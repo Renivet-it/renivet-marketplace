@@ -8,7 +8,7 @@
         "start": "next start",
         "lint": "next lint",
         "db:gen": "drizzle-kit generate",
-        "db:mig": "drizzle-kit migrate"
+        "db:mig": "drizzle-kit generate && drizzle-kit migrate"
     },
     "dependencies": {
         "@clerk/nextjs": "^5.7.5",

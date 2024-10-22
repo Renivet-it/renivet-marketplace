@@ -1,5 +1,5 @@
 {
-  "id": "12b5fad5-4c67-4a4c-933f-9635e1a4d007",
+  "id": "84fb9808-28f5-439d-af22-92853d8abc39",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -14,8 +14,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -32,22 +32,22 @@
           "primaryKey": false,
           "notNull": false
         },
-        "isProfileCompleted": {
-          "name": "isProfileCompleted",
+        "is_profile_completed": {
+          "name": "is_profile_completed",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -56,12 +56,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "profiles_userId_users_id_fk": {
-          "name": "profiles_userId_users_id_fk",
+        "profiles_user_id_users_id_fk": {
+          "name": "profiles_user_id_users_id_fk",
           "tableFrom": "profiles",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -79,11 +79,11 @@
             "id"
           ]
         },
-        "profiles_userId_unique": {
-          "name": "profiles_userId_unique",
+        "profiles_user_id_unique": {
+          "name": "profiles_user_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "userId"
+            "user_id"
           ]
         },
         "profiles_phone_unique": {
@@ -106,14 +106,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "firstName": {
-          "name": "firstName",
+        "first_name": {
+          "name": "first_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "lastName": {
-          "name": "lastName",
+        "last_name": {
+          "name": "last_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -130,28 +130,28 @@
           "primaryKey": false,
           "notNull": true
         },
-        "avatarUrl": {
-          "name": "avatarUrl",
+        "avatar_url": {
+          "name": "avatar_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "isVerified": {
-          "name": "isVerified",
+        "is_verified": {
+          "name": "is_verified",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
