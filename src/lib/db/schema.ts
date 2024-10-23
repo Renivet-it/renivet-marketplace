@@ -1,5 +1,13 @@
 import { relations } from "drizzle-orm";
-import { boolean, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+    boolean,
+    integer,
+    jsonb,
+    numeric,
+    pgTable,
+    text,
+    timestamp,
+} from "drizzle-orm/pg-core";
 import { generateId } from "../utils";
 import { Profile } from "../validations";
 
@@ -29,6 +37,64 @@ export const profiles = pgTable("profiles", {
     isProfileCompleted: boolean("is_profile_completed")
         .notNull()
         .default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const brands = pgTable("brands", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull().unique(),
+    logoUrl: text("logo_url"),
+    registeredBy: text("registered_by")
+        .notNull()
+        .references(() => users.id, {
+            onDelete: "cascade",
+        }),
+    bio: text("bio"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const category = pgTable("category", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull().unique(),
+    description: text("description"),
+    parentId: text("parent_id"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const products = pgTable("products", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull(),
+    description: text("description"),
+    price: numeric("price", {
+        precision: 10,
+        scale: 2,
+    }).notNull(),
+    quantity: integer("quantity").notNull().default(0),
+    colors: text("colors").$type<string[]>(),
+    brandId: text("brand_id")
+        .notNull()
+        .references(() => brands.id, {
+            onDelete: "cascade",
+        }),
+    categoryId: text("category_id")
+        .notNull()
+        .references(() => category.id, {
+            onDelete: "cascade",
+        }),
+    subCategoryId: text("sub_category_id")
+        .notNull()
+        .references(() => category.id, {
+            onDelete: "cascade",
+        }),
+    images: text("images").$type<
+        {
+            color: string;
+            urls: string[];
+        }[]
+    >(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
