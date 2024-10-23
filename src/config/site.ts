@@ -1,20 +1,18 @@
 export const siteConfig: SiteConfig = {
-    name: "Vortex",
+    name: "Renivet",
     description:
-        "A multi-purpose Discord bot to help you with your server needs",
+        "A marketplace for digital products, services, and more. Buy and sell items with ease.",
     longDescription:
-        "An easy-to-use & multi-purpose Discord bot to help you with your server needs, with advanced moderation, fun, and utility commands.",
+        "Renivet is a marketplace for digital products, services, and more. Buy and sell items with ease. We offer a wide range of categories, including software, graphics, music, and more.",
     keywords: [
-        "vortex",
-        "discord",
-        "bot",
-        "drvgo",
-        "vortex bot",
-        "vortex discord",
-        "vortex bot discord",
-        "vortex discord bot",
-        "vortex discord bot invite",
-        "itsdrvgo",
+        "marketplace",
+        "digital products",
+        "services",
+        "buy",
+        "sell",
+        "software",
+        "graphics",
+        "music",
     ],
     developer: {
         name: "DRVGO",
@@ -27,29 +25,24 @@ export const siteConfig: SiteConfig = {
     },
     menu: [
         {
-            name: "Features",
-            href: "/#features",
-            icon: "Zap",
+            name: "Home",
+            href: "/",
+            icon: "Home",
         },
         {
-            name: "Support",
-            href: "/support",
-            icon: "LifeBuoy",
+            name: "Shop",
+            href: "/shop",
+            icon: "ShoppingBag",
         },
         {
-            name: "Commands",
-            href: "/commands",
-            icon: "Command",
+            name: "About",
+            href: "/about",
+            icon: "User",
         },
         {
-            name: "Premium",
-            href: "/premium",
-            icon: "Crown",
+            name: "Contact",
+            href: "/contact",
+            icon: "Mail",
         },
     ],
-    links: {
-        Instagram: "https://instagram.com/itsdrvgo",
-        X_Twitter: "https://x.com/itsdrvgo",
-        Discord: "https://itsdrvgo.me/support",
-    },
 };

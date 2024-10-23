@@ -1,15 +1,10 @@
-import type { Metadata } from "next";
-import "./globals.css";
 import { ClientProvider, ServerProvider } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
-import { Poppins } from "next/font/google";
-
-const font = Poppins({
-    subsets: ["latin"],
-    weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-});
+import type { Metadata } from "next";
+import "./globals.css";
+import { garamond, inter } from "./fonts";
 
 export const metadata: Metadata = {
     title: {
@@ -70,12 +65,13 @@ export default function RootLayout({
 }>) {
     return (
         <ServerProvider>
-            <html lang="en" suppressHydrationWarning>
+            <html
+                lang="en"
+                suppressHydrationWarning
+                className={cn(inter.variable, garamond.variable)}
+            >
                 <body
-                    className={cn(
-                        font.className,
-                        "min-h-screen overflow-x-hidden antialiased"
-                    )}
+                    className={cn("min-h-screen overflow-x-hidden antialiased")}
                 >
                     <ClientProvider>
                         {children}
