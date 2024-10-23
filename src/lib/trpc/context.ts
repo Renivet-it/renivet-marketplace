@@ -58,7 +58,6 @@ export const createContext = async ({
                     id: user.id,
                     firstName: user.firstName,
                     lastName: user.lastName,
-                    username: user.username,
                     email: user.email,
                     avatarUrl: user.avatarUrl,
                     profile: {

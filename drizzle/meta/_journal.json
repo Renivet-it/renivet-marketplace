@@ -8,6 +8,13 @@
       "when": 1729628228393,
       "tag": "0000_strong_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1729673469286,
+      "tag": "0001_melodic_oracle",
+      "breakpoints": true
     }
   ]
 }

@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
 
                     const user: Omit<User, "isVerified"> = {
                         id: webhookUser.id,
-                        username: webhookUser.username,
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
                         email: webhookUser.email_addresses[0].email_address,
@@ -81,7 +80,6 @@ export async function POST(req: NextRequest) {
 
                     const user: User = {
                         id: webhookUser.id,
-                        username: webhookUser.username,
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
                         email: webhookUser.email_addresses[0].email_address,
@@ -106,7 +104,6 @@ export async function POST(req: NextRequest) {
                         db
                             .update(users)
                             .set({
-                                username: user.username,
                                 firstName: user.firstName,
                                 lastName: user.lastName,
                                 email: user.email,

@@ -20,13 +20,6 @@ export const userSchema = z.object({
             invalid_type_error: "Last name must be a string",
         })
         .min(1, "Last name is required"),
-    username: z
-        .string({
-            required_error: "Username is required",
-            invalid_type_error: "Username must be a string",
-        })
-        .min(3, "Username is required")
-        .max(25, "Username must be less than 25 characters"),
     email: z
         .string({
             required_error: "Email is required",

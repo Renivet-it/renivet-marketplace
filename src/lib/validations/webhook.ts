@@ -11,7 +11,6 @@ export const userWebhookSchema = z.object({
     image_url: z.string(),
     first_name: z.string(),
     last_name: z.string(),
-    username: z.string(),
     email_addresses: z.array(
         z.object({
             email_address: z.string().email(),
