@@ -55,6 +55,11 @@ export const userWithProfileSchema = userSchema.extend({
     }),
 });
 
+export const safeUserSchema = userSchema.omit({
+    email: true,
+    isVerified: true,
+});
+
 export const cachedUserSchema = userWithProfileSchema;
 
 export type User = z.infer<typeof userSchema>;
