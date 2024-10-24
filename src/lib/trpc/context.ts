@@ -34,7 +34,7 @@ export const createContext = async ({
 }) => {
     let user: UserWithProfile | null = null;
 
-    const auth = clerkAuth();
+    const auth = await clerkAuth();
 
     if (auth.userId) {
         const cachedUser = await userCache.get(auth.userId);
