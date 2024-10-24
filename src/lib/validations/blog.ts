@@ -45,6 +45,14 @@ export const blogSchema = z.object({
             invalid_type_error: "Author ID must be a string",
         })
         .length(32, "Author ID must be 32 characters long"),
+    isPublished: z.boolean({
+        required_error: "Is published is required",
+        invalid_type_error: "Is published must be a boolean",
+    }),
+    publishedAt: z.date({
+        required_error: "Published at is required",
+        invalid_type_error: "Published at must be a date",
+    }),
     createdAt: z.date({
         required_error: "Created at is required",
         invalid_type_error: "Created at must be a date",

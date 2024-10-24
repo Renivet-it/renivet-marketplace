@@ -7,7 +7,7 @@ const f = createUploadthing();
 export const ourFileRouter = {
     imageUploader: f({ image: { maxFileSize: "4MB" } })
         .middleware(async () => {
-            const auth = clerkAuth();
+            const auth = await clerkAuth();
             if (!auth.userId)
                 throw new UploadThingError({
                     code: "FORBIDDEN",

@@ -53,6 +53,17 @@ export const blogs = pgTable("blogs", {
         .references(() => users.id, {
             onDelete: "cascade",
         }),
+    isPublished: boolean("is_published").notNull().default(false),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const newsletterSubscribers = pgTable("newsletter_subscribers", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
