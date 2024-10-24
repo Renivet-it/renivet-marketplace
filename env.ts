@@ -34,6 +34,16 @@ export const env = createEnv({
             })
             .min(1, "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required"),
     },
-    runtimeEnv: process.env,
+    runtimeEnv: {
+        CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
+        SVIX_SECRET: process.env.SVIX_SECRET,
+        DATABASE_URL: process.env.DATABASE_URL,
+        REDIS_URL: process.env.REDIS_URL,
+        UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
+        NODE_ENV: process.env.NODE_ENV,
+
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
+            process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    },
     extends: [vercel()],
 });
