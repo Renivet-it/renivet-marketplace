@@ -53,6 +53,8 @@ export const blogs = pgTable("blogs", {
         .references(() => users.id, {
             onDelete: "cascade",
         }),
+    isPublished: boolean("is_published").notNull().default(false),
+    publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
