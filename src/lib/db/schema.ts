@@ -41,6 +41,22 @@ export const profiles = pgTable("profiles", {
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const blogs = pgTable("blogs", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description").notNull(),
+    content: text("content").notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    authorId: text("author_id")
+        .notNull()
+        .references(() => users.id, {
+            onDelete: "cascade",
+        }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const brands = pgTable("brands", {
     id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
     name: text("name").notNull().unique(),
@@ -101,13 +117,21 @@ export const products = pgTable("products", {
 
 // RELATIONS
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
     profile: one(profiles),
+    blogs: many(blogs),
 }));
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
     user: one(users, {
         fields: [profiles.userId],
+        references: [users.id],
+    }),
+}));
+
+export const blogsRelations = relations(blogs, ({ one }) => ({
+    author: one(users, {
+        fields: [blogs.authorId],
         references: [users.id],
     }),
 }));
