@@ -43,6 +43,16 @@ export const newsletterSubscriberRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
 
+            const existingNewsletterSubscriber =
+                await db.query.newsletterSubscribers.findFirst({
+                    where: eq(schemas.newsletterSubscribers.email, input.email),
+                });
+            if (existingNewsletterSubscriber)
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "Newsletter subscriber already exists",
+                });
+
             const newsletterSubscriber = await db
                 .insert(schemas.newsletterSubscribers)
                 .values(input)
@@ -62,6 +72,16 @@ export const newsletterSubscriberRouter = createTRPCRouter({
             const { db, schemas } = ctx;
             const { email, isActive } = input;
 
+            const existingNewsletterSubscriber =
+                await db.query.newsletterSubscribers.findFirst({
+                    where: eq(schemas.newsletterSubscribers.email, email),
+                });
+            if (!existingNewsletterSubscriber)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Newsletter subscriber not found",
+                });
+
             const newsletterSubscriber = await db
                 .update(schemas.newsletterSubscribers)
                 .set({ isActive })
@@ -75,5 +95,32 @@ export const newsletterSubscriberRouter = createTRPCRouter({
                 });
 
             return newsletterSubscriber;
+        }),
+    deleteNewsletterSubscriber: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { db, schemas } = ctx;
+            const { id } = input;
+
+            const existingNewsletterSubscriber =
+                await db.query.newsletterSubscribers.findFirst({
+                    where: eq(schemas.newsletterSubscribers.id, id),
+                });
+            if (!existingNewsletterSubscriber)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Newsletter subscriber not found",
+                });
+
+            await db
+                .delete(schemas.newsletterSubscribers)
+                .where(eq(schemas.newsletterSubscribers.id, id))
+                .execute();
+
+            return true;
         }),
 });

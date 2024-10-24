@@ -41,6 +41,17 @@ export const profiles = pgTable("profiles", {
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const brandsWaitlist = pgTable("brands_waitlist", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    brandName: text("brand_name").notNull(),
+    brandEmail: text("brand_email").notNull().unique(),
+    brandPhone: text("brand_phone"),
+    brandWebsite: text("brand_website"),
+});
+
 export const blogs = pgTable("blogs", {
     id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
     title: text("title").notNull(),

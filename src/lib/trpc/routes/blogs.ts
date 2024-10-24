@@ -128,5 +128,7 @@ export const blogsRouter = createTRPCRouter({
                 });
 
             await db.delete(schemas.blogs).where(eq(schemas.blogs.id, id));
+
+            return true;
         }),
 });
