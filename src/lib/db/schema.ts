@@ -57,6 +57,15 @@ export const blogs = pgTable("blogs", {
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const newsletterSubscribers = pgTable("newsletter_subscribers", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const brands = pgTable("brands", {
     id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
     name: text("name").notNull().unique(),
