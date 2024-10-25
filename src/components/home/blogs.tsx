@@ -8,7 +8,7 @@ const offerData = {
     description:
         "When your OOTDs call for a bit of cuteness with a dash of chic, crop tops never fail to come through. These styling tips will help you incorporate crop tops…",
     buttonText: "Read More",
-    img: "/images/blog.jpeg",
+    img: "/images/blog2.jpeg",
 };
 
 export function Blogs({ className, ...props }: GenericProps) {
