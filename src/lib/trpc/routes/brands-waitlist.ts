@@ -3,7 +3,7 @@ import {
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
-import { brandWaitlistSchema } from "@/lib/validations";
+import { createBrandWaitlistSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -54,7 +54,7 @@ export const brandsWaitlistRouter = createTRPCRouter({
             return brandsWaitlistEntry;
         }),
     createBrandsWaitlistEntry: publicProcedure
-        .input(brandWaitlistSchema)
+        .input(createBrandWaitlistSchema)
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
 
