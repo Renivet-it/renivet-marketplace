@@ -38,6 +38,7 @@ export const createNewsletterSubscriberSchema = newsletterSubscriberSchema.omit(
         id: true,
         createdAt: true,
         updatedAt: true,
+        isActive: true,
     }
 );
 
