@@ -4,7 +4,7 @@ import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata } from "next";
 import "./globals.css";
-import { garamond, inter } from "./fonts";
+import { garamond, poppins } from "./fonts";
 
 export const metadata: Metadata = {
     title: {
@@ -68,7 +68,7 @@ export default function RootLayout({
             <html
                 lang="en"
                 suppressHydrationWarning
-                className={cn(inter.variable, garamond.variable)}
+                className={cn(poppins.variable, garamond.variable)}
             >
                 <body
                     className={cn("min-h-screen overflow-x-hidden antialiased")}

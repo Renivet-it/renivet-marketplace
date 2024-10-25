@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 html {
-    font-family: var(--font-inter);
+    font-family: var(--font-poppins);
 }
 
 h1,
@@ -13,10 +13,6 @@ h4,
 h5,
 h6 {
     font-family: var(--font-garamond);
-}
-
-body {
-    font-family: Arial, Helvetica, sans-serif;
 }
 
 @layer base {
