@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { Renivet } from "@/components/svgs";
 // import { DEFAULT_MESSAGES } from "@/config/const";
 import { siteConfig } from "@/config/site";
 import { useNavbarStore } from "@/lib/store";
@@ -79,8 +80,13 @@ export function NavbarHome() {
                     href="/"
                     className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
                 >
-                    {/* TODO: Logo Component */}
-                    <Icons.Waves className="size-7" />
+                    <Renivet
+                        fill="white"
+                        stroke="black"
+                        svgScale={1.3}
+                        height={38.33}
+                        width={40.3}
+                    />
 
                     <h4 className="text-2xl font-bold md:text-3xl">
                         {siteConfig.name}
