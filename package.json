@@ -30,6 +30,8 @@
         "clsx": "^2.1.1",
         "dotenv": "^16.4.5",
         "drizzle-orm": "^0.35.3",
+        "embla-carousel-autoplay": "^8.3.0",
+        "embla-carousel-react": "^8.3.0",
         "enhanced-ms": "^3.0.0",
         "framer-motion": "^11.11.9",
         "ioredis": "^5.4.1",
