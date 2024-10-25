@@ -1,3 +1,4 @@
+import { IntroModal } from "@/components/globals/modals";
 import {
     Arrivals,
     Blogs,
@@ -18,6 +19,7 @@ export default function Page() {
             <Theme />
             <Arrivals title="New Arrivals" />
             <Blogs />
+            <IntroModal />
         </>
     );
 }

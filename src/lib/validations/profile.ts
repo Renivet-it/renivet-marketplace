@@ -1,9 +1,18 @@
 import { z } from "zod";
-import { userSchema } from "./user";
 
 export const profileSchema = z.object({
-    id: userSchema.shape.id,
-    userId: userSchema.shape.id,
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .min(1, "ID is required"),
+    userId: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .min(1, "ID is required"),
     phone: z
         .string({
             required_error: "Phone is required",
@@ -20,8 +29,14 @@ export const profileSchema = z.object({
         })
         .nullable(),
     isProfileCompleted: z.boolean(),
-    createdAt: userSchema.shape.createdAt,
-    updatedAt: userSchema.shape.updatedAt,
+    createdAt: z.date({
+        required_error: "Created at is required",
+        invalid_type_error: "Created at must be a date",
+    }),
+    updatedAt: z.date({
+        required_error: "Updated at is required",
+        invalid_type_error: "Updated at must be a date",
+    }),
 });
 
 export type Profile = z.infer<typeof profileSchema>;

@@ -11,9 +11,8 @@ export function Landing({ className, ...props }: GenericProps) {
                     src="/images/landing1.webp"
                     alt="Landing"
                     priority
-                    layout="fill"
-                    objectFit="cover"
-                    className="opacity-90"
+                    fill
+                    className="object-cover opacity-90"
                 />
             </div>
         </section>
