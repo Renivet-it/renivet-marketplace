@@ -20,11 +20,11 @@ export function Landing({ className, ...props }: GenericProps) {
                 <div className="absolute inset-0 bg-foreground opacity-30"></div>
 
                 <div className="absolute z-10 flex flex-col items-center gap-5 p-4 text-center text-background md:gap-10">
-                    <h1 className="text-balance text-3xl font-bold md:text-5xl">
+                    <h1 className="text-balance text-3xl font-bold md:text-5xl lg:text-7xl">
                         SEASONAL BRIGHTS
                     </h1>
 
-                    <p className="max-w-xl text-balance text-background/80 md:text-lg">
+                    <p className="max-w-xl text-balance text-background/80 md:text-lg lg:max-w-3xl lg:text-2xl">
                         Find your golf look, designed especially for golf fans.
                         Featuring a range of high-performance patterns to choose
                         from.
