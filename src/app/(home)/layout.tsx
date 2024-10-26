@@ -1,5 +1,4 @@
-import { NavbarHome, NavbarMob } from "@/components/globals/layouts";
-import Footer from "@/components/globals/layouts/footer/footer";
+import { Footer, NavbarHome, NavbarMob } from "@/components/globals/layouts";
 import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
 

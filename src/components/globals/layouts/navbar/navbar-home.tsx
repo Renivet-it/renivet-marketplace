@@ -66,7 +66,7 @@ export function NavbarHome() {
             className="sticky inset-x-0 top-0 z-50 flex h-auto w-full items-center justify-center bg-background"
             data-menu-open={isMenuOpen}
         >
-            <nav className="relative z-10 flex w-full max-w-[100rem] items-center justify-between gap-5 overflow-hidden p-4 md:px-8">
+            <nav className="relative z-10 flex w-full max-w-5xl items-center justify-between gap-5 overflow-hidden p-4 md:px-8 xl:max-w-[100rem]">
                 <button
                     aria-label="Mobile Menu Toggle Button"
                     aria-pressed={isMenuOpen}

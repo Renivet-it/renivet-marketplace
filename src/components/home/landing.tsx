@@ -1,38 +1,41 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 export function Landing({ className, ...props }: GenericProps) {
     return (
         <section className={cn("", className)} {...props}>
-            <div className="relative flex min-h-[10vh] w-full items-center justify-center overflow-hidden sm:min-h-[60vh] md:min-h-[70vh] lg:min-h-[80vh]">
-                {/* Background Image */}
+            <div className="relative flex h-[calc(100vh-70px)] w-full items-center justify-center overflow-hidden sm:min-h-[60vh] md:min-h-[70vh] lg:min-h-[80vh]">
                 <Image
-                    src="/images/landing1.jpg" // Ensure this image path is correct
+                    src="/images/landing1.jpg"
                     alt="Landing"
-                    height={1000}
-                    width={1000}
+                    height={2000}
+                    width={2000}
                     priority
-                    className="h-full w-full object-cover" // Full width and height to cover the screen
+                    className="size-full object-cover"
                 />
 
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-black opacity-30"></div>
+                <div className="absolute inset-0 bg-foreground opacity-30"></div>
 
-                {/* Centered Text */}
-                <div className="absolute z-10 px-4 text-center text-white md:px-6 lg:px-10">
-                    <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-5xl lg:text-6xl">
+                <div className="absolute z-10 flex flex-col items-center gap-5 p-4 text-center text-background md:gap-10">
+                    <h1 className="text-balance text-3xl font-bold md:text-5xl">
                         SEASONAL BRIGHTS
                     </h1>
-                    <p className="mb-8 text-sm sm:mb-10 sm:text-base md:text-lg lg:text-xl">
+
+                    <p className="max-w-xl text-balance text-background/80 md:text-lg">
                         Find your golf look, designed especially for golf fans.
                         Featuring a range of high-performance patterns to choose
                         from.
                     </p>
-                    <button className="bg-white bg-opacity-20 px-4 py-2 font-semibold text-black sm:px-6 sm:py-3 md:text-lg">
-                        DISCOVER MORE
-                    </button>
+
+                    <Button
+                        size="lg"
+                        className="mt-1 bg-background font-semibold uppercase text-foreground hover:bg-background/90 md:mt-0 md:py-7 md:text-lg"
+                    >
+                        Discover More
+                    </Button>
                 </div>
             </div>
         </section>

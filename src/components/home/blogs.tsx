@@ -14,37 +14,41 @@ const offerData = {
 export function Blogs({ className, ...props }: GenericProps) {
     return (
         <section
-            className={cn("flex justify-center py-5 md:py-10", className)}
+            className={cn(
+                "flex justify-center px-4 py-5 md:px-8 md:py-10",
+                className
+            )}
             {...props}
         >
-            <div className="w-full max-w-[100rem] space-y-10">
-                <div className="flex items-center justify-center gap-4">
-                    <h2 className="text-3xl font-semibold uppercase">
+            <div className="flex w-full max-w-5xl flex-col items-center gap-5 md:gap-10 xl:max-w-[100rem]">
+                <div className="flex w-full items-center justify-center gap-4">
+                    <h2 className="text-2xl font-semibold uppercase md:text-3xl">
                         Our Blogs
                     </h2>
                 </div>
 
-                <div className="flex flex-col items-center bg-muted md:flex-row">
-                    <div className="flex w-full flex-col items-center gap-4 py-10 text-center">
-                        <h2 className="max-w-md text-balance text-4xl font-semibold">
+                <div className="flex w-full flex-col bg-muted lg:flex-row">
+                    <div className="flex w-full flex-col items-center gap-5 p-6 text-center md:gap-10 md:p-10">
+                        <h2 className="max-w-lg text-balance text-2xl font-semibold md:text-4xl">
                             {offerData.title}
                         </h2>
 
-                        <p className="max-w-xl text-balance text-muted-foreground">
+                        <p className="max-w-lg text-balance text-sm text-muted-foreground md:text-base">
                             {offerData.description}
                         </p>
 
-                        <button className="text-lg font-semibold uppercase underline underline-offset-2">
+                        <button className="font-semibold uppercase underline underline-offset-2 md:text-lg">
                             {offerData.buttonText}
                         </button>
                     </div>
 
-                    <div className="w-full">
+                    <div className="size-full">
                         <Image
                             src={offerData.img}
                             alt="Offer"
                             width={1000}
                             height={1000}
+                            className="size-full object-cover"
                         />
                     </div>
                 </div>

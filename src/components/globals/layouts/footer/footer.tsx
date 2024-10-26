@@ -1,138 +1,119 @@
 "use client";
 
+import { Icons } from "@/components/icons";
+import { Renivet } from "@/components/svgs";
 import { Button } from "@/components/ui/button";
+import { siteConfig } from "@/config/site";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
-import React from "react";
 
-const Footer: React.FC = () => {
+export function Footer({ className, ...props }: GenericProps) {
     return (
-        <footer className="py bg-[#30343F] px-8 text-[#9B9B9B] md:px-20">
-            {/* Top section with logo, button, and divider */}
-            <div className="flex flex-col items-center justify-between gap-8 md:flex-row md:items-start">
-                <div className="mt-10 flex flex-col items-center md:items-start md:pr-16">
-                    {/* Logo Section */}
-                    <h1 className="text-2xl font-bold tracking-wide text-white">
-                        MOON.
-                    </h1>
-                    <p className="max-w- mb-10 mt-4 text-center leading-relaxed md:text-left">
-                        Lorem ipsum dolor sit amet consectetur adipiscing elit
-                        aliquam mauris sed ma
-                    </p>
-                    {/* Get Started Button */}
-                    <Button
-                        variant="outline"
-                        className="min-w-40 rounded-none border-accent bg-transparent"
-                        size="lg"
-                        asChild
-                    >
-                        <Link
-                            href="/"
-                            className="text-lg font-semibold text-accent"
-                        >
-                            View All
+        <footer
+            className={cn(
+                "flex justify-center bg-primary text-primary-foreground",
+                className
+            )}
+            {...props}
+        >
+            <div className="flex w-full max-w-5xl flex-col items-center justify-between xl:max-w-[100rem]">
+                <div className="flex w-full flex-col items-center justify-between lg:flex-row lg:items-start">
+                    <div className="w-full space-y-6 p-10 px-5 md:p-10 lg:basis-1/3 lg:p-20">
+                        <Link href="/" className="flex items-center gap-2">
+                            <Renivet
+                                svgScale={1.3}
+                                height={38.33}
+                                width={40.3}
+                            />
+
+                            <h1 className="text-4xl font-bold">
+                                {siteConfig.name}
+                            </h1>
                         </Link>
-                    </Button>
-                </div>
 
-                {/* Divider: vertical for large screens, horizontal for smaller screens */}
-                <div className="mx-8 w-full border-t border-white md:h-[45vh] md:w-auto md:border-l md:border-t-0"></div>
+                        <p className="text-primary-foreground/80">
+                            {siteConfig.description}
+                        </p>
 
-                {/* Bottom Section with Links */}
-                <div className="grid w-full grid-cols-2 gap-10 text-sm md:mt-0 md:grid-cols-3">
-                    {/* About Us */}
-                    <div className="mt-10">
-                        <h2 className="mb-6 font-semibold text-white">
-                            ABOUT US
-                        </h2>
-                        <ul className="space-y-3">
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Mission
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Our team
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Awards
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Testimonials
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Privacy policy
-                            </li>
-                        </ul>
+                        <Button
+                            variant="outline"
+                            className="min-w-40 border-background bg-transparent font-semibold hover:bg-background hover:text-black"
+                            size="lg"
+                            asChild
+                        >
+                            <Link href="/">
+                                <span>Get Started</span>
+                                <Icons.ArrowRight />
+                            </Link>
+                        </Button>
                     </div>
-                    {/* Services */}
-                    <div className="mt-10">
-                        <h2 className="mb-6 font-semibold text-white">
-                            SERVICES
-                        </h2>
-                        <ul className="space-y-3">
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Web design
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Web development
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Mobile design
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                UI/UX design
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Branding design
-                            </li>
-                        </ul>
-                    </div>
-                    {/* Portfolio */}
-                    <div className="mb-4 mt-10">
-                        <h2 className="mb-6 font-semibold text-white">
-                            PORTFOLIO
-                        </h2>
-                        <ul className="space-y-3">
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Corporate websites
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                E-commerce
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Mobile apps
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                Landing pages
-                            </li>
-                            <li className="cursor-pointer transition-colors hover:text-white">
-                                UI/UX projects
-                            </li>
-                        </ul>
+
+                    <div className="mx-5 h-px self-stretch bg-background lg:mx-0 lg:h-auto lg:w-px" />
+
+                    <div className="grid w-full basis-2/3 grid-cols-2 gap-5 p-10 px-5 md:grid-cols-3 md:p-10 lg:p-20">
+                        {siteConfig.footer.menu.map((category, i) => (
+                            <div key={i} className="space-y-3 lg:space-y-6">
+                                <h2 className="text-lg font-semibold uppercase lg:text-2xl">
+                                    {category.name}
+                                </h2>
+
+                                <ul className="space-y-1 lg:space-y-3">
+                                    {category.items.map((item, i) => (
+                                        <li key={i}>
+                                            <Link
+                                                href={item.href}
+                                                target={
+                                                    item.isExternal
+                                                        ? "_blank"
+                                                        : "_self"
+                                                }
+                                                className="w-full text-sm text-primary-foreground/80 transition-all ease-in-out hover:text-primary-foreground md:text-base"
+                                            >
+                                                {item.name}
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
                     </div>
                 </div>
-            </div>
 
-            {/* Footer Bottom Section */}
-            <div className="mb-4 flex flex-col items-center justify-between border-t border-white pt-6 md:flex-row">
-                <p className="text-xs text-[#828282]">
-                    &copy; 2023 Moon | All Rights Reserved
-                </p>
-                <div className="mt-4 flex gap-6 md:mt-0">
-                    <a
-                        href="#"
-                        className="text-xs text-[#828282] transition-colors hover:text-white"
-                    >
-                        Terms and Conditions
-                    </a>
-                    <a
-                        href="#"
-                        className="text-xs text-[#828282] transition-colors hover:text-white"
-                    >
-                        Privacy Policy
-                    </a>
+                <div className="self-stretch px-5 md:mx-0">
+                    <div className="h-px w-full self-stretch bg-background" />
+                </div>
+
+                <div className="flex w-full flex-col items-center justify-center gap-1 p-5 text-sm text-primary-foreground/80 md:flex-row">
+                    <p>
+                        Copyright &copy; {new Date().getFullYear()}{" "}
+                        {siteConfig.name}
+                    </p>
+
+                    <span className="hidden md:inline-block">|</span>
+
+                    <p>All Rights Reserved</p>
+
+                    <span className="hidden md:inline-block">|</span>
+
+                    <div className="flex items-center gap-1">
+                        <Link
+                            href="/terms"
+                            className="underline underline-offset-2"
+                        >
+                            Terms and Conditions
+                        </Link>
+
+                        <span>|</span>
+
+                        <Link
+                            href="/privacy"
+                            className="underline underline-offset-2"
+                        >
+                            Privacy Policy
+                        </Link>
+                    </div>
                 </div>
             </div>
         </footer>
     );
-};
-
-export default Footer;
+}

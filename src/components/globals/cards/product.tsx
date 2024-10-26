@@ -16,7 +16,7 @@ interface PageProps extends GenericProps {
 export function ProductCard({ className, product, ...props }: PageProps) {
     return (
         <div className={cn("space-y-4", className)} {...props}>
-            <div className="h-80 md:h-[30rem]">
+            <div className="h-80 xl:h-[30rem]">
                 <Image
                     width={1000}
                     height={1000}
@@ -43,7 +43,7 @@ export function ProductCard({ className, product, ...props }: PageProps) {
                 </p>
             </div>
 
-            <Button variant="accent" className="rounded-none font-semibold">
+            <Button variant="accent" className="font-semibold">
                 Add to Cart
             </Button>
         </div>
