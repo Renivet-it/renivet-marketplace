@@ -50,10 +50,12 @@ export const blogSchema = z.object({
         required_error: "Is published is required",
         invalid_type_error: "Is published must be a boolean",
     }),
-    publishedAt: z.date({
-        required_error: "Published at is required",
-        invalid_type_error: "Published at must be a date",
-    }),
+    publishedAt: z
+        .date({
+            required_error: "Published at is required",
+            invalid_type_error: "Published at must be a date",
+        })
+        .nullable(),
     createdAt: z.date({
         required_error: "Created at is required",
         invalid_type_error: "Created at must be a date",
@@ -152,3 +154,6 @@ export const blogWithAuthorAndTagSchema = blogSchema
 
 export type Blog = z.infer<typeof blogSchema>;
 export type CreateBlog = z.infer<typeof createBlogSchema>;
+export type UpdateBlog = z.infer<typeof updateBlogSchema>;
+export type BlogToTags = z.infer<typeof blogToTagsSchema>;
+export type BlogWithAuthorAndTag = z.infer<typeof blogWithAuthorAndTagSchema>;
