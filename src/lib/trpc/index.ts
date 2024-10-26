@@ -1,5 +1,6 @@
 import {
     blogsRouter,
+    blogTagsRouter,
     brandsWaitlistRouter,
     newsletterSubscriberRouter,
     usersRouter,
@@ -7,6 +8,7 @@ import {
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({
+    blogTags: blogTagsRouter,
     blogs: blogsRouter,
     brandsWaitlist: brandsWaitlistRouter,
     newsletterSubscribers: newsletterSubscriberRouter,
