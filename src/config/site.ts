@@ -45,4 +45,83 @@ export const siteConfig: SiteConfig = {
             icon: "Mail",
         },
     ],
+    footer: {
+        menu: [
+            {
+                name: "About Us",
+                items: [
+                    {
+                        name: "Mission",
+                        href: "/about#mission",
+                    },
+                    {
+                        name: "Our Team",
+                        href: "/about#team",
+                    },
+                    {
+                        name: "Awards",
+                        href: "/about#awards",
+                    },
+                    {
+                        name: "Testimonials",
+                        href: "/about#testimonials",
+                    },
+                    {
+                        name: "Privacy Policy",
+                        href: "/privacy",
+                    },
+                ],
+            },
+            {
+                name: "Services",
+                items: [
+                    {
+                        name: "Web Design",
+                        href: "/services/web-design",
+                    },
+                    {
+                        name: "Web Development",
+                        href: "/services/web-development",
+                    },
+                    {
+                        name: "Mobile Design",
+                        href: "/services/mobile-design",
+                    },
+                    {
+                        name: "UI/UX Design",
+                        href: "/services/ui-ux-design",
+                    },
+                    {
+                        name: "Branding Design",
+                        href: "/services/branding-design",
+                    },
+                ],
+            },
+            {
+                name: "Portfolio",
+                items: [
+                    {
+                        name: "Corporate Websites",
+                        href: "/portfolio/corporate-websites",
+                    },
+                    {
+                        name: "E-Commerce",
+                        href: "/portfolio/e-commerce",
+                    },
+                    {
+                        name: "Mobile Apps",
+                        href: "/portfolio/mobile-apps",
+                    },
+                    {
+                        name: "Landing Pages",
+                        href: "/portfolio/landing-pages",
+                    },
+                    {
+                        name: "UI/UX Projects",
+                        href: "/portfolio/ui-ux-projects",
+                    },
+                ],
+            },
+        ],
+    },
 };

@@ -1,4 +1,4 @@
-import { env } from "@/../env.mjs";
+import { env } from "@/../env";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { init } from "@paralleldrive/cuid2";
 import { clsx, type ClassValue } from "clsx";

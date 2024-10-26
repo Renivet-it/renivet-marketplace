@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { Renivet } from "@/components/svgs";
 // import { DEFAULT_MESSAGES } from "@/config/const";
 import { siteConfig } from "@/config/site";
 import { useNavbarStore } from "@/lib/store";
@@ -62,10 +63,10 @@ export function NavbarHome() {
                 duration: 0.35,
                 ease: "easeInOut",
             }}
-            className="sticky inset-x-0 top-0 z-50 flex h-auto w-full items-center justify-center bg-transparent"
+            className="sticky inset-x-0 top-0 z-50 flex h-auto w-full items-center justify-center bg-background"
             data-menu-open={isMenuOpen}
         >
-            <nav className="relative z-10 flex w-full max-w-7xl items-center justify-between gap-5 overflow-hidden rounded-2xl bg-background p-4 md:px-8">
+            <nav className="relative z-10 flex w-full max-w-5xl items-center justify-between gap-5 overflow-hidden p-4 md:px-8 xl:max-w-[100rem]">
                 <button
                     aria-label="Mobile Menu Toggle Button"
                     aria-pressed={isMenuOpen}
@@ -79,8 +80,13 @@ export function NavbarHome() {
                     href="/"
                     className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
                 >
-                    {/* TODO: Logo Component */}
-                    <Icons.Waves className="size-7" />
+                    <Renivet
+                        fill="white"
+                        stroke="black"
+                        svgScale={1.3}
+                        height={38.33}
+                        width={40.3}
+                    />
 
                     <h4 className="text-2xl font-bold md:text-3xl">
                         {siteConfig.name}

@@ -1,4 +1,4 @@
-import { env } from "@/../env.mjs";
+import { env } from "@/../env";
 import { db } from "@/lib/db";
 import { profiles, users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";

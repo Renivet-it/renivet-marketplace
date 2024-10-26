@@ -1,4 +1,4 @@
-import "./env.mjs";
+import "./env";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
         remotePatterns: [
             {
                 hostname: "utfs.io",
+            },
+            {
+                hostname: "picsum.photos",
             },
         ],
     },

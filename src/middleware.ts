@@ -1,7 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export default clerkMiddleware((auth, req) => {
+export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
     const res = NextResponse.next();
 
@@ -13,7 +13,7 @@ export default clerkMiddleware((auth, req) => {
     if (url.pathname === "/auth")
         return NextResponse.redirect(new URL("/auth/signin", url));
 
-    const isAuth = auth();
+    const isAuth = await auth();
 
     if (isAuth.sessionId) {
         if (url.pathname === "/auth/signin")

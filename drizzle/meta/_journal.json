@@ -15,6 +15,34 @@
       "when": 1729673469286,
       "tag": "0001_melodic_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1729682319333,
+      "tag": "0002_aberrant_morg",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1729761105425,
+      "tag": "0003_secret_peter_quill",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1729853606301,
+      "tag": "0004_graceful_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1729944264890,
+      "tag": "0005_brown_morbius",
+      "breakpoints": true
     }
   ]
 }
