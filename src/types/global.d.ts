@@ -34,6 +34,16 @@ declare global {
             icon: keyof typeof Icons;
             isExternal?: boolean;
         }[];
+        footer: {
+            menu: {
+                name: string;
+                items: {
+                    name: string;
+                    href: string;
+                    isExternal?: boolean;
+                }[];
+            }[];
+        };
     };
 
     type ExtendedFile<T extends "image" | "video" | "document" = "image", K> = {

@@ -44,12 +44,15 @@ interface PageProps extends GenericProps {
 export function Arrivals({ title, className, ...props }: PageProps) {
     return (
         <section
-            className={cn("flex justify-center py-5 md:py-10", className)}
+            className={cn(
+                "flex justify-center px-4 py-5 md:px-8 md:py-10",
+                className
+            )}
             {...props}
         >
-            <div className="w-full max-w-[100rem] space-y-10 px-8 xl:px-4">
+            <div className="w-full max-w-5xl space-y-5 md:space-y-10 xl:max-w-[100rem]">
                 <div className="flex items-center justify-center gap-4">
-                    <h2 className="text-3xl font-semibold uppercase">
+                    <h2 className="text-2xl font-semibold uppercase md:text-3xl">
                         {title}
                     </h2>
                 </div>
@@ -73,16 +76,11 @@ export function Arrivals({ title, className, ...props }: PageProps) {
                 <div className="flex items-center justify-center">
                     <Button
                         variant="outline"
-                        className="min-w-40 rounded-none border-accent"
+                        className="w-full min-w-40 border-accent font-semibold text-accent md:w-min"
                         size="lg"
                         asChild
                     >
-                        <Link
-                            href="/products"
-                            className="text-lg font-semibold text-accent"
-                        >
-                            View All
-                        </Link>
+                        <Link href="/products">View All</Link>
                     </Button>
                 </div>
             </div>

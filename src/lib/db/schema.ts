@@ -1,12 +1,14 @@
 import { relations } from "drizzle-orm";
 import {
     boolean,
+    index,
     integer,
     jsonb,
     numeric,
     pgTable,
     text,
     timestamp,
+    uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { generateId } from "../utils";
 import { Profile } from "../validations";
@@ -52,6 +54,14 @@ export const brandsWaitlist = pgTable("brands_waitlist", {
     brandWebsite: text("brand_website"),
 });
 
+export const blogTags = pgTable("blog_tags", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const blogs = pgTable("blogs", {
     id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
     title: text("title").notNull(),
@@ -69,6 +79,30 @@ export const blogs = pgTable("blogs", {
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const blogToTags = pgTable(
+    "blog_to_tags",
+    {
+        id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+        blogId: text("blog_id")
+            .notNull()
+            .references(() => blogs.id, { onDelete: "cascade" }),
+        tagId: text("tag_id")
+            .notNull()
+            .references(() => blogTags.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at").notNull().defaultNow(),
+    },
+    (table) => {
+        return {
+            blogIdIdx: index("blog_id_idx").on(table.blogId),
+            tagIdIdx: index("tag_id_idx").on(table.tagId),
+            blogTagIdx: uniqueIndex("blog_tag_idx").on(
+                table.blogId,
+                table.tagId
+            ),
+        };
+    }
+);
 
 export const newsletterSubscribers = pgTable("newsletter_subscribers", {
     id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
@@ -151,9 +185,25 @@ export const profilesRelations = relations(profiles, ({ one }) => ({
     }),
 }));
 
-export const blogsRelations = relations(blogs, ({ one }) => ({
+export const blogsRelations = relations(blogs, ({ one, many }) => ({
     author: one(users, {
         fields: [blogs.authorId],
         references: [users.id],
+    }),
+    blogToTags: many(blogToTags),
+}));
+
+export const blogTagsRelations = relations(blogTags, ({ many }) => ({
+    blogToTags: many(blogToTags),
+}));
+
+export const blogToTagsRelations = relations(blogToTags, ({ one }) => ({
+    blog: one(blogs, {
+        fields: [blogToTags.blogId],
+        references: [blogs.id],
+    }),
+    tag: one(blogTags, {
+        fields: [blogToTags.tagId],
+        references: [blogTags.id],
     }),
 }));

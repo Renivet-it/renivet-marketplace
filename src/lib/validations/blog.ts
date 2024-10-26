@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tagSchema } from "./tag";
 import { safeUserSchema } from "./user";
 
 export const blogSchema = z.object({
@@ -49,10 +50,12 @@ export const blogSchema = z.object({
         required_error: "Is published is required",
         invalid_type_error: "Is published must be a boolean",
     }),
-    publishedAt: z.date({
-        required_error: "Published at is required",
-        invalid_type_error: "Published at must be a date",
-    }),
+    publishedAt: z
+        .date({
+            required_error: "Published at is required",
+            invalid_type_error: "Published at must be a date",
+        })
+        .nullable(),
     createdAt: z.date({
         required_error: "Created at is required",
         invalid_type_error: "Created at must be a date",
@@ -63,13 +66,26 @@ export const blogSchema = z.object({
     }),
 });
 
-export const createBlogSchema = blogSchema.omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
-    slug: true,
-    authorId: true,
-});
+export const createBlogSchema = blogSchema
+    .omit({
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        slug: true,
+        authorId: true,
+    })
+    .extend({
+        tagIds: z
+            .array(
+                z
+                    .string({
+                        required_error: "Tag IDs is required",
+                        invalid_type_error: "Tag IDs must be a string",
+                    })
+                    .length(32, "Tag IDs must be 32 characters long")
+            )
+            .min(1, "At least one tag is required"),
+    });
 
 export const updateBlogSchema = blogSchema
     .omit({
@@ -78,14 +94,66 @@ export const updateBlogSchema = blogSchema
         updatedAt: true,
         slug: true,
         authorId: true,
+        isPublished: true,
+        publishedAt: true,
+    })
+    .extend({
+        tagIds: z
+            .array(
+                z
+                    .string({
+                        required_error: "Tag IDs is required",
+                        invalid_type_error: "Tag IDs must be a string",
+                    })
+                    .length(32, "Tag IDs must be 32 characters long")
+            )
+            .min(1, "At least one tag is required"),
     })
     .partial();
 
-export const blogWithAuthorSchema = blogSchema.merge(
-    z.object({
-        author: safeUserSchema,
-    })
-);
+export const blogToTagsSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .length(32, "ID must be 32 characters long"),
+    blogId: z
+        .string({
+            required_error: "Blog ID is required",
+            invalid_type_error: "Blog ID must be a string",
+        })
+        .length(32, "Blog ID must be 32 characters long"),
+    tagId: z
+        .string({
+            required_error: "Tag ID is required",
+            invalid_type_error: "Tag ID must be a string",
+        })
+        .length(32, "Tag ID must be 32 characters long"),
+    createdAt: z.date({
+        required_error: "Created at is required",
+        invalid_type_error: "Created at must be a date",
+    }),
+});
+
+export const blogWithAuthorAndTagSchema = blogSchema
+    .merge(
+        z.object({
+            author: safeUserSchema.omit({ createdAt: true, updatedAt: true }),
+        })
+    )
+    .merge(
+        z.object({
+            blogToTags: z.array(
+                z.object({
+                    tag: tagSchema.omit({ createdAt: true, updatedAt: true }),
+                })
+            ),
+        })
+    );
 
 export type Blog = z.infer<typeof blogSchema>;
 export type CreateBlog = z.infer<typeof createBlogSchema>;
+export type UpdateBlog = z.infer<typeof updateBlogSchema>;
+export type BlogToTags = z.infer<typeof blogToTagsSchema>;
+export type BlogWithAuthorAndTag = z.infer<typeof blogWithAuthorAndTagSchema>;
