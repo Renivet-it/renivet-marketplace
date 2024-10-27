@@ -7,7 +7,7 @@ import Image from "next/image";
 export function Landing({ className, ...props }: GenericProps) {
     return (
         <section className={cn("", className)} {...props}>
-            <div className="relative flex h-[calc(100vh-70px)] w-full items-center justify-center overflow-hidden sm:min-h-[60vh] md:min-h-[70vh] lg:min-h-[80vh]">
+            <div className="relative flex h-[calc(100vh-70px)] w-full items-center justify-center overflow-hidden">
                 <Image
                     src="/images/landing1.jpg"
                     alt="Landing"
