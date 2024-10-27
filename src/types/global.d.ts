@@ -44,6 +44,12 @@ declare global {
                 }[];
             }[];
         };
+        contact: {
+            officeHours: string;
+            email: string;
+            phone: string;
+            location: string;
+        };
     };
 
     type ExtendedFile<T extends "image" | "video" | "document" = "image", K> = {

@@ -242,6 +242,7 @@ export function slugify(text: string, separator: string = "-") {
 
 export function convertValueToLabel(value: string) {
     return value
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
         .split(/[_-\s]/)
         .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
         .join(" ");
