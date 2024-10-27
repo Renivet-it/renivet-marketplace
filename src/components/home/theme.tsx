@@ -63,13 +63,13 @@ export function Theme({ className, ...props }: GenericProps) {
                                 </button>
                             </div>
 
-                            <div className="w-full">
+                            <div className="size-full">
                                 <Image
                                     src={item.image}
                                     height={700}
                                     width={500}
                                     alt="Pottery Design"
-                                    className="w-full object-cover md:flex-1"
+                                    className="size-full object-cover"
                                 />
                             </div>
                         </div>
