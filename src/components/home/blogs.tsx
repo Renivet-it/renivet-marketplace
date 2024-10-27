@@ -21,11 +21,9 @@ export function Blogs({ className, ...props }: GenericProps) {
             {...props}
         >
             <div className="flex w-full max-w-5xl flex-col items-center gap-5 md:gap-10 xl:max-w-[100rem]">
-                <div className="flex w-full items-center justify-center gap-4">
-                    <h2 className="text-2xl font-semibold uppercase md:text-3xl">
-                        Our Blogs
-                    </h2>
-                </div>
+                <h2 className="text-balance text-center text-2xl font-semibold uppercase md:text-3xl">
+                    Our Blogs
+                </h2>
 
                 <div className="flex w-full flex-col bg-muted lg:flex-row">
                     <div className="flex w-full flex-col items-center gap-5 p-6 text-center md:gap-10 md:p-10">

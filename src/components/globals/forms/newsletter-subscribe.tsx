@@ -17,10 +17,15 @@ import {
     createNewsletterSubscriberSchema,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Dispatch, SetStateAction } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export function NewsLetterSubscribeForm() {
+interface PageProps {
+    setCurrentTab: Dispatch<SetStateAction<"community" | "brand">>;
+}
+
+export function NewsLetterSubscribeForm({ setCurrentTab }: PageProps) {
     const setIsOpen = useIntroModalStore((state) => state.setIsOpen);
 
     const form = useForm<CreateNewsletterSubscriber>({
@@ -98,6 +103,16 @@ export function NewsLetterSubscribeForm() {
                         </FormItem>
                     )}
                 />
+
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => setCurrentTab("brand")}
+                        className="text-sm text-muted-foreground underline"
+                    >
+                        Join as a Brand
+                    </button>
+                </div>
 
                 <Button
                     variant="accent"

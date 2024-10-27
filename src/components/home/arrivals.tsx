@@ -51,11 +51,9 @@ export function Arrivals({ title, className, ...props }: PageProps) {
             {...props}
         >
             <div className="w-full max-w-5xl space-y-5 md:space-y-10 xl:max-w-[100rem]">
-                <div className="flex items-center justify-center gap-4">
-                    <h2 className="text-2xl font-semibold uppercase md:text-3xl">
-                        {title}
-                    </h2>
-                </div>
+                <h2 className="text-balance text-center text-2xl font-semibold uppercase md:text-3xl">
+                    {title}
+                </h2>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Suspense
