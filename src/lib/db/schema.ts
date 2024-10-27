@@ -43,6 +43,16 @@ export const profiles = pgTable("profiles", {
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const contactUs = pgTable("contact_us", {
+    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    company: text("company"),
+    message: text("message").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const brandsWaitlist = pgTable("brands_waitlist", {
     id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
     name: text("name").notNull(),
