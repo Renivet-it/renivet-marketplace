@@ -3,6 +3,7 @@ import {
     Arrivals,
     Blogs,
     Collection,
+    Expectations,
     Landing,
     Offer,
     Popular,
@@ -15,6 +16,7 @@ export default function Page() {
             <Landing />
             <Collection />
             <Offer />
+            <Expectations />
             <Popular title="Best Sellers" />
             <Theme />
             <Arrivals title="New Arrivals" />
