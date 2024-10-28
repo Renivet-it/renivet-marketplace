@@ -98,7 +98,6 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                 onClick={() => setIsMenuOpen(false)}
                             >
                                 <span>{item.name}</span>
-                                {/* @ts-expect-error */}
                                 <Icon className="size-5" />
                             </Link>
                         </li>

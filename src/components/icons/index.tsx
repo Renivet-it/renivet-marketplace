@@ -1,9 +1,43 @@
-import * as LucideIcons from "lucide-react";
+import LucideIcons, {
+    ArrowRight,
+    Facebook,
+    Footprints,
+    Heart,
+    Home,
+    Instagram,
+    Leaf,
+    Linkedin,
+    Mail,
+    Menu,
+    Search,
+    ShoppingBag,
+    ShoppingCart,
+    Twitter,
+    User,
+    UserCircle,
+    Youtube,
+} from "lucide-react";
 
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
-    ...LucideIcons,
+    Footprints,
+    Leaf,
+    Heart,
+    UserCircle,
+    Search,
+    ShoppingCart,
+    Menu,
+    ArrowRight,
+    Youtube,
+    Linkedin,
+    Instagram,
+    Twitter,
+    Facebook,
+    Mail,
+    User,
+    ShoppingBag,
+    Home,
     X_Twitter: (props: LucideIcons.LucideProps) => (
         <svg
             aria-hidden="true"
