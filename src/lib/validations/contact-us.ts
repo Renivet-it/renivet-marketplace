@@ -10,7 +10,7 @@ export const contactUsSchema = z.object({
             required_error: "ID is required",
             invalid_type_error: "ID must be a string",
         })
-        .length(32, "ID must be 32 characters long"),
+        .uuid("ID is invalid"),
     name: z
         .string({
             required_error: "Name is required",

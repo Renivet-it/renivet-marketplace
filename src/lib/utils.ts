@@ -6,7 +6,6 @@ import {
 } from "@/config/permissions";
 import { init } from "@paralleldrive/cuid2";
 import { clsx, type ClassValue } from "clsx";
-import ms from "enhanced-ms";
 import { NextResponse } from "next/server";
 import { toast } from "sonner";
 import { ValidationError, WebhookVerificationError } from "svix";
@@ -262,10 +261,6 @@ export function generateId(
     }
 ) {
     return init(opts)();
-}
-
-export function convertToSeconds(input: string): number {
-    return ms(input) / 1000;
 }
 
 export function convertBitToString(bit: number): string {

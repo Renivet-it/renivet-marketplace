@@ -8,7 +8,7 @@ export const userSchema = z.object({
             required_error: "ID is required",
             invalid_type_error: "ID must be a string",
         })
-        .uuid("ID is invalid"),
+        .min(1, "ID is required"),
     firstName: z
         .string({
             required_error: "First name is required",
