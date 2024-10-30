@@ -4,6 +4,7 @@ export * from "./contact-us";
 export * from "./newsletter-subscriber";
 export * from "./profile";
 export * from "./response";
+export * from "./role";
 export * from "./tag";
 export * from "./user";
 export * from "./webhook";

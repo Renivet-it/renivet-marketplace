@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
                             isProfileCompleted: false,
                             phone: null,
                         },
+                        roles: [],
                     };
 
                     await Promise.all([
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
                     const cachedUser: CachedUser = {
                         ...user,
                         profile: existingCachedUser.profile,
+                        roles: existingCachedUser.roles,
                     };
 
                     await Promise.all([

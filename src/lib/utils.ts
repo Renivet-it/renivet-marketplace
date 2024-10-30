@@ -1,5 +1,9 @@
 import { env } from "@/../env";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import {
+    BitFieldBrandPermission,
+    BitFieldSitePermission,
+} from "@/config/permissions";
 import { init } from "@paralleldrive/cuid2";
 import { clsx, type ClassValue } from "clsx";
 import ms from "enhanced-ms";
@@ -8,7 +12,7 @@ import { toast } from "sonner";
 import { ValidationError, WebhookVerificationError } from "svix";
 import { twMerge } from "tailwind-merge";
 import { ZodError } from "zod";
-import { ResponseMessages } from "./validations";
+import { CachedUser, ResponseMessages } from "./validations";
 
 export function wait(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -262,4 +266,40 @@ export function generateId(
 
 export function convertToSeconds(input: string): number {
     return ms(input) / 1000;
+}
+
+export function convertBitToString(bit: number): string {
+    return bit.toString();
+}
+
+export function hasPermission(
+    userPermissions: number,
+    requiredPermissions: number[],
+    type: "all" | "any" = "all"
+) {
+    if (requiredPermissions.length === 0) return false;
+    if (userPermissions & BitFieldSitePermission.ADMINISTRATOR) return true;
+    if (userPermissions & BitFieldBrandPermission.ADMINISTRATOR) return true;
+
+    const requiredBitmask = requiredPermissions.reduce(
+        (acc, permission) => acc | permission,
+        0
+    );
+
+    return type === "all"
+        ? (userPermissions & requiredBitmask) === requiredBitmask
+        : (userPermissions & requiredBitmask) !== 0;
+}
+
+export function getUserPermissions(roles: CachedUser["roles"]) {
+    return {
+        sitePermissions: roles.reduce(
+            (acc, role) => acc | parseInt(role.sitePermissions, 10),
+            0
+        ),
+        brandPermissions: roles.reduce(
+            (acc, role) => acc | parseInt(role.brandPermissions, 10),
+            0
+        ),
+    };
 }

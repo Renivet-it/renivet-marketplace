@@ -1,26 +1,57 @@
+import { BitFieldSitePermission } from "@/config/permissions";
 import {
     createTRPCRouter,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
+import { hasPermission } from "@/lib/utils";
 import { createContactUsSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const contactUsRouter = createTRPCRouter({
-    getContactUs: protectedProcedure.query(async ({ ctx }) => {
-        const { db } = ctx;
+    getContactUs: protectedProcedure
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
 
-        const contactUs = await db.query.contactUs.findMany();
-        return contactUs;
-    }),
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.VIEW_FEEDBACK,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
+        .query(async ({ ctx }) => {
+            const { db } = ctx;
+
+            const contactUs = await db.query.contactUs.findMany();
+            return contactUs;
+        }),
     getContactUsSingle: protectedProcedure
         .input(
             z.object({
                 id: z.string(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.VIEW_FEEDBACK,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .query(async ({ input, ctx }) => {
             const { db, schemas } = ctx;
             const { id } = input;
@@ -56,6 +87,20 @@ export const contactUsRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_FEEDBACK,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id } = input;

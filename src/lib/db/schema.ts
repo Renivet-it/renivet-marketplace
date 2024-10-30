@@ -9,11 +9,21 @@ import {
     text,
     timestamp,
     uniqueIndex,
+    uuid,
 } from "drizzle-orm/pg-core";
-import { generateId } from "../utils";
 import { Profile } from "../validations";
 
 // SCHEMAS
+
+export const roles = pgTable("roles", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    sitePermissions: text("site_permissions").notNull().default("0"),
+    brandPermissions: text("brand_permissions").notNull().default("0"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 export const users = pgTable("users", {
     id: text("id").primaryKey().notNull().unique(),
@@ -27,7 +37,7 @@ export const users = pgTable("users", {
 });
 
 export const profiles = pgTable("profiles", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     userId: text("user_id")
         .notNull()
         .unique()
@@ -43,8 +53,33 @@ export const profiles = pgTable("profiles", {
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const userRoles = pgTable(
+    "user_roles",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, {
+                onDelete: "cascade",
+            }),
+        roleId: uuid("role_id")
+            .notNull()
+            .references(() => roles.id, {
+                onDelete: "cascade",
+            }),
+        createdAt: timestamp("created_at").notNull().defaultNow(),
+        updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    },
+    (table) => {
+        return {
+            userIdIdx: index("user_id_idx").on(table.userId),
+            roleIdIdx: index("role_id_idx").on(table.roleId),
+        };
+    }
+);
+
 export const contactUs = pgTable("contact_us", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
@@ -54,7 +89,7 @@ export const contactUs = pgTable("contact_us", {
 });
 
 export const brandsWaitlist = pgTable("brands_waitlist", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull(),
     phone: text("phone"),
@@ -64,8 +99,8 @@ export const brandsWaitlist = pgTable("brands_waitlist", {
     brandWebsite: text("brand_website"),
 });
 
-export const blogTags = pgTable("blog_tags", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+export const tags = pgTable("tags", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -73,7 +108,7 @@ export const blogTags = pgTable("blog_tags", {
 });
 
 export const blogs = pgTable("blogs", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),
     slug: text("slug").notNull().unique(),
     description: text("description").notNull(),
@@ -90,16 +125,16 @@ export const blogs = pgTable("blogs", {
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const blogToTags = pgTable(
-    "blog_to_tags",
+export const blogTags = pgTable(
+    "blog_tags",
     {
-        id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
-        blogId: text("blog_id")
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        blogId: uuid("blog_id")
             .notNull()
             .references(() => blogs.id, { onDelete: "cascade" }),
-        tagId: text("tag_id")
+        tagId: uuid("tag_id")
             .notNull()
-            .references(() => blogTags.id, { onDelete: "cascade" }),
+            .references(() => tags.id, { onDelete: "cascade" }),
         createdAt: timestamp("created_at").notNull().defaultNow(),
     },
     (table) => {
@@ -115,7 +150,7 @@ export const blogToTags = pgTable(
 );
 
 export const newsletterSubscribers = pgTable("newsletter_subscribers", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
     isActive: boolean("is_active").notNull().default(true),
@@ -124,7 +159,7 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
 });
 
 export const brands = pgTable("brands", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull().unique(),
     logoUrl: text("logo_url"),
     registeredBy: text("registered_by")
@@ -138,16 +173,16 @@ export const brands = pgTable("brands", {
 });
 
 export const category = pgTable("category", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull().unique(),
     description: text("description"),
-    parentId: text("parent_id"),
+    parentId: uuid("parent_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const products = pgTable("products", {
-    id: text("id").primaryKey().notNull().unique().$defaultFn(generateId),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     description: text("description"),
     price: numeric("price", {
@@ -156,17 +191,17 @@ export const products = pgTable("products", {
     }).notNull(),
     quantity: integer("quantity").notNull().default(0),
     colors: text("colors").$type<string[]>(),
-    brandId: text("brand_id")
+    brandId: uuid("brand_id")
         .notNull()
         .references(() => brands.id, {
             onDelete: "cascade",
         }),
-    categoryId: text("category_id")
+    categoryId: uuid("category_id")
         .notNull()
         .references(() => category.id, {
             onDelete: "cascade",
         }),
-    subCategoryId: text("sub_category_id")
+    subCategoryId: uuid("sub_category_id")
         .notNull()
         .references(() => category.id, {
             onDelete: "cascade",
@@ -186,6 +221,7 @@ export const products = pgTable("products", {
 export const usersRelations = relations(users, ({ one, many }) => ({
     profile: one(profiles),
     blogs: many(blogs),
+    roles: many(userRoles),
 }));
 
 export const profilesRelations = relations(profiles, ({ one }) => ({
@@ -195,25 +231,40 @@ export const profilesRelations = relations(profiles, ({ one }) => ({
     }),
 }));
 
+export const rolesRelations = relations(roles, ({ many }) => ({
+    userRoles: many(userRoles),
+}));
+
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+    user: one(users, {
+        fields: [userRoles.userId],
+        references: [users.id],
+    }),
+    role: one(roles, {
+        fields: [userRoles.roleId],
+        references: [roles.id],
+    }),
+}));
+
 export const blogsRelations = relations(blogs, ({ one, many }) => ({
     author: one(users, {
         fields: [blogs.authorId],
         references: [users.id],
     }),
-    blogToTags: many(blogToTags),
+    tags: many(blogTags),
 }));
 
-export const blogTagsRelations = relations(blogTags, ({ many }) => ({
-    blogToTags: many(blogToTags),
+export const tagsRelations = relations(tags, ({ many }) => ({
+    blogTags: many(blogTags),
 }));
 
-export const blogToTagsRelations = relations(blogToTags, ({ one }) => ({
+export const blogTagsRelations = relations(blogTags, ({ one }) => ({
     blog: one(blogs, {
-        fields: [blogToTags.blogId],
+        fields: [blogTags.blogId],
         references: [blogs.id],
     }),
     tag: one(blogTags, {
-        fields: [blogToTags.tagId],
+        fields: [blogTags.tagId],
         references: [blogTags.id],
     }),
 }));

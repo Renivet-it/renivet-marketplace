@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { profileSchema } from "./profile";
+import { roleSchema } from "./role";
 
 export const userSchema = z.object({
     id: z
@@ -7,7 +8,7 @@ export const userSchema = z.object({
             required_error: "ID is required",
             invalid_type_error: "ID must be a string",
         })
-        .min(1, "ID is required"),
+        .uuid("ID is invalid"),
     firstName: z
         .string({
             required_error: "First name is required",
@@ -46,13 +47,19 @@ export const userSchema = z.object({
     }),
 });
 
-export const userWithProfileSchema = userSchema.extend({
+export const userWithProfileAndRolesSchema = userSchema.extend({
     profile: profileSchema.omit({
         id: true,
         userId: true,
         createdAt: true,
         updatedAt: true,
     }),
+    roles: z.array(
+        roleSchema.omit({
+            createdAt: true,
+            updatedAt: true,
+        })
+    ),
 });
 
 export const safeUserSchema = userSchema.omit({
@@ -60,8 +67,8 @@ export const safeUserSchema = userSchema.omit({
     isVerified: true,
 });
 
-export const cachedUserSchema = userWithProfileSchema;
+export const cachedUserSchema = userWithProfileAndRolesSchema;
 
 export type User = z.infer<typeof userSchema>;
-export type UserWithProfile = z.infer<typeof userWithProfileSchema>;
+export type UserWithProfile = z.infer<typeof userWithProfileAndRolesSchema>;
 export type CachedUser = z.infer<typeof cachedUserSchema>;
