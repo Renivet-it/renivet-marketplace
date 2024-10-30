@@ -1,19 +1,19 @@
 import {
     blogsRouter,
-    blogTagsRouter,
     brandsWaitlistRouter,
     contactUsRouter,
     newsletterSubscriberRouter,
+    tagsRouter,
     usersRouter,
 } from "./routes";
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({
-    blogTags: blogTagsRouter,
     blogs: blogsRouter,
-    contactUs: contactUsRouter,
     brandsWaitlist: brandsWaitlistRouter,
+    contactUs: contactUsRouter,
     newsletterSubscribers: newsletterSubscriberRouter,
+    tags: tagsRouter,
     users: usersRouter,
 });
 

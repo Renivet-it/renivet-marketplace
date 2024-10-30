@@ -49,7 +49,6 @@ export function ContactHeading({ className, ...props }: GenericProps) {
                                             key={key}
                                             className="aspect-square bg-secondary p-2 text-secondary-foreground"
                                         >
-                                            {/* @ts-expect-error */}
                                             <Icon className="size-3 md:size-4" />
                                         </Link>
                                     );

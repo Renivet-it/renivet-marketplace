@@ -144,7 +144,7 @@ export const blogWithAuthorAndTagSchema = blogSchema
     )
     .merge(
         z.object({
-            blogToTags: z.array(
+            tags: z.array(
                 z.object({
                     tag: tagSchema.omit({ createdAt: true, updatedAt: true }),
                 })

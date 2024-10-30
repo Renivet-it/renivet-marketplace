@@ -1,9 +1,10 @@
+import { BitFieldSitePermission } from "@/config/permissions";
 import {
     createTRPCRouter,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
-import { slugify } from "@/lib/utils";
+import { hasPermission, slugify } from "@/lib/utils";
 import {
     blogWithAuthorAndTagSchema,
     createBlogSchema,
@@ -27,9 +28,9 @@ export const blogsRouter = createTRPCRouter({
             const blogs = await db.query.blogs.findMany({
                 with: {
                     author: true,
-                    blogToTags: {
+                    tags: {
                         where: tagId
-                            ? eq(schemas.blogToTags.tagId, tagId)
+                            ? eq(schemas.blogTags.tagId, tagId)
                             : undefined,
                         with: {
                             tag: true,
@@ -65,9 +66,9 @@ export const blogsRouter = createTRPCRouter({
                 ),
                 with: {
                     author: true,
-                    blogToTags: {
+                    tags: {
                         where: tagId
-                            ? eq(schemas.blogToTags.tagId, tagId)
+                            ? eq(schemas.blogTags.tagId, tagId)
                             : undefined,
                         with: {
                             tag: true,
@@ -75,7 +76,7 @@ export const blogsRouter = createTRPCRouter({
                     },
                 },
             });
-            if (!blog || (tagId && blog.blogToTags.length === 0))
+            if (!blog || (tagId && blog.tags.length === 0))
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Blog not found",
@@ -86,6 +87,20 @@ export const blogsRouter = createTRPCRouter({
         }),
     createBlog: protectedProcedure
         .input(createBlogSchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BLOGS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas, user } = ctx;
 
@@ -126,7 +141,7 @@ export const blogsRouter = createTRPCRouter({
                     .returning()
                     .then((res) => res[0]);
 
-                await tx.insert(schemas.blogToTags).values(
+                await tx.insert(schemas.blogTags).values(
                     input.tagIds.map((tagId) => ({
                         blogId: blog.id,
                         tagId,
@@ -151,6 +166,20 @@ export const blogsRouter = createTRPCRouter({
                     path: ["id", "slug"],
                 })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BLOGS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id, slug, data } = input;
@@ -161,7 +190,7 @@ export const blogsRouter = createTRPCRouter({
                     slug ? eq(schemas.blogs.slug, slug) : undefined
                 ),
                 with: {
-                    blogToTags: true,
+                    tags: true,
                 },
             });
             if (!blog)
@@ -203,6 +232,20 @@ export const blogsRouter = createTRPCRouter({
                 isPublished: z.boolean(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BLOGS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id, isPublished } = input;
@@ -234,6 +277,20 @@ export const blogsRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BLOGS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id } = input;

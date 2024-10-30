@@ -1,21 +1,26 @@
-import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { slugify } from "@/lib/utils";
+import { BitFieldSitePermission } from "@/config/permissions";
+import {
+    createTRPCRouter,
+    protectedProcedure,
+    publicProcedure,
+} from "@/lib/trpc/trpc";
+import { hasPermission, slugify } from "@/lib/utils";
 import { TRPCError } from "@trpc/server";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
-export const blogTagsRouter = createTRPCRouter({
-    getTags: protectedProcedure.query(async ({ ctx }) => {
+export const tagsRouter = createTRPCRouter({
+    getTags: publicProcedure.query(async ({ ctx }) => {
         const { db } = ctx;
 
-        const tags = await db.query.blogTags.findMany({
+        const tags = await db.query.tags.findMany({
             with: {
-                blogToTags: true,
+                blogTags: true,
             },
         });
         return tags;
     }),
-    getTag: protectedProcedure
+    getTag: publicProcedure
         .input(
             z.object({
                 id: z.string(),
@@ -25,10 +30,10 @@ export const blogTagsRouter = createTRPCRouter({
             const { db, schemas } = ctx;
             const { id } = input;
 
-            const tag = await db.query.blogTags.findFirst({
-                where: eq(schemas.blogTags.id, id),
+            const tag = await db.query.tags.findFirst({
+                where: eq(schemas.tags.id, id),
                 with: {
-                    blogToTags: true,
+                    blogTags: true,
                 },
             });
             if (!tag)
@@ -45,14 +50,28 @@ export const blogTagsRouter = createTRPCRouter({
                 name: z.string(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BLOG_TAGS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { name } = input;
 
             const slug = slugify(name);
 
-            const existingTag = await db.query.blogTags.findFirst({
-                where: eq(schemas.blogTags.slug, slug),
+            const existingTag = await db.query.tags.findFirst({
+                where: eq(schemas.tags.slug, slug),
             });
             if (existingTag)
                 throw new TRPCError({
@@ -61,7 +80,7 @@ export const blogTagsRouter = createTRPCRouter({
                 });
 
             const newTag = await db
-                .insert(schemas.blogTags)
+                .insert(schemas.tags)
                 .values({
                     name,
                     slug,
@@ -78,12 +97,26 @@ export const blogTagsRouter = createTRPCRouter({
                 name: z.string(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BLOG_TAGS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id, name } = input;
 
-            const existingTag = await db.query.blogTags.findFirst({
-                where: eq(schemas.blogTags.id, id),
+            const existingTag = await db.query.tags.findFirst({
+                where: eq(schemas.tags.id, id),
             });
             if (!existingTag)
                 throw new TRPCError({
@@ -93,10 +126,10 @@ export const blogTagsRouter = createTRPCRouter({
 
             const slug = slugify(name);
 
-            const existingOtherTag = await db.query.blogTags.findFirst({
+            const existingOtherTag = await db.query.tags.findFirst({
                 where: and(
-                    eq(schemas.blogTags.slug, slug),
-                    ne(schemas.blogTags.id, id)
+                    eq(schemas.tags.slug, slug),
+                    ne(schemas.tags.id, id)
                 ),
             });
             if (existingOtherTag)
@@ -106,12 +139,12 @@ export const blogTagsRouter = createTRPCRouter({
                 });
 
             const updatedTag = await db
-                .update(schemas.blogTags)
+                .update(schemas.tags)
                 .set({
                     name,
                     slug,
                 })
-                .where(eq(schemas.blogTags.id, id))
+                .where(eq(schemas.tags.id, id))
                 .returning()
                 .then((res) => res[0]);
 
@@ -123,12 +156,26 @@ export const blogTagsRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BLOG_TAGS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id } = input;
 
-            const existingTag = await db.query.blogTags.findFirst({
-                where: eq(schemas.blogTags.id, id),
+            const existingTag = await db.query.tags.findFirst({
+                where: eq(schemas.tags.id, id),
             });
             if (!existingTag)
                 throw new TRPCError({
@@ -136,9 +183,7 @@ export const blogTagsRouter = createTRPCRouter({
                     message: "Tag not found",
                 });
 
-            await db
-                .delete(schemas.blogTags)
-                .where(eq(schemas.blogTags.id, id));
+            await db.delete(schemas.tags).where(eq(schemas.tags.id, id));
 
             return true;
         }),
