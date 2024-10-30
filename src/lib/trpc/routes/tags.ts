@@ -5,6 +5,7 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { hasPermission, slugify } from "@/lib/utils";
+import { createTagSchema, updateTagSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -45,11 +46,7 @@ export const tagsRouter = createTRPCRouter({
             return tag;
         }),
     createTag: protectedProcedure
-        .input(
-            z.object({
-                name: z.string(),
-            })
-        )
+        .input(createTagSchema)
         .use(({ ctx, next }) => {
             const { user } = ctx;
 
@@ -94,7 +91,7 @@ export const tagsRouter = createTRPCRouter({
         .input(
             z.object({
                 id: z.string(),
-                name: z.string(),
+                data: updateTagSchema,
             })
         )
         .use(({ ctx, next }) => {
@@ -113,7 +110,7 @@ export const tagsRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
-            const { id, name } = input;
+            const { id, data } = input;
 
             const existingTag = await db.query.tags.findFirst({
                 where: eq(schemas.tags.id, id),
@@ -124,7 +121,7 @@ export const tagsRouter = createTRPCRouter({
                     message: "Tag not found",
                 });
 
-            const slug = slugify(name);
+            const slug = slugify(data.name);
 
             const existingOtherTag = await db.query.tags.findFirst({
                 where: and(
@@ -141,7 +138,7 @@ export const tagsRouter = createTRPCRouter({
             const updatedTag = await db
                 .update(schemas.tags)
                 .set({
-                    name,
+                    ...data,
                     slug,
                 })
                 .where(eq(schemas.tags.id, id))

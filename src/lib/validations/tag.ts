@@ -6,7 +6,7 @@ export const tagSchema = z.object({
             required_error: "ID is required",
             invalid_type_error: "ID must be a string",
         })
-        .length(32, "ID must be 32 characters long"),
+        .uuid("ID is invalid"),
     name: z
         .string({
             required_error: "Name is required",
@@ -31,9 +31,12 @@ export const tagSchema = z.object({
 
 export const createTagSchema = tagSchema.omit({
     id: true,
+    slug: true,
     createdAt: true,
     updatedAt: true,
 });
+
+export const updateTagSchema = createTagSchema;
 
 export type Tag = z.infer<typeof tagSchema>;
 export type CreateTag = z.infer<typeof createTagSchema>;
