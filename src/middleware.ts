@@ -1,5 +1,8 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { BitFieldSitePermission } from "./config/permissions";
+import { userCache } from "./lib/redis/methods";
+import { getUserPermissions, hasPermission } from "./lib/utils";
 
 export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
@@ -19,8 +22,18 @@ export default clerkMiddleware(async (auth, req) => {
         if (url.pathname === "/auth/signin")
             return NextResponse.redirect(new URL("/dashboard", url));
 
-        if (url.pathname === "/dashboard/guilds")
-            return NextResponse.redirect(new URL("/dashboard", url));
+        const existingUser = await userCache.get(isAuth.userId);
+        if (!existingUser)
+            return NextResponse.redirect(new URL("/auth/signin", url));
+
+        const { sitePermissions } = getUserPermissions(existingUser.roles);
+
+        if (url.pathname.startsWith("/dashboard")) {
+            const isAuthorized = hasPermission(sitePermissions, [
+                BitFieldSitePermission.VIEW_PROTECTED_PAGES,
+            ]);
+            if (!isAuthorized) return NextResponse.redirect(new URL("/", url));
+        }
     }
 
     if (!isAuth.sessionId)

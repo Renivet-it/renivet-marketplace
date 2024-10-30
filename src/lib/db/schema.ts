@@ -19,8 +19,8 @@ export const roles = pgTable("roles", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
-    sitePermissions: text("site_permissions").notNull().default("0"),
-    brandPermissions: text("brand_permissions").notNull().default("0"),
+    sitePermissions: text("site_permissions").notNull(),
+    brandPermissions: text("brand_permissions").notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

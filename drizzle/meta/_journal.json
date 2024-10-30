@@ -8,6 +8,13 @@
       "when": 1730208601862,
       "tag": "0000_robust_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1730280221843,
+      "tag": "0001_complex_yellowjacket",
+      "breakpoints": true
     }
   ]
 }
