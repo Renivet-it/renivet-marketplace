@@ -1,4 +1,4 @@
-import { convertToSeconds, generateCacheKey, parseToJSON } from "@/lib/utils";
+import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedUser } from "@/lib/validations";
 import { redis } from "..";
 
@@ -18,7 +18,7 @@ class UserCache {
             this.genKey(user.id),
             JSON.stringify(user),
             "EX",
-            convertToSeconds("1d")
+            60 * 60 * 24
         );
     }
 
