@@ -45,6 +45,11 @@ export const createContext = async ({
                 where: eq(schema.users.id, auth.userId),
                 with: {
                     profile: true,
+                    roles: {
+                        with: {
+                            role: true,
+                        },
+                    },
                 },
             });
 
@@ -52,6 +57,7 @@ export const createContext = async ({
                 user = {
                     ...dbUser,
                     profile: dbUser.profile,
+                    roles: dbUser.roles.map((r) => r.role),
                 };
 
                 const cachedUser: CachedUser = {
@@ -65,6 +71,7 @@ export const createContext = async ({
                         phone: user.profile.phone,
                         isProfileCompleted: user.profile.isProfileCompleted,
                     },
+                    roles: user.roles,
                     isVerified: user.isVerified,
                     createdAt: user.createdAt,
                     updatedAt: user.updatedAt,

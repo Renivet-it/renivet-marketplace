@@ -4,7 +4,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: {
-        default: siteConfig.name + " | " + siteConfig.description,
+        default: siteConfig.description + " | " + siteConfig.name,
         template: "%s | " + siteConfig.name,
     },
 };

@@ -17,7 +17,7 @@ const dummyBlogs = Array.from({ length: 50 }, (_, i) => ({
     title: `Blog Post ${i + 1}`,
     slug: `blog-post-${i + 1}`,
     description: `This is the description for blog post ${i + 1}`,
-    thumbnailUrl: "https://picsum.photos/seed/picsum/1920/1080",
+    thumbnailUrl: `https://picsum.photos/seed/${i + 1}/1920/1080`,
     publishedAt: new Date(),
     author: {
         firstName: "John",
@@ -55,7 +55,7 @@ export function BlogsPage({ className, ...props }: PageProps) {
             <section className="flex w-full flex-col items-center justify-between overflow-hidden bg-muted md:max-h-[calc(40vh)] md:flex-row">
                 <div className="size-full overflow-hidden">
                     <Image
-                        src="https://picsum.photos/seed/picsum/1500/1000"
+                        src="https://picsum.photos/seed/700/1500/1000"
                         alt="Blog1"
                         width={1000}
                         height={1000}

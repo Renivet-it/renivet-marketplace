@@ -9,38 +9,38 @@ import { cn } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 
-export function Collection({ className, ...props }: GenericProps) {
-    const demoData = [
-        {
-            title: "T-Shirts",
-            img: "/images/collection1.jpeg",
-        },
-        {
-            title: "Hoodies",
-            img: "/images/collection2.jpeg",
-        },
-        {
-            title: "T-shirts",
-            img: "/images/collection3.jpeg",
-        },
-        {
-            title: "COLLECTION",
-            img: "/images/collection4.jpeg",
-        },
-        {
-            title: "New Arrivals",
-            img: "/images/collection5.jpeg",
-        },
-        {
-            title: "Exclusive",
-            img: "/images/collection6.jpg",
-        },
-    ];
+const demoData = [
+    {
+        title: "T-Shirts",
+        img: "/images/collection1.jpeg",
+    },
+    {
+        title: "Hoodies",
+        img: "/images/collection2.jpeg",
+    },
+    {
+        title: "T-shirts",
+        img: "/images/collection3.jpeg",
+    },
+    {
+        title: "COLLECTION",
+        img: "/images/collection4.jpeg",
+    },
+    {
+        title: "New Arrivals",
+        img: "/images/collection5.jpeg",
+    },
+    {
+        title: "Exclusive",
+        img: "/images/collection6.jpg",
+    },
+];
 
+export function Collection({ className, ...props }: GenericProps) {
     return (
         <section
             className={cn(
-                "relative flex w-full justify-center py-5 pt-10 md:px-8 md:py-10 md:pt-20",
+                "flex w-full justify-center py-5 pt-10 md:px-8 md:py-10 md:pt-20",
                 className
             )}
             {...props}

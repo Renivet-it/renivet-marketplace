@@ -23,6 +23,19 @@ export const siteConfig: SiteConfig = {
         width: 1200,
         height: 630,
     },
+    links: {
+        Facebook: "#",
+        Twitter: "#",
+        Instagram: "#",
+        Linkedin: "#",
+        Youtube: "#",
+    },
+    contact: {
+        officeHours: "Monday - Friday, 9:00 AM - 5:00 PM",
+        email: "support@renivet.com",
+        phone: "+1 (234) 567-8901",
+        location: "1234 Main Street, New York, NY 10001",
+    },
     menu: [
         {
             name: "Home",

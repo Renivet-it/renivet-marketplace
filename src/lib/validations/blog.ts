@@ -8,7 +8,7 @@ export const blogSchema = z.object({
             required_error: "ID is required",
             invalid_type_error: "ID must be a string",
         })
-        .length(32, "ID must be 32 characters long"),
+        .uuid("ID is invalid"),
     title: z
         .string({
             required_error: "Title is required",
@@ -45,7 +45,7 @@ export const blogSchema = z.object({
             required_error: "Author ID is required",
             invalid_type_error: "Author ID must be a string",
         })
-        .length(32, "Author ID must be 32 characters long"),
+        .min(1, "Author ID is required"),
     isPublished: z.boolean({
         required_error: "Is published is required",
         invalid_type_error: "Is published must be a boolean",
@@ -82,7 +82,7 @@ export const createBlogSchema = blogSchema
                         required_error: "Tag IDs is required",
                         invalid_type_error: "Tag IDs must be a string",
                     })
-                    .length(32, "Tag IDs must be 32 characters long")
+                    .uuid("ID is invalid")
             )
             .min(1, "At least one tag is required"),
     });
@@ -105,7 +105,7 @@ export const updateBlogSchema = blogSchema
                         required_error: "Tag IDs is required",
                         invalid_type_error: "Tag IDs must be a string",
                     })
-                    .length(32, "Tag IDs must be 32 characters long")
+                    .uuid("ID is invalid")
             )
             .min(1, "At least one tag is required"),
     })
@@ -117,19 +117,19 @@ export const blogToTagsSchema = z.object({
             required_error: "ID is required",
             invalid_type_error: "ID must be a string",
         })
-        .length(32, "ID must be 32 characters long"),
+        .uuid("ID is invalid"),
     blogId: z
         .string({
             required_error: "Blog ID is required",
             invalid_type_error: "Blog ID must be a string",
         })
-        .length(32, "Blog ID must be 32 characters long"),
+        .uuid("ID is invalid"),
     tagId: z
         .string({
             required_error: "Tag ID is required",
             invalid_type_error: "Tag ID must be a string",
         })
-        .length(32, "Tag ID must be 32 characters long"),
+        .uuid("ID is invalid"),
     createdAt: z.date({
         required_error: "Created at is required",
         invalid_type_error: "Created at must be a date",
@@ -144,7 +144,7 @@ export const blogWithAuthorAndTagSchema = blogSchema
     )
     .merge(
         z.object({
-            blogToTags: z.array(
+            tags: z.array(
                 z.object({
                     tag: tagSchema.omit({ createdAt: true, updatedAt: true }),
                 })
