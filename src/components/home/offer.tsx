@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import Link from "next/link";
 
 const offerData = {
     title: "UP TO 40% OFF OUR CHRISTMAS COLLECTION",
@@ -30,9 +31,12 @@ export function Offer({ className, ...props }: GenericProps) {
                         {offerData.description}
                     </p>
 
-                    <button className="font-semibold uppercase underline underline-offset-2 md:text-lg">
+                    <Link
+                        className="font-semibold uppercase underline underline-offset-2 md:text-lg"
+                        href="/soon"
+                    >
                         {offerData.buttonText}
-                    </button>
+                    </Link>
                 </div>
 
                 <div className="size-full">

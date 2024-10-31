@@ -298,3 +298,9 @@ export function getUserPermissions(roles: CachedUser["roles"]) {
         ),
     };
 }
+
+export function hideEmail(email: string) {
+    const [username, domain] = email.split("@");
+    const hiddenUsername = `${username.slice(0, 3)}${"*".repeat(5)}`;
+    return `${hiddenUsername}@${domain}`;
+}

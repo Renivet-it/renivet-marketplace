@@ -16,15 +16,25 @@ import { useIntroModalStore } from "@/lib/store";
 import ms from "enhanced-ms";
 import { useEffect, useState } from "react";
 
-export function IntroModal() {
+interface Props {
+    selectedTab?: "community" | "brand";
+}
+
+export function IntroModal({ selectedTab }: Props) {
     const [currentTab, setCurrentTab] = useState<"community" | "brand">(
-        "community"
+        selectedTab ?? "community"
     );
+
+    useEffect(() => {
+        if (selectedTab) setCurrentTab(selectedTab);
+    }, [selectedTab]);
 
     const isOpen = useIntroModalStore((state) => state.isOpen);
     const setIsOpen = useIntroModalStore((state) => state.setIsOpen);
 
     useEffect(() => {
+        if (selectedTab) return setIsOpen(true);
+
         if (
             typeof window === "undefined" ||
             typeof localStorage === "undefined"

@@ -1,12 +1,13 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { BitFieldSitePermission } from "./config/permissions";
-import { userCache } from "./lib/redis/methods";
-import { getUserPermissions, hasPermission } from "./lib/utils";
+import { cFetch } from "./lib/utils";
+import { ResponseData } from "./lib/validations";
 
 export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
     const res = NextResponse.next();
+
+    if (url.pathname === "/api/webhooks/clerk") return NextResponse.next();
 
     if (url.pathname === "/support")
         return NextResponse.redirect(new URL("https://dsc.gg/drvgo"), {
@@ -19,21 +20,21 @@ export default clerkMiddleware(async (auth, req) => {
     const isAuth = await auth();
 
     if (isAuth.sessionId) {
-        if (url.pathname === "/auth/signin")
-            return NextResponse.redirect(new URL("/dashboard", url));
+        if (url.pathname.startsWith("/auth"))
+            return NextResponse.redirect(new URL("/", url));
 
-        const existingUser = await userCache.get(isAuth.userId);
-        if (!existingUser)
-            return NextResponse.redirect(new URL("/auth/signin", url));
+        const searchParams = new URLSearchParams({
+            uId: isAuth.userId,
+            path: url.pathname,
+        });
 
-        const { sitePermissions } = getUserPermissions(existingUser.roles);
-
-        if (url.pathname.startsWith("/dashboard")) {
-            const isAuthorized = hasPermission(sitePermissions, [
-                BitFieldSitePermission.VIEW_PROTECTED_PAGES,
-            ]);
-            if (!isAuthorized) return NextResponse.redirect(new URL("/", url));
-        }
+        const res = await cFetch<ResponseData>(
+            new URL(
+                `/api/permission?${searchParams.toString()}`,
+                url
+            ).toString()
+        );
+        if (res.error) return NextResponse.redirect(new URL("/", url));
     }
 
     if (!isAuth.sessionId)

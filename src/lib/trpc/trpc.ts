@@ -46,12 +46,10 @@ const ratelimiter = t.middleware(({ ctx, next }) => {
     requests.push(now);
     map.set(identifier, requests);
 
-    return next({
-        ctx,
-    });
+    return next({ ctx });
 });
 
-const isAuth = t.middleware(async ({ ctx, next }) => {
+const isAuth = t.middleware(({ ctx, next }) => {
     if (!ctx.user || !ctx.auth)
         throw new TRPCError({
             code: "UNAUTHORIZED",
@@ -69,19 +67,17 @@ const isAuth = t.middleware(async ({ ctx, next }) => {
     });
 });
 
-const isBrand = isAuth.unstable_pipe(async ({ ctx, next }) => {
+const isBrand = isAuth.unstable_pipe(({ ctx, next }) => {
     if (ctx.user.brandPermissions <= 0)
         throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "You're not authorized",
         });
 
-    return next({
-        ctx,
-    });
+    return next({ ctx });
 });
 
-const isAdmin = isAuth.unstable_pipe(async ({ ctx, next }) => {
+const isAdmin = isAuth.unstable_pipe(({ ctx, next }) => {
     const isAuthorized = hasPermission(ctx.user.sitePermissions, [
         BitFieldSitePermission.ADMINISTRATOR,
     ]);
@@ -92,9 +88,7 @@ const isAdmin = isAuth.unstable_pipe(async ({ ctx, next }) => {
             message: "You're not authorized",
         });
 
-    return next({
-        ctx,
-    });
+    return next({ ctx });
 });
 
 const errorHandler = t.middleware(async ({ next }) => {

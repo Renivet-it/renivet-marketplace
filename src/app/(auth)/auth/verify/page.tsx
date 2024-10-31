@@ -1,4 +1,4 @@
-import { SignUpForm } from "@/components/globals/forms";
+import { OTPVerificationForm } from "@/components/globals/forms";
 import { GeneralShell } from "@/components/globals/layouts";
 import {
     Card,
@@ -9,8 +9,8 @@ import {
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "Create an Account",
-    description: "Create an account to access all features",
+    title: "Verify Email",
+    description: "Verify your email address",
 };
 
 export default function Page() {
@@ -22,13 +22,13 @@ export default function Page() {
         >
             <Card className="rounded-none">
                 <CardHeader>
-                    <CardTitle>Create an Account</CardTitle>
+                    <CardTitle>Verification</CardTitle>
                     <CardDescription>
-                        Create an account to access all features
+                        Enter the OTP sent to your email address
                     </CardDescription>
                 </CardHeader>
 
-                <SignUpForm />
+                <OTPVerificationForm />
             </Card>
         </GeneralShell>
     );

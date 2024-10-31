@@ -69,6 +69,26 @@ const config: Config = {
                 md: "calc(var(--radius) - 2px)",
                 sm: "calc(var(--radius) - 4px)",
             },
+            keyframes: {
+                "caret-blink": {
+                    "0%,70%,100%": { opacity: "1" },
+                    "20%,50%": { opacity: "0" },
+                },
+                spotlight: {
+                    "0%": {
+                        opacity: "0",
+                        transform: "translate(-72%, -62%) scale(0.5)",
+                    },
+                    "100%": {
+                        opacity: "1",
+                        transform: "translate(-50%,-40%) scale(1)",
+                    },
+                },
+            },
+            animation: {
+                "caret-blink": "caret-blink 1.25s ease-out infinite",
+                spotlight: "spotlight 2s ease .75s 1 forwards",
+            },
         },
     },
     plugins: [tAnimate],

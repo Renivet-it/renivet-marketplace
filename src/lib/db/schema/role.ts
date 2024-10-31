@@ -4,11 +4,11 @@ import { timestamps } from "../helper";
 import { userRoles } from "./user";
 
 export const roles = pgTable("roles", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    name: text().notNull(),
-    slug: text().notNull().unique(),
-    sitePermissions: text().notNull(),
-    brandPermissions: text().notNull(),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    sitePermissions: text("site_permissions").notNull(),
+    brandPermissions: text("brand_permissions").notNull(),
     ...timestamps,
 });
 

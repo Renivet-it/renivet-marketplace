@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
+import Link from "next/link";
 
 const demoData = [
     {
@@ -63,19 +64,21 @@ export function Collection({ className, ...props }: GenericProps) {
                                 key={index}
                                 className="space-y-4 text-center md:basis-1/2 lg:basis-1/4"
                             >
-                                <div className="h-80">
-                                    <Image
-                                        width={1000}
-                                        height={1000}
-                                        src={item.img}
-                                        alt={item.title}
-                                        className="size-full object-cover"
-                                    />
-                                </div>
+                                <Link href="/soon">
+                                    <div className="h-80">
+                                        <Image
+                                            width={1000}
+                                            height={1000}
+                                            src={item.img}
+                                            alt={item.title}
+                                            className="size-full object-cover"
+                                        />
+                                    </div>
 
-                                <h3 className="text-lg font-semibold uppercase">
-                                    {item.title}
-                                </h3>
+                                    <h3 className="text-lg font-semibold uppercase">
+                                        {item.title}
+                                    </h3>
+                                </Link>
                             </CarouselItem>
                         ))}
                     </CarouselContent>

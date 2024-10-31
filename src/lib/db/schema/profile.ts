@@ -5,16 +5,18 @@ import { timestamps } from "../helper";
 import { users } from "./user";
 
 export const profiles = pgTable("profiles", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    userId: text()
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    userId: text("user_id")
         .notNull()
         .unique()
         .references(() => users.id, {
             onDelete: "cascade",
         }),
-    phone: text().unique(),
-    address: jsonb().$type<Profile["address"]>(),
-    isProfileCompleted: boolean().notNull().default(false),
+    phone: text("phone").unique(),
+    address: jsonb("address").$type<Profile["address"]>(),
+    isProfileCompleted: boolean("is_profile_completed")
+        .notNull()
+        .default(false),
     ...timestamps,
 });
 

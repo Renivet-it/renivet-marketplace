@@ -19,8 +19,8 @@ export const userWebhookSchema = z.object({
             }),
         })
     ),
-    createdAt: z.number().transform((val) => new Date(val)),
-    updatedAt: z.number().transform((val) => new Date(val)),
+    created_at: z.number().transform((val) => new Date(val)),
+    updated_at: z.number().transform((val) => new Date(val)),
 });
 
 export const userDeleteWebhookSchema = z.object({
