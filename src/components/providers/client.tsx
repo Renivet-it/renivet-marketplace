@@ -32,7 +32,7 @@ export function ClientProvider({ children }: LayoutProps) {
     return (
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
-                <NextThemesProvider attribute="class">
+                <NextThemesProvider attribute="class" defaultTheme="light">
                     {children}
                 </NextThemesProvider>
 

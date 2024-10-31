@@ -6,25 +6,25 @@ import { profiles } from "./profile";
 import { roles } from "./role";
 
 export const users = pgTable("users", {
-    id: text().primaryKey().notNull().unique(),
-    firstName: text().notNull(),
-    lastName: text().notNull(),
-    email: text().notNull().unique(),
-    avatarUrl: text(),
-    isVerified: boolean().notNull().default(false),
+    id: text("id").primaryKey().notNull().unique(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull().unique(),
+    avatarUrl: text("avatar_url"),
+    isVerified: boolean("is_verified").notNull().default(false),
     ...timestamps,
 });
 
 export const userRoles = pgTable(
     "user_roles",
     {
-        id: uuid().primaryKey().notNull().unique().defaultRandom(),
-        userId: text()
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        userId: text("user_id")
             .notNull()
             .references(() => users.id, {
                 onDelete: "cascade",
             }),
-        roleId: uuid()
+        roleId: uuid("role_id")
             .notNull()
             .references(() => roles.id, {
                 onDelete: "cascade",
@@ -33,8 +33,8 @@ export const userRoles = pgTable(
     },
     (table) => {
         return {
-            userIdIdx: index().on(table.userId),
-            roleIdIdx: index().on(table.roleId),
+            userIdIdx: index("user_id_idx").on(table.userId),
+            roleIdIdx: index("role_id_idx").on(table.roleId),
         };
     }
 );

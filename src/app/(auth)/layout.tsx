@@ -1,4 +1,4 @@
-import { AuthShell } from "@/components/globals/layouts";
+import { Footer, NavbarHome, NavbarMob } from "@/components/globals/layouts";
 import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
 
@@ -12,8 +12,11 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: LayoutProps) {
     return (
-        <main className="flex flex-1 flex-col">
-            <AuthShell>{children}</AuthShell>
-        </main>
+        <div className="relative flex min-h-screen flex-col">
+            <NavbarHome />
+            <main className="flex flex-1 flex-col">{children}</main>
+            <Footer />
+            <NavbarMob />
+        </div>
     );
 }

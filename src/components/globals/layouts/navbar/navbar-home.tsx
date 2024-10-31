@@ -2,20 +2,33 @@
 
 import { Icons } from "@/components/icons";
 import { Renivet } from "@/components/svgs";
-// import { DEFAULT_MESSAGES } from "@/config/const";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DEFAULT_MESSAGES } from "@/config/const";
 import { siteConfig } from "@/config/site";
 import { useNavbarStore } from "@/lib/store";
-// import { trpc } from "@/lib/trpc/client";
-// import { getAbsoluteURL } from "@/lib/utils";
-// import { useAuth } from "@clerk/nextjs";
-// import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
+import { trpc } from "@/lib/trpc/client";
+import { hideEmail } from "@/lib/utils";
+import { useAuth } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
+import { useMutation } from "@tanstack/react-query";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-// import { toast } from "sonner";
+import { toast } from "sonner";
 
 export function NavbarHome() {
+    const router = useRouter();
+
     const [isMenuHidden, setIsMenuHidden] = useState(false);
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
@@ -30,23 +43,31 @@ export function NavbarHome() {
         else setIsMenuHidden(false);
     });
 
-    // const { data, isPending } = trpc.users.currentUser.useQuery();
+    const { data: user } = trpc.users.currentUser.useQuery();
 
-    // const { signOut } = useAuth();
+    const { signOut } = useAuth();
 
-    // const handleLogout = async () => {
-    //     try {
-    //         await signOut({
-    //             redirectUrl: getAbsoluteURL(),
-    //         });
-    //     } catch (err) {
-    //         console.error(err);
-
-    //         return isClerkAPIResponseError(err)
-    //             ? toast.error(err.errors.map((e) => e.message).join(", "))
-    //             : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC);
-    //     }
-    // };
+    const { mutate: handleLogout, isPending: isLoggingOut } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Logging out...");
+            return { toastId };
+        },
+        mutationFn: () => signOut(),
+        onSuccess: (_, __, { toastId }) => {
+            toast.success("See you soon!", { id: toastId });
+            router.refresh();
+            router.push("/auth/signin");
+        },
+        onError: (err, _, ctx) => {
+            return isClerkAPIResponseError(err)
+                ? toast.error(err.errors.map((e) => e.message).join(", "), {
+                      id: ctx?.toastId,
+                  })
+                : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
+                      id: ctx?.toastId,
+                  });
+        },
+    });
 
     return (
         <motion.header
@@ -100,7 +121,9 @@ export function NavbarHome() {
                                 <Link
                                     className="text-sm ease-in-out"
                                     href={item.href}
-                                    target="_blank"
+                                    target={
+                                        item.isExternal ? "_blank" : "_self"
+                                    }
                                 >
                                     {item.name}
                                 </Link>
@@ -108,33 +131,116 @@ export function NavbarHome() {
                         ))}
                 </ul>
 
-                <div className="flex items-center">
-                    <Link
-                        aria-label="Mobile Cart Button"
-                        className="sm:hidden"
-                        href="/cart"
-                    >
-                        <Icons.ShoppingCart className="size-6" />
-                    </Link>
+                {user ? (
+                    <div className="flex items-center">
+                        <Link
+                            aria-label="Mobile Cart Button"
+                            className="sm:hidden"
+                            href="/cart"
+                        >
+                            <Icons.ShoppingCart className="size-6" />
+                        </Link>
 
-                    <div className="hidden items-center gap-5 md:flex">
-                        <button>
-                            <Icons.Search className="size-5" />
-                        </button>
+                        <div className="hidden items-center gap-5 md:flex">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button>
+                                        <Icons.UserCircle className="size-5" />
+                                        <span className="sr-only">
+                                            User menu
+                                        </span>
+                                    </button>
+                                </DropdownMenuTrigger>
 
-                        <button>
-                            <Icons.UserCircle className="size-5" />
-                        </button>
+                                <DropdownMenuContent className="min-w-56 rounded-none">
+                                    <DropdownMenuLabel className="space-y-1">
+                                        <p>
+                                            Hello,{" "}
+                                            <span className="font-semibold">
+                                                {user.firstName}
+                                            </span>
+                                        </p>
+                                        <p className="text-xs font-normal">
+                                            {hideEmail(user.email)}
+                                        </p>
+                                    </DropdownMenuLabel>
 
-                        <button>
-                            <Icons.Heart className="size-5" />
-                        </button>
+                                    <DropdownMenuSeparator />
 
-                        <button>
-                            <Icons.ShoppingCart className="size-5" />
-                        </button>
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem className="rounded-none">
+                                            <Icons.Package className="mr-2 size-4" />
+                                            <span>Orders</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem className="rounded-none">
+                                            <Icons.Heart className="mr-2 size-4" />
+                                            <span>Wishlist</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem className="rounded-none">
+                                            <Icons.LifeBuoy className="mr-2 size-4" />
+                                            <span>Contact Us</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem className="rounded-none">
+                                            <Icons.Ticket className="mr-2 size-4" />
+                                            <span>Coupons</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem className="rounded-none">
+                                            <Icons.Home className="mr-2 size-4" />
+                                            <span>Addresses</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem className="rounded-none">
+                                            <Icons.User2 className="mr-2 size-4" />
+                                            <span>Edit Profile</span>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuItem
+                                        className="rounded-none"
+                                        disabled={isLoggingOut}
+                                        onClick={() => handleLogout()}
+                                    >
+                                        <Icons.LogOut className="mr-2 size-4" />
+                                        <span>Log out</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <Link href="/soon">
+                                <Icons.Heart className="size-5" />
+                            </Link>
+
+                            <Link href="/soon">
+                                <Icons.ShoppingCart className="size-5" />
+                            </Link>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link href="/soon"> Become a Seller</Link>
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            className="border-accent text-accent"
+                            size="sm"
+                            asChild
+                        >
+                            <Link href="/auth/signin">Login/Signup</Link>
+                        </Button>
+                    </div>
+                )}
             </nav>
         </motion.header>
     );

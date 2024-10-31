@@ -10,7 +10,8 @@ class UserCache {
     }
 
     async get(id: string) {
-        return parseToJSON<CachedUser>(await redis.get(this.genKey(id)));
+        const user = await redis.get(this.genKey(id));
+        return parseToJSON<CachedUser>(user);
     }
 
     async add(user: CachedUser) {

@@ -36,14 +36,17 @@ export async function POST(req: NextRequest) {
                 {
                     const webhookUser = userWebhookSchema.parse(data);
 
-                    const user: Omit<User, "isVerified"> = {
+                    const user: User = {
                         id: webhookUser.id,
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
                         email: webhookUser.email_addresses[0].email_address,
                         avatarUrl: webhookUser.image_url,
-                        createdAt: webhookUser.createdAt,
-                        updatedAt: webhookUser.updatedAt,
+                        isVerified:
+                            webhookUser.email_addresses[0].verification
+                                .status === "verified",
+                        createdAt: webhookUser.created_at,
+                        updatedAt: webhookUser.updated_at,
                     };
 
                     const profile: Omit<
@@ -57,7 +60,9 @@ export async function POST(req: NextRequest) {
 
                     const cachedUser: CachedUser = {
                         ...user,
-                        isVerified: false,
+                        isVerified:
+                            webhookUser.email_addresses[0].verification
+                                .status === "verified",
                         profile: {
                             ...profile,
                             address: null,
@@ -67,8 +72,9 @@ export async function POST(req: NextRequest) {
                         roles: [],
                     };
 
+                    await db.insert(users).values(user);
+
                     await Promise.all([
-                        db.insert(users).values(user),
                         db.insert(profiles).values(profile),
                         userCache.add(cachedUser),
                     ]);
@@ -88,8 +94,8 @@ export async function POST(req: NextRequest) {
                         isVerified:
                             webhookUser.email_addresses[0].verification
                                 .status === "verified",
-                        createdAt: webhookUser.createdAt,
-                        updatedAt: webhookUser.updatedAt,
+                        createdAt: webhookUser.created_at,
+                        updatedAt: webhookUser.updated_at,
                     };
 
                     const existingCachedUser = await userCache.get(user.id);
@@ -98,6 +104,9 @@ export async function POST(req: NextRequest) {
 
                     const cachedUser: CachedUser = {
                         ...user,
+                        isVerified:
+                            webhookUser.email_addresses[0].verification
+                                .status === "verified",
                         profile: existingCachedUser.profile,
                         roles: existingCachedUser.roles,
                     };
@@ -135,6 +144,7 @@ export async function POST(req: NextRequest) {
             message: "OK",
         });
     } catch (err) {
+        console.error(err);
         return handleError(err);
     }
 }

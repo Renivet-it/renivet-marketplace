@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
 interface ThemeData {
@@ -58,9 +59,12 @@ export function Theme({ className, ...props }: GenericProps) {
                                     {item.description}
                                 </p>
 
-                                <button className="text-sm font-semibold uppercase underline underline-offset-2">
+                                <Link
+                                    className="text-sm font-semibold uppercase underline underline-offset-2"
+                                    href="/soon"
+                                >
                                     Learn More
-                                </button>
+                                </Link>
                             </div>
 
                             <div className="size-full">

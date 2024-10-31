@@ -4,36 +4,36 @@ import { timestamps } from "../helper";
 import { productCategories, products } from "./product";
 
 export const categories = pgTable("categories", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    name: text().notNull(),
-    slug: text().notNull().unique(),
-    description: text(),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description"),
     ...timestamps,
 });
 
 export const subCategories = pgTable("sub_categories", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    categoryId: uuid()
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    categoryId: uuid("category_id")
         .notNull()
         .references(() => categories.id, {
             onDelete: "cascade",
         }),
-    name: text().notNull(),
-    slug: text().notNull().unique(),
-    description: text(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description"),
     ...timestamps,
 });
 
 export const productTypes = pgTable("product_types", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    subCategoryId: uuid()
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    subCategoryId: uuid("sub_category_id")
         .notNull()
         .references(() => subCategories.id, {
             onDelete: "cascade",
         }),
-    name: text().notNull(),
-    slug: text().notNull().unique(),
-    description: text(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description"),
     ...timestamps,
 });
 

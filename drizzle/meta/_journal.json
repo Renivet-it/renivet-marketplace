@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1730292846718,
-      "tag": "0000_zippy_red_hulk",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1730295206347,
-      "tag": "0001_noisy_emma_frost",
+      "when": 1730381943372,
+      "tag": "0000_lumpy_puma",
       "breakpoints": true
     }
   ]

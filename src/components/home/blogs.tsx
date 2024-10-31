@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import Link from "next/link";
 
 const offerData = {
     title: "Glamorous Karwa Chauth Outfit Ideas Inspired By Celebs",
@@ -35,9 +36,12 @@ export function Blogs({ className, ...props }: GenericProps) {
                             {offerData.description}
                         </p>
 
-                        <button className="font-semibold uppercase underline underline-offset-2 md:text-lg">
+                        <Link
+                            className="font-semibold uppercase underline underline-offset-2 md:text-lg"
+                            href="/blogs"
+                        >
                             {offerData.buttonText}
-                        </button>
+                        </Link>
                     </div>
 
                     <div className="size-full">

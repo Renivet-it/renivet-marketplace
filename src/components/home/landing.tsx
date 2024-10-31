@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import Link from "next/link";
 
 export function Landing({ className, ...props }: GenericProps) {
     return (
@@ -33,8 +34,9 @@ export function Landing({ className, ...props }: GenericProps) {
                     <Button
                         size="lg"
                         className="mt-1 bg-background font-semibold uppercase text-foreground hover:bg-background/90 md:mt-0 md:py-7 md:text-lg"
+                        asChild
                     >
-                        Discover More
+                        <Link href="/soon">Discover More</Link>
                     </Button>
                 </div>
             </div>

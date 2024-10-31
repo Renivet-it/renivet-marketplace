@@ -13,26 +13,26 @@ import { brands } from "./brand";
 import { categories, productTypes, subCategories } from "./category";
 
 export const products = pgTable("products", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    name: text().notNull(),
-    description: text(),
-    price: numeric({
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    name: text("name").notNull(),
+    description: text("description"),
+    price: numeric("price", {
         precision: 10,
         scale: 2,
     }).notNull(),
-    quantity: integer().notNull().default(0),
-    colors: text().$type<string[]>(),
-    brandId: uuid()
+    quantity: integer("quantity").notNull().default(0),
+    colors: text("colors").$type<string[]>(),
+    brandId: uuid("brand_id")
         .notNull()
         .references(() => brands.id, {
             onDelete: "cascade",
         }),
-    productTypeId: uuid()
+    productTypeId: uuid("product_type_id")
         .notNull()
         .references(() => productTypes.id, {
             onDelete: "cascade",
         }),
-    images: jsonb().$type<
+    images: jsonb("images").$type<
         {
             color: string;
             urls: string[];
@@ -42,24 +42,24 @@ export const products = pgTable("products", {
 });
 
 export const productCategories = pgTable("product_categories", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    productId: uuid()
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
-    categoryId: uuid()
+    categoryId: uuid("category_id")
         .notNull()
         .references(() => categories.id, { onDelete: "cascade" }),
-    subcategoryId: uuid()
+    subcategoryId: uuid("subcategory_id")
         .notNull()
         .references(() => subCategories.id, {
             onDelete: "cascade",
         }),
-    productTypeId: uuid()
+    productTypeId: uuid("product_type_id")
         .notNull()
         .references(() => productTypes.id, {
             onDelete: "cascade",
         }),
-    isPrimary: boolean().notNull().default(false),
+    isPrimary: boolean("is_primary").notNull().default(false),
     ...timestamps,
 });
 
