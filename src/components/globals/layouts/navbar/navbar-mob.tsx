@@ -48,16 +48,16 @@ const extraMenu: SiteConfig["menu"] = [
         icon: "BookOpen",
     },
     {
-        name: "Terms of Services",
-        description: "Read our terms of service",
-        href: "/terms",
-        icon: "FileText",
-    },
-    {
         name: "Privacy Policy",
         description: "Read our privacy policy",
         href: "/privacy",
-        icon: "Copyright",
+        icon: "Scale",
+    },
+    {
+        name: "Terms of Services",
+        description: "Read our terms of service",
+        href: "/terms",
+        icon: "ScrollText",
     },
 ];
 

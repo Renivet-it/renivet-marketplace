@@ -33,10 +33,10 @@ interface Props extends GenericProps {
     }[];
 }
 
-export function NavMain({ className, items, ...props }: Props) {
+export function NavBrand({ className, items, ...props }: Props) {
     return (
         <SidebarGroup className={cn("", className)} {...props}>
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupLabel>Brand</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
                     const Icon = item.icon && Icons[item.icon];

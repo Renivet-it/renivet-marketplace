@@ -7,6 +7,7 @@ import LucideIcons, {
     ChevronRight,
     ChevronUp,
     Command,
+    Cookie,
     Copyright,
     Eye,
     EyeOff,
@@ -30,11 +31,14 @@ import LucideIcons, {
     Menu,
     Package,
     PieChart,
+    Scale,
+    ScrollText,
     Search,
     Settings2,
     ShoppingBag,
     ShoppingCart,
     SquareTerminal,
+    Store,
     Ticket,
     Twitter,
     User,
@@ -46,6 +50,10 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Store,
+    ScrollText,
+    Cookie,
+    Scale,
     LogIn,
     Copyright,
     FileText,
