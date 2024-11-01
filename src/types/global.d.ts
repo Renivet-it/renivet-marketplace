@@ -30,6 +30,7 @@ declare global {
         links?: Partial<Record<keyof typeof Icons, string>>;
         menu: {
             name: string;
+            description?: string;
             href: string;
             icon: keyof typeof Icons;
             isExternal?: boolean;

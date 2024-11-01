@@ -13,17 +13,18 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { BitFieldSitePermission } from "@/config/permissions";
 import { siteConfig } from "@/config/site";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
-import { hideEmail } from "@/lib/utils";
+import { cn, getUserPermissions, hasPermission, hideEmail } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export function NavbarHome() {
@@ -44,6 +45,23 @@ export function NavbarHome() {
     });
 
     const { data: user } = trpc.users.currentUser.useQuery();
+
+    const userPermissions = useMemo(() => {
+        if (!user)
+            return {
+                sitePermissions: 0,
+                brandPermissions: 0,
+            };
+        return getUserPermissions(user.roles);
+    }, [user]);
+
+    const isAuthorized = useMemo(
+        () =>
+            hasPermission(userPermissions.sitePermissions, [
+                BitFieldSitePermission.VIEW_PROTECTED_PAGES,
+            ]),
+        [userPermissions.sitePermissions]
+    );
 
     const { signOut } = useAuth();
 
@@ -87,7 +105,12 @@ export function NavbarHome() {
             className="sticky inset-x-0 top-0 z-50 flex h-auto w-full items-center justify-center bg-background"
             data-menu-open={isMenuOpen}
         >
-            <nav className="relative z-10 flex w-full max-w-5xl items-center justify-between gap-5 overflow-hidden p-4 md:px-8 xl:max-w-[100rem]">
+            <nav
+                className={cn(
+                    "relative z-10 flex w-full max-w-5xl items-center justify-between gap-5 overflow-hidden p-4 md:px-8 xl:max-w-[100rem]",
+                    isMenuOpen && "border-b"
+                )}
+            >
                 <button
                     aria-label="Mobile Menu Toggle Button"
                     aria-pressed={isMenuOpen}
@@ -168,14 +191,37 @@ export function NavbarHome() {
                                     <DropdownMenuSeparator />
 
                                     <DropdownMenuGroup>
-                                        <DropdownMenuItem className="rounded-none">
+                                        <DropdownMenuItem
+                                            className={cn(
+                                                "rounded-none",
+                                                isAuthorized && "hidden"
+                                            )}
+                                        >
                                             <Icons.Package className="mr-2 size-4" />
                                             <span>Orders</span>
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuItem className="rounded-none">
+                                        <DropdownMenuItem
+                                            className={cn(
+                                                "rounded-none",
+                                                isAuthorized && "hidden"
+                                            )}
+                                        >
                                             <Icons.Heart className="mr-2 size-4" />
                                             <span>Wishlist</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem
+                                            className={cn(
+                                                "rounded-none",
+                                                !isAuthorized && "hidden"
+                                            )}
+                                            asChild
+                                        >
+                                            <Link href="/dashboard">
+                                                <Icons.LayoutDashboard className="mr-2 size-4" />
+                                                <span>Dashboard</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem className="rounded-none">
@@ -187,12 +233,22 @@ export function NavbarHome() {
                                     <DropdownMenuSeparator />
 
                                     <DropdownMenuGroup>
-                                        <DropdownMenuItem className="rounded-none">
+                                        <DropdownMenuItem
+                                            className={cn(
+                                                "rounded-none",
+                                                isAuthorized && "hidden"
+                                            )}
+                                        >
                                             <Icons.Ticket className="mr-2 size-4" />
                                             <span>Coupons</span>
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuItem className="rounded-none">
+                                        <DropdownMenuItem
+                                            className={cn(
+                                                "rounded-none",
+                                                isAuthorized && "hidden"
+                                            )}
+                                        >
                                             <Icons.Home className="mr-2 size-4" />
                                             <span>Addresses</span>
                                         </DropdownMenuItem>
@@ -226,20 +282,33 @@ export function NavbarHome() {
                         </div>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href="/soon"> Become a Seller</Link>
-                        </Button>
+                    <>
+                        <div className="hidden items-center gap-1 md:flex">
+                            <Button variant="ghost" size="sm" asChild>
+                                <Link href="/soon"> Become a Seller</Link>
+                            </Button>
 
-                        <Button
-                            variant="ghost"
-                            className="border-accent text-accent"
-                            size="sm"
-                            asChild
-                        >
-                            <Link href="/auth/signin">Login/Signup</Link>
-                        </Button>
-                    </div>
+                            <Button
+                                variant="ghost"
+                                className="border-accent text-accent"
+                                size="sm"
+                                asChild
+                            >
+                                <Link href="/auth/signin">Login/Signup</Link>
+                            </Button>
+                        </div>
+
+                        <div className="flex items-center gap-1 md:hidden">
+                            <Button
+                                variant="ghost"
+                                className="border-accent text-accent"
+                                size="sm"
+                                asChild
+                            >
+                                <Link href="/auth/signin">Login</Link>
+                            </Button>
+                        </div>
+                    </>
                 )}
             </nav>
         </motion.header>

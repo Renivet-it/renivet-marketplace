@@ -1,6 +1,6 @@
 import { Permission } from "@/types";
 
-export const SitePermissions: Permission[] = [
+export const sitePermissions: Permission[] = [
     {
         name: "VIEW_PROTECTED_PAGES",
         description: "Access protected areas of the platform",
