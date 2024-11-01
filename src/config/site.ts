@@ -39,23 +39,27 @@ export const siteConfig: SiteConfig = {
     menu: [
         {
             name: "Home",
+            description: "Go back to the homepage",
             href: "/",
             icon: "Home",
         },
         {
             name: "Shop",
+            description: "Browse our products",
             href: "/shop",
             icon: "ShoppingBag",
         },
         {
             name: "About",
+            description: "Learn more about us",
             href: "/about",
             icon: "User",
         },
         {
             name: "Contact",
+            description: "Get in touch with us",
             href: "/contact",
-            icon: "Mail",
+            icon: "Headset",
         },
     ],
     footer: {

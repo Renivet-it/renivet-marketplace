@@ -1,3 +1,5 @@
+"use client";
+
 import { Icons } from "@/components/icons";
 import {
     Sidebar as ShadSidebar,
@@ -6,10 +8,15 @@ import {
     SidebarHeader,
     SidebarRail,
 } from "@/components/ui/sidebar";
+import { BitFieldSitePermission } from "@/config/permissions";
+import { trpc } from "@/lib/trpc/client";
+import { cn, getUserPermissions, hasPermission } from "@/lib/utils";
+import { useMemo } from "react";
+import { GenericHeader } from "./generic-header";
+import { NavBrand } from "./nav-brand";
+import { NavLegal } from "./nav-legal";
 import { NavMain } from "./nav-main";
-import { NavProjects } from "./nav-projects";
 import { NavUser } from "./nav-user";
-import { TeamSwitcher } from "./team-switcher";
 
 interface Sidebar {
     user: {
@@ -17,11 +24,6 @@ interface Sidebar {
         email: string;
         avatar: string;
     };
-    teams: {
-        name: string;
-        logo: keyof typeof Icons;
-        plan: string;
-    }[];
     navMain: {
         title: string;
         url: string;
@@ -32,7 +34,17 @@ interface Sidebar {
             url: string;
         }[];
     }[];
-    projects: {
+    navBrand: {
+        title: string;
+        url: string;
+        icon: keyof typeof Icons;
+        isActive?: boolean;
+        items?: {
+            title: string;
+            url: string;
+        }[];
+    }[];
+    legal: {
         name: string;
         url: string;
         icon: keyof typeof Icons;
@@ -45,141 +57,222 @@ const data: Sidebar = {
         email: "m@example.com",
         avatar: "/avatars/shadcn.jpg",
     },
-    teams: [
-        {
-            name: "Acme Inc",
-            logo: "GalleryVerticalEnd",
-            plan: "Enterprise",
-        },
-        {
-            name: "Acme Corp.",
-            logo: "AudioWaveform",
-            plan: "Startup",
-        },
-        {
-            name: "Evil Corp.",
-            logo: "Command",
-            plan: "Free",
-        },
-    ],
     navMain: [
         {
-            title: "Playground",
+            title: "Dashboard",
             url: "#",
-            icon: "SquareTerminal",
-            isActive: true,
+            icon: "LayoutDashboard",
             items: [
                 {
-                    title: "History",
-                    url: "#",
+                    title: "Analytics",
+                    url: "/dashboard/general/analytics",
                 },
                 {
-                    title: "Starred",
-                    url: "#",
+                    title: "Reports",
+                    url: "/dashboard/general/reports",
                 },
                 {
-                    title: "Settings",
-                    url: "#",
+                    title: "Metrics",
+                    url: "/dashboard/general/metrics",
+                },
+                {
+                    title: "Logs",
+                    url: "/dashboard/general/logs",
                 },
             ],
         },
         {
-            title: "Models",
-            url: "#",
-            icon: "Bot",
-            items: [
-                {
-                    title: "Genesis",
-                    url: "#",
-                },
-                {
-                    title: "Explorer",
-                    url: "#",
-                },
-                {
-                    title: "Quantum",
-                    url: "#",
-                },
-            ],
-        },
-        {
-            title: "Documentation",
+            title: "Content",
             url: "#",
             icon: "BookOpen",
             items: [
                 {
-                    title: "Introduction",
-                    url: "#",
+                    title: "Banners",
+                    url: "/dashboard/general/banners",
                 },
                 {
-                    title: "Get Started",
-                    url: "#",
+                    title: "About",
+                    url: "/dashboard/general/about",
                 },
                 {
-                    title: "Tutorials",
-                    url: "#",
-                },
-                {
-                    title: "Changelog",
-                    url: "#",
+                    title: "Blogs",
+                    url: "/dashboard/general/blogs",
                 },
             ],
         },
         {
-            title: "Settings",
+            title: "Management",
             url: "#",
             icon: "Settings2",
             items: [
                 {
-                    title: "General",
-                    url: "#",
+                    title: "Users",
+                    url: "/dashboard/general/users",
                 },
                 {
-                    title: "Team",
-                    url: "#",
+                    title: "Brands",
+                    url: "/dashboard/general/brands",
                 },
                 {
-                    title: "Billing",
-                    url: "#",
+                    title: "Roles",
+                    url: "/dashboard/general/roles",
                 },
                 {
-                    title: "Limits",
-                    url: "#",
+                    title: "Tags",
+                    url: "/dashboard/general/tags",
+                },
+                {
+                    title: "Tickets",
+                    url: "/dashboard/general/tickets",
+                },
+                {
+                    title: "Subscribers",
+                    url: "/dashboard/general/newsletter",
+                },
+                {
+                    title: "Waitlist",
+                    url: "/dashboard/general/brand-waitlist",
+                },
+            ],
+        },
+        {
+            title: "Products",
+            url: "#",
+            icon: "Package",
+            items: [
+                {
+                    title: "Categories",
+                    url: "/dashboard/general/categories",
+                },
+                {
+                    title: "Sub Categories",
+                    url: "/dashboard/general/sub-categories",
+                },
+                {
+                    title: "Product Types",
+                    url: "/dashboard/general/product-types",
                 },
             ],
         },
     ],
-    projects: [
+    navBrand: [
         {
-            name: "Design Engineering",
+            title: "Dashboard",
             url: "#",
-            icon: "Frame",
+            icon: "LayoutDashboard",
+            items: [
+                {
+                    title: "Analytics",
+                    url: "/dashboard/brand/analytics",
+                },
+                {
+                    title: "Reports",
+                    url: "/dashboard/brand/reports",
+                },
+                {
+                    title: "Metrics",
+                    url: "/dashboard/brand/metrics",
+                },
+                {
+                    title: "Logs",
+                    url: "/dashboard/brand/logs",
+                },
+            ],
         },
         {
-            name: "Sales & Marketing",
+            title: "Store",
             url: "#",
-            icon: "PieChart",
+            icon: "Store",
+            items: [
+                {
+                    title: "Page",
+                    url: "/dashboard/brand/page",
+                },
+                {
+                    title: "Products",
+                    url: "/dashboard/brand/products",
+                },
+                {
+                    title: "Orders",
+                    url: "/dashboard/brand/orders",
+                },
+                {
+                    title: "Coupons",
+                    url: "/dashboard/brand/coupons",
+                },
+            ],
+        },
+    ],
+    legal: [
+        {
+            name: "Privacy Policy",
+            url: "/dashboard/general/privacy",
+            icon: "Scale",
         },
         {
-            name: "Travel",
-            url: "#",
-            icon: "Map",
+            name: "Terms of Services",
+            url: "/dashboard/general/terms",
+            icon: "ScrollText",
         },
     ],
 };
 
 export function Sidebar() {
+    const { data: user } = trpc.users.currentUser.useQuery();
+
+    const userPermissions = useMemo(() => {
+        if (!user)
+            return {
+                sitePermissions: 0,
+                brandPermissions: 0,
+            };
+        return getUserPermissions(user.roles);
+    }, [user]);
+
+    const isGeneral = useMemo(
+        () =>
+            hasPermission(userPermissions.sitePermissions, [
+                BitFieldSitePermission.VIEW_PROTECTED_PAGES,
+            ]) && userPermissions.brandPermissions === 0,
+        [userPermissions.brandPermissions, userPermissions.sitePermissions]
+    );
+
+    const isBrand = useMemo(
+        () => userPermissions.brandPermissions > 0,
+        [userPermissions.brandPermissions]
+    );
+
     return (
         <ShadSidebar collapsible="icon">
             <SidebarHeader>
-                <TeamSwitcher teams={data.teams} />
+                <GenericHeader />
             </SidebarHeader>
-            <SidebarContent>
-                <NavMain items={data.navMain} />
-                <NavProjects projects={data.projects} />
+
+            <SidebarContent style={{ scrollbarWidth: "none" }}>
+                <NavMain
+                    items={data.navMain}
+                    className={cn({
+                        hidden: !isGeneral,
+                    })}
+                />
+
+                <NavBrand
+                    items={data.navBrand}
+                    className={cn({
+                        hidden: !isBrand,
+                    })}
+                />
+
+                <NavLegal
+                    legal={data.legal}
+                    className={cn({
+                        hidden: !isGeneral,
+                    })}
+                />
             </SidebarContent>
+
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser />
             </SidebarFooter>
             <SidebarRail />
         </ShadSidebar>
