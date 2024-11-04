@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { httpBatchLink, loggerLink } from "@trpc/client";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useState } from "react";
 import superjson from "superjson";
 
@@ -32,9 +33,11 @@ export function ClientProvider({ children }: LayoutProps) {
     return (
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
-                <NextThemesProvider attribute="class" defaultTheme="light">
-                    {children}
-                </NextThemesProvider>
+                <NuqsAdapter>
+                    <NextThemesProvider attribute="class" defaultTheme="light">
+                        {children}
+                    </NextThemesProvider>
+                </NuqsAdapter>
 
                 <ReactQueryDevtools />
             </QueryClientProvider>

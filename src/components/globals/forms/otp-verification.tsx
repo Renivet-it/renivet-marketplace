@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import {
     Form,

@@ -1,4 +1,3 @@
-import { env } from "@/../env";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import {
     BitFieldBrandPermission,
@@ -23,8 +22,8 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getAbsoluteURL(path: string = "/") {
     if (process.env.NODE_ENV === "production") {
-        if (env.VERCEL_PROJECT_PRODUCTION_URL)
-            return env.VERCEL_PROJECT_PRODUCTION_URL + path;
+        if (process.env.VERCEL_PROJECT_PRODUCTION_URL)
+            return process.env.VERCEL_PROJECT_PRODUCTION_URL + path;
     }
     return "http://localhost:3000" + path;
 }
@@ -78,7 +77,7 @@ export function handleError(error: unknown) {
     else return CResponse({ message: "INTERNAL_SERVER_ERROR" });
 }
 
-export function handleClientError(error: unknown, toastId?: string) {
+export function handleClientError(error: unknown, toastId?: string | number) {
     if (error instanceof Error)
         return toast.error(error.message, { id: toastId });
     else toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, { id: toastId });
@@ -303,4 +302,30 @@ export function hideEmail(email: string) {
     const [username, domain] = email.split("@");
     const hiddenUsername = `${username.slice(0, 3)}${"*".repeat(5)}`;
     return `${hiddenUsername}@${domain}`;
+}
+
+export function generateUploadThingFileUrl(fileKey: string) {
+    return `https://utfs.io/f/${fileKey}`;
+}
+
+export function getUploadThingFileKey(url: string) {
+    const split = url.split("https://utfs.io/f/");
+    return split[1];
+}
+
+export function isValidUrl(url: string) {
+    return /^https?:\/\/\S+$/.test(url);
+}
+
+export function getUrlFromString(str: string) {
+    if (isValidUrl(str)) return str;
+    if (str.includes(".") && !str.includes(" "))
+        return new URL(`https://${str}`).toString();
+    return null;
+}
+
+export function getReadTime(content: string) {
+    const WORDS_PER_MINUTE = 200;
+    const textLength = content.split(" ").length;
+    return Math.ceil(textLength / WORDS_PER_MINUTE);
 }

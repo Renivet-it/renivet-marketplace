@@ -1,6 +1,7 @@
-import { ButtonProps, buttonVariants } from "@/components/ui/button";
+import { ButtonProps, buttonVariants } from "@/components/ui/button-dash";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 
 const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
@@ -37,21 +38,24 @@ type PaginationLinkProps = {
     isActive?: boolean;
     disabled?: boolean;
 } & Pick<ButtonProps, "size"> &
-    React.ComponentProps<"a">;
+    React.ComponentProps<typeof Link>;
 
 const PaginationLink = ({
     className,
     isActive,
+    disabled,
     size = "icon",
     ...props
 }: PaginationLinkProps) => (
-    <a
+    <Link
         aria-current={isActive ? "page" : undefined}
         className={cn(
             buttonVariants({
                 variant: isActive ? "outline" : "ghost",
                 size,
             }),
+            disabled &&
+                "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-current",
             className
         )}
         {...props}

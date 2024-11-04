@@ -2,7 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { Renivet } from "@/components/svgs";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import {
     DropdownMenu,
     DropdownMenuContent,

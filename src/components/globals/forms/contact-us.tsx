@@ -1,7 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import {
     Form,
     FormControl,
@@ -10,8 +10,8 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input-general";
+import { Textarea } from "@/components/ui/textarea-general";
 import { trpc } from "@/lib/trpc/client";
 import { CreateContactUs, createContactUsSchema } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
