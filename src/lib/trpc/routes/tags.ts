@@ -7,16 +7,20 @@ import {
 import { hasPermission, slugify } from "@/lib/utils";
 import { createTagSchema, updateTagSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
 export const tagsRouter = createTRPCRouter({
     getTags: publicProcedure.query(async ({ ctx }) => {
-        const { db } = ctx;
+        const { db, schemas } = ctx;
 
         const tags = await db.query.tags.findMany({
             with: {
                 blogTags: true,
+            },
+            orderBy: [desc(schemas.tags.createdAt)],
+            extras: {
+                tagCount: db.$count(schemas.tags).as("tag_count"),
             },
         });
         return tags;

@@ -1,11 +1,10 @@
 import { BlogsTable } from "@/components/dashboard/blogs";
 import { DashShell } from "@/components/globals/layouts";
+import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
-import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/db";
 import { blogs } from "@/lib/db/schema";
-import { cn } from "@/lib/utils";
 import { blogWithAuthorAndTagSchema } from "@/lib/validations";
 import { desc } from "drizzle-orm";
 import { Metadata } from "next";
@@ -47,7 +46,7 @@ export default function Page({ searchParams }: PageProps) {
                 </Button>
             </div>
 
-            <Suspense fallback={<BlogsTableSkeleton />}>
+            <Suspense fallback={<TableSkeleton />}>
                 <BlogsFetch searchParams={searchParams} />
             </Suspense>
         </DashShell>
@@ -88,41 +87,4 @@ async function BlogsFetch({ searchParams }: PageProps) {
         .parse(data);
 
     return <BlogsTable initialBlogs={parsed} />;
-}
-
-function BlogsTableSkeleton() {
-    return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <div className="flex w-full flex-col items-center gap-2 md:flex-row">
-                    {Array.from({ length: 2 }).map((_, i) => (
-                        <Skeleton
-                            key={i}
-                            className="h-10 w-full rounded-md md:w-44"
-                        />
-                    ))}
-                </div>
-
-                <Skeleton className="hidden h-9 w-24 rounded-md md:inline-block" />
-            </div>
-
-            <Skeleton className="h-96 w-full rounded-md" />
-
-            <div className="flex items-center justify-between gap-2">
-                <Skeleton className="h-4 w-36 rounded-md" />
-
-                <div className="flex items-center gap-2">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton
-                            key={i}
-                            className={cn("size-8 rounded-md", {
-                                "w-20": i === 0 || i === 3,
-                                "hidden md:inline-block": i === 1 || i === 2,
-                            })}
-                        />
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
 }

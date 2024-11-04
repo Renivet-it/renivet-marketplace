@@ -27,7 +27,7 @@ export function Pagination({ total }: PageProps) {
 
     const renderPageNumbers = () => {
         const pages = [];
-        const maxVisiblePages = 3;
+        const maxVisiblePages = 4;
 
         if (total <= maxVisiblePages) {
             for (let i = 1; i <= total; i++) {
