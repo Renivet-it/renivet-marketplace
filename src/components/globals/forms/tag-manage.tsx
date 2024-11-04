@@ -1,5 +1,6 @@
 "use client";
 
+import { TableTag } from "@/components/dashboard/tags";
 import { Button } from "@/components/ui/button-dash";
 import { DialogClose, DialogFooter } from "@/components/ui/dialog-dash";
 import {
@@ -20,16 +21,19 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 interface PageProps {
+    tag?: TableTag;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function TagManageForm({ setIsOpen }: PageProps) {
+export function TagManageForm({ tag, setIsOpen }: PageProps) {
     const form = useForm<CreateTag>({
         resolver: zodResolver(createTagSchema),
         defaultValues: {
-            name: "",
+            name: tag?.name ?? "",
         },
     });
+
+    const { refetch } = trpc.tags.getTags.useQuery();
 
     const { mutate: createTag, isPending: isTagCreating } =
         trpc.tags.createTag.useMutation({
@@ -40,6 +44,23 @@ export function TagManageForm({ setIsOpen }: PageProps) {
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Tag created successfully", { id: toastId });
                 setIsOpen(false);
+                refetch();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    const { mutate: updateTag, isPending: isTagUpdating } =
+        trpc.tags.updateTag.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Updating tag...");
+                return { toastId };
+            },
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Tag updated successfully", { id: toastId });
+                setIsOpen(false);
+                refetch();
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -50,7 +71,11 @@ export function TagManageForm({ setIsOpen }: PageProps) {
         <Form {...form}>
             <form
                 className="space-y-4"
-                onSubmit={form.handleSubmit((values) => createTag(values))}
+                onSubmit={form.handleSubmit((values) =>
+                    tag
+                        ? updateTag({ id: tag.id, data: values })
+                        : createTag(values)
+                )}
             >
                 <FormField
                     control={form.control}
@@ -62,7 +87,7 @@ export function TagManageForm({ setIsOpen }: PageProps) {
                             <FormControl>
                                 <Input
                                     placeholder="Enter tag name"
-                                    disabled={isTagCreating}
+                                    disabled={isTagCreating || isTagUpdating}
                                     {...field}
                                 />
                             </FormControl>
@@ -78,14 +103,22 @@ export function TagManageForm({ setIsOpen }: PageProps) {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            disabled={isTagCreating}
+                            disabled={isTagCreating || isTagUpdating}
                         >
                             Cancel
                         </Button>
                     </DialogClose>
 
-                    <Button type="submit" size="sm" disabled={isTagCreating}>
-                        Create
+                    <Button
+                        type="submit"
+                        size="sm"
+                        disabled={
+                            isTagCreating ||
+                            isTagUpdating ||
+                            !form.formState.isDirty
+                        }
+                    >
+                        {tag ? "Update" : "Create"}
                     </Button>
                 </DialogFooter>
             </form>
