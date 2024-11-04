@@ -38,10 +38,10 @@ export const siteConfig: SiteConfig = {
     },
     menu: [
         {
-            name: "Home",
-            description: "Go back to the homepage",
-            href: "/",
-            icon: "Home",
+            name: "About",
+            description: "Learn more about us",
+            href: "/about",
+            icon: "User",
         },
         {
             name: "Shop",
@@ -50,10 +50,10 @@ export const siteConfig: SiteConfig = {
             icon: "ShoppingBag",
         },
         {
-            name: "About",
-            description: "Learn more about us",
-            href: "/about",
-            icon: "User",
+            name: "Blogs",
+            description: "Read our latest articles",
+            href: "/blogs",
+            icon: "BookOpen",
         },
         {
             name: "Contact",

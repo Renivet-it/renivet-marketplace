@@ -2,7 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { Renivet } from "@/components/svgs";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import Link from "next/link";

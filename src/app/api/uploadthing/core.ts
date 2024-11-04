@@ -3,11 +3,12 @@ import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { UploadThingError } from "uploadthing/server";
+import { UploadThingError, UTApi } from "uploadthing/server";
 
 const f = createUploadthing();
+export const utApi = new UTApi();
 
-export const ourFileRouter = {
+export const uploadRouter = {
     blogThumbnailUploader: f({ image: { maxFileSize: "4MB" } })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -75,4 +76,4 @@ export const ourFileRouter = {
         }),
 } satisfies FileRouter;
 
-export type OurFileRouter = typeof ourFileRouter;
+export type UploadRouter = typeof uploadRouter;

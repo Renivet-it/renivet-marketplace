@@ -49,7 +49,7 @@ const ratelimiter = t.middleware(({ ctx, next }) => {
     return next({ ctx });
 });
 
-const isAuth = t.middleware(({ ctx, next }) => {
+export const isAuth = t.middleware(({ ctx, next }) => {
     if (!ctx.user || !ctx.auth)
         throw new TRPCError({
             code: "UNAUTHORIZED",

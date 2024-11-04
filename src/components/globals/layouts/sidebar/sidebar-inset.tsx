@@ -9,6 +9,7 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn, convertValueToLabel } from "@/lib/utils";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React from "react";
 
@@ -33,9 +34,13 @@ export function SidebarInset({ className, ...props }: GenericProps) {
                             ) : (
                                 <BreadcrumbLink
                                     className="hidden md:block"
-                                    href={`/${segments.slice(0, index + 1).join("/")}`}
+                                    asChild
                                 >
-                                    {convertValueToLabel(segment)}
+                                    <Link
+                                        href={`/${segments.slice(0, index + 1).join("/")}`}
+                                    >
+                                        {convertValueToLabel(segment)}
+                                    </Link>
                                 </BreadcrumbLink>
                             )}
                         </BreadcrumbItem>

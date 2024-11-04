@@ -1,1 +1,1 @@
-export * from "./blogs-fetch";
+export * from "./blogs-page";

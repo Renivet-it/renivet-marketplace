@@ -9,7 +9,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog-general";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { siteConfig } from "@/config/site";
 import { useIntroModalStore } from "@/lib/store";

@@ -3,7 +3,7 @@
 import { useIntroModalStore } from "@/lib/store";
 import { useState } from "react";
 import { IntroModal } from "../globals/modals";
-import { Button } from "../ui/button";
+import { Button } from "../ui/button-general";
 
 export function SoonButtons() {
     const [currentTab, setCurrentTab] = useState<"community" | "brand">();

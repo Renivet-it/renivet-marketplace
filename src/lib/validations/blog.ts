@@ -26,13 +26,14 @@ export const blogSchema = z.object({
             required_error: "Description is required",
             invalid_type_error: "Description must be a string",
         })
-        .min(3, "Description must be at least 3 characters long"),
+        .min(3, "Description must be at least 3 characters long")
+        .max(255, "Description must be at most 255 characters long"),
     content: z
         .string({
             required_error: "Content is required",
             invalid_type_error: "Content must be a string",
         })
-        .min(3, "Content must be at least 3 characters long"),
+        .min(10, "Content must be at least 10 characters long"),
     thumbnailUrl: z
         .string({
             required_error: "Thumbnail URL is required",
@@ -71,6 +72,7 @@ export const createBlogSchema = blogSchema
         id: true,
         createdAt: true,
         updatedAt: true,
+        publishedAt: true,
         slug: true,
         authorId: true,
     })
@@ -85,7 +87,19 @@ export const createBlogSchema = blogSchema
                     .uuid("ID is invalid")
             )
             .min(1, "At least one tag is required"),
-    });
+    })
+    .refine(
+        (data) => {
+            const content = data.content
+                .replace(/<p>/g, "")
+                .replace(/<\/p>/g, "");
+            return content.length >= 10;
+        },
+        {
+            message: "Content must be at least 10 characters long",
+            path: ["content"],
+        }
+    );
 
 export const updateBlogSchema = blogSchema
     .omit({

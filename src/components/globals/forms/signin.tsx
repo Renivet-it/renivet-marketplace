@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import {
     Form,
@@ -10,7 +10,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input-general";
 import { PasswordInput } from "@/components/ui/password-input";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { SignIn, signInSchema } from "@/lib/validations";

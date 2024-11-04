@@ -8,18 +8,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 interface PageProps extends GenericProps {
-    // blog: BlogWithAuthorAndTag;
-    blog: {
-        title: string;
-        slug: string;
-        description: string;
-        thumbnailUrl: string;
-        publishedAt: Date;
-        author: {
-            firstName: string;
-            lastName: string;
-            avatarUrl: string | null;
-        };
+    blog: BlogWithAuthorAndTag & {
+        blogCount: number;
     };
 }
 
@@ -61,7 +51,10 @@ export function BlogCard({ className, blog, ...props }: PageProps) {
                         <Separator className="h-[2px] max-w-16 bg-foreground/20" />
 
                         <p className="text-sm font-semibold">
-                            {format(blog.publishedAt, "MMM dd, yyyy")}
+                            {format(
+                                new Date(blog.publishedAt!),
+                                "MMM dd, yyyy"
+                            )}
                         </p>
                     </div>
 

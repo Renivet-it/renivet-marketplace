@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import * as React from "react";
 import { Icons } from "../icons";
-import { Button } from "./button";
+import { Button } from "./button-general";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
     classNames?: {

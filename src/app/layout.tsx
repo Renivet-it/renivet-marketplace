@@ -64,12 +64,12 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <ServerProvider>
-            <html
-                lang="en"
-                suppressHydrationWarning
-                className={cn(poppins.variable, garamond.variable)}
-            >
+        <html
+            lang="en"
+            suppressHydrationWarning
+            className={cn(poppins.variable, garamond.variable)}
+        >
+            <ServerProvider>
                 <body
                     className={cn("min-h-screen overflow-x-hidden antialiased")}
                 >
@@ -78,7 +78,7 @@ export default function RootLayout({
                         <Toaster />
                     </ClientProvider>
                 </body>
-            </html>
-        </ServerProvider>
+            </ServerProvider>
+        </html>
     );
 }
