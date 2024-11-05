@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
             const dbUser = await db.query.users.findFirst({
                 where: eq(users.id, uId),
                 with: {
-                    profile: true,
+                    addresses: true,
                     roles: {
                         with: {
                             role: true,
@@ -39,11 +39,7 @@ export async function GET(req: NextRequest) {
 
             existingUser = {
                 ...dbUser,
-                profile: dbUser.profile ?? {
-                    address: null,
-                    phone: null,
-                    isProfileCompleted: false,
-                },
+                addresses: dbUser.addresses,
                 roles: dbUser.roles.map((r) => r.role),
             };
 

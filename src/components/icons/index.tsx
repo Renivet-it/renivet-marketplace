@@ -27,6 +27,7 @@ import LucideIcons, {
     Heart,
     Home,
     Instagram,
+    Key,
     LayoutDashboard,
     Leaf,
     LifeBuoy,
@@ -68,6 +69,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Key,
     SlidersHorizontal,
     ArrowDown,
     ArrowUp,

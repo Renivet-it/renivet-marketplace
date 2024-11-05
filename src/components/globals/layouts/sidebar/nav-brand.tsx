@@ -16,7 +16,7 @@ import {
     SidebarMenuSubButton,
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+import { cn, hasPermission } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -29,17 +29,36 @@ interface Props extends GenericProps {
         items?: {
             title: string;
             url: string;
+            permissions: number;
         }[];
     }[];
+    userPermissions: {
+        sitePermissions: number;
+        brandPermissions: number;
+    };
 }
 
-export function NavBrand({ className, items, ...props }: Props) {
+export function NavBrand({
+    className,
+    items,
+    userPermissions,
+    ...props
+}: Props) {
     return (
         <SidebarGroup className={cn("", className)} {...props}>
             <SidebarGroupLabel>Brand</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
                     const Icon = item.icon && Icons[item.icon];
+
+                    const filteredItems = item.items?.filter((subItem) => {
+                        return hasPermission(
+                            userPermissions.brandPermissions,
+                            [subItem.permissions],
+                            "any"
+                        );
+                    });
+                    if (!filteredItems?.length) return null;
 
                     return (
                         <Collapsible

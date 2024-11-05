@@ -16,7 +16,8 @@ import {
     SidebarMenuSubButton,
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+import { BitFieldSitePermission } from "@/config/permissions";
+import { cn, hasPermission } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -29,17 +30,39 @@ interface Props extends GenericProps {
         items?: {
             title: string;
             url: string;
+            permissions?: number;
         }[];
     }[];
+    userPermissions: {
+        sitePermissions: number;
+        brandPermissions: number;
+    };
 }
 
-export function NavMain({ className, items, ...props }: Props) {
+export function NavMain({
+    className,
+    items,
+    userPermissions,
+    ...props
+}: Props) {
     return (
         <SidebarGroup className={cn("", className)} {...props}>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
                     const Icon = item.icon && Icons[item.icon];
+
+                    const filteredItems = item.items?.filter((subItem) => {
+                        return hasPermission(
+                            userPermissions.sitePermissions,
+                            [
+                                subItem.permissions ||
+                                    BitFieldSitePermission.VIEW_PROTECTED_PAGES,
+                            ],
+                            "any"
+                        );
+                    });
+                    if (!filteredItems?.length) return null;
 
                     return (
                         <Collapsible
@@ -56,9 +79,10 @@ export function NavMain({ className, items, ...props }: Props) {
                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
+
                                 <CollapsibleContent>
                                     <SidebarMenuSub>
-                                        {item.items?.map((subItem) => (
+                                        {filteredItems?.map((subItem) => (
                                             <SidebarMenuSubItem
                                                 key={subItem.title}
                                             >
