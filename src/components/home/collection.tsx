@@ -62,9 +62,9 @@ export function Collection({ className, ...props }: GenericProps) {
                         {demoData.map((item, index) => (
                             <CarouselItem
                                 key={index}
-                                className="space-y-4 text-center md:basis-1/2 lg:basis-1/4"
+                                className="text-center md:basis-1/2 lg:basis-1/4"
                             >
-                                <Link href="/soon">
+                                <Link href="/soon" className="space-y-4">
                                     <div className="h-80">
                                         <Image
                                             width={1000}
