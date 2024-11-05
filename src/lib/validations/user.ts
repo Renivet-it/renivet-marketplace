@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { profileSchema } from "./profile";
+import { addressSchema } from "./address";
 import { roleSchema } from "./role";
 
 export const userSchema = z.object({
@@ -27,13 +27,24 @@ export const userSchema = z.object({
             invalid_type_error: "Email must be a string",
         })
         .email("Email is invalid"),
+    phone: z
+        .string({
+            required_error: "Phone is required",
+            invalid_type_error: "Phone must be a string",
+        })
+        .min(10, "Phone must be at least 10 characters long")
+        .nullable(),
     avatarUrl: z
         .string({
             required_error: "Avatar URL is required",
             invalid_type_error: "Avatar URL must be a string",
         })
         .nullable(),
-    isVerified: z.boolean({
+    isEmailVerified: z.boolean({
+        required_error: "Is verified is required",
+        invalid_type_error: "Is verified must be a boolean",
+    }),
+    isPhoneVerified: z.boolean({
         required_error: "Is verified is required",
         invalid_type_error: "Is verified must be a boolean",
     }),
@@ -47,15 +58,15 @@ export const userSchema = z.object({
     }),
 });
 
-export const userWithProfileAndRolesSchema = userSchema.extend({
-    profile: profileSchema.omit({
-        id: true,
-        userId: true,
-        createdAt: true,
-        updatedAt: true,
-    }),
+export const userWithAddressesAndRolesSchema = userSchema.extend({
     roles: z.array(
         roleSchema.omit({
+            createdAt: true,
+            updatedAt: true,
+        })
+    ),
+    addresses: z.array(
+        addressSchema.omit({
             createdAt: true,
             updatedAt: true,
         })
@@ -64,11 +75,15 @@ export const userWithProfileAndRolesSchema = userSchema.extend({
 
 export const safeUserSchema = userSchema.omit({
     email: true,
-    isVerified: true,
+    phone: true,
+    isEmailVerified: true,
+    isPhoneVerified: true,
 });
 
-export const cachedUserSchema = userWithProfileAndRolesSchema;
+export const cachedUserSchema = userWithAddressesAndRolesSchema;
 
 export type User = z.infer<typeof userSchema>;
-export type UserWithProfile = z.infer<typeof userWithProfileAndRolesSchema>;
+export type UserWithAddressesAndRoles = z.infer<
+    typeof userWithAddressesAndRolesSchema
+>;
 export type CachedUser = z.infer<typeof cachedUserSchema>;

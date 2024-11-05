@@ -41,16 +41,11 @@ export const blogTags = pgTable(
             .references(() => tags.id, { onDelete: "cascade" }),
         ...timestamps,
     },
-    (table) => {
-        return {
-            blogIdIdx: index("blog_id_idx").on(table.blogId),
-            tagIdIdx: index("tag_id_idx").on(table.tagId),
-            blogTagIdx: uniqueIndex("blog_tag_idx").on(
-                table.blogId,
-                table.tagId
-            ),
-        };
-    }
+    (table) => ({
+        blogIdIdx: index("blog_id_idx").on(table.blogId),
+        tagIdIdx: index("tag_id_idx").on(table.tagId),
+        blogTagIdx: uniqueIndex("blog_tag_idx").on(table.blogId, table.tagId),
+    })
 );
 
 export const blogRelations = relations(blogs, ({ one, many }) => ({

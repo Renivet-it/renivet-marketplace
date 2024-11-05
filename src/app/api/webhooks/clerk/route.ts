@@ -1,11 +1,10 @@
 import { env } from "@/../env";
 import { db } from "@/lib/db";
-import { profiles, users } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import { AppError, CResponse, handleError } from "@/lib/utils";
 import {
     CachedUser,
-    Profile,
     User,
     userDeleteWebhookSchema,
     userWebhookSchema,
@@ -41,41 +40,33 @@ export async function POST(req: NextRequest) {
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
                         email: webhookUser.email_addresses[0].email_address,
+                        phone:
+                            webhookUser.phone_numbers[0]?.phone_number ?? null,
                         avatarUrl: webhookUser.image_url,
-                        isVerified:
+                        isEmailVerified:
                             webhookUser.email_addresses[0].verification
+                                .status === "verified",
+                        isPhoneVerified:
+                            webhookUser.phone_numbers[0]?.verification
                                 .status === "verified",
                         createdAt: webhookUser.created_at,
                         updatedAt: webhookUser.updated_at,
                     };
 
-                    const profile: Omit<
-                        Profile,
-                        "id" | "phone" | "address" | "isProfileCompleted"
-                    > = {
-                        userId: user.id,
-                        createdAt: user.createdAt,
-                        updatedAt: user.updatedAt,
-                    };
-
                     const cachedUser: CachedUser = {
                         ...user,
-                        isVerified:
+                        isEmailVerified:
                             webhookUser.email_addresses[0].verification
                                 .status === "verified",
-                        profile: {
-                            ...profile,
-                            address: null,
-                            isProfileCompleted: false,
-                            phone: null,
-                        },
+                        isPhoneVerified:
+                            webhookUser.phone_numbers[0]?.verification
+                                .status === "verified",
+                        addresses: [],
                         roles: [],
                     };
 
-                    await db.insert(users).values(user);
-
                     await Promise.all([
-                        db.insert(profiles).values(profile),
+                        db.insert(users).values(user),
                         userCache.add(cachedUser),
                     ]);
                 }
@@ -90,9 +81,14 @@ export async function POST(req: NextRequest) {
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
                         email: webhookUser.email_addresses[0].email_address,
+                        phone:
+                            webhookUser.phone_numbers[0]?.phone_number ?? null,
                         avatarUrl: webhookUser.image_url,
-                        isVerified:
+                        isEmailVerified:
                             webhookUser.email_addresses[0].verification
+                                .status === "verified",
+                        isPhoneVerified:
+                            webhookUser.phone_numbers[0]?.verification
                                 .status === "verified",
                         createdAt: webhookUser.created_at,
                         updatedAt: webhookUser.updated_at,
@@ -104,11 +100,14 @@ export async function POST(req: NextRequest) {
 
                     const cachedUser: CachedUser = {
                         ...user,
-                        isVerified:
+                        isEmailVerified:
                             webhookUser.email_addresses[0].verification
                                 .status === "verified",
-                        profile: existingCachedUser.profile,
+                        isPhoneVerified:
+                            webhookUser.phone_numbers[0]?.verification
+                                .status === "verified",
                         roles: existingCachedUser.roles,
+                        addresses: existingCachedUser.addresses,
                     };
 
                     await Promise.all([
@@ -118,8 +117,10 @@ export async function POST(req: NextRequest) {
                                 firstName: user.firstName,
                                 lastName: user.lastName,
                                 email: user.email,
+                                phone: user.phone,
                                 avatarUrl: user.avatarUrl,
-                                isVerified: user.isVerified,
+                                isEmailVerified: user.isEmailVerified,
+                                isPhoneVerified: user.isPhoneVerified,
                                 updatedAt: user.updatedAt,
                             })
                             .where(eq(users.id, user.id)),

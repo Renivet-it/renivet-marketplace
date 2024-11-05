@@ -1,3 +1,4 @@
+export * from "./address";
 export * from "./blog";
 export * from "./brand";
 export * from "./brand-waitlist";
@@ -5,7 +6,6 @@ export * from "./category";
 export * from "./contact-us";
 export * from "./newsletter-subscriber";
 export * from "./product";
-export * from "./profile";
 export * from "./role";
 export * from "./tag";
 export * from "./user";

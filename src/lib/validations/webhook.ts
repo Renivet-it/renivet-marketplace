@@ -19,6 +19,16 @@ export const userWebhookSchema = z.object({
             }),
         })
     ),
+    phone_numbers: z.array(
+        z
+            .object({
+                phone_number: z.string(),
+                verification: z.object({
+                    status: z.string(),
+                }),
+            })
+            .optional()
+    ),
     created_at: z.number().transform((val) => new Date(val)),
     updated_at: z.number().transform((val) => new Date(val)),
 });

@@ -253,9 +253,14 @@ export function NavbarHome() {
                                             <span>Addresses</span>
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuItem className="rounded-none">
-                                            <Icons.User2 className="mr-2 size-4" />
-                                            <span>Edit Profile</span>
+                                        <DropdownMenuItem
+                                            className="rounded-none"
+                                            asChild
+                                        >
+                                            <Link href="/profile">
+                                                <Icons.User2 className="mr-2 size-4" />
+                                                <span>Edit Profile</span>
+                                            </Link>
                                         </DropdownMenuItem>
                                     </DropdownMenuGroup>
 
