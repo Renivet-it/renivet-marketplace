@@ -1,4 +1,4 @@
-import { OTPVerificationForm } from "@/components/globals/forms";
+import { EmailOTPVerificationInitForm } from "@/components/globals/forms";
 import { GeneralShell } from "@/components/globals/layouts";
 import {
     Card,
@@ -28,7 +28,7 @@ export default function Page() {
                     </CardDescription>
                 </CardHeader>
 
-                <OTPVerificationForm />
+                <EmailOTPVerificationInitForm />
             </Card>
         </GeneralShell>
     );

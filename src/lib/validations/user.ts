@@ -82,8 +82,33 @@ export const safeUserSchema = userSchema.omit({
 
 export const cachedUserSchema = userWithAddressesAndRolesSchema;
 
+export const updateUserGeneralSchema = userSchema
+    .pick({
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+    })
+    .partial();
+
+export const updateUserEmailSchema = userSchema.pick({
+    email: true,
+});
+export const updateUserPhoneSchema = z.object({
+    phone: z
+        .string({
+            required_error: "Phone is required",
+            invalid_type_error: "Phone must be a string",
+        })
+        .min(10, "Phone must be at least 10 characters long")
+        .transform((v) => v.replace(/[^0-9+]/g, "")),
+});
+
 export type User = z.infer<typeof userSchema>;
 export type UserWithAddressesAndRoles = z.infer<
     typeof userWithAddressesAndRolesSchema
 >;
 export type CachedUser = z.infer<typeof cachedUserSchema>;
+export type SafeUser = z.infer<typeof safeUserSchema>;
+export type UpdateUserGeneral = z.infer<typeof updateUserGeneralSchema>;
+export type UpdateUserEmail = z.infer<typeof updateUserEmailSchema>;
+export type UpdateUserPhone = z.infer<typeof updateUserPhoneSchema>;

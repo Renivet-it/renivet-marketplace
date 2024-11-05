@@ -27,7 +27,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export function OTPVerificationForm() {
+export function EmailOTPVerificationInitForm() {
     const router = useRouter();
 
     const form = useForm<OTP>({
