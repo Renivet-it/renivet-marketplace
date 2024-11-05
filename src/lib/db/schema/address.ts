@@ -9,7 +9,6 @@ export const addresses = pgTable(
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         userId: text("user_id")
             .notNull()
-            .unique()
             .references(() => users.id, {
                 onDelete: "cascade",
             }),
@@ -21,6 +20,7 @@ export const addresses = pgTable(
         ...timestamps,
     },
     (table) => ({
+        userIdIdx: index("address_to_user_id_idx").on(table.userId),
         isPrimaryIdx: index("is_primary_idx").on(table.isPrimary),
     })
 );

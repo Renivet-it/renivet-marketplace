@@ -34,7 +34,7 @@ export const userRoles = pgTable(
         ...timestamps,
     },
     (table) => ({
-        userIdIdx: index("user_id_idx").on(table.userId),
+        userIdIdx: index("user_role_id_idx").on(table.userId),
         roleIdIdx: index("role_id_idx").on(table.roleId),
     })
 );

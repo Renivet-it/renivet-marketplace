@@ -15,6 +15,13 @@
       "when": 1730808846237,
       "tag": "0001_large_sasquatch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1730809798862,
+      "tag": "0002_harsh_layla_miller",
+      "breakpoints": true
     }
   ]
 }
