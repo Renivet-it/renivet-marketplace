@@ -8,7 +8,10 @@ import {
     SidebarHeader,
     SidebarRail,
 } from "@/components/ui/sidebar";
-import { BitFieldSitePermission } from "@/config/permissions";
+import {
+    BitFieldBrandPermission,
+    BitFieldSitePermission,
+} from "@/config/permissions";
 import { trpc } from "@/lib/trpc/client";
 import { cn, getUserPermissions, hasPermission } from "@/lib/utils";
 import { useMemo } from "react";
@@ -32,6 +35,7 @@ interface Sidebar {
         items?: {
             title: string;
             url: string;
+            permissions?: number;
         }[];
     }[];
     navBrand: {
@@ -42,12 +46,14 @@ interface Sidebar {
         items?: {
             title: string;
             url: string;
+            permissions: number;
         }[];
     }[];
     legal: {
         name: string;
         url: string;
         icon: keyof typeof Icons;
+        permissions: number;
     }[];
 }
 
@@ -66,18 +72,30 @@ const data: Sidebar = {
                 {
                     title: "Analytics",
                     url: "/dashboard/general/analytics",
+                    permissions:
+                        BitFieldSitePermission.VIEW_ANALYTICS |
+                        BitFieldSitePermission.MANAGE_SETTINGS,
                 },
                 {
                     title: "Reports",
                     url: "/dashboard/general/reports",
+                    permissions:
+                        BitFieldSitePermission.VIEW_ANALYTICS |
+                        BitFieldSitePermission.MANAGE_SETTINGS,
                 },
                 {
                     title: "Metrics",
                     url: "/dashboard/general/metrics",
+                    permissions:
+                        BitFieldSitePermission.VIEW_ANALYTICS |
+                        BitFieldSitePermission.MANAGE_SETTINGS,
                 },
                 {
                     title: "Logs",
                     url: "/dashboard/general/logs",
+                    permissions:
+                        BitFieldSitePermission.VIEW_ANALYTICS |
+                        BitFieldSitePermission.MANAGE_SETTINGS,
                 },
             ],
         },
@@ -89,14 +107,17 @@ const data: Sidebar = {
                 {
                     title: "Banners",
                     url: "/dashboard/general/banners",
+                    permissions: BitFieldSitePermission.MANAGE_CONTENT,
                 },
                 {
                     title: "About",
                     url: "/dashboard/general/about",
+                    permissions: BitFieldSitePermission.MANAGE_CONTENT,
                 },
                 {
                     title: "Blogs",
                     url: "/dashboard/general/blogs",
+                    permissions: BitFieldSitePermission.MANAGE_BLOGS,
                 },
             ],
         },
@@ -108,30 +129,49 @@ const data: Sidebar = {
                 {
                     title: "Users",
                     url: "/dashboard/general/users",
+                    permissions:
+                        BitFieldSitePermission.VIEW_USERS |
+                        BitFieldSitePermission.MANAGE_USERS,
                 },
                 {
                     title: "Brands",
                     url: "/dashboard/general/brands",
+                    permissions:
+                        BitFieldSitePermission.MANAGE_BRANDS |
+                        BitFieldSitePermission.VIEW_BRANDS,
                 },
                 {
                     title: "Roles",
                     url: "/dashboard/general/roles",
+                    permissions:
+                        BitFieldSitePermission.MANAGE_ROLES |
+                        BitFieldSitePermission.VIEW_ROLES,
                 },
                 {
                     title: "Tags",
                     url: "/dashboard/general/tags",
+                    permissions: BitFieldSitePermission.MANAGE_BLOG_TAGS,
                 },
                 {
                     title: "Tickets",
                     url: "/dashboard/general/tickets",
+                    permissions:
+                        BitFieldSitePermission.MANAGE_FEEDBACK |
+                        BitFieldSitePermission.VIEW_FEEDBACK,
                 },
                 {
                     title: "Subscribers",
                     url: "/dashboard/general/newsletter",
+                    permissions:
+                        BitFieldSitePermission.MANAGE_SETTINGS |
+                        BitFieldSitePermission.VIEW_SETTINGS,
                 },
                 {
                     title: "Waitlist",
                     url: "/dashboard/general/brand-waitlist",
+                    permissions:
+                        BitFieldSitePermission.MANAGE_SETTINGS |
+                        BitFieldSitePermission.VIEW_SETTINGS,
                 },
             ],
         },
@@ -143,14 +183,17 @@ const data: Sidebar = {
                 {
                     title: "Categories",
                     url: "/dashboard/general/categories",
+                    permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
                 },
                 {
                     title: "Sub Categories",
                     url: "/dashboard/general/sub-categories",
+                    permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
                 },
                 {
                     title: "Product Types",
                     url: "/dashboard/general/product-types",
+                    permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
                 },
             ],
         },
@@ -164,18 +207,22 @@ const data: Sidebar = {
                 {
                     title: "Analytics",
                     url: "/dashboard/brand/analytics",
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
                 },
                 {
                     title: "Reports",
                     url: "/dashboard/brand/reports",
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
                 },
                 {
                     title: "Metrics",
                     url: "/dashboard/brand/metrics",
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
                 },
                 {
                     title: "Logs",
                     url: "/dashboard/brand/logs",
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
                 },
             ],
         },
@@ -187,18 +234,22 @@ const data: Sidebar = {
                 {
                     title: "Page",
                     url: "/dashboard/brand/page",
+                    permissions: BitFieldBrandPermission.MANAGE_BRANDING,
                 },
                 {
                     title: "Products",
                     url: "/dashboard/brand/products",
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
                 {
                     title: "Orders",
                     url: "/dashboard/brand/orders",
+                    permissions: BitFieldBrandPermission.VIEW_ORDERS,
                 },
                 {
                     title: "Coupons",
                     url: "/dashboard/brand/coupons",
+                    permissions: BitFieldBrandPermission.MANAGE_DISCOUNTS,
                 },
             ],
         },
@@ -208,11 +259,13 @@ const data: Sidebar = {
             name: "Privacy Policy",
             url: "/dashboard/general/privacy",
             icon: "Scale",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
         {
             name: "Terms of Services",
             url: "/dashboard/general/terms",
             icon: "ScrollText",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
     ],
 };
@@ -251,6 +304,7 @@ export function Sidebar() {
             <SidebarContent style={{ scrollbarWidth: "none" }}>
                 <NavMain
                     items={data.navMain}
+                    userPermissions={userPermissions}
                     className={cn({
                         hidden: !isGeneral,
                     })}
@@ -258,6 +312,7 @@ export function Sidebar() {
 
                 <NavBrand
                     items={data.navBrand}
+                    userPermissions={userPermissions}
                     className={cn({
                         hidden: !isBrand,
                     })}
@@ -265,6 +320,7 @@ export function Sidebar() {
 
                 <NavLegal
                     legal={data.legal}
+                    userPermissions={userPermissions}
                     className={cn({
                         hidden: !isGeneral,
                     })}

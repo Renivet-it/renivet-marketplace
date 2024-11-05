@@ -8,7 +8,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+import { cn, hasPermission } from "@/lib/utils";
 import Link from "next/link";
 
 interface Props extends GenericProps {
@@ -16,10 +16,29 @@ interface Props extends GenericProps {
         name: string;
         url: string;
         icon: keyof typeof Icons;
+        permissions: number;
     }[];
+    userPermissions: {
+        sitePermissions: number;
+        brandPermissions: number;
+    };
 }
 
-export function NavLegal({ className, legal, ...props }: Props) {
+export function NavLegal({
+    className,
+    legal,
+    userPermissions,
+    ...props
+}: Props) {
+    const filteredItems = legal.filter((item) => {
+        return hasPermission(
+            userPermissions.sitePermissions,
+            [item.permissions],
+            "any"
+        );
+    });
+    if (!filteredItems?.length) return null;
+
     return (
         <SidebarGroup
             className={cn("group-data-[collapsible=icon]:hidden", className)}
