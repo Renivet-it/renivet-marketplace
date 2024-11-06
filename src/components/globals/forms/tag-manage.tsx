@@ -100,7 +100,7 @@ export function TagManageForm({ tag, setIsOpen }: PageProps) {
                 <DialogFooter>
                     <DialogClose asChild>
                         <Button
-                            type="button"
+                            type="reset"
                             variant="ghost"
                             size="sm"
                             disabled={isTagCreating || isTagUpdating}

@@ -20,7 +20,7 @@ const items: Item[] = [
         title: "Lorem ipsum",
         description:
             "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci cum natus inventore.",
-        imageUrl: "/banner_1.jpg",
+        imageUrl: "/banner_1.png",
         button: "Discover More",
         href: "/soon",
     },
@@ -28,7 +28,7 @@ const items: Item[] = [
         title: "dolor sit",
         description:
             "Lorem ipsum dolor sit, amet consectetur adipisicing elit. Eos nam dolore cumque quos magni maxime molestiae nostrum corporis.",
-        imageUrl: "/banner_2.jpeg",
+        imageUrl: "/banner_2.png",
         button: "Learn More",
         href: "/soon",
     },
@@ -36,7 +36,7 @@ const items: Item[] = [
         title: "adipisicing elit",
         description:
             "Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci.",
-        imageUrl: "/banner_3.jpeg",
+        imageUrl: "/banner_3.png",
         button: "Get Started",
         href: "/soon",
     },
@@ -44,7 +44,7 @@ const items: Item[] = [
         title: "Voluptate delectus",
         description:
             "Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci cum natus inventore.",
-        imageUrl: "/banner_4.jpeg",
+        imageUrl: "/banner_4.png",
         button: "Discover More",
         href: "/soon",
     },
@@ -52,7 +52,7 @@ const items: Item[] = [
         title: "amet consectetur",
         description:
             "Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci natus inventore.",
-        imageUrl: "/banner_5.jpg",
+        imageUrl: "/banner_5.png",
         button: "Explore",
         href: "/soon",
     },
