@@ -30,6 +30,18 @@ export const otpSchema = z.object({
     otp: z.string().length(6, "OTP must be 6 characters long"),
 });
 
+export const updatePasswordSchema = z
+    .object({
+        currentPassword: passwordSchema,
+        newPassword: passwordSchema,
+        confirmPassword: passwordSchema,
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+    });
+
 export type SignUp = z.infer<typeof signUpSchema>;
 export type SignIn = z.infer<typeof signInSchema>;
 export type OTP = z.infer<typeof otpSchema>;
+export type UpdatePassword = z.infer<typeof updatePasswordSchema>;

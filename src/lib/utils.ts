@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ValidationError, WebhookVerificationError } from "svix";
 import { twMerge } from "tailwind-merge";
 import { ZodError } from "zod";
-import { CachedUser, ResponseMessages } from "./validations";
+import { Address, CachedUser, ResponseMessages } from "./validations";
 
 export function wait(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -328,4 +328,14 @@ export function getReadTime(content: string) {
     const WORDS_PER_MINUTE = 200;
     const textLength = content.split(" ").length;
     return Math.ceil(textLength / WORDS_PER_MINUTE);
+}
+
+export function generateAddress(
+    address: Omit<Address, "createdAt" | "updatedAt">
+) {
+    return Object.entries(address)
+        .filter(([key]) => ["street", "city", "state", "zip"].includes(key))
+        .filter(([, value]) => value !== null)
+        .map(([, value]) => value)
+        .join(", ");
 }

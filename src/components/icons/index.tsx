@@ -43,9 +43,11 @@ import LucideIcons, {
     Menu,
     MoreHorizontal,
     Package,
+    Pencil,
     PieChart,
     PlaneLanding,
     PlaneTakeoff,
+    Plus,
     PlusCircle,
     Scale,
     ScrollText,
@@ -58,6 +60,7 @@ import LucideIcons, {
     Store,
     Ticket,
     Trash,
+    Trash2,
     Twitter,
     User,
     User2,
@@ -69,6 +72,9 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Plus,
+    Trash2,
+    Pencil,
     Key,
     SlidersHorizontal,
     ArrowDown,

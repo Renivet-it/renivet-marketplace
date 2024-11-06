@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button-general";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -26,7 +27,6 @@ import { useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useDropzone } from "@uploadthing/react";
-import Image from "next/image";
 import { ElementRef, useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -64,12 +64,6 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
             setPreview(previewUrl);
         }
     }, []);
-
-    const removeImage = () => {
-        setPreview(null);
-        setFile(null);
-        form.setValue("avatarUrl", null);
-    };
 
     const { routeConfig } = useUploadThing("profilePictureUploader");
 
@@ -148,15 +142,15 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
                                             />
 
                                             {preview ? (
-                                                <div className="aspect-square size-20 overflow-hidden">
-                                                    <Image
+                                                <Avatar className="size-20">
+                                                    <AvatarImage
                                                         src={preview}
-                                                        alt="Thumbnail preview"
-                                                        width={1000}
-                                                        height={1000}
-                                                        className="size-full object-cover"
+                                                        alt={user.firstName}
                                                     />
-                                                </div>
+                                                    <AvatarFallback>
+                                                        {user.firstName[0]}
+                                                    </AvatarFallback>
+                                                </Avatar>
                                             ) : (
                                                 <div className="flex aspect-square size-20 items-center justify-center p-4">
                                                     <Icons.CloudUpload className="size-8 md:size-10" />
@@ -180,26 +174,10 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
                                                         : "Upload Image"}
                                                 </Button>
 
-                                                {!preview && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                        (Max 4MB)
-                                                    </p>
-                                                )}
+                                                <p className="text-xs text-muted-foreground">
+                                                    (Max 4MB)
+                                                </p>
                                             </div>
-
-                                            {preview && (
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    disabled={isUserUpdating}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        removeImage();
-                                                    }}
-                                                >
-                                                    Remove Image
-                                                </Button>
-                                            )}
                                         </div>
                                     </div>
                                 </FormControl>
@@ -267,12 +245,14 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
                     )}
                 >
                     <Button
+                        type="reset"
                         variant="ghost"
                         size="sm"
                         className={cn(
                             !form.formState.isDirty && "pointer-events-none h-0"
                         )}
                         disabled={isUserUpdating || !form.formState.isDirty}
+                        onClick={() => form.reset()}
                     >
                         Cancel
                     </Button>

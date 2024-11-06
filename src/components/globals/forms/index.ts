@@ -1,3 +1,4 @@
+export * from "./address-manage";
 export * from "./blog-manage";
 export * from "./brand-waitlist";
 export * from "./contact-us";
@@ -10,4 +11,5 @@ export * from "./signup";
 export * from "./tag-manage";
 export * from "./user-email-update";
 export * from "./user-general-update";
+export * from "./user-password-update";
 export * from "./user-phone-update";

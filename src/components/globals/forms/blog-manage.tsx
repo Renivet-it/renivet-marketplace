@@ -410,7 +410,7 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                         <FormItem>
                             <div className="flex w-min flex-row-reverse items-center justify-start gap-2">
                                 <FormLabel className="whitespace-nowrap font-semibold">
-                                    Published Immediately
+                                    Publish Immediately
                                 </FormLabel>
 
                                 <FormControl>
