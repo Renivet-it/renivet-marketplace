@@ -122,17 +122,11 @@ export function NavbarHome() {
 
                 <Link
                     href="/"
-                    className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
+                    className="flex items-center gap-1 text-2xl font-bold hover:opacity-100 active:opacity-100"
                 >
-                    <Renivet
-                        fill="white"
-                        stroke="black"
-                        svgScale={1.3}
-                        height={38.33}
-                        width={40.3}
-                    />
+                    <Renivet className="size-8" />
 
-                    <h4 className="text-2xl font-bold md:text-3xl">
+                    <h4 className="text-xl font-bold uppercase md:text-2xl">
                         {siteConfig.name}
                     </h4>
                 </Link>

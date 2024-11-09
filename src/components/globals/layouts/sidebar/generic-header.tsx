@@ -20,7 +20,7 @@ export function GenericHeader() {
                 >
                     <Link href="/">
                         <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-                            <Renivet className="size-7" stroke="black" />
+                            <Renivet className="size-7" />
                         </div>
 
                         <div className="grid flex-1 text-left text-sm leading-tight">

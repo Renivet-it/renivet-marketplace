@@ -41,7 +41,24 @@ export const updatePasswordSchema = z
         path: ["confirmPassword"],
     });
 
+export const forgotPasswordS1Schema = z.object({
+    email: userSchema.shape.email,
+});
+
+export const forgotPasswordS2Schema = z
+    .object({
+        otp: otpSchema.shape.otp,
+        password: passwordSchema,
+        confirmPassword: passwordSchema,
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+    });
+
 export type SignUp = z.infer<typeof signUpSchema>;
 export type SignIn = z.infer<typeof signInSchema>;
 export type OTP = z.infer<typeof otpSchema>;
 export type UpdatePassword = z.infer<typeof updatePasswordSchema>;
+export type ForgotPasswordS1 = z.infer<typeof forgotPasswordS1Schema>;
+export type ForgotPasswordS2 = z.infer<typeof forgotPasswordS2Schema>;

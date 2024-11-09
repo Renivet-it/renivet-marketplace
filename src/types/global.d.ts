@@ -17,6 +17,7 @@ declare global {
         name: string;
         description: string;
         longDescription?: string;
+        category: string;
         og: {
             url: string;
             width: number;

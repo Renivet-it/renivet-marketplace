@@ -72,6 +72,9 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
         },
         onSuccess: (_, __, { toastId }) => {
             toast.success("SMS sent successfully", { id: toastId });
+            form.reset({
+                phone: phoneObj?.phoneNumber,
+            });
             setIsVerifyModalOpen(true);
         },
         onError: (err, _, ctx) => {

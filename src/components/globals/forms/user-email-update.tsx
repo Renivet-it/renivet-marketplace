@@ -77,6 +77,9 @@ export function UserEmailUpdateForm({ user }: PageProps) {
                 "A verification email has been sent to your new email",
                 { id: toastId }
             );
+            form.reset({
+                email: emailObj?.emailAddress,
+            });
             setIsVerifyModalOpen(true);
         },
         onError: (err, _, ctx) => {
