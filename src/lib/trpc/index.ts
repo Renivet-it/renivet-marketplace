@@ -4,6 +4,7 @@ import {
     categoriesRouter,
     contactUsRouter,
     newsletterSubscriberRouter,
+    rolesRouter,
     tagsRouter,
     usersRouter,
 } from "./routes";
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
     categories: categoriesRouter,
     contactUs: contactUsRouter,
     newsletterSubscribers: newsletterSubscriberRouter,
+    roles: rolesRouter,
     tags: tagsRouter,
     users: usersRouter,
 });

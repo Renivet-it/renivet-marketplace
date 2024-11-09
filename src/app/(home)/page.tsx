@@ -5,9 +5,7 @@ import {
     Collection,
     Expectations,
     Landing,
-    Offer,
     Popular,
-    Theme,
 } from "@/components/home";
 
 export default function Page() {
@@ -15,10 +13,10 @@ export default function Page() {
         <>
             <Landing />
             <Collection />
-            <Offer />
+            {/* <Offer /> */}
             <Expectations />
             <Popular title="Best Sellers" />
-            <Theme />
+            {/* <Theme /> */}
             <Arrivals title="New Arrivals" />
             <Blogs />
             <IntroModal />

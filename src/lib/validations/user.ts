@@ -86,7 +86,6 @@ export const updateUserGeneralSchema = userSchema
     .pick({
         firstName: true,
         lastName: true,
-        avatarUrl: true,
     })
     .partial();
 

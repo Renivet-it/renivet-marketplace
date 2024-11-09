@@ -4,7 +4,13 @@ import { TableSkeleton } from "@/components/globals/skeletons";
 import { db } from "@/lib/db";
 import { tags } from "@/lib/db/schema";
 import { desc } from "drizzle-orm";
+import { Metadata } from "next";
 import { Suspense } from "react";
+
+export const metadata: Metadata = {
+    title: "Tags",
+    description: "Manage tags for the blog posts",
+};
 
 export default function Page() {
     return (

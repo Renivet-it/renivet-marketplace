@@ -71,7 +71,7 @@ export function Landing({ className, ...props }: GenericProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="h-[calc(100vh-64px)] w-full"
+                className="h-[calc(100vh-16rem)] w-full"
             >
                 <CarouselContent className="ml-0">
                     {items.map((item, index) => (

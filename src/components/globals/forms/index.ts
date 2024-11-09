@@ -10,6 +10,7 @@ export * from "./newsletter-subscribe";
 export * from "./phone-otp-verification";
 export * from "./signin";
 export * from "./signup";
+export * from "./role-manage";
 export * from "./tag-manage";
 export * from "./user-email-update";
 export * from "./user-general-update";
