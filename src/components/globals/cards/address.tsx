@@ -67,7 +67,7 @@ export function AddressCard({
                     </CardContent>
                 </div>
 
-                <CardFooter className="flex justify-between">
+                <CardFooter className="flex justify-between gap-2">
                     <Badge
                         variant={address.isPrimary ? "secondary" : "default"}
                         className="rounded-none"

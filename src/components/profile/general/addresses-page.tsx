@@ -39,7 +39,7 @@ export function AddressesPage({ className, ...props }: GenericProps) {
                 <Separator />
 
                 <CardContent className="space-y-6 pt-6">
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {user.addresses
                             .sort(
                                 (a, b) =>
@@ -54,7 +54,7 @@ export function AddressesPage({ className, ...props }: GenericProps) {
                                 />
                             ))}
 
-                        <Card className="flex aspect-video h-full items-center justify-center rounded-none">
+                        <Card className="flex aspect-auto h-full items-center justify-center rounded-none xl:aspect-video">
                             <Button
                                 variant="ghost"
                                 className="size-full text-base font-semibold"

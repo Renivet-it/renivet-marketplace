@@ -10,22 +10,28 @@ const tiles: {
     imageUrl: string;
 }[] = [
     {
-        title: "1910",
+        title: "#1",
         description:
-            "Lorem ipsum dolor sit amet consectetur adipiscing eli mattis sit phasellus mollis sit aliquam sit nullam neque ultrices.",
+            "At Renivet, we’re on a mission to make sustainability more than a trend—it’s a commitment to shaping a future built on quality, longevity, and mindful choices. Inspired by our founder’s journey through Europe, where sustainable living became a way of life, Renivet was born from the vision of bringing meaningful change into everyday choices.",
         imageUrl: "https://picsum.photos/seed/1910/1000/1000",
     },
     {
-        title: "1990",
+        title: "#2",
         description:
-            "Lorem ipsum dolor sit amet consectetur adipiscing eli mattis sit phasellus mollis sit aliquam sit nullam neque ultrices.",
+            "Renivet is more than a marketplace; it’s a movement. We curate high-quality, sustainable products crafted with care, designed to enrich your life while respecting the planet. Rooted in the principles of circularity, our platform ensures each item lives multiple lives, reducing waste and supporting a zero-waste future.",
         imageUrl: "https://picsum.photos/seed/1990/1000/1000",
     },
     {
-        title: "2010",
+        title: "#3",
         description:
-            "Lorem ipsum dolor sit amet consectetur adipiscing eli mattis sit phasellus mollis sit aliquam sit nullam neque ultrices.",
+            "As part of our commitment to circularity, Renivet seeks to redefine the life cycle of products by embedding them into a continuous loop of renewal and reusability. By encouraging a system where products are recycled, repurposed, and reimagined, we aspire to reduce the environmental footprint of fashion and lifestyle goods. Through our platform, we aim to educate and empower our community, demonstrating that sustainable choices are not only possible but can enhance daily life in ways that feel authentic and rewarding.",
         imageUrl: "https://picsum.photos/seed/2010/1000/1000",
+    },
+    {
+        title: "#4",
+        description:
+            "Join us on this journey to a sustainable lifestyle—one where every purchase is a step towards a cleaner planet, a healthier future, and a beautiful way of living. Together, we can make sustainability second nature, creating a community of conscious consumers who value quality, purpose, and responsibility.",
+        imageUrl: "https://picsum.photos/seed/2024/1000/1000",
     },
 ];
 

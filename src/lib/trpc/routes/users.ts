@@ -2,12 +2,7 @@ import { BitFieldSitePermission } from "@/config/permissions";
 import { userCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { hasPermission, slugify } from "@/lib/utils";
-import {
-    createAddressSchema,
-    updateAddressSchema,
-    updateUserGeneralSchema,
-} from "@/lib/validations";
-import { clerkClient } from "@clerk/nextjs/server";
+import { createAddressSchema, updateAddressSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
@@ -25,21 +20,6 @@ export const usersRouter = createTRPCRouter({
 
         return cachedUser;
     }),
-    updateUserGeneral: protectedProcedure
-        .input(updateUserGeneralSchema)
-        .mutation(async ({ ctx, input }) => {
-            const { user } = ctx;
-            const { firstName, lastName } = input;
-
-            const client = await clerkClient();
-
-            await client.users.updateUser(user.id, {
-                firstName,
-                lastName,
-            });
-
-            return input;
-        }),
     addAddress: protectedProcedure
         .input(createAddressSchema)
         .mutation(async ({ ctx, input }) => {
