@@ -19,6 +19,10 @@ export const roleSchema = z.object({
             invalid_type_error: "Slug must be a string",
         })
         .min(1, "Slug is required"),
+    position: z.number({
+        required_error: "Position is required",
+        invalid_type_error: "Position must be a number",
+    }),
     sitePermissions: z.string({
         required_error: "Site permissions is required",
         invalid_type_error: "Site permissions must be a string",
@@ -40,12 +44,21 @@ export const roleSchema = z.object({
 export const createRoleSchema = roleSchema.omit({
     id: true,
     slug: true,
+    position: true,
     createdAt: true,
     updatedAt: true,
 });
 
 export const updateRoleSchema = createRoleSchema.partial();
 
+export const cachedRole = roleSchema.extend({
+    users: z.number({
+        required_error: "Users count is required",
+        invalid_type_error: "Users count must be a number",
+    }),
+});
+
 export type Role = z.infer<typeof roleSchema>;
 export type CreateRole = z.infer<typeof createRoleSchema>;
 export type UpdateRole = z.infer<typeof updateRoleSchema>;
+export type CachedRole = z.infer<typeof cachedRole>;
