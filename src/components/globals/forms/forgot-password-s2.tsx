@@ -10,27 +10,32 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input-general";
+import {
+    InputOTP,
+    InputOTPGroup,
+    InputOTPSeparator,
+    InputOTPSlot,
+} from "@/components/ui/input-otp";
 import { PasswordInput } from "@/components/ui/password-input";
 import { DEFAULT_MESSAGES } from "@/config/const";
-import { SignIn, signInSchema } from "@/lib/validations";
+import { ForgotPasswordS2, forgotPasswordS2Schema } from "@/lib/validations";
 import { useSignIn } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export function SignInForm() {
+export function ForgotPasswordS2Form() {
     const router = useRouter();
 
-    const form = useForm<SignIn>({
-        resolver: zodResolver(signInSchema),
+    const form = useForm<ForgotPasswordS2>({
+        resolver: zodResolver(forgotPasswordS2Schema),
         defaultValues: {
-            email: "",
+            otp: "",
             password: "",
+            confirmPassword: "",
         },
     });
 
@@ -38,16 +43,17 @@ export function SignInForm() {
 
     const { mutate: handleSignIn, isPending: isSigninIn } = useMutation({
         onMutate: () => {
-            const toastId = toast.loading("Logging you in...");
+            const toastId = toast.loading(
+                "Verifying OTP and updating password..."
+            );
             return { toastId };
         },
-        mutationFn: async (values: SignIn) => {
+        mutationFn: async (values: ForgotPasswordS2) => {
             if (!isLoaded) throw new Error(DEFAULT_MESSAGES.ERRORS.GENERIC);
-            if (process.env.NEXT_PUBLIC_IS_AUTH_DISABLED === "true")
-                throw new Error(DEFAULT_MESSAGES.ERRORS.SIGNIN_DISABLED);
 
-            const signInAttempt = await signIn.create({
-                identifier: values.email,
+            const signInAttempt = await signIn.attemptFirstFactor({
+                strategy: "reset_password_email_code",
+                code: values.otp,
                 password: values.password,
             });
 
@@ -70,7 +76,7 @@ export function SignInForm() {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(err.message, {
+                : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
                       id: ctx?.toastId,
                   });
         },
@@ -85,18 +91,43 @@ export function SignInForm() {
                 <CardContent className="space-y-4">
                     <FormField
                         control={form.control}
-                        name="email"
+                        name="otp"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Email</FormLabel>
+                                <FormLabel>OTP</FormLabel>
 
                                 <FormControl>
-                                    <Input
-                                        type="email"
-                                        placeholder="johndoe@gmail.com"
+                                    <InputOTP
+                                        maxLength={6}
                                         disabled={isSigninIn}
                                         {...field}
-                                    />
+                                    >
+                                        <InputOTPGroup>
+                                            <InputOTPSlot
+                                                index={0}
+                                                className="first:rounded-l-none"
+                                            />
+                                            <InputOTPSlot index={1} />
+                                            <InputOTPSlot
+                                                index={2}
+                                                className="last:rounded-r-none"
+                                            />
+                                        </InputOTPGroup>
+
+                                        <InputOTPSeparator />
+
+                                        <InputOTPGroup>
+                                            <InputOTPSlot
+                                                index={3}
+                                                className="first:rounded-l-none"
+                                            />
+                                            <InputOTPSlot index={4} />
+                                            <InputOTPSlot
+                                                index={5}
+                                                className="last:rounded-r-none"
+                                            />
+                                        </InputOTPGroup>
+                                    </InputOTP>
                                 </FormControl>
 
                                 <FormMessage />
@@ -123,6 +154,27 @@ export function SignInForm() {
                             </FormItem>
                         )}
                     />
+
+                    <FormField
+                        control={form.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                            <FormItem className="w-full">
+                                <FormLabel>Confirm Password</FormLabel>
+
+                                <FormControl>
+                                    <PasswordInput
+                                        placeholder="********"
+                                        disabled={isSigninIn}
+                                        isToggleDisabled
+                                        {...field}
+                                    />
+                                </FormControl>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </CardContent>
 
                 <CardFooter className="flex-col items-end gap-4">
@@ -131,30 +183,8 @@ export function SignInForm() {
                         className="w-full"
                         disabled={isSigninIn}
                     >
-                        Sign In
+                        Update Password
                     </Button>
-
-                    <div className="space-y-1 text-end">
-                        <p className="text-sm">
-                            Don&apos;t have an account?{" "}
-                            <Link
-                                href="/auth/signup"
-                                className="text-accent underline underline-offset-2"
-                            >
-                                Create one here
-                            </Link>
-                        </p>
-
-                        <p className="text-sm">
-                            Forgot your password?{" "}
-                            <Link
-                                href="/auth/forgot-password/s1"
-                                className="text-accent underline underline-offset-2"
-                            >
-                                Reset here
-                            </Link>
-                        </p>
-                    </div>
                 </CardFooter>
             </form>
         </Form>

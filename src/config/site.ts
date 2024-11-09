@@ -1,3 +1,5 @@
+import { getAbsoluteURL } from "@/lib/utils";
+
 export const siteConfig: SiteConfig = {
     name: "Renivet",
     description:
@@ -14,12 +16,13 @@ export const siteConfig: SiteConfig = {
         "graphics",
         "music",
     ],
+    category: "Marketplace",
     developer: {
         name: "DRVGO",
         url: "https://itsdrvgo.me/",
     },
     og: {
-        url: "/og.webp",
+        url: getAbsoluteURL("/og.webp"),
         width: 1200,
         height: 630,
     },

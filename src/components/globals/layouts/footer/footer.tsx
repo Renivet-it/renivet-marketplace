@@ -20,11 +20,7 @@ export function Footer({ className, ...props }: GenericProps) {
                 <div className="flex w-full flex-col items-center justify-between lg:flex-row lg:items-start">
                     <div className="w-full space-y-6 p-10 px-5 md:p-10 lg:basis-1/3 lg:p-20">
                         <Link href="/" className="flex items-center gap-2">
-                            <Renivet
-                                svgScale={1.3}
-                                height={38.33}
-                                width={40.3}
-                            />
+                            <Renivet className="size-8" />
 
                             <h1 className="text-4xl font-bold">
                                 {siteConfig.name}

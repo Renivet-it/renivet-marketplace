@@ -17,41 +17,41 @@ interface Item {
 
 const items: Item[] = [
     {
-        title: "Lorem ipsum",
+        title: "Making a Choice",
         description:
-            "Lorem ipsum dolor sit amet consectetur, adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci cum natus inventore.",
+            "A choice that is good for you and the planet. Discover our sustainable products.",
         imageUrl: "/banner_1.png",
         button: "Discover More",
         href: "/soon",
     },
     {
-        title: "dolor sit",
+        title: "Nurture Nature",
         description:
-            "Lorem ipsum dolor sit, amet consectetur adipisicing elit. Eos nam dolore cumque quos magni maxime molestiae nostrum corporis.",
+            "The best way to protect the environment is to make sustainable choices.",
         imageUrl: "/banner_2.png",
         button: "Learn More",
         href: "/soon",
     },
     {
-        title: "adipisicing elit",
+        title: "From Raw to Remarkable",
         description:
-            "Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci.",
+            "From raw materials to remarkable products, we are committed to sustainability.",
         imageUrl: "/banner_3.png",
         button: "Get Started",
         href: "/soon",
     },
     {
-        title: "Voluptate delectus",
+        title: "Earthy Warmth Naturally Inspired",
         description:
-            "Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci cum natus inventore.",
+            "Our products are inspired by nature and designed to bring warmth to your home.",
         imageUrl: "/banner_4.png",
         button: "Discover More",
         href: "/soon",
     },
     {
-        title: "amet consectetur",
+        title: "Drip of Elegance",
         description:
-            "Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptate delectus aut autem est, repellat nulla optio adipisci natus inventore.",
+            "Discover our elegant and eco-friendly products that are designed to make a statement.",
         imageUrl: "/banner_5.png",
         button: "Explore",
         href: "/soon",
@@ -71,7 +71,7 @@ export function Landing({ className, ...props }: GenericProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="h-[calc(100vh-70px)] w-full"
+                className="h-[calc(100vh-64px)] w-full"
             >
                 <CarouselContent className="ml-0">
                     {items.map((item, index) => (
@@ -86,7 +86,7 @@ export function Landing({ className, ...props }: GenericProps) {
                                     priority={index === 0}
                                 />
                                 <div className="absolute inset-0 flex flex-col items-center justify-center space-y-5 p-4 text-center text-background md:space-y-10">
-                                    <h1 className="text-balance text-3xl font-bold uppercase md:text-5xl lg:text-7xl">
+                                    <h1 className="max-w-3xl text-balance text-3xl font-bold uppercase md:text-5xl lg:text-7xl">
                                         {item.title}
                                     </h1>
 

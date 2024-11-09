@@ -46,6 +46,8 @@ export function SignUpForm() {
         },
         mutationFn: async (values: SignUp) => {
             if (!isLoaded) throw new Error(DEFAULT_MESSAGES.ERRORS.GENERIC);
+            if (process.env.NEXT_PUBLIC_IS_AUTH_DISABLED === "true")
+                throw new Error(DEFAULT_MESSAGES.ERRORS.SIGNUP_DISABLED);
 
             await signUp.create({
                 emailAddress: values.email,
@@ -69,7 +71,7 @@ export function SignUpForm() {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
+                : toast.error(err.message, {
                       id: ctx?.toastId,
                   });
         },

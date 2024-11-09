@@ -23,14 +23,16 @@ import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { EmailAddressResource } from "@clerk/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { Dispatch, SetStateAction } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 interface PageProps {
     emailObj?: EmailAddressResource;
+    setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function EmailOTPVerificationForm({ emailObj }: PageProps) {
+export function EmailOTPVerificationForm({ emailObj, setIsOpen }: PageProps) {
     const form = useForm<OTP>({
         resolver: zodResolver(otpSchema),
         defaultValues: {
@@ -51,16 +53,25 @@ export function EmailOTPVerificationForm({ emailObj }: PageProps) {
                     throw new Error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);
                 if (!emailObj) throw new Error(DEFAULT_MESSAGES.ERRORS.GENERIC);
 
+                const oldEmailAddress = clerkUser.primaryEmailAddress;
+
                 const verifyAttempt = await emailObj.attemptVerification({
                     code: values.otp,
                 });
 
                 if (verifyAttempt.verification.status !== "verified")
                     throw verifyAttempt.verification.error;
+
+                await clerkUser.update({
+                    primaryEmailAddressId: emailObj.id,
+                });
+
+                await oldEmailAddress?.destroy();
             },
             onSuccess: async (_, __, { toastId }) => {
                 toast.success("Email verified successfully", { id: toastId });
                 clerkUser?.reload();
+                setIsOpen(false);
             },
             onError: (err, __, ctx) => {
                 return isClerkAPIResponseError(err)

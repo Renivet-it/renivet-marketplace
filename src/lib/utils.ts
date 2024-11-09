@@ -21,10 +21,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getAbsoluteURL(path: string = "/") {
-    if (process.env.NODE_ENV === "production") {
-        if (process.env.VERCEL_PROJECT_PRODUCTION_URL)
-            return process.env.VERCEL_PROJECT_PRODUCTION_URL + path;
-    }
+    if (process.env.NEXT_PUBLIC_DEPLOYMENT_URL)
+        return `https://${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}${path}`;
+    else if (process.env.VERCEL_URL)
+        return `https://${process.env.VERCEL_URL}${path}`;
     return "http://localhost:3000" + path;
 }
 

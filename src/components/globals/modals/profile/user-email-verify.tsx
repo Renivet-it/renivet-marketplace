@@ -33,7 +33,10 @@ export function UserEmailVerifyModal({
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
-                <EmailOTPVerificationForm emailObj={emailObj} />
+                <EmailOTPVerificationForm
+                    emailObj={emailObj}
+                    setIsOpen={setIsOpen}
+                />
             </AlertDialogContent>
         </AlertDialog>
     );

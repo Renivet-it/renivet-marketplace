@@ -23,14 +23,16 @@ import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { PhoneNumberResource } from "@clerk/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { Dispatch, SetStateAction } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 interface PageProps {
     phoneObj?: PhoneNumberResource;
+    setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function PhoneOTPVerificationForm({ phoneObj }: PageProps) {
+export function PhoneOTPVerificationForm({ phoneObj, setIsOpen }: PageProps) {
     const form = useForm<OTP>({
         resolver: zodResolver(otpSchema),
         defaultValues: {
@@ -51,18 +53,27 @@ export function PhoneOTPVerificationForm({ phoneObj }: PageProps) {
                     throw new Error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);
                 if (!phoneObj) throw new Error(DEFAULT_MESSAGES.ERRORS.GENERIC);
 
+                const oldPhoneNumber = clerkUser.primaryPhoneNumber;
+
                 const verifyAttempt = await phoneObj.attemptVerification({
                     code: values.otp,
                 });
 
                 if (verifyAttempt.verification.status !== "verified")
                     throw verifyAttempt.verification.error;
+
+                await clerkUser.update({
+                    primaryPhoneNumberId: phoneObj.id,
+                });
+
+                await oldPhoneNumber?.destroy();
             },
             onSuccess: async (_, __, { toastId }) => {
                 toast.success("Phone number verified successfully", {
                     id: toastId,
                 });
                 clerkUser?.reload();
+                setIsOpen(false);
             },
             onError: (err, __, ctx) => {
                 return isClerkAPIResponseError(err)

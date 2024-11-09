@@ -33,7 +33,10 @@ export function UserPhoneVerifyModal({
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
-                <PhoneOTPVerificationForm phoneObj={phoneObj} />
+                <PhoneOTPVerificationForm
+                    phoneObj={phoneObj}
+                    setIsOpen={setIsOpen}
+                />
             </AlertDialogContent>
         </AlertDialog>
     );

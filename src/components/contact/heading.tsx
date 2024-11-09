@@ -23,7 +23,7 @@ export function ContactHeading({ className, ...props }: GenericProps) {
 
                 <div className="flex aspect-square w-full flex-col items-center justify-center gap-4 bg-primary p-20 px-16 md:absolute md:left-[10%] md:aspect-auto md:h-full md:w-auto md:gap-10 xl:p-28">
                     <div>
-                        <Renivet className="size-10" />
+                        <Renivet className="size-14" />
                     </div>
 
                     <h1 className="text-3xl font-semibold uppercase md:text-4xl">

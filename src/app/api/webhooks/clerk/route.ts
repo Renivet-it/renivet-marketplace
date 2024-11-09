@@ -35,20 +35,24 @@ export async function POST(req: NextRequest) {
                 {
                     const webhookUser = userWebhookSchema.parse(data);
 
+                    const email = webhookUser.email_addresses.find(
+                        (e) => e.id === webhookUser.primary_email_address_id
+                    )!;
+                    const phone = webhookUser.phone_numbers.find(
+                        (p) => p?.id === webhookUser.primary_phone_number_id
+                    );
+
                     const user: User = {
                         id: webhookUser.id,
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
-                        email: webhookUser.email_addresses[0].email_address,
-                        phone:
-                            webhookUser.phone_numbers[0]?.phone_number ?? null,
+                        email: email.email_address,
+                        phone: phone?.phone_number ?? null,
                         avatarUrl: webhookUser.image_url,
                         isEmailVerified:
-                            webhookUser.email_addresses[0].verification
-                                .status === "verified",
+                            email.verification?.status === "verified",
                         isPhoneVerified:
-                            webhookUser.phone_numbers[0]?.verification
-                                .status === "verified",
+                            phone?.verification?.status === "verified",
                         createdAt: webhookUser.created_at,
                         updatedAt: webhookUser.updated_at,
                     };
@@ -56,11 +60,9 @@ export async function POST(req: NextRequest) {
                     const cachedUser: CachedUser = {
                         ...user,
                         isEmailVerified:
-                            webhookUser.email_addresses[0].verification
-                                .status === "verified",
+                            email.verification?.status === "verified",
                         isPhoneVerified:
-                            webhookUser.phone_numbers[0]?.verification
-                                .status === "verified",
+                            phone?.verification?.status === "verified",
                         addresses: [],
                         roles: [],
                     };
@@ -76,20 +78,24 @@ export async function POST(req: NextRequest) {
                 {
                     const webhookUser = userWebhookSchema.parse(data);
 
+                    const email = webhookUser.email_addresses.find(
+                        (e) => e.id === webhookUser.primary_email_address_id
+                    )!;
+                    const phone = webhookUser.phone_numbers.find(
+                        (p) => p?.id === webhookUser.primary_phone_number_id
+                    );
+
                     const user: User = {
                         id: webhookUser.id,
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
-                        email: webhookUser.email_addresses[0].email_address,
-                        phone:
-                            webhookUser.phone_numbers[0]?.phone_number ?? null,
+                        email: email.email_address,
+                        phone: phone?.phone_number ?? null,
                         avatarUrl: webhookUser.image_url,
                         isEmailVerified:
-                            webhookUser.email_addresses[0].verification
-                                .status === "verified",
+                            email.verification?.status === "verified",
                         isPhoneVerified:
-                            webhookUser.phone_numbers[0]?.verification
-                                .status === "verified",
+                            phone?.verification?.status === "verified",
                         createdAt: webhookUser.created_at,
                         updatedAt: webhookUser.updated_at,
                     };
@@ -101,11 +107,9 @@ export async function POST(req: NextRequest) {
                     const cachedUser: CachedUser = {
                         ...user,
                         isEmailVerified:
-                            webhookUser.email_addresses[0].verification
-                                .status === "verified",
+                            email.verification?.status === "verified",
                         isPhoneVerified:
-                            webhookUser.phone_numbers[0]?.verification
-                                .status === "verified",
+                            phone?.verification?.status === "verified",
                         roles: existingCachedUser.roles,
                         addresses: existingCachedUser.addresses,
                     };
@@ -145,7 +149,6 @@ export async function POST(req: NextRequest) {
             message: "OK",
         });
     } catch (err) {
-        console.error(err);
         return handleError(err);
     }
 }
