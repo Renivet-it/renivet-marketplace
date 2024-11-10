@@ -20,7 +20,8 @@ const items: Item[] = [
         title: "Making a Choice",
         description:
             "A choice that is good for you and the planet. Discover our sustainable products.",
-        imageUrl: "/banner_1.png",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZn9M1CYRgtC81g0yM5IoNfltURbp4rs2XnFQOT",
         button: "Discover More",
         href: "/soon",
     },
@@ -28,7 +29,8 @@ const items: Item[] = [
         title: "Nurture Nature",
         description:
             "The best way to protect the environment is to make sustainable choices.",
-        imageUrl: "/banner_2.png",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnMBwj2mdNari256c8ReoWJUD0Pyg3ZdX7Yqpb",
         button: "Learn More",
         href: "/soon",
     },
@@ -36,7 +38,8 @@ const items: Item[] = [
         title: "From Raw to Remarkable",
         description:
             "From raw materials to remarkable products, we are committed to sustainability.",
-        imageUrl: "/banner_3.png",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZntdsqdSIHmgvafVRtSkxXNwjCWPu2LqAG3Fly",
         button: "Get Started",
         href: "/soon",
     },
@@ -44,7 +47,8 @@ const items: Item[] = [
         title: "Earthy Warmth Naturally Inspired",
         description:
             "Our products are inspired by nature and designed to bring warmth to your home.",
-        imageUrl: "/banner_4.png",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnC4U1le5EGLspIcX2SViB8tOyhJe6n7fF3RWj",
         button: "Discover More",
         href: "/soon",
     },
@@ -52,7 +56,8 @@ const items: Item[] = [
         title: "Drip of Elegance",
         description:
             "Discover our elegant and eco-friendly products that are designed to make a statement.",
-        imageUrl: "/banner_5.png",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnV6qCG7l80TM4AsehRfmtqSxKLIbUCcJay9gN",
         button: "Explore",
         href: "/soon",
     },
@@ -78,7 +83,7 @@ export function Landing({ className, ...props }: GenericProps) {
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative size-full">
                                 <Image
-                                    src={`/home/landing/banners${item.imageUrl}`}
+                                    src={item.imageUrl}
                                     alt={item.title}
                                     width={2000}
                                     height={2000}

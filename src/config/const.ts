@@ -12,6 +12,7 @@ export const DEFAULT_MESSAGES = {
     },
 } as const;
 
-export const DEFAULT_AVATAR_URL = "/avatars/default_avatar.png" as const;
+export const DEFAULT_AVATAR_URL =
+    "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNyaieDfB5TEHko4KfX8CDn1z7Q2migSIjw0ds" as const;
 export const DEFAULT_BLOG_THUMBNAIL_URL =
-    "/thumbnails/blogs/default_blog_thumbnail.png" as const;
+    "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNprAppIYoKFqlYMSWzhgNZG6Cm5OtIUjre39T" as const;
