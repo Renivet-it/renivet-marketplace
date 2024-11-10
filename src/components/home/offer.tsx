@@ -7,9 +7,9 @@ import Link from "next/link";
 const offerData = {
     title: "UP TO 40% OFF OUR CHRISTMAS COLLECTION",
     description:
-        "Lorem ipsum dolor sit amet consectetur adipiscing elit mattis sit phasellus mollis sit aliquam sit nullam neque ultrices.",
+        "Bring the festive spirit to your home with our Christmas collection. Try our new arrivals and get up to 40% off.",
     buttonText: "Shop Now",
-    img: "/images/offer1.png",
+    img: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnkIvOIZt9nCdcN8sTjeLbGJYa2tlumUyWIOHK",
 };
 
 export function Offer({ className, ...props }: GenericProps) {
@@ -22,7 +22,7 @@ export function Offer({ className, ...props }: GenericProps) {
             {...props}
         >
             <div className="flex w-full max-w-5xl flex-col items-center justify-between bg-muted md:flex-row xl:max-w-[100rem]">
-                <div className="flex w-full flex-col items-center gap-5 p-6 text-center md:gap-10 md:p-10">
+                <div className="flex w-full flex-col items-center gap-5 p-10 text-center md:gap-10">
                     <h2 className="max-w-lg text-balance text-2xl font-semibold md:text-4xl">
                         {offerData.title}
                     </h2>
@@ -39,7 +39,7 @@ export function Offer({ className, ...props }: GenericProps) {
                     </Link>
                 </div>
 
-                <div className="size-full">
+                <div className="h-60 w-full overflow-hidden md:h-[30rem]">
                     <Image
                         src={offerData.img}
                         alt="Offer"

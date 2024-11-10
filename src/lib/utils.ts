@@ -304,13 +304,13 @@ export function hideEmail(email: string) {
     return `${hiddenUsername}@${domain}`;
 }
 
-export function generateUploadThingFileUrl(fileKey: string) {
-    return `https://utfs.io/f/${fileKey}`;
+export function generateUploadThingFileUrl(appUrl: string, fileKey: string) {
+    return `${appUrl}${fileKey}`;
 }
 
 export function getUploadThingFileKey(url: string) {
-    const split = url.split("https://utfs.io/f/");
-    return split[1];
+    const split = url.split("/").filter(Boolean);
+    return split[split.length - 1];
 }
 
 export function isValidUrl(url: string) {

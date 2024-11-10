@@ -120,17 +120,19 @@ export function BlogsTable({ initialBlogs }: PageProps) {
 
     const blogs = useMemo(
         () =>
-            blogsRaw?.map((blog) => ({
-                ...blog,
-                authorName: `${blog.author.firstName} ${blog.author.lastName}`,
-                status: blog.isPublished ? "published" : "draft",
-                tagCount: blog.tags.length,
-            })) ?? [],
+            blogsRaw.length > 0
+                ? blogsRaw.map((blog) => ({
+                      ...blog,
+                      authorName: `${blog.author.firstName} ${blog.author.lastName}`,
+                      status: blog.isPublished ? "published" : "draft",
+                      tagCount: blog.tags.length,
+                  }))
+                : [],
         [blogsRaw]
     );
 
     const pages = useMemo(
-        () => Math.ceil(blogsRaw?.[0]?.blogCount / limit) ?? 1,
+        () => Math.ceil(blogsRaw?.[0]?.blogCount ?? 0 / limit) ?? 1,
         [blogsRaw, limit]
     );
 

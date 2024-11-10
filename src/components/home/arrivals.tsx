@@ -8,32 +8,31 @@ import { Skeleton } from "../ui/skeleton";
 const dummyProducts = [
     {
         id: 1,
-        name: "CULT GAIA",
-        price: 49.0,
-        description: "Women Lou Top Handle Handbag Limited Edition",
-        image: "/images/popular1.jpeg",
+        name: "Tote Bags",
+        price: 1249,
+        description: "Leather Tote Bag with Gold Chain",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnorNcINvXBYvar8fi13IDLNAzQMbyucG0lj4t",
     },
     {
         id: 2,
-        name: "DIESEL",
-        price: 149.0,
-        description: "Unisex Auwt-Reinhold-Wt04 Regular Graphic Jacket",
-        image: "/images/popular2.jpeg",
+        name: "Waistcoats",
+        price: 1349,
+        description: "Leather Waistcoat with Gold Chain",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnlSZkhEHdy3cIoDNiMsOAgx4PfaSnXJpkKjEL",
     },
     {
         id: 3,
-        name: "VERSACE",
-        price: 2249.0,
-        description: "La Coupe des Versace Dieux Reversible Zip Jumper",
-        image: "/images/popular3.jpeg",
+        name: "Shirts",
+        price: 1449,
+        description: "Floral Print Shirt with Belt",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnFmUQEReUpgOqIWc15MXSjve3Q7xDhftJ6Zad",
     },
     {
         id: 4,
-        name: "GIORGIO ARMANI",
-        price: 2349.0,
-        description:
-            "Allover Logo Print Blouson Jacket with Designer Embroidary",
-        image: "/images/popular4.jpeg",
+        name: "Co-ords",
+        price: 1549,
+        description: "Organic Cotton Co-ords with Embroidered Logo",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZneSlV5TAhL7pEgDy5OrGIzuiMZxmk9vWQtUF1",
     },
 ];
 

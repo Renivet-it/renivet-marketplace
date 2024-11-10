@@ -8,32 +8,31 @@ import { Skeleton } from "../ui/skeleton";
 const dummyProducts = [
     {
         id: 1,
-        name: "CULT GAIA",
-        price: 49.0,
-        description: "Women Lou Top Handle Handbag Limited Edition",
-        image: "/images/popular1.jpeg",
+        name: "Candles",
+        price: 49,
+        description: "Scented Candles with Wooden Wick",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnM4ZiYYdNari256c8ReoWJUD0Pyg3ZdX7Yqpb",
     },
     {
         id: 2,
-        name: "DIESEL",
-        price: 149.0,
-        description: "Unisex Auwt-Reinhold-Wt04 Regular Graphic Jacket",
-        image: "/images/popular2.jpeg",
+        name: "Handbags",
+        price: 149,
+        description: "Leather Handbag with Gold Chain",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnFVbaaKeUpgOqIWc15MXSjve3Q7xDhftJ6Zad",
     },
     {
         id: 3,
-        name: "VERSACE",
-        price: 2249.0,
-        description: "La Coupe des Versace Dieux Reversible Zip Jumper",
-        image: "/images/popular3.jpeg",
+        name: "Dresses",
+        price: 649,
+        description: "Floral Print Maxi Dress with Belt",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnr4p6JQzIG4SFbfdRA720aKEDHgcCUhY1XZBJ",
     },
     {
         id: 4,
-        name: "GIORGIO ARMANI",
-        price: 2349.0,
-        description:
-            "Allover Logo Print Blouson Jacket with Designer Embroidary",
-        image: "/images/popular4.jpeg",
+        name: "T-Shirts",
+        price: 1249,
+        description: "Organic Cotton T-Shirt with Embroidered Logo",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnVK7JfNl80TM4AsehRfmtqSxKLIbUCcJay9gN",
     },
 ];
 
@@ -61,7 +60,7 @@ export function Popular({ title, className, ...props }: PageProps) {
                             <Skeleton key={index} className="h-20 w-full" />
                         ))}
                     >
-                        {dummyProducts.map((product) => (
+                        {dummyProducts.reverse().map((product) => (
                             <ProductCard
                                 key={product.id}
                                 product={product}
