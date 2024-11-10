@@ -1,18 +1,16 @@
 "use client";
 
+import { DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
 import { cn } from "@/lib/utils";
+import { Blog } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
 
-const offerData = {
-    title: "Glamorous Karwa Chauth Outfit Ideas Inspired By Celebs",
-    description:
-        "When your OOTDs call for a bit of cuteness with a dash of chic, crop tops never fail to come through. These styling tips will help you incorporate crop tops…",
-    buttonText: "Read More",
-    img: "/images/blog2.jpeg",
-};
+interface PageProps extends GenericProps {
+    blog: Blog;
+}
 
-export function Blogs({ className, ...props }: GenericProps) {
+export function Blogs({ className, blog, ...props }: PageProps) {
     return (
         <section
             className={cn(
@@ -27,27 +25,29 @@ export function Blogs({ className, ...props }: GenericProps) {
                 </h2>
 
                 <div className="flex w-full flex-col bg-muted lg:flex-row">
-                    <div className="flex w-full flex-col items-center gap-5 p-6 text-center md:gap-10 md:p-10">
+                    <div className="flex w-full flex-col items-center justify-center gap-5 p-6 text-center md:gap-10 md:p-10">
                         <h2 className="max-w-lg text-balance text-2xl font-semibold md:text-4xl">
-                            {offerData.title}
+                            {blog.title}
                         </h2>
 
                         <p className="max-w-lg text-balance text-sm text-muted-foreground md:text-base">
-                            {offerData.description}
+                            {blog.description}
                         </p>
 
                         <Link
                             className="font-semibold uppercase underline underline-offset-2 md:text-lg"
-                            href="/blogs"
+                            href={`/blogs/${blog.slug}`}
                         >
-                            {offerData.buttonText}
+                            Read More
                         </Link>
                     </div>
 
-                    <div className="size-full">
+                    <div className="h-60 w-full overflow-hidden md:h-[25rem]">
                         <Image
-                            src={offerData.img}
-                            alt="Offer"
+                            src={
+                                blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL
+                            }
+                            alt={blog.title}
                             width={1000}
                             height={1000}
                             className="size-full object-cover"

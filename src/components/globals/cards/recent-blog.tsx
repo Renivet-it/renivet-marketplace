@@ -18,8 +18,11 @@ interface PageProps extends ComponentProps<typeof Link> {
 
 export function RecentBlogCard({ className, blog, ...props }: PageProps) {
     return (
-        <Link className={cn("flex gap-5", className)} {...props}>
-            <div className="aspect-[3/2] size-full basis-2/5">
+        <Link
+            className={cn("flex flex-col gap-5 md:flex-row", className)}
+            {...props}
+        >
+            <div className="aspect-[3/2] size-full md:basis-2/5">
                 <Image
                     src={blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL}
                     alt={blog.title}
@@ -29,13 +32,17 @@ export function RecentBlogCard({ className, blog, ...props }: PageProps) {
                 />
             </div>
 
-            <div className="basis-3/5">
+            <div className="md:basis-3/5">
                 <h3 className="text-xl font-semibold">
-                    {blog.title.length > 25
-                        ? `${blog.title.slice(0, 25)}...`
-                        : blog.title}
+                    <span className="hidden md:block">
+                        {blog.title.length > 25
+                            ? `${blog.title.slice(0, 25)}...`
+                            : blog.title}
+                    </span>
+
+                    <span className="md:hidden">{blog.title}</span>
                 </h3>
-                <p className="max-w-xs text-balance text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground md:max-w-xs md:text-balance">
                     {blog.description.length > 100
                         ? `${blog.description.slice(0, 100)}...`
                         : blog.description}

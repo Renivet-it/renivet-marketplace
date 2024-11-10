@@ -94,7 +94,7 @@ export function TagsTable({ initialTags }: PageProps) {
     );
 
     const pages = useMemo(
-        () => Math.ceil(tagsRaw?.[0]?.tagCount / limit) ?? 1,
+        () => Math.ceil(tagsRaw?.[0]?.tagCount ?? 0 / limit) ?? 1,
         [tagsRaw, limit]
     );
 

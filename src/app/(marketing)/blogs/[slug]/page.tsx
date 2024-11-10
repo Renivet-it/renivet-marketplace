@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { blogs } from "@/lib/db/schema";
 import { getAbsoluteURL } from "@/lib/utils";
 import { blogWithAuthorAndTagSchema } from "@/lib/validations";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -105,7 +105,7 @@ async function BlogFetch({ params }: PageProps) {
     if (!existingBlog) notFound();
 
     const recentBlogs = await db.query.blogs.findMany({
-        where: and(ne(blogs.id, existingBlog.id), eq(blogs.isPublished, true)),
+        where: eq(blogs.isPublished, true),
         orderBy: [desc(blogs.publishedAt)],
         limit: 3,
     });
@@ -113,10 +113,10 @@ async function BlogFetch({ params }: PageProps) {
     const parsed = blogWithAuthorAndTagSchema.parse(existingBlog);
 
     return (
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-y-10 md:gap-10 lg:grid-cols-3">
             <BlogPage blog={parsed} className="col-span-2" />
 
-            <div className="col-span-1 flex h-full gap-10">
+            <div className="flex h-full gap-10 md:col-span-1">
                 <Separator
                     orientation="vertical"
                     className="hidden h-full lg:inline-block"

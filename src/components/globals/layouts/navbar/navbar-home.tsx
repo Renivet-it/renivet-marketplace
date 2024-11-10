@@ -122,6 +122,7 @@ export function NavbarHome() {
 
                 <Link
                     href="/"
+                    title="Home"
                     className="flex items-center gap-1 text-2xl font-bold hover:opacity-100 active:opacity-100"
                 >
                     <Renivet className="size-8" />
@@ -136,10 +137,17 @@ export function NavbarHome() {
                         siteConfig.menu.map((item, index) => (
                             <li key={index}>
                                 <Link
-                                    className="text-sm ease-in-out"
+                                    className={cn(
+                                        "text-sm ease-in-out",
+                                        item.isDisabled &&
+                                            "cursor-not-allowed opacity-50"
+                                    )}
                                     href={item.href}
                                     target={
                                         item.isExternal ? "_blank" : "_self"
+                                    }
+                                    onClick={(e) =>
+                                        item.isDisabled && e.preventDefault()
                                     }
                                 >
                                     {item.name}

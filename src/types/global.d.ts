@@ -35,6 +35,7 @@ declare global {
             href: string;
             icon: keyof typeof Icons;
             isExternal?: boolean;
+            isDisabled?: boolean;
         }[];
         footer: {
             menu: {

@@ -155,7 +155,7 @@ export function Pagination({ total }: PageProps) {
                                 e.preventDefault();
                                 handlePageChange(page + 1);
                             }}
-                            disabled={page === total}
+                            disabled={total === 0 || page === total}
                         />
                     </PaginationItem>
                 </PaginationContent>

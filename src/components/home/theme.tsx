@@ -18,16 +18,16 @@ export function Theme({ className, ...props }: GenericProps) {
         const fetchData = () => {
             const mockData: ThemeData[] = [
                 {
-                    title: "Made in Viet Nam Since 1450",
+                    title: "About Renivet",
                     description:
-                        "Lorem ipsum dolor sit amet consectetur amet consectetur adipiscing eli mattis sit phasellus mollis sit aliquam sit nullat phasellus mollis sit aliquam sit nullam neque ultrices.",
-                    image: "/images/theme1.png",
+                        "We curate high-quality, sustainable products crafted with care, designed to enrich your life while respecting the planet. Rooted in the principles of circularity, our platform ensures each item lives multiple lives, reducing waste and supporting a zero-waste future.",
+                    image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnERRlTLnhSRFZnVydgJQevlEK94BOP72qhGmw",
                 },
                 {
-                    title: "Our History - Next Vision",
+                    title: "Our Mission",
                     description:
-                        "Lorem ipsum adipiscing eli mattis sit phasellus mollis sit aliquam sit nullat phasellus mollis sit aliquam sit nullam neque ultrices dolor sit amet consectetur adipiscing eli mattis sit .",
-                    image: "/images/theme2.png",
+                        "We're on a mission to make sustainability more than a trend—it's a commitment to shaping a future built on quality, longevity, and mindful choices. Inspired by our founder's journey through Europe, where sustainable living became a way of life, Renivet was born from the vision of bringing meaningful change into everyday choices.",
+                    image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnPtCq8YLrdBOITmVvY701358RpKx4iGDZJbQL",
                 },
             ];
             setData(mockData);
@@ -67,7 +67,7 @@ export function Theme({ className, ...props }: GenericProps) {
                                 </Link>
                             </div>
 
-                            <div className="size-full">
+                            <div className="h-60 w-full overflow-hidden md:h-[25rem]">
                                 <Image
                                     src={item.image}
                                     height={700}

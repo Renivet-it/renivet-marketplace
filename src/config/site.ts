@@ -51,6 +51,7 @@ export const siteConfig: SiteConfig = {
             description: "Browse our products",
             href: "/shop",
             icon: "ShoppingBag",
+            isDisabled: true,
         },
         {
             name: "Blogs",
@@ -86,35 +87,6 @@ export const siteConfig: SiteConfig = {
                         name: "Testimonials",
                         href: "/about#testimonials",
                     },
-                    {
-                        name: "Privacy Policy",
-                        href: "/privacy",
-                    },
-                ],
-            },
-            {
-                name: "Services",
-                items: [
-                    {
-                        name: "Web Design",
-                        href: "/services/web-design",
-                    },
-                    {
-                        name: "Web Development",
-                        href: "/services/web-development",
-                    },
-                    {
-                        name: "Mobile Design",
-                        href: "/services/mobile-design",
-                    },
-                    {
-                        name: "UI/UX Design",
-                        href: "/services/ui-ux-design",
-                    },
-                    {
-                        name: "Branding Design",
-                        href: "/services/branding-design",
-                    },
                 ],
             },
             {
@@ -139,6 +111,27 @@ export const siteConfig: SiteConfig = {
                     {
                         name: "UI/UX Projects",
                         href: "/portfolio/ui-ux-projects",
+                    },
+                ],
+            },
+            {
+                name: "Legal",
+                items: [
+                    {
+                        name: "Terms and Conditions",
+                        href: "/terms",
+                    },
+                    {
+                        name: "Privacy Policy",
+                        href: "/privacy",
+                    },
+                    {
+                        name: "Cookie Policy",
+                        href: "/cookies",
+                    },
+                    {
+                        name: "Refund Policy",
+                        href: "/refund",
                     },
                 ],
             },

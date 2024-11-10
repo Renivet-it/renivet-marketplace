@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
-import { cn, generateUploadThingFileUrl, handleClientError } from "@/lib/utils";
+import { cn, handleClientError } from "@/lib/utils";
 import {
     BlogWithAuthorAndTag,
     CreateBlog,
@@ -115,7 +115,7 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                 if (!res?.length) throw new Error("Failed to upload image");
 
                 const image = res[0];
-                values.thumbnailUrl = generateUploadThingFileUrl(image.key);
+                values.thumbnailUrl = image.appUrl;
             }
 
             await createBlogAsync(values);
@@ -144,7 +144,7 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                 if (!res?.length) throw new Error("Failed to upload image");
 
                 const image = res[0];
-                values.thumbnailUrl = generateUploadThingFileUrl(image.key);
+                values.thumbnailUrl = image.appUrl;
             }
 
             await updateBlogAsync({
