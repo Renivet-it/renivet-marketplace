@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import { Icons } from "../icons";
 
 export function Expectations({ className, ...props }: GenericProps) {
@@ -61,15 +62,17 @@ function ExpectationCard({
     const Icon = Icons[icon];
 
     return (
-        <div className="flex flex-col items-center space-y-4 bg-muted p-6 py-10 text-center">
-            <div className="text-primary">
-                <Icon className="size-8" />
-            </div>
+        <Link href="/soon">
+            <div className="flex flex-col items-center space-y-4 bg-muted p-6 py-10 text-center">
+                <div className="text-primary">
+                    <Icon className="size-8" />
+                </div>
 
-            <div className="space-y-2">
-                <h3 className="text-xl font-semibold">{title}</h3>
-                <p className="text-muted-foreground">{description}</p>
+                <div className="space-y-2">
+                    <h3 className="text-xl font-semibold">{title}</h3>
+                    <p className="text-muted-foreground">{description}</p>
+                </div>
             </div>
-        </div>
+        </Link>
     );
 }

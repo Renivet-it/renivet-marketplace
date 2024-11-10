@@ -13,7 +13,8 @@ export function SoonButtons() {
     return (
         <div className="flex flex-col items-center gap-2 md:flex-row">
             <Button
-                className="w-full rounded-md bg-background font-semibold text-foreground hover:bg-background/80"
+                variant="accent"
+                className="w-full rounded-md font-semibold"
                 onClick={() => {
                     setIsOpen(true);
                     setCurrentTab("community");
@@ -23,7 +24,7 @@ export function SoonButtons() {
             </Button>
 
             <Button
-                className="w-full rounded-md bg-background font-semibold text-foreground hover:bg-background/80"
+                className="w-full rounded-md font-semibold"
                 onClick={() => {
                     setIsOpen(true);
                     setCurrentTab("brand");

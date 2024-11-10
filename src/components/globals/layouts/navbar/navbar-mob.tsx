@@ -233,7 +233,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 )}
 
                 <div className={cn("space-y-5", !user && "mt-5")}>
-                    {!isAuthorized && (
+                    {/* {!isAuthorized && (
                         <>
                             <ul
                                 className="grid grid-cols-2 items-center gap-4 px-4"
@@ -278,7 +278,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
 
                             <Separator />
                         </>
-                    )}
+                    )} */}
 
                     <ul
                         className="flex items-center gap-2 overflow-x-scroll px-4"

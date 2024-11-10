@@ -31,7 +31,7 @@ const items: Item[] = [
             "The best way to protect the environment is to make sustainable choices.",
         imageUrl:
             "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnMBwj2mdNari256c8ReoWJUD0Pyg3ZdX7Yqpb",
-        button: "Learn More",
+        button: "Discover More",
         href: "/soon",
     },
     {
@@ -40,7 +40,7 @@ const items: Item[] = [
             "From raw materials to remarkable products, we are committed to sustainability.",
         imageUrl:
             "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZntdsqdSIHmgvafVRtSkxXNwjCWPu2LqAG3Fly",
-        button: "Get Started",
+        button: "Discover More",
         href: "/soon",
     },
     {
@@ -58,7 +58,7 @@ const items: Item[] = [
             "Discover our elegant and eco-friendly products that are designed to make a statement.",
         imageUrl:
             "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnV6qCG7l80TM4AsehRfmtqSxKLIbUCcJay9gN",
-        button: "Explore",
+        button: "Discover More",
         href: "/soon",
     },
 ];
@@ -76,7 +76,7 @@ export function Landing({ className, ...props }: GenericProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="h-[calc(100vh-16rem)] w-full"
+                className="h-[calc(100vh-20vh)] w-full"
             >
                 <CarouselContent className="ml-0">
                     {items.map((item, index) => (
