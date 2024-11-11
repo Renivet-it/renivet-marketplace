@@ -16,7 +16,7 @@ export function CountdownStrip() {
     });
 
     useEffect(() => {
-        const targetDate = new Date("2024-12-01T00:00:00");
+        const targetDate = new Date("2025-01-17T00:00:00");
 
         const interval = setInterval(() => {
             const now = new Date();
@@ -41,7 +41,7 @@ export function CountdownStrip() {
     return (
         <div
             className={cn(
-                "w-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 p-2 shadow-lg",
+                "w-full bg-foreground p-2 shadow-lg",
                 isNavbarOpen ? "hidden" : "block"
             )}
         >

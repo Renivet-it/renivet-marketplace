@@ -101,7 +101,7 @@ export function Landing({ className, ...props }: GenericProps) {
 
                                     <Button
                                         size="lg"
-                                        className="mt-1 bg-background font-semibold uppercase text-foreground hover:bg-background/90 md:mt-0 md:py-7 md:text-lg"
+                                        className="mt-1 bg-background/60 font-semibold uppercase text-foreground hover:bg-background/90 md:mt-0 md:py-5"
                                         asChild
                                     >
                                         <Link href={item.href}>
