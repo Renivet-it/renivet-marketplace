@@ -51,14 +51,36 @@ export const createRoleSchema = roleSchema.omit({
 
 export const updateRoleSchema = createRoleSchema.partial();
 
-export const cachedRole = roleSchema.extend({
+export const cachedRoleSchema = roleSchema.extend({
     users: z.number({
         required_error: "Users count is required",
         invalid_type_error: "Users count must be a number",
     }),
+    createdAt: z
+        .string({
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a string",
+        })
+        .transform((x) => new Date(x)),
+    updatedAt: z
+        .string({
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a string",
+        })
+        .transform((x) => new Date(x)),
 });
+
+export const reorderRolesSchema = z.array(
+    roleSchema.extend({
+        users: z.number({
+            required_error: "Users count is required",
+            invalid_type_error: "Users count must be a number",
+        }),
+    })
+);
 
 export type Role = z.infer<typeof roleSchema>;
 export type CreateRole = z.infer<typeof createRoleSchema>;
 export type UpdateRole = z.infer<typeof updateRoleSchema>;
-export type CachedRole = z.infer<typeof cachedRole>;
+export type CachedRole = z.infer<typeof cachedRoleSchema>;
+export type ReorderRoles = z.infer<typeof reorderRolesSchema>;

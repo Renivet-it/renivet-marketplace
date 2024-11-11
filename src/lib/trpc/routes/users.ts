@@ -2,12 +2,86 @@ import { BitFieldSitePermission } from "@/config/permissions";
 import { userCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { hasPermission, slugify } from "@/lib/utils";
-import { createAddressSchema, updateAddressSchema } from "@/lib/validations";
+import {
+    createAddressSchema,
+    updateAddressSchema,
+    userWithAddressesAndRolesSchema,
+} from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ilike, ne } from "drizzle-orm";
 import { z } from "zod";
 
 export const usersRouter = createTRPCRouter({
+    getUsers: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().min(1).max(50).default(10),
+                page: z.number().min(1).default(1),
+                search: z.string().optional(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(
+                user.sitePermissions,
+                [
+                    BitFieldSitePermission.MANAGE_USERS |
+                        BitFieldSitePermission.VIEW_USERS,
+                ],
+                "any"
+            );
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
+        .query(async ({ input, ctx }) => {
+            const { db, schemas } = ctx;
+            const { limit, page, search } = input;
+
+            const data = await db.query.users.findMany({
+                where: !!search?.length
+                    ? ilike(schemas.users.email, `%${search}%`)
+                    : undefined,
+                with: {
+                    addresses: true,
+                    roles: {
+                        with: {
+                            role: true,
+                        },
+                    },
+                },
+                limit,
+                offset: (page - 1) * limit,
+                orderBy: [desc(schemas.users.createdAt)],
+                extras: {
+                    userCount: db.$count(schemas.users).as("user_ount"),
+                },
+            });
+
+            const parsed = userWithAddressesAndRolesSchema
+                .extend({
+                    userCount: z
+                        .string({
+                            required_error: "User count is required",
+                            invalid_type_error: "User count must be a string",
+                        })
+                        .transform((x) => parseInt(x) || 0),
+                })
+                .array()
+                .parse(
+                    data.map((user) => ({
+                        ...user,
+                        roles: user.roles.map((role) => role.role),
+                    }))
+                );
+
+            return parsed;
+        }),
     currentUser: protectedProcedure.query(async ({ ctx }) => {
         const { user } = ctx;
 

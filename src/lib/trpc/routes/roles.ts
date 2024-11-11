@@ -1,10 +1,15 @@
 import { BitFieldSitePermission } from "@/config/permissions";
-import { roleCache } from "@/lib/redis/methods";
+import { roleCache, userCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { hasPermission, slugify } from "@/lib/utils";
-import { createRoleSchema, updateRoleSchema } from "@/lib/validations";
+import {
+    cachedRoleSchema,
+    createRoleSchema,
+    reorderRolesSchema,
+    updateRoleSchema,
+} from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, gt, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export const rolesRouter = createTRPCRouter({
@@ -34,18 +39,17 @@ export const rolesRouter = createTRPCRouter({
                     },
                 });
 
-                cachedRoles = roles.map((role) => ({
-                    ...role,
-                    users: role.userRoles.length,
-                }));
+                cachedRoles = cachedRoleSchema.array().parse(
+                    roles.map((role) => ({
+                        ...role,
+                        users: role.userRoles.length,
+                    }))
+                );
 
                 await roleCache.addBulk(cachedRoles.map((x) => x!));
             }
 
-            return cachedRoles.map((role) => ({
-                ...role,
-                roleCount: cachedRoles.length,
-            }));
+            return cachedRoles.sort((a, b) => a.position - b.position);
         }),
     getRole: protectedProcedure
         .input(
@@ -85,10 +89,10 @@ export const rolesRouter = createTRPCRouter({
                         message: "Role not found",
                     });
 
-                cachedRole = {
+                cachedRole = cachedRoleSchema.parse({
                     ...role,
                     users: role.userRoles.length,
-                };
+                });
 
                 await roleCache.add(cachedRole);
             }
@@ -116,9 +120,12 @@ export const rolesRouter = createTRPCRouter({
 
             const slug = slugify(input.name);
 
-            const existingRole = await db.query.roles.findFirst({
-                where: eq(schemas.roles.slug, slug),
-            });
+            const [cachedRoles, existingRole] = await Promise.all([
+                roleCache.getAll(),
+                db.query.roles.findFirst({
+                    where: eq(schemas.roles.slug, slug),
+                }),
+            ]);
             if (existingRole)
                 throw new TRPCError({
                     code: "CONFLICT",
@@ -130,6 +137,7 @@ export const rolesRouter = createTRPCRouter({
                 .values({
                     ...input,
                     slug,
+                    position: cachedRoles.length + 1,
                 })
                 .returning()
                 .then((res) => res[0]);
@@ -210,6 +218,46 @@ export const rolesRouter = createTRPCRouter({
 
             return updatedRole;
         }),
+    reorderRoles: protectedProcedure
+        .input(reorderRolesSchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_ROLES,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { db, schemas } = ctx;
+
+            const existingRoles = await roleCache.getAll();
+            if (existingRoles.length !== input.length)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Invalid data",
+                });
+
+            await db.transaction(async (tx) => {
+                for (const role of input) {
+                    await tx
+                        .update(schemas.roles)
+                        .set({ position: role.position })
+                        .where(eq(schemas.roles.id, role.id));
+                }
+
+                await roleCache.drop();
+                await roleCache.addBulk(input);
+            });
+
+            return true;
+        }),
     deleteRole: protectedProcedure
         .input(
             z.object({
@@ -234,17 +282,58 @@ export const rolesRouter = createTRPCRouter({
             const { db, schemas } = ctx;
             const { id } = input;
 
-            const existingRole = await roleCache.get(id);
+            const existingRoles = await roleCache.getAll();
+            const existingRole = existingRoles.find((role) => role.id === id);
             if (!existingRole)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Role not found",
                 });
 
-            await Promise.all([
-                db.delete(schemas.roles).where(eq(schemas.roles.id, id)),
-                roleCache.remove(id),
-            ]);
+            const existingUsers = await userCache.getAll();
+            const usersWithRole = existingUsers.filter((user) =>
+                user.roles.some((role) => role.id === id)
+            );
+
+            const updatedUsers = existingUsers.map((user) => ({
+                ...user,
+                roles: user.roles.filter((role) => role.id !== id),
+            }));
+
+            await db.transaction(async (tx) => {
+                await Promise.all([
+                    tx.delete(schemas.roles).where(eq(schemas.roles.id, id)),
+                    tx
+                        .update(schemas.roles)
+                        .set({ position: sql`${schemas.roles.position} - 1` })
+                        .where(
+                            gt(schemas.roles.position, existingRole.position)
+                        ),
+                    roleCache.drop(),
+                ]);
+
+                const updateRoles = existingRoles
+                    .map((role) => {
+                        if (role.position > existingRole.position) {
+                            return {
+                                ...role,
+                                position: role.position - 1,
+                            };
+                        }
+                        return role;
+                    })
+                    .filter((role) => role.id !== id);
+
+                if (usersWithRole.length > 0) {
+                    await Promise.all([
+                        roleCache.addBulk(updateRoles),
+                        userCache.drop(),
+                    ]);
+                    await userCache.addBulk(updatedUsers);
+                } else {
+                    await roleCache.addBulk(updateRoles);
+                }
+            });
 
             return true;
         }),

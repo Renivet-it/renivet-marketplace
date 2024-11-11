@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import {
     DataTableViewOptions,
     Pagination,
@@ -14,7 +15,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
-import { CachedRole } from "@/lib/validations";
+import { UserWithAddressesAndRoles } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -30,49 +31,69 @@ import {
 import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
+import { UserAction } from "./user-action";
 
-export type TableRole = CachedRole;
+export type TableUser = UserWithAddressesAndRoles & {
+    name: string;
+    joinedAt: string;
+};
 
-const columns: ColumnDef<TableRole>[] = [
+const columns: ColumnDef<TableUser>[] = [
     {
         accessorKey: "name",
         header: "Name",
         enableHiding: false,
     },
     {
-        accessorKey: "users",
-        header: "Users",
+        accessorKey: "email",
+        header: "Email",
+        enableHiding: false,
     },
     {
-        accessorKey: "position",
-        header: "Position",
-    },
-    {
-        accessorKey: "createdAt",
-        header: "Created At",
+        accessorKey: "roles",
+        header: "Roles",
         cell: ({ row }) => {
-            const tag = row.original;
-            return format(new Date(tag.createdAt), "MMM dd, yyyy");
+            const user = row.original;
+
+            return (
+                <div className="flex flex-wrap gap-1">
+                    {user.roles.map((role) => (
+                        <Badge key={role.id}>{role.name}</Badge>
+                    ))}
+                </div>
+            );
         },
     },
-    // {
-    //     id: "actions",
-    //     cell: ({ row }) => {
-    //         const tag = row.original;
-    //         return <TagAction tag={tag} />;
-    //     },
-    // },
+    {
+        accessorKey: "joinedAt",
+        header: "Joined At",
+        cell: ({ row }) => {
+            const user = row.original;
+            return format(new Date(user.createdAt), "MMM dd, yyyy");
+        },
+    },
+    {
+        id: "actions",
+        cell: ({ row }) => {
+            const user = row.original;
+            return <UserAction user={user} />;
+        },
+    },
 ];
 
 interface PageProps {
-    initialRoles: (CachedRole & {
-        roleCount: number;
+    initialUsers: (UserWithAddressesAndRoles & {
+        userCount: number;
     })[];
 }
 
-export function RolesTable({ initialRoles }: PageProps) {
+export function UsersTable({ initialUsers }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+
+    const [search, setSearch] = useQueryState("search", {
+        defaultValue: "",
+    });
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -81,27 +102,33 @@ export function RolesTable({ initialRoles }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: rolesRaw } = trpc.roles.getRoles.useQuery(undefined, {
-        initialData: initialRoles,
-    });
+    const { data: usersRaw } = trpc.users.getUsers.useQuery(
+        { page, limit, search },
+        { initialData: initialUsers }
+    );
 
-    const roles = useMemo(
-        () => rolesRaw?.map((role) => role) ?? [],
-        [rolesRaw]
+    const users = useMemo(
+        () =>
+            usersRaw.length > 0
+                ? usersRaw.map((user) => ({
+                      ...user,
+                      name: `${user.firstName} ${user.lastName}`,
+                      joinedAt: format(
+                          new Date(user.createdAt),
+                          "MMM dd, yyyy"
+                      ),
+                  }))
+                : [],
+        [usersRaw]
     );
 
     const pages = useMemo(
-        () => Math.ceil(rolesRaw?.[0]?.roleCount / limit) ?? 1,
-        [rolesRaw, limit]
-    );
-
-    const paginatedRoles = useMemo(
-        () => roles.slice((page - 1) * limit, page * limit),
-        [roles, page, limit]
+        () => Math.ceil(usersRaw?.[0]?.userCount ?? 0 / limit) ?? 1,
+        [usersRaw, limit]
     );
 
     const table = useReactTable({
-        data: paginatedRoles,
+        data: users,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -124,17 +151,18 @@ export function RolesTable({ initialRoles }: PageProps) {
             <div className="flex items-center gap-2">
                 <div className="w-full md:w-auto">
                     <Input
-                        placeholder="Search by name..."
+                        placeholder="Search by email..."
                         value={
                             (table
-                                .getColumn("name")
+                                .getColumn("email")
                                 ?.getFilterValue() as string) ?? ""
                         }
-                        onChange={(event) =>
+                        onChange={(event) => {
                             table
-                                .getColumn("name")
-                                ?.setFilterValue(event.target.value)
-                        }
+                                .getColumn("email")
+                                ?.setFilterValue(event.target.value);
+                            setSearch(event.target.value);
+                        }}
                     />
                 </div>
 
@@ -172,7 +200,10 @@ export function RolesTable({ initialRoles }: PageProps) {
                                     }
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
+                                        <TableCell
+                                            key={cell.id}
+                                            className="max-w-60"
+                                        >
                                             {flexRender(
                                                 cell.column.columnDef.cell,
                                                 cell.getContext()
@@ -198,7 +229,7 @@ export function RolesTable({ initialRoles }: PageProps) {
             <div className="flex items-center justify-between gap-2">
                 <p className="text-sm text-muted-foreground">
                     Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {rolesRaw?.[0]?.roleCount ?? 0} tags
+                    {usersRaw?.[0]?.userCount ?? 0} users
                 </p>
 
                 <Pagination total={pages} />

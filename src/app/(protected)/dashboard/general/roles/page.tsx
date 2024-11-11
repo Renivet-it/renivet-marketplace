@@ -1,9 +1,10 @@
-import { RolesTable } from "@/components/dashboard/roles";
+import { RolesPage } from "@/components/dashboard/roles";
 import { DashShell } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { db } from "@/lib/db";
 import { roleCache } from "@/lib/redis/methods";
+import { cachedRoleSchema } from "@/lib/validations";
 import { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -51,20 +52,17 @@ async function RolesFetch() {
             },
         });
 
-        cachedRoles = roles.map((role) => ({
-            ...role,
-            users: role.userRoles.length,
-        }));
+        cachedRoles = cachedRoleSchema.array().parse(
+            roles.map((role) => ({
+                ...role,
+                users: role.userRoles.length,
+            }))
+        );
 
         await roleCache.addBulk(cachedRoles.map((x) => x!));
     }
 
-    return (
-        <RolesTable
-            initialRoles={cachedRoles.map((role) => ({
-                ...role,
-                roleCount: cachedRoles.length,
-            }))}
-        />
-    );
+    const initialRoles = cachedRoles.sort((a, b) => a.position - b.position);
+
+    return <RolesPage initialRoles={initialRoles} />;
 }

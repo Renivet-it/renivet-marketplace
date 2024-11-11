@@ -12,6 +12,7 @@
     },
     "dependencies": {
         "@clerk/nextjs": "^6.3.0",
+        "@hello-pangea/dnd": "^17.0.0",
         "@hookform/resolvers": "^3.9.1",
         "@mantine/hooks": "^7.13.5",
         "@paralleldrive/cuid2": "^2.2.2",

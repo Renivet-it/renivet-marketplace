@@ -80,7 +80,20 @@ export const safeUserSchema = userSchema.omit({
     isPhoneVerified: true,
 });
 
-export const cachedUserSchema = userWithAddressesAndRolesSchema;
+export const cachedUserSchema = userWithAddressesAndRolesSchema.extend({
+    createdAt: z
+        .string({
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a string",
+        })
+        .transform((x) => new Date(x)),
+    updatedAt: z
+        .string({
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a string",
+        })
+        .transform((x) => new Date(x)),
+});
 
 export const updateUserGeneralSchema = userSchema
     .pick({

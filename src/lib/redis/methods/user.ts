@@ -1,5 +1,5 @@
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
-import { CachedUser } from "@/lib/validations";
+import { CachedUser, cachedUserSchema } from "@/lib/validations";
 import { redis } from "..";
 
 class UserCache {
@@ -9,9 +9,22 @@ class UserCache {
         this.genKey = generateCacheKey(":", "user");
     }
 
+    async getAll() {
+        const keys = await redis.keys(this.genKey("*"));
+        if (!keys.length) return [];
+        const users = await redis.mget(...keys);
+        return cachedUserSchema
+            .array()
+            .parse(
+                users
+                    .map((user) => parseToJSON<CachedUser>(user))
+                    .filter((user): user is CachedUser => user !== null)
+            );
+    }
+
     async get(id: string) {
         const user = await redis.get(this.genKey(id));
-        return parseToJSON<CachedUser>(user);
+        return cachedUserSchema.parse(parseToJSON<CachedUser>(user));
     }
 
     async add(user: CachedUser) {
@@ -23,6 +36,23 @@ class UserCache {
         );
     }
 
+    async addBulk(users: CachedUser[]) {
+        const pipeline = redis.pipeline();
+
+        await Promise.all(
+            users.map((user) => {
+                pipeline.set(
+                    this.genKey(user.id),
+                    JSON.stringify(user),
+                    "EX",
+                    60 * 60 * 24
+                );
+            })
+        );
+
+        return await pipeline.exec();
+    }
+
     async update(user: CachedUser) {
         await this.remove(user.id);
         return await this.add(user);
@@ -30,6 +60,12 @@ class UserCache {
 
     async remove(id: string) {
         return await redis.del(this.genKey(id));
+    }
+
+    async drop() {
+        const keys = await redis.keys(this.genKey("*"));
+        if (!keys.length) return;
+        await redis.del(...keys);
     }
 }
 

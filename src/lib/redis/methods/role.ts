@@ -1,5 +1,5 @@
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
-import { CachedRole } from "@/lib/validations";
+import { CachedRole, cachedRoleSchema } from "@/lib/validations";
 import { redis } from "..";
 
 class RoleCache {
@@ -13,14 +13,18 @@ class RoleCache {
         const keys = await redis.keys(this.genKey("*"));
         if (!keys.length) return [];
         const roles = await redis.mget(...keys);
-        return roles
-            .map((role) => parseToJSON<CachedRole>(role))
-            .filter((role): role is CachedRole => role !== null);
+        return cachedRoleSchema
+            .array()
+            .parse(
+                roles
+                    .map((role) => parseToJSON<CachedRole>(role))
+                    .filter((role): role is CachedRole => role !== null)
+            );
     }
 
     async get(id: string) {
         const role = await redis.get(this.genKey(id));
-        return parseToJSON<CachedRole>(role);
+        return cachedRoleSchema.parse(parseToJSON<CachedRole>(role));
     }
 
     async add(role: CachedRole) {
@@ -56,6 +60,12 @@ class RoleCache {
 
     async remove(id: string) {
         return await redis.del(this.genKey(id));
+    }
+
+    async drop() {
+        const keys = await redis.keys(this.genKey("*"));
+        if (!keys.length) return 0;
+        return await redis.del(...keys);
     }
 }
 

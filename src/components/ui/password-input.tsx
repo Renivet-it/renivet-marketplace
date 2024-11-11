@@ -56,9 +56,15 @@ const PasswordInput = React.forwardRef<HTMLInputElement, InputProps>(
                         onClick={() => setIsVisible((prev) => !prev)}
                     >
                         {isVisible ? (
-                            <Icons.EyeOff className="size-5" />
+                            <>
+                                <Icons.EyeOff className="size-5" />
+                                <span className="sr-only">Hide Password</span>
+                            </>
                         ) : (
-                            <Icons.Eye className="size-5" />
+                            <>
+                                <Icons.Eye className="size-5" />
+                                <span className="sr-only">Show Password</span>
+                            </>
                         )}
                     </Button>
                 )}

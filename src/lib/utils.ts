@@ -246,7 +246,11 @@ export function convertValueToLabel(value: string) {
     return value
         .replace(/([a-z])([A-Z])/g, "$1 $2")
         .split(/[_-\s]/)
-        .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
+        .map((x) =>
+            x.toLowerCase().includes("id")
+                ? x.toLowerCase().replace("id", "ID")
+                : x.charAt(0).toUpperCase() + x.slice(1)
+        )
         .join(" ");
 }
 
@@ -338,4 +342,16 @@ export function generateAddress(
         .filter(([, value]) => value !== null)
         .map(([, value]) => value)
         .join(", ");
+}
+
+export function reorder<T>(
+    list: T[],
+    startIndex: number,
+    endIndex: number
+): T[] {
+    const result = Array.from(list);
+    const [removed] = result.splice(startIndex, 1);
+    result.splice(endIndex, 0, removed);
+
+    return result;
 }

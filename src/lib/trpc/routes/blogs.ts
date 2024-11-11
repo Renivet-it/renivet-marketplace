@@ -32,12 +32,6 @@ const hasBlogManagePermission = isAuth.unstable_pipe(({ ctx, next }) => {
 });
 
 export const blogsRouter = createTRPCRouter({
-    getBlogsCount: publicProcedure.query(async ({ ctx }) => {
-        const { db, schemas } = ctx;
-
-        const count = await db.$count(schemas.blogs);
-        return count;
-    }),
     getBlogs: publicProcedure
         .input(
             z.object({

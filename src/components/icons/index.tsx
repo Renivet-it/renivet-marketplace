@@ -23,6 +23,7 @@ import LucideIcons, {
     Footprints,
     Frame,
     GalleryVerticalEnd,
+    GripVertical,
     Headset,
     Heart,
     Home,
@@ -44,6 +45,7 @@ import LucideIcons, {
     MoreHorizontal,
     Package,
     Pencil,
+    Phone,
     PieChart,
     PlaneLanding,
     PlaneTakeoff,
@@ -72,6 +74,8 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Phone,
+    GripVertical,
     Plus,
     Trash2,
     Pencil,

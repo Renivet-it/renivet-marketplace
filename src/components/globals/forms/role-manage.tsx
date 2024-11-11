@@ -14,22 +14,26 @@ import { Switch } from "@/components/ui/switch";
 import { sitePermissions } from "@/config/permissions";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel, handleClientError } from "@/lib/utils";
-import { CreateRole, createRoleSchema } from "@/lib/validations";
+import { CachedRole, CreateRole, createRoleSchema } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export function RoleManageForm() {
+interface PageProps {
+    role?: CachedRole;
+}
+
+export function RoleManageForm({ role }: PageProps) {
     const router = useRouter();
 
     const form = useForm<CreateRole>({
         resolver: zodResolver(createRoleSchema),
         defaultValues: {
-            name: "",
-            sitePermissions: "0",
-            brandPermissions: "0",
+            name: role?.name ?? "",
+            sitePermissions: role?.sitePermissions ?? "0",
+            brandPermissions: role?.brandPermissions ?? "0",
         },
     });
 
@@ -37,6 +41,8 @@ export function RoleManageForm() {
         () => sitePermissions.reduce((acc, curr) => acc | curr.bit, 0),
         []
     );
+
+    const { refetch } = trpc.roles.getRoles.useQuery();
 
     const { mutate: createRole, isPending: isRoleCreating } =
         trpc.roles.createRole.useMutation({
@@ -47,6 +53,25 @@ export function RoleManageForm() {
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Role created", { id: toastId });
                 router.push("/dashboard/general/roles");
+                refetch();
+                router.refresh();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    const { mutate: updateRole, isPending: isRoleUpdating } =
+        trpc.roles.updateRole.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Updating role...");
+                return { toastId };
+            },
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Role updated", { id: toastId });
+                router.push("/dashboard/general/roles");
+                refetch();
+                router.refresh();
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -57,7 +82,11 @@ export function RoleManageForm() {
         <Form {...form}>
             <form
                 className="space-y-6"
-                onSubmit={form.handleSubmit((values) => createRole(values))}
+                onSubmit={form.handleSubmit((values) =>
+                    role
+                        ? updateRole({ id: role.id, data: values })
+                        : createRole(values)
+                )}
             >
                 <FormField
                     control={form.control}
@@ -69,7 +98,7 @@ export function RoleManageForm() {
                             <FormControl>
                                 <Input
                                     placeholder="Enter the role name"
-                                    disabled={isRoleCreating}
+                                    disabled={isRoleCreating || isRoleUpdating}
                                     {...field}
                                 />
                             </FormControl>
@@ -91,7 +120,7 @@ export function RoleManageForm() {
                                     variant="outline"
                                     size="sm"
                                     type="button"
-                                    disabled={isRoleCreating}
+                                    disabled={isRoleCreating || isRoleUpdating}
                                     onClick={() => {
                                         field.onChange(
                                             +field.value ===
@@ -138,7 +167,8 @@ export function RoleManageForm() {
                                                         "brandPermissions"
                                                     ) > 0 &&
                                                         permission.bit === 1) ||
-                                                    isRoleCreating
+                                                    isRoleCreating ||
+                                                    isRoleUpdating
                                                 }
                                                 onCheckedChange={(checked) => {
                                                     let value = checked
@@ -252,10 +282,14 @@ export function RoleManageForm() {
 
                 <Button
                     type="submit"
-                    disabled={isRoleCreating || !form.formState.isDirty}
+                    disabled={
+                        isRoleCreating ||
+                        isRoleUpdating ||
+                        !form.formState.isDirty
+                    }
                     className="w-full"
                 >
-                    Create Role
+                    {role ? "Update Role" : "Create Role"}
                 </Button>
             </form>
         </Form>
