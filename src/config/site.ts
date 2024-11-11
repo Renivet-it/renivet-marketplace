@@ -87,30 +87,34 @@ export const siteConfig: SiteConfig = {
                         name: "Testimonials",
                         href: "/about#testimonials",
                     },
+                    {
+                        name: "Join Community",
+                        href: "/soon",
+                    },
                 ],
             },
             {
-                name: "Portfolio",
+                name: "Socials",
                 items: [
                     {
-                        name: "Corporate Websites",
-                        href: "/portfolio/corporate-websites",
+                        name: "Instagram",
+                        href: "/soon",
                     },
                     {
-                        name: "E-Commerce",
-                        href: "/portfolio/e-commerce",
+                        name: "Facebook",
+                        href: "/soon",
                     },
                     {
-                        name: "Mobile Apps",
-                        href: "/portfolio/mobile-apps",
+                        name: "Youtube",
+                        href: "/soon",
                     },
                     {
-                        name: "Landing Pages",
-                        href: "/portfolio/landing-pages",
+                        name: "Twitter",
+                        href: "/soon",
                     },
                     {
-                        name: "UI/UX Projects",
-                        href: "/portfolio/ui-ux-projects",
+                        name: "Linkedin",
+                        href: "/soon",
                     },
                 ],
             },
