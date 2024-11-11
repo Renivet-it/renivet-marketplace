@@ -1,6 +1,8 @@
+import { BitFieldSitePermission } from "@/config/permissions";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { getUserPermissions, hasPermission } from "../utils";
 import { Context } from "./context";
 
 const map = new Map<string, number[]>();
@@ -44,25 +46,49 @@ const ratelimiter = t.middleware(({ ctx, next }) => {
     requests.push(now);
     map.set(identifier, requests);
 
-    return next({
-        ctx,
-    });
+    return next({ ctx });
 });
 
-const isAuth = t.middleware(async ({ ctx, next }) => {
+export const isAuth = t.middleware(({ ctx, next }) => {
     if (!ctx.user || !ctx.auth)
         throw new TRPCError({
             code: "UNAUTHORIZED",
             message: "You're not authorized",
         });
 
+    const userPermissions = getUserPermissions(ctx.user.roles);
+
     return next({
         ctx: {
             ...ctx,
-            user: ctx.user,
+            user: { ...ctx.user, ...userPermissions },
             auth: ctx.auth,
         },
     });
+});
+
+const isBrand = isAuth.unstable_pipe(({ ctx, next }) => {
+    if (ctx.user.brandPermissions <= 0)
+        throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "You're not authorized",
+        });
+
+    return next({ ctx });
+});
+
+const isAdmin = isAuth.unstable_pipe(({ ctx, next }) => {
+    const isAuthorized = hasPermission(ctx.user.sitePermissions, [
+        BitFieldSitePermission.ADMINISTRATOR,
+    ]);
+
+    if (!isAuthorized)
+        throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "You're not authorized",
+        });
+
+    return next({ ctx });
 });
 
 const errorHandler = t.middleware(async ({ next }) => {
@@ -84,3 +110,5 @@ const errorHandler = t.middleware(async ({ next }) => {
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure.use(errorHandler).use(ratelimiter);
 export const protectedProcedure = publicProcedure.use(isAuth);
+export const brandProcedure = protectedProcedure.use(isBrand);
+export const adminProcedure = protectedProcedure.use(isAdmin);

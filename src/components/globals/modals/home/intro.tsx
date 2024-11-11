@@ -9,18 +9,32 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "@/components/ui/dialog-general";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { siteConfig } from "@/config/site";
 import { useIntroModalStore } from "@/lib/store";
 import ms from "enhanced-ms";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export function IntroModal() {
+interface Props {
+    selectedTab?: "community" | "brand";
+}
+
+export function IntroModal({ selectedTab }: Props) {
+    const [currentTab, setCurrentTab] = useState<"community" | "brand">(
+        selectedTab ?? "community"
+    );
+
+    useEffect(() => {
+        if (selectedTab) setCurrentTab(selectedTab);
+    }, [selectedTab]);
+
     const isOpen = useIntroModalStore((state) => state.isOpen);
     const setIsOpen = useIntroModalStore((state) => state.setIsOpen);
 
     useEffect(() => {
+        if (selectedTab) return setIsOpen(true);
+
         if (
             typeof window === "undefined" ||
             typeof localStorage === "undefined"
@@ -46,28 +60,27 @@ export function IntroModal() {
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen} defaultOpen={false}>
-            <DialogContent>
+            <DialogContent onInteractOutside={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>Welcome to {siteConfig.name}!</DialogTitle>
                 </DialogHeader>
 
                 <div className="">
-                    <Tabs defaultValue="community">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="community">
-                                Join our Community
-                            </TabsTrigger>
-                            <TabsTrigger value="brand">
-                                Join as a Brand
-                            </TabsTrigger>
-                        </TabsList>
-
+                    <Tabs
+                        defaultValue="community"
+                        onValueChange={(value) =>
+                            setCurrentTab(value as "community" | "brand")
+                        }
+                        value={currentTab}
+                    >
                         <TabsContent value="community">
-                            <NewsLetterSubscribeForm />
+                            <NewsLetterSubscribeForm
+                                setCurrentTab={setCurrentTab}
+                            />
                         </TabsContent>
 
                         <TabsContent value="brand">
-                            <BrandWaitlistForm />
+                            <BrandWaitlistForm setCurrentTab={setCurrentTab} />
                         </TabsContent>
                     </Tabs>
                 </div>

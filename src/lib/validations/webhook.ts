@@ -13,14 +13,32 @@ export const userWebhookSchema = z.object({
     last_name: z.string(),
     email_addresses: z.array(
         z.object({
+            id: z.string(),
             email_address: z.string().email(),
-            verification: z.object({
-                status: z.string(),
-            }),
+            verification: z
+                .object({
+                    status: z.string(),
+                })
+                .nullable(),
         })
     ),
-    createdAt: z.number().transform((val) => new Date(val)),
-    updatedAt: z.number().transform((val) => new Date(val)),
+    phone_numbers: z.array(
+        z
+            .object({
+                id: z.string(),
+                phone_number: z.string(),
+                verification: z
+                    .object({
+                        status: z.string(),
+                    })
+                    .nullable(),
+            })
+            .optional()
+    ),
+    primary_email_address_id: z.string(),
+    primary_phone_number_id: z.string().nullable(),
+    created_at: z.number().transform((val) => new Date(val)),
+    updated_at: z.number().transform((val) => new Date(val)),
 });
 
 export const userDeleteWebhookSchema = z.object({

@@ -1,4 +1,4 @@
-import { convertToSeconds, generateCacheKey, parseToJSON } from "@/lib/utils";
+import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedUser } from "@/lib/validations";
 import { redis } from "..";
 
@@ -10,7 +10,8 @@ class UserCache {
     }
 
     async get(id: string) {
-        return parseToJSON<CachedUser>(await redis.get(this.genKey(id)));
+        const user = await redis.get(this.genKey(id));
+        return parseToJSON<CachedUser>(user);
     }
 
     async add(user: CachedUser) {
@@ -18,7 +19,7 @@ class UserCache {
             this.genKey(user.id),
             JSON.stringify(user),
             "EX",
-            convertToSeconds("1d")
+            60 * 60 * 24
         );
     }
 

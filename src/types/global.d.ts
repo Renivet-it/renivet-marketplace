@@ -17,6 +17,7 @@ declare global {
         name: string;
         description: string;
         longDescription?: string;
+        category: string;
         og: {
             url: string;
             width: number;
@@ -30,10 +31,28 @@ declare global {
         links?: Partial<Record<keyof typeof Icons, string>>;
         menu: {
             name: string;
+            description?: string;
             href: string;
             icon: keyof typeof Icons;
             isExternal?: boolean;
+            isDisabled?: boolean;
         }[];
+        footer: {
+            menu: {
+                name: string;
+                items: {
+                    name: string;
+                    href: string;
+                    isExternal?: boolean;
+                }[];
+            }[];
+        };
+        contact: {
+            officeHours: string;
+            email: string;
+            phone: string;
+            location: string;
+        };
     };
 
     type ExtendedFile<T extends "image" | "video" | "document" = "image", K> = {

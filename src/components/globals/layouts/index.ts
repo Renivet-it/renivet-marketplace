@@ -1,4 +1,4 @@
+export * from "./footer";
 export * from "./navbar";
 export * from "./shells";
-export * from "./footer";
-
+export * from "./sidebar";

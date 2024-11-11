@@ -1,20 +1,37 @@
+import { BitFieldSitePermission } from "@/config/permissions";
 import {
     createTRPCRouter,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
+import { hasPermission } from "@/lib/utils";
 import { createBrandWaitlistSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const brandsWaitlistRouter = createTRPCRouter({
-    getBrandsWaitlist: protectedProcedure.query(async ({ ctx }) => {
-        const { db } = ctx;
+    getBrandsWaitlist: protectedProcedure
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
 
-        const brandsWaitlist = await db.query.brandsWaitlist.findMany();
-        return brandsWaitlist;
-    }),
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.VIEW_BRANDS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
+        .query(async ({ ctx }) => {
+            const { db } = ctx;
+
+            const brandsWaitlist = await db.query.brandsWaitlist.findMany();
+            return brandsWaitlist;
+        }),
     getBrandsWaitlistEntry: protectedProcedure
         .input(
             z
@@ -32,6 +49,20 @@ export const brandsWaitlistRouter = createTRPCRouter({
                     return true;
                 })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.VIEW_BRANDS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .query(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id, brandEmail } = input;
@@ -85,6 +116,20 @@ export const brandsWaitlistRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BRANDS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id } = input;

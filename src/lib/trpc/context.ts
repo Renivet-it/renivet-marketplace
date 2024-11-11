@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
-import { CachedUser, UserWithProfile } from "@/lib/validations";
+import { CachedUser, UserWithAddressesAndRoles } from "@/lib/validations";
 import {
     SignedInAuthObject,
     SignedOutAuthObject,
@@ -14,7 +14,7 @@ import { NextRequest } from "next/server";
 type ContextProps = {
     req: NextRequest | Request;
     auth: SignedInAuthObject | SignedOutAuthObject | null;
-    user: UserWithProfile | null;
+    user: UserWithAddressesAndRoles | null;
 };
 
 export const createContextInner = ({ req, auth, user }: ContextProps) => {
@@ -32,7 +32,7 @@ export const createContext = async ({
 }: FetchCreateContextFnOptions & {
     req: NextRequest | Request;
 }) => {
-    let user: UserWithProfile | null = null;
+    let user: UserWithAddressesAndRoles | null = null;
 
     const auth = await clerkAuth();
 
@@ -44,14 +44,20 @@ export const createContext = async ({
             const dbUser = await db.query.users.findFirst({
                 where: eq(schema.users.id, auth.userId),
                 with: {
-                    profile: true,
+                    addresses: true,
+                    roles: {
+                        with: {
+                            role: true,
+                        },
+                    },
                 },
             });
 
-            if (dbUser && dbUser.profile) {
+            if (dbUser) {
                 user = {
                     ...dbUser,
-                    profile: dbUser.profile,
+                    addresses: dbUser.addresses,
+                    roles: dbUser.roles.map((r) => r.role),
                 };
 
                 const cachedUser: CachedUser = {
@@ -60,12 +66,11 @@ export const createContext = async ({
                     lastName: user.lastName,
                     email: user.email,
                     avatarUrl: user.avatarUrl,
-                    profile: {
-                        address: user.profile.address,
-                        phone: user.profile.phone,
-                        isProfileCompleted: user.profile.isProfileCompleted,
-                    },
-                    isVerified: user.isVerified,
+                    addresses: user.addresses,
+                    roles: user.roles,
+                    isEmailVerified: user.isEmailVerified,
+                    isPhoneVerified: user.isPhoneVerified,
+                    phone: user.phone,
                     createdAt: user.createdAt,
                     updatedAt: user.updatedAt,
                 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import {
     Form,
     FormControl,
@@ -9,7 +9,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { useIntroModalStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
@@ -18,10 +18,15 @@ import {
     createBrandWaitlistSchema,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Dispatch, SetStateAction } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-export function BrandWaitlistForm() {
+interface PageProps {
+    setCurrentTab: Dispatch<SetStateAction<"community" | "brand">>;
+}
+
+export function BrandWaitlistForm({ setCurrentTab }: PageProps) {
     const setIsOpen = useIntroModalStore((state) => state.setIsOpen);
 
     const form = useForm<CreateBrandWaitlist>({
@@ -241,6 +246,16 @@ export function BrandWaitlistForm() {
                             )}
                         />
                     </div>
+                </div>
+
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => setCurrentTab("community")}
+                        className="text-sm text-muted-foreground underline"
+                    >
+                        Join our Community
+                    </button>
                 </div>
 
                 <Button

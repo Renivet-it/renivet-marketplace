@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -8,32 +8,31 @@ import { Skeleton } from "../ui/skeleton";
 const dummyProducts = [
     {
         id: 1,
-        name: "CULT GAIA",
-        price: 49.0,
-        description: "Women Lou Top Handle Handbag Limited Edition",
-        image: "/images/popular1.jpeg",
+        name: "Tote Bags",
+        price: 1249,
+        description: "Leather Tote Bag with Gold Chain",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnorNcINvXBYvar8fi13IDLNAzQMbyucG0lj4t",
     },
     {
         id: 2,
-        name: "DIESEL",
-        price: 149.0,
-        description: "Unisex Auwt-Reinhold-Wt04 Regular Graphic Jacket",
-        image: "/images/popular2.jpeg",
+        name: "Waistcoats",
+        price: 1349,
+        description: "Leather Waistcoat with Gold Chain",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnlSZkhEHdy3cIoDNiMsOAgx4PfaSnXJpkKjEL",
     },
     {
         id: 3,
-        name: "VERSACE",
-        price: 2249.0,
-        description: "La Coupe des Versace Dieux Reversible Zip Jumper",
-        image: "/images/popular3.jpeg",
+        name: "Shirts",
+        price: 1449,
+        description: "Floral Print Shirt with Belt",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnFmUQEReUpgOqIWc15MXSjve3Q7xDhftJ6Zad",
     },
     {
         id: 4,
-        name: "GIORGIO ARMANI",
-        price: 2349.0,
-        description:
-            "Allover Logo Print Blouson Jacket with Designer Embroidary",
-        image: "/images/popular4.jpeg",
+        name: "Co-ords",
+        price: 1549,
+        description: "Organic Cotton Co-ords with Embroidered Logo",
+        image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZneSlV5TAhL7pEgDy5OrGIzuiMZxmk9vWQtUF1",
     },
 ];
 
@@ -44,15 +43,16 @@ interface PageProps extends GenericProps {
 export function Arrivals({ title, className, ...props }: PageProps) {
     return (
         <section
-            className={cn("flex justify-center py-5 md:py-10", className)}
+            className={cn(
+                "flex justify-center px-4 py-5 md:px-8 md:py-10",
+                className
+            )}
             {...props}
         >
-            <div className="w-full max-w-[100rem] space-y-10 px-8 xl:px-4">
-                <div className="flex items-center justify-center gap-4">
-                    <h2 className="text-3xl font-semibold uppercase">
-                        {title}
-                    </h2>
-                </div>
+            <div className="w-full max-w-5xl space-y-5 md:space-y-10 xl:max-w-[100rem]">
+                <h2 className="text-balance text-center text-2xl font-semibold uppercase md:text-3xl">
+                    {title}
+                </h2>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Suspense
@@ -73,16 +73,11 @@ export function Arrivals({ title, className, ...props }: PageProps) {
                 <div className="flex items-center justify-center">
                     <Button
                         variant="outline"
-                        className="min-w-40 rounded-none border-accent"
+                        className="w-full min-w-40 border-accent font-semibold text-accent md:w-min"
                         size="lg"
                         asChild
                     >
-                        <Link
-                            href="/products"
-                            className="text-lg font-semibold text-accent"
-                        >
-                            View All
-                        </Link>
+                        <Link href="/products">View All</Link>
                     </Button>
                 </div>
             </div>

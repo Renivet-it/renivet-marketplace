@@ -1,50 +1,56 @@
 "use client";
 
+import { DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
 import { cn } from "@/lib/utils";
+import { Blog } from "@/lib/validations";
 import Image from "next/image";
+import Link from "next/link";
 
-const offerData = {
-    title: "Glamorous Karwa Chauth Outfit Ideas Inspired By Celebs",
-    description:
-        "When your OOTDs call for a bit of cuteness with a dash of chic, crop tops never fail to come through. These styling tips will help you incorporate crop tops…",
-    buttonText: "Read More",
-    img: "/images/blog2.jpeg",
-};
+interface PageProps extends GenericProps {
+    blog: Blog;
+}
 
-export function Blogs({ className, ...props }: GenericProps) {
+export function Blogs({ className, blog, ...props }: PageProps) {
     return (
         <section
-            className={cn("flex justify-center py-5 md:py-10", className)}
+            className={cn(
+                "flex justify-center px-4 py-5 md:px-8 md:py-10",
+                className
+            )}
             {...props}
         >
-            <div className="w-full max-w-[100rem] space-y-10">
-                <div className="flex items-center justify-center gap-4">
-                    <h2 className="text-3xl font-semibold uppercase">
-                        Our Blogs
-                    </h2>
-                </div>
+            <div className="flex w-full max-w-5xl flex-col items-center gap-5 md:gap-10 xl:max-w-[100rem]">
+                <h2 className="text-balance text-center text-2xl font-semibold uppercase md:text-3xl">
+                    Our Blogs
+                </h2>
 
-                <div className="flex flex-col items-center bg-muted md:flex-row">
-                    <div className="flex w-full flex-col items-center gap-4 py-10 text-center">
-                        <h2 className="max-w-md text-balance text-4xl font-semibold">
-                            {offerData.title}
+                <div className="flex w-full flex-col bg-muted lg:flex-row">
+                    <div className="flex w-full flex-col items-center justify-center gap-5 p-6 text-center md:gap-10 md:p-10">
+                        <h2 className="max-w-lg text-balance text-2xl font-semibold md:text-4xl">
+                            {blog.title}
                         </h2>
 
-                        <p className="max-w-xl text-balance text-muted-foreground">
-                            {offerData.description}
+                        <p className="max-w-lg text-balance text-sm text-muted-foreground md:text-base">
+                            {blog.description}
                         </p>
 
-                        <button className="text-lg font-semibold uppercase underline underline-offset-2">
-                            {offerData.buttonText}
-                        </button>
+                        <Link
+                            className="font-semibold uppercase underline underline-offset-2 md:text-lg"
+                            href={`/blogs/${blog.slug}`}
+                        >
+                            Read More
+                        </Link>
                     </div>
 
-                    <div className="w-full">
+                    <div className="h-60 w-full overflow-hidden md:h-[25rem]">
                         <Image
-                            src={offerData.img}
-                            alt="Offer"
+                            src={
+                                blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL
+                            }
+                            alt={blog.title}
                             width={1000}
                             height={1000}
+                            className="size-full object-cover"
                         />
                     </div>
                 </div>

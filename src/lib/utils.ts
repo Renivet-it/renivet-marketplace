@@ -1,14 +1,16 @@
-import { env } from "@/../env";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import {
+    BitFieldBrandPermission,
+    BitFieldSitePermission,
+} from "@/config/permissions";
 import { init } from "@paralleldrive/cuid2";
 import { clsx, type ClassValue } from "clsx";
-import ms from "enhanced-ms";
 import { NextResponse } from "next/server";
 import { toast } from "sonner";
 import { ValidationError, WebhookVerificationError } from "svix";
 import { twMerge } from "tailwind-merge";
 import { ZodError } from "zod";
-import { ResponseMessages } from "./validations";
+import { Address, CachedUser, ResponseMessages } from "./validations";
 
 export function wait(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -19,10 +21,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getAbsoluteURL(path: string = "/") {
-    if (process.env.NODE_ENV === "production") {
-        if (env.VERCEL_PROJECT_PRODUCTION_URL)
-            return env.VERCEL_PROJECT_PRODUCTION_URL + path;
-    }
+    if (process.env.NEXT_PUBLIC_DEPLOYMENT_URL)
+        return `https://${process.env.NEXT_PUBLIC_DEPLOYMENT_URL}${path}`;
+    else if (process.env.VERCEL_URL)
+        return `https://${process.env.VERCEL_URL}${path}`;
     return "http://localhost:3000" + path;
 }
 
@@ -75,7 +77,7 @@ export function handleError(error: unknown) {
     else return CResponse({ message: "INTERNAL_SERVER_ERROR" });
 }
 
-export function handleClientError(error: unknown, toastId?: string) {
+export function handleClientError(error: unknown, toastId?: string | number) {
     if (error instanceof Error)
         return toast.error(error.message, { id: toastId });
     else toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, { id: toastId });
@@ -242,6 +244,7 @@ export function slugify(text: string, separator: string = "-") {
 
 export function convertValueToLabel(value: string) {
     return value
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
         .split(/[_-\s]/)
         .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
         .join(" ");
@@ -259,6 +262,80 @@ export function generateId(
     return init(opts)();
 }
 
-export function convertToSeconds(input: string): number {
-    return ms(input) / 1000;
+export function convertBitToString(bit: number): string {
+    return bit.toString();
+}
+
+export function hasPermission(
+    userPermissions: number,
+    requiredPermissions: number[],
+    type: "all" | "any" = "all"
+) {
+    if (requiredPermissions.length === 0) return false;
+    if (userPermissions & BitFieldSitePermission.ADMINISTRATOR) return true;
+    if (userPermissions & BitFieldBrandPermission.ADMINISTRATOR) return true;
+
+    const requiredBitmask = requiredPermissions.reduce(
+        (acc, permission) => acc | permission,
+        0
+    );
+
+    return type === "all"
+        ? (userPermissions & requiredBitmask) === requiredBitmask
+        : (userPermissions & requiredBitmask) !== 0;
+}
+
+export function getUserPermissions(roles: CachedUser["roles"]) {
+    return {
+        sitePermissions: roles.reduce(
+            (acc, role) => acc | parseInt(role.sitePermissions, 10),
+            0
+        ),
+        brandPermissions: roles.reduce(
+            (acc, role) => acc | parseInt(role.brandPermissions, 10),
+            0
+        ),
+    };
+}
+
+export function hideEmail(email: string) {
+    const [username, domain] = email.split("@");
+    const hiddenUsername = `${username.slice(0, 3)}${"*".repeat(5)}`;
+    return `${hiddenUsername}@${domain}`;
+}
+
+export function generateUploadThingFileUrl(appUrl: string, fileKey: string) {
+    return `${appUrl}${fileKey}`;
+}
+
+export function getUploadThingFileKey(url: string) {
+    const split = url.split("/").filter(Boolean);
+    return split[split.length - 1];
+}
+
+export function isValidUrl(url: string) {
+    return /^https?:\/\/\S+$/.test(url);
+}
+
+export function getUrlFromString(str: string) {
+    if (isValidUrl(str)) return str;
+    if (str.includes(".") && !str.includes(" "))
+        return new URL(`https://${str}`).toString();
+    return null;
+}
+
+export function getReadTime(content: string) {
+    const WORDS_PER_MINUTE = 200;
+    const textLength = content.split(" ").length;
+    return Math.ceil(textLength / WORDS_PER_MINUTE);
+}
+
+export function generateAddress(
+    address: Omit<Address, "createdAt" | "updatedAt">
+) {
+    return Object.entries(address)
+        .filter(([key]) => ["street", "city", "state", "zip"].includes(key))
+        .filter(([, value]) => value !== null)
+        .map(([, value]) => value)
+        .join(", ");
 }

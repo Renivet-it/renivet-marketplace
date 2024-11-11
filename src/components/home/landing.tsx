@@ -1,40 +1,119 @@
 "use client";
 
+import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
+import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
+import Link from "next/link";
+import { Carousel, CarouselContent, CarouselItem } from "../ui/carousel";
+
+interface Item {
+    title: string;
+    description: string;
+    imageUrl: string;
+    button: string;
+    href: string;
+}
+
+const items: Item[] = [
+    {
+        title: "Making a Choice",
+        description:
+            "A choice that is good for you and the planet. Discover our sustainable products.",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZn9M1CYRgtC81g0yM5IoNfltURbp4rs2XnFQOT",
+        button: "Discover More",
+        href: "/soon",
+    },
+    {
+        title: "Nurture Nature",
+        description:
+            "The best way to protect the environment is to make sustainable choices.",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnMBwj2mdNari256c8ReoWJUD0Pyg3ZdX7Yqpb",
+        button: "Discover More",
+        href: "/soon",
+    },
+    {
+        title: "From Raw to Remarkable",
+        description:
+            "From raw materials to remarkable products, we are committed to sustainability.",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZntdsqdSIHmgvafVRtSkxXNwjCWPu2LqAG3Fly",
+        button: "Discover More",
+        href: "/soon",
+    },
+    {
+        title: "Earthy Warmth Naturally Inspired",
+        description:
+            "Our products are inspired by nature and designed to bring warmth to your home.",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnC4U1le5EGLspIcX2SViB8tOyhJe6n7fF3RWj",
+        button: "Discover More",
+        href: "/soon",
+    },
+    {
+        title: "Drip of Elegance",
+        description:
+            "Discover our elegant and eco-friendly products that are designed to make a statement.",
+        imageUrl:
+            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnV6qCG7l80TM4AsehRfmtqSxKLIbUCcJay9gN",
+        button: "Discover More",
+        href: "/soon",
+    },
+];
 
 export function Landing({ className, ...props }: GenericProps) {
     return (
         <section className={cn("", className)} {...props}>
-            <div className="relative flex min-h-[10vh] w-full items-center justify-center overflow-hidden sm:min-h-[60vh] md:min-h-[70vh] lg:min-h-[80vh]">
-                {/* Background Image */}
-                <Image
-                    src="/images/landing1.jpg" // Ensure this image path is correct
-                    alt="Landing"
-                    height={1000}
-                    width={1000}
-                    priority
-                    className="h-full w-full object-cover" // Full width and height to cover the screen
-                />
+            <Carousel
+                opts={{
+                    align: "start",
+                    loop: true,
+                }}
+                plugins={[
+                    Autoplay({
+                        delay: 5000,
+                    }),
+                ]}
+                className="h-[calc(100vh-20vh)] w-full"
+            >
+                <CarouselContent className="ml-0">
+                    {items.map((item, index) => (
+                        <CarouselItem key={index} className="h-full p-0">
+                            <div className="relative size-full">
+                                <Image
+                                    src={item.imageUrl}
+                                    alt={item.title}
+                                    width={2000}
+                                    height={2000}
+                                    className="size-full object-cover brightness-50"
+                                    priority={index === 0}
+                                />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-5 p-4 text-center text-background md:space-y-10">
+                                    <h1 className="max-w-3xl text-balance text-3xl font-bold uppercase md:text-5xl lg:text-7xl">
+                                        {item.title}
+                                    </h1>
 
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-black opacity-30"></div>
+                                    <p className="max-w-xl text-balance text-background/80 md:text-lg lg:max-w-3xl lg:text-2xl">
+                                        {item.description}
+                                    </p>
 
-                {/* Centered Text */}
-                <div className="absolute z-10 px-4 text-center text-white md:px-6 lg:px-10">
-                    <h1 className="mb-4 text-2xl font-bold sm:text-3xl md:text-5xl lg:text-6xl">
-                        SEASONAL BRIGHTS
-                    </h1>
-                    <p className="mb-8 text-sm sm:mb-10 sm:text-base md:text-lg lg:text-xl">
-                        Find your golf look, designed especially for golf fans.
-                        Featuring a range of high-performance patterns to choose
-                        from.
-                    </p>
-                    <button className="bg-white bg-opacity-20 px-4 py-2 font-semibold text-black sm:px-6 sm:py-3 md:text-lg">
-                        DISCOVER MORE
-                    </button>
-                </div>
-            </div>
+                                    <Button
+                                        size="lg"
+                                        className="mt-1 bg-background font-semibold uppercase text-foreground hover:bg-background/90 md:mt-0 md:py-7 md:text-lg"
+                                        asChild
+                                    >
+                                        <Link href={item.href}>
+                                            {item.button}
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </div>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+            </Carousel>
         </section>
     );
 }

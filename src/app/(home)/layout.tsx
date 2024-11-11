@@ -1,11 +1,11 @@
-import { NavbarHome, NavbarMob } from "@/components/globals/layouts";
-import Footer from "@/components/globals/layouts/footer/footer";
+import { CountdownStrip } from "@/components/globals/cards";
+import { Footer, NavbarHome, NavbarMob } from "@/components/globals/layouts";
 import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: {
-        default: siteConfig.name + " | " + siteConfig.description,
+        default: siteConfig.description + " | " + siteConfig.name,
         template: "%s | " + siteConfig.name,
     },
 };
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 export default function Layout({ children }: LayoutProps) {
     return (
         <div className="relative flex min-h-screen flex-col">
+            <CountdownStrip />
             <NavbarHome />
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer />
