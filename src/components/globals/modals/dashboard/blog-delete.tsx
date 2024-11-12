@@ -34,7 +34,7 @@ export function BlogDeleteModal({ blog, isOpen, setIsOpen }: PageProps) {
     const { mutate: deleteBlog, isPending: isDeleting } =
         trpc.blogs.deleteBlog.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Deleting blog");
+                const toastId = toast.loading("Deleting blog...");
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
@@ -75,11 +75,7 @@ export function BlogDeleteModal({ blog, isOpen, setIsOpen }: PageProps) {
                         variant="destructive"
                         size="sm"
                         disabled={isDeleting}
-                        onClick={() =>
-                            deleteBlog({
-                                id: blog.id,
-                            })
-                        }
+                        onClick={() => deleteBlog({ id: blog.id })}
                     >
                         Delete
                     </Button>

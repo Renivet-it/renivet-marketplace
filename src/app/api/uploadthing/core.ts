@@ -47,7 +47,7 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
-    profilePictureUploader: f({ image: { maxFileSize: "4MB" } })
+    contentUploader: f({ image: { maxFileSize: "4MB" } })
         .middleware(async () => {
             const auth = await clerkAuth();
             if (!auth.userId)
@@ -58,6 +58,17 @@ export const uploadRouter = {
 
             const existingUser = await userCache.get(auth.userId);
             if (!existingUser)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const { sitePermissions } = getUserPermissions(existingUser.roles);
+            const isAuthorized = hasPermission(sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+
+            if (!isAuthorized)
                 throw new UploadThingError({
                     code: "FORBIDDEN",
                     message: "You're not authorized",

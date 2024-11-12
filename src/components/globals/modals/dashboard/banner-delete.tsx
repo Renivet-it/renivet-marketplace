@@ -11,41 +11,37 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
+import { Banner } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    blog: BlogWithAuthorAndTag;
+    banner: Banner;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
+export function BannerDeleteModal({ banner, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({ page, limit });
+    const { refetch } = trpc.content.banners.getBanners.useQuery({
+        page,
+        limit,
+    });
 
-    const { mutate: updatePublishStatus, isPending: isUpdating } =
-        trpc.blogs.changePublishStatus.useMutation({
-            onMutate: ({ isPublished }) => {
-                const toastId = toast.loading(
-                    !isPublished ? "Unpublishing blog..." : "Publishing blog..."
-                );
+    const { mutate: deleteBanner, isPending: isDeleting } =
+        trpc.content.banners.deleteBanner.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Deleting banner...");
                 return { toastId };
             },
-            onSuccess: (_, { isPublished }, { toastId }) => {
-                toast.success(
-                    !isPublished ? "Blog unpublished" : "Blog published",
-                    {
-                        id: toastId,
-                    }
-                );
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Banner deleted", { id: toastId });
                 setIsOpen(false);
                 router.refresh();
                 refetch();
@@ -60,13 +56,23 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you sure you want to{" "}
-                        {blog.isPublished ? "unpublish" : "publish"} this blog?
+                        Are you sure you want to delete this banner?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        {blog.isPublished
-                            ? "This blog will no longer be visible to the public, are you sure you want to unpublish it?"
-                            : "This blog will be visible to the public, are you sure you want to publish it?"}
+                        Deleting this blog will remove it from the platform.
+                        This action cannot be undone.
+                        {banner.isActive && (
+                            <>
+                                <br />
+                                <br />
+                                <span>
+                                    {" "}
+                                    This banner is currently active. Deleting
+                                    this banner will remove it from the home
+                                    carousel.
+                                </span>
+                            </>
+                        )}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
@@ -74,7 +80,7 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
                     <Button
                         variant="ghost"
                         size="sm"
-                        disabled={isUpdating}
+                        disabled={isDeleting}
                         onClick={() => setIsOpen(false)}
                     >
                         Cancel
@@ -83,15 +89,10 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
                     <Button
                         variant="destructive"
                         size="sm"
-                        disabled={isUpdating}
-                        onClick={() =>
-                            updatePublishStatus({
-                                id: blog.id,
-                                isPublished: !blog.isPublished,
-                            })
-                        }
+                        disabled={isDeleting}
+                        onClick={() => deleteBanner({ id: banner.id })}
                     >
-                        {blog.isPublished ? "Unpublish" : "Publish"}
+                        Delete
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -2,7 +2,6 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
-import { Editor, EditorRef } from "@/components/ui/editor";
 import {
     Form,
     FormControl,
@@ -12,31 +11,22 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
-import {
-    Notice,
-    NoticeButton,
-    NoticeContent,
-    NoticeIcon,
-    NoticeTitle,
-} from "@/components/ui/notice";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { cn, handleClientError } from "@/lib/utils";
 import {
-    BlogWithAuthorAndTag,
-    CreateBlog,
-    createBlogSchema,
-    Tag,
-    UpdateBlog,
+    Banner,
+    CreateBanner,
+    createBannerSchema,
+    UpdateBanner,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useDropzone } from "@uploadthing/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -45,35 +35,27 @@ import {
 } from "uploadthing/client";
 
 interface PageProps {
-    tags: Tag[];
-    blog?: Omit<BlogWithAuthorAndTag, "author">;
+    banner?: Banner;
 }
 
-export function BlogManageForm({ tags, blog }: PageProps) {
+export function BannerManageForm({ banner }: PageProps) {
     const router = useRouter();
 
     const [preview, setPreview] = useState<string | null>(
-        blog?.thumbnailUrl ?? null
+        banner?.imageUrl ?? null
     );
     const [file, setFile] = useState<File | null>(null);
 
-    const editorRef = useRef<EditorRef>(null!);
+    const { startUpload, routeConfig } = useUploadThing("contentUploader");
 
-    const { startUpload, routeConfig } = useUploadThing(
-        "blogThumbnailUploader"
-    );
-
-    const form = useForm<CreateBlog>({
-        resolver: zodResolver(createBlogSchema),
+    const form = useForm<CreateBanner>({
+        resolver: zodResolver(createBannerSchema),
         defaultValues: {
-            title: blog?.title ?? "",
-            description: blog?.description ?? "",
-            content: blog?.content ?? "",
-            thumbnailUrl: blog?.thumbnailUrl ?? null,
-            tagIds: blog?.tags.map((tag) => tag.tag.id) ?? [],
-            isPublished: blog?.isPublished ?? false,
+            title: banner?.title ?? "",
+            description: banner?.description ?? "",
+            imageUrl: banner?.imageUrl ?? null,
+            isActive: banner?.isActive ?? false,
         },
-        disabled: !tags.length,
     });
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -88,7 +70,7 @@ export function BlogManageForm({ tags, blog }: PageProps) {
     const removeImage = () => {
         setPreview(null);
         setFile(null);
-        form.setValue("thumbnailUrl", null);
+        form.setValue("imageUrl", null);
     };
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -100,30 +82,30 @@ export function BlogManageForm({ tags, blog }: PageProps) {
         maxSize: 4 * 1024 * 1024,
     });
 
-    const { mutateAsync: createBlogAsync } =
-        trpc.blogs.createBlog.useMutation();
-    const { mutateAsync: updateBlogAsync } =
-        trpc.blogs.updateBlog.useMutation();
+    const { mutateAsync: createBannerAsync } =
+        trpc.content.banners.createBanner.useMutation();
+    const { mutateAsync: updateBannerAsync } =
+        trpc.content.banners.updateBanner.useMutation();
 
-    const { mutate: createBlog, isPending: isBlogCreating } = useMutation({
+    const { mutate: createBanner, isPending: isBannerCreating } = useMutation({
         onMutate: () => {
-            const toastId = toast.loading("Creating blog...");
+            const toastId = toast.loading("Creating banner...");
             return { toastId };
         },
-        mutationFn: async (values: CreateBlog) => {
+        mutationFn: async (values: CreateBanner) => {
             if (file) {
                 const res = await startUpload([file]);
                 if (!res?.length) throw new Error("Failed to upload image");
 
                 const image = res[0];
-                values.thumbnailUrl = image.appUrl;
+                values.imageUrl = image.appUrl;
             }
 
-            await createBlogAsync(values);
+            await createBannerAsync(values);
         },
         onSuccess: (_, __, { toastId }) => {
-            toast.success("Blog created successfully", { id: toastId });
-            router.push("/dashboard/general/blogs");
+            toast.success("Banner created successfully", { id: toastId });
+            router.push("/dashboard/general/banners");
             setPreview(null);
             setFile(null);
         },
@@ -132,27 +114,27 @@ export function BlogManageForm({ tags, blog }: PageProps) {
         },
     });
 
-    const { mutate: updateBlog, isPending: isBlogUpdating } = useMutation({
+    const { mutate: updateBanner, isPending: isBannerUpdating } = useMutation({
         onMutate: () => {
-            const toastId = toast.loading("Updating blog...");
+            const toastId = toast.loading("Updating banner...");
             return { toastId };
         },
-        mutationFn: async (values: UpdateBlog) => {
-            if (!blog) throw new Error("Blog not found");
+        mutationFn: async (values: UpdateBanner) => {
+            if (!banner) throw new Error("Banner not found");
 
             if (file) {
                 const res = await startUpload([file]);
                 if (!res?.length) throw new Error("Failed to upload image");
 
                 const image = res[0];
-                values.thumbnailUrl = image.appUrl;
+                values.imageUrl = image.appUrl;
             }
 
-            await updateBlogAsync({ id: blog.id, data: values });
+            await updateBannerAsync({ id: banner.id, data: values });
         },
         onSuccess: (_, __, { toastId }) => {
-            toast.success("Blog updated successfully", { id: toastId });
-            router.push("/dashboard/general/blogs");
+            toast.success("Banner updated successfully", { id: toastId });
+            router.push("/dashboard/general/banners");
             setPreview(null);
             setFile(null);
         },
@@ -166,36 +148,9 @@ export function BlogManageForm({ tags, blog }: PageProps) {
             <form
                 className="space-y-6"
                 onSubmit={form.handleSubmit((values) =>
-                    blog ? updateBlog(values) : createBlog(values)
+                    banner ? updateBanner(values) : createBanner(values)
                 )}
             >
-                {!tags.length && (
-                    <Notice>
-                        <NoticeContent>
-                            <NoticeTitle>
-                                <NoticeIcon />
-                                Warning
-                            </NoticeTitle>
-
-                            <p className="text-sm">
-                                No tags found. Please create a tag before
-                                creating a blog.
-                            </p>
-                        </NoticeContent>
-                        <NoticeButton asChild>
-                            <Button
-                                type="button"
-                                size="sm"
-                                onClick={() =>
-                                    router.push("/dashboard/general/tags")
-                                }
-                            >
-                                Create Tag
-                            </Button>
-                        </NoticeButton>
-                    </Notice>
-                )}
-
                 <FormField
                     control={form.control}
                     name="title"
@@ -205,11 +160,9 @@ export function BlogManageForm({ tags, blog }: PageProps) {
 
                             <FormControl>
                                 <Input
-                                    placeholder="Enter blog title"
+                                    placeholder="Enter banner title"
                                     disabled={
-                                        isBlogCreating ||
-                                        isBlogUpdating ||
-                                        !tags.length
+                                        isBannerCreating || isBannerUpdating
                                     }
                                     {...field}
                                 />
@@ -228,13 +181,10 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                             <FormLabel>Description</FormLabel>
 
                             <FormControl>
-                                <Textarea
-                                    placeholder="Enter a brief description of the blog"
-                                    minRows={3}
+                                <Input
+                                    placeholder="Enter a brief description/tagline of the banner"
                                     disabled={
-                                        isBlogCreating ||
-                                        isBlogUpdating ||
-                                        !tags.length
+                                        isBannerCreating || isBannerUpdating
                                     }
                                     {...field}
                                 />
@@ -247,36 +197,10 @@ export function BlogManageForm({ tags, blog }: PageProps) {
 
                 <FormField
                     control={form.control}
-                    name="content"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Content</FormLabel>
-
-                            <FormControl>
-                                <Editor
-                                    {...field}
-                                    disabled={
-                                        isBlogCreating ||
-                                        isBlogUpdating ||
-                                        !tags.length
-                                    }
-                                    ref={editorRef}
-                                    content={field.value}
-                                    onChange={field.onChange}
-                                />
-                            </FormControl>
-
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="thumbnailUrl"
+                    name="imageUrl"
                     render={() => (
                         <FormItem>
-                            <FormLabel>Thumbnail</FormLabel>
+                            <FormLabel>Image</FormLabel>
 
                             <FormControl>
                                 <div
@@ -286,18 +210,15 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                                         isDragActive &&
                                             "border-green-500 bg-green-50",
                                         preview && "border-0 p-0",
-                                        (isBlogCreating ||
-                                            isBlogUpdating ||
-                                            !tags.length) &&
+                                        (isBannerCreating ||
+                                            isBannerUpdating) &&
                                             "cursor-not-allowed opacity-50"
                                     )}
                                 >
                                     <input
                                         {...getInputProps()}
                                         disabled={
-                                            isBlogCreating ||
-                                            isBlogUpdating ||
-                                            !tags.length
+                                            isBannerCreating || isBannerUpdating
                                         }
                                     />
 
@@ -354,56 +275,7 @@ export function BlogManageForm({ tags, blog }: PageProps) {
 
                 <FormField
                     control={form.control}
-                    name="tagIds"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Tags</FormLabel>
-
-                            <FormControl>
-                                <div className="flex flex-wrap gap-2">
-                                    {tags.map((tag) => (
-                                        <Button
-                                            key={tag.id}
-                                            type="button"
-                                            size="sm"
-                                            disabled={
-                                                isBlogCreating ||
-                                                isBlogUpdating ||
-                                                !tags.length
-                                            }
-                                            onClick={() => {
-                                                const updatedTags =
-                                                    field.value.includes(tag.id)
-                                                        ? field.value.filter(
-                                                              (id) =>
-                                                                  id !== tag.id
-                                                          )
-                                                        : [
-                                                              ...field.value,
-                                                              tag.id,
-                                                          ];
-                                                field.onChange(updatedTags);
-                                            }}
-                                            className={cn(
-                                                "rounded-full border border-primary bg-background text-xs text-foreground hover:text-background md:text-sm",
-                                                field.value.includes(tag.id) &&
-                                                    "bg-primary text-background"
-                                            )}
-                                        >
-                                            {tag.name}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </FormControl>
-
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="isPublished"
+                    name="isActive"
                     render={({ field }) => (
                         <FormItem>
                             <div className="flex w-min flex-row-reverse items-center justify-start gap-2">
@@ -413,13 +285,11 @@ export function BlogManageForm({ tags, blog }: PageProps) {
 
                                 <FormControl>
                                     <Switch
-                                        disabled={
-                                            isBlogCreating ||
-                                            isBlogUpdating ||
-                                            !tags.length
-                                        }
                                         checked={field.value}
                                         onCheckedChange={field.onChange}
+                                        disabled={
+                                            isBannerCreating || isBannerUpdating
+                                        }
                                     />
                                 </FormControl>
                             </div>
@@ -432,15 +302,14 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                 <Button
                     type="submit"
                     disabled={
-                        isBlogCreating ||
-                        isBlogUpdating ||
-                        !tags.length ||
-                        (preview === blog?.thumbnailUrl &&
+                        isBannerCreating ||
+                        isBannerUpdating ||
+                        (preview === (banner?.imageUrl ?? null) &&
                             !form.formState.isDirty)
                     }
                     className="w-full"
                 >
-                    {blog ? "Update Blog" : "Create Blog"}
+                    {banner ? "Update Banner" : "Create Banner"}
                 </Button>
             </form>
         </Form>

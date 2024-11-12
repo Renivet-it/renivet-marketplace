@@ -3,9 +3,7 @@ import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/db";
 import { cn } from "@/lib/utils";
-import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -31,9 +29,6 @@ export default function Page() {
 }
 
 async function BlogCreateFetch() {
-    const { userId } = await auth();
-    if (!userId) redirect("/auth/signin");
-
     const tags = await db.query.tags.findMany();
     return <BlogManageForm tags={tags} />;
 }

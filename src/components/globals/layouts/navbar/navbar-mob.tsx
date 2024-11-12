@@ -112,6 +112,8 @@ const boxMenu: SiteConfig["menu"] = [
     },
 ];
 
+const IS_HIDDEN = true;
+
 export function NavbarMob({ className, ...props }: GenericProps) {
     const router = useRouter();
 
@@ -233,10 +235,13 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 )}
 
                 <div className={cn("space-y-5", !user && "mt-5")}>
-                    {/* {!isAuthorized && (
+                    {!isAuthorized && (
                         <>
                             <ul
-                                className="grid grid-cols-2 items-center gap-4 px-4"
+                                className={cn(
+                                    "grid grid-cols-2 items-center gap-4 px-4",
+                                    IS_HIDDEN && "hidden"
+                                )}
                                 ref={navListRef}
                             >
                                 {boxMenu.map((item, index) => {
@@ -276,9 +281,9 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                 })}
                             </ul>
 
-                            <Separator />
+                            <Separator className="hidden" />
                         </>
-                    )} */}
+                    )}
 
                     <ul
                         className="flex items-center gap-2 overflow-x-scroll px-4"

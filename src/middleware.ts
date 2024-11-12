@@ -35,6 +35,12 @@ export default clerkMiddleware(async (auth, req) => {
             ).toString()
         );
         if (res.error) return NextResponse.redirect(new URL("/", url));
+
+        if (
+            url.pathname === "/dashboard/general" ||
+            url.pathname === "/dashboard/brand"
+        )
+            return NextResponse.redirect(new URL("/dashboard", url));
     }
 
     if (!isAuth.sessionId)

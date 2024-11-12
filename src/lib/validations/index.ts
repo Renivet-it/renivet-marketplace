@@ -4,6 +4,7 @@ export * from "./blog";
 export * from "./brand-waitlist";
 export * from "./category";
 export * from "./contact-us";
+export * from "./home";
 export * from "./newsletter-subscriber";
 export * from "./response";
 export * from "./role";

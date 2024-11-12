@@ -11,37 +11,42 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
+import { Banner } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    blog: BlogWithAuthorAndTag;
+    banner: Banner;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
+export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({ page, limit });
+    const { refetch } = trpc.content.banners.getBanners.useQuery({
+        page,
+        limit,
+    });
 
-    const { mutate: updatePublishStatus, isPending: isUpdating } =
-        trpc.blogs.changePublishStatus.useMutation({
-            onMutate: ({ isPublished }) => {
+    const { mutate: updateBannerStatus, isPending: isUpdating } =
+        trpc.content.banners.changeStatus.useMutation({
+            onMutate: ({ isActive }) => {
                 const toastId = toast.loading(
-                    !isPublished ? "Unpublishing blog..." : "Publishing blog..."
+                    !isActive
+                        ? "Deactivating banner..."
+                        : "Activating banner..."
                 );
                 return { toastId };
             },
-            onSuccess: (_, { isPublished }, { toastId }) => {
+            onSuccess: (_, { isActive }, { toastId }) => {
                 toast.success(
-                    !isPublished ? "Blog unpublished" : "Blog published",
+                    !isActive ? "Banner deactivated" : "Banner activated",
                     {
                         id: toastId,
                     }
@@ -61,12 +66,13 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
                 <AlertDialogHeader>
                     <AlertDialogTitle>
                         Are you sure you want to{" "}
-                        {blog.isPublished ? "unpublish" : "publish"} this blog?
+                        {banner.isActive ? "deactivate" : "activate"} this
+                        banner?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        {blog.isPublished
-                            ? "This blog will no longer be visible to the public, are you sure you want to unpublish it?"
-                            : "This blog will be visible to the public, are you sure you want to publish it?"}
+                        {banner.isActive
+                            ? "Deactivating this banner will remove it from the home carousels."
+                            : "Activating this banner will add it to the home carousels."}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
@@ -85,13 +91,13 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
                         size="sm"
                         disabled={isUpdating}
                         onClick={() =>
-                            updatePublishStatus({
-                                id: blog.id,
-                                isPublished: !blog.isPublished,
+                            updateBannerStatus({
+                                id: banner.id,
+                                isActive: !banner.isActive,
                             })
                         }
                     >
-                        {blog.isPublished ? "Unpublish" : "Publish"}
+                        Delete
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -30,7 +30,7 @@ export function RoleDeleteModal({ role, isOpen, setIsOpen }: PageProps) {
     const { mutate: deleteRole, isPending: isDeleting } =
         trpc.roles.deleteRole.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Deleting role");
+                const toastId = toast.loading("Deleting role...");
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {

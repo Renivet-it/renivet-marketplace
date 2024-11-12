@@ -24,7 +24,7 @@ class UserCache {
 
     async get(id: string) {
         const user = await redis.get(this.genKey(id));
-        return cachedUserSchema.parse(parseToJSON<CachedUser>(user));
+        return cachedUserSchema.nullable().parse(parseToJSON<CachedUser>(user));
     }
 
     async add(user: CachedUser) {

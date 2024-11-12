@@ -22,7 +22,7 @@ export async function generateMetadata({
     const { id } = await params;
 
     const existingBlog = await db.query.blogs.findFirst({
-        where: and(eq(blogs.id, id)),
+        where: eq(blogs.id, id),
     });
     if (!existingBlog)
         return {

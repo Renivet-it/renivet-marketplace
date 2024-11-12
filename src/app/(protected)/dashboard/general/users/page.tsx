@@ -60,7 +60,7 @@ async function UsersFetch({ searchParams }: PageProps) {
         offset: (page - 1) * limit,
         orderBy: [desc(users.createdAt)],
         extras: {
-            userCount: db.$count(users).as("user_ount"),
+            userCount: db.$count(users).as("user_count"),
         },
     });
 

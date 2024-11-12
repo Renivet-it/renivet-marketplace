@@ -105,6 +105,9 @@ interface PageProps {
 export function BlogsTable({ initialBlogs }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search, setSearch] = useQueryState("search", {
+        defaultValue: "",
+    });
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -114,20 +117,18 @@ export function BlogsTable({ initialBlogs }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const { data: blogsRaw } = trpc.blogs.getBlogs.useQuery(
-        { page, limit },
+        { page, limit, search },
         { initialData: initialBlogs }
     );
 
     const blogs = useMemo(
         () =>
-            blogsRaw.length > 0
-                ? blogsRaw.map((blog) => ({
-                      ...blog,
-                      authorName: `${blog.author.firstName} ${blog.author.lastName}`,
-                      status: blog.isPublished ? "published" : "draft",
-                      tagCount: blog.tags.length,
-                  }))
-                : [],
+            blogsRaw.map((blog) => ({
+                ...blog,
+                authorName: `${blog.author.firstName} ${blog.author.lastName}`,
+                status: blog.isPublished ? "published" : "draft",
+                tagCount: blog.tags.length,
+            })),
         [blogsRaw]
     );
 
@@ -164,13 +165,14 @@ export function BlogsTable({ initialBlogs }: PageProps) {
                         value={
                             (table
                                 .getColumn("title")
-                                ?.getFilterValue() as string) ?? ""
+                                ?.getFilterValue() as string) ?? search
                         }
-                        onChange={(event) =>
+                        onChange={(event) => {
                             table
                                 .getColumn("title")
-                                ?.setFilterValue(event.target.value)
-                        }
+                                ?.setFilterValue(event.target.value);
+                            setSearch(event.target.value);
+                        }}
                     />
 
                     <Select

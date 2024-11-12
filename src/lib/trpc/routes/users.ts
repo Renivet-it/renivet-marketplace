@@ -59,7 +59,7 @@ export const usersRouter = createTRPCRouter({
                 offset: (page - 1) * limit,
                 orderBy: [desc(schemas.users.createdAt)],
                 extras: {
-                    userCount: db.$count(schemas.users).as("user_ount"),
+                    userCount: db.$count(schemas.users).as("user_count"),
                 },
             });
 

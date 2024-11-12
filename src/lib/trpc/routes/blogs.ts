@@ -160,8 +160,8 @@ export const blogsRouter = createTRPCRouter({
 
             const data = await db.query.blogs.findMany({
                 where: and(
-                    isPublished
-                        ? eq(schemas.blogs.isPublished, true)
+                    isPublished !== undefined
+                        ? eq(schemas.blogs.isPublished, isPublished)
                         : undefined,
                     !!search?.length
                         ? ilike(schemas.blogs.title, `%${search}%`)

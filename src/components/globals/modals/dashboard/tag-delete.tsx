@@ -30,7 +30,7 @@ export function TagDeleteModal({ tag, isOpen, setIsOpen }: PageProps) {
     const { mutate: deleteTag, isPending: isDeleting } =
         trpc.tags.deleteTag.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Deleting tag");
+                const toastId = toast.loading("Deleting tag...");
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {

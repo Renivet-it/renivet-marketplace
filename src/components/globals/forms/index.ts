@@ -1,4 +1,5 @@
 export * from "./address-manage";
+export * from "./banner-manage";
 export * from "./blog-manage";
 export * from "./brand-waitlist";
 export * from "./contact-us";
@@ -8,9 +9,9 @@ export * from "./forgot-password-s1";
 export * from "./forgot-password-s2";
 export * from "./newsletter-subscribe";
 export * from "./phone-otp-verification";
+export * from "./role-manage";
 export * from "./signin";
 export * from "./signup";
-export * from "./role-manage";
 export * from "./tag-manage";
 export * from "./user-email-update";
 export * from "./user-general-update";
