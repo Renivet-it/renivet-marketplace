@@ -23,6 +23,7 @@ import LucideIcons, {
     Footprints,
     Frame,
     GalleryVerticalEnd,
+    Globe,
     GripVertical,
     Headset,
     Heart,
@@ -74,6 +75,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Globe,
     Phone,
     GripVertical,
     Plus,
