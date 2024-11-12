@@ -1,7 +1,7 @@
 import { pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 
-export const contactUs = pgTable("contact_us", {
+export const tickets = pgTable("tickets", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull(),

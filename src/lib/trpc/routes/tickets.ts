@@ -5,13 +5,20 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { hasPermission } from "@/lib/utils";
-import { createContactUsSchema } from "@/lib/validations";
+import { createTicketSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
-export const contactUsRouter = createTRPCRouter({
-    getContactUs: protectedProcedure
+export const ticketRouter = createTRPCRouter({
+    getTickets: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+                search: z.string().optional(),
+            })
+        )
         .use(({ ctx, next }) => {
             const { user } = ctx;
 
@@ -26,13 +33,25 @@ export const contactUsRouter = createTRPCRouter({
 
             return next({ ctx });
         })
-        .query(async ({ ctx }) => {
-            const { db } = ctx;
+        .query(async ({ ctx, input }) => {
+            const { db, schemas } = ctx;
+            const { limit, page, search } = input;
 
-            const contactUs = await db.query.contactUs.findMany();
-            return contactUs;
+            const tickets = await db.query.tickets.findMany({
+                where: !!search?.length
+                    ? ilike(schemas.tickets.email, `%${search}%`)
+                    : undefined,
+                limit,
+                offset: (page - 1) * limit,
+                orderBy: [desc(schemas.tickets.createdAt)],
+                extras: {
+                    ticketCount: db.$count(schemas.tickets).as("ticket_count"),
+                },
+            });
+
+            return tickets;
         }),
-    getContactUsSingle: protectedProcedure
+    getTicket: protectedProcedure
         .input(
             z.object({
                 id: z.string(),
@@ -56,32 +75,31 @@ export const contactUsRouter = createTRPCRouter({
             const { db, schemas } = ctx;
             const { id } = input;
 
-            const contactUs = await db.query.contactUs.findFirst({
-                where: eq(schemas.contactUs.id, id),
+            const existingTicket = await db.query.tickets.findFirst({
+                where: eq(schemas.tickets.id, id),
             });
-            if (!contactUs) {
+            if (!existingTicket)
                 throw new TRPCError({
                     code: "NOT_FOUND",
-                    message: "Entry not found",
+                    message: "Ticket not found",
                 });
-            }
 
-            return contactUs;
+            return existingTicket;
         }),
-    createContactUs: publicProcedure
-        .input(createContactUsSchema)
+    createTicket: publicProcedure
+        .input(createTicketSchema)
         .mutation(async ({ input, ctx }) => {
             const { db, schemas } = ctx;
 
-            const newEntry = await db
-                .insert(schemas.contactUs)
+            const newTicket = await db
+                .insert(schemas.tickets)
                 .values(input)
                 .returning()
                 .then((res) => res[0]);
 
-            return newEntry;
+            return newTicket;
         }),
-    deleteContactUs: protectedProcedure
+    deleteTicket: protectedProcedure
         .input(
             z.object({
                 id: z.string(),
@@ -105,20 +123,17 @@ export const contactUsRouter = createTRPCRouter({
             const { db, schemas } = ctx;
             const { id } = input;
 
-            const contactUs = await db.query.contactUs.findFirst({
-                where: eq(schemas.contactUs.id, id),
+            const existingTicket = await db.query.tickets.findFirst({
+                where: eq(schemas.tickets.id, id),
             });
-            if (!contactUs) {
+            if (!existingTicket) {
                 throw new TRPCError({
                     code: "NOT_FOUND",
-                    message: "Entry not found",
+                    message: "Ticket not found",
                 });
             }
 
-            await db
-                .delete(schemas.contactUs)
-                .where(eq(schemas.contactUs.id, id));
-
+            await db.delete(schemas.tickets).where(eq(schemas.tickets.id, id));
             return true;
         }),
 });
