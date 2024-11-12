@@ -4,7 +4,7 @@ const convertEmptyStringToNull = (data: unknown) => {
     return typeof data === "string" && data === "" ? null : data;
 };
 
-export const contactUsSchema = z.object({
+export const ticketSchema = z.object({
     id: z
         .string({
             required_error: "ID is required",
@@ -49,12 +49,17 @@ export const contactUsSchema = z.object({
         required_error: "Created at is required",
         invalid_type_error: "Created at must be a date",
     }),
+    updatedAt: z.date({
+        required_error: "Updated at is required",
+        invalid_type_error: "Updated at must be a date",
+    }),
 });
 
-export const createContactUsSchema = contactUsSchema.omit({
+export const createTicketSchema = ticketSchema.omit({
     id: true,
     createdAt: true,
+    updatedAt: true,
 });
 
-export type ContactUs = z.infer<typeof contactUsSchema>;
-export type CreateContactUs = z.infer<typeof createContactUsSchema>;
+export type Ticket = z.infer<typeof ticketSchema>;
+export type CreateTicket = z.infer<typeof createTicketSchema>;

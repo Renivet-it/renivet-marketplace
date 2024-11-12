@@ -11,37 +11,42 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { Banner } from "@/lib/validations";
+import { NewsletterSubscriber } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    banner: Banner;
+    subscriber: NewsletterSubscriber;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function BannerDeleteModal({ banner, isOpen, setIsOpen }: PageProps) {
+export function SubscriberDeleteModal({
+    subscriber,
+    isOpen,
+    setIsOpen,
+}: PageProps) {
     const router = useRouter();
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
 
-    const { refetch } = trpc.content.banners.getBanners.useQuery({
-        page,
-        limit,
-    });
+    const { refetch } =
+        trpc.newsletterSubscribers.getNewsletterSubscribers.useQuery({
+            page,
+            limit,
+        });
 
-    const { mutate: deleteBanner, isPending: isDeleting } =
-        trpc.content.banners.deleteBanner.useMutation({
+    const { mutate: deleteSubscriber, isPending: isDeleting } =
+        trpc.newsletterSubscribers.deleteNewsletterSubscriber.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Deleting banner...");
+                const toastId = toast.loading("Deleting subscriber...");
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
-                toast.success("Banner deleted", { id: toastId });
+                toast.success("Subscriber deleted", { id: toastId });
                 setIsOpen(false);
                 router.refresh();
                 refetch();
@@ -56,20 +61,20 @@ export function BannerDeleteModal({ banner, isOpen, setIsOpen }: PageProps) {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you sure you want to delete this banner?
+                        Are you sure you want to delete this subscriber?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Deleting this banner will remove it from the platform.
-                        This action cannot be undone.
-                        {banner.isActive && (
+                        Deleting this subscriber will remove it from the
+                        subscribers list. This action cannot be undone.
+                        {subscriber.isActive && (
                             <>
                                 <br />
                                 <br />
                                 <span>
                                     {" "}
-                                    This banner is currently active. Deleting
-                                    this banner will remove it from the home
-                                    carousel.
+                                    This subscriber is currently active.
+                                    Deleting this subscriber will remove it from
+                                    the active subscribers list.
                                 </span>
                             </>
                         )}
@@ -90,7 +95,7 @@ export function BannerDeleteModal({ banner, isOpen, setIsOpen }: PageProps) {
                         variant="destructive"
                         size="sm"
                         disabled={isDeleting}
-                        onClick={() => deleteBanner({ id: banner.id })}
+                        onClick={() => deleteSubscriber({ id: subscriber.id })}
                     >
                         Delete
                     </Button>

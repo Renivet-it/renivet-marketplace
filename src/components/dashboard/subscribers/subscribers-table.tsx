@@ -7,6 +7,13 @@ import {
 } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select-dash";
+import {
     Table,
     TableBody,
     TableCell,
@@ -15,7 +22,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
-import { UserWithAddressesAndRoles } from "@/lib/validations";
+import { convertValueToLabel } from "@/lib/utils";
+import { NewsletterSubscriber } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -31,14 +39,13 @@ import {
 import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
-import { UserAction } from "./user-action";
+import { SubscriberAction } from "./subscriber-action";
 
-export type TableUser = UserWithAddressesAndRoles & {
-    name: string;
-    joinedAt: string;
+export type TableSubscriber = NewsletterSubscriber & {
+    status: string;
 };
 
-const columns: ColumnDef<TableUser>[] = [
+const columns: ColumnDef<TableSubscriber>[] = [
     {
         accessorKey: "name",
         header: "Name",
@@ -50,49 +57,51 @@ const columns: ColumnDef<TableUser>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: "roles",
-        header: "Roles",
+        accessorKey: "status",
+        header: "Status",
         cell: ({ row }) => {
-            const user = row.original;
+            const subscriber = row.original;
 
             return (
-                <div className="flex flex-wrap gap-1">
-                    {user.roles.map((role) => (
-                        <Badge key={role.id}>{role.name}</Badge>
-                    ))}
-                </div>
+                <Badge
+                    variant={subscriber.isActive ? "default" : "destructive"}
+                >
+                    {convertValueToLabel(subscriber.status)}
+                </Badge>
             );
         },
     },
     {
-        accessorKey: "joinedAt",
-        header: "Joined At",
+        accessorKey: "createdAt",
+        header: "Created At",
         cell: ({ row }) => {
-            const user = row.original;
-            return format(new Date(user.createdAt), "MMM dd, yyyy");
+            const subscriber = row.original;
+            return format(new Date(subscriber.createdAt), "MMM dd, yyyy");
         },
     },
     {
         id: "actions",
         cell: ({ row }) => {
-            const user = row.original;
-            return <UserAction user={user} />;
+            const subscriber = row.original;
+            return <SubscriberAction subscriber={subscriber} />;
         },
     },
 ];
 
 interface PageProps {
-    initialUsers: (UserWithAddressesAndRoles & {
-        userCount: number;
+    initialData: (NewsletterSubscriber & {
+        subscriberCount: number;
     })[];
 }
 
-export function UsersTable({ initialUsers }: PageProps) {
+export function SubscribersTable({ initialData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
+
+    const [isActive, setIsActive] = useState<boolean>();
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -101,28 +110,28 @@ export function UsersTable({ initialUsers }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: usersRaw } = trpc.users.getUsers.useQuery(
-        { page, limit, search },
-        { initialData: initialUsers }
-    );
+    const { data: subsRaw } =
+        trpc.newsletterSubscribers.getNewsletterSubscribers.useQuery(
+            { page, limit, search, isActive },
+            { initialData }
+        );
 
-    const users = useMemo(
+    const subs = useMemo(
         () =>
-            usersRaw.map((user) => ({
-                ...user,
-                name: `${user.firstName} ${user.lastName}`,
-                joinedAt: format(new Date(user.createdAt), "MMM dd, yyyy"),
+            subsRaw.map((sub) => ({
+                ...sub,
+                status: sub.isActive ? "Active" : "Inactive",
             })),
-        [usersRaw]
+        [subsRaw]
     );
 
     const pages = useMemo(
-        () => Math.ceil(usersRaw?.[0]?.userCount ?? 0 / limit) ?? 1,
-        [usersRaw, limit]
+        () => Math.ceil(subsRaw?.[0]?.subscriberCount ?? 0 / limit) ?? 1,
+        [subsRaw, limit]
     );
 
     const table = useReactTable({
-        data: users,
+        data: subs,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -143,7 +152,7 @@ export function UsersTable({ initialUsers }: PageProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <div className="w-full md:w-auto">
+                <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
                     <Input
                         placeholder="Search by email..."
                         value={
@@ -158,6 +167,35 @@ export function UsersTable({ initialUsers }: PageProps) {
                             setSearch(event.target.value);
                         }}
                     />
+
+                    <Select
+                        value={
+                            (table
+                                .getColumn("status")
+                                ?.getFilterValue() as string) ??
+                            (isActive !== undefined
+                                ? isActive
+                                    ? "active"
+                                    : "inactive"
+                                : undefined) ??
+                            ""
+                        }
+                        onValueChange={(value) => {
+                            table.getColumn("status")?.setFilterValue(value);
+                            setIsActive(value === "active" ? true : false);
+                        }}
+                    >
+                        <SelectTrigger className="capitalize">
+                            <SelectValue placeholder="Search by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {["inactive", "active"].map((x) => (
+                                <SelectItem key={x} value={x}>
+                                    {convertValueToLabel(x)}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <DataTableViewOptions table={table} />
@@ -223,7 +261,7 @@ export function UsersTable({ initialUsers }: PageProps) {
             <div className="flex items-center justify-between gap-2">
                 <p className="text-sm text-muted-foreground">
                     Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {usersRaw?.[0]?.userCount ?? 0} users
+                    {subsRaw?.[0]?.subscriberCount ?? 0} subscribers
                 </p>
 
                 <Pagination total={pages} />

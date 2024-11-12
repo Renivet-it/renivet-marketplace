@@ -54,21 +54,39 @@ export function Footer({ className, ...props }: GenericProps) {
                                 </h2>
 
                                 <ul className="space-y-1 lg:space-y-3">
-                                    {category.items.map((item, i) => (
-                                        <li key={i}>
-                                            <Link
-                                                href={item.href}
-                                                target={
-                                                    item.isExternal
-                                                        ? "_blank"
-                                                        : "_self"
-                                                }
-                                                className="w-full text-sm text-primary-foreground/80 transition-all ease-in-out hover:text-primary-foreground md:text-base"
-                                            >
-                                                {item.name}
-                                            </Link>
-                                        </li>
-                                    ))}
+                                    {category.items.map((item, i) => {
+                                        let Icon:
+                                            | (typeof Icons)[keyof typeof Icons]
+                                            | undefined;
+                                        if (
+                                            Object.keys(Icons).includes(
+                                                item.name
+                                            )
+                                        )
+                                            Icon =
+                                                Icons[
+                                                    item.name as keyof typeof Icons
+                                                ];
+
+                                        return (
+                                            <li key={i}>
+                                                <Link
+                                                    href={item.href}
+                                                    target={
+                                                        item.isExternal
+                                                            ? "_blank"
+                                                            : "_self"
+                                                    }
+                                                    className="flex w-full items-center gap-2 text-sm text-primary-foreground/80 transition-all ease-in-out hover:text-primary-foreground md:text-base"
+                                                >
+                                                    {Icon && (
+                                                        <Icon className="size-5" />
+                                                    )}
+                                                    {item.name}
+                                                </Link>
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             </div>
                         ))}

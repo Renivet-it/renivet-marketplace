@@ -2,20 +2,13 @@
 
 import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
+import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../ui/carousel";
 
-interface Item {
-    title: string;
-    description: string;
-    imageUrl: string;
-    button: string;
-    href: string;
-}
-
-const items: Item[] = [
+const items = [
     {
         title: "Making a Choice",
         description:
@@ -63,7 +56,11 @@ const items: Item[] = [
     },
 ];
 
-export function Landing({ className, ...props }: GenericProps) {
+interface PageProps extends GenericProps {
+    banners: Banner[];
+}
+
+export function Landing({ className, banners, ...props }: PageProps) {
     return (
         <section className={cn("", className)} {...props}>
             <Carousel
@@ -79,7 +76,7 @@ export function Landing({ className, ...props }: GenericProps) {
                 className="h-[calc(100vh-20vh)] w-full"
             >
                 <CarouselContent className="ml-0">
-                    {items.map((item, index) => (
+                    {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative size-full">
                                 <Image
@@ -104,9 +101,7 @@ export function Landing({ className, ...props }: GenericProps) {
                                         className="mt-1 bg-background/60 font-semibold uppercase text-foreground hover:bg-background/90 md:mt-0 md:py-5"
                                         asChild
                                     >
-                                        <Link href={item.href}>
-                                            {item.button}
-                                        </Link>
+                                        <Link href="/soon">Discover More</Link>
                                     </Button>
                                 </div>
                             </div>

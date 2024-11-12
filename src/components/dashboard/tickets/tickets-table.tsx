@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import {
     DataTableViewOptions,
     Pagination,
@@ -15,7 +14,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
-import { UserWithAddressesAndRoles } from "@/lib/validations";
+import { Ticket } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -31,14 +30,11 @@ import {
 import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
-import { UserAction } from "./user-action";
+import { TicketAction } from "./ticket-action";
 
-export type TableUser = UserWithAddressesAndRoles & {
-    name: string;
-    joinedAt: string;
-};
+export type TableTicket = Ticket;
 
-const columns: ColumnDef<TableUser>[] = [
+const columns: ColumnDef<TableTicket>[] = [
     {
         accessorKey: "name",
         header: "Name",
@@ -50,44 +46,41 @@ const columns: ColumnDef<TableUser>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: "roles",
-        header: "Roles",
+        accessorKey: "phone",
+        header: "Phone",
+    },
+    {
+        accessorKey: "company",
+        header: "Company",
         cell: ({ row }) => {
-            const user = row.original;
-
-            return (
-                <div className="flex flex-wrap gap-1">
-                    {user.roles.map((role) => (
-                        <Badge key={role.id}>{role.name}</Badge>
-                    ))}
-                </div>
-            );
+            const ticket = row.original;
+            return ticket.company ? ticket.company : "N/A";
         },
     },
     {
-        accessorKey: "joinedAt",
-        header: "Joined At",
+        accessorKey: "createdAt",
+        header: "Created At",
         cell: ({ row }) => {
-            const user = row.original;
-            return format(new Date(user.createdAt), "MMM dd, yyyy");
+            const ticket = row.original;
+            return format(new Date(ticket.createdAt), "MMM dd, yyyy");
         },
     },
     {
         id: "actions",
         cell: ({ row }) => {
-            const user = row.original;
-            return <UserAction user={user} />;
+            const ticket = row.original;
+            return <TicketAction ticket={ticket} />;
         },
     },
 ];
 
 interface PageProps {
-    initialUsers: (UserWithAddressesAndRoles & {
-        userCount: number;
+    initialTickets: (Ticket & {
+        ticketCount: number;
     })[];
 }
 
-export function UsersTable({ initialUsers }: PageProps) {
+export function TicketsTable({ initialTickets }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
@@ -101,28 +94,18 @@ export function UsersTable({ initialUsers }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: usersRaw } = trpc.users.getUsers.useQuery(
+    const { data: tickets } = trpc.tickets.getTickets.useQuery(
         { page, limit, search },
-        { initialData: initialUsers }
-    );
-
-    const users = useMemo(
-        () =>
-            usersRaw.map((user) => ({
-                ...user,
-                name: `${user.firstName} ${user.lastName}`,
-                joinedAt: format(new Date(user.createdAt), "MMM dd, yyyy"),
-            })),
-        [usersRaw]
+        { initialData: initialTickets }
     );
 
     const pages = useMemo(
-        () => Math.ceil(usersRaw?.[0]?.userCount ?? 0 / limit) ?? 1,
-        [usersRaw, limit]
+        () => Math.ceil(tickets?.[0]?.ticketCount ?? 0 / limit) ?? 1,
+        [tickets, limit]
     );
 
     const table = useReactTable({
-        data: users,
+        data: tickets,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -223,7 +206,7 @@ export function UsersTable({ initialUsers }: PageProps) {
             <div className="flex items-center justify-between gap-2">
                 <p className="text-sm text-muted-foreground">
                     Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {usersRaw?.[0]?.userCount ?? 0} users
+                    {tickets?.[0]?.ticketCount ?? 0} tickets
                 </p>
 
                 <Pagination total={pages} />

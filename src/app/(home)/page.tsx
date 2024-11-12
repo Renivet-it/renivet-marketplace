@@ -11,20 +11,23 @@ import {
 } from "@/components/home";
 import { db } from "@/lib/db";
 import { blogs } from "@/lib/db/schema";
+import { bannerCache } from "@/lib/redis/methods";
 import { desc, eq } from "drizzle-orm";
 import { Suspense } from "react";
 
 export default function Page() {
     return (
         <>
-            <Landing />
+            <Suspense fallback={null}>
+                <BannersFetch />
+            </Suspense>
             <Collection />
             <Offer />
             <Expectations />
             <Popular title="Best Sellers" />
             <Theme />
             <Arrivals title="New Arrivals" />
-            <Suspense>
+            <Suspense fallback={null}>
                 <BlogsFetch />
             </Suspense>
             <IntroModal />
@@ -40,4 +43,10 @@ async function BlogsFetch() {
     if (!blog) return null;
 
     return <Blogs blog={blog} />;
+}
+
+async function BannersFetch() {
+    const banners = await bannerCache.getAll();
+    if (banners.length === 0) return null;
+    return <Landing banners={banners} />;
 }

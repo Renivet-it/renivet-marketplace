@@ -3,5 +3,8 @@ export * from "./banner-status";
 export * from "./blog-delete";
 export * from "./blog-publish";
 export * from "./role-delete";
+export * from "./subscriber-delete";
 export * from "./tag-delete";
 export * from "./tag-manage";
+export * from "./ticket-delete";
+export * from "./ticket-view";

@@ -42,15 +42,14 @@ export const brandWaitlistSchema = z.object({
             required_error: "Brand Phone is required",
             invalid_type_error: "Brand Phone must be a string",
         })
-        .min(10, "Brand Phone must be at least 10 characters long")
-        .nullable(),
+        .min(10, "Brand Phone must be at least 10 characters long"),
     brandWebsite: z
         .string({
             required_error: "Brand Website is required",
             invalid_type_error: "Brand Website must be a string",
         })
-        .url("Brand Website is invalid")
-        .nullable(),
+        .url("Brand Website is invalid"),
+    status: z.enum(["pending", "approved", "rejected"]),
     createdAt: z.date({
         required_error: "Created at is required",
         invalid_type_error: "Created at must be a date",
@@ -63,9 +62,17 @@ export const brandWaitlistSchema = z.object({
 
 export const createBrandWaitlistSchema = brandWaitlistSchema.omit({
     id: true,
+    status: true,
     createdAt: true,
     updatedAt: true,
 });
 
+export const updateBrandWaitlistStatusSchema = brandWaitlistSchema.pick({
+    status: true,
+});
+
 export type BrandWaitlist = z.infer<typeof brandWaitlistSchema>;
 export type CreateBrandWaitlist = z.infer<typeof createBrandWaitlistSchema>;
+export type UpdateBrandWaitlistStatus = z.infer<
+    typeof updateBrandWaitlistStatusSchema
+>;

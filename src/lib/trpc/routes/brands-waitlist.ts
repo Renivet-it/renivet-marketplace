@@ -5,13 +5,25 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { hasPermission } from "@/lib/utils";
-import { createBrandWaitlistSchema } from "@/lib/validations";
+import {
+    brandWaitlistSchema,
+    createBrandWaitlistSchema,
+    updateBrandWaitlistStatusSchema,
+} from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 export const brandsWaitlistRouter = createTRPCRouter({
     getBrandsWaitlist: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+                status: brandWaitlistSchema.shape.status.optional(),
+                search: z.string().optional(),
+            })
+        )
         .use(({ ctx, next }) => {
             const { user } = ctx;
 
@@ -26,10 +38,32 @@ export const brandsWaitlistRouter = createTRPCRouter({
 
             return next({ ctx });
         })
-        .query(async ({ ctx }) => {
-            const { db } = ctx;
+        .query(async ({ ctx, input }) => {
+            const { db, schemas } = ctx;
+            const { limit, page, status, search } = input;
 
-            const brandsWaitlist = await db.query.brandsWaitlist.findMany();
+            const brandsWaitlist = await db.query.brandsWaitlist.findMany({
+                where: and(
+                    status
+                        ? eq(schemas.brandsWaitlist.status, status)
+                        : undefined,
+                    !!search?.length
+                        ? ilike(
+                              schemas.brandsWaitlist.brandEmail,
+                              `%${search}%`
+                          )
+                        : undefined
+                ),
+                limit,
+                offset: (page - 1) * limit,
+                orderBy: [desc(schemas.brandsWaitlist.createdAt)],
+                extras: {
+                    waitlistCount: db
+                        .$count(schemas.brandsWaitlist)
+                        .as("waitlist_count"),
+                },
+            });
+
             return brandsWaitlist;
         }),
     getBrandsWaitlistEntry: protectedProcedure
@@ -110,6 +144,64 @@ export const brandsWaitlistRouter = createTRPCRouter({
 
             return brandsWaitlistEntry;
         }),
+    updateBrandsWaitlistEntryStatus: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                data: updateBrandWaitlistStatusSchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_BRANDS,
+            ]);
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { db, schemas } = ctx;
+            const { id, data } = input;
+
+            const existingBrandsWaitlistEntry =
+                await db.query.brandsWaitlist.findFirst({
+                    where: eq(schemas.brandsWaitlist.id, id),
+                });
+            if (!existingBrandsWaitlistEntry)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brands waitlist entry not found",
+                });
+
+            if (
+                existingBrandsWaitlistEntry.status === "approved" ||
+                existingBrandsWaitlistEntry.status === "rejected"
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Brands waitlist entry is already approved/rejected",
+                });
+
+            if (existingBrandsWaitlistEntry.status === data.status)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brands waitlist entry status is the same",
+                });
+
+            await db
+                .update(schemas.brandsWaitlist)
+                .set(data)
+                .where(eq(schemas.brandsWaitlist.id, id));
+
+            return true;
+        }),
     deleteBrandsWaitlistEntry: protectedProcedure
         .input(
             z.object({
@@ -148,6 +240,6 @@ export const brandsWaitlistRouter = createTRPCRouter({
                 .delete(schemas.brandsWaitlist)
                 .where(eq(schemas.brandsWaitlist.id, id));
 
-            return null;
+            return true;
         }),
 });

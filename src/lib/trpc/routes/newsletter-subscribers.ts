@@ -7,11 +7,19 @@ import {
 import { hasPermission } from "@/lib/utils";
 import { createNewsletterSubscriberSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 export const newsletterSubscriberRouter = createTRPCRouter({
     getNewsletterSubscribers: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+                isActive: z.boolean().optional(),
+                search: z.string().optional(),
+            })
+        )
         .use(({ ctx, next }) => {
             const { user } = ctx;
 
@@ -26,11 +34,36 @@ export const newsletterSubscriberRouter = createTRPCRouter({
 
             return next({ ctx });
         })
-        .query(async ({ ctx }) => {
-            const { db } = ctx;
+        .query(async ({ ctx, input }) => {
+            const { db, schemas } = ctx;
+            const { limit, page, isActive, search } = input;
 
             const newsletterSubscribers =
-                await db.query.newsletterSubscribers.findMany();
+                await db.query.newsletterSubscribers.findMany({
+                    where: and(
+                        isActive !== undefined
+                            ? eq(
+                                  schemas.newsletterSubscribers.isActive,
+                                  isActive
+                              )
+                            : undefined,
+                        !!search?.length
+                            ? ilike(
+                                  schemas.newsletterSubscribers.email,
+                                  `%${search}%`
+                              )
+                            : undefined
+                    ),
+                    limit,
+                    offset: (page - 1) * limit,
+                    orderBy: [desc(schemas.newsletterSubscribers.createdAt)],
+                    extras: {
+                        subscriberCount: db
+                            .$count(schemas.newsletterSubscribers)
+                            .as("subscriber_count"),
+                    },
+                });
+
             return newsletterSubscribers;
         }),
     getNewsletterSubscriber: protectedProcedure

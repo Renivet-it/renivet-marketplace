@@ -7,6 +7,13 @@ import {
 } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select-dash";
+import {
     Table,
     TableBody,
     TableCell,
@@ -15,7 +22,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
-import { UserWithAddressesAndRoles } from "@/lib/validations";
+import { convertValueToLabel } from "@/lib/utils";
+import { BrandWaitlist } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -31,68 +39,83 @@ import {
 import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
-import { UserAction } from "./user-action";
+import { WaitlistAction } from "./waitlist-action";
 
-export type TableUser = UserWithAddressesAndRoles & {
-    name: string;
-    joinedAt: string;
+export type TableWaitlist = BrandWaitlist & {
+    registrant: string;
 };
 
-const columns: ColumnDef<TableUser>[] = [
+const columns: ColumnDef<TableWaitlist>[] = [
     {
-        accessorKey: "name",
+        accessorKey: "brandName",
         header: "Name",
         enableHiding: false,
     },
     {
-        accessorKey: "email",
+        accessorKey: "brandEmail",
         header: "Email",
         enableHiding: false,
     },
     {
-        accessorKey: "roles",
-        header: "Roles",
+        accessorKey: "brandPhone",
+        header: "Phone",
+    },
+    {
+        accessorKey: "registrant",
+        header: "Registrant",
+    },
+    {
+        accessorKey: "status",
+        header: "Status",
         cell: ({ row }) => {
-            const user = row.original;
+            const waitlist = row.original;
 
             return (
-                <div className="flex flex-wrap gap-1">
-                    {user.roles.map((role) => (
-                        <Badge key={role.id}>{role.name}</Badge>
-                    ))}
-                </div>
+                <Badge
+                    variant={
+                        waitlist.status === "approved"
+                            ? "secondary"
+                            : waitlist.status === "rejected"
+                              ? "destructive"
+                              : "default"
+                    }
+                >
+                    {convertValueToLabel(waitlist.status)}
+                </Badge>
             );
         },
     },
     {
-        accessorKey: "joinedAt",
-        header: "Joined At",
+        accessorKey: "createdAt",
+        header: "Created At",
         cell: ({ row }) => {
-            const user = row.original;
-            return format(new Date(user.createdAt), "MMM dd, yyyy");
+            const waitlist = row.original;
+            return format(new Date(waitlist.createdAt), "MMM dd, yyyy");
         },
     },
     {
         id: "actions",
         cell: ({ row }) => {
-            const user = row.original;
-            return <UserAction user={user} />;
+            const waitlist = row.original;
+            return <WaitlistAction waitlist={waitlist} />;
         },
     },
 ];
 
 interface PageProps {
-    initialUsers: (UserWithAddressesAndRoles & {
-        userCount: number;
+    initialData: (BrandWaitlist & {
+        waitlistCount: number;
     })[];
 }
 
-export function UsersTable({ initialUsers }: PageProps) {
+export function WaitlistTable({ initialData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
+
+    const [status, setStatus] = useState<BrandWaitlist["status"]>();
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -101,28 +124,28 @@ export function UsersTable({ initialUsers }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: usersRaw } = trpc.users.getUsers.useQuery(
-        { page, limit, search },
-        { initialData: initialUsers }
-    );
+    const { data: waitlistRaw } =
+        trpc.brandsWaitlist.getBrandsWaitlist.useQuery(
+            { page, limit, status, search },
+            { initialData }
+        );
 
-    const users = useMemo(
+    const waitlist = useMemo(
         () =>
-            usersRaw.map((user) => ({
-                ...user,
-                name: `${user.firstName} ${user.lastName}`,
-                joinedAt: format(new Date(user.createdAt), "MMM dd, yyyy"),
+            waitlistRaw.map((waitlist) => ({
+                ...waitlist,
+                registrant: waitlist.name,
             })),
-        [usersRaw]
+        [waitlistRaw]
     );
 
     const pages = useMemo(
-        () => Math.ceil(usersRaw?.[0]?.userCount ?? 0 / limit) ?? 1,
-        [usersRaw, limit]
+        () => Math.ceil(waitlistRaw?.[0]?.waitlistCount / limit) ?? 1,
+        [waitlistRaw, limit]
     );
 
     const table = useReactTable({
-        data: users,
+        data: waitlist,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -143,21 +166,46 @@ export function UsersTable({ initialUsers }: PageProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <div className="w-full md:w-auto">
+                <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
                     <Input
-                        placeholder="Search by email..."
+                        placeholder="Search by brand name..."
                         value={
                             (table
-                                .getColumn("email")
+                                .getColumn("brandName")
                                 ?.getFilterValue() as string) ?? search
                         }
                         onChange={(event) => {
                             table
-                                .getColumn("email")
+                                .getColumn("brandName")
                                 ?.setFilterValue(event.target.value);
                             setSearch(event.target.value);
                         }}
                     />
+
+                    <Select
+                        value={
+                            (table
+                                .getColumn("status")
+                                ?.getFilterValue() as string) ??
+                            status ??
+                            ""
+                        }
+                        onValueChange={(value) => {
+                            table.getColumn("status")?.setFilterValue(value);
+                            setStatus(value as BrandWaitlist["status"]);
+                        }}
+                    >
+                        <SelectTrigger className="capitalize">
+                            <SelectValue placeholder="Search by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {["pending", "approved", "rejected"].map((x) => (
+                                <SelectItem key={x} value={x}>
+                                    {convertValueToLabel(x)}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <DataTableViewOptions table={table} />
@@ -223,7 +271,7 @@ export function UsersTable({ initialUsers }: PageProps) {
             <div className="flex items-center justify-between gap-2">
                 <p className="text-sm text-muted-foreground">
                     Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {usersRaw?.[0]?.userCount ?? 0} users
+                    {waitlistRaw?.[0]?.waitlistCount ?? 0} results
                 </p>
 
                 <Pagination total={pages} />

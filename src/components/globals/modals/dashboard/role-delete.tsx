@@ -52,7 +52,7 @@ export function RoleDeleteModal({ role, isOpen, setIsOpen }: PageProps) {
                         Are you sure you want to delete this role?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Deleting this blog will remove it from the platform.
+                        Deleting this role will remove it from the platform.
                         This action cannot be undone.
                         {role.users > 0 && (
                             <>

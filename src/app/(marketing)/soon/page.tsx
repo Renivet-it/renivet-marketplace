@@ -6,7 +6,6 @@ import {
 } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
 import { SoonButtons } from "@/components/soon";
-import { BackgroundLines } from "@/components/ui/background-lines";
 import { Button } from "@/components/ui/button-general";
 import Image from "next/image";
 import Link from "next/link";
