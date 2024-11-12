@@ -7,13 +7,6 @@ import {
 import { Icons } from "@/components/icons";
 import { SoonButtons } from "@/components/soon";
 import { Button } from "@/components/ui/button-general";
-import {
-    EmptyPlaceholder,
-    EmptyPlaceholderContent,
-    EmptyPlaceholderDescription,
-    EmptyPlaceholderIcon,
-    EmptyPlaceholderTitle,
-} from "@/components/ui/empty-placeholder-general";
 import Image from "next/image";
 import Link from "next/link";
 
