@@ -161,7 +161,7 @@ const data: Sidebar = {
                 },
                 {
                     title: "Subscribers",
-                    url: "/dashboard/general/newsletter",
+                    url: "/dashboard/general/subscribers",
                     permissions:
                         BitFieldSitePermission.MANAGE_SETTINGS |
                         BitFieldSitePermission.VIEW_SETTINGS,
