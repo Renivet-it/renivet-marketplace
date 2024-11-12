@@ -29,8 +29,8 @@ export const siteConfig: SiteConfig = {
     links: {
         Facebook: "#",
         Twitter: "#",
-        Instagram: "#",
-        Linkedin: "#",
+        Instagram: "https://www.instagram.com/renivet__",
+        Linkedin: "https://www.linkedin.com/company/renivet/",
         Youtube: "#",
     },
     contact: {
@@ -97,15 +97,7 @@ export const siteConfig: SiteConfig = {
                 name: "Socials",
                 items: [
                     {
-                        name: "Instagram",
-                        href: "/soon",
-                    },
-                    {
                         name: "Facebook",
-                        href: "/soon",
-                    },
-                    {
-                        name: "Youtube",
                         href: "/soon",
                     },
                     {
@@ -113,7 +105,15 @@ export const siteConfig: SiteConfig = {
                         href: "/soon",
                     },
                     {
+                        name: "Instagram",
+                        href: "https://www.instagram.com/renivet__",
+                    },
+                    {
                         name: "Linkedin",
+                        href: "https://www.linkedin.com/company/renivet/",
+                    },
+                    {
+                        name: "Youtube",
                         href: "/soon",
                     },
                 ],
