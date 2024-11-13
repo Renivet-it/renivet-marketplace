@@ -3,7 +3,6 @@ import { roleCache, userCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { hasPermission, slugify } from "@/lib/utils";
 import {
-    cachedRoleSchema,
     createRoleSchema,
     reorderRolesSchema,
     updateRoleSchema,
@@ -28,27 +27,8 @@ export const rolesRouter = createTRPCRouter({
 
             return next({ ctx });
         })
-        .query(async ({ ctx }) => {
-            const { db } = ctx;
-
-            let cachedRoles = await roleCache.getAll();
-            if (!cachedRoles.length) {
-                const roles = await db.query.roles.findMany({
-                    with: {
-                        userRoles: true,
-                    },
-                });
-
-                cachedRoles = cachedRoleSchema.array().parse(
-                    roles.map((role) => ({
-                        ...role,
-                        users: role.userRoles.length,
-                    }))
-                );
-
-                await roleCache.addBulk(cachedRoles.map((x) => x!));
-            }
-
+        .query(async () => {
+            const cachedRoles = await roleCache.getAll();
             return cachedRoles.sort((a, b) => a.position - b.position);
         }),
     getRole: protectedProcedure
@@ -71,32 +51,10 @@ export const rolesRouter = createTRPCRouter({
 
             return next({ ctx });
         })
-        .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+        .query(async ({ input }) => {
             const { id } = input;
 
-            let cachedRole = await roleCache.get(id);
-            if (!cachedRole) {
-                const role = await db.query.roles.findFirst({
-                    where: eq(schemas.blogs.id, id),
-                    with: {
-                        userRoles: true,
-                    },
-                });
-                if (!role)
-                    throw new TRPCError({
-                        code: "NOT_FOUND",
-                        message: "Role not found",
-                    });
-
-                cachedRole = cachedRoleSchema.parse({
-                    ...role,
-                    users: role.userRoles.length,
-                });
-
-                await roleCache.add(cachedRole);
-            }
-
+            const cachedRole = await roleCache.get(id);
             return cachedRole;
         }),
     createRole: protectedProcedure
@@ -290,16 +248,6 @@ export const rolesRouter = createTRPCRouter({
                     message: "Role not found",
                 });
 
-            const existingUsers = await userCache.getAll();
-            const usersWithRole = existingUsers.filter((user) =>
-                user.roles.some((role) => role.id === id)
-            );
-
-            const updatedUsers = existingUsers.map((user) => ({
-                ...user,
-                roles: user.roles.filter((role) => role.id !== id),
-            }));
-
             await db.transaction(async (tx) => {
                 await Promise.all([
                     tx.delete(schemas.roles).where(eq(schemas.roles.id, id)),
@@ -324,15 +272,10 @@ export const rolesRouter = createTRPCRouter({
                     })
                     .filter((role) => role.id !== id);
 
-                if (usersWithRole.length > 0) {
-                    await Promise.all([
-                        roleCache.addBulk(updateRoles),
-                        userCache.drop(),
-                    ]);
-                    await userCache.addBulk(updatedUsers);
-                } else {
-                    await roleCache.addBulk(updateRoles);
-                }
+                await Promise.all([
+                    roleCache.addBulk(updateRoles),
+                    userCache.drop(),
+                ]);
             });
 
             return true;
