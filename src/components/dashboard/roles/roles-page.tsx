@@ -70,31 +70,29 @@ export function RolesPage({ initialRoles }: PageProps) {
     });
 
     return (
-        <div className="space-y-4">
-            <DragDropContext
-                onDragStart={handleDragStart}
-                onDragEnd={(res) => handleReorder(res)}
-            >
-                <Droppable droppableId="droppable">
-                    {(droppableProvided) => (
-                        <ul
-                            className="space-y-4"
-                            {...droppableProvided.droppableProps}
-                            ref={droppableProvided.innerRef}
-                        >
-                            {roles.map((role, index) => (
-                                <RoleDraggableCard
-                                    index={index}
-                                    key={role.id}
-                                    role={role}
-                                    isDragDisabled={isReordering}
-                                />
-                            ))}
-                            {droppableProvided.placeholder}
-                        </ul>
-                    )}
-                </Droppable>
-            </DragDropContext>
-        </div>
+        <DragDropContext
+            onDragStart={handleDragStart}
+            onDragEnd={(res) => handleReorder(res)}
+        >
+            <Droppable droppableId="droppable">
+                {(droppableProvided) => (
+                    <ul
+                        className="space-y-4"
+                        {...droppableProvided.droppableProps}
+                        ref={droppableProvided.innerRef}
+                    >
+                        {roles.map((role, index) => (
+                            <RoleDraggableCard
+                                index={index}
+                                key={role.id}
+                                role={role}
+                                isDragDisabled={isReordering}
+                            />
+                        ))}
+                        {droppableProvided.placeholder}
+                    </ul>
+                )}
+            </Droppable>
+        </DragDropContext>
     );
 }

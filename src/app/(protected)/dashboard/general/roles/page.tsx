@@ -2,12 +2,14 @@ import { RolesPage } from "@/components/dashboard/roles";
 import { DashShell } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
+import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/db";
 import { roleCache } from "@/lib/redis/methods";
-import { cachedRoleSchema } from "@/lib/validations";
+import { roleSchema } from "@/lib/validations";
 import { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { z } from "zod";
 
 export const metadata: Metadata = {
     title: "Roles",
@@ -36,7 +38,7 @@ export default function Page() {
                 </Button>
             </div>
 
-            <Suspense fallback={<>Loading...</>}>
+            <Suspense fallback={<RolesPageSkeleton />}>
                 <RolesFetch />
             </Suspense>
         </DashShell>
@@ -52,17 +54,31 @@ async function RolesFetch() {
             },
         });
 
-        cachedRoles = cachedRoleSchema.array().parse(
-            roles.map((role) => ({
-                ...role,
-                users: role.userRoles.length,
-            }))
-        );
+        cachedRoles = roleSchema
+            .extend({
+                users: z.number(),
+            })
+            .array()
+            .parse(
+                roles.map((role) => ({
+                    ...role,
+                    users: role.userRoles.length,
+                }))
+            );
 
         await roleCache.addBulk(cachedRoles.map((x) => x!));
     }
 
     const initialRoles = cachedRoles.sort((a, b) => a.position - b.position);
-
     return <RolesPage initialRoles={initialRoles} />;
+}
+
+function RolesPageSkeleton() {
+    return (
+        <ul className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-[4.5rem] w-full rounded-md" />
+            ))}
+        </ul>
+    );
 }

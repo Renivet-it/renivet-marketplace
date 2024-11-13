@@ -5,6 +5,8 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { db } from "@/lib/db";
 import { banners } from "@/lib/db/schema";
+import { bannerCache } from "@/lib/redis/methods";
+import { bannerSchema } from "@/lib/validations";
 import { desc } from "drizzle-orm";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -66,6 +68,12 @@ async function BannersFetch({ searchParams }: PageProps) {
             bannerCount: db.$count(banners).as("banner_count"),
         },
     });
+
+    const cachedBanners = await bannerCache.getAll();
+    if (cachedBanners.length === 0)
+        await bannerCache.addBulk(
+            bannerSchema.array().parse(data.filter((banner) => banner.isActive))
+        );
 
     return <BannersTable initialBanners={data} />;
 }
