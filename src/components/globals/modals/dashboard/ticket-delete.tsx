@@ -28,8 +28,15 @@ export function TicketDeleteModal({ ticket, isOpen, setIsOpen }: PageProps) {
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
 
-    const { refetch } = trpc.tickets.getTickets.useQuery({ page, limit });
+    const { refetch } = trpc.tickets.getTickets.useQuery({
+        page,
+        limit,
+        search,
+    });
 
     const { mutate: deleteTicket, isPending: isDeleting } =
         trpc.tickets.deleteTicket.useMutation({

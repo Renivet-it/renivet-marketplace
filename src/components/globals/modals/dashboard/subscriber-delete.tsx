@@ -32,11 +32,15 @@ export function SubscriberDeleteModal({
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
 
     const { refetch } =
         trpc.newsletterSubscribers.getNewsletterSubscribers.useQuery({
             page,
             limit,
+            search,
         });
 
     const { mutate: deleteSubscriber, isPending: isDeleting } =

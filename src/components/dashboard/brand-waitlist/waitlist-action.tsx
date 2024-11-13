@@ -54,10 +54,14 @@ export function WaitlistAction({ waitlist }: PageProps) {
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
 
     const { refetch } = trpc.brandsWaitlist.getBrandsWaitlist.useQuery({
         page,
         limit,
+        search,
     });
 
     const form = useForm<UpdateBrandWaitlistStatus>({

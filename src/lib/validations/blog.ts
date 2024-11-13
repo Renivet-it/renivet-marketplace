@@ -122,8 +122,7 @@ export const updateBlogSchema = blogSchema
                     .uuid("ID is invalid")
             )
             .min(1, "At least one tag is required"),
-    })
-    .partial();
+    });
 
 export const blogToTagsSchema = z.object({
     id: z
