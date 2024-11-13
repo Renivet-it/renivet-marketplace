@@ -10,7 +10,7 @@ import {
     Theme,
 } from "@/components/home";
 import { db } from "@/lib/db";
-import { banners, blogs } from "@/lib/db/schema";
+import { blogs } from "@/lib/db/schema";
 import { bannerCache } from "@/lib/redis/methods";
 import { desc, eq } from "drizzle-orm";
 import { Suspense } from "react";
@@ -46,17 +46,8 @@ async function BlogsFetch() {
 }
 
 async function BannersFetch() {
-    let cachedBanners = await bannerCache.getAll();
-    if (cachedBanners.length === 0) {
-        const existingBanners = await db.query.banners.findMany({
-            where: eq(banners.isActive, true),
-            orderBy: [desc(banners.createdAt)],
-        });
-        if (existingBanners.length === 0) return null;
-
-        await bannerCache.addBulk(existingBanners);
-        cachedBanners = existingBanners;
-    }
+    const cachedBanners = await bannerCache.getAll();
+    if (!cachedBanners.length) return null;
 
     return <Landing banners={cachedBanners} />;
 }

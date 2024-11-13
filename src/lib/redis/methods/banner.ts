@@ -1,5 +1,8 @@
+import { db } from "@/lib/db";
+import { banners } from "@/lib/db/schema";
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedBanner, cachedBannerSchema } from "@/lib/validations";
+import { and, eq } from "drizzle-orm";
 import { redis } from "..";
 
 class BannerCache {
@@ -11,21 +14,43 @@ class BannerCache {
 
     async getAll() {
         const keys = await redis.keys(this.genKey("*"));
-        if (!keys.length) return [];
+        if (!keys.length) {
+            const dbBanners = await db.query.banners.findMany({
+                where: eq(banners.isActive, true),
+            });
+            if (!dbBanners.length) return [];
 
-        const banners = await redis.mget(...keys);
+            await this.addBulk(dbBanners);
+            return dbBanners;
+        }
+
+        const cachedBanners = await redis.mget(...keys);
         return cachedBannerSchema
             .array()
             .parse(
-                banners
+                cachedBanners
                     .map((banner) => parseToJSON<CachedBanner>(banner))
                     .filter((banner): banner is CachedBanner => banner !== null)
             );
     }
 
     async get(id: string) {
-        const banner = await redis.get(this.genKey(id));
-        return cachedBannerSchema.parse(parseToJSON<CachedBanner>(banner));
+        const cachedBannerRaw = await redis.get(this.genKey(id));
+        let cachedBanner = cachedBannerSchema
+            .nullable()
+            .parse(parseToJSON<CachedBanner>(cachedBannerRaw));
+
+        if (!cachedBanner) {
+            const dbBanner = await db.query.banners.findFirst({
+                where: and(eq(banners.id, id), eq(banners.isActive, true)),
+            });
+            if (!dbBanner) return null;
+
+            cachedBanner = dbBanner;
+            await this.add(cachedBanner);
+        }
+
+        return cachedBanner;
     }
 
     async add(banner: CachedBanner) {

@@ -1,5 +1,8 @@
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedUser, cachedUserSchema } from "@/lib/validations";
+import { eq } from "drizzle-orm";
 import { redis } from "..";
 
 class UserCache {
@@ -9,22 +12,36 @@ class UserCache {
         this.genKey = generateCacheKey(":", "user");
     }
 
-    async getAll() {
-        const keys = await redis.keys(this.genKey("*"));
-        if (!keys.length) return [];
-        const users = await redis.mget(...keys);
-        return cachedUserSchema
-            .array()
-            .parse(
-                users
-                    .map((user) => parseToJSON<CachedUser>(user))
-                    .filter((user): user is CachedUser => user !== null)
-            );
-    }
-
     async get(id: string) {
-        const user = await redis.get(this.genKey(id));
-        return cachedUserSchema.nullable().parse(parseToJSON<CachedUser>(user));
+        const cachedUserRaw = await redis.get(this.genKey(id));
+        let cachedUser = cachedUserSchema
+            .nullable()
+            .parse(parseToJSON<CachedUser>(cachedUserRaw));
+
+        if (!cachedUser) {
+            const dbUser = await db.query.users.findFirst({
+                where: eq(users.id, id),
+                with: {
+                    addresses: true,
+                    roles: {
+                        with: {
+                            role: true,
+                        },
+                    },
+                },
+            });
+            if (!dbUser) return null;
+
+            cachedUser = {
+                ...dbUser,
+                addresses: dbUser.addresses,
+                roles: dbUser.roles.map((r) => r.role),
+            };
+
+            await this.add(cachedUser);
+        }
+
+        return cachedUser;
     }
 
     async add(user: CachedUser) {

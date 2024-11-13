@@ -1,5 +1,8 @@
+import { db } from "@/lib/db";
+import { roles } from "@/lib/db/schema";
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedRole, cachedRoleSchema } from "@/lib/validations";
+import { eq } from "drizzle-orm";
 import { redis } from "..";
 
 class RoleCache {
@@ -10,21 +13,62 @@ class RoleCache {
     }
 
     async getAll() {
+        const dbRolesCount = await db.$count(roles);
+
         const keys = await redis.keys(this.genKey("*"));
-        if (!keys.length) return [];
-        const roles = await redis.mget(...keys);
+        if (keys.length !== +dbRolesCount) {
+            await this.drop();
+
+            const dbRoles = await db.query.roles.findMany({
+                with: {
+                    userRoles: true,
+                },
+            });
+            if (!dbRoles.length) return [];
+
+            const cachedRoles = dbRoles.map((role) => ({
+                ...role,
+                users: role.userRoles.length,
+            }));
+
+            await this.addBulk(cachedRoles);
+            return cachedRoles;
+        }
+
+        const cachedRoles = await redis.mget(...keys);
         return cachedRoleSchema
             .array()
             .parse(
-                roles
+                cachedRoles
                     .map((role) => parseToJSON<CachedRole>(role))
                     .filter((role): role is CachedRole => role !== null)
             );
     }
 
     async get(id: string) {
-        const role = await redis.get(this.genKey(id));
-        return cachedRoleSchema.nullable().parse(parseToJSON<CachedRole>(role));
+        const cachedRoleRaw = await redis.get(this.genKey(id));
+        let cachedRole = cachedRoleSchema
+            .nullable()
+            .parse(parseToJSON<CachedRole>(cachedRoleRaw));
+
+        if (!cachedRole) {
+            const dbRole = await db.query.roles.findFirst({
+                where: eq(roles.id, id),
+                with: {
+                    userRoles: true,
+                },
+            });
+            if (!dbRole) return null;
+
+            cachedRole = {
+                ...dbRole,
+                users: dbRole.userRoles.length,
+            };
+
+            await this.add(cachedRole);
+        }
+
+        return cachedRole;
     }
 
     async add(role: CachedRole) {

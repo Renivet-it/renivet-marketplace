@@ -69,11 +69,10 @@ async function BannersFetch({ searchParams }: PageProps) {
         },
     });
 
-    const cachedBanners = await bannerCache.getAll();
-    if (cachedBanners.length === 0)
-        await bannerCache.addBulk(
-            bannerSchema.array().parse(data.filter((banner) => banner.isActive))
-        );
+    await bannerCache.drop();
+    await bannerCache.addBulk(
+        bannerSchema.array().parse(data.filter((banner) => banner.isActive))
+    );
 
     return <BannersTable initialBanners={data} />;
 }

@@ -3,13 +3,10 @@ import { DashShell } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/db";
 import { roleCache } from "@/lib/redis/methods";
-import { roleSchema } from "@/lib/validations";
 import { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { z } from "zod";
 
 export const metadata: Metadata = {
     title: "Roles",
@@ -46,28 +43,7 @@ export default function Page() {
 }
 
 async function RolesFetch() {
-    let cachedRoles = await roleCache.getAll();
-    if (!cachedRoles.length) {
-        const roles = await db.query.roles.findMany({
-            with: {
-                userRoles: true,
-            },
-        });
-
-        cachedRoles = roleSchema
-            .extend({
-                users: z.number(),
-            })
-            .array()
-            .parse(
-                roles.map((role) => ({
-                    ...role,
-                    users: role.userRoles.length,
-                }))
-            );
-
-        await roleCache.addBulk(cachedRoles.map((x) => x!));
-    }
+    const cachedRoles = await roleCache.getAll();
 
     const initialRoles = cachedRoles.sort((a, b) => a.position - b.position);
     return <RolesPage initialRoles={initialRoles} />;

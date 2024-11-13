@@ -1,6 +1,4 @@
 import { BitFieldSitePermission } from "@/config/permissions";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import {
     AppError,
@@ -9,7 +7,6 @@ import {
     handleError,
     hasPermission,
 } from "@/lib/utils";
-import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -22,29 +19,8 @@ export async function GET(req: NextRequest) {
         if (!uId || !path)
             throw new AppError("Invalid parameters", "BAD_REQUEST");
 
-        let existingUser = await userCache.get(uId);
-        if (!existingUser) {
-            const dbUser = await db.query.users.findFirst({
-                where: eq(users.id, uId),
-                with: {
-                    addresses: true,
-                    roles: {
-                        with: {
-                            role: true,
-                        },
-                    },
-                },
-            });
-            if (!dbUser) throw new AppError("User not found", "NOT_FOUND");
-
-            existingUser = {
-                ...dbUser,
-                addresses: dbUser.addresses,
-                roles: dbUser.roles.map((r) => r.role),
-            };
-
-            await userCache.add(existingUser);
-        }
+        const existingUser = await userCache.get(uId);
+        if (!existingUser) throw new AppError("User not found", "NOT_FOUND");
 
         const { sitePermissions } = getUserPermissions(existingUser.roles);
 
