@@ -27,73 +27,70 @@ export function RoleDraggableCard({ role, index, isDragDisabled }: PageProps) {
                 isDragDisabled={isDragDisabled}
             >
                 {(draggableProvided) => (
-                    <>
-                        <li
-                            className={cn(
-                                "flex items-center justify-between gap-4 rounded-lg bg-muted p-3 md:p-4",
-                                isDragDisabled &&
-                                    "cursor-not-allowed opacity-60"
-                            )}
-                            aria-label={role.name}
-                            ref={draggableProvided.innerRef}
-                            {...draggableProvided.draggableProps}
-                            {...draggableProvided.dragHandleProps}
-                        >
+                    <li
+                        className={cn(
+                            "flex items-center justify-between gap-4 rounded-lg bg-muted p-3 md:p-4",
+                            isDragDisabled && "cursor-not-allowed opacity-60"
+                        )}
+                        aria-label={role.name}
+                        ref={draggableProvided.innerRef}
+                        {...draggableProvided.draggableProps}
+                        {...draggableProvided.dragHandleProps}
+                    >
+                        <div className="flex items-center gap-2 md:gap-4">
+                            <Icons.GripVertical className="size-4" />
+
                             <div className="flex items-center gap-2 md:gap-4">
-                                <Icons.GripVertical className="size-4" />
-
-                                <div className="flex items-center gap-2 md:gap-4">
-                                    <p className="flex size-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground md:size-6 md:text-sm">
-                                        {role.position}
-                                    </p>
-                                    <p className="text-sm md:text-base">
-                                        {role.name}
-                                    </p>
-                                </div>
+                                <p className="flex size-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground md:size-6 md:text-sm">
+                                    {role.position}
+                                </p>
+                                <p className="text-sm md:text-base">
+                                    {role.name}
+                                </p>
                             </div>
+                        </div>
 
-                            <div className="flex items-center">
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    asChild
-                                    className="size-8 rounded rounded-r-none border-r-0 md:size-10"
-                                    disabled={isDragDisabled}
-                                    title="Edit Role"
+                        <div className="flex items-center">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                asChild
+                                className="size-8 rounded rounded-r-none border-r-0 md:size-10"
+                                disabled={isDragDisabled}
+                                title="Edit Role"
+                            >
+                                <Link
+                                    href={`/dashboard/general/roles/r/${role.id}`}
                                 >
-                                    <Link
-                                        href={`/dashboard/general/roles/r/${role.id}`}
-                                    >
-                                        <Icons.Edit className="size-4" />
-                                        <span className="sr-only">Edit</span>
-                                    </Link>
-                                </Button>
+                                    <Icons.Edit className="size-4" />
+                                    <span className="sr-only">Edit</span>
+                                </Link>
+                            </Button>
 
-                                <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="size-8 rounded rounded-l-none md:size-10"
-                                    // onClick={() => {
-                                    //     const newRoles: CachedRole[] =
-                                    //         [...roles];
-                                    //     newRoles.splice(
-                                    //         index,
-                                    //         1
-                                    //     );
-                                    //     setRoles(
-                                    //         newRoles
-                                    //     );
-                                    // }}
-                                    onClick={() => setIsDeleteModalOpen(true)}
-                                    disabled={isDragDisabled}
-                                    title="Delete Role"
-                                >
-                                    <Icons.X className="size-4" />
-                                    <span className="sr-only">Delete</span>
-                                </Button>
-                            </div>
-                        </li>
-                    </>
+                            <Button
+                                size="icon"
+                                variant="outline"
+                                className="size-8 rounded rounded-l-none md:size-10"
+                                // onClick={() => {
+                                //     const newRoles: CachedRole[] =
+                                //         [...roles];
+                                //     newRoles.splice(
+                                //         index,
+                                //         1
+                                //     );
+                                //     setRoles(
+                                //         newRoles
+                                //     );
+                                // }}
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                disabled={isDragDisabled}
+                                title="Delete Role"
+                            >
+                                <Icons.X className="size-4" />
+                                <span className="sr-only">Delete</span>
+                            </Button>
+                        </div>
+                    </li>
                 )}
             </Draggable>
 

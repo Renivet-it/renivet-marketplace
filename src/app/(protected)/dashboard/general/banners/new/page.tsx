@@ -1,7 +1,6 @@
 import { BannerManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
-import { Suspense } from "react";
 
 export const metadata: Metadata = {
     title: "Create New Banner",
@@ -18,13 +17,7 @@ export default function Page() {
                 </p>
             </div>
 
-            <Suspense fallback={<>Loading...</>}>
-                <BannerCreateFetch />
-            </Suspense>
+            <BannerManageForm />
         </DashShell>
     );
-}
-
-async function BannerCreateFetch() {
-    return <BannerManageForm />;
 }

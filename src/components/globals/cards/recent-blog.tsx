@@ -43,8 +43,8 @@ export function RecentBlogCard({ className, blog, ...props }: PageProps) {
                     <span className="md:hidden">{blog.title}</span>
                 </h3>
                 <p className="text-sm text-muted-foreground md:max-w-xs md:text-balance">
-                    {blog.description.length > 100
-                        ? `${blog.description.slice(0, 100)}...`
+                    {blog.description.length > 75
+                        ? `${blog.description.slice(0, 75)}...`
                         : blog.description}
                 </p>
             </div>

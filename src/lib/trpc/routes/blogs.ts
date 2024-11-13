@@ -317,7 +317,10 @@ export const blogsRouter = createTRPCRouter({
                 });
 
             const existingThumbnailUrl = existingBlog.thumbnailUrl;
-            if (existingThumbnailUrl) {
+            if (
+                existingThumbnailUrl &&
+                existingThumbnailUrl !== data.thumbnailUrl
+            ) {
                 const existingKey = getUploadThingFileKey(existingThumbnailUrl);
                 await utApi.deleteFiles([existingKey]);
             }

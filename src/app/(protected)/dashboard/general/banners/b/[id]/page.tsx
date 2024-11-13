@@ -1,5 +1,6 @@
 import { BannerManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
+import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/db";
 import { banners } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -43,7 +44,7 @@ export default function Page({ params }: PageProps) {
                 </p>
             </div>
 
-            <Suspense fallback={<>Loading...</>}>
+            <Suspense fallback={<BannerEditSkeleton />}>
                 <BannerEditFetch params={params} />
             </Suspense>
         </DashShell>
@@ -59,4 +60,28 @@ async function BannerEditFetch({ params }: PageProps) {
     if (!existingBanner) notFound();
 
     return <BannerManageForm banner={existingBanner} />;
+}
+
+function BannerEditSkeleton() {
+    return (
+        <div className="space-y-6">
+            {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                    <p className="text-sm">
+                        {i === 0 ? "Title" : "Description"}
+                    </p>
+                    <Skeleton className="h-10 rounded-md" />
+                </div>
+            ))}
+
+            <div className="space-y-2">
+                <p className="text-sm">Image</p>
+                <Skeleton className="h-60 rounded-md" />
+            </div>
+
+            <Skeleton className="h-9 w-1/4 rounded-md" />
+
+            <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+    );
 }

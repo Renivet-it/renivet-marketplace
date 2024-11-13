@@ -86,10 +86,10 @@ export function TagsTable({ initialTags }: PageProps) {
 
     const tags = useMemo(
         () =>
-            tagsRaw?.map((tag) => ({
+            tagsRaw.map((tag) => ({
                 ...tag,
                 blogs: tag.blogTags.length,
-            })) ?? [],
+            })),
         [tagsRaw]
     );
 

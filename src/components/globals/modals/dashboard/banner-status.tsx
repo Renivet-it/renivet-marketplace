@@ -28,10 +28,14 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
 
     const { refetch } = trpc.content.banners.getBanners.useQuery({
         page,
         limit,
+        search,
     });
 
     const { mutate: updateBannerStatus, isPending: isUpdating } =

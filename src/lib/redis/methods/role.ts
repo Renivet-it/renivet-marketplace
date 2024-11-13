@@ -24,7 +24,7 @@ class RoleCache {
 
     async get(id: string) {
         const role = await redis.get(this.genKey(id));
-        return cachedRoleSchema.parse(parseToJSON<CachedRole>(role));
+        return cachedRoleSchema.nullable().parse(parseToJSON<CachedRole>(role));
     }
 
     async add(role: CachedRole) {

@@ -28,8 +28,11 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({ page, limit });
+    const { refetch } = trpc.blogs.getBlogs.useQuery({ page, limit, search });
 
     const { mutate: updatePublishStatus, isPending: isUpdating } =
         trpc.blogs.changePublishStatus.useMutation({

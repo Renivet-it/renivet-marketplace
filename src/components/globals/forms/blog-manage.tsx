@@ -278,20 +278,20 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                         <FormItem>
                             <FormLabel>Thumbnail</FormLabel>
 
-                            <FormControl>
-                                <div
-                                    {...getRootProps()}
-                                    className={cn(
-                                        "relative cursor-pointer rounded-md border-2 border-dashed border-input p-8 py-16 text-center",
-                                        isDragActive &&
-                                            "border-green-500 bg-green-50",
-                                        preview && "border-0 p-0",
-                                        (isBlogCreating ||
-                                            isBlogUpdating ||
-                                            !tags.length) &&
-                                            "cursor-not-allowed opacity-50"
-                                    )}
-                                >
+                            <div
+                                {...getRootProps()}
+                                className={cn(
+                                    "relative cursor-pointer rounded-md border-2 border-dashed border-input p-8 py-16 text-center",
+                                    isDragActive &&
+                                        "border-green-500 bg-green-50",
+                                    preview && "border-0 p-0",
+                                    (isBlogCreating ||
+                                        isBlogUpdating ||
+                                        !tags.length) &&
+                                        "cursor-not-allowed opacity-50"
+                                )}
+                            >
+                                <FormControl>
                                     <input
                                         {...getInputProps()}
                                         disabled={
@@ -300,52 +300,51 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                                             !tags.length
                                         }
                                     />
+                                </FormControl>
 
-                                    {preview ? (
-                                        <div className="relative aspect-video w-full overflow-hidden rounded-md">
-                                            <Image
-                                                src={preview}
-                                                alt="Thumbnail preview"
-                                                width={1000}
-                                                height={1000}
-                                                className="size-full object-cover"
-                                            />
+                                {preview ? (
+                                    <div className="relative aspect-video w-full overflow-hidden rounded-md">
+                                        <Image
+                                            src={preview}
+                                            alt="Thumbnail preview"
+                                            width={1000}
+                                            height={1000}
+                                            className="size-full object-cover"
+                                        />
 
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="absolute right-2 top-2 size-5 rounded-full bg-white/20 text-background backdrop-blur-md"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeImage();
-                                                }}
-                                            >
-                                                <Icons.X className="size-4" />
-                                                <span className="sr-only">
-                                                    Remove image
-                                                </span>
-                                            </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute right-2 top-2 size-5 rounded-full bg-white/20 text-background backdrop-blur-md"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeImage();
+                                            }}
+                                        >
+                                            <Icons.X className="size-4" />
+                                            <span className="sr-only">
+                                                Remove image
+                                            </span>
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 md:space-y-4">
+                                        <div className="flex justify-center">
+                                            <Icons.CloudUpload className="size-10 md:size-12" />
                                         </div>
-                                    ) : (
-                                        <div className="space-y-2 md:space-y-4">
-                                            <div className="flex justify-center">
-                                                <Icons.CloudUpload className="size-10 md:size-12" />
-                                            </div>
 
-                                            <div className="space-y-1 md:space-y-0">
-                                                <p className="text-sm md:text-base">
-                                                    Choose a file or Drag and
-                                                    Drop
-                                                </p>
-                                                <p className="text-xs text-muted-foreground md:text-sm">
-                                                    Image (4 MB)
-                                                </p>
-                                            </div>
+                                        <div className="space-y-1 md:space-y-0">
+                                            <p className="text-sm md:text-base">
+                                                Choose a file or Drag and Drop
+                                            </p>
+                                            <p className="text-xs text-muted-foreground md:text-sm">
+                                                Image (4 MB)
+                                            </p>
                                         </div>
-                                    )}
-                                </div>
-                            </FormControl>
+                                    </div>
+                                )}
+                            </div>
 
                             <FormMessage />
                         </FormItem>
