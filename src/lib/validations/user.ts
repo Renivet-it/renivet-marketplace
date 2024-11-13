@@ -115,6 +115,23 @@ export const updateUserPhoneSchema = z.object({
         .transform((v) => v.replace(/[^0-9+]/g, "")),
 });
 
+export const updateUserRolesSchema = z.object({
+    userId: z
+        .string({
+            required_error: "User ID is required",
+            invalid_type_error: "User ID must be a string",
+        })
+        .min(1, "User ID is required"),
+    roleIds: z.array(
+        z
+            .string({
+                required_error: "Role ID is required",
+                invalid_type_error: "Role ID must be a string",
+            })
+            .uuid("Role ID is invalid")
+    ),
+});
+
 export type User = z.infer<typeof userSchema>;
 export type UserWithAddressesAndRoles = z.infer<
     typeof userWithAddressesAndRolesSchema
@@ -124,3 +141,4 @@ export type SafeUser = z.infer<typeof safeUserSchema>;
 export type UpdateUserGeneral = z.infer<typeof updateUserGeneralSchema>;
 export type UpdateUserEmail = z.infer<typeof updateUserEmailSchema>;
 export type UpdateUserPhone = z.infer<typeof updateUserPhoneSchema>;
+export type UpdateUserRoles = z.infer<typeof updateUserRolesSchema>;
