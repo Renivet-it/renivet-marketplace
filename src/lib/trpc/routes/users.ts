@@ -1,14 +1,15 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { userCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { hasPermission, slugify } from "@/lib/utils";
+import { getUserPermissions, hasPermission, slugify } from "@/lib/utils";
 import {
     createAddressSchema,
     updateAddressSchema,
+    updateUserRolesSchema,
     userWithAddressesAndRolesSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike, ne } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 
 export const usersRouter = createTRPCRouter({
@@ -342,13 +343,8 @@ export const usersRouter = createTRPCRouter({
 
             return true;
         }),
-    addRole: protectedProcedure
-        .input(
-            z.object({
-                userId: z.string(),
-                roleId: z.string(),
-            })
-        )
+    updateRoles: protectedProcedure
+        .input(updateUserRolesSchema)
         .use(({ ctx, next }) => {
             const { user } = ctx;
 
@@ -364,13 +360,13 @@ export const usersRouter = createTRPCRouter({
             return next({ ctx });
         })
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
-            const { userId, roleId } = input;
+            const { db, schemas, user } = ctx;
+            const { userId, roleIds } = input;
 
-            const [existingUser, existingRole] = await Promise.all([
+            const [existingUser, existingRoles] = await Promise.all([
                 userCache.get(userId),
-                db.query.roles.findFirst({
-                    where: eq(schemas.roles.id, roleId),
+                db.query.roles.findMany({
+                    where: inArray(schemas.roles.id, roleIds),
                     columns: {
                         createdAt: false,
                         updatedAt: false,
@@ -382,91 +378,93 @@ export const usersRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "User not found",
                 });
-            if (!existingRole)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Role not found",
-                });
-
-            if (existingUser.roles.some((role) => role.id === roleId))
+            if (existingRoles.length !== roleIds.length)
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "User already has this role",
+                    message: "Some roles not found",
+                });
+
+            const existingRoleIds = existingUser.roles.map((role) => role.id);
+            const newRoles = existingRoles.filter(
+                (role) => !existingRoleIds.includes(role.id)
+            );
+            const removedRoles = existingUser.roles.filter(
+                (role) => !roleIds.includes(role.id)
+            );
+
+            const { sitePermissions: existingRolesSitePermissions } =
+                getUserPermissions(existingUser.roles);
+            const hasExistingRolesAdminPerms = hasPermission(
+                existingRolesSitePermissions,
+                []
+            );
+
+            const { sitePermissions: newRolesSitePermissions } =
+                getUserPermissions(newRoles);
+            const hasNewRolesAdminPerms = hasPermission(
+                newRolesSitePermissions,
+                []
+            );
+
+            if (
+                user.id === userId &&
+                hasNewRolesAdminPerms &&
+                !hasExistingRolesAdminPerms
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Cannot add admin roles",
+                });
+
+            const { sitePermissions: removedRolesSitePermissions } =
+                getUserPermissions(removedRoles);
+            const hasRemovedRolesAdminPerms = hasPermission(
+                removedRolesSitePermissions,
+                []
+            );
+
+            if (user.id !== userId && hasRemovedRolesAdminPerms)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Cannot remove admin roles",
+                });
+
+            if (newRoles.length === 0 && removedRoles.length === 0)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "No changes detected",
                 });
 
             await Promise.all([
+                db.transaction(async (tx) => {
+                    if (newRoles.length > 0)
+                        await tx.insert(schemas.userRoles).values(
+                            newRoles.map((role) => ({
+                                userId,
+                                roleId: role.id,
+                            }))
+                        );
+
+                    if (removedRoles.length > 0)
+                        await tx.delete(schemas.userRoles).where(
+                            and(
+                                eq(schemas.userRoles.userId, userId),
+                                inArray(
+                                    schemas.userRoles.roleId,
+                                    removedRoles.map((role) => role.id)
+                                )
+                            )
+                        );
+                }),
                 userCache.update({
                     ...existingUser,
-                    roles: [...existingUser.roles, existingRole],
+                    roles: [
+                        ...existingUser.roles.filter((role) =>
+                            roleIds.includes(role.id)
+                        ),
+                        ...newRoles,
+                    ],
                 }),
-                db.insert(schemas.userRoles).values({
-                    userId,
-                    roleId,
-                }),
-            ]);
-
-            return true;
-        }),
-    removeRole: protectedProcedure
-        .input(
-            z.object({
-                userId: z.string(),
-                roleId: z.string(),
-            })
-        )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_USERS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
-        .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
-            const { userId, roleId } = input;
-
-            const [existingUser, existingUserRole] = await Promise.all([
-                userCache.get(userId),
-                db.query.userRoles.findFirst({
-                    where: and(
-                        eq(schemas.userRoles.userId, userId),
-                        eq(schemas.userRoles.roleId, roleId)
-                    ),
-                }),
-            ]);
-            if (!existingUser)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "User not found",
-                });
-            if (!existingUserRole)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "User role not found",
-                });
-
-            await Promise.all([
-                userCache.update({
-                    ...existingUser,
-                    roles: existingUser.roles.filter(
-                        (role) => role.id !== roleId
-                    ),
-                }),
-                db
-                    .delete(schemas.userRoles)
-                    .where(
-                        and(
-                            eq(schemas.userRoles.userId, userId),
-                            eq(schemas.userRoles.roleId, roleId)
-                        )
-                    ),
             ]);
 
             return true;

@@ -15,6 +15,7 @@ import {
 import { DEFAULT_AVATAR_URL } from "@/config/const";
 import { cn, convertValueToLabel, hideEmail } from "@/lib/utils";
 import { toast } from "sonner";
+import { UserRoleManageForm } from "./user-role-manage";
 import { TableUser } from "./users-table";
 
 interface PageProps {
@@ -153,19 +154,15 @@ export function UserAction({ user }: PageProps) {
                     </div>
                 </div>
 
-                <div className="space-y-4 text-sm">
-                    <div className="space-y-2">
-                        <p>Roles</p>
+                <UserRoleManageForm user={user} />
 
-                        <div className="flex flex-wrap gap-1 rounded-md bg-muted p-4">
+                {/* <div className="flex flex-wrap gap-1 rounded-md bg-muted p-4">
                             {user.roles.map((role) => (
                                 <Badge key={role.id} className="text-xs">
                                     {role.name}
                                 </Badge>
                             ))}
-                        </div>
-                    </div>
-                </div>
+                        </div> */}
             </SheetContent>
         </Sheet>
     );

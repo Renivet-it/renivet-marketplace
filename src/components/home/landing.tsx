@@ -8,54 +8,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../ui/carousel";
 
-const items = [
-    {
-        title: "Making a Choice",
-        description:
-            "A choice that is good for you and the planet. Discover our sustainable products.",
-        imageUrl:
-            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZn9M1CYRgtC81g0yM5IoNfltURbp4rs2XnFQOT",
-        button: "Discover More",
-        href: "/soon",
-    },
-    {
-        title: "Nurture Nature",
-        description:
-            "The best way to protect the environment is to make sustainable choices.",
-        imageUrl:
-            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnMBwj2mdNari256c8ReoWJUD0Pyg3ZdX7Yqpb",
-        button: "Discover More",
-        href: "/soon",
-    },
-    {
-        title: "From Raw to Remarkable",
-        description:
-            "From raw materials to remarkable products, we are committed to sustainability.",
-        imageUrl:
-            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZntdsqdSIHmgvafVRtSkxXNwjCWPu2LqAG3Fly",
-        button: "Discover More",
-        href: "/soon",
-    },
-    {
-        title: "Earthy Warmth Naturally Inspired",
-        description:
-            "Our products are inspired by nature and designed to bring warmth to your home.",
-        imageUrl:
-            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnC4U1le5EGLspIcX2SViB8tOyhJe6n7fF3RWj",
-        button: "Discover More",
-        href: "/soon",
-    },
-    {
-        title: "Drip of Elegance",
-        description:
-            "Discover our elegant and eco-friendly products that are designed to make a statement.",
-        imageUrl:
-            "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnV6qCG7l80TM4AsehRfmtqSxKLIbUCcJay9gN",
-        button: "Discover More",
-        href: "/soon",
-    },
-];
-
 interface PageProps extends GenericProps {
     banners: Banner[];
 }

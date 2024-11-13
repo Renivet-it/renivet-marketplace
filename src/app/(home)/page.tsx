@@ -49,5 +49,10 @@ async function BannersFetch() {
     const cachedBanners = await bannerCache.getAll();
     if (!cachedBanners.length) return null;
 
-    return <Landing banners={cachedBanners} />;
+    const sorted = cachedBanners.sort(
+        (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return <Landing banners={sorted} />;
 }
