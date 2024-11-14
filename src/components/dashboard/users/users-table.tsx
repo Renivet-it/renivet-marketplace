@@ -57,9 +57,13 @@ const columns: ColumnDef<TableUser>[] = [
 
             return (
                 <div className="flex flex-wrap gap-1">
-                    {user.roles.map((role) => (
-                        <Badge key={role.id}>{role.name}</Badge>
-                    ))}
+                    {!!user.roles.length ? (
+                        user.roles.map((role) => (
+                            <Badge key={role.id}>{role.name}</Badge>
+                        ))
+                    ) : (
+                        <Badge variant="secondary">General</Badge>
+                    )}
                 </div>
             );
         },
@@ -100,6 +104,8 @@ export function UsersTable({ initialUsers }: PageProps) {
         {}
     );
     const [rowSelection, setRowSelection] = useState({});
+
+    trpc.roles.getRoles.useQuery();
 
     const { data: usersRaw } = trpc.users.getUsers.useQuery(
         { page, limit, search },

@@ -1,23 +1,9 @@
 "use client";
 
+import { deleteBrandDemo, generateBrandDemoLink } from "@/actions";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button-dash";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select-dash";
 import { Separator } from "@/components/ui/separator";
 import {
     Sheet,
@@ -34,14 +20,10 @@ import {
     handleClientError,
     hideEmail,
 } from "@/lib/utils";
-import {
-    UpdateBrandWaitlistStatus,
-    updateBrandWaitlistStatusSchema,
-} from "@/lib/validations";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import Player from "next-video/player";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { TableWaitlist } from "./waitlist-table";
 
@@ -64,36 +46,75 @@ export function WaitlistAction({ waitlist }: PageProps) {
         search,
     });
 
-    const form = useForm<UpdateBrandWaitlistStatus>({
-        resolver: zodResolver(updateBrandWaitlistStatusSchema),
-        defaultValues: {
-            status: waitlist.status,
+    const { mutate: generateLink, isPending: isGenerating } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Generating invite link...");
+            return { toastId };
+        },
+        mutationFn: generateBrandDemoLink,
+        onSuccess: (data, _, { toastId }) => {
+            toast.success("Invite link generated and copied to clipboard", {
+                id: toastId,
+            });
+            navigator.clipboard.writeText(data);
+        },
+        onError: (err, _, ctx) => {
+            return handleClientError(err, ctx?.toastId);
         },
     });
 
-    const { mutate: updateStatus, isPending: isUpdating } =
-        trpc.brandsWaitlist.updateBrandsWaitlistEntryStatus.useMutation({
+    const { mutate: downloadVideo, isPending: isVideoDownloading } =
+        useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Saving changes...");
+                const toastId = toast.loading(
+                    "Downloading video, please do not close the window..."
+                );
                 return { toastId };
             },
-            onSuccess: (_, data, { toastId }) => {
-                toast.success("Changes saved successfully", { id: toastId });
-                form.reset(data.data);
-                refetch();
-                router.refresh();
+            mutationFn: async () => {
+                if (!waitlist.demoUrl) throw new Error("No demo video found");
+
+                const response = await fetch(waitlist.demoUrl);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+
+                const fileName = waitlist.demoUrl.split("/").pop();
+                if (!fileName) throw new Error("Invalid file name");
+
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            },
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Video downloaded successfully", { id: toastId });
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
             },
         });
 
+    const { mutate: deleteVideo, isPending: isDeleting } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Deleting video...");
+            return { toastId };
+        },
+        mutationFn: deleteBrandDemo,
+        onSuccess: (_, __, { toastId }) => {
+            toast.success("Video deleted successfully", { id: toastId });
+            router.refresh();
+            refetch();
+        },
+        onError: (err, _, ctx) => {
+            return handleClientError(err, ctx?.toastId);
+        },
+    });
+
     return (
-        <Sheet
-            onOpenChange={(isOpen) => {
-                if (!isOpen) form.reset();
-            }}
-        >
+        <Sheet>
             <SheetTrigger asChild>
                 <Button variant="ghost" className="size-8 p-0">
                     <Icons.Settings2 className="size-4" />
@@ -217,74 +238,50 @@ export function WaitlistAction({ waitlist }: PageProps) {
                         </div>
                     </div>
 
+                    {waitlist.demoUrl && (
+                        <div className="space-y-4 text-sm">
+                            <div className="space-y-2">
+                                <p>Demo Video</p>
+
+                                <Player src={waitlist.demoUrl} />
+
+                                <div className="flex flex-col items-center gap-2 md:flex-row">
+                                    <Button
+                                        size="sm"
+                                        className="w-full"
+                                        variant="outline"
+                                        onClick={() => downloadVideo()}
+                                        disabled={isVideoDownloading}
+                                    >
+                                        <Icons.Download className="size-5" />
+                                        Save
+                                    </Button>
+
+                                    <Button
+                                        size="sm"
+                                        className="w-full"
+                                        variant="destructive"
+                                        disabled={isDeleting}
+                                        onClick={() => deleteVideo(waitlist)}
+                                    >
+                                        <Icons.Trash className="size-5" />
+                                        Delete
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <Separator />
 
-                    <Form {...form}>
-                        <form
-                            className="space-y-2"
-                            onSubmit={form.handleSubmit((values) =>
-                                updateStatus({
-                                    id: waitlist.id,
-                                    data: values,
-                                })
-                            )}
-                        >
-                            <FormField
-                                control={form.control}
-                                name="status"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Status</FormLabel>
-
-                                        <Select
-                                            onValueChange={field.onChange}
-                                            defaultValue={field.value}
-                                            disabled={
-                                                waitlist.status !== "pending" ||
-                                                isUpdating
-                                            }
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select status" />
-                                                </SelectTrigger>
-                                            </FormControl>
-
-                                            <SelectContent>
-                                                {[
-                                                    "pending",
-                                                    "approved",
-                                                    "rejected",
-                                                ].map((x) => (
-                                                    <SelectItem
-                                                        key={x}
-                                                        value={x}
-                                                        disabled={
-                                                            x ===
-                                                                waitlist.status ||
-                                                            x === "pending"
-                                                        }
-                                                    >
-                                                        {convertValueToLabel(x)}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={isUpdating || !form.formState.isDirty}
-                            >
-                                Save Changes
-                            </Button>
-                        </form>
-                    </Form>
+                    <Button
+                        className="w-full"
+                        size="sm"
+                        onClick={() => generateLink(waitlist.brandEmail)}
+                        disabled={isGenerating}
+                    >
+                        Generate Demo Link
+                    </Button>
                 </div>
             </SheetContent>
         </Sheet>

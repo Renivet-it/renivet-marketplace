@@ -18,7 +18,11 @@ import { Suspense } from "react";
 export default function Page() {
     return (
         <>
-            <Suspense fallback={null}>
+            <Suspense
+                fallback={
+                    <div className="h-[calc(100vh-20vh)] w-full bg-background" />
+                }
+            >
                 <BannersFetch />
             </Suspense>
             <Collection />

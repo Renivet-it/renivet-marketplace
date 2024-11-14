@@ -22,6 +22,7 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -30,6 +31,8 @@ interface PageProps {
 }
 
 export function UserGeneralUpdateForm({ user }: PageProps) {
+    const router = useRouter();
+
     const { user: clerkUser, isLoaded: isClerkUserLoaded } = useUser();
 
     const form = useForm<UpdateUserGeneral>({
@@ -58,6 +61,7 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
             toast.success("Changes saved successfully", { id: toastId });
             form.reset(data);
             clerkUser?.reload();
+            router.refresh();
         },
         onError: (err, _, ctx) => {
             return handleClientError(err, ctx?.toastId);

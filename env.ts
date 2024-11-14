@@ -23,6 +23,10 @@ export const env = createEnv({
             .string({ required_error: "UPLOADTHING_TOKEN is required" })
             .min(1, "UPLOADTHING_TOKEN is required"),
 
+        JWT_SECRET_KEY: z
+            .string({ required_error: "JWT_SECRET_KEY is required" })
+            .min(1, "JWT_SECRET_KEY is required"),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -40,6 +44,7 @@ export const env = createEnv({
         DATABASE_URL: process.env.DATABASE_URL,
         REDIS_URL: process.env.REDIS_URL,
         UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
+        JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

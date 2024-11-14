@@ -60,10 +60,11 @@ export function UserRoleManageForm({ user }: PageProps) {
                 const toastId = toast.loading("Updating roles...");
                 return { toastId };
             },
-            onSuccess: (_, __, { toastId }) => {
+            onSuccess: (_, data, { toastId }) => {
                 toast.success("Roles updated successfully", { id: toastId });
                 refetch();
                 router.refresh();
+                form.reset(data);
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
