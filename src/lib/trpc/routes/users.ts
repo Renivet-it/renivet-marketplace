@@ -396,14 +396,14 @@ export const usersRouter = createTRPCRouter({
                 getUserPermissions(existingUser.roles);
             const hasExistingRolesAdminPerms = hasPermission(
                 existingRolesSitePermissions,
-                []
+                [BitFieldSitePermission.ADMINISTRATOR]
             );
 
             const { sitePermissions: newRolesSitePermissions } =
                 getUserPermissions(newRoles);
             const hasNewRolesAdminPerms = hasPermission(
                 newRolesSitePermissions,
-                []
+                [BitFieldSitePermission.ADMINISTRATOR]
             );
 
             if (
@@ -420,7 +420,7 @@ export const usersRouter = createTRPCRouter({
                 getUserPermissions(removedRoles);
             const hasRemovedRolesAdminPerms = hasPermission(
                 removedRolesSitePermissions,
-                []
+                [BitFieldSitePermission.ADMINISTRATOR]
             );
 
             if (user.id !== userId && hasRemovedRolesAdminPerms)

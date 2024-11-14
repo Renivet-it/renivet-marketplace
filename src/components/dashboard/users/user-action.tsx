@@ -101,68 +101,66 @@ export function UserAction({ user }: PageProps) {
                     <div className="space-y-2">
                         <p>Addresses</p>
 
-                        {user.addresses
-                            .sort((a) => (a.isPrimary ? -1 : 1))
-                            .map((address) => (
-                                <div
-                                    key={address.id}
-                                    className="space-y-1 rounded-md bg-muted p-4"
-                                >
-                                    <div>
-                                        <div className="flex justify-between gap-2">
-                                            <p className="font-semibold">
-                                                {address.fullName} (
-                                                {convertValueToLabel(
-                                                    address.type
+                        {!!user.addresses.length ? (
+                            user.addresses
+                                .sort((a) => (a.isPrimary ? -1 : 1))
+                                .map((address) => (
+                                    <div
+                                        key={address.id}
+                                        className="space-y-1 rounded-md bg-muted p-4"
+                                    >
+                                        <div>
+                                            <div className="flex justify-between gap-2">
+                                                <p className="font-semibold">
+                                                    {address.fullName} (
+                                                    {convertValueToLabel(
+                                                        address.type
+                                                    )}
+                                                    )
+                                                </p>
+
+                                                {address.isPrimary && (
+                                                    <Badge
+                                                        className="text-xs"
+                                                        variant="secondary"
+                                                    >
+                                                        Primary
+                                                    </Badge>
                                                 )}
-                                                )
+                                            </div>
+                                            <p
+                                                className="cursor-pointer text-xs underline"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(
+                                                        address.phone
+                                                    );
+                                                    return toast.success(
+                                                        "Phone number copied to clipboard"
+                                                    );
+                                                }}
+                                            >
+                                                {address.phone}
                                             </p>
-
-                                            {address.isPrimary && (
-                                                <Badge
-                                                    className="text-xs"
-                                                    variant="secondary"
-                                                >
-                                                    Primary
-                                                </Badge>
-                                            )}
                                         </div>
-                                        <p
-                                            className="cursor-pointer text-xs underline"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(
-                                                    address.phone
-                                                );
-                                                return toast.success(
-                                                    "Phone number copied to clipboard"
-                                                );
-                                            }}
-                                        >
-                                            {address.phone}
-                                        </p>
-                                    </div>
 
-                                    <div>
-                                        <p>{address.alias}</p>
-                                        <p>
-                                            {address.city}, {address.state}{" "}
-                                            {address.zip}
-                                        </p>
+                                        <div>
+                                            <p>{address.alias}</p>
+                                            <p>
+                                                {address.city}, {address.state}{" "}
+                                                {address.zip}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                        ) : (
+                            <div className="space-y-1 rounded-md bg-muted p-4">
+                                <p>No address found</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <UserRoleManageForm user={user} />
-
-                {/* <div className="flex flex-wrap gap-1 rounded-md bg-muted p-4">
-                            {user.roles.map((role) => (
-                                <Badge key={role.id} className="text-xs">
-                                    {role.name}
-                                </Badge>
-                            ))}
-                        </div> */}
             </SheetContent>
         </Sheet>
     );
