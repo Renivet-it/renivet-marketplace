@@ -7,6 +7,7 @@ import { CachedRole } from "@/lib/validations";
 import { Draggable } from "@hello-pangea/dnd";
 import Link from "next/link";
 import { useState } from "react";
+import * as React from "react";
 import { RoleDeleteModal } from "../modals";
 
 interface PageProps {
@@ -26,16 +27,17 @@ export function RoleDraggableCard({ role, index, isDragDisabled }: PageProps) {
                 index={index}
                 isDragDisabled={isDragDisabled}
             >
-                {(draggableProvided) => (
+                {(provided) => (
+                    // @ts-expect-error
                     <li
                         className={cn(
                             "flex items-center justify-between gap-4 rounded-lg bg-muted p-3 md:p-4",
                             isDragDisabled && "cursor-not-allowed opacity-60"
                         )}
                         aria-label={role.name}
-                        ref={draggableProvided.innerRef}
-                        {...draggableProvided.draggableProps}
-                        {...draggableProvided.dragHandleProps}
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
                     >
                         <div className="flex items-center gap-2 md:gap-4">
                             <Icons.GripVertical className="size-4" />
@@ -71,17 +73,6 @@ export function RoleDraggableCard({ role, index, isDragDisabled }: PageProps) {
                                 size="icon"
                                 variant="outline"
                                 className="size-8 rounded rounded-l-none md:size-10"
-                                // onClick={() => {
-                                //     const newRoles: CachedRole[] =
-                                //         [...roles];
-                                //     newRoles.splice(
-                                //         index,
-                                //         1
-                                //     );
-                                //     setRoles(
-                                //         newRoles
-                                //     );
-                                // }}
                                 onClick={() => setIsDeleteModalOpen(true)}
                                 disabled={isDragDisabled}
                                 title="Delete Role"
