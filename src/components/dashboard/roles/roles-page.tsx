@@ -75,11 +75,11 @@ export function RolesPage({ initialRoles }: PageProps) {
             onDragEnd={(res) => handleReorder(res)}
         >
             <Droppable droppableId="droppable">
-                {(droppableProvided) => (
+                {(provided) => (
                     <ul
                         className="space-y-4"
-                        {...droppableProvided.droppableProps}
-                        ref={droppableProvided.innerRef}
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
                     >
                         {roles.map((role, index) => (
                             <RoleDraggableCard
@@ -89,7 +89,7 @@ export function RolesPage({ initialRoles }: PageProps) {
                                 isDragDisabled={isReordering}
                             />
                         ))}
-                        {droppableProvided.placeholder}
+                        {provided.placeholder}
                     </ul>
                 )}
             </Droppable>
