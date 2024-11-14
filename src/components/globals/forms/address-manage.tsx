@@ -87,7 +87,7 @@ export function AddressManageForm({
     }, [address, form]);
 
     const { mutate: addAddress, isPending: isAddressAdding } =
-        trpc.users.addAddress.useMutation({
+        trpc.users.addresses.addAddress.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Adding address...");
                 return { toastId };
@@ -104,7 +104,7 @@ export function AddressManageForm({
         });
 
     const { mutate: updateAddress, isPending: isAddressUpdating } =
-        trpc.users.updateAddress.useMutation({
+        trpc.users.addresses.updateAddress.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Updating address...");
                 return { toastId };

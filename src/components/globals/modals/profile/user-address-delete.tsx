@@ -29,7 +29,7 @@ export function UserAddressDeleteModal({
     const { refetch } = trpc.users.currentUser.useQuery();
 
     const { mutate: deleteAddress, isPending: isAddressDeleting } =
-        trpc.users.deleteAddress.useMutation({
+        trpc.users.addresses.deleteAddress.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Deleting address...");
                 return { toastId };

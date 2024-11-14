@@ -55,7 +55,7 @@ export function UserRoleManageForm({ user }: PageProps) {
     );
 
     const { mutate: updateRoles, isPending: isUpdating } =
-        trpc.users.updateRoles.useMutation({
+        trpc.users.roles.updateRoles.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Updating roles...");
                 return { toastId };
