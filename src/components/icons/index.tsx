@@ -15,6 +15,7 @@ import LucideIcons, {
     Cookie,
     Copy,
     Copyright,
+    Download,
     Edit,
     Eye,
     EyeOff,
@@ -75,6 +76,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Download,
     Globe,
     Phone,
     GripVertical,

@@ -10,10 +10,6 @@ export const brandsWaitlist = pgTable("brands_waitlist", {
     brandEmail: text("brand_email").notNull().unique(),
     brandPhone: text("brand_phone").notNull(),
     brandWebsite: text("brand_website").notNull(),
-    status: text("status", {
-        enum: ["pending", "approved", "rejected"],
-    })
-        .notNull()
-        .default("pending"),
+    demoUrl: text("demo_url"),
     ...timestamps,
 });

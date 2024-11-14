@@ -1,18 +1,10 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import {
     DataTableViewOptions,
     Pagination,
 } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select-dash";
 import {
     Table,
     TableBody,
@@ -22,7 +14,6 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
-import { convertValueToLabel } from "@/lib/utils";
 import { BrandWaitlist } from "@/lib/validations";
 import {
     ColumnDef,
@@ -65,27 +56,6 @@ const columns: ColumnDef<TableWaitlist>[] = [
         header: "Registrant",
     },
     {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => {
-            const waitlist = row.original;
-
-            return (
-                <Badge
-                    variant={
-                        waitlist.status === "approved"
-                            ? "secondary"
-                            : waitlist.status === "rejected"
-                              ? "destructive"
-                              : "default"
-                    }
-                >
-                    {convertValueToLabel(waitlist.status)}
-                </Badge>
-            );
-        },
-    },
-    {
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => {
@@ -115,8 +85,6 @@ export function WaitlistTable({ initialData }: PageProps) {
         defaultValue: "",
     });
 
-    const [status, setStatus] = useState<BrandWaitlist["status"]>();
-
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
@@ -126,7 +94,7 @@ export function WaitlistTable({ initialData }: PageProps) {
 
     const { data: waitlistRaw } =
         trpc.brandsWaitlist.getBrandsWaitlist.useQuery(
-            { page, limit, status, search },
+            { page, limit, search },
             { initialData }
         );
 
@@ -166,7 +134,7 @@ export function WaitlistTable({ initialData }: PageProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
+                <div className="w-full md:w-auto">
                     <Input
                         placeholder="Search by brand name..."
                         value={
@@ -181,31 +149,6 @@ export function WaitlistTable({ initialData }: PageProps) {
                             setSearch(event.target.value);
                         }}
                     />
-
-                    <Select
-                        value={
-                            (table
-                                .getColumn("status")
-                                ?.getFilterValue() as string) ??
-                            status ??
-                            ""
-                        }
-                        onValueChange={(value) => {
-                            table.getColumn("status")?.setFilterValue(value);
-                            setStatus(value as BrandWaitlist["status"]);
-                        }}
-                    >
-                        <SelectTrigger className="capitalize">
-                            <SelectValue placeholder="Search by status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {["pending", "approved", "rejected"].map((x) => (
-                                <SelectItem key={x} value={x}>
-                                    {convertValueToLabel(x)}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                 </div>
 
                 <DataTableViewOptions table={table} />
