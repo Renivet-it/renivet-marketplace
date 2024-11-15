@@ -54,6 +54,9 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: UpdateUserPhone) => {
+            if (values.phone)
+                throw new Error("Adding a phone number is currently disabled");
+
             if (!isClerkUserLoaded || !clerkUser)
                 throw new Error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);
             const res = await clerkUser.createPhoneNumber({
@@ -103,7 +106,8 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
                                             inputMode="tel"
                                             placeholder="+919874563210"
                                             disabled={
-                                                isPhoneVerificationSending
+                                                isPhoneVerificationSending ||
+                                                true
                                             }
                                             {...field}
                                             onChange={(e) => {
@@ -129,7 +133,10 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
                                     </div>
                                 </FormControl>
 
-                                <FormMessage />
+                                <FormMessage className="text-xs">
+                                    * Adding a phone number is currently
+                                    disabled
+                                </FormMessage>
                             </FormItem>
                         )}
                     />
