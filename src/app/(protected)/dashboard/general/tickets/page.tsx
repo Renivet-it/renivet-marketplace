@@ -1,9 +1,7 @@
 import { TicketsTable } from "@/components/dashboard/tickets";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { db } from "@/lib/db";
-import { tickets } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { ticketQueries } from "@/lib/db/queries";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -16,6 +14,7 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
+        search?: string;
     }>;
 }
 
@@ -39,20 +38,22 @@ export default function Page({ searchParams }: PageProps) {
 }
 
 async function TicketsFetch({ searchParams }: PageProps) {
-    const { page: pageRaw, limit: limitRaw } = await searchParams;
+    const {
+        page: pageRaw,
+        limit: limitRaw,
+        search: searchRaw,
+    } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const search = searchRaw?.length ? searchRaw : undefined;
 
-    const data = await db.query.tickets.findMany({
+    const data = await ticketQueries.getTickets({
         limit,
-        offset: (page - 1) * limit,
-        orderBy: [desc(tickets.createdAt)],
-        extras: {
-            ticketCount: db.$count(tickets).as("ticket_count"),
-        },
+        page,
+        search,
     });
 
-    return <TicketsTable initialTickets={data} />;
+    return <TicketsTable initialData={data} />;
 }

@@ -1,10 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-    DataTableViewOptions,
-    Pagination,
-} from "@/components/ui/data-table-dash";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
     Select,
@@ -13,21 +11,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select-dash";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel } from "@/lib/utils";
 import { NewsletterSubscriber } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
@@ -37,7 +26,7 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { SubscriberAction } from "./subscriber-action";
 
@@ -89,9 +78,10 @@ const columns: ColumnDef<TableSubscriber>[] = [
 ];
 
 interface PageProps {
-    initialData: (NewsletterSubscriber & {
-        subscriberCount: number;
-    })[];
+    initialData: {
+        data: NewsletterSubscriber[];
+        count: number;
+    };
 }
 
 export function SubscribersTable({ initialData }: PageProps) {
@@ -100,8 +90,10 @@ export function SubscribersTable({ initialData }: PageProps) {
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
-
-    const [isActive, setIsActive] = useState<boolean>();
+    const [isActive, setIsActive] = useQueryState(
+        "isActive",
+        parseAsBoolean.withDefault(true)
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -110,28 +102,26 @@ export function SubscribersTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: subsRaw } =
-        trpc.newsletterSubscribers.getNewsletterSubscribers.useQuery(
-            { page, limit, search, isActive },
-            { initialData }
-        );
+    const {
+        data: { data: dataRaw, count },
+    } = trpc.newsletterSubscribers.getNewsletterSubscribers.useQuery(
+        { page, limit, search, isActive },
+        { initialData }
+    );
 
-    const subs = useMemo(
+    const data = useMemo(
         () =>
-            subsRaw.map((sub) => ({
-                ...sub,
-                status: sub.isActive ? "Active" : "Inactive",
+            dataRaw.map((x) => ({
+                ...x,
+                status: x.isActive ? "Active" : "Inactive",
             })),
-        [subsRaw]
+        [dataRaw]
     );
 
-    const pages = useMemo(
-        () => Math.ceil(subsRaw?.[0]?.subscriberCount ?? 0 / limit) ?? 1,
-        [subsRaw, limit]
-    );
+    const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
-        data: subs,
+        data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -173,12 +163,9 @@ export function SubscribersTable({ initialData }: PageProps) {
                             (table
                                 .getColumn("status")
                                 ?.getFilterValue() as string) ??
-                            (isActive !== undefined
-                                ? isActive
-                                    ? "active"
-                                    : "inactive"
-                                : undefined) ??
-                            ""
+                            (isActive !== undefined || isActive === true
+                                ? "active"
+                                : "inactive")
                         }
                         onValueChange={(value) => {
                             table.getColumn("status")?.setFilterValue(value);
@@ -189,7 +176,7 @@ export function SubscribersTable({ initialData }: PageProps) {
                             <SelectValue placeholder="Search by status" />
                         </SelectTrigger>
                         <SelectContent>
-                            {["inactive", "active"].map((x) => (
+                            {["active", "inactive"].map((x) => (
                                 <SelectItem key={x} value={x}>
                                     {convertValueToLabel(x)}
                                 </SelectItem>
@@ -201,71 +188,12 @@ export function SubscribersTable({ initialData }: PageProps) {
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext()
-                                                  )}
-                                        </TableHead>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected() && "selected"
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className="max-w-60"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No results.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {subsRaw?.[0]?.subscriberCount ?? 0} subscribers
-                </p>
-
-                <Pagination total={pages} />
-            </div>
+            <DataTable
+                columns={columns}
+                table={table}
+                pages={pages}
+                count={count}
+            />
         </div>
     );
 }

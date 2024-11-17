@@ -5,6 +5,8 @@ import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
 import { lora, poppins } from "./fonts";
 import "./globals.css";
+import { env } from "@/../env";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 export const viewport: Viewport = {
     themeColor: [
@@ -105,6 +107,7 @@ export default function RootLayout({
                     </ClientProvider>
                 </body>
             </ServerProvider>
+            <GoogleAnalytics gaId={env.GOOGLE_ANALYTICS_ID} />
         </html>
     );
 }

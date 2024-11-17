@@ -1,7 +1,7 @@
 import { BlogManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/db";
+import { tagCache } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
 import { Metadata } from "next";
 import { Suspense } from "react";
@@ -29,7 +29,7 @@ export default function Page() {
 }
 
 async function BlogCreateFetch() {
-    const tags = await db.query.tags.findMany();
+    const tags = await tagCache.getAll();
     return <BlogManageForm tags={tags} />;
 }
 

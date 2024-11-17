@@ -1,11 +1,9 @@
 import { BlogManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/db";
-import { blogs } from "@/lib/db/schema";
+import { blogQueries } from "@/lib/db/queries";
+import { tagCache } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
-import { blogWithAuthorAndTagSchema } from "@/lib/validations";
-import { and, eq } from "drizzle-orm";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -21,9 +19,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { id } = await params;
 
-    const existingBlog = await db.query.blogs.findFirst({
-        where: eq(blogs.id, id),
-    });
+    const existingBlog = await blogQueries.getBlog({ id });
     if (!existingBlog)
         return {
             title: "Blog not found",
@@ -57,28 +53,12 @@ async function BlogEditFetch({ params }: PageProps) {
     const { id } = await params;
 
     const [tags, existingBlog] = await Promise.all([
-        db.query.tags.findMany(),
-        db.query.blogs.findFirst({
-            where: and(eq(blogs.id, id)),
-            with: {
-                tags: {
-                    with: {
-                        tag: true,
-                    },
-                },
-            },
-        }),
+        tagCache.getAll(),
+        blogQueries.getBlog({ id }),
     ]);
-
     if (!existingBlog) notFound();
 
-    const parsed = blogWithAuthorAndTagSchema
-        .omit({
-            author: true,
-        })
-        .parse(existingBlog);
-
-    return <BlogManageForm blog={parsed} tags={tags} />;
+    return <BlogManageForm blog={existingBlog} tags={tags} />;
 }
 
 function BlogManageSkeleton() {

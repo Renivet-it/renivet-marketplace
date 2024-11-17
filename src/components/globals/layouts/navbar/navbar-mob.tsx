@@ -48,6 +48,12 @@ const extraMenu: SiteConfig["menu"] = [
         icon: "BookOpen",
     },
     {
+        name: "Become a Seller",
+        description: "Join as a seller",
+        href: "/become-a-seller",
+        icon: "DollarSign",
+    },
+    {
         name: "Privacy Policy",
         description: "Read our privacy policy",
         href: "/privacy",

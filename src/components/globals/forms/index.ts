@@ -3,6 +3,7 @@ export * from "./banner-manage";
 export * from "./blog-manage";
 export * from "./brand-waitlist";
 export * from "./contact-us";
+export * from "./brand-request";
 export * from "./email-otp-verification";
 export * from "./email-otp-verification-init";
 export * from "./forgot-password-s1";

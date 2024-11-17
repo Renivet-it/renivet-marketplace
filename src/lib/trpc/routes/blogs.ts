@@ -1,35 +1,21 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { tagCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
-    isAuth,
+    isTRPCAuth,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
-import { getUploadThingFileKey, hasPermission, slugify } from "@/lib/utils";
+import { getUploadThingFileKey, slugify } from "@/lib/utils";
 import {
     blogWithAuthorAndTagSchema,
     createBlogSchema,
     updateBlogSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-
-const hasBlogManagePermission = isAuth.unstable_pipe(({ ctx, next }) => {
-    const { user } = ctx;
-
-    const isAuthorized = hasPermission(user.sitePermissions, [
-        BitFieldSitePermission.MANAGE_BLOGS,
-    ]);
-    if (!isAuthorized)
-        throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: "You're not authorized",
-        });
-
-    return next({ ctx });
-});
 
 export const blogsRouter = createTRPCRouter({
     getBlogs: publicProcedure
@@ -43,159 +29,28 @@ export const blogsRouter = createTRPCRouter({
             })
         )
         .query(async ({ input, ctx }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { limit, page, tagId, isPublished, search } = input;
 
             if (!!tagId?.length) {
-                const data = await db
-                    .select({
-                        id: schemas.blogs.id,
-                        createdAt: schemas.blogs.createdAt,
-                        updatedAt: schemas.blogs.updatedAt,
-                        slug: schemas.blogs.slug,
-                        title: schemas.blogs.title,
-                        description: schemas.blogs.description,
-                        content: schemas.blogs.content,
-                        thumbnailUrl: schemas.blogs.thumbnailUrl,
-                        authorId: schemas.blogs.authorId,
-                        isPublished: schemas.blogs.isPublished,
-                        publishedAt: schemas.blogs.publishedAt,
-                        author: {
-                            id: schemas.users.id,
-                            firstName: schemas.users.firstName,
-                            lastName: schemas.users.lastName,
-                            avatarUrl: schemas.users.avatarUrl,
-                        },
-                        tags: sql<
-                            {
-                                tag: { id: string; name: string; slug: string };
-                            }[]
-                        >`
-                  COALESCE(
-                    JSON_AGG(
-                      JSON_BUILD_OBJECT(
-                        'tag', JSON_BUILD_OBJECT(
-                          'id', ${schemas.tags.id},
-                          'name', ${schemas.tags.name},
-                          'slug', ${schemas.tags.slug}
-                        )
-                      )
-                    ) FILTER (WHERE ${schemas.tags.id} IS NOT NULL),
-                    '[]'
-                  )
-                `.as("tags"),
-                    })
-                    .from(schemas.blogs)
-                    .innerJoin(
-                        schemas.blogTags,
-                        eq(schemas.blogs.id, schemas.blogTags.blogId)
-                    )
-                    .innerJoin(
-                        schemas.tags,
-                        eq(schemas.blogTags.tagId, schemas.tags.id)
-                    )
-                    .leftJoin(
-                        schemas.users,
-                        eq(schemas.blogs.authorId, schemas.users.id)
-                    )
-                    .where(
-                        and(
-                            eq(schemas.tags.id, tagId),
-                            isPublished
-                                ? eq(schemas.blogs.isPublished, true)
-                                : undefined,
-                            !!search?.length
-                                ? ilike(schemas.blogs.title, `%${search}%`)
-                                : undefined
-                        )
-                    )
-                    .orderBy(
-                        isPublished
-                            ? desc(schemas.blogs.publishedAt)
-                            : desc(schemas.blogs.createdAt)
-                    )
-                    .groupBy(schemas.blogs.id, schemas.users.id)
-                    .limit(limit)
-                    .offset((page - 1) * limit);
+                const data = await queries.blogs.getBlogsByTag({
+                    tagId,
+                    limit,
+                    page,
+                    search,
+                });
 
-                const blogCount = await db
-                    .select({
-                        count: sql<number>`count(DISTINCT ${schemas.blogs.id})`,
-                    })
-                    .from(schemas.blogs)
-                    .innerJoin(
-                        schemas.blogTags,
-                        eq(schemas.blogs.id, schemas.blogTags.blogId)
-                    )
-                    .where(
-                        and(
-                            eq(schemas.blogTags.tagId, tagId),
-                            isPublished
-                                ? eq(schemas.blogs.isPublished, true)
-                                : undefined,
-                            !!search?.length
-                                ? ilike(schemas.blogs.title, `%${search}%`)
-                                : undefined
-                        )
-                    )
-                    .then((res) => res[0].count);
-
-                const parsed = blogWithAuthorAndTagSchema
-                    .merge(
-                        z.object({
-                            blogCount: z
-                                .string()
-                                .transform((val) => parseInt(val)),
-                        })
-                    )
-                    .array()
-                    .parse(
-                        data.map((item) => ({
-                            ...item,
-                            blogCount,
-                        }))
-                    );
-                return parsed;
+                return data;
             }
 
-            const data = await db.query.blogs.findMany({
-                where: and(
-                    isPublished !== undefined
-                        ? eq(schemas.blogs.isPublished, isPublished)
-                        : undefined,
-                    !!search?.length
-                        ? ilike(schemas.blogs.title, `%${search}%`)
-                        : undefined
-                ),
+            const data = await queries.blogs.getBlogs({
                 limit,
-                offset: (page - 1) * limit,
-                orderBy: [
-                    isPublished
-                        ? desc(schemas.blogs.publishedAt)
-                        : desc(schemas.blogs.createdAt),
-                ],
-                with: {
-                    author: true,
-                    tags: {
-                        with: {
-                            tag: true,
-                        },
-                    },
-                },
-                extras: {
-                    blogCount: db.$count(schemas.blogs).as("blog_count"),
-                },
+                page,
+                search,
+                isPublished,
             });
 
-            const parsed = blogWithAuthorAndTagSchema
-                .merge(
-                    z.object({
-                        blogCount: z.string().transform((val) => parseInt(val)),
-                    })
-                )
-                .array()
-                .parse(data);
-            return parsed;
+            return data;
         }),
     getBlog: publicProcedure
         .input(
@@ -210,23 +65,10 @@ export const blogsRouter = createTRPCRouter({
                 })
         )
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id, slug } = input;
 
-            const blog = await db.query.blogs.findFirst({
-                where: or(
-                    id ? eq(schemas.blogs.id, id) : undefined,
-                    slug ? eq(schemas.blogs.slug, slug) : undefined
-                ),
-                with: {
-                    author: true,
-                    tags: {
-                        with: {
-                            tag: true,
-                        },
-                    },
-                },
-            });
+            const blog = await queries.blogs.getBlog({ id, slug });
             if (!blog)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -238,15 +80,16 @@ export const blogsRouter = createTRPCRouter({
         }),
     createBlog: protectedProcedure
         .input(createBlogSchema)
-        .use(hasBlogManagePermission)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas, user } = ctx;
+            const { db, schemas, user, queries } = ctx;
 
-            const blogSlug = slugify(input.title);
+            const slug = slugify(input.title);
 
-            const existingTags = await db.query.tags.findMany({
-                where: inArray(schemas.tags.id, input.tagIds),
-            });
+            const allTags = await tagCache.getAll();
+            const existingTags = allTags.filter((tag) =>
+                input.tagIds.includes(tag.id)
+            );
 
             const missingTags = input.tagIds.filter(
                 (tagId) => !existingTags.find((tag) => tag.id === tagId)
@@ -259,9 +102,7 @@ export const blogsRouter = createTRPCRouter({
                     )} not found`,
                 });
 
-            const existingBlog = await db.query.blogs.findFirst({
-                where: eq(schemas.blogs.slug, blogSlug),
-            });
+            const existingBlog = await queries.blogs.getBlog({ slug });
             if (existingBlog)
                 throw new TRPCError({
                     code: "CONFLICT",
@@ -273,19 +114,27 @@ export const blogsRouter = createTRPCRouter({
                     .insert(schemas.blogs)
                     .values({
                         ...input,
-                        slug: blogSlug,
+                        slug,
                         authorId: user.id,
                         publishedAt: input.isPublished ? new Date() : null,
                     })
                     .returning()
                     .then((res) => res[0]);
 
-                await tx.insert(schemas.blogTags).values(
-                    input.tagIds.map((tagId) => ({
-                        blogId: blog.id,
-                        tagId,
-                    }))
-                );
+                await Promise.all([
+                    tx.insert(schemas.blogTags).values(
+                        input.tagIds.map((tagId) => ({
+                            blogId: blog.id,
+                            tagId,
+                        }))
+                    ),
+                    tagCache.updateBulk(
+                        existingTags.map((tag) => ({
+                            ...tag,
+                            blogs: tag.blogs + 1,
+                        }))
+                    ),
+                ]);
 
                 return blog;
             });
@@ -299,17 +148,12 @@ export const blogsRouter = createTRPCRouter({
                 data: updateBlogSchema,
             })
         )
-        .use(hasBlogManagePermission)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries, db, schemas } = ctx;
             const { id, data } = input;
 
-            const existingBlog = await db.query.blogs.findFirst({
-                where: eq(schemas.blogs.id, id),
-                with: {
-                    tags: true,
-                },
-            });
+            const existingBlog = await queries.blogs.getBlog({ id });
             if (!existingBlog)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -325,10 +169,14 @@ export const blogsRouter = createTRPCRouter({
                 await utApi.deleteFiles([existingKey]);
             }
 
-            if (data.tagIds) {
-                const existingTags = await db.query.tags.findMany({
-                    where: inArray(schemas.tags.id, data.tagIds),
-                });
+            if (
+                existingBlog.tags.length !== data.tagIds.length ||
+                !existingBlog.tags.every((tag) => data.tagIds.includes(tag.id))
+            ) {
+                const allTags = await tagCache.getAll();
+                const existingTags = allTags.filter((tag) =>
+                    data.tagIds.includes(tag.id)
+                );
 
                 const missingTags = data.tagIds.filter(
                     (tagId) => !existingTags.find((tag) => tag.id === tagId)
@@ -340,15 +188,47 @@ export const blogsRouter = createTRPCRouter({
                             ", "
                         )} not found`,
                     });
+
+                const tagsToInsert = existingTags.filter(
+                    (tag) =>
+                        !existingBlog.tags.some(
+                            (existingTag) => existingTag.id === tag.id
+                        )
+                );
+                const tagsToDelete = existingBlog.tags.filter(
+                    (tag) =>
+                        !existingTags.some(
+                            (existingTag) => existingTag.id === tag.id
+                        )
+                );
+
+                console.log(tagsToInsert, tagsToDelete);
+
+                await db.transaction(async (tx) => {
+                    await Promise.all([
+                        tagsToInsert.length > 0 &&
+                            tx.insert(schemas.blogTags).values(
+                                tagsToInsert.map((tag) => ({
+                                    blogId: id,
+                                    tagId: tag.id,
+                                }))
+                            ),
+                        tagsToDelete.length > 0 &&
+                            tx.delete(schemas.blogTags).where(
+                                and(
+                                    eq(schemas.blogTags.blogId, id),
+                                    inArray(
+                                        schemas.blogTags.tagId,
+                                        tagsToDelete.map((tag) => tag.id)
+                                    )
+                                )
+                            ),
+                        tagCache.drop(),
+                    ]);
+                });
             }
 
-            const updatedBlog = await db
-                .update(schemas.blogs)
-                .set(data)
-                .where(eq(schemas.blogs.id, existingBlog.id))
-                .returning()
-                .then((res) => res[0]);
-
+            const updatedBlog = await queries.blogs.updateBlog(id, data);
             return updatedBlog;
         }),
     changePublishStatus: protectedProcedure
@@ -358,29 +238,22 @@ export const blogsRouter = createTRPCRouter({
                 isPublished: z.boolean(),
             })
         )
-        .use(hasBlogManagePermission)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id, isPublished } = input;
 
-            const existingBlog = await db.query.blogs.findFirst({
-                where: eq(schemas.blogs.id, id),
-            });
+            const existingBlog = await queries.blogs.getBlog({ id });
             if (!existingBlog)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Blog not found",
                 });
 
-            const updatedBlog = await db
-                .update(schemas.blogs)
-                .set({
-                    isPublished,
-                    publishedAt: isPublished ? new Date() : null,
-                })
-                .where(eq(schemas.blogs.id, existingBlog.id))
-                .returning()
-                .then((res) => res[0]);
+            const updatedBlog = await queries.blogs.updateBlogStatus(
+                id,
+                isPublished
+            );
 
             return updatedBlog;
         }),
@@ -390,14 +263,12 @@ export const blogsRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(hasBlogManagePermission)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
-            const existingBlog = await db.query.blogs.findFirst({
-                where: eq(schemas.blogs.id, id),
-            });
+            const existingBlog = await queries.blogs.getBlog({ id });
             if (!existingBlog)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -410,10 +281,7 @@ export const blogsRouter = createTRPCRouter({
                 await utApi.deleteFiles([existingKey]);
             }
 
-            await db
-                .delete(schemas.blogs)
-                .where(eq(schemas.blogs.id, existingBlog.id));
-
+            await queries.blogs.deleteBlog(id);
             return true;
         }),
 });

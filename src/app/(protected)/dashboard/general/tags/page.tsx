@@ -1,9 +1,7 @@
 import { TagsPage, TagsTable } from "@/components/dashboard/tags";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { db } from "@/lib/db";
-import { tags } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { tagCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -34,15 +32,12 @@ export default function Page() {
 }
 
 async function TagsFetch() {
-    const data = await db.query.tags.findMany({
-        with: {
-            blogTags: true,
-        },
-        orderBy: [desc(tags.createdAt)],
-        extras: {
-            tagCount: db.$count(tags).as("tag_count"),
-        },
-    });
+    const data = await tagCache.getAll();
 
-    return <TagsTable initialTags={data} />;
+    const parsed = {
+        data,
+        count: data.length,
+    };
+
+    return <TagsTable initialData={parsed} />;
 }

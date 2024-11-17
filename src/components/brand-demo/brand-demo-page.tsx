@@ -131,8 +131,7 @@ export function BrandDemoPage({
     return (
         <GeneralShell
             classNames={{
-                innerWrapper:
-                    "w-full max-w-5xl space-y-4 p-8 py-10 xl:max-w-5xl",
+                innerWrapper: "xl:max-w-5xl",
             }}
         >
             <div className={cn("w-full space-y-4", className)} {...props}>

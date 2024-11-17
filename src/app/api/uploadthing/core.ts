@@ -1,11 +1,11 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
-import { brandsWaitlist } from "@/lib/db/schema";
+import { brandRequests, brandsWaitlist } from "@/lib/db/schema";
 import { jwt } from "@/lib/jose";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth as clerkAuth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError, UTApi } from "uploadthing/server";
 import { z } from "zod";
@@ -77,6 +77,50 @@ export const uploadRouter = {
                 throw new UploadThingError({
                     code: "FORBIDDEN",
                     message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            return {
+                uploaderId: metadata.userId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                url: file.url,
+            };
+        }),
+    brandRequestDemoUploader: f({
+        "video/mp4": { maxFileSize: "32MB" },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const existingUser = await userCache.get(auth.userId);
+            if (!existingUser)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const existingBrandRequest = await db.query.brandRequests.findFirst(
+                {
+                    where: and(
+                        eq(brandRequests.ownerId, auth.userId),
+                        ne(brandRequests.status, "rejected")
+                    ),
+                }
+            );
+            if (existingBrandRequest)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message:
+                        "You have already submitted a brand request, withdraw it if you want to submit a new one",
                 });
 
             return { userId: auth.userId };

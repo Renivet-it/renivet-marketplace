@@ -2,10 +2,13 @@
 
 import { RecentBlogCard } from "@/components/globals/cards";
 import { cn } from "@/lib/utils";
-import { Blog } from "@/lib/validations";
+import { BlogWithAuthorAndTagCount } from "@/lib/validations";
 
 interface PageProps extends GenericProps {
-    blogs: Blog[];
+    blogs: {
+        data: BlogWithAuthorAndTagCount[];
+        count: number;
+    };
 }
 
 export function RecentsList({ className, blogs, ...props }: PageProps) {
@@ -14,7 +17,7 @@ export function RecentsList({ className, blogs, ...props }: PageProps) {
             <h2 className="text-2xl font-semibold">Recent Blogs</h2>
 
             <div className="space-y-5">
-                {blogs.map((blog, i) => (
+                {blogs.data.map((blog, i) => (
                     <RecentBlogCard
                         blog={blog}
                         key={i}

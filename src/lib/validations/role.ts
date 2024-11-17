@@ -49,7 +49,7 @@ export const createRoleSchema = roleSchema.omit({
     updatedAt: true,
 });
 
-export const updateRoleSchema = createRoleSchema.partial();
+export const updateRoleSchema = createRoleSchema;
 
 export const cachedRoleSchema = roleSchema.extend({
     users: z.number({

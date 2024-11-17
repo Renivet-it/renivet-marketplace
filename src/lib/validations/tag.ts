@@ -71,7 +71,27 @@ export const createTagSchema = tagSchema.omit({
 
 export const updateTagSchema = createTagSchema;
 
+export const cachedTagSchema = tagSchema.extend({
+    blogs: z.number({
+        required_error: "Blogs is required",
+        invalid_type_error: "Blogs must be a number",
+    }),
+    createdAt: z
+        .string({
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a string",
+        })
+        .transform((x) => new Date(x)),
+    updatedAt: z
+        .string({
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a string",
+        })
+        .transform((x) => new Date(x)),
+});
+
 export type Tag = z.infer<typeof tagSchema>;
 export type CreateTag = z.infer<typeof createTagSchema>;
 export type UpdateTag = z.infer<typeof updateTagSchema>;
 export type TagWithBlogTags = z.infer<typeof tagWithBlogTagsSchema>;
+export type CachedTag = z.infer<typeof cachedTagSchema>;

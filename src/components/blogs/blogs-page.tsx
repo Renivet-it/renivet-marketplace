@@ -11,7 +11,7 @@ import {
 import { DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Blog, Tag } from "@/lib/validations";
+import { Blog, BlogWithAuthorAndTagCount, Tag } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -24,12 +24,22 @@ import { BlogsList } from "./blogs-list";
 
 interface PageProps extends GenericProps {
     bannerBlog?: Blog;
+    recentBlogs?: {
+        data: BlogWithAuthorAndTagCount[];
+        count: number;
+    };
+    initialData: {
+        data: BlogWithAuthorAndTagCount[];
+        count: number;
+    };
     tags: Tag[];
 }
 
 export function BlogsPage({
     className,
     bannerBlog,
+    initialData,
+    recentBlogs,
     tags,
     ...props
 }: PageProps) {
@@ -40,13 +50,19 @@ export function BlogsPage({
         defaultValue: "",
     });
 
-    const { data: blogs, isPending } = trpc.blogs.getBlogs.useQuery({
-        page,
-        limit,
-        tagId: tagId ?? undefined,
-        isPublished: true,
-        search: search,
-    });
+    const {
+        data: { data: blogs, count },
+        isPending,
+    } = trpc.blogs.getBlogs.useQuery(
+        {
+            page,
+            limit,
+            tagId: tagId?.length ? tagId : undefined,
+            isPublished: true,
+            search,
+        },
+        { initialData }
+    );
 
     return (
         <div className={cn("w-full space-y-10", className)} {...props}>
@@ -94,7 +110,12 @@ export function BlogsPage({
                         {isPending ? (
                             <BlogListSkeleton />
                         ) : !!blogs?.length ? (
-                            <BlogsList blogs={blogs} />
+                            <BlogsList
+                                blogs={{
+                                    data: blogs,
+                                    count,
+                                }}
+                            />
                         ) : (
                             <EmptyPlaceholder
                                 fullWidth
@@ -138,17 +159,15 @@ export function BlogsPage({
                                 Array.from({ length: 3 }).map((_, i) => (
                                     <RecentBlogsSkeleton key={i} />
                                 ))
-                            ) : !!blogs?.length ? (
-                                blogs
-                                    .slice(0, 3)
-                                    .map((blog, i) => (
-                                        <RecentBlogCard
-                                            blog={blog}
-                                            key={i}
-                                            href={`/blogs/${blog.slug}`}
-                                            title={blog.title}
-                                        />
-                                    ))
+                            ) : !!recentBlogs?.data.length ? (
+                                recentBlogs.data.map((blog, i) => (
+                                    <RecentBlogCard
+                                        blog={blog}
+                                        key={i}
+                                        href={`/blogs/${blog.slug}`}
+                                        title={blog.title}
+                                    />
+                                ))
                             ) : (
                                 <p>No recent blogs found</p>
                             )}

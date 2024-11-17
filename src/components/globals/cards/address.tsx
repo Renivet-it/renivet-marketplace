@@ -13,7 +13,7 @@ import {
 import { cn, convertValueToLabel, generateAddress } from "@/lib/utils";
 import { CachedUser } from "@/lib/validations";
 import { Dispatch, SetStateAction, useState } from "react";
-import { UserAddressDeleteModal } from "../modals/profile";
+import { UserAddressDeleteModal } from "../modals";
 
 interface PageProps extends GenericProps {
     address: CachedUser["addresses"][0];

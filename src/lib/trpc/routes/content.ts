@@ -4,7 +4,6 @@ import { bannerCache } from "@/lib/redis/methods";
 import { getUploadThingFileKey, hasPermission } from "@/lib/utils";
 import { createBannerSchema, updateBannerSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
@@ -19,24 +18,14 @@ export const bannerRouter = createTRPCRouter({
             })
         )
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { limit, page, isActive, search } = input;
 
-            const banners = await db.query.banners.findMany({
-                where: and(
-                    isActive !== undefined
-                        ? eq(schemas.banners.isActive, isActive)
-                        : undefined,
-                    !!search?.length
-                        ? ilike(schemas.banners.title, `%${search}%`)
-                        : undefined
-                ),
+            const banners = await queries.banners.getBanners({
                 limit,
-                offset: (page - 1) * limit,
-                orderBy: [desc(schemas.banners.createdAt)],
-                extras: {
-                    bannerCount: db.$count(schemas.banners).as("banner_count"),
-                },
+                page,
+                isActive,
+                search,
             });
 
             return banners;
@@ -48,12 +37,10 @@ export const bannerRouter = createTRPCRouter({
             })
         )
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
-            const existingBanner = await db.query.banners.findFirst({
-                where: eq(schemas.banners.id, id),
-            });
+            const existingBanner = await queries.banners.getBanner(id);
             if (!existingBanner)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -80,7 +67,7 @@ export const bannerRouter = createTRPCRouter({
             return next({ ctx });
         })
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
 
             if (!input.imageUrl)
                 throw new TRPCError({
@@ -88,15 +75,10 @@ export const bannerRouter = createTRPCRouter({
                     message: "Image URL is required",
                 });
 
-            const newBanner = await db
-                .insert(schemas.banners)
-                .values({
-                    ...input,
-                    imageUrl: input.imageUrl,
-                })
-                .returning()
-                .then((res) => res[0]);
-
+            const newBanner = await queries.banners.createBanner({
+                ...input,
+                imageUrl: input.imageUrl,
+            });
             if (input.isActive) await bannerCache.add(newBanner);
 
             return newBanner;
@@ -124,7 +106,7 @@ export const bannerRouter = createTRPCRouter({
             return next({ ctx });
         })
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id, data } = input;
 
             if (!data.imageUrl)
@@ -133,9 +115,7 @@ export const bannerRouter = createTRPCRouter({
                     message: "Image URL is required",
                 });
 
-            const existingBanner = await db.query.banners.findFirst({
-                where: eq(schemas.banners.id, id),
-            });
+            const existingBanner = await queries.banners.getBanner(id);
             if (!existingBanner)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -148,16 +128,10 @@ export const bannerRouter = createTRPCRouter({
                 await utApi.deleteFiles([existingKey]);
             }
 
-            const updatedBanner = await db
-                .update(schemas.banners)
-                .set({
-                    ...data,
-                    imageUrl: data.imageUrl,
-                    updatedAt: new Date(),
-                })
-                .where(eq(schemas.banners.id, id))
-                .returning()
-                .then((res) => res[0]);
+            const updatedBanner = await queries.banners.updateBanner(id, {
+                ...data,
+                imageUrl: data.imageUrl,
+            });
 
             if (data.isActive || existingBanner.isActive) {
                 if (data.isActive) await bannerCache.update(updatedBanner);
@@ -189,27 +163,20 @@ export const bannerRouter = createTRPCRouter({
             return next({ ctx });
         })
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id, isActive } = input;
 
-            const existingBanner = await db.query.banners.findFirst({
-                where: eq(schemas.banners.id, id),
-            });
+            const existingBanner = await queries.banners.getBanner(id);
             if (!existingBanner)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Banner not found",
                 });
 
-            const updatedBanner = await db
-                .update(schemas.banners)
-                .set({
-                    isActive,
-                    updatedAt: new Date(),
-                })
-                .where(eq(schemas.banners.id, id))
-                .returning()
-                .then((res) => res[0]);
+            const updatedBanner = await queries.banners.updateBannerStatus(
+                id,
+                isActive
+            );
 
             if (isActive) await bannerCache.update(updatedBanner);
             else await bannerCache.remove(id);
@@ -238,12 +205,10 @@ export const bannerRouter = createTRPCRouter({
             return next({ ctx });
         })
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
-            const existingBanner = await db.query.banners.findFirst({
-                where: eq(schemas.banners.id, id),
-            });
+            const existingBanner = await queries.banners.getBanner(id);
             if (!existingBanner)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -254,7 +219,7 @@ export const bannerRouter = createTRPCRouter({
             const existingKey = getUploadThingFileKey(existingImageUrl);
 
             await Promise.all([
-                db.delete(schemas.banners).where(eq(schemas.banners.id, id)),
+                queries.banners.deleteBanner(id),
                 utApi.deleteFiles([existingKey]),
                 ...(existingBanner.isActive ? [bannerCache.remove(id)] : []),
             ]);

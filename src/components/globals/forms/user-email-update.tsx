@@ -24,7 +24,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { UserEmailVerifyModal } from "../modals/profile";
+import { UserEmailVerifyModal } from "../modals";
 
 interface PageProps {
     user: UserWithAddressesAndRoles;

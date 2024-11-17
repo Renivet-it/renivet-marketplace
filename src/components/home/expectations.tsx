@@ -63,7 +63,7 @@ function ExpectationCard({
 
     return (
         <Link href="/soon">
-            <div className="flex flex-col items-center space-y-4 bg-muted p-6 py-10 text-center">
+            <div className="flex h-full flex-col items-center justify-center space-y-4 bg-muted p-6 py-10 text-center">
                 <div className="text-primary">
                     <Icon className="size-8" />
                 </div>

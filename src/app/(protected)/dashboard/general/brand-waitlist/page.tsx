@@ -1,9 +1,7 @@
 import { WaitlistTable } from "@/components/dashboard/brand-waitlist";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { db } from "@/lib/db";
-import { brandsWaitlist } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { waitlistQueries } from "@/lib/db/queries";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -16,6 +14,7 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
+        search?: string;
     }>;
 }
 
@@ -41,19 +40,21 @@ export default function Page({ searchParams }: PageProps) {
 }
 
 async function WaitlistFetch({ searchParams }: PageProps) {
-    const { page: pageRaw, limit: limitRaw } = await searchParams;
+    const {
+        page: pageRaw,
+        limit: limitRaw,
+        search: searchRaw,
+    } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const search = searchRaw?.length ? searchRaw : undefined;
 
-    const data = await db.query.brandsWaitlist.findMany({
+    const data = await waitlistQueries.getWaitlistBrands({
         limit,
-        offset: (page - 1) * limit,
-        orderBy: [desc(brandsWaitlist.createdAt)],
-        extras: {
-            waitlistCount: db.$count(brandsWaitlist).as("waitlist_count"),
-        },
+        page,
+        search,
     });
 
     return <WaitlistTable initialData={data} />;

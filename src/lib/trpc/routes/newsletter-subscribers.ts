@@ -1,13 +1,12 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import {
     createTRPCRouter,
+    isTRPCAuth,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
-import { hasPermission } from "@/lib/utils";
 import { createNewsletterSubscriberSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 export const newsletterSubscriberRouter = createTRPCRouter({
@@ -20,48 +19,23 @@ export const newsletterSubscriberRouter = createTRPCRouter({
                 search: z.string().optional(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_SETTINGS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.VIEW_SETTINGS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+                "any"
+            )
+        )
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { limit, page, isActive, search } = input;
 
             const newsletterSubscribers =
-                await db.query.newsletterSubscribers.findMany({
-                    where: and(
-                        isActive !== undefined
-                            ? eq(
-                                  schemas.newsletterSubscribers.isActive,
-                                  isActive
-                              )
-                            : undefined,
-                        !!search?.length
-                            ? ilike(
-                                  schemas.newsletterSubscribers.email,
-                                  `%${search}%`
-                              )
-                            : undefined
-                    ),
+                await queries.newsletterSubscribers.getSubscribers({
                     limit,
-                    offset: (page - 1) * limit,
-                    orderBy: [desc(schemas.newsletterSubscribers.createdAt)],
-                    extras: {
-                        subscriberCount: db
-                            .$count(schemas.newsletterSubscribers)
-                            .as("subscriber_count"),
-                    },
+                    page,
+                    isActive,
+                    search,
                 });
 
             return newsletterSubscribers;
@@ -72,28 +46,19 @@ export const newsletterSubscriberRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_SETTINGS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.VIEW_SETTINGS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+                "any"
+            )
+        )
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
             const newsletterSubscriber =
-                await db.query.newsletterSubscribers.findFirst({
-                    where: eq(schemas.newsletterSubscribers.id, id),
-                });
+                await queries.newsletterSubscribers.getSubscriber(id);
             if (!newsletterSubscriber)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -105,23 +70,20 @@ export const newsletterSubscriberRouter = createTRPCRouter({
     createNewsletterSubscriber: publicProcedure
         .input(createNewsletterSubscriberSchema)
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
 
             const existingNewsletterSubscriber =
-                await db.query.newsletterSubscribers.findFirst({
-                    where: eq(schemas.newsletterSubscribers.email, input.email),
-                });
+                await queries.newsletterSubscribers.getSubscriberByEmail(
+                    input.email
+                );
             if (existingNewsletterSubscriber)
                 throw new TRPCError({
                     code: "CONFLICT",
-                    message: "Newsletter subscriber already exists",
+                    message: "This email is already subscribed",
                 });
 
-            const newsletterSubscriber = await db
-                .insert(schemas.newsletterSubscribers)
-                .values(input)
-                .returning()
-                .then((res) => res[0]);
+            const newsletterSubscriber =
+                await queries.newsletterSubscribers.createSubscriber(input);
 
             return newsletterSubscriber;
         }),
@@ -133,30 +95,30 @@ export const newsletterSubscriberRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { email, isActive } = input;
 
             const existingNewsletterSubscriber =
-                await db.query.newsletterSubscribers.findFirst({
-                    where: eq(schemas.newsletterSubscribers.email, email),
-                });
+                await queries.newsletterSubscribers.getSubscriberByEmail(email);
             if (!existingNewsletterSubscriber)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Newsletter subscriber not found",
                 });
 
-            const newsletterSubscriber = await db
-                .update(schemas.newsletterSubscribers)
-                .set({ isActive })
-                .where(eq(schemas.newsletterSubscribers.email, email))
-                .returning()
-                .then((res) => res[0]);
-            if (!newsletterSubscriber)
+            if (existingNewsletterSubscriber.isActive === isActive)
                 throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Newsletter subscriber not found",
+                    code: "CONFLICT",
+                    message: isActive
+                        ? "Subscribtion is already active"
+                        : "Subscribtion is already inactive",
                 });
+
+            const newsletterSubscriber =
+                await queries.newsletterSubscribers.updateSubscriber(
+                    email,
+                    isActive
+                );
 
             return newsletterSubscriber;
         }),
@@ -166,39 +128,20 @@ export const newsletterSubscriberRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_SETTINGS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_SETTINGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
             const existingNewsletterSubscriber =
-                await db.query.newsletterSubscribers.findFirst({
-                    where: eq(schemas.newsletterSubscribers.id, id),
-                });
+                await queries.newsletterSubscribers.getSubscriber(id);
             if (!existingNewsletterSubscriber)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Newsletter subscriber not found",
                 });
 
-            await db
-                .delete(schemas.newsletterSubscribers)
-                .where(eq(schemas.newsletterSubscribers.id, id))
-                .execute();
-
+            await queries.newsletterSubscribers.deleteSubscriber(id);
             return true;
         }),
 });

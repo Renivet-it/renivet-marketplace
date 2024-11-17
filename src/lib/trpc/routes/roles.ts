@@ -1,32 +1,23 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { roleCache, userCache } from "@/lib/redis/methods";
-import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { hasPermission, slugify } from "@/lib/utils";
+import {
+    createTRPCRouter,
+    isTRPCAuth,
+    protectedProcedure,
+} from "@/lib/trpc/trpc";
+import { slugify } from "@/lib/utils";
 import {
     createRoleSchema,
     reorderRolesSchema,
     updateRoleSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq, gt, ne, sql } from "drizzle-orm";
+import { eq, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export const rolesRouter = createTRPCRouter({
     getRoles: protectedProcedure
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_ROLES,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ROLES))
         .query(async () => {
             const cachedRoles = await roleCache.getAll();
             return cachedRoles.sort((a, b) => a.position - b.position);
@@ -37,20 +28,7 @@ export const rolesRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_ROLES,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ROLES))
         .query(async ({ input }) => {
             const { id } = input;
 
@@ -59,46 +37,27 @@ export const rolesRouter = createTRPCRouter({
         }),
     createRole: protectedProcedure
         .input(createRoleSchema)
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_ROLES,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ROLES))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
 
             const slug = slugify(input.name);
 
             const [cachedRoles, existingRole] = await Promise.all([
                 roleCache.getAll(),
-                db.query.roles.findFirst({
-                    where: eq(schemas.roles.slug, slug),
-                }),
+                queries.roles.getRoleBySlug(slug),
             ]);
             if (existingRole)
                 throw new TRPCError({
                     code: "CONFLICT",
-                    message: "Role already exists",
+                    message: "Another role with the same name exists",
                 });
 
-            const newRole = await db
-                .insert(schemas.roles)
-                .values({
-                    ...input,
-                    slug,
-                    position: cachedRoles.length + 1,
-                })
-                .returning()
-                .then((res) => res[0]);
+            const newRole = await queries.roles.createRole({
+                ...input,
+                slug,
+                position: cachedRoles.length + 1,
+            });
 
             await roleCache.add({
                 ...newRole,
@@ -114,22 +73,9 @@ export const rolesRouter = createTRPCRouter({
                 data: updateRoleSchema,
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_ROLES,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ROLES))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id, data } = input;
 
             const existingRole = await roleCache.get(id);
@@ -139,37 +85,28 @@ export const rolesRouter = createTRPCRouter({
                     message: "Role not found",
                 });
 
-            if (data.name) {
-                const slug = slugify(data.name);
+            const slug = slugify(data.name);
 
-                const existingOtherRole = await db.query.roles.findFirst({
-                    where: and(
-                        eq(schemas.roles.slug, slug),
-                        ne(schemas.roles.id, id)
-                    ),
+            const existingOtherRole = await queries.roles.getOtherRole(
+                slug,
+                id
+            );
+            if (existingOtherRole)
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "Another role with the same name exists",
                 });
-                if (existingOtherRole)
-                    throw new TRPCError({
-                        code: "CONFLICT",
-                        message: "Another role with the same name exists",
-                    });
-            }
 
             const [updatedRole] = await Promise.all([
-                db
-                    .update(schemas.roles)
-                    .set({
-                        ...data,
-                        ...(data.name && { slug: slugify(data.name) }),
-                    })
-                    .where(eq(schemas.roles.id, existingRole.id))
-                    .returning()
-                    .then((res) => res[0]),
+                queries.roles.updateRole(id, {
+                    ...data,
+                    ...(data.name && { slug }),
+                }),
                 roleCache.update({
                     ...existingRole,
                     ...{
                         ...data,
-                        ...(data.name && { slug: slugify(data.name) }),
+                        ...(data.name && { slug }),
                     },
                 }),
             ]);
@@ -178,20 +115,7 @@ export const rolesRouter = createTRPCRouter({
         }),
     reorderRoles: protectedProcedure
         .input(reorderRolesSchema)
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_ROLES,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ROLES))
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
 
@@ -222,20 +146,7 @@ export const rolesRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_ROLES,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ROLES))
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
             const { id } = input;

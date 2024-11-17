@@ -1,29 +1,23 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { tagCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
+    isTRPCAuth,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
-import { hasPermission, slugify } from "@/lib/utils";
+import { slugify } from "@/lib/utils";
 import { createTagSchema, updateTagSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 
 export const tagsRouter = createTRPCRouter({
-    getTags: publicProcedure.query(async ({ ctx }) => {
-        const { db, schemas } = ctx;
-
-        const tags = await db.query.tags.findMany({
-            with: {
-                blogTags: true,
-            },
-            orderBy: [desc(schemas.tags.createdAt)],
-            extras: {
-                tagCount: db.$count(schemas.tags).as("tag_count"),
-            },
-        });
-        return tags;
+    getTags: publicProcedure.query(async () => {
+        const tags = await tagCache.getAll();
+        return {
+            data: tags,
+            count: tags.length,
+        };
     }),
     getTag: publicProcedure
         .input(
@@ -31,16 +25,10 @@ export const tagsRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+        .query(async ({ input }) => {
             const { id } = input;
 
-            const tag = await db.query.tags.findFirst({
-                where: eq(schemas.tags.id, id),
-                with: {
-                    blogTags: true,
-                },
-            });
+            const tag = await tagCache.get(id);
             if (!tag)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -51,43 +39,29 @@ export const tagsRouter = createTRPCRouter({
         }),
     createTag: protectedProcedure
         .input(createTagSchema)
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_BLOG_TAGS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOG_TAGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { name } = input;
 
             const slug = slugify(name);
 
-            const existingTag = await db.query.tags.findFirst({
-                where: eq(schemas.tags.slug, slug),
-            });
+            const existingTag = await queries.tags.getTagBySlug(slug);
             if (existingTag)
                 throw new TRPCError({
                     code: "CONFLICT",
                     message: "Tag already exists",
                 });
 
-            const newTag = await db
-                .insert(schemas.tags)
-                .values({
-                    name,
-                    slug,
-                })
-                .returning()
-                .then((res) => res[0]);
+            const newTag = await queries.tags.createTag({
+                name,
+                slug,
+            });
+
+            await tagCache.add({
+                ...newTag,
+                blogs: 0,
+            });
 
             return newTag;
         }),
@@ -98,27 +72,12 @@ export const tagsRouter = createTRPCRouter({
                 data: updateTagSchema,
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_BLOG_TAGS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOG_TAGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id, data } = input;
 
-            const existingTag = await db.query.tags.findFirst({
-                where: eq(schemas.tags.id, id),
-            });
+            const existingTag = await tagCache.get(id);
             if (!existingTag)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -127,27 +86,26 @@ export const tagsRouter = createTRPCRouter({
 
             const slug = slugify(data.name);
 
-            const existingOtherTag = await db.query.tags.findFirst({
-                where: and(
-                    eq(schemas.tags.slug, slug),
-                    ne(schemas.tags.id, id)
-                ),
-            });
+            const existingOtherTag = await queries.tags.getOtherTag(slug, id);
             if (existingOtherTag)
                 throw new TRPCError({
                     code: "CONFLICT",
-                    message: "Tag already exists",
+                    message: "Another tag with the same name already exists",
                 });
 
-            const updatedTag = await db
-                .update(schemas.tags)
-                .set({
+            const [updatedTag] = await Promise.all([
+                queries.tags.updateTag(id, {
                     ...data,
                     slug,
-                })
-                .where(eq(schemas.tags.id, id))
-                .returning()
-                .then((res) => res[0]);
+                }),
+                tagCache.update({
+                    ...existingTag,
+                    ...{
+                        ...data,
+                        ...(data.name && { slug }),
+                    },
+                }),
+            ]);
 
             return updatedTag;
         }),
@@ -157,34 +115,22 @@ export const tagsRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_BLOG_TAGS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOG_TAGS))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
-            const existingTag = await db.query.tags.findFirst({
-                where: eq(schemas.tags.id, id),
-            });
+            const existingTag = await tagCache.get(id);
             if (!existingTag)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Tag not found",
                 });
 
-            await db.delete(schemas.tags).where(eq(schemas.tags.id, id));
+            await Promise.all([
+                queries.tags.deleteTag(id),
+                tagCache.remove(id),
+            ]);
 
             return true;
         }),
