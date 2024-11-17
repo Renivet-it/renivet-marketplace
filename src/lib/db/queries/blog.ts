@@ -59,12 +59,11 @@ class BlogQuery {
         });
 
         const parsed: BlogWithAuthorAndTagCount[] = data.map(
-            ({ tags, ...rest }) => ({
-                ...blogWithAuthorAndTagCountSchema.parse({
+            ({ tags, ...rest }) =>
+                blogWithAuthorAndTagCountSchema.parse({
                     ...rest,
                     tags: tags.length,
-                }),
-            })
+                })
         );
 
         return {

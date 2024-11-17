@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
-import { safeUserSchema, userSchema } from "./user";
+import { safeUserSchema } from "./user";
 
-export const brandRequestSchema = z.object({
+export const brandSchema = z.object({
     id: z
         .string({
             required_error: "ID is required",
@@ -14,7 +14,7 @@ export const brandRequestSchema = z.object({
             required_error: "Name is required",
             invalid_type_error: "Name must be a string",
         })
-        .min(1, "Name must be at least 1 characters long"),
+        .min(3, "Name must be at least 3 characters long"),
     email: z
         .string({
             required_error: "Email is required",
@@ -27,90 +27,52 @@ export const brandRequestSchema = z.object({
             invalid_type_error: "Website must be a string",
         })
         .url("Website is invalid"),
+    logoUrl: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Logo URL must be a string",
+            })
+            .url("Logo URL is invalid")
+            .nullable()
+    ),
     ownerId: z
         .string({
             required_error: "Owner ID is required",
             invalid_type_error: "Owner ID must be a string",
         })
         .min(1, "Owner ID must be at least 1 characters long"),
-    demoUrl: z.preprocess(
+    bio: z.preprocess(
         convertEmptyStringToNull,
         z
             .string({
-                invalid_type_error: "Demo URL must be a string",
-            })
-            .url("Demo URL is invalid")
-            .nullable()
-    ),
-    message: z
-        .string({
-            required_error: "Message is required",
-            invalid_type_error: "Message must be a string",
-        })
-        .min(5, "Message must be at least 5 characters long"),
-    status: z.enum(["pending", "approved", "rejected"], {
-        required_error: "Status is required",
-        invalid_type_error:
-            "Status must be one of: pending, approved, rejected",
-    }),
-    rejectionReason: z.preprocess(
-        convertEmptyStringToNull,
-        z
-            .string({
-                invalid_type_error: "Rejection Reason must be a string",
-            })
-            .min(1, "Rejection Reason must be at least 1 characters long")
-            .nullable()
-    ),
-    rejectedAt: z.preprocess(
-        convertEmptyStringToNull,
-        z
-            .date({
-                invalid_type_error: "Rejected At must be a date",
+                invalid_type_error: "Bio must be a string",
             })
             .nullable()
     ),
     createdAt: z.date({
-        required_error: "Created At is required",
-        invalid_type_error: "Created At must be a date",
+        required_error: "Created at is required",
+        invalid_type_error: "Created at must be a date",
     }),
     updatedAt: z.date({
-        required_error: "Updated At is required",
-        invalid_type_error: "Updated At must be a date",
+        required_error: "Updated at is required",
+        invalid_type_error: "Updated at must be a date",
     }),
 });
 
-export const brandRequestWithOwnerSchema = brandRequestSchema.extend({
-    owner: safeUserSchema.extend({
-        email: userSchema.shape.email,
-    }),
-});
-
-export const createBrandRequestSchema = brandRequestSchema.omit({
+export const createBrandSchema = brandSchema.omit({
     id: true,
     createdAt: true,
     updatedAt: true,
-    ownerId: true,
-    status: true,
-    rejectionReason: true,
-    rejectedAt: true,
 });
 
-export const updateBrandRequestStatusSchema = brandRequestSchema
-    .pick({
-        status: true,
-        rejectionReason: true,
-    })
-    .extend({
-        status: z.enum(["approved", "rejected"], {
-            required_error: "Status is required",
-            invalid_type_error: "Status must be one of: approved, rejected",
-        }),
-    });
+export const brandWithOwnerAndMembersSchema = brandSchema.extend({
+    owner: safeUserSchema,
+    members: z.array(safeUserSchema),
+});
 
-export type BrandRequest = z.infer<typeof brandRequestSchema>;
-export type BrandRequestWithOwner = z.infer<typeof brandRequestWithOwnerSchema>;
-export type CreateBrandRequest = z.infer<typeof createBrandRequestSchema>;
-export type UpdateBrandRequestStatus = z.infer<
-    typeof updateBrandRequestStatusSchema
+export type Brand = z.infer<typeof brandSchema>;
+export type CreateBrand = z.infer<typeof createBrandSchema>;
+export type BrandWithOwnerAndMembers = z.infer<
+    typeof brandWithOwnerAndMembersSchema
 >;

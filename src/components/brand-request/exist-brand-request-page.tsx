@@ -35,32 +35,37 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
     return (
         <>
             <div className="space-y-4">
-                <Notice>
-                    <NoticeContent>
-                        <NoticeTitle>
-                            <NoticeIcon />
-                            <span>Warning</span>
-                        </NoticeTitle>
+                {brandRequest.status === "pending" && (
+                    <>
+                        <Notice>
+                            <NoticeContent>
+                                <NoticeTitle>
+                                    <NoticeIcon />
+                                    <span>Warning</span>
+                                </NoticeTitle>
 
-                        <p className="text-sm">
-                            You have already submitted a brand request for the
-                            brand <strong>{brandRequest.name}</strong>. You can
-                            withdraw the request if you want to.
-                        </p>
-                    </NoticeContent>
+                                <p className="text-sm">
+                                    You have already submitted a brand request
+                                    for the brand{" "}
+                                    <strong>{brandRequest.name}</strong>. You
+                                    can withdraw the request if you want to.
+                                </p>
+                            </NoticeContent>
 
-                    <NoticeButton asChild>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsWithdrawModalOpen(true)}
-                        >
-                            Withdraw Request
-                        </Button>
-                    </NoticeButton>
-                </Notice>
+                            <NoticeButton asChild>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsWithdrawModalOpen(true)}
+                                >
+                                    Withdraw Request
+                                </Button>
+                            </NoticeButton>
+                        </Notice>
 
-                <Separator />
+                        <Separator />
+                    </>
+                )}
 
                 <Card className="rounded-none">
                     <div className="flex items-center justify-between gap-5">

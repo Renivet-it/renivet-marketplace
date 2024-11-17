@@ -1,10 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-    DataTableViewOptions,
-    Pagination,
-} from "@/components/ui/data-table-dash";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
     Select,
@@ -13,21 +11,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select-dash";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel } from "@/lib/utils";
 import { BrandRequestWithOwner } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
@@ -37,7 +26,7 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { BrandRequestAction } from "./brand-request-action";
 
@@ -100,9 +89,10 @@ const columns: ColumnDef<TableBrandRequests>[] = [
 ];
 
 interface PageProps {
-    initialData: (BrandRequestWithOwner & {
-        requestCount: number;
-    })[];
+    initialData: {
+        data: BrandRequestWithOwner[];
+        count: number;
+    };
 }
 
 export function BrandRequestsTable({ initialData }: PageProps) {
@@ -111,7 +101,14 @@ export function BrandRequestsTable({ initialData }: PageProps) {
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
-    const [status, setStatus] = useState<TableBrandRequests["status"]>();
+    const [status, setStatus] = useQueryState(
+        "status",
+        parseAsStringLiteral([
+            "pending",
+            "approved",
+            "rejected",
+        ] as const).withDefault("pending")
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -120,28 +117,27 @@ export function BrandRequestsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: requestsRaw } = trpc.brands.requests.getRequests.useQuery(
+    const {
+        data: { data: dataRaw, count },
+    } = trpc.brands.requests.getRequests.useQuery(
         { page, limit, search, status },
         { initialData }
     );
 
-    const requests = useMemo(
+    const data = useMemo(
         () =>
-            requestsRaw.map((request) => ({
-                ...request,
-                registrant: `${request.owner.firstName} ${request.owner.lastName}`,
-                registrantEmail: request.owner.email,
+            dataRaw.map((x) => ({
+                ...x,
+                registrant: `${x.owner.firstName} ${x.owner.lastName}`,
+                registrantEmail: x.owner.email,
             })),
-        [requestsRaw]
+        [dataRaw]
     );
 
-    const pages = useMemo(
-        () => Math.ceil(requestsRaw[0]?.requestCount ?? 0 / limit),
-        [requestsRaw, limit]
-    );
+    const pages = useMemo(() => Math.ceil(count / limit), [count, limit]);
 
     const table = useReactTable({
-        data: requests,
+        data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -205,71 +201,12 @@ export function BrandRequestsTable({ initialData }: PageProps) {
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext()
-                                                  )}
-                                        </TableHead>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected() && "selected"
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className="max-w-60"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No results.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {requestsRaw?.[0]?.requestCount ?? 0} results
-                </p>
-
-                <Pagination total={pages} />
-            </div>
+            <DataTable
+                table={table}
+                columns={columns}
+                count={count}
+                pages={pages}
+            />
         </div>
     );
 }

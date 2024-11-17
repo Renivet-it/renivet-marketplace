@@ -1,8 +1,9 @@
+import { BrandsTable } from "@/components/dashboard/brands";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button-general";
 import { db } from "@/lib/db";
+import { brandQueries } from "@/lib/db/queries";
 import { brandRequests } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Metadata } from "next";
@@ -18,6 +19,7 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
+        search?: string;
     }>;
 }
 
@@ -70,5 +72,22 @@ async function BrandRequestsFetch() {
 }
 
 async function BrandsFetch({ searchParams }: PageProps) {
-    return <></>;
+    const {
+        page: pageRaw,
+        limit: limitRaw,
+        search: searchRaw,
+    } = await searchParams;
+
+    const limit =
+        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
+    const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const search = searchRaw?.length ? searchRaw : undefined;
+
+    const data = await brandQueries.getBrands({
+        limit,
+        page,
+        search,
+    });
+
+    return <BrandsTable initialData={data} />;
 }

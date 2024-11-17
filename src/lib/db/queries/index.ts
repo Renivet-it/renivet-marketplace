@@ -1,5 +1,7 @@
 export * from "./banner";
 export * from "./blog";
+export * from "./brand";
+export * from "./brand-request";
 export * from "./role";
 export * from "./subscriber";
 export * from "./tag";

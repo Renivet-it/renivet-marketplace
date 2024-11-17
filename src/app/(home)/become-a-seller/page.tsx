@@ -10,9 +10,11 @@ import {
     NoticeTitle,
 } from "@/components/ui/notice-general";
 import { db } from "@/lib/db";
-import { brandMembers, brandRequests } from "@/lib/db/schema";
+import { brandRequestQueries } from "@/lib/db/queries";
+import { brandMembers } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { and, eq, ne } from "drizzle-orm";
+import { format } from "date-fns";
+import { eq } from "drizzle-orm";
 import { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -48,20 +50,22 @@ async function BecomeASellerFetch() {
     const { userId } = await auth();
     if (!userId) redirect("/auth/signin");
 
-    const [existingBrandRequest, existingBrandMember] = await Promise.all([
-        db.query.brandRequests.findFirst({
-            where: and(
-                eq(brandRequests.ownerId, userId),
-                ne(brandRequests.status, "rejected")
+    const [existingBrandRequest, existingBrandMember, existingRejectedRequest] =
+        await Promise.all([
+            brandRequestQueries.getBrandRequestByOwnerId(
+                userId,
+                "rejected",
+                "ne"
             ),
-        }),
-        db.query.brandMembers.findFirst({
-            where: eq(brandMembers.memberId, userId),
-            with: {
-                brand: true,
-            },
-        }),
-    ]);
+            db.query.brandMembers.findFirst({
+                where: eq(brandMembers.memberId, userId),
+                with: {
+                    brand: true,
+                },
+            }),
+            brandRequestQueries.getRecentRejectedRequest(userId),
+        ]);
+
     if (existingBrandRequest)
         return <ExistBrandRequestPage brandRequest={existingBrandRequest} />;
 
@@ -86,6 +90,33 @@ async function BecomeASellerFetch() {
                         <Link href="#">Leave Brand</Link>
                     </Button>
                 </NoticeButton>
+            </Notice>
+        );
+
+    if (existingRejectedRequest)
+        return (
+            <Notice>
+                <NoticeContent>
+                    <NoticeTitle>
+                        <NoticeIcon />
+                        <span>Warning</span>
+                    </NoticeTitle>
+
+                    <p className="text-sm">
+                        Your previous brand request was rejected. You can submit
+                        a new request after{" "}
+                        <strong>
+                            {format(
+                                new Date(
+                                    existingRejectedRequest.rejectedAt!
+                                ).getTime() +
+                                    1000 * 60 * 60 * 24 * 7,
+                                "MMMM d, yyyy"
+                            )}
+                        </strong>
+                        .
+                    </p>
+                </NoticeContent>
             </Notice>
         );
 

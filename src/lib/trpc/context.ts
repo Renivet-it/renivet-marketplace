@@ -12,6 +12,8 @@ import { NextRequest } from "next/server";
 import {
     bannerQueries,
     blogQueries,
+    brandQueries,
+    brandRequestQueries,
     roleQueries,
     subscriberQueries,
     tagQueries,
@@ -36,6 +38,8 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
         queries: {
             banners: bannerQueries,
             blogs: blogQueries,
+            brands: brandQueries,
+            brandRequests: brandRequestQueries,
             roles: roleQueries,
             newsletterSubscribers: subscriberQueries,
             tags: tagQueries,

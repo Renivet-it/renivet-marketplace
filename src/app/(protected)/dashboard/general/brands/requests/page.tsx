@@ -1,13 +1,10 @@
 import { BrandRequestsTable } from "@/components/dashboard/brand-requests";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { db } from "@/lib/db";
-import { brandRequests } from "@/lib/db/schema";
-import { brandRequestWithOwnerSchema } from "@/lib/validations";
-import { desc } from "drizzle-orm";
+import { brandRequestQueries } from "@/lib/db/queries";
+import { BrandRequest } from "@/lib/validations";
 import { Metadata } from "next";
 import { Suspense } from "react";
-import { z } from "zod";
 
 export const metadata: Metadata = {
     title: "Brand Requests",
@@ -18,6 +15,8 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
+        status?: BrandRequest["status"];
+        search?: string;
     }>;
 }
 
@@ -41,30 +40,25 @@ export default function Page({ searchParams }: PageProps) {
 }
 
 async function BrandRequestsFetch({ searchParams }: PageProps) {
-    const { page: pageRaw, limit: limitRaw } = await searchParams;
+    const {
+        page: pageRaw,
+        limit: limitRaw,
+        status: statusRaw,
+        search: searchRaw,
+    } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const status = statusRaw === undefined ? "pending" : statusRaw;
+    const search = searchRaw?.length ? searchRaw : undefined;
 
-    const data = await db.query.brandRequests.findMany({
-        with: {
-            owner: true,
-        },
+    const data = await brandRequestQueries.getBrandRequests({
         limit,
-        offset: (page - 1) * limit,
-        orderBy: [desc(brandRequests.createdAt)],
-        extras: {
-            requestCount: db.$count(brandRequests).as("request_count"),
-        },
+        page,
+        search,
+        status,
     });
 
-    const parsed = brandRequestWithOwnerSchema
-        .extend({
-            requestCount: z.string().transform((val) => parseInt(val)),
-        })
-        .array()
-        .parse(data);
-
-    return <BrandRequestsTable initialData={parsed} />;
+    return <BrandRequestsTable initialData={data} />;
 }
