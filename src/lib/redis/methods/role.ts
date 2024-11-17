@@ -1,8 +1,6 @@
-import { db } from "@/lib/db";
-import { roles } from "@/lib/db/schema";
+import { roleQueries } from "@/lib/db/queries";
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedRole, cachedRoleSchema } from "@/lib/validations";
-import { eq } from "drizzle-orm";
 import { redis } from "..";
 
 class RoleCache {
@@ -13,17 +11,15 @@ class RoleCache {
     }
 
     async getAll() {
-        const dbRolesCount = await db.$count(roles);
+        const [dbRolesCount, keys] = await Promise.all([
+            roleQueries.getCount(),
+            redis.keys(this.genKey("*")),
+        ]);
 
-        const keys = await redis.keys(this.genKey("*"));
-        if (keys.length !== +dbRolesCount) {
+        if (keys.length !== dbRolesCount) {
             await this.drop();
 
-            const dbRoles = await db.query.roles.findMany({
-                with: {
-                    userRoles: true,
-                },
-            });
+            const dbRoles = await roleQueries.getRoles();
             if (!dbRoles.length) return [];
 
             const cachedRoles = dbRoles.map((role) => ({
@@ -52,12 +48,7 @@ class RoleCache {
             .parse(parseToJSON<CachedRole>(cachedRoleRaw));
 
         if (!cachedRole) {
-            const dbRole = await db.query.roles.findFirst({
-                where: eq(roles.id, id),
-                with: {
-                    userRoles: true,
-                },
-            });
+            const dbRole = await roleQueries.getRole(id);
             if (!dbRole) return null;
 
             cachedRole = {

@@ -11,14 +11,14 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
+import { BlogWithAuthorAndTagCount } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    blog: BlogWithAuthorAndTag;
+    blog: BlogWithAuthorAndTagCount;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
@@ -31,8 +31,17 @@ export function BlogDeleteModal({ blog, isOpen, setIsOpen }: PageProps) {
     const [search] = useQueryState("search", {
         defaultValue: "",
     });
+    const [isPublished] = useQueryState(
+        "isPublished",
+        parseAsBoolean.withDefault(true)
+    );
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({ page, limit, search });
+    const { refetch } = trpc.blogs.getBlogs.useQuery({
+        page,
+        limit,
+        search,
+        isPublished,
+    });
 
     const { mutate: deleteBlog, isPending: isDeleting } =
         trpc.blogs.deleteBlog.useMutation({

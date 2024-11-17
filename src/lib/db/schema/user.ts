@@ -3,6 +3,7 @@ import { boolean, index, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
 import { blogs } from "./blog";
+import { brandMembers, brands } from "./brand";
 import { roles } from "./role";
 
 export const users = pgTable("users", {
@@ -61,10 +62,19 @@ export const userAddresses = pgTable(
     })
 );
 
-export const userRelations = relations(users, ({ many }) => ({
+export const userRelations = relations(users, ({ one, many }) => ({
     blogs: many(blogs),
     roles: many(userRoles),
     addresses: many(addresses),
+    brandRequests: many(brands),
+    brand: one(brands, {
+        fields: [users.id],
+        references: [brands.ownerId],
+    }),
+    brandMember: one(brandMembers, {
+        fields: [users.id],
+        references: [brandMembers.memberId],
+    }),
 }));
 
 export const userRoleRelations = relations(userRoles, ({ one }) => ({

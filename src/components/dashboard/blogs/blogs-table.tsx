@@ -1,10 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-    DataTableViewOptions,
-    Pagination,
-} from "@/components/ui/data-table-dash";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
     Select,
@@ -13,21 +11,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select-dash";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
+import { BlogWithAuthorAndTagCount } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
@@ -37,14 +26,13 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { BlogAction } from "./blog-action";
 
-export type TableBlog = BlogWithAuthorAndTag & {
+export type TableBlog = BlogWithAuthorAndTagCount & {
     authorName: string;
     status: string;
-    tagCount: number;
 };
 
 const columns: ColumnDef<TableBlog>[] = [
@@ -84,7 +72,17 @@ const columns: ColumnDef<TableBlog>[] = [
         },
     },
     {
-        accessorKey: "tagCount",
+        accessorKey: "publishedAt",
+        header: "Published At",
+        cell: ({ row }) => {
+            const blog = row.original;
+            return blog.publishedAt
+                ? format(new Date(blog.publishedAt), "MMM dd, yyyy")
+                : "N/A";
+        },
+    },
+    {
+        accessorKey: "tags",
         header: "Tags",
     },
     {
@@ -97,17 +95,22 @@ const columns: ColumnDef<TableBlog>[] = [
 ];
 
 interface PageProps {
-    initialBlogs: (BlogWithAuthorAndTag & {
-        blogCount: number;
-    })[];
+    initialData: {
+        data: BlogWithAuthorAndTagCount[];
+        count: number;
+    };
 }
 
-export function BlogsTable({ initialBlogs }: PageProps) {
+export function BlogsTable({ initialData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
+    const [isPublished, setIsPublished] = useQueryState(
+        "isPublished",
+        parseAsBoolean.withDefault(true)
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -116,29 +119,27 @@ export function BlogsTable({ initialBlogs }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: blogsRaw } = trpc.blogs.getBlogs.useQuery(
-        { page, limit, search },
-        { initialData: initialBlogs }
+    const {
+        data: { data: dataRaw, count },
+    } = trpc.blogs.getBlogs.useQuery(
+        { page, limit, search, isPublished },
+        { initialData }
     );
 
-    const blogs = useMemo(
+    const data = useMemo(
         () =>
-            blogsRaw.map((blog) => ({
-                ...blog,
-                authorName: `${blog.author.firstName} ${blog.author.lastName}`,
-                status: blog.isPublished ? "published" : "draft",
-                tagCount: blog.tags.length,
+            dataRaw.map((x) => ({
+                ...x,
+                authorName: `${x.author.firstName} ${x.author.lastName}`,
+                status: x.isPublished ? "published" : "draft",
             })),
-        [blogsRaw]
+        [dataRaw]
     );
 
-    const pages = useMemo(
-        () => Math.ceil(blogsRaw?.[0]?.blogCount ?? 0 / limit) ?? 1,
-        [blogsRaw, limit]
-    );
+    const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
-        data: blogs,
+        data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -179,17 +180,21 @@ export function BlogsTable({ initialBlogs }: PageProps) {
                         value={
                             (table
                                 .getColumn("status")
-                                ?.getFilterValue() as string) ?? ""
+                                ?.getFilterValue() as string) ??
+                            (isPublished === undefined || isPublished === true
+                                ? "published"
+                                : "draft")
                         }
-                        onValueChange={(value) =>
-                            table.getColumn("status")?.setFilterValue(value)
-                        }
+                        onValueChange={(value) => {
+                            table.getColumn("status")?.setFilterValue(value);
+                            setIsPublished(value === "published");
+                        }}
                     >
                         <SelectTrigger className="capitalize">
                             <SelectValue placeholder="Search by status" />
                         </SelectTrigger>
                         <SelectContent>
-                            {["draft", "published"].map((x) => (
+                            {["published", "draft"].map((x) => (
                                 <SelectItem key={x} value={x}>
                                     {convertValueToLabel(x)}
                                 </SelectItem>
@@ -201,71 +206,12 @@ export function BlogsTable({ initialBlogs }: PageProps) {
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext()
-                                                  )}
-                                        </TableHead>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected() && "selected"
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className="max-w-60"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No results.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {blogsRaw?.[0]?.blogCount ?? 0} blogs
-                </p>
-
-                <Pagination total={pages} />
-            </div>
+            <DataTable
+                table={table}
+                columns={columns}
+                count={count}
+                pages={pages}
+            />
         </div>
     );
 }

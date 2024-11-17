@@ -1,25 +1,14 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-    DataTableViewOptions,
-    Pagination,
-} from "@/components/ui/data-table-dash";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { UserWithAddressesAndRoles } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
@@ -53,13 +42,13 @@ const columns: ColumnDef<TableUser>[] = [
         accessorKey: "roles",
         header: "Roles",
         cell: ({ row }) => {
-            const user = row.original;
+            const data = row.original;
 
             return (
                 <div className="flex flex-wrap gap-1">
-                    {!!user.roles.length ? (
-                        user.roles.map((role) => (
-                            <Badge key={role.id}>{role.name}</Badge>
+                    {!!data.roles.length ? (
+                        data.roles.map((data) => (
+                            <Badge key={data.id}>{data.name}</Badge>
                         ))
                     ) : (
                         <Badge variant="secondary">General</Badge>
@@ -72,26 +61,27 @@ const columns: ColumnDef<TableUser>[] = [
         accessorKey: "joinedAt",
         header: "Joined At",
         cell: ({ row }) => {
-            const user = row.original;
-            return format(new Date(user.createdAt), "MMM dd, yyyy");
+            const data = row.original;
+            return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
     {
         id: "actions",
         cell: ({ row }) => {
-            const user = row.original;
-            return <UserAction user={user} />;
+            const data = row.original;
+            return <UserAction user={data} />;
         },
     },
 ];
 
 interface PageProps {
-    initialUsers: (UserWithAddressesAndRoles & {
-        userCount: number;
-    })[];
+    initialData: {
+        data: UserWithAddressesAndRoles[];
+        count: number;
+    };
 }
 
-export function UsersTable({ initialUsers }: PageProps) {
+export function UsersTable({ initialData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
@@ -107,28 +97,24 @@ export function UsersTable({ initialUsers }: PageProps) {
 
     trpc.roles.getRoles.useQuery();
 
-    const { data: usersRaw } = trpc.users.getUsers.useQuery(
-        { page, limit, search },
-        { initialData: initialUsers }
-    );
+    const {
+        data: { data: dataRaw, count },
+    } = trpc.users.getUsers.useQuery({ page, limit, search }, { initialData });
 
-    const users = useMemo(
+    const data = useMemo(
         () =>
-            usersRaw.map((user) => ({
-                ...user,
-                name: `${user.firstName} ${user.lastName}`,
-                joinedAt: format(new Date(user.createdAt), "MMM dd, yyyy"),
+            dataRaw.map((x) => ({
+                ...x,
+                name: `${x.firstName} ${x.lastName}`,
+                joinedAt: format(new Date(x.createdAt), "MMM dd, yyyy"),
             })),
-        [usersRaw]
+        [dataRaw]
     );
 
-    const pages = useMemo(
-        () => Math.ceil(usersRaw?.[0]?.userCount ?? 0 / limit) ?? 1,
-        [usersRaw, limit]
-    );
+    const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
-        data: users,
+        data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -169,71 +155,12 @@ export function UsersTable({ initialUsers }: PageProps) {
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext()
-                                                  )}
-                                        </TableHead>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected() && "selected"
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className="max-w-60"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No results.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {usersRaw?.[0]?.userCount ?? 0} users
-                </p>
-
-                <Pagination total={pages} />
-            </div>
+            <DataTable
+                columns={columns}
+                table={table}
+                pages={pages}
+                count={count}
+            />
         </div>
     );
 }

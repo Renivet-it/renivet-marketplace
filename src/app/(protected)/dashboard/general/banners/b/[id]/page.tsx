@@ -1,9 +1,7 @@
 import { BannerManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/db";
-import { banners } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { bannerQueries } from "@/lib/db/queries";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -19,9 +17,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { id } = await params;
 
-    const existingBanner = await db.query.banners.findFirst({
-        where: eq(banners.id, id),
-    });
+    const existingBanner = await bannerQueries.getBanner(id);
     if (!existingBanner)
         return {
             title: "Banner not found",
@@ -54,9 +50,7 @@ export default function Page({ params }: PageProps) {
 async function BannerEditFetch({ params }: PageProps) {
     const { id } = await params;
 
-    const existingBanner = await db.query.banners.findFirst({
-        where: eq(banners.id, id),
-    });
+    const existingBanner = await bannerQueries.getBanner(id);
     if (!existingBanner) notFound();
 
     return <BannerManageForm banner={existingBanner} />;

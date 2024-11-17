@@ -27,6 +27,14 @@ export const env = createEnv({
             .string({ required_error: "JWT_SECRET_KEY is required" })
             .min(1, "JWT_SECRET_KEY is required"),
 
+        GOOGLE_ANALYTICS_ID: z
+            .string({ required_error: "GOOGLE_ANALYTICS_ID is required" })
+            .min(1, "GOOGLE_ANALYTICS_ID is required"),
+
+        RESEND_API_KEY: z
+            .string({ required_error: "RESEND_API_KEY is required" })
+            .min(1, "RESEND_API_KEY is required"),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -45,6 +53,8 @@ export const env = createEnv({
         REDIS_URL: process.env.REDIS_URL,
         UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
         JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
+        RESEND_API_KEY: process.env.RESEND_API_KEY,
+        GOOGLE_ANALYTICS_ID: process.env.GOOGLE_ANALYTICS_ID,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

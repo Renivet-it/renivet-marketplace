@@ -57,5 +57,6 @@ export const config = {
         "/",
         "/dashboard/:path*",
         "/auth/:path*",
+        "/become-a-seller",
     ],
 };

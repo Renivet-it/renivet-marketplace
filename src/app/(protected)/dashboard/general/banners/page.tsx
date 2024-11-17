@@ -3,11 +3,9 @@ import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
-import { db } from "@/lib/db";
-import { banners } from "@/lib/db/schema";
+import { bannerQueries } from "@/lib/db/queries";
 import { bannerCache } from "@/lib/redis/methods";
 import { bannerSchema } from "@/lib/validations";
-import { desc } from "drizzle-orm";
 import { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -21,6 +19,8 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
+        isActive?: string;
+        search?: string;
     }>;
 }
 
@@ -54,25 +54,33 @@ export default function Page({ searchParams }: PageProps) {
 }
 
 async function BannersFetch({ searchParams }: PageProps) {
-    const { page: pageRaw, limit: limitRaw } = await searchParams;
+    const {
+        page: pageRaw,
+        limit: limitRaw,
+        isActive: isActiveRaw,
+        search: searchRaw,
+    } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const isActive =
+        isActiveRaw === undefined || isActiveRaw === "true" ? true : false;
+    const search = searchRaw?.length ? searchRaw : undefined;
 
-    const data = await db.query.banners.findMany({
+    const data = await bannerQueries.getBanners({
         limit,
-        offset: (page - 1) * limit,
-        orderBy: [desc(banners.createdAt)],
-        extras: {
-            bannerCount: db.$count(banners).as("banner_count"),
-        },
+        page,
+        isActive,
+        search,
     });
 
     await bannerCache.drop();
     await bannerCache.addBulk(
-        bannerSchema.array().parse(data.filter((banner) => banner.isActive))
+        bannerSchema
+            .array()
+            .parse(data.data.filter((banner) => banner.isActive))
     );
 
-    return <BannersTable initialBanners={data} />;
+    return <BannersTable initialData={data} />;
 }

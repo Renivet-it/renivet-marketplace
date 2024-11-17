@@ -1,9 +1,7 @@
 import { SubscribersTable } from "@/components/dashboard/subscribers";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { db } from "@/lib/db";
-import { newsletterSubscribers } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { subscriberQueries } from "@/lib/db/queries";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -16,6 +14,8 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
+        isActive?: string;
+        search?: string;
     }>;
 }
 
@@ -41,21 +41,25 @@ export default function Page({ searchParams }: PageProps) {
 }
 
 async function SubscribersFetch({ searchParams }: PageProps) {
-    const { page: pageRaw, limit: limitRaw } = await searchParams;
+    const {
+        page: pageRaw,
+        limit: limitRaw,
+        isActive: isActiveRaw,
+        search: searchRaw,
+    } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const isActive =
+        isActiveRaw === undefined || isActiveRaw === "true" ? true : false;
+    const search = searchRaw?.length ? searchRaw : undefined;
 
-    const data = await db.query.newsletterSubscribers.findMany({
+    const data = await subscriberQueries.getSubscribers({
         limit,
-        offset: (page - 1) * limit,
-        orderBy: [desc(newsletterSubscribers.createdAt)],
-        extras: {
-            subscriberCount: db
-                .$count(newsletterSubscribers)
-                .as("subscriber_count"),
-        },
+        page,
+        isActive,
+        search,
     });
 
     return <SubscribersTable initialData={data} />;

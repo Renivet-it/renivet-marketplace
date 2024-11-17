@@ -9,8 +9,12 @@ import { getAbsoluteURL, getUploadThingFileKey } from "@/lib/utils";
 import { BrandWaitlist } from "@/lib/validations";
 import { eq } from "drizzle-orm";
 
+export async function generateToken(email: string) {
+    return await jwt.sign(email);
+}
+
 export async function generateBrandDemoLink(email: string) {
-    const token = await jwt.sign(email);
+    const token = await generateToken(email);
 
     const url = new URLBuilder(getAbsoluteURL())
         .setPathTemplate("/brand-demo")

@@ -149,7 +149,7 @@ export const blogToTagsSchema = z.object({
     }),
 });
 
-export const blogWithAuthorAndTagSchema = blogSchema
+export const blogWithAuthorAndTagCountSchema = blogSchema
     .merge(
         z.object({
             author: safeUserSchema.omit({ createdAt: true, updatedAt: true }),
@@ -157,16 +157,23 @@ export const blogWithAuthorAndTagSchema = blogSchema
     )
     .merge(
         z.object({
-            tags: z.array(
-                z.object({
-                    tag: tagSchema.omit({ createdAt: true, updatedAt: true }),
-                })
-            ),
+            tags: z.number({
+                required_error: "Tags is required",
+                invalid_type_error: "Tags must be a number",
+            }),
         })
     );
+
+export const blogWithAuthorAndTagSchema =
+    blogWithAuthorAndTagCountSchema.extend({
+        tags: z.array(tagSchema),
+    });
 
 export type Blog = z.infer<typeof blogSchema>;
 export type CreateBlog = z.infer<typeof createBlogSchema>;
 export type UpdateBlog = z.infer<typeof updateBlogSchema>;
 export type BlogToTags = z.infer<typeof blogToTagsSchema>;
+export type BlogWithAuthorAndTagCount = z.infer<
+    typeof blogWithAuthorAndTagCountSchema
+>;
 export type BlogWithAuthorAndTag = z.infer<typeof blogWithAuthorAndTagSchema>;

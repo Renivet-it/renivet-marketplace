@@ -15,6 +15,7 @@ import LucideIcons, {
     Cookie,
     Copy,
     Copyright,
+    DollarSign,
     Download,
     Edit,
     Eye,
@@ -76,6 +77,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    DollarSign,
     Download,
     Globe,
     Phone,

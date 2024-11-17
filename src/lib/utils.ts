@@ -362,3 +362,7 @@ export function convertBytesToHumanReadable(bytes: number) {
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`;
 }
+
+export function convertEmptyStringToNull(data: unknown) {
+    return typeof data === "string" && data === "" ? null : data;
+}

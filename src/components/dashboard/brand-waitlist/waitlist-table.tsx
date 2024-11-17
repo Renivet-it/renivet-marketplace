@@ -1,24 +1,13 @@
 "use client";
 
-import {
-    DataTableViewOptions,
-    Pagination,
-} from "@/components/ui/data-table-dash";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { BrandWaitlist } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
@@ -73,9 +62,10 @@ const columns: ColumnDef<TableWaitlist>[] = [
 ];
 
 interface PageProps {
-    initialData: (BrandWaitlist & {
-        waitlistCount: number;
-    })[];
+    initialData: {
+        data: BrandWaitlist[];
+        count: number;
+    };
 }
 
 export function WaitlistTable({ initialData }: PageProps) {
@@ -92,28 +82,26 @@ export function WaitlistTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: waitlistRaw } =
-        trpc.brandsWaitlist.getBrandsWaitlist.useQuery(
-            { page, limit, search },
-            { initialData }
-        );
+    const {
+        data: { data: dataRaw, count },
+    } = trpc.brandsWaitlist.getBrandsWaitlist.useQuery(
+        { page, limit, search },
+        { initialData }
+    );
 
-    const waitlist = useMemo(
+    const data = useMemo(
         () =>
-            waitlistRaw.map((waitlist) => ({
-                ...waitlist,
-                registrant: waitlist.name,
+            dataRaw.map((x) => ({
+                ...x,
+                registrant: x.name,
             })),
-        [waitlistRaw]
+        [dataRaw]
     );
 
-    const pages = useMemo(
-        () => Math.ceil(waitlistRaw?.[0]?.waitlistCount / limit) ?? 1,
-        [waitlistRaw, limit]
-    );
+    const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
-        data: waitlist,
+        data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -154,71 +142,12 @@ export function WaitlistTable({ initialData }: PageProps) {
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext()
-                                                  )}
-                                        </TableHead>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected() && "selected"
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className="max-w-60"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No results.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {waitlistRaw?.[0]?.waitlistCount ?? 0} results
-                </p>
-
-                <Pagination total={pages} />
-            </div>
+            <DataTable
+                table={table}
+                columns={columns}
+                count={count}
+                pages={pages}
+            />
         </div>
     );
 }

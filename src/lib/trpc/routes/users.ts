@@ -1,15 +1,18 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { userCache } from "@/lib/redis/methods";
-import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
+import {
+    createTRPCRouter,
+    isTRPCAuth,
+    protectedProcedure,
+} from "@/lib/trpc/trpc";
 import { getUserPermissions, hasPermission, slugify } from "@/lib/utils";
 import {
     createAddressSchema,
     updateAddressSchema,
     updateUserRolesSchema,
-    userWithAddressesAndRolesSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, ilike, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
 
 export const userAddressesRouter = createTRPCRouter({
@@ -266,20 +269,7 @@ export const userAddressesRouter = createTRPCRouter({
 export const userRolesRouter = createTRPCRouter({
     updateRoles: protectedProcedure
         .input(updateUserRolesSchema)
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_USERS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_USERS))
         .mutation(async ({ ctx, input }) => {
             const { db, schemas, user } = ctx;
             const { userId, roleIds } = input;
@@ -396,67 +386,24 @@ export const usersRouter = createTRPCRouter({
                 search: z.string().optional(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(
-                user.sitePermissions,
-                [
-                    BitFieldSitePermission.MANAGE_USERS |
-                        BitFieldSitePermission.VIEW_USERS,
-                ],
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.MANAGE_USERS |
+                    BitFieldSitePermission.VIEW_USERS,
                 "any"
-            );
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+            )
+        )
         .query(async ({ input, ctx }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { limit, page, search } = input;
 
-            const data = await db.query.users.findMany({
-                where: !!search?.length
-                    ? ilike(schemas.users.email, `%${search}%`)
-                    : undefined,
-                with: {
-                    addresses: true,
-                    roles: {
-                        with: {
-                            role: true,
-                        },
-                    },
-                },
+            const data = await queries.users.getUsers({
                 limit,
-                offset: (page - 1) * limit,
-                orderBy: [desc(schemas.users.createdAt)],
-                extras: {
-                    userCount: db.$count(schemas.users).as("user_count"),
-                },
+                page,
+                search,
             });
 
-            const parsed = userWithAddressesAndRolesSchema
-                .extend({
-                    userCount: z
-                        .string({
-                            required_error: "User count is required",
-                            invalid_type_error: "User count must be a string",
-                        })
-                        .transform((x) => parseInt(x) || 0),
-                })
-                .array()
-                .parse(
-                    data.map((user) => ({
-                        ...user,
-                        roles: user.roles.map((role) => role.role),
-                    }))
-                );
-
-            return parsed;
+            return data;
         }),
     currentUser: protectedProcedure.query(async ({ ctx }) => {
         const { user } = ctx;

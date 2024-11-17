@@ -2,6 +2,7 @@ import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldSitePermission } from "@/config/permissions";
 import {
     createTRPCRouter,
+    isTRPCAuth,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
@@ -11,7 +12,6 @@ import {
     createBrandWaitlistSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 export const brandsWaitlistRouter = createTRPCRouter({
@@ -23,84 +23,31 @@ export const brandsWaitlistRouter = createTRPCRouter({
                 search: z.string().optional(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_BRANDS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_BRANDS))
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { limit, page, search } = input;
 
-            const brandsWaitlist = await db.query.brandsWaitlist.findMany({
-                where: !!search?.length
-                    ? ilike(schemas.brandsWaitlist.brandEmail, `%${search}%`)
-                    : undefined,
+            const brandsWaitlist = await queries.waitlists.getWaitlistBrands({
                 limit,
-                offset: (page - 1) * limit,
-                orderBy: [desc(schemas.brandsWaitlist.createdAt)],
-                extras: {
-                    waitlistCount: db
-                        .$count(schemas.brandsWaitlist)
-                        .as("waitlist_count"),
-                },
+                page,
+                search,
             });
 
             return brandsWaitlist;
         }),
     getBrandsWaitlistEntry: protectedProcedure
         .input(
-            z
-                .object({
-                    id: z.string().optional(),
-                    brandEmail: z.string().optional(),
-                })
-                .refine((input) => {
-                    if (!input.id && !input.brandEmail)
-                        throw new TRPCError({
-                            code: "BAD_REQUEST",
-                            message: "ID or brand email is required",
-                        });
-
-                    return true;
-                })
+            z.object({
+                id: z.string(),
+            })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_BRANDS,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_BRANDS))
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
-            const { id, brandEmail } = input;
+            const { queries } = ctx;
 
-            const brandsWaitlistEntry = await db.query.brandsWaitlist.findFirst(
-                {
-                    where: id
-                        ? eq(schemas.brandsWaitlist.id, id)
-                        : brandEmail
-                          ? eq(schemas.brandsWaitlist.brandEmail, brandEmail)
-                          : undefined,
-                }
-            );
+            const brandsWaitlistEntry =
+                await queries.waitlists.getWaitlistBrand(input.id);
             if (!brandsWaitlistEntry)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -112,26 +59,20 @@ export const brandsWaitlistRouter = createTRPCRouter({
     createBrandsWaitlistEntry: publicProcedure
         .input(createBrandWaitlistSchema)
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
 
             const existingBrandsWaitlistEntry =
-                await db.query.brandsWaitlist.findFirst({
-                    where: eq(
-                        schemas.brandsWaitlist.brandEmail,
-                        input.brandEmail
-                    ),
-                });
+                await queries.waitlists.getWaitlistBrandByEmail(
+                    input.brandEmail
+                );
             if (existingBrandsWaitlistEntry)
                 throw new TRPCError({
                     code: "CONFLICT",
                     message: "Brands waitlist entry already exists",
                 });
 
-            const brandsWaitlistEntry = await db
-                .insert(schemas.brandsWaitlist)
-                .values(input)
-                .returning()
-                .then((res) => res[0]);
+            const brandsWaitlistEntry =
+                await queries.waitlists.createWaitlistBrand(input);
 
             return brandsWaitlistEntry;
         }),
@@ -143,13 +84,11 @@ export const brandsWaitlistRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id, data } = input;
 
             const existingBrandsWaitlistEntry =
-                await db.query.brandsWaitlist.findFirst({
-                    where: eq(schemas.brandsWaitlist.id, id),
-                });
+                await queries.waitlists.getWaitlistBrand(id);
             if (!existingBrandsWaitlistEntry)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -162,13 +101,7 @@ export const brandsWaitlistRouter = createTRPCRouter({
                 await utApi.deleteFiles([existingKey]);
             }
 
-            await db
-                .update(schemas.brandsWaitlist)
-                .set({
-                    demoUrl: data.demoUrl,
-                })
-                .where(eq(schemas.brandsWaitlist.id, id));
-
+            await queries.waitlists.addBrandWaitlistDemo(id, data);
             return true;
         }),
     deleteBrandsWaitlistEntry: protectedProcedure
@@ -192,23 +125,25 @@ export const brandsWaitlistRouter = createTRPCRouter({
             return next({ ctx });
         })
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
             const existingBrandsWaitlistEntry =
-                await db.query.brandsWaitlist.findFirst({
-                    where: eq(schemas.brandsWaitlist.id, id),
-                });
+                await queries.waitlists.getWaitlistBrand(id);
             if (!existingBrandsWaitlistEntry)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Brands waitlist entry not found",
                 });
 
-            await db
-                .delete(schemas.brandsWaitlist)
-                .where(eq(schemas.brandsWaitlist.id, id));
+            if (existingBrandsWaitlistEntry.demoUrl) {
+                const key = getUploadThingFileKey(
+                    existingBrandsWaitlistEntry.demoUrl
+                );
+                await utApi.deleteFiles([key]);
+            }
 
+            await queries.waitlists.deleteWaitlistBrand(id);
             return true;
         }),
 });

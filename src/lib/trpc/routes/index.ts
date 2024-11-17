@@ -1,4 +1,5 @@
 export * from "./blogs";
+export * from "./brands";
 export * from "./brands-waitlist";
 export * from "./categories";
 export * from "./content";

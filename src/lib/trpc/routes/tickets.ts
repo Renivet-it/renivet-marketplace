@@ -1,13 +1,12 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import {
     createTRPCRouter,
+    isTRPCAuth,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
-import { hasPermission } from "@/lib/utils";
 import { createTicketSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 
 export const ticketRouter = createTRPCRouter({
@@ -19,34 +18,21 @@ export const ticketRouter = createTRPCRouter({
                 search: z.string().optional(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_FEEDBACK,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.VIEW_FEEDBACK |
+                    BitFieldSitePermission.MANAGE_FEEDBACK,
+                "any"
+            )
+        )
         .query(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { limit, page, search } = input;
 
-            const tickets = await db.query.tickets.findMany({
-                where: !!search?.length
-                    ? ilike(schemas.tickets.email, `%${search}%`)
-                    : undefined,
+            const tickets = await queries.tickets.getTickets({
                 limit,
-                offset: (page - 1) * limit,
-                orderBy: [desc(schemas.tickets.createdAt)],
-                extras: {
-                    ticketCount: db.$count(schemas.tickets).as("ticket_count"),
-                },
+                page,
+                search,
             });
 
             return tickets;
@@ -57,27 +43,18 @@ export const ticketRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.VIEW_FEEDBACK,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.VIEW_FEEDBACK |
+                    BitFieldSitePermission.MANAGE_FEEDBACK,
+                "any"
+            )
+        )
         .query(async ({ input, ctx }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
-            const existingTicket = await db.query.tickets.findFirst({
-                where: eq(schemas.tickets.id, id),
-            });
+            const existingTicket = await queries.tickets.getTicket(id);
             if (!existingTicket)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -89,14 +66,9 @@ export const ticketRouter = createTRPCRouter({
     createTicket: publicProcedure
         .input(createTicketSchema)
         .mutation(async ({ input, ctx }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
 
-            const newTicket = await db
-                .insert(schemas.tickets)
-                .values(input)
-                .returning()
-                .then((res) => res[0]);
-
+            const newTicket = await queries.tickets.createTicket(input);
             return newTicket;
         }),
     deleteTicket: protectedProcedure
@@ -105,27 +77,12 @@ export const ticketRouter = createTRPCRouter({
                 id: z.string(),
             })
         )
-        .use(({ ctx, next }) => {
-            const { user } = ctx;
-
-            const isAuthorized = hasPermission(user.sitePermissions, [
-                BitFieldSitePermission.MANAGE_FEEDBACK,
-            ]);
-            if (!isAuthorized)
-                throw new TRPCError({
-                    code: "UNAUTHORIZED",
-                    message: "You're not authorized",
-                });
-
-            return next({ ctx });
-        })
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_FEEDBACK))
         .mutation(async ({ ctx, input }) => {
-            const { db, schemas } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
-            const existingTicket = await db.query.tickets.findFirst({
-                where: eq(schemas.tickets.id, id),
-            });
+            const existingTicket = await queries.tickets.getTicket(id);
             if (!existingTicket) {
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -133,7 +90,7 @@ export const ticketRouter = createTRPCRouter({
                 });
             }
 
-            await db.delete(schemas.tickets).where(eq(schemas.tickets.id, id));
+            await queries.tickets.deleteTicket(id);
             return true;
         }),
 });

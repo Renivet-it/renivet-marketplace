@@ -1,8 +1,6 @@
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { userQueries } from "@/lib/db/queries";
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedUser, cachedUserSchema } from "@/lib/validations";
-import { eq } from "drizzle-orm";
 import { redis } from "..";
 
 class UserCache {
@@ -19,25 +17,10 @@ class UserCache {
             .parse(parseToJSON<CachedUser>(cachedUserRaw));
 
         if (!cachedUser) {
-            const dbUser = await db.query.users.findFirst({
-                where: eq(users.id, id),
-                with: {
-                    addresses: true,
-                    roles: {
-                        with: {
-                            role: true,
-                        },
-                    },
-                },
-            });
+            const dbUser = await userQueries.getUser(id);
             if (!dbUser) return null;
 
-            cachedUser = {
-                ...dbUser,
-                addresses: dbUser.addresses,
-                roles: dbUser.roles.map((r) => r.role),
-            };
-
+            cachedUser = dbUser;
             await this.add(cachedUser);
         }
 

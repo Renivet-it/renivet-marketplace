@@ -4,11 +4,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
 import { siteConfig } from "@/config/site";
-import { db } from "@/lib/db";
-import { blogs } from "@/lib/db/schema";
+import { blogQueries } from "@/lib/db/queries";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import { blogWithAuthorAndTagSchema } from "@/lib/validations";
-import { and, desc, eq } from "drizzle-orm";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -24,12 +22,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { slug } = await params;
 
-    const existingBlog = await db.query.blogs.findFirst({
-        where: and(eq(blogs.slug, slug), eq(blogs.isPublished, true)),
-        with: {
-            author: true,
-        },
-    });
+    const existingBlog = await blogQueries.getBlog({ slug });
     if (!existingBlog)
         return {
             title: "Blog not found",
@@ -92,23 +85,13 @@ export default function Page({ params }: PageProps) {
 async function BlogFetch({ params }: PageProps) {
     const { slug } = await params;
 
-    const existingBlog = await db.query.blogs.findFirst({
-        where: and(eq(blogs.slug, slug), eq(blogs.isPublished, true)),
-        with: {
-            author: true,
-            tags: {
-                with: {
-                    tag: true,
-                },
-            },
-        },
-    });
+    const existingBlog = await blogQueries.getBlog({ slug });
     if (!existingBlog) notFound();
 
-    const recentBlogs = await db.query.blogs.findMany({
-        where: eq(blogs.isPublished, true),
-        orderBy: [desc(blogs.publishedAt)],
+    const recentBlogs = await blogQueries.getBlogs({
         limit: 3,
+        page: 1,
+        isPublished: true,
     });
 
     const parsed = blogWithAuthorAndTagSchema.parse(existingBlog);

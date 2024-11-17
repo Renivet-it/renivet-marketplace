@@ -18,7 +18,7 @@ import {
     NoticeContent,
     NoticeIcon,
     NoticeTitle,
-} from "@/components/ui/notice";
+} from "@/components/ui/notice-dash";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
@@ -46,7 +46,7 @@ import {
 
 interface PageProps {
     tags: Tag[];
-    blog?: Omit<BlogWithAuthorAndTag, "author">;
+    blog?: BlogWithAuthorAndTag;
 }
 
 export function BlogManageForm({ tags, blog }: PageProps) {
@@ -70,7 +70,7 @@ export function BlogManageForm({ tags, blog }: PageProps) {
             description: blog?.description ?? "",
             content: blog?.content ?? "",
             thumbnailUrl: blog?.thumbnailUrl ?? null,
-            tagIds: blog?.tags.map((tag) => tag.tag.id) ?? [],
+            tagIds: blog?.tags.map((tag) => tag.id) ?? [],
             isPublished: blog?.isPublished ?? false,
         },
         disabled: !tags.length,

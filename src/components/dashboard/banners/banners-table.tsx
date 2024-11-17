@@ -1,10 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-    DataTableViewOptions,
-    Pagination,
-} from "@/components/ui/data-table-dash";
+import { DataTable } from "@/components/ui/data-table";
+import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
     Select,
@@ -13,21 +11,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select-dash";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
-    flexRender,
     getCoreRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
@@ -37,7 +26,7 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { BannerAction } from "./banner-action";
 
@@ -55,11 +44,11 @@ const columns: ColumnDef<TableBanner>[] = [
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
-            const blog = row.original;
+            const data = row.original;
 
             return (
-                <Badge variant={blog.isActive ? "default" : "destructive"}>
-                    {convertValueToLabel(blog.status)}
+                <Badge variant={data.isActive ? "default" : "destructive"}>
+                    {convertValueToLabel(data.status)}
                 </Badge>
             );
         },
@@ -68,33 +57,36 @@ const columns: ColumnDef<TableBanner>[] = [
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => {
-            const blog = row.original;
-            return format(new Date(blog.createdAt), "MMM dd, yyyy");
+            const data = row.original;
+            return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
     {
         id: "actions",
         cell: ({ row }) => {
-            const banner = row.original;
-            return <BannerAction banner={banner} />;
+            const data = row.original;
+            return <BannerAction banner={data} />;
         },
     },
 ];
 
 interface PageProps {
-    initialBanners: (Banner & {
-        bannerCount: number;
-    })[];
+    initialData: {
+        data: Banner[];
+        count: number;
+    };
 }
 
-export function BannersTable({ initialBanners }: PageProps) {
+export function BannersTable({ initialData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
-
-    const [isActive, setIsActive] = useState<boolean>();
+    const [isActive, setIsActive] = useQueryState(
+        "isActive",
+        parseAsBoolean.withDefault(true)
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -103,27 +95,31 @@ export function BannersTable({ initialBanners }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: bannersRaw } = trpc.content.banners.getBanners.useQuery(
+    const {
+        data: { data: dataRaw, count },
+    } = trpc.content.banners.getBanners.useQuery(
         { page, limit, search, isActive },
-        { initialData: initialBanners }
+        {
+            initialData: {
+                data: initialData.data,
+                count: initialData.count,
+            },
+        }
     );
 
-    const banners = useMemo(
+    const data = useMemo(
         () =>
-            bannersRaw.map((banner) => ({
-                ...banner,
-                status: banner.isActive ? "active" : "inactive",
+            dataRaw.map((x) => ({
+                ...x,
+                status: x.isActive ? "active" : "inactive",
             })),
-        [bannersRaw]
+        [dataRaw]
     );
 
-    const pages = useMemo(
-        () => Math.ceil(banners?.[0]?.bannerCount ?? 0 / limit) ?? 1,
-        [banners, limit]
-    );
+    const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
-        data: banners,
+        data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -165,23 +161,20 @@ export function BannersTable({ initialBanners }: PageProps) {
                             (table
                                 .getColumn("status")
                                 ?.getFilterValue() as string) ??
-                            (isActive !== undefined
-                                ? isActive
-                                    ? "active"
-                                    : "inactive"
-                                : undefined) ??
-                            ""
+                            (isActive !== undefined || isActive === true
+                                ? "active"
+                                : "inactive")
                         }
                         onValueChange={(value) => {
                             table.getColumn("status")?.setFilterValue(value);
-                            setIsActive(value === "active" ? true : false);
+                            setIsActive(value === "active");
                         }}
                     >
                         <SelectTrigger className="capitalize">
                             <SelectValue placeholder="Search by status" />
                         </SelectTrigger>
                         <SelectContent>
-                            {["inactive", "active"].map((x) => (
+                            {["active", "inactive"].map((x) => (
                                 <SelectItem key={x} value={x}>
                                     {convertValueToLabel(x)}
                                 </SelectItem>
@@ -193,71 +186,12 @@ export function BannersTable({ initialBanners }: PageProps) {
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext()
-                                                  )}
-                                        </TableHead>
-                                    );
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={
-                                        row.getIsSelected() && "selected"
-                                    }
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell
-                                            key={cell.id}
-                                            className="max-w-60"
-                                        >
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    No results.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {banners?.[0]?.bannerCount ?? 0} banners
-                </p>
-
-                <Pagination total={pages} />
-            </div>
+            <DataTable
+                columns={columns}
+                table={table}
+                pages={pages}
+                count={count}
+            />
         </div>
     );
 }

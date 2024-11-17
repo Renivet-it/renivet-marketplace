@@ -9,6 +9,18 @@ import {
 import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import { NextRequest } from "next/server";
+import {
+    bannerQueries,
+    blogQueries,
+    brandQueries,
+    brandRequestQueries,
+    roleQueries,
+    subscriberQueries,
+    tagQueries,
+    ticketQueries,
+    userQueries,
+    waitlistQueries,
+} from "../db/queries";
 
 type ContextProps = {
     req: NextRequest | Request;
@@ -23,6 +35,18 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
         auth,
         user,
         schemas: schema,
+        queries: {
+            banners: bannerQueries,
+            blogs: blogQueries,
+            brands: brandQueries,
+            brandRequests: brandRequestQueries,
+            roles: roleQueries,
+            newsletterSubscribers: subscriberQueries,
+            tags: tagQueries,
+            tickets: ticketQueries,
+            users: userQueries,
+            waitlists: waitlistQueries,
+        },
     };
 };
 

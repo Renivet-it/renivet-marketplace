@@ -1,8 +1,5 @@
 import { z } from "zod";
-
-const convertEmptyStringToNull = (data: unknown) => {
-    return typeof data === "string" && data === "" ? null : data;
-};
+import { convertEmptyStringToNull } from "../utils";
 
 export const ticketSchema = z.object({
     id: z
