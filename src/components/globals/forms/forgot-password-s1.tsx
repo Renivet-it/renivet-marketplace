@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-general";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { handleClientError } from "@/lib/utils";
 import { ForgotPasswordS1, forgotPasswordS1Schema } from "@/lib/validations";
 import { useSignIn } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -61,9 +62,7 @@ export function ForgotPasswordS1Form() {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(err.message, {
-                      id: ctx?.toastId,
-                  });
+                : handleClientError(err, ctx?.toastId);
         },
     });
 

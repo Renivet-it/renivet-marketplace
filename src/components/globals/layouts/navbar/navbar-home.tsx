@@ -12,12 +12,17 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { siteConfig } from "@/config/site";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
-import { cn, getUserPermissions, hasPermission, hideEmail } from "@/lib/utils";
+import {
+    cn,
+    getUserPermissions,
+    handleClientError,
+    hasPermission,
+    hideEmail,
+} from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
@@ -81,9 +86,7 @@ export function NavbarHome() {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
-                      id: ctx?.toastId,
-                  });
+                : handleClientError(err, ctx?.toastId);
         },
     });
 
@@ -142,6 +145,7 @@ export function NavbarHome() {
                                         item.isDisabled &&
                                             "cursor-not-allowed opacity-50"
                                     )}
+                                    prefetch
                                     href={item.href}
                                     target={
                                         item.isExternal ? "_blank" : "_self"
@@ -237,9 +241,14 @@ export function NavbarHome() {
                                             </Link>
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuItem className="rounded-none">
-                                            <Icons.LifeBuoy className="mr-2 size-4" />
-                                            <span>Contact Us</span>
+                                        <DropdownMenuItem
+                                            className="rounded-none"
+                                            asChild
+                                        >
+                                            <Link href="/contact">
+                                                <Icons.LifeBuoy className="mr-2 size-4" />
+                                                <span>Contact Us</span>
+                                            </Link>
                                         </DropdownMenuItem>
                                     </DropdownMenuGroup>
 
@@ -261,9 +270,12 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Home className="mr-2 size-4" />
-                                            <span>Addresses</span>
+                                            <Link href="/profile/addresses">
+                                                <Icons.Home className="mr-2 size-4" />
+                                                <span>Addresses</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem

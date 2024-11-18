@@ -3,13 +3,14 @@
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { DEFAULT_AVATAR_URL, DEFAULT_MESSAGES } from "@/config/const";
+import { DEFAULT_AVATAR_URL } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
 import {
     cn,
     getUserPermissions,
+    handleClientError,
     hasPermission,
     hideEmail,
     slugify,
@@ -174,9 +175,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
-                      id: ctx?.toastId,
-                  });
+                : handleClientError(err, ctx?.toastId);
         },
     });
 

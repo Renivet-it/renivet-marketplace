@@ -16,6 +16,7 @@ import { DEFAULT_MESSAGES } from "@/config/const";
 import { cn, handleClientError } from "@/lib/utils";
 import { UpdatePassword, updatePasswordSchema } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -55,7 +56,11 @@ export function UserPasswordUpdateForm() {
                 clerkUser?.reload();
             },
             onError: (err, _, ctx) => {
-                return handleClientError(err, ctx?.toastId);
+                return isClerkAPIResponseError(err)
+                    ? toast.error(err.errors.map((e) => e.message).join(", "), {
+                          id: ctx?.toastId,
+                      })
+                    : handleClientError(err, ctx?.toastId);
             },
         });
 

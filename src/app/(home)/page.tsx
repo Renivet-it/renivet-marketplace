@@ -9,10 +9,7 @@ import {
     Popular,
     Theme,
 } from "@/components/home";
-import { db } from "@/lib/db";
-import { blogs } from "@/lib/db/schema";
-import { bannerCache } from "@/lib/redis/methods";
-import { desc, eq } from "drizzle-orm";
+import { bannerCache, blogCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
 
 export default function Page() {
@@ -40,10 +37,7 @@ export default function Page() {
 }
 
 async function BlogsFetch() {
-    const blog = await db.query.blogs.findFirst({
-        where: eq(blogs.isPublished, true),
-        orderBy: [desc(blogs.publishedAt)],
-    });
+    const blog = await blogCache.get();
     if (!blog) return null;
 
     return <Blogs blog={blog} />;

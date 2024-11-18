@@ -169,6 +169,28 @@ export const blogWithAuthorAndTagSchema =
         tags: z.array(tagSchema),
     });
 
+export const cachedBlogSchema = blogWithAuthorAndTagCountSchema.extend({
+    createdAt: z
+        .string({
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a string",
+        })
+        .transform((x) => new Date(x)),
+    publishedAt: z
+        .string({
+            required_error: "Published at is required",
+            invalid_type_error: "Published at must be a string",
+        })
+        .transform((x) => new Date(x))
+        .nullable(),
+    updatedAt: z
+        .string({
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a string",
+        })
+        .transform((x) => new Date(x)),
+});
+
 export type Blog = z.infer<typeof blogSchema>;
 export type CreateBlog = z.infer<typeof createBlogSchema>;
 export type UpdateBlog = z.infer<typeof updateBlogSchema>;
@@ -177,3 +199,4 @@ export type BlogWithAuthorAndTagCount = z.infer<
     typeof blogWithAuthorAndTagCountSchema
 >;
 export type BlogWithAuthorAndTag = z.infer<typeof blogWithAuthorAndTagSchema>;
+export type CachedBlog = z.infer<typeof cachedBlogSchema>;

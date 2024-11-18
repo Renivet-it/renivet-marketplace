@@ -14,7 +14,11 @@ interface PageProps extends GenericProps {
 export function BlogCard({ className, blog, ...props }: PageProps) {
     return (
         <div className={cn("", className)} {...props}>
-            <Link href={`/blogs/${blog.slug}`} className="flex flex-col gap-5">
+            <Link
+                prefetch
+                href={`/blogs/${blog.slug}`}
+                className="flex flex-col gap-5"
+            >
                 <div className="aspect-video size-full">
                     <Image
                         src={blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL}
