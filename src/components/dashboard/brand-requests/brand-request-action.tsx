@@ -198,6 +198,7 @@ export function BrandRequestAction({ request }: PageProps) {
                             size="sm"
                             variant="destructive"
                             className="w-full"
+                            disabled
                             onClick={() => setIsRejectModalOpen(true)}
                         >
                             Reject
@@ -205,11 +206,17 @@ export function BrandRequestAction({ request }: PageProps) {
                         <Button
                             size="sm"
                             className="w-full"
+                            disabled
                             onClick={() => setIsApproveModalOpen(true)}
                         >
                             Approve
                         </Button>
                     </div>
+
+                    <p className="text-sm text-destructive">
+                        * Approving or rejecting brand requests are disabled for
+                        now
+                    </p>
                 </SheetContent>
             </Sheet>
 

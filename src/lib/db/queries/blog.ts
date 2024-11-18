@@ -5,7 +5,7 @@ import {
     blogWithAuthorAndTagSchema,
     UpdateBlog,
 } from "@/lib/validations";
-import { and, desc, eq, ilike, inArray } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, ne } from "drizzle-orm";
 import { db } from "..";
 import { blogs, blogTags, users } from "../schema";
 
@@ -93,6 +93,11 @@ class BlogQuery {
                 .leftJoin(users, eq(blogs.authorId, users.id))
                 .limit(limit)
                 .offset((page - 1) * limit)
+                .orderBy(
+                    isPublished
+                        ? desc(blogs.publishedAt)
+                        : desc(blogs.createdAt)
+                )
                 .where(
                     and(
                         eq(blogTags.tagId, tagId),
@@ -144,6 +149,14 @@ class BlogQuery {
         };
     }
 
+    async getOtherBlog(slug: string, id: string) {
+        const data = await db.query.blogs.findFirst({
+            where: and(eq(blogs.slug, slug), ne(blogs.id, id)),
+        });
+
+        return data;
+    }
+
     async getBlog({ id, slug }: { id?: string; slug?: string }) {
         const data = await db.query.blogs.findFirst({
             where: id
@@ -170,7 +183,12 @@ class BlogQuery {
         return parsed;
     }
 
-    async updateBlog(id: string, values: UpdateBlog) {
+    async updateBlog(
+        id: string,
+        values: UpdateBlog & {
+            slug: string;
+        }
+    ) {
         const data = await db
             .update(blogs)
             .set({

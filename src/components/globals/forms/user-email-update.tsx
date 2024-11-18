@@ -18,6 +18,7 @@ import {
     UserWithAddressesAndRoles,
 } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { EmailAddressResource } from "@clerk/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -83,7 +84,11 @@ export function UserEmailUpdateForm({ user }: PageProps) {
             setIsVerifyModalOpen(true);
         },
         onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
+            return isClerkAPIResponseError(err)
+                ? toast.error(err.errors.map((e) => e.message).join(", "), {
+                      id: ctx?.toastId,
+                  })
+                : handleClientError(err, ctx?.toastId);
         },
     });
 

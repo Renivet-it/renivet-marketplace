@@ -17,6 +17,7 @@ import {
     InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { handleClientError } from "@/lib/utils";
 import { OTP, otpSchema } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -54,6 +55,8 @@ export function EmailOTPVerificationForm({ emailObj, setIsOpen }: PageProps) {
                 if (!emailObj) throw new Error(DEFAULT_MESSAGES.ERRORS.GENERIC);
 
                 const oldEmailAddress = clerkUser.primaryEmailAddress;
+                if (!oldEmailAddress)
+                    throw new Error(DEFAULT_MESSAGES.ERRORS.GENERIC);
 
                 const verifyAttempt = await emailObj.attemptVerification({
                     code: values.otp,
@@ -66,7 +69,8 @@ export function EmailOTPVerificationForm({ emailObj, setIsOpen }: PageProps) {
                     primaryEmailAddressId: emailObj.id,
                 });
 
-                await oldEmailAddress?.destroy();
+                await clerkUser.reload();
+                await oldEmailAddress.destroy();
             },
             onSuccess: async (_, __, { toastId }) => {
                 toast.success("Email verified successfully", { id: toastId });
@@ -78,9 +82,7 @@ export function EmailOTPVerificationForm({ emailObj, setIsOpen }: PageProps) {
                     ? toast.error(err.errors.map((e) => e.message).join(", "), {
                           id: ctx?.toastId,
                       })
-                    : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
-                          id: ctx?.toastId,
-                      });
+                    : handleClientError(err, ctx?.toastId);
             },
         });
 

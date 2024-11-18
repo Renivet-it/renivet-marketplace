@@ -415,7 +415,8 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                                         disabled={
                                             isBlogCreating ||
                                             isBlogUpdating ||
-                                            !tags.length
+                                            !tags.length ||
+                                            !!blog
                                         }
                                         checked={field.value}
                                         onCheckedChange={field.onChange}

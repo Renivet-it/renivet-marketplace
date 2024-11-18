@@ -17,6 +17,7 @@ import {
     InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { handleClientError } from "@/lib/utils";
 import { OTP, otpSchema } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -66,7 +67,8 @@ export function PhoneOTPVerificationForm({ phoneObj, setIsOpen }: PageProps) {
                     primaryPhoneNumberId: phoneObj.id,
                 });
 
-                await oldPhoneNumber?.destroy();
+                await clerkUser.reload();
+                if (oldPhoneNumber) await oldPhoneNumber.destroy();
             },
             onSuccess: async (_, __, { toastId }) => {
                 toast.success("Phone number verified successfully", {
@@ -80,9 +82,7 @@ export function PhoneOTPVerificationForm({ phoneObj, setIsOpen }: PageProps) {
                     ? toast.error(err.errors.map((e) => e.message).join(", "), {
                           id: ctx?.toastId,
                       })
-                    : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
-                          id: ctx?.toastId,
-                      });
+                    : handleClientError(err, ctx?.toastId);
             },
         });
 

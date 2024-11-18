@@ -1,6 +1,6 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldSitePermission } from "@/config/permissions";
-import { tagCache } from "@/lib/redis/methods";
+import { blogCache, tagCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -10,6 +10,7 @@ import {
 import { getUploadThingFileKey, slugify } from "@/lib/utils";
 import {
     blogWithAuthorAndTagSchema,
+    cachedBlogSchema,
     createBlogSchema,
     updateBlogSchema,
 } from "@/lib/validations";
@@ -91,6 +92,8 @@ export const blogsRouter = createTRPCRouter({
                 input.tagIds.includes(tag.id)
             );
 
+            const existingPrimaryBlog = await blogCache.get();
+
             const missingTags = input.tagIds.filter(
                 (tagId) => !existingTags.find((tag) => tag.id === tagId)
             );
@@ -136,6 +139,25 @@ export const blogsRouter = createTRPCRouter({
                     ),
                 ]);
 
+                if (input.isPublished) {
+                    if (!existingPrimaryBlog)
+                        await blogCache.add(
+                            cachedBlogSchema.parse({
+                                ...blog,
+                                tags: existingTags,
+                                author: user,
+                            })
+                        );
+                    else
+                        await blogCache.update(
+                            cachedBlogSchema.parse({
+                                ...blog,
+                                tags: existingTags,
+                                author: user,
+                            })
+                        );
+                }
+
                 return blog;
             });
 
@@ -158,6 +180,17 @@ export const blogsRouter = createTRPCRouter({
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Blog not found",
+                });
+
+            const slug = slugify(data.title);
+            const existingOtherBlog = await queries.blogs.getOtherBlog(
+                slug,
+                existingBlog.id
+            );
+            if (existingOtherBlog)
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "Another blog with the same title exists",
                 });
 
             const existingThumbnailUrl = existingBlog.thumbnailUrl;
@@ -202,8 +235,6 @@ export const blogsRouter = createTRPCRouter({
                         )
                 );
 
-                console.log(tagsToInsert, tagsToDelete);
-
                 await db.transaction(async (tx) => {
                     await Promise.all([
                         tagsToInsert.length > 0 &&
@@ -228,7 +259,10 @@ export const blogsRouter = createTRPCRouter({
                 });
             }
 
-            const updatedBlog = await queries.blogs.updateBlog(id, data);
+            const updatedBlog = await queries.blogs.updateBlog(id, {
+                ...data,
+                slug,
+            });
             return updatedBlog;
         }),
     changePublishStatus: protectedProcedure
@@ -240,7 +274,7 @@ export const blogsRouter = createTRPCRouter({
         )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BLOGS))
         .mutation(async ({ ctx, input }) => {
-            const { queries } = ctx;
+            const { queries, user } = ctx;
             const { id, isPublished } = input;
 
             const existingBlog = await queries.blogs.getBlog({ id });
@@ -249,6 +283,32 @@ export const blogsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Blog not found",
                 });
+
+            const existingPrimaryBlog = await blogCache.get();
+
+            if (isPublished && !existingPrimaryBlog)
+                await blogCache.add(
+                    cachedBlogSchema.parse({
+                        ...existingBlog,
+                        tags: existingBlog.tags,
+                        author: user,
+                    })
+                );
+            else if (isPublished)
+                await blogCache.update(
+                    cachedBlogSchema.parse({
+                        ...existingBlog,
+                        tags: existingBlog.tags,
+                        author: user,
+                    })
+                );
+
+            if (
+                existingPrimaryBlog &&
+                existingPrimaryBlog.id === id &&
+                !isPublished
+            )
+                await blogCache.remove();
 
             const updatedBlog = await queries.blogs.updateBlogStatus(
                 id,
@@ -274,6 +334,10 @@ export const blogsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Blog not found",
                 });
+
+            const existingPrimaryBlog = await blogCache.get();
+            if (existingPrimaryBlog && existingPrimaryBlog.id === id)
+                await blogCache.remove();
 
             const existingThumbnailUrl = existingBlog.thumbnailUrl;
             if (existingThumbnailUrl) {
