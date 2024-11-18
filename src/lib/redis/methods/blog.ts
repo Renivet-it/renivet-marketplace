@@ -24,7 +24,14 @@ class BlogCache {
             });
             if (!dbBlog) return null;
 
-            cachedBlog = cachedBlogSchema.parse(dbBlog.data[0]);
+            const blog = dbBlog.data[0];
+
+            cachedBlog = cachedBlogSchema.parse({
+                ...blog,
+                publishedAt: blog.publishedAt?.toString() ?? null,
+                createdAt: blog.createdAt.toString(),
+                updatedAt: blog.updatedAt.toString(),
+            });
             await this.add(cachedBlog);
         }
 
