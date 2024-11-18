@@ -146,6 +146,10 @@ export const blogsRouter = createTRPCRouter({
                                 ...blog,
                                 tags: existingTags,
                                 author: user,
+                                publishedAt:
+                                    blog.publishedAt?.toString() ?? null,
+                                createdAt: blog.createdAt.toString(),
+                                updatedAt: blog.updatedAt.toString(),
                             })
                         );
                     else
@@ -154,6 +158,10 @@ export const blogsRouter = createTRPCRouter({
                                 ...blog,
                                 tags: existingTags,
                                 author: user,
+                                publishedAt:
+                                    blog.publishedAt?.toString() ?? null,
+                                createdAt: blog.createdAt.toString(),
+                                updatedAt: blog.updatedAt.toString(),
                             })
                         );
                 }
@@ -292,6 +300,10 @@ export const blogsRouter = createTRPCRouter({
                         ...existingBlog,
                         tags: existingBlog.tags,
                         author: user,
+                        publishedAt:
+                            existingBlog.publishedAt?.toString() ?? null,
+                        createdAt: existingBlog.createdAt.toString(),
+                        updatedAt: existingBlog.updatedAt.toString(),
                     })
                 );
             else if (isPublished)
@@ -300,6 +312,10 @@ export const blogsRouter = createTRPCRouter({
                         ...existingBlog,
                         tags: existingBlog.tags,
                         author: user,
+                        publishedAt:
+                            existingBlog.publishedAt?.toString() ?? null,
+                        createdAt: existingBlog.createdAt.toString(),
+                        updatedAt: existingBlog.updatedAt.toString(),
                     })
                 );
 
