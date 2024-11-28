@@ -17,7 +17,7 @@ export default function Page() {
                 </p>
             </div>
 
-            <RoleManageForm />
+            <RoleManageForm type="site" />
         </DashShell>
     );
 }

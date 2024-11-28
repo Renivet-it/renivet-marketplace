@@ -26,10 +26,10 @@ export function UserAddressDeleteModal({
     isOpen,
     setIsOpen,
 }: PageProps) {
-    const { refetch } = trpc.users.currentUser.useQuery();
+    const { refetch } = trpc.general.users.currentUser.useQuery();
 
     const { mutate: deleteAddress, isPending: isAddressDeleting } =
-        trpc.users.addresses.deleteAddress.useMutation({
+        trpc.general.users.addresses.deleteAddress.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Deleting address...");
                 return { toastId };

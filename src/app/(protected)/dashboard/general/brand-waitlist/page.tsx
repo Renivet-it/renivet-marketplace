@@ -1,4 +1,4 @@
-import { WaitlistTable } from "@/components/dashboard/brand-waitlist";
+import { WaitlistTable } from "@/components/dashboard/general/brand-waitlist";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { waitlistQueries } from "@/lib/db/queries";

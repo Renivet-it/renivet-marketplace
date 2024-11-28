@@ -25,10 +25,10 @@ interface PageProps {
 export function RoleDeleteModal({ role, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
 
-    const { refetch } = trpc.roles.getRoles.useQuery();
+    const { refetch } = trpc.general.roles.getRoles.useQuery();
 
     const { mutate: deleteRole, isPending: isDeleting } =
-        trpc.roles.deleteRole.useMutation({
+        trpc.general.roles.deleteRole.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Deleting role...");
                 return { toastId };
@@ -53,21 +53,8 @@ export function RoleDeleteModal({ role, isOpen, setIsOpen }: PageProps) {
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                         Deleting this role will remove it from the platform.
-                        This action cannot be undone.
-                        {role.users > 0 && (
-                            <>
-                                <br />
-                                <br />
-                                <span>
-                                    {" "}
-                                    This role is currently assigned to{" "}
-                                    <strong>{role.users}</strong> user
-                                    {role.users > 1 ? "s" : ""}. If you delete
-                                    this role, the users will be unassigned from
-                                    this role.
-                                </span>
-                            </>
-                        )}
+                        This action cannot be undone. If this role is assigned
+                        to any users, they will loose access to the role.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 

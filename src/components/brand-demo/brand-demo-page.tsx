@@ -90,7 +90,7 @@ export function BrandDemoPage({
     });
 
     const { mutateAsync: addDemoAsync } =
-        trpc.brandsWaitlist.addBrandsWaitlistDemo.useMutation();
+        trpc.general.brandsWaitlist.addBrandsWaitlistDemo.useMutation();
 
     const { mutate: addDemo, isPending: isDemoAdding } = useMutation({
         onMutate: () => {

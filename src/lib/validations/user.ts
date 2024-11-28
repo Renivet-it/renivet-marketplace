@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { addressSchema } from "./address";
+import { brandSchema } from "./brand";
 import { roleSchema } from "./role";
 
 export const userSchema = z.object({
@@ -48,17 +49,28 @@ export const userSchema = z.object({
         required_error: "Is verified is required",
         invalid_type_error: "Is verified must be a boolean",
     }),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
-    }),
-    updatedAt: z.date({
-        required_error: "Updated at is required",
-        invalid_type_error: "Updated at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
 });
 
-export const userWithAddressesAndRolesSchema = userSchema.extend({
+export const safeUserSchema = userSchema.omit({
+    email: true,
+    phone: true,
+    isEmailVerified: true,
+    isPhoneVerified: true,
+});
+
+export const userWithAddressesRolesAndBrandSchema = userSchema.extend({
     roles: z.array(
         roleSchema.omit({
             createdAt: true,
@@ -71,29 +83,10 @@ export const userWithAddressesAndRolesSchema = userSchema.extend({
             updatedAt: true,
         })
     ),
+    brand: brandSchema.nullable(),
 });
 
-export const safeUserSchema = userSchema.omit({
-    email: true,
-    phone: true,
-    isEmailVerified: true,
-    isPhoneVerified: true,
-});
-
-export const cachedUserSchema = userWithAddressesAndRolesSchema.extend({
-    createdAt: z
-        .string({
-            required_error: "Created at is required",
-            invalid_type_error: "Created at must be a string",
-        })
-        .transform((x) => new Date(x)),
-    updatedAt: z
-        .string({
-            required_error: "Updated at is required",
-            invalid_type_error: "Updated at must be a string",
-        })
-        .transform((x) => new Date(x)),
-});
+export const cachedUserSchema = userWithAddressesRolesAndBrandSchema;
 
 export const updateUserGeneralSchema = userSchema
     .pick({
@@ -133,8 +126,8 @@ export const updateUserRolesSchema = z.object({
 });
 
 export type User = z.infer<typeof userSchema>;
-export type UserWithAddressesAndRoles = z.infer<
-    typeof userWithAddressesAndRolesSchema
+export type UserWithAddressesRolesAndBrand = z.infer<
+    typeof userWithAddressesRolesAndBrandSchema
 >;
 export type CachedUser = z.infer<typeof cachedUserSchema>;
 export type SafeUser = z.infer<typeof safeUserSchema>;

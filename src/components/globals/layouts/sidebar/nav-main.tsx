@@ -48,20 +48,21 @@ export function NavMain({
     return (
         <SidebarGroup className={cn("", className)} {...props}>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
+
             <SidebarMenu>
                 {items.map((item) => {
                     const Icon = item.icon && Icons[item.icon];
 
-                    const filteredItems = item.items?.filter((subItem) => {
-                        return hasPermission(
+                    const filteredItems = item.items?.filter((subItem) =>
+                        hasPermission(
                             userPermissions.sitePermissions,
                             [
                                 subItem.permissions ||
                                     BitFieldSitePermission.VIEW_PROTECTED_PAGES,
                             ],
                             "any"
-                        );
-                    });
+                        )
+                    );
                     if (!filteredItems?.length) return null;
 
                     return (
@@ -88,9 +89,7 @@ export function NavMain({
                                             >
                                                 <SidebarMenuSubButton asChild>
                                                     <Link href={subItem.url}>
-                                                        <span>
-                                                            {subItem.title}
-                                                        </span>
+                                                        {subItem.title}
                                                     </Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>

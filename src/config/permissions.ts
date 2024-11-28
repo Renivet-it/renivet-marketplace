@@ -134,20 +134,30 @@ export const brandPermissions: Permission[] = [
         bit: 1 << 20,
     },
     {
+        name: "MANAGE_INVITES",
+        description: "Create, edit, or delete invites for team members",
+        bit: 1 << 21,
+    },
+    {
+        name: "MANAGE_ROLES",
+        description: "Create, edit, or delete roles and assign permissions",
+        bit: 1 << 22,
+    },
+    {
         name: "VIEW_ORDERS",
         description: "Access order information and analytics",
-        bit: 1 << 21,
+        bit: 1 << 23,
     },
     {
         name: "MANAGE_BRANDING",
         description: "Edit brand colors, logo, and other branding elements",
-        bit: 1 << 22,
+        bit: 1 << 24,
     },
     {
         name: "ADMINISTRATOR",
         description:
             "Access to all brand functions, including critical administrative tasks",
-        bit: 1 << 23,
+        bit: 1 << 25,
     },
 ];
 
@@ -156,7 +166,9 @@ export enum BitFieldBrandPermission {
     MANAGE_TEAM = 1 << 18,
     MANAGE_PRODUCTS = 1 << 19,
     MANAGE_DISCOUNTS = 1 << 20,
-    VIEW_ORDERS = 1 << 21,
-    MANAGE_BRANDING = 1 << 22,
-    ADMINISTRATOR = 1 << 23,
+    MANAGE_INVITES = 1 << 21,
+    MANAGE_ROLES = 1 << 22,
+    VIEW_ORDERS = 1 << 23,
+    MANAGE_BRANDING = 1 << 24,
+    ADMINISTRATOR = 1 << 25,
 }

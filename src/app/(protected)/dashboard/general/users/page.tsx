@@ -1,4 +1,4 @@
-import { UsersTable } from "@/components/dashboard/users";
+import { UsersTable } from "@/components/dashboard/general/users";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { userQueries } from "@/lib/db/queries";

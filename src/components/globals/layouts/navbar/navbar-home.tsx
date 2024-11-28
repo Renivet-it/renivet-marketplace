@@ -49,7 +49,7 @@ export function NavbarHome() {
         else setIsMenuHidden(false);
     });
 
-    const { data: user } = trpc.users.currentUser.useQuery();
+    const { data: user } = trpc.general.users.currentUser.useQuery();
 
     const userPermissions = useMemo(() => {
         if (!user)
@@ -64,8 +64,8 @@ export function NavbarHome() {
         () =>
             hasPermission(userPermissions.sitePermissions, [
                 BitFieldSitePermission.VIEW_PROTECTED_PAGES,
-            ]),
-        [userPermissions.sitePermissions]
+            ]) || !!user?.brand,
+        [userPermissions.sitePermissions, user?.brand]
     );
 
     const { signOut } = useAuth();

@@ -1,7 +1,8 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { cFetch } from "./lib/utils";
-import { ResponseData } from "./lib/validations";
+import { generalSidebarConfig, generateBrandSideNav } from "./config/site";
+import { cFetch, getUserPermissions, hasPermission } from "./lib/utils";
+import { CachedUser, ResponseData } from "./lib/validations";
 
 export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
@@ -28,7 +29,7 @@ export default clerkMiddleware(async (auth, req) => {
             path: url.pathname,
         });
 
-        const res = await cFetch<ResponseData>(
+        const res = await cFetch<ResponseData<CachedUser>>(
             new URL(
                 `/api/permission?${searchParams.toString()}`,
                 url
@@ -36,15 +37,102 @@ export default clerkMiddleware(async (auth, req) => {
         );
         if (res.error) return NextResponse.redirect(new URL("/", url));
 
-        if (
-            url.pathname === "/dashboard/general" ||
-            url.pathname === "/dashboard/brand"
-        )
-            return NextResponse.redirect(new URL("/dashboard", url));
+        if (url.pathname.startsWith("/dashboard")) {
+            const existingUser = res.data!.data!;
+            const { brandPermissions, sitePermissions } = getUserPermissions(
+                existingUser.roles
+            );
+
+            if (url.pathname === "/dashboard") {
+                if (existingUser.brand) {
+                    return NextResponse.redirect(
+                        new URL(
+                            `/dashboard/brands/${existingUser.brand.id}`,
+                            url
+                        )
+                    );
+                } else
+                    return NextResponse.redirect(
+                        new URL("/dashboard/general", url)
+                    );
+            }
+
+            if (url.pathname.startsWith("/dashboard/general")) {
+                const routes = generalSidebarConfig
+                    .map((item) => item.items.map((subItem) => subItem))
+                    .flat();
+
+                if (url.pathname !== "/dashboard/general") {
+                    const accessedRoute = routes.find((route) =>
+                        url.pathname.startsWith(route.url)
+                    );
+                    if (!accessedRoute)
+                        return NextResponse.redirect(
+                            new URL("/dashboard", url)
+                        );
+
+                    const isAuthorized = hasPermission(sitePermissions, [
+                        accessedRoute.permissions,
+                    ]);
+                    if (!isAuthorized)
+                        return NextResponse.redirect(
+                            new URL("/dashboard", url)
+                        );
+                }
+            }
+
+            if (
+                url.pathname.startsWith("/dashboard/brands") &&
+                existingUser.brand
+            ) {
+                if (url.pathname === "/dashboard/brands")
+                    return NextResponse.redirect(
+                        new URL(
+                            `/dashboard/brands/${existingUser.brand.id}`,
+                            url
+                        )
+                    );
+
+                const routes = generateBrandSideNav(existingUser.brand.id)
+                    .map((item) => item.items.map((subItem) => subItem))
+                    .flat();
+
+                if (
+                    url.pathname !==
+                    `/dashboard/brands/${existingUser.brand.id}`
+                ) {
+                    const accessedRoute = routes.find((route) =>
+                        url.pathname.startsWith(route.url)
+                    );
+                    if (!accessedRoute)
+                        return NextResponse.redirect(
+                            new URL(
+                                `/dashboard/brands/${existingUser.brand.id}`,
+                                url
+                            )
+                        );
+
+                    const isAuthorized = hasPermission(brandPermissions, [
+                        accessedRoute.permissions,
+                    ]);
+                    if (!isAuthorized)
+                        return NextResponse.redirect(
+                            new URL(
+                                `/dashboard/brands/${existingUser.brand.id}`,
+                                url
+                            )
+                        );
+                }
+            }
+        }
     }
 
     if (!isAuth.sessionId)
-        if (url.pathname.startsWith("/dashboard"))
+        if (
+            url.pathname.startsWith("/dashboard") ||
+            url.pathname.startsWith("/profile") ||
+            url.pathname.startsWith("/become-a-seller")
+        )
             return NextResponse.redirect(new URL("/auth/signin", url));
 
     return res;
@@ -56,6 +144,7 @@ export const config = {
         "/(api(?!/webhooks/clerk)|trpc)(.*)",
         "/",
         "/dashboard/:path*",
+        "/profile/:path*",
         "/auth/:path*",
         "/become-a-seller",
     ],

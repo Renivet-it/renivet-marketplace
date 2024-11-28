@@ -13,6 +13,30 @@ declare global {
 
     type SvixHeaders = IncomingHttpHeaders & WebhookRequiredHeaders;
 
+    type GeneralSidebarConfig = {
+        title: string;
+        url: string;
+        icon: keyof typeof Icons;
+        isActive?: boolean;
+        items: {
+            title: string;
+            url: string;
+            permissions: number;
+        }[];
+    };
+
+    type BrandSidebarConfig = {
+        title: string;
+        url: string;
+        icon: keyof typeof Icons;
+        isActive?: boolean;
+        items: {
+            title: string;
+            url: string;
+            permissions: number;
+        }[];
+    };
+
     type SiteConfig = {
         name: string;
         description: string;

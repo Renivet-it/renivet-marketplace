@@ -23,7 +23,7 @@ export function AddressesPage({ className, ...props }: GenericProps) {
     const [selectedAddress, setSelectedAddress] =
         useState<Omit<Address, "createdAt" | "updatedAt">>();
 
-    const { data: user } = trpc.users.currentUser.useQuery();
+    const { data: user } = trpc.general.users.currentUser.useQuery();
     if (!user) return null;
 
     return (

@@ -1,8 +1,4 @@
-import {
-    BrandWithOwnerAndMembers,
-    brandWithOwnerAndMembersSchema,
-    CreateBrand,
-} from "@/lib/validations";
+import { CachedBrand, cachedBrandSchema, CreateBrand } from "@/lib/validations";
 import { desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { brands } from "../schema";
@@ -25,6 +21,12 @@ class BrandQuery {
                         member: true,
                     },
                 },
+                roles: {
+                    with: {
+                        role: true,
+                    },
+                },
+                invites: true,
             },
             where: !!search?.length
                 ? ilike(brands.name, `%${search}%`)
@@ -44,12 +46,12 @@ class BrandQuery {
             },
         });
 
-        const parsed: BrandWithOwnerAndMembers[] = data.map(
-            ({ members, ...rest }) =>
-                brandWithOwnerAndMembersSchema.parse({
-                    ...rest,
-                    members: members.map(({ member }) => member),
-                })
+        const parsed: CachedBrand[] = cachedBrandSchema.array().parse(
+            data.map(({ members, roles, ...rest }) => ({
+                ...rest,
+                members: members.map(({ member }) => member),
+                roles: roles.map(({ role }) => role),
+            }))
         );
 
         return {
@@ -63,11 +65,27 @@ class BrandQuery {
             where: eq(brands.id, id),
             with: {
                 owner: true,
-                members: true,
+                members: {
+                    with: {
+                        member: true,
+                    },
+                },
+                roles: {
+                    with: {
+                        role: true,
+                    },
+                },
+                invites: true,
+                bannedMembers: true,
             },
         });
+        if (!data) return null;
 
-        return brandWithOwnerAndMembersSchema.parse(data);
+        return cachedBrandSchema.parse({
+            ...data,
+            members: data.members.map(({ member }) => member),
+            roles: data.roles.map(({ role }) => role),
+        });
     }
 
     async createBrand(values: CreateBrand) {

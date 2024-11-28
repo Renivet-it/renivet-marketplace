@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 
 export function SecurityPage({ className, ...props }: GenericProps) {
-    const { data: user } = trpc.users.currentUser.useQuery();
+    const { data: user } = trpc.general.users.currentUser.useQuery();
     if (!user) return null;
 
     return (

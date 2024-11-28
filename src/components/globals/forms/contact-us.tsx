@@ -31,7 +31,7 @@ export function ContactUsForm() {
     });
 
     const { mutate: sendMessage, isPending } =
-        trpc.tickets.createTicket.useMutation({
+        trpc.general.tickets.createTicket.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Sending message...");
                 return { toastId };

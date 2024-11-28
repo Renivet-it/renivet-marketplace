@@ -32,14 +32,14 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
         defaultValue: "",
     });
 
-    const { refetch } = trpc.content.banners.getBanners.useQuery({
+    const { refetch } = trpc.general.content.banners.getBanners.useQuery({
         page,
         limit,
         search,
     });
 
     const { mutate: updateBannerStatus, isPending: isUpdating } =
-        trpc.content.banners.changeStatus.useMutation({
+        trpc.general.content.banners.changeStatus.useMutation({
             onMutate: ({ isActive }) => {
                 const toastId = toast.loading(
                     !isActive

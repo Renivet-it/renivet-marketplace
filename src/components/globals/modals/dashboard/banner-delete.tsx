@@ -32,14 +32,14 @@ export function BannerDeleteModal({ banner, isOpen, setIsOpen }: PageProps) {
         defaultValue: "",
     });
 
-    const { refetch } = trpc.content.banners.getBanners.useQuery({
+    const { refetch } = trpc.general.content.banners.getBanners.useQuery({
         page,
         limit,
         search,
     });
 
     const { mutate: deleteBanner, isPending: isDeleting } =
-        trpc.content.banners.deleteBanner.useMutation({
+        trpc.general.content.banners.deleteBanner.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Deleting banner...");
                 return { toastId };

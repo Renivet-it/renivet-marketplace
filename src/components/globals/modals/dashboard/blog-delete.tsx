@@ -36,7 +36,7 @@ export function BlogDeleteModal({ blog, isOpen, setIsOpen }: PageProps) {
         parseAsBoolean.withDefault(true)
     );
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({
+    const { refetch } = trpc.general.blogs.getBlogs.useQuery({
         page,
         limit,
         search,
@@ -44,7 +44,7 @@ export function BlogDeleteModal({ blog, isOpen, setIsOpen }: PageProps) {
     });
 
     const { mutate: deleteBlog, isPending: isDeleting } =
-        trpc.blogs.deleteBlog.useMutation({
+        trpc.general.blogs.deleteBlog.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Deleting blog...");
                 return { toastId };

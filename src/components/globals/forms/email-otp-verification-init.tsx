@@ -66,7 +66,7 @@ export function EmailOTPVerificationInitForm() {
                     session: signUpAttempt.createdSessionId,
                 });
                 toast.success(
-                    `Hey, ${signUpAttempt.firstName}, Welcome to ${siteConfig.name}!`,
+                    `Hey ${signUpAttempt.firstName}, Welcome to ${siteConfig.name}!`,
                     { id: toastId }
                 );
                 router.push("/");

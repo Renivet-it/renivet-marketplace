@@ -15,7 +15,7 @@ import { handleClientError } from "@/lib/utils";
 import {
     UpdateUserEmail,
     updateUserEmailSchema,
-    UserWithAddressesAndRoles,
+    UserWithAddressesRolesAndBrand,
 } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { UserEmailVerifyModal } from "../modals";
 
 interface PageProps {
-    user: UserWithAddressesAndRoles;
+    user: UserWithAddressesRolesAndBrand;
 }
 
 export function UserEmailUpdateForm({ user }: PageProps) {

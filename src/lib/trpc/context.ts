@@ -1,17 +1,10 @@
 import { db } from "@/lib/db";
-import * as schema from "@/lib/db/schema";
-import { userCache } from "@/lib/redis/methods";
-import { UserWithAddressesAndRoles } from "@/lib/validations";
 import {
-    SignedInAuthObject,
-    SignedOutAuthObject,
-} from "@clerk/backend/internal";
-import { auth as clerkAuth } from "@clerk/nextjs/server";
-import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
-import { NextRequest } from "next/server";
-import {
+    bannedBrandMemberQueries,
     bannerQueries,
     blogQueries,
+    brandInviteQueries,
+    brandMemberQueries,
     brandQueries,
     brandRequestQueries,
     roleQueries,
@@ -20,12 +13,22 @@ import {
     ticketQueries,
     userQueries,
     waitlistQueries,
-} from "../db/queries";
+} from "@/lib/db/queries";
+import * as schema from "@/lib/db/schema";
+import { userCache } from "@/lib/redis/methods";
+import { UserWithAddressesRolesAndBrand } from "@/lib/validations";
+import {
+    SignedInAuthObject,
+    SignedOutAuthObject,
+} from "@clerk/backend/internal";
+import { auth as clerkAuth } from "@clerk/nextjs/server";
+import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
+import { NextRequest } from "next/server";
 
 type ContextProps = {
     req: NextRequest | Request;
     auth: SignedInAuthObject | SignedOutAuthObject | null;
-    user: UserWithAddressesAndRoles | null;
+    user: UserWithAddressesRolesAndBrand | null;
 };
 
 export const createContextInner = ({ req, auth, user }: ContextProps) => {
@@ -36,8 +39,11 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
         user,
         schemas: schema,
         queries: {
+            bannedBrandMembers: bannedBrandMemberQueries,
             banners: bannerQueries,
             blogs: blogQueries,
+            brandInvites: brandInviteQueries,
+            brandMembers: brandMemberQueries,
             brands: brandQueries,
             brandRequests: brandRequestQueries,
             roles: roleQueries,
@@ -55,7 +61,7 @@ export const createContext = async ({
 }: FetchCreateContextFnOptions & {
     req: NextRequest | Request;
 }) => {
-    let user: UserWithAddressesAndRoles | null = null;
+    let user: UserWithAddressesRolesAndBrand | null = null;
 
     const auth = await clerkAuth();
 

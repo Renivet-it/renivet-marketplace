@@ -1,6 +1,6 @@
 "use client";
 
-import { TableTag } from "@/components/dashboard/tags";
+import { TableTag } from "@/components/dashboard/general/tags";
 import { TagManageForm } from "@/components/globals/forms";
 import {
     Dialog,

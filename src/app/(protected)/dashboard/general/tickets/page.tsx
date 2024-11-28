@@ -1,4 +1,4 @@
-import { TicketsTable } from "@/components/dashboard/tickets";
+import { TicketsTable } from "@/components/dashboard/general/tickets";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { ticketQueries } from "@/lib/db/queries";

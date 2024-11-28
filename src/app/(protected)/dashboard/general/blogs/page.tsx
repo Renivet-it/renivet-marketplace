@@ -1,4 +1,4 @@
-import { BlogsTable } from "@/components/dashboard/blogs";
+import { BlogsTable } from "@/components/dashboard/general/blogs";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";

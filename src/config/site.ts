@@ -1,4 +1,5 @@
 import { getAbsoluteURL } from "@/lib/utils";
+import { BitFieldBrandPermission, BitFieldSitePermission } from "./permissions";
 
 export const siteConfig: SiteConfig = {
     name: "Renivet",
@@ -142,3 +143,225 @@ export const siteConfig: SiteConfig = {
         ],
     },
 };
+
+export const generalSidebarConfig: GeneralSidebarConfig[] = [
+    {
+        title: "Dashboard",
+        url: "#",
+        icon: "LayoutDashboard",
+        items: [
+            {
+                title: "Analytics",
+                url: "/dashboard/general/analytics",
+                permissions:
+                    BitFieldSitePermission.VIEW_ANALYTICS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+            {
+                title: "Reports",
+                url: "/dashboard/general/reports",
+                permissions:
+                    BitFieldSitePermission.VIEW_ANALYTICS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+            {
+                title: "Metrics",
+                url: "/dashboard/general/metrics",
+                permissions:
+                    BitFieldSitePermission.VIEW_ANALYTICS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+            {
+                title: "Logs",
+                url: "/dashboard/general/logs",
+                permissions:
+                    BitFieldSitePermission.VIEW_ANALYTICS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+        ],
+    },
+    {
+        title: "Content",
+        url: "#",
+        icon: "BookOpen",
+        items: [
+            {
+                title: "Banners",
+                url: "/dashboard/general/banners",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "About",
+                url: "/dashboard/general/about",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Blogs",
+                url: "/dashboard/general/blogs",
+                permissions: BitFieldSitePermission.MANAGE_BLOGS,
+            },
+        ],
+    },
+    {
+        title: "Management",
+        url: "#",
+        icon: "Settings2",
+        items: [
+            {
+                title: "Users",
+                url: "/dashboard/general/users",
+                permissions:
+                    BitFieldSitePermission.VIEW_USERS |
+                    BitFieldSitePermission.MANAGE_USERS,
+            },
+            {
+                title: "Brands",
+                url: "/dashboard/general/brands",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_BRANDS,
+            },
+            {
+                title: "Roles",
+                url: "/dashboard/general/roles",
+                permissions:
+                    BitFieldSitePermission.MANAGE_ROLES |
+                    BitFieldSitePermission.VIEW_ROLES,
+            },
+            {
+                title: "Tags",
+                url: "/dashboard/general/tags",
+                permissions: BitFieldSitePermission.MANAGE_BLOG_TAGS,
+            },
+            {
+                title: "Tickets",
+                url: "/dashboard/general/tickets",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Subscribers",
+                url: "/dashboard/general/subscribers",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.VIEW_SETTINGS,
+            },
+            {
+                title: "Waitlist",
+                url: "/dashboard/general/brand-waitlist",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.VIEW_SETTINGS,
+            },
+        ],
+    },
+    {
+        title: "Products",
+        url: "#",
+        icon: "Package",
+        items: [
+            {
+                title: "Categories",
+                url: "/dashboard/general/categories",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
+            {
+                title: "Sub Categories",
+                url: "/dashboard/general/sub-categories",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
+            {
+                title: "Product Types",
+                url: "/dashboard/general/product-types",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
+        ],
+    },
+];
+
+export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
+    return [
+        {
+            title: "Dashboard",
+            url: "#",
+            icon: "LayoutDashboard",
+            items: [
+                {
+                    title: "Analytics",
+                    url: `/dashboard/brands/${brandId}/analytics`,
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                },
+                {
+                    title: "Reports",
+                    url: `/dashboard/brands/${brandId}/reports`,
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                },
+                {
+                    title: "Metrics",
+                    url: `/dashboard/brands/${brandId}/metrics`,
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                },
+                {
+                    title: "Logs",
+                    url: `/dashboard/brands/${brandId}/logs`,
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                },
+            ],
+        },
+        {
+            title: "Management",
+            url: "#",
+            icon: "Settings2",
+            items: [
+                {
+                    title: "Invites",
+                    url: `/dashboard/brands/${brandId}/invites`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Roles",
+                    url: `/dashboard/brands/${brandId}/roles`,
+                    permissions: BitFieldBrandPermission.MANAGE_ROLES,
+                },
+                {
+                    title: "Members",
+                    url: `/dashboard/brands/${brandId}/members`,
+                    permissions: BitFieldBrandPermission.MANAGE_TEAM,
+                },
+                {
+                    title: "Bans",
+                    url: `/dashboard/brands/${brandId}/bans`,
+                    permissions: BitFieldBrandPermission.MANAGE_TEAM,
+                },
+            ],
+        },
+        {
+            title: "Store",
+            url: "#",
+            icon: "Store",
+            items: [
+                {
+                    title: "Page",
+                    url: `/dashboard/brands/${brandId}/page`,
+                    permissions: BitFieldBrandPermission.MANAGE_BRANDING,
+                },
+                {
+                    title: "Products",
+                    url: `/dashboard/brands/${brandId}/products`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Orders",
+                    url: `/dashboard/brands/${brandId}/orders`,
+                    permissions: BitFieldBrandPermission.VIEW_ORDERS,
+                },
+                {
+                    title: "Coupons",
+                    url: `/dashboard/brands/${brandId}/coupons`,
+                    permissions: BitFieldBrandPermission.MANAGE_DISCOUNTS,
+                },
+            ],
+        },
+    ];
+}

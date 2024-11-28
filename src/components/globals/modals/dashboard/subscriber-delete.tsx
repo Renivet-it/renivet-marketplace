@@ -37,28 +37,30 @@ export function SubscriberDeleteModal({
     });
 
     const { refetch } =
-        trpc.newsletterSubscribers.getNewsletterSubscribers.useQuery({
+        trpc.general.newsletterSubscribers.getNewsletterSubscribers.useQuery({
             page,
             limit,
             search,
         });
 
     const { mutate: deleteSubscriber, isPending: isDeleting } =
-        trpc.newsletterSubscribers.deleteNewsletterSubscriber.useMutation({
-            onMutate: () => {
-                const toastId = toast.loading("Deleting subscriber...");
-                return { toastId };
-            },
-            onSuccess: (_, __, { toastId }) => {
-                toast.success("Subscriber deleted", { id: toastId });
-                setIsOpen(false);
-                router.refresh();
-                refetch();
-            },
-            onError: (err, _, ctx) => {
-                return handleClientError(err, ctx?.toastId);
-            },
-        });
+        trpc.general.newsletterSubscribers.deleteNewsletterSubscriber.useMutation(
+            {
+                onMutate: () => {
+                    const toastId = toast.loading("Deleting subscriber...");
+                    return { toastId };
+                },
+                onSuccess: (_, __, { toastId }) => {
+                    toast.success("Subscriber deleted", { id: toastId });
+                    setIsOpen(false);
+                    router.refresh();
+                    refetch();
+                },
+                onError: (err, _, ctx) => {
+                    return handleClientError(err, ctx?.toastId);
+                },
+            }
+        );
 
     return (
         <AlertDialog open={isOpen} onOpenChange={setIsOpen}>

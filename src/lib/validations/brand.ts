@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
+import { bannedBrandMemberSchema } from "./banned-brand-member";
+import { brandInviteSchema } from "./brand-invite";
+import { roleSchema } from "./role";
 import { safeUserSchema } from "./user";
 
 export const brandSchema = z.object({
@@ -50,14 +53,18 @@ export const brandSchema = z.object({
             })
             .nullable()
     ),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
-    }),
-    updatedAt: z.date({
-        required_error: "Updated at is required",
-        invalid_type_error: "Updated at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
 });
 
 export const createBrandSchema = brandSchema.omit({
@@ -66,13 +73,35 @@ export const createBrandSchema = brandSchema.omit({
     updatedAt: true,
 });
 
-export const brandWithOwnerAndMembersSchema = brandSchema.extend({
-    owner: safeUserSchema,
-    members: z.array(safeUserSchema),
-});
+export const brandWithOwnerMembersAndRolesSchema = z.lazy(() =>
+    brandSchema.extend({
+        owner: safeUserSchema,
+        members: z.array(safeUserSchema),
+        roles: z.array(
+            roleSchema.omit({
+                isSiteRole: true,
+            })
+        ),
+    })
+);
+
+export const cachedBrandSchema = z.lazy(() =>
+    brandSchema.extend({
+        owner: safeUserSchema,
+        members: z.array(safeUserSchema),
+        roles: z.array(
+            roleSchema.omit({
+                isSiteRole: true,
+            })
+        ),
+        invites: brandInviteSchema.array(),
+        bannedMembers: bannedBrandMemberSchema.array(),
+    })
+);
 
 export type Brand = z.infer<typeof brandSchema>;
 export type CreateBrand = z.infer<typeof createBrandSchema>;
-export type BrandWithOwnerAndMembers = z.infer<
-    typeof brandWithOwnerAndMembersSchema
+export type BrandWithOwnerMembersAndRoles = z.infer<
+    typeof brandWithOwnerMembersAndRolesSchema
 >;
+export type CachedBrand = z.infer<typeof cachedBrandSchema>;

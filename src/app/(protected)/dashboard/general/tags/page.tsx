@@ -1,4 +1,4 @@
-import { TagsPage, TagsTable } from "@/components/dashboard/tags";
+import { TagsPage, TagsTable } from "@/components/dashboard/general/tags";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { tagCache } from "@/lib/redis/methods";
