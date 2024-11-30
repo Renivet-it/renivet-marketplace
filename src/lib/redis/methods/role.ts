@@ -30,6 +30,7 @@ class RoleCache {
             await this.addBulk(cachedRoles);
             return cachedRoles;
         }
+        if (!keys.length) return [];
 
         const cachedRoles = await redis.mget(...keys);
         return cachedRoleSchema

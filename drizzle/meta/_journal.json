@@ -176,6 +176,20 @@
       "when": 1732608364135,
       "tag": "0024_steady_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1732879890082,
+      "tag": "0025_fixed_marvel_zombies",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1732969064144,
+      "tag": "0026_fast_bill_hollister",
+      "breakpoints": true
     }
   ]
 }
