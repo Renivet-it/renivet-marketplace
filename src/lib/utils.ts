@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ValidationError, WebhookVerificationError } from "svix";
 import { twMerge } from "tailwind-merge";
 import { ZodError } from "zod";
-import { Address, CachedUser, ResponseMessages } from "./validations";
+import { Address, ResponseMessages, Role } from "./validations";
 
 export function wait(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -271,13 +271,13 @@ export function convertBitToString(bit: number): string {
 }
 
 export function hasPermission(
-    userPermissions: number,
+    permissions: number,
     requiredPermissions: number[],
     type: "all" | "any" = "all"
 ) {
     if (requiredPermissions.length === 0) return false;
-    if (userPermissions & BitFieldSitePermission.ADMINISTRATOR) return true;
-    if (userPermissions & BitFieldBrandPermission.ADMINISTRATOR) return true;
+    if (permissions & BitFieldSitePermission.ADMINISTRATOR) return true;
+    if (permissions & BitFieldBrandPermission.ADMINISTRATOR) return true;
 
     const requiredBitmask = requiredPermissions.reduce(
         (acc, permission) => acc | permission,
@@ -285,11 +285,13 @@ export function hasPermission(
     );
 
     return type === "all"
-        ? (userPermissions & requiredBitmask) === requiredBitmask
-        : (userPermissions & requiredBitmask) !== 0;
+        ? (permissions & requiredBitmask) === requiredBitmask
+        : (permissions & requiredBitmask) !== 0;
 }
 
-export function getUserPermissions(roles: CachedUser["roles"]) {
+export function getUserPermissions(
+    roles: Omit<Role, "isSiteRole" | "createdAt" | "updatedAt">[]
+) {
     return {
         sitePermissions: roles.reduce(
             (acc, role) => acc | parseInt(role.sitePermissions, 10),
@@ -365,4 +367,8 @@ export function convertBytesToHumanReadable(bytes: number) {
 
 export function convertEmptyStringToNull(data: unknown) {
     return typeof data === "string" && data === "" ? null : data;
+}
+
+export function generateBrandRoleSlug(roleName: string, brandId: string) {
+    return slugify(`${roleName} ${brandId}`);
 }

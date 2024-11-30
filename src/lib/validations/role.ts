@@ -31,19 +31,28 @@ export const roleSchema = z.object({
         required_error: "Brand permissions is required",
         invalid_type_error: "Brand permissions must be a string",
     }),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
+    isSiteRole: z.boolean({
+        required_error: "Is site role is required",
+        invalid_type_error: "Is site role must be a boolean",
     }),
-    updatedAt: z.date({
-        required_error: "Updated at is required",
-        invalid_type_error: "Updated at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
 });
 
 export const createRoleSchema = roleSchema.omit({
     id: true,
     slug: true,
+    isSiteRole: true,
     position: true,
     createdAt: true,
     updatedAt: true,

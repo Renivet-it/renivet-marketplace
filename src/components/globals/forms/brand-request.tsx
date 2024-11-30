@@ -85,7 +85,7 @@ export function BrandRequestForm() {
     });
 
     const { mutateAsync: createRequestAsync } =
-        trpc.brands.requests.createRequest.useMutation();
+        trpc.general.brands.requests.createRequest.useMutation();
 
     const { mutate: sendRequest, isPending: isRequestSending } = useMutation({
         onMutate: () => {

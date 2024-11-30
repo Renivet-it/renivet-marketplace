@@ -1,7 +1,6 @@
 import { tagQueries } from "@/lib/db/queries";
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
-import { CachedTag, cachedTagSchema, tagSchema } from "@/lib/validations";
-import { z } from "zod";
+import { CachedTag, cachedTagSchema } from "@/lib/validations";
 import { redis } from "..";
 
 class TagCache {
@@ -23,21 +22,17 @@ class TagCache {
             const dbTags = await tagQueries.getTags();
             if (!dbTags.length) return [];
 
-            const cachedTags = tagSchema
-                .extend({
-                    blogs: z.number(),
-                })
-                .array()
-                .parse(
-                    dbTags.map((tag) => ({
-                        ...tag,
-                        blogs: tag.blogTags.length,
-                    }))
-                );
+            const cachedTags = cachedTagSchema.array().parse(
+                dbTags.map((tag) => ({
+                    ...tag,
+                    blogs: tag.blogTags.length,
+                }))
+            );
 
             await this.addBulk(cachedTags);
             return cachedTags;
         }
+        if (!keys.length) return [];
 
         const cachedTags = await redis.mget(...keys);
         return cachedTagSchema
@@ -59,14 +54,10 @@ class TagCache {
             const dbTag = await tagQueries.getTag(id);
             if (!dbTag) return null;
 
-            cachedTag = tagSchema
-                .extend({
-                    blogs: z.number(),
-                })
-                .parse({
-                    ...dbTag,
-                    blogs: dbTag.blogTags.length,
-                });
+            cachedTag = cachedTagSchema.parse({
+                ...dbTag,
+                blogs: dbTag.blogTags.length,
+            });
 
             await this.add(cachedTag);
         }

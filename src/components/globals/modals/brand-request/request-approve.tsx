@@ -36,7 +36,7 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
             "rejected",
         ] as const).withDefault("pending")
     );
-    const { refetch } = trpc.brands.requests.getRequests.useQuery({
+    const { refetch } = trpc.general.brands.requests.getRequests.useQuery({
         page,
         limit,
         search,
@@ -44,7 +44,7 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
     });
 
     const { mutate: approveRequest, isPending: isRequestApproving } =
-        trpc.brands.requests.updateRequestStatus.useMutation({
+        trpc.general.brands.requests.updateRequestStatus.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Approving brand request...");
                 return { toastId };

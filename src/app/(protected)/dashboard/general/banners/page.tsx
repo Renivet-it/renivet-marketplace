@@ -1,4 +1,4 @@
-import { BannersTable } from "@/components/dashboard/banners";
+import { BannersTable } from "@/components/dashboard/general/banners";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";

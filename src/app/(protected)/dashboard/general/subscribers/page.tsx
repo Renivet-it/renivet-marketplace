@@ -1,4 +1,4 @@
-import { SubscribersTable } from "@/components/dashboard/subscribers";
+import { SubscribersTable } from "@/components/dashboard/general/subscribers";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { subscriberQueries } from "@/lib/db/queries";

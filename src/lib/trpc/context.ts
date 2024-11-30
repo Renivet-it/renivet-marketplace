@@ -1,7 +1,25 @@
 import { db } from "@/lib/db";
+import {
+    bannedBrandMemberQueries,
+    bannerQueries,
+    blogQueries,
+    brandInviteQueries,
+    brandMemberQueries,
+    brandQueries,
+    brandRequestQueries,
+    categoryQueries,
+    productTypeQueries,
+    roleQueries,
+    subCategoryQueries,
+    subscriberQueries,
+    tagQueries,
+    ticketQueries,
+    userQueries,
+    waitlistQueries,
+} from "@/lib/db/queries";
 import * as schema from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
-import { UserWithAddressesAndRoles } from "@/lib/validations";
+import { UserWithAddressesRolesAndBrand } from "@/lib/validations";
 import {
     SignedInAuthObject,
     SignedOutAuthObject,
@@ -9,23 +27,11 @@ import {
 import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import { NextRequest } from "next/server";
-import {
-    bannerQueries,
-    blogQueries,
-    brandQueries,
-    brandRequestQueries,
-    roleQueries,
-    subscriberQueries,
-    tagQueries,
-    ticketQueries,
-    userQueries,
-    waitlistQueries,
-} from "../db/queries";
 
 type ContextProps = {
     req: NextRequest | Request;
     auth: SignedInAuthObject | SignedOutAuthObject | null;
-    user: UserWithAddressesAndRoles | null;
+    user: UserWithAddressesRolesAndBrand | null;
 };
 
 export const createContextInner = ({ req, auth, user }: ContextProps) => {
@@ -36,11 +42,17 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
         user,
         schemas: schema,
         queries: {
+            bannedBrandMembers: bannedBrandMemberQueries,
             banners: bannerQueries,
             blogs: blogQueries,
+            brandInvites: brandInviteQueries,
+            brandMembers: brandMemberQueries,
             brands: brandQueries,
             brandRequests: brandRequestQueries,
+            categories: categoryQueries,
+            productTypes: productTypeQueries,
             roles: roleQueries,
+            subCategories: subCategoryQueries,
             newsletterSubscribers: subscriberQueries,
             tags: tagQueries,
             tickets: ticketQueries,
@@ -55,7 +67,7 @@ export const createContext = async ({
 }: FetchCreateContextFnOptions & {
     req: NextRequest | Request;
 }) => {
-    let user: UserWithAddressesAndRoles | null = null;
+    let user: UserWithAddressesRolesAndBrand | null = null;
 
     const auth = await clerkAuth();
 

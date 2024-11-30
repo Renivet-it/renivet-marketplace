@@ -7,9 +7,13 @@ import LucideIcons, {
     AudioWaveform,
     BookOpen,
     Bot,
+    Calendar,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     ChevronUp,
+    CircleCheck,
+    Clipboard,
     CloudUpload,
     Command,
     Cookie,
@@ -27,6 +31,7 @@ import LucideIcons, {
     GalleryVerticalEnd,
     Globe,
     GripVertical,
+    Hammer,
     Headset,
     Heart,
     Home,
@@ -77,6 +82,11 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Hammer,
+    CircleCheck,
+    Clipboard,
+    ChevronLeft,
+    Calendar,
     DollarSign,
     Download,
     Globe,

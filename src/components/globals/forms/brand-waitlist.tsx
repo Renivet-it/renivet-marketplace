@@ -43,7 +43,7 @@ export function BrandWaitlistForm({ setCurrentTab }: PageProps) {
     });
 
     const { mutate: addBrandToWaitlist, isPending } =
-        trpc.brandsWaitlist.createBrandsWaitlistEntry.useMutation({
+        trpc.general.brandsWaitlist.createBrandsWaitlistEntry.useMutation({
             onMutate: () => {
                 const toastId = toast.loading(
                     "Adding your brand to the waitlist..."

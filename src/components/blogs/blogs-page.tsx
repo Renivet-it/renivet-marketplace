@@ -45,7 +45,7 @@ export function BlogsPage({
 
     const {
         data: { data: blogs, count },
-    } = trpc.blogs.getBlogs.useQuery(
+    } = trpc.general.blogs.getBlogs.useQuery(
         {
             page,
             limit,

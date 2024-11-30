@@ -1,6 +1,6 @@
 "use client";
 
-import { TableTag } from "@/components/dashboard/tags";
+import { TableTag } from "@/components/dashboard/general/tags";
 import { Button } from "@/components/ui/button-dash";
 import { DialogClose, DialogFooter } from "@/components/ui/dialog-dash";
 import {
@@ -33,10 +33,10 @@ export function TagManageForm({ tag, setIsOpen }: PageProps) {
         },
     });
 
-    const { refetch } = trpc.tags.getTags.useQuery();
+    const { refetch } = trpc.general.tags.getTags.useQuery();
 
     const { mutate: createTag, isPending: isTagCreating } =
-        trpc.tags.createTag.useMutation({
+        trpc.general.tags.createTag.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Creating tag...");
                 return { toastId };
@@ -52,7 +52,7 @@ export function TagManageForm({ tag, setIsOpen }: PageProps) {
         });
 
     const { mutate: updateTag, isPending: isTagUpdating } =
-        trpc.tags.updateTag.useMutation({
+        trpc.general.tags.updateTag.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Updating tag...");
                 return { toastId };

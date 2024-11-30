@@ -1,4 +1,4 @@
-import { BrandsTable } from "@/components/dashboard/brands";
+import { BrandsTable } from "@/components/dashboard/general/brands";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";

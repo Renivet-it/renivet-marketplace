@@ -1,6 +1,6 @@
 "use client";
 
-import { TableTicket } from "@/components/dashboard/tickets";
+import { TableTicket } from "@/components/dashboard/general/tickets";
 import {
     Dialog,
     DialogContent,

@@ -10,6 +10,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
+import { brandRoles, roles } from "./role";
 import { users } from "./user";
 
 export const brandRequests = pgTable("brand_requests", {
@@ -68,8 +69,8 @@ export const brandInvites = pgTable(
                 onDelete: "cascade",
             }),
         expiresAt: timestamp("expires_at"),
-        maxUses: integer("max_uses").default(0),
-        uses: integer("uses").default(0),
+        maxUses: integer("max_uses").default(0).notNull(),
+        uses: integer("uses").default(0).notNull(),
         ...timestamps,
     },
     (table) => ({
@@ -100,6 +101,32 @@ export const brandMembers = pgTable(
     })
 );
 
+export const bannedBrandMembers = pgTable(
+    "banned_brand_members",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        memberId: text("member_id")
+            .notNull()
+            .references(() => users.id, {
+                onDelete: "cascade",
+            }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, {
+                onDelete: "cascade",
+            }),
+        reason: text("reason"),
+        bannedAt: timestamp("banned_at").notNull().defaultNow(),
+        ...timestamps,
+    },
+    (table) => ({
+        bannedMemberBrandIdx: index("banned_member_brand_index").on(
+            table.memberId,
+            table.brandId
+        ),
+    })
+);
+
 export const brandRequestRelations = relations(brandRequests, ({ one }) => ({
     owner: one(users, {
         fields: [brandRequests.ownerId],
@@ -114,6 +141,8 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     }),
     invites: many(brandInvites),
     members: many(brandMembers),
+    roles: many(brandRoles),
+    bannedMembers: many(bannedBrandMembers),
 }));
 
 export const brandInviteRelations = relations(brandInvites, ({ one }) => ({
@@ -133,3 +162,28 @@ export const brandMemberRelations = relations(brandMembers, ({ one }) => ({
         references: [brands.id],
     }),
 }));
+
+export const brandRolesRelations = relations(brandRoles, ({ one }) => ({
+    brand: one(brands, {
+        fields: [brandRoles.brandId],
+        references: [brands.id],
+    }),
+    role: one(roles, {
+        fields: [brandRoles.roleId],
+        references: [roles.id],
+    }),
+}));
+
+export const bannedBrandMemberRelations = relations(
+    bannedBrandMembers,
+    ({ one }) => ({
+        member: one(users, {
+            fields: [bannedBrandMembers.memberId],
+            references: [users.id],
+        }),
+        brand: one(brands, {
+            fields: [bannedBrandMembers.brandId],
+            references: [brands.id],
+        }),
+    })
+);

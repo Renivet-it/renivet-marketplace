@@ -5,12 +5,13 @@ import { roles } from "../schema";
 
 class RoleQuery {
     async getCount() {
-        const data = await db.$count(roles);
+        const data = await db.$count(roles, eq(roles.isSiteRole, true));
         return +data || 0;
     }
 
     async getRoles() {
         const data = await db.query.roles.findMany({
+            where: eq(roles.isSiteRole, true),
             with: {
                 userRoles: true,
             },
@@ -32,7 +33,7 @@ class RoleQuery {
 
     async getRoleBySlug(slug: string) {
         const data = await db.query.roles.findFirst({
-            where: eq(roles.slug, slug),
+            where: and(eq(roles.slug, slug), eq(roles.isSiteRole, true)),
         });
 
         return data;
@@ -40,7 +41,11 @@ class RoleQuery {
 
     async getOtherRole(slug: string, id: string) {
         const data = await db.query.roles.findFirst({
-            where: and(eq(roles.slug, slug), ne(roles.id, id)),
+            where: and(
+                eq(roles.slug, slug),
+                ne(roles.id, id),
+                eq(roles.isSiteRole, true)
+            ),
         });
 
         return data;

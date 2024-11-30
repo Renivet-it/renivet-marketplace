@@ -107,12 +107,16 @@ const errorHandler = t.middleware(async ({ next }) => {
     }
 });
 
-export const isTRPCAuth = (permission: number, type?: "all" | "any") =>
+export const isTRPCAuth = (
+    permission: number,
+    type?: "all" | "any",
+    permType?: "brand" | "site"
+) =>
     isAuth.unstable_pipe(({ ctx, next }) => {
         const { user } = ctx;
 
         const isAuthorized = hasPermission(
-            user.sitePermissions,
+            permType === "brand" ? user.brandPermissions : user.sitePermissions,
             [permission],
             type
         );

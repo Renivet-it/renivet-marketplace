@@ -7,9 +7,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 interface PageProps {
-    params: Promise<{
-        id: string;
-    }>;
+    params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({
@@ -53,7 +51,7 @@ async function RoleEditFetch({ params }: PageProps) {
     const existingRole = await roleCache.get(id);
     if (!existingRole) notFound();
 
-    return <RoleManageForm role={existingRole} />;
+    return <RoleManageForm role={existingRole} type="site" />;
 }
 
 function RoleEditSkeleton() {

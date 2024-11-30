@@ -1,4 +1,4 @@
-import { userWithAddressesAndRolesSchema } from "@/lib/validations";
+import { userWithAddressesRolesAndBrandSchema } from "@/lib/validations";
 import { desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { users } from "../schema";
@@ -24,6 +24,7 @@ class UserQuery {
                         role: true,
                     },
                 },
+                brand: true,
             },
             limit,
             offset: (page - 1) * limit,
@@ -40,10 +41,11 @@ class UserQuery {
             },
         });
 
-        const parsed = userWithAddressesAndRolesSchema.array().parse(
+        const parsed = userWithAddressesRolesAndBrandSchema.array().parse(
             data.map((user) => ({
                 ...user,
                 roles: user.roles.map((role) => role.role),
+                brand: user?.brand ?? null,
             }))
         );
 
@@ -63,13 +65,20 @@ class UserQuery {
                         role: true,
                     },
                 },
+                brand: true,
+                brandMember: {
+                    with: {
+                        brand: true,
+                    },
+                },
             },
         });
         if (!user) return null;
 
-        return userWithAddressesAndRolesSchema.parse({
+        return userWithAddressesRolesAndBrandSchema.parse({
             ...user,
             roles: user.roles.map((role) => role.role),
+            brand: user?.brand ?? user?.brandMember?.brand ?? null,
         });
     }
 }

@@ -32,7 +32,7 @@ import {
 export function NavUser() {
     const { isMobile } = useSidebar();
 
-    const { data: user, isPending } = trpc.users.currentUser.useQuery();
+    const { data: user, isPending } = trpc.general.users.currentUser.useQuery();
 
     return (
         <SidebarMenu>

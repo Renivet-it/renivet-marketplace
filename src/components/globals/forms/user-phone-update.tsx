@@ -15,7 +15,7 @@ import { handleClientError } from "@/lib/utils";
 import {
     UpdateUserPhone,
     updateUserPhoneSchema,
-    UserWithAddressesAndRoles,
+    UserWithAddressesRolesAndBrand,
 } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { UserPhoneVerifyModal } from "../modals";
 
 interface PageProps {
-    user: UserWithAddressesAndRoles;
+    user: UserWithAddressesRolesAndBrand;
 }
 
 export function UserPhoneUpdateForm({ user }: PageProps) {

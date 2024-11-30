@@ -1,6 +1,6 @@
 "use client";
 
-import { TableTicket } from "@/components/dashboard/tickets";
+import { TableTicket } from "@/components/dashboard/general/tickets";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -32,14 +32,14 @@ export function TicketDeleteModal({ ticket, isOpen, setIsOpen }: PageProps) {
         defaultValue: "",
     });
 
-    const { refetch } = trpc.tickets.getTickets.useQuery({
+    const { refetch } = trpc.general.tickets.getTickets.useQuery({
         page,
         limit,
         search,
     });
 
     const { mutate: deleteTicket, isPending: isDeleting } =
-        trpc.tickets.deleteTicket.useMutation({
+        trpc.general.tickets.deleteTicket.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Deleting ticket...");
                 return { toastId };

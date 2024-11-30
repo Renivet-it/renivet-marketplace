@@ -17,7 +17,7 @@ import { cn, handleClientError } from "@/lib/utils";
 import {
     UpdateUserGeneral,
     updateUserGeneralSchema,
-    UserWithAddressesAndRoles,
+    UserWithAddressesRolesAndBrand,
 } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -28,7 +28,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 interface PageProps {
-    user: UserWithAddressesAndRoles;
+    user: UserWithAddressesRolesAndBrand;
 }
 
 export function UserGeneralUpdateForm({ user }: PageProps) {

@@ -1,4 +1,4 @@
-import { BrandRequestsTable } from "@/components/dashboard/brand-requests";
+import { BrandRequestsTable } from "@/components/dashboard/general/brand-requests";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { brandRequestQueries } from "@/lib/db/queries";

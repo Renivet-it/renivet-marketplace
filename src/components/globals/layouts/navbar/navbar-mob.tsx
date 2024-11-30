@@ -137,7 +137,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
         else document.body.style.overflow = "auto";
     }, [isMenuOpen]);
 
-    const { data: user } = trpc.users.currentUser.useQuery();
+    const { data: user } = trpc.general.users.currentUser.useQuery();
 
     const userPermissions = useMemo(() => {
         if (!user)

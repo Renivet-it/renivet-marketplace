@@ -27,15 +27,18 @@ export async function GET(req: NextRequest) {
         let isAuthorized = true;
 
         if (path.startsWith("/dashboard")) {
-            isAuthorized = hasPermission(sitePermissions, [
-                BitFieldSitePermission.VIEW_PROTECTED_PAGES,
-            ]);
+            isAuthorized =
+                hasPermission(sitePermissions, [
+                    BitFieldSitePermission.VIEW_PROTECTED_PAGES,
+                ]) || !!existingUser.brand;
         }
 
         return CResponse({
             message: isAuthorized ? "OK" : "FORBIDDEN",
+            data: existingUser,
         });
     } catch (err) {
+        console.error(err);
         return handleError(err);
     }
 }

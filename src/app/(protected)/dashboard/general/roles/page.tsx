@@ -1,4 +1,4 @@
-import { RolesPage } from "@/components/dashboard/roles";
+import { RolesPage } from "@/components/dashboard/general/roles";
 import { DashShell } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
@@ -45,8 +45,10 @@ export default function Page() {
 async function RolesFetch() {
     const cachedRoles = await roleCache.getAll();
 
-    const initialRoles = cachedRoles.sort((a, b) => a.position - b.position);
-    return <RolesPage initialRoles={initialRoles} />;
+    const data = cachedRoles
+        .filter((role) => role.isSiteRole)
+        .sort((a, b) => a.position - b.position);
+    return <RolesPage initialData={data} />;
 }
 
 function RolesPageSkeleton() {

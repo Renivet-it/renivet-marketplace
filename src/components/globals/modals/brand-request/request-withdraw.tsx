@@ -30,7 +30,7 @@ export function RequestWithdrawModal({
     const router = useRouter();
 
     const { mutate: withdrawRequest, isPending: isRequestWithdrawing } =
-        trpc.brands.requests.deleteRequest.useMutation({
+        trpc.general.brands.requests.deleteRequest.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Withdrawing brand request...");
                 return { toastId };

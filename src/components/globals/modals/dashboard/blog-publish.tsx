@@ -36,7 +36,7 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
         parseAsBoolean.withDefault(true)
     );
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({
+    const { refetch } = trpc.general.blogs.getBlogs.useQuery({
         page,
         limit,
         search,
@@ -44,7 +44,7 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
     });
 
     const { mutate: updatePublishStatus, isPending: isUpdating } =
-        trpc.blogs.changePublishStatus.useMutation({
+        trpc.general.blogs.changePublishStatus.useMutation({
             onMutate: ({ isPublished }) => {
                 const toastId = toast.loading(
                     !isPublished ? "Unpublishing blog..." : "Publishing blog..."

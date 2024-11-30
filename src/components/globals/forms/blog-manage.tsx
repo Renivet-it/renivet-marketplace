@@ -101,9 +101,9 @@ export function BlogManageForm({ tags, blog }: PageProps) {
     });
 
     const { mutateAsync: createBlogAsync } =
-        trpc.blogs.createBlog.useMutation();
+        trpc.general.blogs.createBlog.useMutation();
     const { mutateAsync: updateBlogAsync } =
-        trpc.blogs.updateBlog.useMutation();
+        trpc.general.blogs.updateBlog.useMutation();
 
     const { mutate: createBlog, isPending: isBlogCreating } = useMutation({
         onMutate: () => {

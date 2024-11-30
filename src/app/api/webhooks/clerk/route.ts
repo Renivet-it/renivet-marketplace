@@ -2,10 +2,8 @@ import { env } from "@/../env";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
-import { AppError, CResponse, handleError } from "@/lib/utils";
+import { CResponse, handleError } from "@/lib/utils";
 import {
-    CachedUser,
-    User,
     userDeleteWebhookSchema,
     userWebhookSchema,
     webhookSchema,
@@ -42,7 +40,7 @@ export async function POST(req: NextRequest) {
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
 
-                    const user: User = {
+                    await db.insert(users).values({
                         id: webhookUser.id,
                         firstName: webhookUser.first_name,
                         lastName: webhookUser.last_name,
@@ -55,22 +53,7 @@ export async function POST(req: NextRequest) {
                             phone?.verification?.status === "verified",
                         createdAt: webhookUser.created_at,
                         updatedAt: webhookUser.updated_at,
-                    };
-
-                    const cachedUser: CachedUser = {
-                        ...user,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        addresses: [],
-                        roles: [],
-                    };
-
-                    await Promise.all([
-                        db.insert(users).values(user),
-                        userCache.add(cachedUser),
-                    ]);
+                    });
                 }
                 break;
 
@@ -84,51 +67,23 @@ export async function POST(req: NextRequest) {
                     const phone = webhookUser.phone_numbers.find(
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
-
-                    const user: User = {
-                        id: webhookUser.id,
-                        firstName: webhookUser.first_name,
-                        lastName: webhookUser.last_name,
-                        email: email.email_address,
-                        phone: phone?.phone_number ?? null,
-                        avatarUrl: webhookUser.image_url,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        createdAt: webhookUser.created_at,
-                        updatedAt: webhookUser.updated_at,
-                    };
-
-                    const existingCachedUser = await userCache.get(user.id);
-                    if (!existingCachedUser)
-                        throw new AppError("User not found", "NOT_FOUND");
-
-                    const cachedUser: CachedUser = {
-                        ...user,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        roles: existingCachedUser.roles,
-                        addresses: existingCachedUser.addresses,
-                    };
-
                     await Promise.all([
                         db
                             .update(users)
                             .set({
-                                firstName: user.firstName,
-                                lastName: user.lastName,
-                                email: user.email,
-                                phone: user.phone,
-                                avatarUrl: user.avatarUrl,
-                                isEmailVerified: user.isEmailVerified,
-                                isPhoneVerified: user.isPhoneVerified,
-                                updatedAt: user.updatedAt,
+                                firstName: webhookUser.first_name,
+                                lastName: webhookUser.last_name,
+                                email: email.email_address,
+                                phone: phone?.phone_number ?? null,
+                                avatarUrl: webhookUser.image_url,
+                                isEmailVerified:
+                                    email.verification?.status === "verified",
+                                isPhoneVerified:
+                                    phone?.verification?.status === "verified",
+                                updatedAt: webhookUser.updated_at,
                             })
-                            .where(eq(users.id, user.id)),
-                        userCache.update(cachedUser),
+                            .where(eq(users.id, webhookUser.id)),
+                        userCache.remove(webhookUser.id),
                     ]);
                 }
                 break;

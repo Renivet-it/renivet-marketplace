@@ -83,9 +83,9 @@ export function BannerManageForm({ banner }: PageProps) {
     });
 
     const { mutateAsync: createBannerAsync } =
-        trpc.content.banners.createBanner.useMutation();
+        trpc.general.content.banners.createBanner.useMutation();
     const { mutateAsync: updateBannerAsync } =
-        trpc.content.banners.updateBanner.useMutation();
+        trpc.general.content.banners.updateBanner.useMutation();
 
     const { mutate: createBanner, isPending: isBannerCreating } = useMutation({
         onMutate: () => {

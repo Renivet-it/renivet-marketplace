@@ -1,6 +1,6 @@
 "use client";
 
-import { TableTag } from "@/components/dashboard/tags";
+import { TableTag } from "@/components/dashboard/general/tags";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -25,10 +25,10 @@ interface PageProps {
 export function TagDeleteModal({ tag, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
 
-    const { refetch } = trpc.tags.getTags.useQuery();
+    const { refetch } = trpc.general.tags.getTags.useQuery();
 
     const { mutate: deleteTag, isPending: isDeleting } =
-        trpc.tags.deleteTag.useMutation({
+        trpc.general.tags.deleteTag.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Deleting tag...");
                 return { toastId };

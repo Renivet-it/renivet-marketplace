@@ -7,16 +7,21 @@ import { CachedRole } from "@/lib/validations";
 import { Draggable } from "@hello-pangea/dnd";
 import Link from "next/link";
 import { useState } from "react";
-import * as React from "react";
 import { RoleDeleteModal } from "../modals";
 
 interface PageProps {
     role: CachedRole;
     index: number;
+    roles: CachedRole[];
     isDragDisabled: boolean;
 }
 
-export function RoleDraggableCard({ role, index, isDragDisabled }: PageProps) {
+export function RoleDraggableCard({
+    role,
+    index,
+    roles,
+    isDragDisabled,
+}: PageProps) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     return (
@@ -74,7 +79,7 @@ export function RoleDraggableCard({ role, index, isDragDisabled }: PageProps) {
                                 variant="outline"
                                 className="size-8 rounded rounded-l-none md:size-10"
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                disabled={isDragDisabled}
+                                disabled={isDragDisabled || roles.length === 1}
                                 title="Delete Role"
                             >
                                 <Icons.X className="size-4" />

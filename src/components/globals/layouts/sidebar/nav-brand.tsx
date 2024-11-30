@@ -21,17 +21,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 interface Props extends GenericProps {
-    items: {
-        title: string;
-        url: string;
-        icon?: keyof typeof Icons;
-        isActive?: boolean;
-        items?: {
-            title: string;
-            url: string;
-            permissions: number;
-        }[];
-    }[];
+    items: BrandSidebarConfig[];
     userPermissions: {
         sitePermissions: number;
         brandPermissions: number;
@@ -47,17 +37,19 @@ export function NavBrand({
     return (
         <SidebarGroup className={cn("", className)} {...props}>
             <SidebarGroupLabel>Brand</SidebarGroupLabel>
+
             <SidebarMenu>
                 {items.map((item) => {
                     const Icon = item.icon && Icons[item.icon];
 
-                    const filteredItems = item.items?.filter((subItem) => {
-                        return hasPermission(
+                    const filteredItems = item.items?.filter((subItem) =>
+                        hasPermission(
                             userPermissions.brandPermissions,
                             [subItem.permissions],
                             "any"
-                        );
-                    });
+                        )
+                    );
+
                     if (!filteredItems?.length) return null;
 
                     return (
@@ -75,17 +67,16 @@ export function NavBrand({
                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
+
                                 <CollapsibleContent>
                                     <SidebarMenuSub>
-                                        {item.items?.map((subItem) => (
+                                        {filteredItems.map((subItem) => (
                                             <SidebarMenuSubItem
                                                 key={subItem.title}
                                             >
                                                 <SidebarMenuSubButton asChild>
                                                     <Link href={subItem.url}>
-                                                        <span>
-                                                            {subItem.title}
-                                                        </span>
+                                                        {subItem.title}
                                                     </Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
