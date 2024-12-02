@@ -6,7 +6,7 @@ import {
     CommandGroup,
     CommandItem,
     CommandList,
-} from "@/components/ui/command-dash";
+} from "@/components/ui/command-general";
 import { cn } from "@/lib/utils";
 import { Command as CommandPrimitive, useCommandState } from "cmdk";
 import { X } from "lucide-react";
@@ -176,7 +176,7 @@ const CommandEmpty = forwardRef<
 
 CommandEmpty.displayName = "CommandEmpty";
 
-const MultipleSelector = React.forwardRef<
+const MultipleSelectorGeneral = React.forwardRef<
     MultipleSelectorRef,
     MultipleSelectorProps
 >(
@@ -468,7 +468,7 @@ const MultipleSelector = React.forwardRef<
             >
                 <div
                     className={cn(
-                        "min-h-10 rounded-md border border-input text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+                        "min-h-10 border border-input text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
                         {
                             "px-3 py-2": selected.length !== 0,
                             "cursor-text": !disabled && selected.length !== 0,
@@ -487,7 +487,7 @@ const MultipleSelector = React.forwardRef<
                                     key={option.value}
                                     className={cn(
                                         "data-[disabled]:bg-muted-foreground data-[disabled]:text-muted data-[disabled]:hover:bg-muted-foreground",
-                                        "data-[fixed]:bg-muted-foreground data-[fixed]:text-muted data-[fixed]:hover:bg-muted-foreground",
+                                        "rounded-none data-[fixed]:bg-muted-foreground data-[fixed]:text-muted data-[fixed]:hover:bg-muted-foreground",
                                         badgeClassName
                                     )}
                                     data-fixed={option.fixed}
@@ -577,7 +577,7 @@ const MultipleSelector = React.forwardRef<
                 <div className="relative">
                     {open && (
                         <CommandList
-                            className="absolute top-1 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in"
+                            className="absolute top-1 z-10 w-full border bg-popover text-popover-foreground shadow-md outline-none animate-in"
                             onMouseLeave={() => {
                                 setOnScrollbar(false);
                             }}
@@ -657,6 +657,18 @@ const MultipleSelector = React.forwardRef<
                                                                         "cursor-default text-muted-foreground"
                                                                 )}
                                                             >
+                                                                {Object.prototype.hasOwnProperty.call(
+                                                                    option,
+                                                                    "hex"
+                                                                ) ? (
+                                                                    <div
+                                                                        style={{
+                                                                            backgroundColor:
+                                                                                option.hex as string,
+                                                                        }}
+                                                                        className="mr-2 size-4 rounded-full"
+                                                                    />
+                                                                ) : null}
                                                                 {option.label}
                                                             </CommandItem>
                                                         );
@@ -675,5 +687,5 @@ const MultipleSelector = React.forwardRef<
     }
 );
 
-MultipleSelector.displayName = "MultipleSelector";
-export default MultipleSelector;
+MultipleSelectorGeneral.displayName = "MultipleSelectorGeneral";
+export { MultipleSelectorGeneral };

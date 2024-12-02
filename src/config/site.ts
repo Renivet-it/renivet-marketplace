@@ -52,7 +52,6 @@ export const siteConfig: SiteConfig = {
             description: "Browse our products",
             href: "/shop",
             icon: "ShoppingBag",
-            isDisabled: true,
         },
         {
             name: "Blogs",

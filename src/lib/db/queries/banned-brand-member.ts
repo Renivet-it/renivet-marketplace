@@ -3,7 +3,7 @@ import {
     bannedBrandMemberWithMemberSchema,
     CreatedBannedBrandMember,
 } from "@/lib/validations";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { bannedBrandMembers } from "../schema";
 
@@ -26,7 +26,7 @@ class BannedBrandMemberQuery {
             where: and(
                 eq(bannedBrandMembers.brandId, brandId),
                 !!search?.length
-                    ? eq(bannedBrandMembers.memberId, search)
+                    ? ilike(bannedBrandMembers.memberId, `%${search}%`)
                     : undefined
             ),
             limit,
@@ -38,7 +38,10 @@ class BannedBrandMemberQuery {
                         and(
                             eq(bannedBrandMembers.brandId, brandId),
                             !!search?.length
-                                ? eq(bannedBrandMembers.memberId, search)
+                                ? ilike(
+                                      bannedBrandMembers.memberId,
+                                      `%${search}%`
+                                  )
                                 : undefined
                         )
                     )

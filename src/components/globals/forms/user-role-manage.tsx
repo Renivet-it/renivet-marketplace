@@ -10,7 +10,7 @@ import {
     FormItem,
     FormLabel,
 } from "@/components/ui/form";
-import MultipleSelector from "@/components/ui/multi-select";
+import { MultipleSelectorDash } from "@/components/ui/multi-select-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import { UpdateUserRoles, updateUserRolesSchema } from "@/lib/validations";
@@ -146,7 +146,7 @@ export function UserRoleManageForm({ ...props }: PageProps) {
                             <FormLabel>Roles</FormLabel>
 
                             <FormControl>
-                                <MultipleSelector
+                                <MultipleSelectorDash
                                     commandProps={{
                                         label: "Add roles",
                                     }}

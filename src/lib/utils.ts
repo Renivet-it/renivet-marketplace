@@ -372,3 +372,11 @@ export function convertEmptyStringToNull(data: unknown) {
 export function generateBrandRoleSlug(roleName: string, brandId: string) {
     return slugify(`${roleName} ${brandId}`);
 }
+
+export function formatPriceTag(price: number, keepDeciamls = false) {
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: keepDeciamls ? 2 : 0,
+    }).format(price);
+}

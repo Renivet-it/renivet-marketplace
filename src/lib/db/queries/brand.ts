@@ -1,9 +1,39 @@
-import { CachedBrand, cachedBrandSchema, CreateBrand } from "@/lib/validations";
+import {
+    brandMetaSchema,
+    CachedBrand,
+    cachedBrandSchema,
+    CreateBrand,
+} from "@/lib/validations";
 import { desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { brands } from "../schema";
 
 class BrandQuery {
+    async getCount() {
+        const data = await db.$count(brands);
+        return +data || 0;
+    }
+
+    async getBrandsMeta() {
+        const data = await db.query.brands.findMany({
+            extras: {
+                count: db.$count(brands).as("brand_count"),
+            },
+            columns: {
+                id: true,
+                name: true,
+                ownerId: true,
+            },
+        });
+
+        const parsed = brandMetaSchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
     async getBrands({
         limit,
         page,

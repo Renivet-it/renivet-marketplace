@@ -10,6 +10,7 @@ export * from "./brand-waitlist";
 export * from "./category";
 export * from "./home";
 export * from "./newsletter-subscriber";
+export * from "./product";
 export * from "./response";
 export * from "./role";
 export * from "./tag";

@@ -14,7 +14,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
         return (
             <div
                 className={cn(
-                    "flex items-center gap-1 border border-input bg-background",
+                    "flex w-full items-center gap-1 border border-input bg-background",
                     disabled && "cursor-not-allowed opacity-50",
                     classNames?.wrapper
                 )}
