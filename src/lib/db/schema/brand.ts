@@ -10,6 +10,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
+import { products } from "./product";
 import { brandRoles, roles } from "./role";
 import { users } from "./user";
 
@@ -143,6 +144,7 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     members: many(brandMembers),
     roles: many(brandRoles),
     bannedMembers: many(bannedBrandMembers),
+    products: many(products),
 }));
 
 export const brandInviteRelations = relations(brandInvites, ({ one }) => ({

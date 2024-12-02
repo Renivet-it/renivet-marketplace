@@ -1,7 +1,7 @@
+import { Product } from "@/lib/validations";
 import { relations } from "drizzle-orm";
 import {
     boolean,
-    integer,
     jsonb,
     numeric,
     pgTable,
@@ -15,29 +15,32 @@ import { categories, productTypes, subCategories } from "./category";
 export const products = pgTable("products", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
-    description: text("description"),
+    description: text("description").notNull(),
     price: numeric("price", {
         precision: 10,
         scale: 2,
     }).notNull(),
-    quantity: integer("quantity").notNull().default(0),
-    colors: text("colors").$type<string[]>(),
+    sizes: jsonb("sizes")
+        .$type<Product["sizes"]>()
+        .default([
+            {
+                name: "One Size",
+                quantity: 0,
+            },
+        ])
+        .notNull(),
+    colors: jsonb("colors").$type<Product["colors"]>().default([]).notNull(),
     brandId: uuid("brand_id")
         .notNull()
         .references(() => brands.id, {
             onDelete: "cascade",
         }),
-    productTypeId: uuid("product_type_id")
-        .notNull()
-        .references(() => productTypes.id, {
-            onDelete: "cascade",
-        }),
-    images: jsonb("images").$type<
-        {
-            color: string;
-            urls: string[];
-        }[]
-    >(),
+    imageUrls: jsonb("image_urls")
+        .$type<Product["imageUrls"]>()
+        .default([])
+        .notNull(),
+    isAvailable: boolean("is_available").default(true).notNull(),
+    isPublished: boolean("is_published").default(false).notNull(),
     ...timestamps,
 });
 
@@ -59,16 +62,15 @@ export const productCategories = pgTable("product_categories", {
         .references(() => productTypes.id, {
             onDelete: "cascade",
         }),
-    isPrimary: boolean("is_primary").notNull().default(false),
     ...timestamps,
 });
 
 export const productsRelations = relations(products, ({ one, many }) => ({
-    primaryType: one(productTypes, {
-        fields: [products.productTypeId],
-        references: [productTypes.id],
-    }),
     categories: many(productCategories),
+    brand: one(brands, {
+        fields: [products.brandId],
+        references: [brands.id],
+    }),
 }));
 
 export const productCategoriesRelations = relations(

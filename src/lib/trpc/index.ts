@@ -2,6 +2,7 @@ import {
     bansRouter as brandBansRouter,
     invitesRouter as brandInvitesRouter,
     membersRouter as brandMembersRouter,
+    productsRouter as brandProductsRouter,
     rolesRouter as brandRolesRouter,
 } from "./routes/brands";
 import {
@@ -39,6 +40,7 @@ export const appRouter = createTRPCRouter({
         bans: brandBansRouter,
         invites: brandInvitesRouter,
         members: brandMembersRouter,
+        products: brandProductsRouter,
         roles: brandRolesRouter,
     }),
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BlogViewer } from "@/components/ui/blog-viewer";
+import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { DEFAULT_AVATAR_URL, DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
 import { cn, getReadTime } from "@/lib/utils";
 import { BlogWithAuthorAndTag } from "@/lib/validations";
@@ -55,7 +55,7 @@ export function BlogPage({ className, blog, ...props }: PageProps) {
                 />
             </div>
 
-            <BlogViewer content={blog.content} />
+            <RichTextViewer content={blog.content} />
         </div>
     );
 }

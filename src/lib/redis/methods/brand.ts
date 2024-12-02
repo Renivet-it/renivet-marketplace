@@ -48,6 +48,12 @@ class BrandCache {
     async remove(id: string) {
         return await redis.del(this.genKey(id));
     }
+
+    async drop() {
+        const keys = await redis.keys(this.genKey("*"));
+        if (!keys.length) return 0;
+        return await redis.del(...keys);
+    }
 }
 
 export const brandCache = new BrandCache();

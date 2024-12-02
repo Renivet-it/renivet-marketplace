@@ -99,9 +99,16 @@ export const cachedBrandSchema = z.lazy(() =>
     })
 );
 
+export const brandMetaSchema = brandSchema.pick({
+    id: true,
+    name: true,
+    ownerId: true,
+});
+
 export type Brand = z.infer<typeof brandSchema>;
 export type CreateBrand = z.infer<typeof createBrandSchema>;
 export type BrandWithOwnerMembersAndRoles = z.infer<
     typeof brandWithOwnerMembersAndRolesSchema
 >;
 export type CachedBrand = z.infer<typeof cachedBrandSchema>;
+export type BrandMeta = z.infer<typeof brandMetaSchema>;

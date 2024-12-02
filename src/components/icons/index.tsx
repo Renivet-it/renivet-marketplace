@@ -8,6 +8,7 @@ import LucideIcons, {
     BookOpen,
     Bot,
     Calendar,
+    Check,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
@@ -82,6 +83,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Check,
     Hammer,
     CircleCheck,
     Clipboard,

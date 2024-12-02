@@ -1,4 +1,7 @@
-import { BitFieldSitePermission } from "@/config/permissions";
+import {
+    BitFieldBrandPermission,
+    BitFieldSitePermission,
+} from "@/config/permissions";
 import { db } from "@/lib/db";
 import { brandRequests, brandsWaitlist } from "@/lib/db/schema";
 import { jwt } from "@/lib/jose";
@@ -14,7 +17,7 @@ const f = createUploadthing();
 export const utApi = new UTApi();
 
 export const uploadRouter = {
-    blogThumbnailUploader: f({ image: { maxFileSize: "4MB" } })
+    blogThumbnailUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
         .middleware(async () => {
             const auth = await clerkAuth();
             if (!auth.userId)
@@ -52,7 +55,7 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
-    contentUploader: f({ image: { maxFileSize: "4MB" } })
+    contentUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
         .middleware(async () => {
             const auth = await clerkAuth();
             if (!auth.userId)
@@ -91,7 +94,7 @@ export const uploadRouter = {
             };
         }),
     brandRequestDemoUploader: f({
-        "video/mp4": { maxFileSize: "32MB" },
+        "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -134,7 +137,9 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
-    brandDemoUploader: f({ "video/mp4": { maxFileSize: "32MB" } })
+    brandDemoUploader: f({
+        "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
+    })
         .input(
             z.object({
                 token: z
@@ -170,6 +175,45 @@ export const uploadRouter = {
         .onUploadComplete(async ({ metadata, file }) => {
             return {
                 uploaderId: metadata.brandId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                url: file.url,
+            };
+        }),
+    productImageUploader: f({
+        image: { maxFileSize: "4MB", maxFileCount: 5 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const existingUser = await userCache.get(auth.userId);
+            if (!existingUser)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const { brandPermissions } = getUserPermissions(existingUser.roles);
+            const isAuthorized = hasPermission(brandPermissions, [
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
+            ]);
+            if (!isAuthorized)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            return {
+                uploaderId: metadata.userId,
                 name: file.name,
                 size: file.size,
                 key: file.key,

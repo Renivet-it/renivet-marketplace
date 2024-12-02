@@ -42,11 +42,11 @@ const extensions = [
     Underline,
 ];
 
-interface BlogViewerProps {
+interface RichTextViewerProps {
     content: string;
 }
 
-export function BlogViewer({ content }: BlogViewerProps) {
+export function RichTextViewer({ content }: RichTextViewerProps) {
     const editor = useEditor({
         extensions: extensions as Extension[],
         editable: false,

@@ -8,6 +8,7 @@
         "start": "next start",
         "lint": "next lint",
         "db:gen": "drizzle-kit generate",
+        "db:push": "drizzle-kit push",
         "db:mig": "drizzle-kit generate && drizzle-kit migrate"
     },
     "dependencies": {
@@ -29,6 +30,7 @@
         "@radix-ui/react-scroll-area": "^1.2.1",
         "@radix-ui/react-select": "^2.1.2",
         "@radix-ui/react-separator": "^1.1.0",
+        "@radix-ui/react-slider": "^1.2.1",
         "@radix-ui/react-slot": "^1.1.0",
         "@radix-ui/react-switch": "^1.1.1",
         "@radix-ui/react-tabs": "^1.1.1",
@@ -70,6 +72,7 @@
         "nuqs": "^2.2.3",
         "postgres": "^3.4.5",
         "react": "^19.0.0-rc-fb9a90fa48-20240614",
+        "react-colorful": "^5.6.1",
         "react-day-picker": "8.10.1",
         "react-dom": "^19.0.0-rc-fb9a90fa48-20240614",
         "react-hook-form": "^7.53.2",

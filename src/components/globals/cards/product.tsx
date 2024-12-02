@@ -1,54 +1,83 @@
 "use client";
 
+import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
+import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 interface PageProps extends GenericProps {
-    product: {
-        name: string;
-        price: number;
-        description: string;
-        image: string;
-    };
+    product: ProductWithBrand;
 }
 
 export function ProductCard({ className, product, ...props }: PageProps) {
+    const [isProductHovered, setIsProductHovered] = useState(false);
+    const [isWishlistHovered, setIsWishlistHovered] = useState(false);
+
     return (
-        <div className={cn("space-y-4", className)} {...props}>
-            <Link href="/soon" className="space-y-4">
-                <div className="h-80 xl:h-[30rem]">
+        <div
+            className={cn("", className)}
+            {...props}
+            onMouseEnter={() => setIsProductHovered(true)}
+            onMouseLeave={() => setIsProductHovered(false)}
+        >
+            <Link
+                href={`/products/${product.id}`}
+                onClick={(e) => {
+                    if (isWishlistHovered) e.preventDefault();
+                }}
+                target="_blank"
+                rel="noreferrer"
+            >
+                <div className="relative aspect-[3/4] overflow-hidden">
                     <Image
+                        src={product.imageUrls[0]}
+                        alt={product.name}
                         width={1000}
                         height={1000}
-                        src={product.image}
-                        alt={product.name}
                         className="size-full object-cover"
                     />
+
+                    <div
+                        className={cn(
+                            "absolute bottom-0 w-full p-2 transition-all ease-in-out",
+                            isProductHovered
+                                ? "translate-y-0"
+                                : "translate-y-full"
+                        )}
+                    >
+                        <Button
+                            size="sm"
+                            className="w-full"
+                            onMouseEnter={() => setIsWishlistHovered(true)}
+                            onMouseLeave={() => setIsWishlistHovered(false)}
+                        >
+                            <Icons.Heart />
+                            Wishlist
+                        </Button>
+                    </div>
                 </div>
 
-                <div className="flex flex-col">
-                    <h3 className="text-md font-semibold uppercase">
-                        {product.name}
-                    </h3>
+                <div className="space-y-1 py-2 md:p-2">
+                    <div>
+                        <p className="truncate text-lg font-semibold md:text-sm">
+                            {product.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground md:text-xs">
+                            {product.brand.name}
+                        </p>
+                    </div>
 
-                    <p className="mb-1 text-sm font-semibold">
+                    <p className="text-lg font-semibold md:text-sm">
                         {Intl.NumberFormat("en-IN", {
                             style: "currency",
                             currency: "INR",
-                        }).format(product.price)}
-                    </p>
-
-                    <p className="truncate text-sm text-muted-foreground">
-                        {product.description}
+                        }).format(parseFloat(product.price))}
                     </p>
                 </div>
             </Link>
-
-            <Button variant="accent" className="font-semibold" asChild>
-                <Link href="/soon">Add to Cart</Link>
-            </Button>
         </div>
     );
 }
