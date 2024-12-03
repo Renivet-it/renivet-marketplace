@@ -1,5 +1,10 @@
 "use client";
 
+import {
+    ProductAvailablityModal,
+    ProductDeleteModal,
+    ProductPublishModal,
+} from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import {
@@ -12,7 +17,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-// import { useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { TableProduct } from "./products-table";
 
@@ -21,8 +26,9 @@ interface PageProps {
 }
 
 export function ProductAction({ product }: PageProps) {
-    // const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-    // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isAvailablityModalOpen, setIsAvailablityModalOpen] = useState(false);
+    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     const handleCopyId = (id: string) => {
         navigator.clipboard.writeText(id);
@@ -48,7 +54,7 @@ export function ProductAction({ product }: PageProps) {
                             disabled={!product.isPublished}
                         >
                             <Link
-                                href={`/products/${product.id}`}
+                                href={`/products/${product.slug}`}
                                 target="_blank"
                             >
                                 <Icons.Eye className="size-4" />
@@ -77,7 +83,7 @@ export function ProductAction({ product }: PageProps) {
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                        // onClick={() => setIsPublishModalOpen(true)}
+                            onClick={() => setIsAvailablityModalOpen(true)}
                         >
                             {product.isAvailable ? (
                                 <Icons.X className="size-4" />
@@ -92,7 +98,7 @@ export function ProductAction({ product }: PageProps) {
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
-                        // onClick={() => setIsPublishModalOpen(true)}
+                            onClick={() => setIsPublishModalOpen(true)}
                         >
                             {product.isPublished ? (
                                 <Icons.LockKeyhole className="size-4" />
@@ -110,7 +116,7 @@ export function ProductAction({ product }: PageProps) {
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem
-                    // onClick={() => setIsDeleteModalOpen(true)}
+                        onClick={() => setIsDeleteModalOpen(true)}
                     >
                         <Icons.Trash className="size-4" />
                         <span>Delete</span>
@@ -118,17 +124,23 @@ export function ProductAction({ product }: PageProps) {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* <BlogPublishModal
-            blog={blog}
-            isOpen={isPublishModalOpen}
-            setIsOpen={setIsPublishModalOpen}
-        />
+            <ProductPublishModal
+                product={product}
+                isOpen={isPublishModalOpen}
+                setIsOpen={setIsPublishModalOpen}
+            />
 
-        <BlogDeleteModal
-            blog={blog}
-            isOpen={isDeleteModalOpen}
-            setIsOpen={setIsDeleteModalOpen}
-        /> */}
+            <ProductAvailablityModal
+                product={product}
+                isOpen={isAvailablityModalOpen}
+                setIsOpen={setIsAvailablityModalOpen}
+            />
+
+            <ProductDeleteModal
+                product={product}
+                isOpen={isDeleteModalOpen}
+                setIsOpen={setIsDeleteModalOpen}
+            />
         </>
     );
 }

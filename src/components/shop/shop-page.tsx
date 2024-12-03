@@ -270,7 +270,10 @@ export function ShopPage({
                         wrapper: "hidden md:flex",
                     }}
                     value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
+                    onChange={(e) => {
+                        if (e.target.value.length <= 1) setSearch("");
+                        setSearchInput(e.target.value);
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") setSearch(searchInput);
                         if (e.key === "Backspace" && searchInput.length <= 1)

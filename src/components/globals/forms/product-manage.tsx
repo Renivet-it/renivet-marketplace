@@ -28,6 +28,7 @@ import {
     CreateProduct,
     createProductSchema,
     ProductWithBrand,
+    UpdateProduct,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -53,11 +54,15 @@ export function ProductManageForm({ brandId, product }: PageProps) {
 
     const editorRef = useRef<EditorRef>(null!);
 
-    const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+    const [selectedSizes, setSelectedSizes] = useState<string[]>(
+        product?.sizes.map((size) => size.name) ?? []
+    );
     const [activeColorIndex, setActiveColorIndex] = useState<number | null>(
         null
     );
-    const [previews, setPreviews] = useState<string[]>([]);
+    const [previews, setPreviews] = useState<string[]>(
+        product?.imageUrls ?? []
+    );
     const [files, setFiles] = useState<File[]>([]);
 
     const form = useForm<CreateProduct>({
@@ -103,6 +108,10 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         control: form.control,
     });
 
+    useEffect(() => {
+        console.log(selectedSizes);
+    }, [selectedSizes]);
+
     const handleSizeToggle = (size: string) => {
         if (size === "One Size") {
             if (selectedSizes.includes("One Size")) {
@@ -125,8 +134,8 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                 : [...prev, size];
 
             if (selectedSizes.includes(size)) {
-                const index = sizesFields.findIndex(
-                    (field) => field.name === size
+                const index = selectedSizes.findIndex(
+                    (field) => field === size
                 );
                 if (index !== -1) removeSizes(index);
             } else {
@@ -192,6 +201,8 @@ export function ProductManageForm({ brandId, product }: PageProps) {
 
     const { mutateAsync: createProductAsync } =
         trpc.brands.products.createProduct.useMutation();
+    const { mutateAsync: updateProductAsync } =
+        trpc.brands.products.updateProduct.useMutation();
 
     const { mutate: createProduct, isPending: isCreating } = useMutation({
         onMutate: () => {
@@ -204,6 +215,9 @@ export function ProductManageForm({ brandId, product }: PageProps) {
 
             const imageUrls = res.map((file) => file.appUrl);
             values.imageUrls = imageUrls;
+
+            if (values.imageUrls.length > 5)
+                throw new Error("Maximum 5 images allowed");
 
             await createProductAsync(values);
         },
@@ -218,13 +232,54 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         },
     });
 
+    const { mutate: updateProduct, isPending: isUpdating } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Updating product...");
+            return { toastId };
+        },
+        mutationFn: async (values: UpdateProduct) => {
+            if (!product) throw new Error("Product not found");
+
+            if (files.length > 0) {
+                const res = await startUpload(files);
+                if (!res?.length) throw new Error("Failed to upload images");
+
+                const imageUrls = res.map((file) => file.appUrl);
+                values.imageUrls = [...values.imageUrls, ...imageUrls];
+            }
+
+            if (values.imageUrls.length > 5)
+                throw new Error("Maximum 5 images allowed");
+
+            await updateProductAsync({ productId: product.id, values });
+        },
+        onSuccess: (_, __, { toastId }) => {
+            toast.success("Product updated successfully", { id: toastId });
+            router.push(`/dashboard/brands/${brandId}/products`);
+            setPreviews([]);
+            setFiles([]);
+        },
+        onError: (err, _, ctx) => {
+            return handleClientError(err, ctx?.toastId);
+        },
+    });
+
+    useEffect(() => {
+        console.log(form.formState.errors);
+    }, [form.formState.errors]);
+
     return (
         <>
             <Form {...form}>
                 <form
                     className="space-y-6"
                     onSubmit={form.handleSubmit((values) =>
-                        createProduct(values)
+                        product
+                            ? updateProduct({
+                                  ...values,
+                                  isAvailable: product.isAvailable,
+                              })
+                            : createProduct(values)
                     )}
                 >
                     <FormField
@@ -237,7 +292,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                 <FormControl>
                                     <Input
                                         placeholder="THE BEAR HOUSE - Men Grey Slim Fit Tartan Checks Checked Casual Shirt"
-                                        disabled={isCreating}
+                                        disabled={isCreating || isUpdating}
                                         {...field}
                                     />
                                 </FormControl>
@@ -257,7 +312,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                 <FormControl>
                                     <Editor
                                         {...field}
-                                        disabled={isCreating}
+                                        disabled={isCreating || isUpdating}
                                         ref={editorRef}
                                         content={field.value ?? ""}
                                         onChange={field.onChange}
@@ -281,7 +336,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                         placeholder="998.00"
                                         currency="INR"
                                         symbol="₹"
-                                        disabled={isCreating}
+                                        disabled={isCreating || isUpdating}
                                         {...field}
                                         onChange={(e) => {
                                             const regex =
@@ -327,7 +382,8 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                     }
                                                     disabled={
                                                         isSizeDisabled(size) ||
-                                                        isCreating
+                                                        isCreating ||
+                                                        isUpdating
                                                     }
                                                     className="min-w-[80px]"
                                                 >
@@ -376,7 +432,8 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                                 placeholder="Enter quantity"
                                                                 type="number"
                                                                 disabled={
-                                                                    isCreating
+                                                                    isCreating ||
+                                                                    isUpdating
                                                                 }
                                                                 {...fieldProps}
                                                                 value={
@@ -414,7 +471,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                 onClick={() =>
                                     appendColors({ name: "", hex: "#ffffff" })
                                 }
-                                disabled={isCreating}
+                                disabled={isCreating || isUpdating}
                                 className="w-full"
                             >
                                 <Icons.Plus className="size-4" />
@@ -437,7 +494,9 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                 onClick={() =>
                                                     setActiveColorIndex(index)
                                                 }
-                                                disabled={isCreating}
+                                                disabled={
+                                                    isCreating || isUpdating
+                                                }
                                                 className="size-10 shrink-0 rounded border border-gray-700"
                                                 style={{
                                                     backgroundColor: form.watch(
@@ -476,7 +535,10 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                 <FormControl>
                                                     <Input
                                                         placeholder="Enter color name"
-                                                        disabled={isCreating}
+                                                        disabled={
+                                                            isCreating ||
+                                                            isUpdating
+                                                        }
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -490,7 +552,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        disabled={isCreating}
+                                        disabled={isCreating || isUpdating}
                                         onClick={() => removeColors(index)}
                                         className="shrink-0 text-gray-400 hover:text-white"
                                     >
@@ -536,7 +598,8 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                                 size="icon"
                                                                 className="absolute right-1 top-1 size-6 rounded-full bg-foreground/50 hover:bg-foreground/70"
                                                                 disabled={
-                                                                    isCreating
+                                                                    isCreating ||
+                                                                    isUpdating
                                                                 }
                                                                 onClick={() =>
                                                                     removeImage(
@@ -561,7 +624,8 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                             <input
                                                                 {...getInputProps()}
                                                                 disabled={
-                                                                    isCreating
+                                                                    isCreating ||
+                                                                    isUpdating
                                                                 }
                                                             />
 
@@ -593,7 +657,11 @@ export function ProductManageForm({ brandId, product }: PageProps) {
 
                                     <FormControl>
                                         <Switch
-                                            disabled={!!product || isCreating}
+                                            disabled={
+                                                !!product ||
+                                                isCreating ||
+                                                isUpdating
+                                            }
                                             checked={field.value}
                                             onCheckedChange={field.onChange}
                                         />
@@ -610,6 +678,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                         className="w-full"
                         disabled={
                             isCreating ||
+                            isUpdating ||
                             (previews.every((preview) =>
                                 product?.imageUrls.includes(preview)
                             ) &&

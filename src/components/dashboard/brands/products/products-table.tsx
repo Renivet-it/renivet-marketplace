@@ -11,7 +11,6 @@ import {
 import {
     Table,
     TableBody,
-    TableCaption,
     TableCell,
     TableFooter,
     TableHead,
@@ -19,6 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import {
     ColumnDef,
@@ -72,7 +72,9 @@ const columns: ColumnDef<TableProduct>[] = [
                 <span>N/A</span>
             ) : (
                 <Popover>
-                    <PopoverTrigger className="underline">View</PopoverTrigger>
+                    <PopoverTrigger title="Click to view" className="underline">
+                        View
+                    </PopoverTrigger>
 
                     <PopoverContent className="w-auto">
                         <Table>
@@ -125,13 +127,35 @@ const columns: ColumnDef<TableProduct>[] = [
             return data.colors.length === 0 ? (
                 <span>N/A</span>
             ) : (
-                <div className="flex flex-wrap gap-1">
-                    {data.colors.map((color, i) => (
+                <div className="flex gap-1">
+                    {data.colors.slice(0, 3).map((color, i) => (
                         <div
                             key={i}
-                            className="size-6 rounded-full"
-                            style={{ backgroundColor: color.hex }}
-                        />
+                            title={
+                                data.colors.length > 3 && i === 2
+                                    ? data.colors
+                                          .slice(2)
+                                          .map((x) => x.name)
+                                          .join(", ")
+                                    : color.name
+                            }
+                            className={cn(
+                                "size-5 rounded-full",
+                                data.colors.length > 3 && i === 2 && "relative"
+                            )}
+                            style={{
+                                backgroundColor:
+                                    data.colors.length > 3 && i === 2
+                                        ? "#000"
+                                        : color.hex,
+                            }}
+                        >
+                            {data.colors.length > 3 && i === 2 && (
+                                <span className="absolute inset-0 flex size-full cursor-default items-center justify-center text-xs text-background">
+                                    +3
+                                </span>
+                            )}
+                        </div>
                     ))}
                 </div>
             );

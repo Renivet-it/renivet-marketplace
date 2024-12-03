@@ -63,6 +63,37 @@ export function ProductPage({ className, product, ...props }: PageProps) {
                     </p>
                 </div>
 
+                {product.colors.length > 0 && (
+                    <div className="space-y-4">
+                        <Label className="font-semibold uppercase">
+                            More Colors
+                        </Label>
+
+                        <div className="flex flex-wrap gap-2">
+                            {product.colors.map((color) => (
+                                <div
+                                    key={color.name}
+                                    className="flex flex-col items-center gap-2"
+                                >
+                                    <button
+                                        title={color.name}
+                                        className="size-12 cursor-pointer rounded-full border border-foreground/10 p-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                        style={{ backgroundColor: color.hex }}
+                                    >
+                                        <span className="sr-only">
+                                            {color.name}
+                                        </span>
+                                    </button>
+
+                                    <span className="text-sm">
+                                        {color.name}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <Separator />
 
                 <div className="space-y-4">

@@ -9,16 +9,19 @@ import { Suspense } from "react";
 
 interface PageProps {
     params: Promise<{
-        id: string;
+        slug: string;
     }>;
 }
 
 export async function generateMetadata({
     params,
 }: PageProps): Promise<Metadata> {
-    const { id } = await params;
+    const { slug } = await params;
 
-    const existingProduct = await productQueries.getProduct(id, true);
+    const existingProduct = await productQueries.getProductBySlug(
+        slug,
+        "published"
+    );
     if (!existingProduct)
         return {
             title: "Product not found",
@@ -31,13 +34,13 @@ export async function generateMetadata({
         authors: [
             {
                 name: existingProduct.brand.name,
-                url: getAbsoluteURL(`/products/${id}`),
+                url: getAbsoluteURL(`/brands/${existingProduct.brand.id}`),
             },
         ],
         openGraph: {
             type: "website",
             locale: "en_US",
-            url: getAbsoluteURL(`/products/${id}`),
+            url: getAbsoluteURL(`/products/${slug}`),
             title: `${existingProduct.name} by ${existingProduct.brand.name}`,
             description: existingProduct.description,
             siteName: siteConfig.name,
@@ -77,9 +80,12 @@ export default function Page({ params }: PageProps) {
 }
 
 async function ProductFetch({ params }: PageProps) {
-    const { id } = await params;
+    const { slug } = await params;
 
-    const existingProduct = await productQueries.getProduct(id, true);
+    const existingProduct = await productQueries.getProductBySlug(
+        slug,
+        "published"
+    );
     if (!existingProduct) notFound();
 
     return <ProductPage product={existingProduct} />;

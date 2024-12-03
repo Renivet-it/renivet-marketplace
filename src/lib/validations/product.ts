@@ -14,6 +14,12 @@ export const productSchema = z.object({
             invalid_type_error: "Name must be a string",
         })
         .min(3, "Name must be at least 3 characters long"),
+    slug: z
+        .string({
+            required_error: "Slug is required",
+            invalid_type_error: "Slug must be a string",
+        })
+        .min(3, "Slug must be at least 3 characters long"),
     description: z
         .string({
             required_error: "Description is required",
@@ -89,6 +95,10 @@ export const productSchema = z.object({
         required_error: "Published status is required",
         invalid_type_error: "Published status must be a boolean",
     }),
+    status: z.boolean({
+        required_error: "Status is required",
+        invalid_type_error: "Status must be a boolean",
+    }),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -109,14 +119,20 @@ export const productWithBrandSchema = productSchema.extend({
 
 export const createProductSchema = productSchema.omit({
     id: true,
+    slug: true,
     isAvailable: true,
+    status: true,
     createdAt: true,
     updatedAt: true,
 });
 
-export const updateProductSchema = createProductSchema.omit({
-    brandId: true,
-});
+export const updateProductSchema = createProductSchema
+    .omit({
+        brandId: true,
+    })
+    .extend({
+        isAvailable: productSchema.shape.isAvailable,
+    });
 
 export type Product = z.infer<typeof productSchema>;
 export type ProductWithBrand = z.infer<typeof productWithBrandSchema>;

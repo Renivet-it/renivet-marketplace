@@ -19,12 +19,13 @@ export function ProductCard({ className, product, ...props }: PageProps) {
     return (
         <div
             className={cn("", className)}
+            title={product.name}
             {...props}
             onMouseEnter={() => setIsProductHovered(true)}
             onMouseLeave={() => setIsProductHovered(false)}
         >
             <Link
-                href={`/products/${product.id}`}
+                href={`/products/${product.slug}`}
                 onClick={(e) => {
                     if (isWishlistHovered) e.preventDefault();
                 }}
