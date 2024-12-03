@@ -1,7 +1,8 @@
 import { Product } from "@/lib/validations";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
     boolean,
+    index,
     jsonb,
     numeric,
     pgTable,
@@ -12,37 +13,54 @@ import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { categories, productTypes, subCategories } from "./category";
 
-export const products = pgTable("products", {
-    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
-    name: text("name").notNull(),
-    description: text("description").notNull(),
-    price: numeric("price", {
-        precision: 10,
-        scale: 2,
-    }).notNull(),
-    sizes: jsonb("sizes")
-        .$type<Product["sizes"]>()
-        .default([
-            {
-                name: "One Size",
-                quantity: 0,
-            },
-        ])
-        .notNull(),
-    colors: jsonb("colors").$type<Product["colors"]>().default([]).notNull(),
-    brandId: uuid("brand_id")
-        .notNull()
-        .references(() => brands.id, {
-            onDelete: "cascade",
-        }),
-    imageUrls: jsonb("image_urls")
-        .$type<Product["imageUrls"]>()
-        .default([])
-        .notNull(),
-    isAvailable: boolean("is_available").default(true).notNull(),
-    isPublished: boolean("is_published").default(false).notNull(),
-    ...timestamps,
-});
+export const products = pgTable(
+    "products",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        name: text("name").notNull(),
+        slug: text("slug").notNull().unique(),
+        description: text("description").notNull(),
+        price: numeric("price", {
+            precision: 10,
+            scale: 2,
+        }).notNull(),
+        sizes: jsonb("sizes")
+            .$type<Product["sizes"]>()
+            .default([
+                {
+                    name: "One Size",
+                    quantity: 0,
+                },
+            ])
+            .notNull(),
+        colors: jsonb("colors")
+            .$type<Product["colors"]>()
+            .default([])
+            .notNull(),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, {
+                onDelete: "cascade",
+            }),
+        imageUrls: jsonb("image_urls")
+            .$type<Product["imageUrls"]>()
+            .default([])
+            .notNull(),
+        isAvailable: boolean("is_available").default(true).notNull(),
+        isPublished: boolean("is_published").default(false).notNull(),
+        status: boolean("status").default(true).notNull(),
+        ...timestamps,
+    },
+    (table) => ({
+        productFtsIdx: index("product_fts_idx").using(
+            "gin",
+            sql`(
+            setweight(to_tsvector('english', ${table.name}), 'A') ||
+            setweight(to_tsvector('english', ${table.description}), 'B')
+        )`
+        ),
+    })
+);
 
 export const productCategories = pgTable("product_categories", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),

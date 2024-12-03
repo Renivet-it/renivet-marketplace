@@ -23,7 +23,7 @@ export async function generateMetadata({
     if (!existingBlog)
         return {
             title: "Blog not found",
-            description: "The requested blog was not found.",
+            description: "The requested blog was not found",
         };
 
     return {

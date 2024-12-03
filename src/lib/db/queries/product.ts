@@ -4,13 +4,21 @@ import {
     productWithBrandSchema,
     UpdateProduct,
 } from "@/lib/validations";
-import { and, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
 import { products } from "../schema";
 
 class ProductQuery {
-    async getProductCount(brandId: string) {
-        const data = await db.$count(products, eq(products.brandId, brandId));
+    async getProductCount(brandId: string, status?: "active" | "deleted") {
+        const data = await db.$count(
+            products,
+            and(
+                eq(products.brandId, brandId),
+                status !== undefined
+                    ? eq(products.status, status === "active")
+                    : undefined
+            )
+        );
         return +data || 0;
     }
 
@@ -23,6 +31,8 @@ class ProductQuery {
         maxPrice,
         isAvailable,
         isPublished,
+        sortBy = "createdAt",
+        sortOrder = "desc",
     }: {
         limit: number;
         page: number;
@@ -32,9 +42,18 @@ class ProductQuery {
         maxPrice?: number;
         isAvailable?: boolean;
         isPublished?: boolean;
+        sortBy?: "price" | "createdAt";
+        sortOrder?: "asc" | "desc";
     }) {
+        const searchQuery = !!search?.length
+            ? sql`(
+            setweight(to_tsvector('english', ${products.name}), 'A') ||
+            setweight(to_tsvector('english', ${products.description}), 'B'))
+            @@ plainto_tsquery('english', ${search})`
+            : undefined;
+
         const filters = and(
-            !!search?.length ? ilike(products.name, `%${search}%`) : undefined,
+            searchQuery,
             !!brandIds?.length
                 ? inArray(products.brandId, brandIds)
                 : undefined,
@@ -49,7 +68,8 @@ class ProductQuery {
                 : undefined,
             isPublished !== undefined
                 ? eq(products.isPublished, isPublished)
-                : undefined
+                : undefined,
+            eq(products.status, true)
         );
 
         const data = await db.query.products.findMany({
@@ -59,6 +79,18 @@ class ProductQuery {
             where: filters,
             limit,
             offset: (page - 1) * limit,
+            orderBy: searchQuery
+                ? [
+                      sortOrder === "asc"
+                          ? asc(products[sortBy])
+                          : desc(products[sortBy]),
+                      //   desc(sql`ts_rank(${searchQuery})`),
+                  ]
+                : [
+                      sortOrder === "asc"
+                          ? asc(products[sortBy])
+                          : desc(products[sortBy]),
+                  ],
             extras: {
                 count: db.$count(products, filters).as("product_count"),
             },
@@ -74,15 +106,15 @@ class ProductQuery {
         };
     }
 
-    async getProduct(productId: string, isPublished?: boolean) {
+    async getProduct(productId: string, visibility?: "published" | "draft") {
         const data = await db.query.products.findFirst({
             with: {
                 brand: true,
             },
             where: and(
                 eq(products.id, productId),
-                isPublished !== undefined
-                    ? eq(products.isPublished, isPublished)
+                visibility !== undefined
+                    ? eq(products.isPublished, visibility === "published")
                     : undefined
             ),
         });
@@ -90,7 +122,27 @@ class ProductQuery {
         return productWithBrandSchema.parse(data);
     }
 
-    async createProduct(values: CreateProduct) {
+    async getProductBySlug(slug: string, visibility?: "published" | "draft") {
+        const data = await db.query.products.findFirst({
+            with: {
+                brand: true,
+            },
+            where: and(
+                eq(products.slug, slug),
+                visibility !== undefined
+                    ? eq(products.isPublished, visibility === "published")
+                    : undefined
+            ),
+        });
+
+        return productWithBrandSchema.parse(data);
+    }
+
+    async createProduct(
+        values: CreateProduct & {
+            slug: string;
+        }
+    ) {
         const data = await db
             .insert(products)
             .values(values)
@@ -100,10 +152,18 @@ class ProductQuery {
         return data;
     }
 
-    async updateProduct(productId: string, values: UpdateProduct) {
+    async updateProduct(
+        productId: string,
+        values: UpdateProduct & {
+            slug: string;
+        }
+    ) {
         const data = await db
             .update(products)
-            .set(values)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);
@@ -111,9 +171,13 @@ class ProductQuery {
         return data;
     }
 
-    async deleteProduct(productId: string) {
+    async softDeleteProduct(productId: string) {
         const data = await db
-            .delete(products)
+            .update(products)
+            .set({
+                status: false,
+                updatedAt: new Date(),
+            })
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);

@@ -1,3 +1,4 @@
+import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldBrandPermission } from "@/config/permissions";
 import {
     createTRPCRouter,
@@ -5,6 +6,7 @@ import {
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
+import { generateProductSlug, getUploadThingFileKey } from "@/lib/utils";
 import { createProductSchema, updateProductSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -21,45 +23,31 @@ export const productsRouter = createTRPCRouter({
                 maxPrice: z.number().optional(),
                 isAvailable: z.boolean().optional(),
                 isPublished: z.boolean().optional(),
+                sortBy: z.enum(["price", "createdAt"]).optional(),
+                sortOrder: z.enum(["asc", "desc"]).optional(),
             })
         )
         .query(async ({ input, ctx }) => {
-            const {
-                limit,
-                page,
-                search,
-                brandIds,
-                minPrice,
-                maxPrice,
-                isAvailable,
-                isPublished,
-            } = input;
             const { queries } = ctx;
 
-            const data = await queries.products.getProducts({
-                limit,
-                page,
-                search,
-                brandIds,
-                minPrice,
-                maxPrice,
-                isAvailable,
-                isPublished,
-            });
-
+            const data = await queries.products.getProducts(input);
             return data;
         }),
     getProduct: publicProcedure
         .input(
             z.object({
                 productId: z.string(),
+                visibility: z.enum(["published", "draft"]).optional(),
             })
         )
         .query(async ({ input, ctx }) => {
-            const { productId } = input;
+            const { productId, visibility } = input;
             const { queries } = ctx;
 
-            const data = await queries.products.getProduct(productId);
+            const data = await queries.products.getProduct(
+                productId,
+                visibility
+            );
             if (!data)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -83,16 +71,21 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const totalProducts =
-                await queries.products.getProductCount(brandId);
+            const totalProducts = await queries.products.getProductCount(
+                brandId,
+                "active"
+            );
             if (totalProducts >= 5)
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You have reached the maximum number of products",
                 });
 
+            const slug = generateProductSlug(product.name, user.brand.name);
+
             const data = await queries.products.createProduct({
                 ...product,
+                slug,
                 brandId,
             });
 
@@ -126,10 +119,28 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const data = await queries.products.updateProduct(
-                productId,
-                values
+            const existingImages = existingProduct.imageUrls.map((url) => ({
+                key: getUploadThingFileKey(url),
+                url,
+            }));
+            const inputImages = values.imageUrls.map((url) => ({
+                key: getUploadThingFileKey(url),
+                url,
+            }));
+
+            const removedImages = existingImages.filter(
+                (img) => !inputImages.some((i) => i.key === img.key)
             );
+
+            if (removedImages.length > 0)
+                await utApi.deleteFiles(removedImages.map((img) => img.key));
+
+            const slug = generateProductSlug(values.name, user.brand.name);
+
+            const data = await queries.products.updateProduct(productId, {
+                ...values,
+                slug,
+            });
 
             return data;
         }),
@@ -160,7 +171,7 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const data = await queries.products.deleteProduct(productId);
+            const data = await queries.products.softDeleteProduct(productId);
             return data;
         }),
 });

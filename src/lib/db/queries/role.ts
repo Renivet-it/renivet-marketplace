@@ -66,7 +66,12 @@ class RoleQuery {
         return data;
     }
 
-    async updateRole(id: string, values: UpdateRole) {
+    async updateRole(
+        id: string,
+        values: UpdateRole & {
+            slug: string;
+        }
+    ) {
         const data = await db
             .update(roles)
             .set({

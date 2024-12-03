@@ -380,3 +380,9 @@ export function formatPriceTag(price: number, keepDeciamls = false) {
         minimumFractionDigits: keepDeciamls ? 2 : 0,
     }).format(price);
 }
+
+export function generateProductSlug(productName: string, brandName: string) {
+    return slugify(
+        `${brandName} ${productName} ${Date.now()} ${Math.random().toString(36).substring(7)}`
+    );
+}

@@ -239,6 +239,34 @@
       "when": 1733157476692,
       "tag": "0034_burly_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1733211052294,
+      "tag": "0035_jazzy_carnage",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1733211089823,
+      "tag": "0036_puzzling_the_hand",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1733211332774,
+      "tag": "0037_common_sebastian_shaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1733222566389,
+      "tag": "0038_bitter_golden_guardian",
+      "breakpoints": true
     }
   ]
 }

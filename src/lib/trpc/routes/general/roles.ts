@@ -102,7 +102,7 @@ export const rolesRouter = createTRPCRouter({
             const [updatedRole] = await Promise.all([
                 queries.roles.updateRole(id, {
                     ...data,
-                    ...(data.name && { slug }),
+                    slug,
                 }),
                 roleCache.remove(id),
             ]);
