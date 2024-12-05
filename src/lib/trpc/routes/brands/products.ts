@@ -7,7 +7,11 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { generateProductSlug, getUploadThingFileKey } from "@/lib/utils";
-import { createProductSchema, updateProductSchema } from "@/lib/validations";
+import {
+    createCategorizeProductSchema,
+    createProductSchema,
+    updateProductSchema,
+} from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -141,6 +145,62 @@ export const productsRouter = createTRPCRouter({
                 ...values,
                 slug,
             });
+
+            return data;
+        }),
+    categorizeProduct: protectedProcedure
+        .input(createCategorizeProductSchema)
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { productId, categories } = input;
+            const { queries, user } = ctx;
+
+            const existingProduct =
+                await queries.products.getProduct(productId);
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (existingProduct.brand.id !== user.brand?.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not a member of this brand",
+                });
+
+            const existingProductCategories = existingProduct.categories.map(
+                (x) => ({
+                    id: x.id,
+                    tag: `${x.category.id}-${x.subcategory.id}-${x.productType.id}`,
+                })
+            );
+            const inputCategories = categories.map(
+                (x) => `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
+            );
+
+            const addedCategories = categories.filter(
+                (x) =>
+                    !existingProductCategories.some(
+                        (y) =>
+                            y.tag ===
+                            `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
+                    )
+            );
+
+            const removedCategories = existingProductCategories.filter(
+                (x) => !inputCategories.some((y) => y === x.tag)
+            );
+
+            console.log({ addedCategories, removedCategories });
+
+            const data = await queries.products.categorizeProduct(
+                productId,
+                addedCategories,
+                removedCategories.map((x) => x.id)
+            );
 
             return data;
         }),

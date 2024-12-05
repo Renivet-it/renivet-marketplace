@@ -226,11 +226,12 @@ export function ShopPage({
                             onValueChange={setPriceRange}
                             min={100}
                             max={10000}
+                            minStepsBetweenThumbs={1}
                             aria-label="Price range slider"
                         />
                     </div>
 
-                    <div className="flex justify-between">
+                    <div>
                         <Label className="tabular-nums">
                             {formatPriceTag(priceRange[0])} -{" "}
                             {formatPriceTag(priceRange[1])}
@@ -283,7 +284,7 @@ export function ShopPage({
 
                 <Separator />
 
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-5 md:grid-cols-5">
                     {products.length > 0 ? (
                         products.map((product) => (
                             <ProductCard key={product.id} product={product} />

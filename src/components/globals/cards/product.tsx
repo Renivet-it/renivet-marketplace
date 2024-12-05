@@ -51,7 +51,7 @@ export function ProductCard({ className, product, ...props }: PageProps) {
                     >
                         <Button
                             size="sm"
-                            className="w-full"
+                            className="w-full hover:bg-background hover:text-foreground"
                             onMouseEnter={() => setIsWishlistHovered(true)}
                             onMouseLeave={() => setIsWishlistHovered(false)}
                         >

@@ -63,6 +63,53 @@ const columns: ColumnDef<TableProduct>[] = [
         },
     },
     {
+        accessorKey: "categories",
+        header: "Categories",
+        cell: ({ row }) => {
+            const data = row.original;
+
+            return data.categories.length === 0 ? (
+                <span>N/A</span>
+            ) : (
+                <Popover>
+                    <PopoverTrigger title="Click to view" className="underline">
+                        View
+                    </PopoverTrigger>
+
+                    <PopoverContent className="w-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Count</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Subcategory</TableHead>
+                                    <TableHead className="text-right">
+                                        Product Type
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+
+                            <TableBody>
+                                {data.categories.map((x, i) => (
+                                    <TableRow key={x.id}>
+                                        <TableCell>{i + 1}</TableCell>
+                                        <TableCell>{x.category.name}</TableCell>
+                                        <TableCell>
+                                            {x.subcategory.name}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {x.productType.name}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </PopoverContent>
+                </Popover>
+            );
+        },
+    },
+    {
         accessorKey: "sizes",
         header: "Sizes",
         cell: ({ row }) => {

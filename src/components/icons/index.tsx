@@ -41,6 +41,7 @@ import LucideIcons, {
     LayoutDashboard,
     Leaf,
     LifeBuoy,
+    Link,
     Linkedin,
     Loader,
     Loader2,
@@ -56,6 +57,7 @@ import LucideIcons, {
     Pencil,
     Phone,
     PieChart,
+    Pin,
     PlaneLanding,
     PlaneTakeoff,
     Plus,
@@ -64,6 +66,7 @@ import LucideIcons, {
     ScrollText,
     Search,
     Settings2,
+    Share,
     ShoppingBag,
     ShoppingCart,
     SlidersHorizontal,
@@ -83,6 +86,9 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Pin,
+    Link,
+    Share,
     Check,
     Hammer,
     CircleCheck,

@@ -64,7 +64,7 @@ function RoleEditSkeleton() {
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm"> Site Permissions</p>
+                    <p className="text-sm">Site Permissions</p>
                     <Skeleton className="h-9 w-24 rounded-md" />
                 </div>
 

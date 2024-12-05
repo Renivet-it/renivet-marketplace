@@ -45,6 +45,12 @@ export const env = createEnv({
                 required_error: "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required",
             })
             .min(1, "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required"),
+
+        NEXT_PUBLIC_FACEBOOK_APP_ID: z
+            .string({
+                required_error: "NEXT_PUBLIC_FACEBOOK_APP_ID is required",
+            })
+            .min(1, "NEXT_PUBLIC_FACEBOOK_APP_ID is required"),
     },
     runtimeEnv: {
         CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
@@ -59,6 +65,7 @@ export const env = createEnv({
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+        NEXT_PUBLIC_FACEBOOK_APP_ID: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
     },
     extends: [vercel()],
 });
