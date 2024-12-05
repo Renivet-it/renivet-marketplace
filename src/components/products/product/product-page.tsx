@@ -94,7 +94,7 @@ export function ProductPage({ className, product, ...props }: PageProps) {
                                     >
                                         <button
                                             title={color.name}
-                                            className="size-12 cursor-pointer rounded-full border border-foreground/10 p-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="size-12 cursor-pointer rounded-full border border-foreground/10 disabled:cursor-not-allowed disabled:opacity-60"
                                             style={{
                                                 backgroundColor: color.hex,
                                             }}

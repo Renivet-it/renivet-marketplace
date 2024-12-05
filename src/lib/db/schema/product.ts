@@ -7,6 +7,7 @@ import {
     numeric,
     pgTable,
     text,
+    uniqueIndex,
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
@@ -62,26 +63,39 @@ export const products = pgTable(
     })
 );
 
-export const productCategories = pgTable("product_categories", {
-    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
-    productId: uuid("product_id")
-        .notNull()
-        .references(() => products.id, { onDelete: "cascade" }),
-    categoryId: uuid("category_id")
-        .notNull()
-        .references(() => categories.id, { onDelete: "cascade" }),
-    subcategoryId: uuid("subcategory_id")
-        .notNull()
-        .references(() => subCategories.id, {
-            onDelete: "cascade",
-        }),
-    productTypeId: uuid("product_type_id")
-        .notNull()
-        .references(() => productTypes.id, {
-            onDelete: "cascade",
-        }),
-    ...timestamps,
-});
+export const productCategories = pgTable(
+    "product_categories",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        categoryId: uuid("category_id")
+            .notNull()
+            .references(() => categories.id, { onDelete: "cascade" }),
+        subcategoryId: uuid("subcategory_id")
+            .notNull()
+            .references(() => subCategories.id, {
+                onDelete: "cascade",
+            }),
+        productTypeId: uuid("product_type_id")
+            .notNull()
+            .references(() => productTypes.id, {
+                onDelete: "cascade",
+            }),
+        ...timestamps,
+    },
+    (table) => ({
+        produtctCatSubCatTypeIdx: uniqueIndex(
+            "product_cat_sub_cat_type_idx"
+        ).on(
+            table.productId,
+            table.categoryId,
+            table.subcategoryId,
+            table.productTypeId
+        ),
+    })
+);
 
 export const productsRelations = relations(products, ({ one, many }) => ({
     categories: many(productCategories),

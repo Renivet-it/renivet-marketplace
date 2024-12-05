@@ -1,4 +1,5 @@
 import {
+    CreateCategorizeProduct,
     CreateProduct,
     ProductWithBrand,
     productWithBrandSchema,
@@ -6,7 +7,7 @@ import {
 } from "@/lib/validations";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { products } from "../schema";
+import { productCategories, products } from "../schema";
 
 class ProductQuery {
     async getProductCount(brandId: string, status?: "active" | "deleted") {
@@ -75,6 +76,13 @@ class ProductQuery {
         const data = await db.query.products.findMany({
             with: {
                 brand: true,
+                categories: {
+                    with: {
+                        category: true,
+                        subcategory: true,
+                        productType: true,
+                    },
+                },
             },
             where: filters,
             limit,
@@ -84,7 +92,11 @@ class ProductQuery {
                       sortOrder === "asc"
                           ? asc(products[sortBy])
                           : desc(products[sortBy]),
-                      //   desc(sql`ts_rank(${searchQuery})`),
+                      desc(sql`ts_rank(
+                        setweight(to_tsvector('english', ${products.name}), 'A') ||
+                        setweight(to_tsvector('english', ${products.description}), 'B'),
+                        plainto_tsquery('english', ${search})
+                      )`),
                   ]
                 : [
                       sortOrder === "asc"
@@ -110,6 +122,13 @@ class ProductQuery {
         const data = await db.query.products.findFirst({
             with: {
                 brand: true,
+                categories: {
+                    with: {
+                        category: true,
+                        subcategory: true,
+                        productType: true,
+                    },
+                },
             },
             where: and(
                 eq(products.id, productId),
@@ -126,6 +145,13 @@ class ProductQuery {
         const data = await db.query.products.findFirst({
             with: {
                 brand: true,
+                categories: {
+                    with: {
+                        category: true,
+                        subcategory: true,
+                        productType: true,
+                    },
+                },
             },
             where: and(
                 eq(products.slug, slug),
@@ -169,6 +195,41 @@ class ProductQuery {
             .then((res) => res[0]);
 
         return data;
+    }
+
+    async categorizeProduct(
+        productId: string,
+        toAdd: CreateCategorizeProduct["categories"],
+        toRemove: string[]
+    ) {
+        const [added, removed] = await Promise.all([
+            toAdd.length > 0
+                ? db
+                      .insert(productCategories)
+                      .values(
+                          toAdd.map((cat) => ({
+                              productId,
+                              categoryId: cat.categoryId,
+                              subcategoryId: cat.subcategoryId,
+                              productTypeId: cat.productTypeId,
+                          }))
+                      )
+                      .returning()
+                : [],
+            toRemove.length > 0
+                ? db
+                      .delete(productCategories)
+                      .where(
+                          and(
+                              eq(productCategories.productId, productId),
+                              inArray(productCategories.id, toRemove)
+                          )
+                      )
+                      .returning()
+                : [],
+        ]);
+
+        return [added, removed];
     }
 
     async softDeleteProduct(productId: string) {

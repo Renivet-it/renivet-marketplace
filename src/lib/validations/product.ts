@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { brandSchema } from "./brand";
+import {
+    categorySchema,
+    productTypeSchema,
+    subCategorySchema,
+} from "./category";
 
 export const productSchema = z.object({
     id: z
@@ -115,6 +120,31 @@ export const productSchema = z.object({
 
 export const productWithBrandSchema = productSchema.extend({
     brand: brandSchema,
+    categories: z.array(
+        z.object({
+            id: z
+                .string({
+                    required_error: "ID is required",
+                    invalid_type_error: "ID must be a string",
+                })
+                .uuid("ID is invalid"),
+            category: categorySchema.pick({
+                id: true,
+                name: true,
+            }),
+            subcategory: subCategorySchema.pick({
+                id: true,
+                name: true,
+                categoryId: true,
+            }),
+            productType: productTypeSchema.pick({
+                id: true,
+                name: true,
+                categoryId: true,
+                subCategoryId: true,
+            }),
+        })
+    ),
 });
 
 export const createProductSchema = productSchema.omit({
@@ -134,7 +164,84 @@ export const updateProductSchema = createProductSchema
         isAvailable: productSchema.shape.isAvailable,
     });
 
+export const categorizeProductSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    productId: z
+        .string({
+            required_error: "Product ID is required",
+            invalid_type_error: "Product ID must be a string",
+        })
+        .uuid("Product ID is invalid"),
+    categoryId: z
+        .string({
+            required_error: "Category ID is required",
+            invalid_type_error: "Category ID must be a string",
+        })
+        .uuid("Category ID is invalid"),
+    subcategoryId: z
+        .string({
+            required_error: "Subcategory ID is required",
+            invalid_type_error: "Subcategory ID must be a string",
+        })
+        .uuid("Subcategory ID is invalid"),
+    productTypeId: z
+        .string({
+            required_error: "Product Type ID is required",
+            invalid_type_error: "Product Type ID must be a string",
+        })
+        .uuid("Product Type ID is invalid"),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
+export const createCategorizeProductSchema = z
+    .object({
+        productId: categorizeProductSchema.shape.productId,
+        categories: z.array(
+            z.object({
+                id: z.string(),
+                categoryId: categorizeProductSchema.shape.categoryId,
+                subcategoryId: categorizeProductSchema.shape.subcategoryId,
+                productTypeId: categorizeProductSchema.shape.productTypeId,
+            })
+        ),
+    })
+    .refine(
+        (v) => {
+            const seen = new Set();
+            return v.categories.every((category) => {
+                const key = `${category.categoryId}-${category.subcategoryId}-${category.productTypeId}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        },
+        {
+            message: "Duplicate category combinations are not allowed",
+            path: ["categories"],
+        }
+    );
+
 export type Product = z.infer<typeof productSchema>;
 export type ProductWithBrand = z.infer<typeof productWithBrandSchema>;
 export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;
+export type CategorizeProduct = z.infer<typeof categorizeProductSchema>;
+export type CreateCategorizeProduct = z.infer<
+    typeof createCategorizeProductSchema
+>;

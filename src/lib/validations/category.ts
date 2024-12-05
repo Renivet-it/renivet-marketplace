@@ -93,7 +93,7 @@ export const subCategorySchema = z.object({
         .transform((v) => new Date(v)),
 });
 
-export const productTypes = z.object({
+export const productTypeSchema = z.object({
     id: z
         .string({
             required_error: "ID is required",
@@ -160,7 +160,7 @@ export const createSubCategorySchema = subCategorySchema.omit({
     createdAt: true,
     updatedAt: true,
 });
-export const createProductTypeSchema = productTypes.omit({
+export const createProductTypeSchema = productTypeSchema.omit({
     id: true,
     slug: true,
     createdAt: true,
@@ -183,11 +183,11 @@ export const cachedSubCategorySchema = subCategorySchema.extend({
         invalid_type_error: "Product types must be a number",
     }),
 });
-export const cachedProductTypeSchema = productTypes;
+export const cachedProductTypeSchema = productTypeSchema;
 
 export type Category = z.infer<typeof categorySchema>;
 export type SubCategory = z.infer<typeof subCategorySchema>;
-export type ProductType = z.infer<typeof productTypes>;
+export type ProductType = z.infer<typeof productTypeSchema>;
 
 export type CreateCategory = z.infer<typeof createCategorySchema>;
 export type CreateSubCategory = z.infer<typeof createSubCategorySchema>;

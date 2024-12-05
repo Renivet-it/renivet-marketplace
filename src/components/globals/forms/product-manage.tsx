@@ -108,10 +108,6 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         control: form.control,
     });
 
-    useEffect(() => {
-        console.log(selectedSizes);
-    }, [selectedSizes]);
-
     const handleSizeToggle = (size: string) => {
         if (size === "One Size") {
             if (selectedSizes.includes("One Size")) {
@@ -219,11 +215,16 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             if (values.imageUrls.length > 5)
                 throw new Error("Maximum 5 images allowed");
 
-            await createProductAsync(values);
+            return await createProductAsync(values);
         },
-        onSuccess: (_, __, { toastId }) => {
-            toast.success("Product added successfully", { id: toastId });
-            router.push(`/dashboard/brands/${brandId}/products`);
+        onSuccess: (data, _, { toastId }) => {
+            toast.success(
+                "Product has been added, please add categorize your product for better organization",
+                { id: toastId }
+            );
+            router.push(
+                `/dashboard/brands/${brandId}/products/p/${data.id}/categorize`
+            );
             setPreviews([]);
             setFiles([]);
         },
@@ -269,426 +270,408 @@ export function ProductManageForm({ brandId, product }: PageProps) {
     }, [form.formState.errors]);
 
     return (
-        <>
-            <Form {...form}>
-                <form
-                    className="space-y-6"
-                    onSubmit={form.handleSubmit((values) =>
-                        product
-                            ? updateProduct({
-                                  ...values,
-                                  isAvailable: product.isAvailable,
-                              })
-                            : createProduct(values)
+        <Form {...form}>
+            <form
+                className="space-y-6"
+                onSubmit={form.handleSubmit((values) =>
+                    product
+                        ? updateProduct({
+                              ...values,
+                              isAvailable: product.isAvailable,
+                          })
+                        : createProduct(values)
+                )}
+            >
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Name</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    placeholder="THE BEAR HOUSE - Men Grey Slim Fit Tartan Checks Checked Casual Shirt"
+                                    disabled={isCreating || isUpdating}
+                                    {...field}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
                     )}
-                >
-                    <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Name</FormLabel>
+                />
+
+                <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Description</FormLabel>
+
+                            <FormControl>
+                                <Editor
+                                    {...field}
+                                    disabled={isCreating || isUpdating}
+                                    ref={editorRef}
+                                    content={field.value ?? ""}
+                                    onChange={field.onChange}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                        <FormItem className="w-full">
+                            <FormLabel>Price</FormLabel>
+
+                            <FormControl>
+                                <PriceInput
+                                    placeholder="998.00"
+                                    currency="INR"
+                                    symbol="₹"
+                                    disabled={isCreating || isUpdating}
+                                    {...field}
+                                    onChange={(e) => {
+                                        const regex = /^[0-9]*\.?[0-9]{0,2}$/;
+                                        if (regex.test(e.target.value))
+                                            field.onChange(e);
+                                    }}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="sizes"
+                    render={() => (
+                        <FormItem
+                            className={cn(
+                                sizesFields.length > 0 && "space-y-4"
+                            )}
+                        >
+                            <div className="space-y-2">
+                                <FormLabel>Sizes</FormLabel>
 
                                 <FormControl>
-                                    <Input
-                                        placeholder="THE BEAR HOUSE - Men Grey Slim Fit Tartan Checks Checked Casual Shirt"
-                                        disabled={isCreating || isUpdating}
-                                        {...field}
-                                    />
-                                </FormControl>
-
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Description</FormLabel>
-
-                                <FormControl>
-                                    <Editor
-                                        {...field}
-                                        disabled={isCreating || isUpdating}
-                                        ref={editorRef}
-                                        content={field.value ?? ""}
-                                        onChange={field.onChange}
-                                    />
-                                </FormControl>
-
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field }) => (
-                            <FormItem className="w-full">
-                                <FormLabel>Price</FormLabel>
-
-                                <FormControl>
-                                    <PriceInput
-                                        placeholder="998.00"
-                                        currency="INR"
-                                        symbol="₹"
-                                        disabled={isCreating || isUpdating}
-                                        {...field}
-                                        onChange={(e) => {
-                                            const regex =
-                                                /^[0-9]*\.?[0-9]{0,2}$/;
-                                            if (regex.test(e.target.value))
-                                                field.onChange(e);
-                                        }}
-                                    />
-                                </FormControl>
-
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="sizes"
-                        render={() => (
-                            <FormItem
-                                className={cn(
-                                    sizesFields.length > 0 && "space-y-4"
-                                )}
-                            >
-                                <div className="space-y-2">
-                                    <FormLabel>Sizes</FormLabel>
-
-                                    <FormControl>
-                                        <div className="flex flex-wrap gap-2">
-                                            {SIZES.map((size) => (
-                                                <Button
-                                                    key={size}
-                                                    type="button"
-                                                    variant={
-                                                        selectedSizes.includes(
-                                                            size
-                                                        )
-                                                            ? "default"
-                                                            : "outline"
-                                                    }
-                                                    onClick={() =>
-                                                        handleSizeToggle(size)
-                                                    }
-                                                    disabled={
-                                                        isSizeDisabled(size) ||
-                                                        isCreating ||
-                                                        isUpdating
-                                                    }
-                                                    className="min-w-[80px]"
-                                                >
-                                                    {size}
-                                                </Button>
-                                            ))}
-                                        </div>
-                                    </FormControl>
-
-                                    <FormMessage />
-                                </div>
-
-                                <div className="space-y-2">
-                                    {sizesFields.length > 0 && <Separator />}
-
-                                    {sizesFields
-                                        .sort(
-                                            (a, b) =>
-                                                SIZES.indexOf(a.name) -
-                                                SIZES.indexOf(b.name)
-                                        )
-                                        .map((field, index) => (
-                                            <FormField
-                                                key={field.id}
-                                                control={form.control}
-                                                name={`sizes.${index}.quantity`}
-                                                render={({
-                                                    field: {
-                                                        value,
-                                                        onChange,
-                                                        ...fieldProps
-                                                    },
-                                                }) => (
-                                                    <FormItem className="flex items-center gap-4">
-                                                        <FormLabel className="min-w-6 whitespace-nowrap">
-                                                            {
-                                                                sizesFields[
-                                                                    index
-                                                                ].name
-                                                            }
-                                                            :
-                                                        </FormLabel>
-
-                                                        <FormControl>
-                                                            <Input
-                                                                placeholder="Enter quantity"
-                                                                type="number"
-                                                                disabled={
-                                                                    isCreating ||
-                                                                    isUpdating
-                                                                }
-                                                                {...fieldProps}
-                                                                value={
-                                                                    value || ""
-                                                                }
-                                                                onChange={(e) =>
-                                                                    onChange(
-                                                                        parseInt(
-                                                                            e
-                                                                                .target
-                                                                                .value
-                                                                        ) || 0
-                                                                    )
-                                                                }
-                                                            />
-                                                        </FormControl>
-
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        ))}
-                                </div>
-                            </FormItem>
-                        )}
-                    />
-
-                    <div className={cn(colorsFields.length > 0 && "space-y-4")}>
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium">Colors</div>
-
-                            <Button
-                                type="button"
-                                variant="accent"
-                                onClick={() =>
-                                    appendColors({ name: "", hex: "#ffffff" })
-                                }
-                                disabled={isCreating || isUpdating}
-                                className="w-full"
-                            >
-                                <Icons.Plus className="size-4" />
-                                Add Color
-                            </Button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {colorsFields.length > 0 && <Separator />}
-
-                            {colorsFields.map((field, index) => (
-                                <div
-                                    key={field.id}
-                                    className="flex items-center gap-3"
-                                >
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <button
+                                    <div className="flex flex-wrap gap-2">
+                                        {SIZES.map((size) => (
+                                            <Button
+                                                key={size}
                                                 type="button"
+                                                variant={
+                                                    selectedSizes.includes(size)
+                                                        ? "default"
+                                                        : "outline"
+                                                }
                                                 onClick={() =>
-                                                    setActiveColorIndex(index)
+                                                    handleSizeToggle(size)
                                                 }
                                                 disabled={
-                                                    isCreating || isUpdating
+                                                    isSizeDisabled(size) ||
+                                                    isCreating ||
+                                                    isUpdating
                                                 }
-                                                className="size-10 shrink-0 rounded border border-gray-700"
-                                                style={{
-                                                    backgroundColor: form.watch(
-                                                        `colors.${index}.hex`
-                                                    ),
-                                                }}
-                                            />
-                                        </PopoverTrigger>
-
-                                        <PopoverContent className="w-auto border-none bg-transparent p-0">
-                                            {activeColorIndex !== null && (
-                                                <HexColorPicker
-                                                    color={form.watch(
-                                                        `colors.${activeColorIndex}.hex`
-                                                    )}
-                                                    onChange={(color) => {
-                                                        if (
-                                                            activeColorIndex !==
-                                                            null
-                                                        )
-                                                            form.setValue(
-                                                                `colors.${activeColorIndex}.hex`,
-                                                                color
-                                                            );
-                                                    }}
-                                                />
-                                            )}
-                                        </PopoverContent>
-                                    </Popover>
-
-                                    <FormField
-                                        control={form.control}
-                                        name={`colors.${index}.name`}
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder="Enter color name"
-                                                        disabled={
-                                                            isCreating ||
-                                                            isUpdating
-                                                        }
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        disabled={isCreating || isUpdating}
-                                        onClick={() => removeColors(index)}
-                                        className="shrink-0 text-gray-400 hover:text-white"
-                                    >
-                                        <Icons.X className="size-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <FormField
-                        control={form.control}
-                        name="imageUrls"
-                        render={() => (
-                            <FormItem>
-                                <FormLabel>Images</FormLabel>
-
-                                <FormControl>
-                                    <div className="flex w-full flex-col gap-2 md:flex-row">
-                                        {[...Array(5)].map((_, index) => (
-                                            <div
-                                                key={index}
-                                                className="basis-1/5"
+                                                className="min-w-[80px]"
                                             >
-                                                <div className="relative aspect-square overflow-hidden rounded-md">
-                                                    {index < previews.length ? (
-                                                        <>
-                                                            <Image
-                                                                src={
-                                                                    previews[
-                                                                        index
-                                                                    ]
-                                                                }
-                                                                alt={`Image ${index + 1}`}
-                                                                width={1500}
-                                                                height={1500}
-                                                                className="object-cover"
-                                                            />
-
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="absolute right-1 top-1 size-6 rounded-full bg-foreground/50 hover:bg-foreground/70"
-                                                                disabled={
-                                                                    isCreating ||
-                                                                    isUpdating
-                                                                }
-                                                                onClick={() =>
-                                                                    removeImage(
-                                                                        index
-                                                                    )
-                                                                }
-                                                            >
-                                                                <Icons.X className="size-4 text-background" />
-                                                            </Button>
-                                                        </>
-                                                    ) : index ===
-                                                          previews.length &&
-                                                      previews.length < 5 ? (
-                                                        <div
-                                                            {...getRootProps()}
-                                                            className={cn(
-                                                                "flex size-full cursor-pointer items-center justify-center rounded-md border border-dashed border-foreground/40",
-                                                                isDragActive &&
-                                                                    "border-green-500 bg-green-500/10"
-                                                            )}
-                                                        >
-                                                            <input
-                                                                {...getInputProps()}
-                                                                disabled={
-                                                                    isCreating ||
-                                                                    isUpdating
-                                                                }
-                                                            />
-
-                                                            <Icons.Plus className="size-6" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex size-full items-center justify-center rounded-md border border-dashed border-foreground/40 bg-muted"></div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                {size}
+                                            </Button>
                                         ))}
                                     </div>
                                 </FormControl>
 
                                 <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                            </div>
 
-                    <FormField
-                        control={form.control}
-                        name="isPublished"
-                        render={({ field }) => (
-                            <FormItem>
-                                <div className="flex w-min flex-row-reverse items-center justify-start gap-2">
-                                    <FormLabel className="whitespace-nowrap font-semibold">
-                                        Publish Immediately
-                                    </FormLabel>
+                            <div className="space-y-2">
+                                {sizesFields.length > 0 && <Separator />}
 
-                                    <FormControl>
-                                        <Switch
-                                            disabled={
-                                                !!product ||
-                                                isCreating ||
-                                                isUpdating
-                                            }
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
+                                {sizesFields
+                                    .sort(
+                                        (a, b) =>
+                                            SIZES.indexOf(a.name) -
+                                            SIZES.indexOf(b.name)
+                                    )
+                                    .map((field, index) => (
+                                        <FormField
+                                            key={field.id}
+                                            control={form.control}
+                                            name={`sizes.${index}.quantity`}
+                                            render={({
+                                                field: {
+                                                    value,
+                                                    onChange,
+                                                    ...fieldProps
+                                                },
+                                            }) => (
+                                                <FormItem className="flex items-center gap-4">
+                                                    <FormLabel className="min-w-6 whitespace-nowrap">
+                                                        {
+                                                            sizesFields[index]
+                                                                .name
+                                                        }
+                                                        :
+                                                    </FormLabel>
+
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Enter quantity"
+                                                            type="number"
+                                                            disabled={
+                                                                isCreating ||
+                                                                isUpdating
+                                                            }
+                                                            {...fieldProps}
+                                                            value={value || ""}
+                                                            onChange={(e) =>
+                                                                onChange(
+                                                                    parseInt(
+                                                                        e.target
+                                                                            .value
+                                                                    ) || 0
+                                                                )
+                                                            }
+                                                        />
+                                                    </FormControl>
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
                                         />
-                                    </FormControl>
+                                    ))}
+                            </div>
+                        </FormItem>
+                    )}
+                />
+
+                <div className={cn(colorsFields.length > 0 && "space-y-4")}>
+                    <div className="space-y-2">
+                        <div className="text-sm font-medium">Colors</div>
+
+                        <Button
+                            type="button"
+                            variant="accent"
+                            onClick={() =>
+                                appendColors({ name: "", hex: "#ffffff" })
+                            }
+                            disabled={isCreating || isUpdating}
+                            className="w-full"
+                        >
+                            <Icons.Plus className="size-4" />
+                            Add Color
+                        </Button>
+                    </div>
+
+                    <div className="space-y-4">
+                        {colorsFields.length > 0 && <Separator />}
+
+                        {colorsFields.map((field, index) => (
+                            <div
+                                key={field.id}
+                                className="flex items-center gap-3"
+                            >
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setActiveColorIndex(index)
+                                            }
+                                            disabled={isCreating || isUpdating}
+                                            className="size-10 shrink-0 rounded border border-gray-700"
+                                            style={{
+                                                backgroundColor: form.watch(
+                                                    `colors.${index}.hex`
+                                                ),
+                                            }}
+                                        />
+                                    </PopoverTrigger>
+
+                                    <PopoverContent className="w-auto border-none bg-transparent p-0">
+                                        {activeColorIndex !== null && (
+                                            <HexColorPicker
+                                                color={form.watch(
+                                                    `colors.${activeColorIndex}.hex`
+                                                )}
+                                                onChange={(color) => {
+                                                    if (
+                                                        activeColorIndex !==
+                                                        null
+                                                    )
+                                                        form.setValue(
+                                                            `colors.${activeColorIndex}.hex`,
+                                                            color
+                                                        );
+                                                }}
+                                            />
+                                        )}
+                                    </PopoverContent>
+                                </Popover>
+
+                                <FormField
+                                    control={form.control}
+                                    name={`colors.${index}.name`}
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Enter color name"
+                                                    disabled={
+                                                        isCreating || isUpdating
+                                                    }
+                                                    {...field}
+                                                />
+                                            </FormControl>
+
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={isCreating || isUpdating}
+                                    onClick={() => removeColors(index)}
+                                    className="shrink-0 text-gray-400 hover:text-white"
+                                >
+                                    <Icons.X className="size-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <FormField
+                    control={form.control}
+                    name="imageUrls"
+                    render={() => (
+                        <FormItem>
+                            <FormLabel>Images</FormLabel>
+
+                            <FormControl>
+                                <div className="flex w-full flex-col gap-2 md:flex-row">
+                                    {[...Array(5)].map((_, index) => (
+                                        <div key={index} className="basis-1/5">
+                                            <div className="relative aspect-square overflow-hidden rounded-md">
+                                                {index < previews.length ? (
+                                                    <>
+                                                        <Image
+                                                            src={
+                                                                previews[index]
+                                                            }
+                                                            alt={`Image ${index + 1}`}
+                                                            width={1500}
+                                                            height={1500}
+                                                            className="object-cover"
+                                                        />
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="absolute right-1 top-1 size-6 rounded-full bg-foreground/50 hover:bg-foreground/70"
+                                                            disabled={
+                                                                isCreating ||
+                                                                isUpdating
+                                                            }
+                                                            onClick={() =>
+                                                                removeImage(
+                                                                    index
+                                                                )
+                                                            }
+                                                        >
+                                                            <Icons.X className="size-4 text-background" />
+                                                        </Button>
+                                                    </>
+                                                ) : index === previews.length &&
+                                                  previews.length < 5 ? (
+                                                    <div
+                                                        {...getRootProps()}
+                                                        className={cn(
+                                                            "flex size-full cursor-pointer items-center justify-center rounded-md border border-dashed border-foreground/40",
+                                                            isDragActive &&
+                                                                "border-green-500 bg-green-500/10"
+                                                        )}
+                                                    >
+                                                        <input
+                                                            {...getInputProps()}
+                                                            disabled={
+                                                                isCreating ||
+                                                                isUpdating
+                                                            }
+                                                        />
+
+                                                        <Icons.Plus className="size-6" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex size-full items-center justify-center rounded-md border border-dashed border-foreground/40 bg-muted"></div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
+                            </FormControl>
 
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
-                    <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={
-                            isCreating ||
-                            isUpdating ||
-                            (previews.every((preview) =>
-                                product?.imageUrls.includes(preview)
-                            ) &&
-                                !form.formState.isDirty)
-                        }
-                    >
-                        {product ? "Update Product" : "Create Product"}
-                    </Button>
-                </form>
-            </Form>
-        </>
+                <FormField
+                    control={form.control}
+                    name="isPublished"
+                    render={({ field }) => (
+                        <FormItem>
+                            <div className="flex w-min flex-row-reverse items-center justify-start gap-2">
+                                <FormLabel className="whitespace-nowrap font-semibold">
+                                    Publish Immediately
+                                </FormLabel>
+
+                                <FormControl>
+                                    <Switch
+                                        disabled={
+                                            !!product ||
+                                            isCreating ||
+                                            isUpdating
+                                        }
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                            </div>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={
+                        isCreating ||
+                        isUpdating ||
+                        (previews.every((preview) =>
+                            product?.imageUrls.includes(preview)
+                        ) &&
+                            !form.formState.isDirty)
+                    }
+                >
+                    {product ? "Update Product" : "Create Product"}
+                </Button>
+            </form>
+        </Form>
     );
 }

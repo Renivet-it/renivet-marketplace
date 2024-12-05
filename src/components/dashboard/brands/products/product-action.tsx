@@ -82,6 +82,15 @@ export function ProductAction({ product }: PageProps) {
                             </Link>
                         </DropdownMenuItem>
 
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/categorize`}
+                            >
+                                <Icons.Pencil className="size-4" />
+                                <span>Categorize</span>
+                            </Link>
+                        </DropdownMenuItem>
+
                         <DropdownMenuItem
                             onClick={() => setIsAvailablityModalOpen(true)}
                         >
