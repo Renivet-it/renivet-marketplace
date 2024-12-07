@@ -265,10 +265,6 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         },
     });
 
-    useEffect(() => {
-        console.log(form.formState.errors);
-    }, [form.formState.errors]);
-
     return (
         <Form {...form}>
             <form

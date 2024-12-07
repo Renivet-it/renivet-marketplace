@@ -1,6 +1,5 @@
 "use client";
 
-import { trpc } from "@/lib/trpc/client";
 import { cn, formatPriceTag } from "@/lib/utils";
 import {
     BrandMeta,
@@ -11,7 +10,6 @@ import {
 import {
     parseAsArrayOf,
     parseAsFloat,
-    parseAsInteger,
     parseAsString,
     parseAsStringLiteral,
     useQueryState,
@@ -32,7 +30,7 @@ import { Separator } from "../ui/separator";
 import { Slider } from "../ui/slider";
 
 interface PageProps extends GenericProps {
-    initialBrandsMeta: {
+    brandsMeta: {
         data: BrandMeta[];
         count: number;
     };
@@ -62,23 +60,18 @@ const sortByWithOrderTypes = [
 
 export function ShopFilters({
     className,
-    initialBrandsMeta,
+    brandsMeta,
     categories,
     subCategories,
     productTypes,
     ...props
 }: PageProps) {
-    const [page] = useQueryState("page", parseAsInteger.withDefault(1));
-    const [limit] = useQueryState("limit", parseAsInteger.withDefault(30));
-    const [search] = useQueryState("search", {
-        defaultValue: "",
-    });
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [minPrice, setMinPrice] = useQueryState("minPrice", parseAsFloat);
-    const [maxPrice, setMaxPrice] = useQueryState("maxPrice", parseAsFloat);
+    const [, setMinPrice] = useQueryState("minPrice", parseAsFloat);
+    const [, setMaxPrice] = useQueryState("maxPrice", parseAsFloat);
     const [categoryId, setCategoryId] = useQueryState("categoryId", {
         defaultValue: "",
     });
@@ -100,27 +93,6 @@ export function ShopFilters({
     );
 
     const [priceRange, setPriceRange] = useState<number[]>([0, 10000]);
-
-    trpc.brands.products.getProducts.useQuery({
-        page,
-        limit,
-        isPublished: true,
-        isAvailable: true,
-        brandIds,
-        search,
-        minPrice: minPrice ?? undefined,
-        maxPrice: maxPrice ?? undefined,
-        categoryId,
-        subCategoryId,
-        productTypeId,
-        sortBy,
-        sortOrder,
-    });
-
-    const { data: brandsMeta } = trpc.general.brands.getBrandsMeta.useQuery(
-        undefined,
-        { initialData: initialBrandsMeta }
-    );
 
     const handleCategoryChange = (value: string) => {
         setCategoryId(value);
@@ -152,14 +124,19 @@ export function ShopFilters({
             <Separator />
 
             <div className="space-y-[4px]">
-                <Label className="font-semibold uppercase">Category</Label>
+                <Label
+                    className="font-semibold uppercase"
+                    htmlFor="category_select"
+                >
+                    Category
+                </Label>
 
                 <Select
                     value={categoryId}
                     onValueChange={handleCategoryChange}
                     disabled={categories.length === 0}
                 >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full" id="category_select">
                         <SelectValue placeholder="Select Category" />
                     </SelectTrigger>
 
@@ -175,7 +152,10 @@ export function ShopFilters({
 
             {categoryId.length > 0 && (
                 <div className="space-y-[4px]">
-                    <Label className="font-semibold uppercase">
+                    <Label
+                        className="font-semibold uppercase"
+                        htmlFor="sub_select"
+                    >
                         Subcategory
                     </Label>
 
@@ -188,7 +168,7 @@ export function ShopFilters({
                             ).length === 0
                         }
                     >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" id="sub_select">
                             <SelectValue placeholder="Select Sub-Category" />
                         </SelectTrigger>
 
@@ -207,7 +187,12 @@ export function ShopFilters({
 
             {subCategoryId.length > 0 && (
                 <div className="space-y-[4px]">
-                    <Label className="font-semibold uppercase">Type</Label>
+                    <Label
+                        className="font-semibold uppercase"
+                        htmlFor="type_select"
+                    >
+                        Type
+                    </Label>
 
                     <Select
                         value={productTypeId}
@@ -218,7 +203,7 @@ export function ShopFilters({
                             ).length === 0
                         }
                     >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full" id="type_select">
                             <SelectValue placeholder="Select Type" />
                         </SelectTrigger>
 
@@ -292,9 +277,15 @@ export function ShopFilters({
 
             <div className="space-y-3">
                 <div className="space-y-2">
-                    <Label className="font-semibold uppercase">Price</Label>
+                    <Label
+                        className="font-semibold uppercase"
+                        htmlFor="price_slider"
+                    >
+                        Price
+                    </Label>
 
                     <Slider
+                        id="price_slider"
                         value={priceRange}
                         step={100}
                         onValueChange={setPriceRange}
@@ -321,13 +312,18 @@ export function ShopFilters({
             <Separator />
 
             <div className="space-y-1">
-                <Label className="font-semibold uppercase">Sort By</Label>
+                <Label
+                    className="font-semibold uppercase"
+                    htmlFor="sort_select"
+                >
+                    Sort By
+                </Label>
 
                 <Select
                     value={`${sortBy}:${sortOrder}`}
                     onValueChange={handleSort}
                 >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full" id="sort_select">
                         <SelectValue placeholder="Sort By" />
                     </SelectTrigger>
 

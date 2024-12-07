@@ -197,8 +197,6 @@ export const productsRouter = createTRPCRouter({
                 (x) => !inputCategories.some((y) => y === x.tag)
             );
 
-            console.log({ addedCategories, removedCategories });
-
             const data = await queries.products.categorizeProduct(
                 productId,
                 addedCategories,

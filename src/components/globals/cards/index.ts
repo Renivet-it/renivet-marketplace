@@ -1,5 +1,4 @@
 export * from "./address";
-export * from "./alpha";
 export * from "./blog";
 export * from "./brand-role-draggable";
 export * from "./product";
