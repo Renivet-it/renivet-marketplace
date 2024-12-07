@@ -22,6 +22,7 @@ class BrandQuery {
             columns: {
                 id: true,
                 name: true,
+                slug: true,
                 ownerId: true,
             },
         });
@@ -118,7 +119,20 @@ class BrandQuery {
         });
     }
 
-    async createBrand(values: CreateBrand) {
+    async getBrandBySlug(slug: string) {
+        const data = await db.query.brands.findFirst({
+            where: eq(brands.slug, slug),
+        });
+        if (!data) return null;
+
+        return data;
+    }
+
+    async createBrand(
+        values: CreateBrand & {
+            slug: string;
+        }
+    ) {
         const data = await db
             .insert(brands)
             .values(values)

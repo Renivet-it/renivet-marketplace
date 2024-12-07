@@ -3,11 +3,17 @@
 import { ProductShareModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+} from "@/components/ui/carousel";
 import { Label } from "@/components/ui/label";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { Separator } from "@/components/ui/separator";
 import { cn, formatPriceTag } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
+import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -23,10 +29,10 @@ export function ProductPage({ className, product, ...props }: PageProps) {
     return (
         <>
             <div
-                className={cn("flex flex-col gap-5 md:flex-row", className)}
+                className={cn("flex flex-col gap-5 lg:flex-row", className)}
                 {...props}
             >
-                <div className="grid basis-3/5 grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="hidden basis-3/5 grid-cols-1 gap-5 md:grid md:grid-cols-2">
                     {product.imageUrls.map((url, i) => (
                         <div className="aspect-[3/4] overflow-hidden" key={i}>
                             <Image
@@ -39,6 +45,38 @@ export function ProductPage({ className, product, ...props }: PageProps) {
                         </div>
                     ))}
                 </div>
+
+                <Carousel
+                    plugins={[
+                        Autoplay({
+                            delay: 5000,
+                        }),
+                    ]}
+                    opts={{
+                        loop: true,
+                        align: "start",
+                    }}
+                    className="md:hidden"
+                >
+                    <CarouselContent className="m-0 flex flex-row gap-4">
+                        {product.imageUrls.map((url, i) => (
+                            <CarouselItem
+                                key={i}
+                                className="p-0 text-center md:basis-1/2 lg:basis-1/4"
+                            >
+                                <div className="aspect-[3/4] size-full overflow-hidden">
+                                    <Image
+                                        src={url}
+                                        alt={`${product.name} ${i}`}
+                                        width={1000}
+                                        height={1000}
+                                        className="size-full object-cover"
+                                    />
+                                </div>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                </Carousel>
 
                 <div className="w-px bg-border" />
 

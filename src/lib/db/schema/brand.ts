@@ -39,6 +39,7 @@ export const brandRequests = pgTable("brand_requests", {
 export const brands = pgTable("brands", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
     email: text("email").notNull().unique(),
     website: text("website").notNull(),
     logoUrl: text("logo_url"),

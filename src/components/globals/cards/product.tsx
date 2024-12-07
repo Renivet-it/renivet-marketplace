@@ -63,15 +63,15 @@ export function ProductCard({ className, product, ...props }: PageProps) {
 
                 <div className="space-y-1 py-2 md:p-2">
                     <div>
-                        <p className="truncate text-lg font-semibold md:text-sm">
+                        <p className="truncate text-sm font-semibold">
                             {product.name}
                         </p>
-                        <p className="text-sm text-muted-foreground md:text-xs">
+                        <p className="text-xs text-muted-foreground">
                             {product.brand.name}
                         </p>
                     </div>
 
-                    <p className="text-lg font-semibold md:text-sm">
+                    <p className="text-sm font-semibold">
                         {Intl.NumberFormat("en-IN", {
                             style: "currency",
                             currency: "INR",

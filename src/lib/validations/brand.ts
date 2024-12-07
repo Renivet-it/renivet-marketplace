@@ -18,6 +18,12 @@ export const brandSchema = z.object({
             invalid_type_error: "Name must be a string",
         })
         .min(3, "Name must be at least 3 characters long"),
+    slug: z
+        .string({
+            required_error: "Slug is required",
+            invalid_type_error: "Slug must be a string",
+        })
+        .min(3, "Slug must be at least 3 characters long"),
     email: z
         .string({
             required_error: "Email is required",
@@ -69,6 +75,7 @@ export const brandSchema = z.object({
 
 export const createBrandSchema = brandSchema.omit({
     id: true,
+    slug: true,
     createdAt: true,
     updatedAt: true,
 });
@@ -102,6 +109,7 @@ export const cachedBrandSchema = z.lazy(() =>
 export const brandMetaSchema = brandSchema.pick({
     id: true,
     name: true,
+    slug: true,
     ownerId: true,
 });
 

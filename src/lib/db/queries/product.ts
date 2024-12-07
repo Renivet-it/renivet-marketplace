@@ -30,6 +30,9 @@ class ProductQuery {
         brandIds,
         minPrice,
         maxPrice,
+        categoryId,
+        subCategoryId,
+        productTypeId,
         isAvailable,
         isPublished,
         sortBy = "createdAt",
@@ -41,6 +44,9 @@ class ProductQuery {
         brandIds?: string[];
         minPrice?: number;
         maxPrice?: number;
+        categoryId?: string;
+        subCategoryId?: string;
+        productTypeId?: string;
         isAvailable?: boolean;
         isPublished?: boolean;
         sortBy?: "price" | "createdAt";
@@ -53,7 +59,7 @@ class ProductQuery {
             @@ plainto_tsquery('english', ${search})`
             : undefined;
 
-        const filters = and(
+        const filters = [
             searchQuery,
             !!brandIds?.length
                 ? inArray(products.brandId, brandIds)
@@ -70,8 +76,115 @@ class ProductQuery {
             isPublished !== undefined
                 ? eq(products.isPublished, isPublished)
                 : undefined,
-            eq(products.status, true)
-        );
+            eq(products.status, true),
+        ];
+
+        if (
+            categoryId &&
+            subCategoryId &&
+            productTypeId &&
+            categoryId.length > 0 &&
+            subCategoryId.length > 0 &&
+            productTypeId.length > 0
+        ) {
+            const cFilters = [
+                ...filters,
+                sql`${products.id} IN ${db
+                    .select({
+                        productId: productCategories.productId,
+                    })
+                    .from(productCategories)
+                    .where(
+                        and(
+                            eq(productCategories.categoryId, categoryId),
+                            eq(productCategories.subcategoryId, subCategoryId),
+                            eq(productCategories.productTypeId, productTypeId)
+                        )
+                    )}`,
+            ];
+
+            const query = db.query.products.findMany({
+                where: and(...cFilters),
+                with: {
+                    brand: true,
+                    categories: {
+                        with: {
+                            category: true,
+                            subcategory: true,
+                            productType: true,
+                        },
+                    },
+                },
+                limit,
+                offset: (page - 1) * limit,
+                orderBy: searchQuery
+                    ? [
+                          sortOrder === "asc"
+                              ? asc(products[sortBy])
+                              : desc(products[sortBy]),
+                          desc(sql`ts_rank(
+                        setweight(to_tsvector('english', ${products.name}), 'A') ||
+                        setweight(to_tsvector('english', ${products.description}), 'B'),
+                        plainto_tsquery('english', ${searchQuery})
+                      )`),
+                      ]
+                    : [
+                          sortOrder === "asc"
+                              ? asc(products[sortBy])
+                              : desc(products[sortBy]),
+                      ],
+            });
+
+            const data = await query;
+
+            const countQuery = db
+                .select({
+                    count: sql<number>`count(DISTINCT ${products.id})`,
+                })
+                .from(products)
+                .where(and(...cFilters));
+
+            const [{ count }] = await countQuery;
+
+            const parsed: ProductWithBrand[] = productWithBrandSchema
+                .array()
+                .parse(data);
+
+            return {
+                data: parsed,
+                count: +count || 0,
+            };
+
+            // const data = await db.query.productCategories.findMany({
+            //     where: and(
+            //         eq(productCategories.categoryId, categoryId),
+            //         eq(productCategories.subcategoryId, subcategoryId),
+            //         eq(productCategories.productTypeId, productTypeId),
+            //         ...filters
+            //     ),
+            //     with: {
+            //         product: {
+            //             with: {
+            //                 brand: true,
+            //                 categories: {
+            //                     with: {
+            //                         category: true,
+            //                         subcategory: true,
+            //                         productType: true,
+            //                     },
+            //                 },
+            //             },
+            //             extras: {
+            //                 count: db
+            //                     .$count(products, and(...filters))
+            //                     .as("product_count"),
+            //             },
+            //         },
+            //     },
+            //     limit,
+            //     offset: (page - 1) * limit,
+            // });
+        }
 
         const data = await db.query.products.findMany({
             with: {
@@ -84,7 +197,7 @@ class ProductQuery {
                     },
                 },
             },
-            where: filters,
+            where: and(...filters),
             limit,
             offset: (page - 1) * limit,
             orderBy: searchQuery
@@ -104,7 +217,7 @@ class ProductQuery {
                           : desc(products[sortBy]),
                   ],
             extras: {
-                count: db.$count(products, filters).as("product_count"),
+                count: db.$count(products, and(...filters)).as("product_count"),
             },
         });
 
