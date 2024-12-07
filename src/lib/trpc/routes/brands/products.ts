@@ -29,6 +29,9 @@ export const productsRouter = createTRPCRouter({
                 isPublished: z.boolean().optional(),
                 sortBy: z.enum(["price", "createdAt"]).optional(),
                 sortOrder: z.enum(["asc", "desc"]).optional(),
+                categoryId: z.string().optional(),
+                subCategoryId: z.string().optional(),
+                productTypeId: z.string().optional(),
             })
         )
         .query(async ({ input, ctx }) => {

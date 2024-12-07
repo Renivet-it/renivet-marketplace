@@ -27,6 +27,7 @@ import LucideIcons, {
     EyeOff,
     Facebook,
     FileText,
+    Filter,
     Footprints,
     Frame,
     GalleryVerticalEnd,
@@ -35,6 +36,7 @@ import LucideIcons, {
     Hammer,
     Headset,
     Heart,
+    History,
     Home,
     Instagram,
     Key,
@@ -43,6 +45,7 @@ import LucideIcons, {
     LifeBuoy,
     Link,
     Linkedin,
+    ListRestart,
     Loader,
     Loader2,
     LockKeyhole,
@@ -86,6 +89,9 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Filter,
+    History,
+    ListRestart,
     Pin,
     Link,
     Share,

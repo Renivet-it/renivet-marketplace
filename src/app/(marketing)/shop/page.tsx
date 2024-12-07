@@ -4,6 +4,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brandQueries, productQueries } from "@/lib/db/queries";
+import {
+    categoryCache,
+    productTypeCache,
+    subCategoryCache,
+} from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 
@@ -40,19 +45,31 @@ async function ShopFetch({ searchParams }: PageProps) {
     const search = searchRaw?.length ? searchRaw : undefined;
     const brandIds = brandIdsRaw?.length ? brandIdsRaw.split(",") : undefined;
 
-    const [data, brandsMeta] = await Promise.all([
-        productQueries.getProducts({
-            page,
-            limit,
-            search,
-            isAvailable: true,
-            isPublished: true,
-            brandIds,
-        }),
-        brandQueries.getBrandsMeta(),
-    ]);
+    const [data, brandsMeta, categories, subCategories, productTypes] =
+        await Promise.all([
+            productQueries.getProducts({
+                page,
+                limit,
+                search,
+                isAvailable: true,
+                isPublished: true,
+                brandIds,
+            }),
+            brandQueries.getBrandsMeta(),
+            categoryCache.getAll(),
+            subCategoryCache.getAll(),
+            productTypeCache.getAll(),
+        ]);
 
-    return <ShopPage initialData={data} brandsMeta={brandsMeta} />;
+    return (
+        <ShopPage
+            initialData={data}
+            brandsMeta={brandsMeta}
+            categories={categories}
+            subCategories={subCategories}
+            productTypes={productTypes}
+        />
+    );
 }
 
 function ShopSkeleton() {
@@ -60,6 +77,13 @@ function ShopSkeleton() {
         <div className="flex flex-col gap-5 md:flex-row">
             <div className="w-full basis-1/6 space-y-4">
                 <h4 className="text-lg">Filters</h4>
+
+                <Separator />
+
+                <div className="space-y-1">
+                    <Label className="font-semibold uppercase">Category</Label>
+                    <Skeleton className="h-10" />
+                </div>
 
                 <Separator />
 
@@ -83,7 +107,7 @@ function ShopSkeleton() {
                 <Separator />
 
                 <div className="space-y-1">
-                    <Label className="font-semibold uppercase">Color</Label>
+                    <Label className="font-semibold uppercase">Sort By</Label>
                     <Skeleton className="h-10" />
                 </div>
             </div>

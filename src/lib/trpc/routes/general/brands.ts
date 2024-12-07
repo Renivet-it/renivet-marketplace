@@ -8,11 +8,13 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
+    publicProcedure,
 } from "@/lib/trpc/trpc";
 import {
     generateBrandRoleSlug,
     getUploadThingFileKey,
     hasPermission,
+    slugify,
 } from "@/lib/utils";
 import {
     brandRequestSchema,
@@ -143,6 +145,17 @@ export const brandRequestsRouter = createTRPCRouter({
                 await utApi.deleteFiles([fileKey]);
             }
 
+            if (data.status === "approved") {
+                const brandSlug = slugify(existingBrandRequest.name);
+                const existingBrandWithSameSlug =
+                    await queries.brands.getBrandBySlug(brandSlug);
+                if (existingBrandWithSameSlug)
+                    throw new TRPCError({
+                        code: "CONFLICT",
+                        message: "Brand with this name already exists",
+                    });
+            }
+
             const [, newBrand] = await Promise.all([
                 queries.brandRequests.updateBrandRequestStatus(id, {
                     ...data,
@@ -154,6 +167,7 @@ export const brandRequestsRouter = createTRPCRouter({
                         ...existingBrandRequest,
                         bio: null,
                         logoUrl: null,
+                        slug: slugify(existingBrandRequest.name),
                     }),
             ]);
 
@@ -271,6 +285,12 @@ export const brandsRouter = createTRPCRouter({
 
             return data;
         }),
+    getBrandsMeta: publicProcedure.query(async ({ ctx }) => {
+        const { queries } = ctx;
+
+        const data = await queries.brands.getBrandsMeta();
+        return data;
+    }),
     getBrand: protectedProcedure
         .input(
             z.object({

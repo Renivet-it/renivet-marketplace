@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Address } from "@/lib/validations";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useState } from "react";
 
 export function AddressesPage({ className, ...props }: GenericProps) {

@@ -1,139 +1,40 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
-import { cn, formatPriceTag } from "@/lib/utils";
-import { BrandMeta, ProductWithBrand } from "@/lib/validations";
+import { cn } from "@/lib/utils";
+import {
+    BrandMeta,
+    CachedCategory,
+    CachedProductType,
+    CachedSubCategory,
+    ProductWithBrand,
+} from "@/lib/validations";
+import { useMediaQuery } from "@mantine/hooks";
 import {
     parseAsArrayOf,
+    parseAsFloat,
     parseAsInteger,
     parseAsString,
+    parseAsStringLiteral,
     useQueryState,
 } from "nuqs";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ProductCard } from "../globals/cards";
+import { Icons } from "../icons";
+import { Button } from "../ui/button-general";
 import { Pagination } from "../ui/data-table-general";
-import { Label } from "../ui/label";
-import { MultipleSelectorGeneral } from "../ui/multi-select-general";
 import { SearchInput } from "../ui/search-input";
 import { Separator } from "../ui/separator";
-import { Slider } from "../ui/slider";
-
-const dummyBrands = [
-    {
-        label: "Highlander",
-        value: "Highlander",
-    },
-    {
-        label: "Nike",
-        value: "Nike",
-    },
-    {
-        label: "Adidas",
-        value: "Adidas",
-    },
-    {
-        label: "Puma",
-        value: "Puma",
-    },
-    {
-        label: "Reebok",
-        value: "Reebok",
-    },
-    {
-        label: "Under Armour",
-        value: "Under Armour",
-    },
-    {
-        label: "New Balance",
-        value: "New Balance",
-    },
-    {
-        label: "Asics",
-        value: "Asics",
-    },
-    {
-        label: "Converse",
-        value: "Converse",
-    },
-    {
-        label: "Vans",
-        value: "Vans",
-    },
-    {
-        label: "Fila",
-        value: "Fila",
-    },
-    {
-        label: "Skechers",
-        value: "Skechers",
-    },
-    {
-        label: "Brooks",
-        value: "Brooks",
-    },
-    {
-        label: "Saucony",
-        value: "Saucony",
-    },
-];
-
-const dummyColors = [
-    {
-        label: "Red",
-        value: "Red",
-        hex: "#FF0000",
-    },
-    {
-        label: "Blue",
-        value: "Blue",
-        hex: "#0000FF",
-    },
-    {
-        label: "Green",
-        value: "Green",
-        hex: "#008000",
-    },
-    {
-        label: "Yellow",
-        value: "Yellow",
-        hex: "#FFFF00",
-    },
-    {
-        label: "Purple",
-        value: "Purple",
-        hex: "#800080",
-    },
-    {
-        label: "Orange",
-        value: "Orange",
-        hex: "#FFA500",
-    },
-    {
-        label: "Pink",
-        value: "Pink",
-        hex: "#FFC0CB",
-    },
-    {
-        label: "Brown",
-        value: "Brown",
-        hex: "#A52A2A",
-    },
-    {
-        label: "Gray",
-        value: "Gray",
-        hex: "#808080",
-    },
-    {
-        label: "Black",
-        value: "Black",
-        hex: "#000000",
-    },
-    {
-        label: "White",
-        value: "White",
-        hex: "#FFFFFF",
-    },
-];
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "../ui/sheet";
+import { ShopFilters } from "./shop-filters";
 
 interface PageProps extends GenericProps {
     initialData: {
@@ -144,26 +45,48 @@ interface PageProps extends GenericProps {
         data: BrandMeta[];
         count: number;
     };
+    categories: CachedCategory[];
+    subCategories: CachedSubCategory[];
+    productTypes: CachedProductType[];
 }
 
 export function ShopPage({
     className,
     initialData,
     brandsMeta,
+    categories,
+    subCategories,
+    productTypes,
     ...props
 }: PageProps) {
+    const isMobile = useMediaQuery("(max-width: 768px)");
+
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(30));
-    const [searchInput, setSearchInput] = useQueryState("search", {
-        defaultValue: "",
-    });
+    const [search] = useQueryState("search", { defaultValue: "" });
     const [brandIds] = useQueryState(
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-
-    const [search, setSearch] = useState("");
-    const [priceRange, setPriceRange] = useState([100, 10000]);
+    const [minPrice] = useQueryState("minPrice", parseAsFloat);
+    const [maxPrice] = useQueryState("maxPrice", parseAsFloat);
+    const [categoryId] = useQueryState("categoryId", { defaultValue: "" });
+    const [subCategoryId] = useQueryState("subcategoryId", {
+        defaultValue: "",
+    });
+    const [productTypeId] = useQueryState("productTypeId", {
+        defaultValue: "",
+    });
+    const [sortBy] = useQueryState(
+        "sortBy",
+        parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
+            "createdAt"
+        )
+    );
+    const [sortOrder] = useQueryState(
+        "sortOrder",
+        parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
+    );
 
     const {
         data: { data: products, count },
@@ -175,6 +98,13 @@ export function ShopPage({
             isAvailable: true,
             brandIds,
             search,
+            minPrice: minPrice ?? undefined,
+            maxPrice: maxPrice ?? undefined,
+            categoryId,
+            subCategoryId,
+            productTypeId,
+            sortBy,
+            sortOrder,
         },
         { initialData }
     );
@@ -186,79 +116,55 @@ export function ShopPage({
             className={cn("flex flex-col gap-5 md:flex-row", className)}
             {...props}
         >
-            <div className="w-full basis-1/6 space-y-4">
-                <h4 className="text-lg">Filters</h4>
+            {isMobile ? (
+                <>
+                    <Sheet>
+                        <SheetTrigger asChild className="md:hidden">
+                            <Button>
+                                <Icons.Filter />
+                                Filters
+                            </Button>
+                        </SheetTrigger>
 
-                <Separator />
+                        <SheetContent
+                            side="bottom"
+                            className="p-4 [&>button]:hidden"
+                        >
+                            <SheetHeader className="sr-only text-start">
+                                <SheetTitle>Select Filters</SheetTitle>
+                            </SheetHeader>
 
-                <div className="space-y-1">
-                    <Label className="font-semibold uppercase">Brand</Label>
+                            <ShopFilters
+                                className="space-y-4"
+                                initialBrandsMeta={brandsMeta}
+                                categories={categories}
+                                subCategories={subCategories}
+                                productTypes={productTypes}
+                            />
 
-                    <MultipleSelectorGeneral
-                        commandProps={{
-                            label: "Brands",
-                        }}
-                        defaultOptions={[
-                            ...brandsMeta.data.map((brand) => ({
-                                label: brand.name,
-                                value: brand.name,
-                            })),
-                            ...dummyBrands,
-                        ].sort((a, b) => a.label.localeCompare(b.label))}
-                        placeholder="Select brands"
-                        emptyIndicator={
-                            <p className="text-center text-sm">
-                                No results found
-                            </p>
-                        }
-                    />
-                </div>
+                            <div className="mt-4 space-y-4">
+                                <Separator />
 
-                <Separator />
+                                <SheetFooter>
+                                    <SheetClose asChild>
+                                        <Button>Close</Button>
+                                    </SheetClose>
+                                </SheetFooter>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
 
-                <div className="space-y-3">
-                    <div className="space-y-2">
-                        <Label className="font-semibold uppercase">Price</Label>
-
-                        <Slider
-                            value={priceRange}
-                            step={100}
-                            onValueChange={setPriceRange}
-                            min={100}
-                            max={10000}
-                            minStepsBetweenThumbs={1}
-                            aria-label="Price range slider"
-                        />
-                    </div>
-
-                    <div>
-                        <Label className="tabular-nums">
-                            {formatPriceTag(priceRange[0])} -{" "}
-                            {formatPriceTag(priceRange[1])}
-                            {priceRange[1] === 10000 && "+"}
-                        </Label>
-                    </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-1">
-                    <Label className="font-semibold uppercase">Color</Label>
-
-                    <MultipleSelectorGeneral
-                        commandProps={{
-                            label: "Colors",
-                        }}
-                        defaultOptions={dummyColors}
-                        placeholder="Select colors"
-                        emptyIndicator={
-                            <p className="text-center text-sm">
-                                No results found
-                            </p>
-                        }
-                    />
-                </div>
-            </div>
+                    <Separator className="md:hidden" />
+                </>
+            ) : (
+                <ShopFilters
+                    className="hidden w-full basis-1/6 space-y-4 md:inline-block"
+                    initialBrandsMeta={brandsMeta}
+                    categories={categories}
+                    subCategories={subCategories}
+                    productTypes={productTypes}
+                />
+            )}
 
             <div className="hidden w-px bg-border md:inline-block" />
 
@@ -267,24 +173,11 @@ export function ShopPage({
                     type="search"
                     placeholder="Search for a product..."
                     className="h-12 text-base"
-                    classNames={{
-                        wrapper: "hidden md:flex",
-                    }}
-                    value={searchInput}
-                    onChange={(e) => {
-                        if (e.target.value.length <= 1) setSearch("");
-                        setSearchInput(e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") setSearch(searchInput);
-                        if (e.key === "Backspace" && searchInput.length <= 1)
-                            setSearch("");
-                    }}
                 />
 
                 <Separator />
 
-                <div className="grid grid-cols-2 gap-5 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                     {products.length > 0 ? (
                         products.map((product) => (
                             <ProductCard key={product.id} product={product} />

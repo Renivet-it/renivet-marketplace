@@ -86,10 +86,7 @@ export const productCategories = pgTable(
         ...timestamps,
     },
     (table) => ({
-        produtctCatSubCatTypeIdx: uniqueIndex(
-            "product_cat_sub_cat_type_idx"
-        ).on(
-            table.productId,
+        catSubCatTypeIdx: uniqueIndex("cat_sub_cat_type_idx").on(
             table.categoryId,
             table.subcategoryId,
             table.productTypeId
