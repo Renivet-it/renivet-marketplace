@@ -119,7 +119,7 @@ export function ShopPage({
             {isMobile ? (
                 <>
                     <Sheet>
-                        <SheetTrigger asChild className="md:hidden">
+                        <SheetTrigger asChild>
                             <Button>
                                 <Icons.Filter />
                                 Filters
@@ -136,7 +136,7 @@ export function ShopPage({
 
                             <ShopFilters
                                 className="space-y-4"
-                                initialBrandsMeta={brandsMeta}
+                                brandsMeta={brandsMeta}
                                 categories={categories}
                                 subCategories={subCategories}
                                 productTypes={productTypes}
@@ -154,12 +154,12 @@ export function ShopPage({
                         </SheetContent>
                     </Sheet>
 
-                    <Separator className="md:hidden" />
+                    <Separator />
                 </>
             ) : (
                 <ShopFilters
-                    className="hidden w-full basis-1/6 space-y-4 md:inline-block"
-                    initialBrandsMeta={brandsMeta}
+                    className="w-full basis-1/6 space-y-4"
+                    brandsMeta={brandsMeta}
                     categories={categories}
                     subCategories={subCategories}
                     productTypes={productTypes}
