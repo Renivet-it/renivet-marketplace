@@ -154,36 +154,6 @@ class ProductQuery {
                 data: parsed,
                 count: +count || 0,
             };
-
-            // const data = await db.query.productCategories.findMany({
-            //     where: and(
-            //         eq(productCategories.categoryId, categoryId),
-            //         eq(productCategories.subcategoryId, subcategoryId),
-            //         eq(productCategories.productTypeId, productTypeId),
-            //         ...filters
-            //     ),
-            //     with: {
-            //         product: {
-            //             with: {
-            //                 brand: true,
-            //                 categories: {
-            //                     with: {
-            //                         category: true,
-            //                         subcategory: true,
-            //                         productType: true,
-            //                     },
-            //                 },
-            //             },
-            //             extras: {
-            //                 count: db
-            //                     .$count(products, and(...filters))
-            //                     .as("product_count"),
-            //             },
-            //         },
-            //     },
-            //     limit,
-            //     offset: (page - 1) * limit,
-            // });
         }
 
         const data = await db.query.products.findMany({

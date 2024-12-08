@@ -2,7 +2,7 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { ProductWithBrand } from "@/lib/validations";
+import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
 import {
     parseAsArrayOf,
     parseAsInteger,
@@ -19,9 +19,17 @@ interface PageProps extends GenericProps {
         data: ProductWithBrand[];
         count: number;
     };
+    initialWishlist?: CachedWishlist[];
+    userId?: string;
 }
 
-export function ShopProducts({ className, initialData, ...props }: PageProps) {
+export function ShopProducts({
+    className,
+    initialData,
+    initialWishlist,
+    userId,
+    ...props
+}: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(30));
     const [search] = useQueryState("search", { defaultValue: "" });
@@ -73,6 +81,11 @@ export function ShopProducts({ className, initialData, ...props }: PageProps) {
         { initialData }
     );
 
+    const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
+        { userId: userId! },
+        { enabled: !!userId, initialData: initialWishlist }
+    );
+
     const pages = Math.ceil(count / limit) ?? 1;
 
     return (
@@ -85,9 +98,21 @@ export function ShopProducts({ className, initialData, ...props }: PageProps) {
                 {...props}
             >
                 {products.length > 0 ? (
-                    products.map((product) => (
-                        <ProductCard key={product.id} product={product} />
-                    ))
+                    products.map((product) => {
+                        const isWishlisted =
+                            wishlist?.some(
+                                (item) => item.productId === product.id
+                            ) ?? false;
+
+                        return (
+                            <ProductCard
+                                key={product.id}
+                                product={product}
+                                isWishlisted={isWishlisted}
+                                userId={userId}
+                            />
+                        );
+                    })
                 ) : (
                     <p>No products found</p>
                 )}

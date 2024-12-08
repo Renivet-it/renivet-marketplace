@@ -10,9 +10,11 @@ import {
     categoryCache,
     productTypeCache,
     subCategoryCache,
+    userWishlistCache,
 } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
 import { brandMetaSchema } from "@/lib/validations";
+import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -82,6 +84,8 @@ async function ShopFiltersFetch(props: GenericProps) {
 }
 
 async function ShopProductsFetch({ searchParams }: PageProps) {
+    const { userId } = await auth();
+
     const {
         page: pageRaw,
         limit: limitRaw,
@@ -123,23 +127,32 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
     const sortBy = !!sortByRaw?.length ? sortByRaw : undefined;
     const sortOrder = !!sortOrderRaw?.length ? sortOrderRaw : undefined;
 
-    const data = await productQueries.getProducts({
-        page,
-        limit,
-        search,
-        isAvailable: true,
-        isPublished: true,
-        brandIds,
-        minPrice,
-        maxPrice,
-        categoryId,
-        subCategoryId,
-        productTypeId,
-        sortBy,
-        sortOrder,
-    });
+    const [data, userWishlist] = await Promise.all([
+        productQueries.getProducts({
+            page,
+            limit,
+            search,
+            isAvailable: true,
+            isPublished: true,
+            brandIds,
+            minPrice,
+            maxPrice,
+            categoryId,
+            subCategoryId,
+            productTypeId,
+            sortBy,
+            sortOrder,
+        }),
+        userId ? userWishlistCache.get(userId) : undefined,
+    ]);
 
-    return <ShopProducts initialData={data} />;
+    return (
+        <ShopProducts
+            initialData={data}
+            initialWishlist={userWishlist}
+            userId={userId ?? undefined}
+        />
+    );
 }
 
 function ShopFiltersSkeleton() {

@@ -295,6 +295,13 @@
       "when": 1733485523172,
       "tag": "0042_pale_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1733653989793,
+      "tag": "0043_familiar_night_nurse",
+      "breakpoints": true
     }
   ]
 }

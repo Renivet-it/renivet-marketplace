@@ -15,3 +15,4 @@ export * from "./tag";
 export * from "./ticket";
 export * from "./user";
 export * from "./waitlist";
+export * from "./wishlist";

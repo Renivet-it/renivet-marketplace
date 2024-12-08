@@ -16,6 +16,7 @@ import {
     tagQueries,
     ticketQueries,
     userQueries,
+    userWishlistQueries,
     waitlistQueries,
 } from "@/lib/db/queries";
 import * as schema from "@/lib/db/schema";
@@ -59,6 +60,7 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
             tags: tagQueries,
             tickets: ticketQueries,
             users: userQueries,
+            userWishlists: userWishlistQueries,
             waitlists: waitlistQueries,
         },
     };

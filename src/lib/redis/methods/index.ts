@@ -7,3 +7,4 @@ export * from "./role";
 export * from "./sub-category";
 export * from "./tag";
 export * from "./user";
+export * from "./wishlist";

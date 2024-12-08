@@ -2,19 +2,75 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface PageProps extends GenericProps {
     product: ProductWithBrand;
+    isWishlisted: boolean;
+    userId?: string;
 }
 
-export function ProductCard({ className, product, ...props }: PageProps) {
+export function ProductCard({
+    className,
+    product,
+    isWishlisted,
+    userId,
+    ...props
+}: PageProps) {
+    const [isProductWishlisted, setIsProductWishlisted] =
+        useState(isWishlisted);
+
     const [isProductHovered, setIsProductHovered] = useState(false);
     const [isWishlistHovered, setIsWishlistHovered] = useState(false);
+
+    const { refetch } = trpc.general.users.wishlist.getWishlist.useQuery(
+        { userId: userId! },
+        { enabled: !!userId }
+    );
+
+    const { mutate: addToWishlist } =
+        trpc.general.users.wishlist.addProductInWishlist.useMutation({
+            onMutate: () => {
+                setIsProductWishlisted(!isProductWishlisted);
+                toast.success(
+                    isProductWishlisted
+                        ? "Removed from wishlist"
+                        : "Added to wishlist"
+                );
+            },
+            onSuccess: () => {
+                refetch();
+            },
+            onError: (err) => {
+                toast.error(err.message);
+                setIsProductWishlisted(isWishlisted);
+            },
+        });
+
+    const { mutate: removeFromWishlist } =
+        trpc.general.users.wishlist.removeProductInWishlist.useMutation({
+            onMutate: () => {
+                setIsProductWishlisted(!isProductWishlisted);
+                toast.success(
+                    isProductWishlisted
+                        ? "Removed from wishlist"
+                        : "Added to wishlist"
+                );
+            },
+            onSuccess: () => {
+                refetch();
+            },
+            onError: (err) => {
+                toast.error(err.message);
+                setIsProductWishlisted(isWishlisted);
+            },
+        });
 
     return (
         <div
@@ -51,12 +107,33 @@ export function ProductCard({ className, product, ...props }: PageProps) {
                     >
                         <Button
                             size="sm"
-                            className="w-full hover:bg-background hover:text-foreground"
+                            className={cn(
+                                "w-full hover:bg-background hover:text-foreground",
+                                isProductWishlisted &&
+                                    "bg-background font-semibold text-primary hover:bg-muted",
+                                !userId && "hidden"
+                            )}
                             onMouseEnter={() => setIsWishlistHovered(true)}
                             onMouseLeave={() => setIsWishlistHovered(false)}
+                            onClick={() =>
+                                isProductWishlisted
+                                    ? removeFromWishlist({
+                                          userId: userId!,
+                                          productId: product.id,
+                                      })
+                                    : addToWishlist({
+                                          userId: userId!,
+                                          productId: product.id,
+                                      })
+                            }
                         >
-                            <Icons.Heart />
-                            Wishlist
+                            <Icons.Heart
+                                className={cn(
+                                    isProductWishlisted &&
+                                        "fill-primary stroke-primary"
+                                )}
+                            />
+                            {isProductWishlisted ? "Wishlisted" : "Wishlist"}
                         </Button>
                     </div>
                 </div>
