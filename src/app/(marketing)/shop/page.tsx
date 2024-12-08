@@ -1,15 +1,18 @@
 import { GeneralShell } from "@/components/globals/layouts";
-import { ShopPage } from "@/components/shop";
+import { ShopFilters, ShopProducts } from "@/components/shop";
 import { Label } from "@/components/ui/label";
+import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { brandQueries, productQueries } from "@/lib/db/queries";
+import { productQueries } from "@/lib/db/queries";
 import {
+    brandCache,
     categoryCache,
     productTypeCache,
     subCategoryCache,
 } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
+import { brandMetaSchema } from "@/lib/validations";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -31,14 +34,54 @@ interface PageProps {
 export default function Page({ searchParams }: PageProps) {
     return (
         <GeneralShell>
-            <Suspense fallback={<ShopSkeleton />}>
-                <ShopFetch searchParams={searchParams} />
-            </Suspense>
+            <div className="flex flex-col gap-5 md:flex-row">
+                <Suspense fallback={<ShopFiltersSkeleton />}>
+                    <ShopFiltersFetch className="w-full basis-1/6 space-y-4" />
+                </Suspense>
+
+                <div className="hidden w-px bg-border md:inline-block" />
+
+                <div className="w-full basis-5/6 space-y-5">
+                    <SearchInput
+                        type="search"
+                        placeholder="Search for a product..."
+                        className="h-12 text-base"
+                    />
+
+                    <Separator />
+
+                    <Suspense fallback={<ShopProductsSkeleton />}>
+                        <ShopProductsFetch searchParams={searchParams} />
+                    </Suspense>
+                </div>
+            </div>
         </GeneralShell>
     );
 }
 
-async function ShopFetch({ searchParams }: PageProps) {
+async function ShopFiltersFetch(props: GenericProps) {
+    const [categories, subCategories, productTypes, allBrands] =
+        await Promise.all([
+            categoryCache.getAll(),
+            subCategoryCache.getAll(),
+            productTypeCache.getAll(),
+            brandCache.getAll(),
+        ]);
+
+    const brandsMeta = brandMetaSchema.array().parse(allBrands);
+
+    return (
+        <ShopFilters
+            categories={categories}
+            subCategories={subCategories}
+            productTypes={productTypes}
+            brandsMeta={brandsMeta}
+            {...props}
+        />
+    );
+}
+
+async function ShopProductsFetch({ searchParams }: PageProps) {
     const {
         page: pageRaw,
         limit: limitRaw,
@@ -63,13 +106,13 @@ async function ShopFetch({ searchParams }: PageProps) {
             ? parseInt(minPriceRaw) < 0
                 ? 0
                 : parseInt(minPriceRaw)
-            : undefined;
+            : 0;
     const maxPrice =
         maxPriceRaw && !isNaN(parseInt(maxPriceRaw))
             ? parseInt(maxPriceRaw) > 10000
                 ? 10000
                 : parseInt(maxPriceRaw)
-            : undefined;
+            : 10000;
     const categoryId = !!categoryIdRaw?.length ? categoryIdRaw : undefined;
     const subCategoryId = !!subCategoryIdRaw?.length
         ? subCategoryIdRaw
@@ -80,119 +123,101 @@ async function ShopFetch({ searchParams }: PageProps) {
     const sortBy = !!sortByRaw?.length ? sortByRaw : undefined;
     const sortOrder = !!sortOrderRaw?.length ? sortOrderRaw : undefined;
 
-    const [data, brandsMeta, categories, subCategories, productTypes] =
-        await Promise.all([
-            productQueries.getProducts({
-                page,
-                limit,
-                search,
-                isAvailable: true,
-                isPublished: true,
-                brandIds,
-                minPrice,
-                maxPrice,
-                categoryId,
-                subCategoryId,
-                productTypeId,
-                sortBy,
-                sortOrder,
-            }),
-            brandQueries.getBrandsMeta(),
-            categoryCache.getAll(),
-            subCategoryCache.getAll(),
-            productTypeCache.getAll(),
-        ]);
+    const data = await productQueries.getProducts({
+        page,
+        limit,
+        search,
+        isAvailable: true,
+        isPublished: true,
+        brandIds,
+        minPrice,
+        maxPrice,
+        categoryId,
+        subCategoryId,
+        productTypeId,
+        sortBy,
+        sortOrder,
+    });
 
+    return <ShopProducts initialData={data} />;
+}
+
+function ShopFiltersSkeleton() {
     return (
-        <ShopPage
-            initialData={data}
-            brandsMeta={brandsMeta}
-            categories={categories}
-            subCategories={subCategories}
-            productTypes={productTypes}
-        />
+        <div className="w-full basis-1/6 space-y-4">
+            <h4 className="text-lg">Filters</h4>
+
+            <Separator />
+
+            <div className="space-y-1">
+                <Label className="font-semibold uppercase">Category</Label>
+                <Skeleton className="h-10" />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-1">
+                <Label className="font-semibold uppercase">Brand</Label>
+                <Skeleton className="h-10" />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-1">
+                <div className="space-y-2">
+                    <Label className="font-semibold uppercase">Price</Label>
+
+                    <Skeleton className="h-7" />
+                </div>
+
+                <Skeleton className="h-4 w-1/2" />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-1">
+                <Label className="font-semibold uppercase">Sort By</Label>
+                <Skeleton className="h-10" />
+            </div>
+        </div>
     );
 }
 
-function ShopSkeleton() {
+function ShopProductsSkeleton() {
     return (
-        <div className="flex flex-col gap-5 md:flex-row">
-            <div className="w-full basis-1/6 space-y-4">
-                <h4 className="text-lg">Filters</h4>
-
-                <Separator />
-
-                <div className="space-y-1">
-                    <Label className="font-semibold uppercase">Category</Label>
-                    <Skeleton className="h-10" />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-1">
-                    <Label className="font-semibold uppercase">Brand</Label>
-                    <Skeleton className="h-10" />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-1">
-                    <div className="space-y-2">
-                        <Label className="font-semibold uppercase">Price</Label>
-
-                        <Skeleton className="h-7" />
-                    </div>
-
-                    <Skeleton className="h-4 w-1/2" />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-1">
-                    <Label className="font-semibold uppercase">Sort By</Label>
-                    <Skeleton className="h-10" />
-                </div>
-            </div>
-
-            <div className="hidden w-px bg-border md:inline-block" />
-
-            <div className="w-full basis-5/6 space-y-5">
-                <Skeleton className="h-12" />
-                <Separator />
-
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-5">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={i}>
-                            <div>
-                                <Skeleton className="aspect-[3/4] size-full" />
-                            </div>
-
-                            <div className="space-y-2 py-2">
-                                <div className="space-y-1">
-                                    <Skeleton className="h-5 w-full" />
-                                    <Skeleton className="h-3 w-1/2" />
-                                </div>
-
-                                <Skeleton className="h-5 w-1/3" />
-                            </div>
+        <>
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-5">
+                {[...Array(8)].map((_, i) => (
+                    <div key={i}>
+                        <div>
+                            <Skeleton className="aspect-[3/4] size-full" />
                         </div>
-                    ))}
-                </div>
 
-                <Separator />
+                        <div className="space-y-2 py-2">
+                            <div className="space-y-1">
+                                <Skeleton className="h-5 w-full" />
+                                <Skeleton className="h-3 w-1/2" />
+                            </div>
 
-                <div className="flex w-full items-center justify-center gap-2">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton
-                            key={i}
-                            className={cn("size-10", {
-                                "w-20": i === 0 || i === 3,
-                                "hidden md:inline-block": i === 1 || i === 2,
-                            })}
-                        />
-                    ))}
-                </div>
+                            <Skeleton className="h-5 w-1/3" />
+                        </div>
+                    </div>
+                ))}
             </div>
-        </div>
+
+            <Separator />
+
+            <div className="flex w-full items-center justify-center gap-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton
+                        key={i}
+                        className={cn("size-10", {
+                            "w-20": i === 0 || i === 3,
+                            "hidden md:inline-block": i === 1 || i === 2,
+                        })}
+                    />
+                ))}
+            </div>
+        </>
     );
 }

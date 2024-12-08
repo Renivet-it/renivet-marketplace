@@ -1,9 +1,4 @@
-import {
-    brandMetaSchema,
-    CachedBrand,
-    cachedBrandSchema,
-    CreateBrand,
-} from "@/lib/validations";
+import { CachedBrand, cachedBrandSchema, CreateBrand } from "@/lib/validations";
 import { desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { brands } from "../schema";
@@ -14,25 +9,39 @@ class BrandQuery {
         return +data || 0;
     }
 
-    async getBrandsMeta() {
+    async getAllBrands() {
         const data = await db.query.brands.findMany({
-            extras: {
-                count: db.$count(brands).as("brand_count"),
-            },
-            columns: {
-                id: true,
-                name: true,
-                slug: true,
-                ownerId: true,
+            with: {
+                owner: true,
+                members: {
+                    with: {
+                        member: true,
+                    },
+                },
+                roles: {
+                    with: {
+                        role: true,
+                    },
+                },
+                invites: true,
+                bannedMembers: {
+                    with: {
+                        member: true,
+                    },
+                },
             },
         });
 
-        const parsed = brandMetaSchema.array().parse(data);
+        const parsed: CachedBrand[] = cachedBrandSchema.array().parse(
+            data.map(({ members, roles, bannedMembers, ...rest }) => ({
+                ...rest,
+                members: members.map(({ member }) => member),
+                roles: roles.map(({ role }) => role),
+                bannedMembers: bannedMembers.map(({ member }) => member),
+            }))
+        );
 
-        return {
-            data: parsed,
-            count: +data?.[0]?.count || 0,
-        };
+        return parsed;
     }
 
     async getBrands({
@@ -58,6 +67,11 @@ class BrandQuery {
                     },
                 },
                 invites: true,
+                bannedMembers: {
+                    with: {
+                        member: true,
+                    },
+                },
             },
             where: !!search?.length
                 ? ilike(brands.name, `%${search}%`)
@@ -78,10 +92,11 @@ class BrandQuery {
         });
 
         const parsed: CachedBrand[] = cachedBrandSchema.array().parse(
-            data.map(({ members, roles, ...rest }) => ({
+            data.map(({ members, roles, bannedMembers, ...rest }) => ({
                 ...rest,
                 members: members.map(({ member }) => member),
                 roles: roles.map(({ role }) => role),
+                bannedMembers: bannedMembers.map(({ member }) => member),
             }))
         );
 
@@ -107,7 +122,11 @@ class BrandQuery {
                     },
                 },
                 invites: true,
-                bannedMembers: true,
+                bannedMembers: {
+                    with: {
+                        member: true,
+                    },
+                },
             },
         });
         if (!data) return null;
@@ -116,6 +135,7 @@ class BrandQuery {
             ...data,
             members: data.members.map(({ member }) => member),
             roles: data.roles.map(({ role }) => role),
+            bannedMembers: data.bannedMembers.map(({ member }) => member),
         });
     }
 

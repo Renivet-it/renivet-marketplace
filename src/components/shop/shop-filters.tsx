@@ -7,9 +7,10 @@ import {
     CachedProductType,
     CachedSubCategory,
 } from "@/lib/validations";
+import { useMediaQuery } from "@mantine/hooks";
 import {
     parseAsArrayOf,
-    parseAsFloat,
+    parseAsInteger,
     parseAsString,
     parseAsStringLiteral,
     useQueryState,
@@ -27,13 +28,19 @@ import {
     SelectValue,
 } from "../ui/select-general";
 import { Separator } from "../ui/separator";
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "../ui/sheet";
 import { Slider } from "../ui/slider";
 
 interface PageProps extends GenericProps {
-    brandsMeta: {
-        data: BrandMeta[];
-        count: number;
-    };
+    brandsMeta: BrandMeta[];
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -66,12 +73,78 @@ export function ShopFilters({
     productTypes,
     ...props
 }: PageProps) {
+    const isMobile = useMediaQuery("(max-width: 768px)");
+
+    return isMobile ? (
+        <>
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button>
+                        <Icons.Filter />
+                        Filters
+                    </Button>
+                </SheetTrigger>
+
+                <SheetContent side="bottom" className="p-4 [&>button]:hidden">
+                    <SheetHeader className="sr-only text-start">
+                        <SheetTitle>Select Filters</SheetTitle>
+                    </SheetHeader>
+
+                    <ShopFiltersSection
+                        className={cn("w-auto basis-full", className)}
+                        brandsMeta={brandsMeta}
+                        categories={categories}
+                        subCategories={subCategories}
+                        productTypes={productTypes}
+                        {...props}
+                    />
+
+                    <div className="mt-4 space-y-4">
+                        <Separator />
+
+                        <SheetFooter>
+                            <SheetClose asChild>
+                                <Button>Close</Button>
+                            </SheetClose>
+                        </SheetFooter>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <Separator />
+        </>
+    ) : (
+        <ShopFiltersSection
+            className={cn("", className)}
+            brandsMeta={brandsMeta}
+            categories={categories}
+            subCategories={subCategories}
+            productTypes={productTypes}
+            {...props}
+        />
+    );
+}
+
+function ShopFiltersSection({
+    className,
+    brandsMeta,
+    categories,
+    subCategories,
+    productTypes,
+    ...props
+}: PageProps) {
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [minPrice, setMinPrice] = useQueryState("minPrice", parseAsFloat);
-    const [maxPrice, setMaxPrice] = useQueryState("maxPrice", parseAsFloat);
+    const [minPrice, setMinPrice] = useQueryState(
+        "minPrice",
+        parseAsInteger.withDefault(0)
+    );
+    const [maxPrice, setMaxPrice] = useQueryState(
+        "maxPrice",
+        parseAsInteger.withDefault(10000)
+    );
     const [categoryId, setCategoryId] = useQueryState("categoryId", {
         defaultValue: "",
     });
@@ -247,7 +320,7 @@ export function ShopFilters({
                     commandProps={{
                         label: "Brands",
                     }}
-                    defaultOptions={brandsMeta.data
+                    defaultOptions={brandsMeta
                         .map((brand) => ({
                             label: brand.name,
                             value: brand.slug,
@@ -257,7 +330,7 @@ export function ShopFilters({
                     emptyIndicator={
                         <p className="text-center text-sm">No results found</p>
                     }
-                    value={brandsMeta.data
+                    value={brandsMeta
                         .filter((brand) => brandIds.includes(brand.id))
                         .map((brand) => ({
                             label: brand.name,
@@ -267,7 +340,7 @@ export function ShopFilters({
                         setBrandIds(
                             options.map(
                                 (option) =>
-                                    brandsMeta.data.find(
+                                    brandsMeta.find(
                                         (brand) => brand.slug === option.value
                                     )?.id ?? ""
                             )

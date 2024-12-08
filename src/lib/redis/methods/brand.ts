@@ -10,6 +10,35 @@ class BrandCache {
         this.genKey = generateCacheKey(":", "brand");
     }
 
+    async getAll() {
+        const [dbBrandsCount, keys] = await Promise.all([
+            brandQueries.getCount(),
+            redis.keys(this.genKey("*")),
+        ]);
+
+        if (keys.length !== dbBrandsCount) {
+            await this.drop();
+
+            const dbBrands = await brandQueries.getAllBrands();
+            if (!dbBrands.length) return [];
+
+            const cachedBrands = dbBrands;
+
+            await this.addBulk(cachedBrands);
+            return cachedBrands;
+        }
+        if (!keys.length) return [];
+
+        const cachedBrands = await redis.mget(...keys);
+        return cachedBrandSchema
+            .array()
+            .parse(
+                cachedBrands
+                    .map((brand) => parseToJSON<CachedBrand>(brand))
+                    .filter((brand): brand is CachedBrand => brand !== null)
+            );
+    }
+
     async get(id: string) {
         const cachedBrandRaw = await redis.get(this.genKey(id));
         let cachedBrand = cachedBrandSchema
@@ -38,6 +67,23 @@ class BrandCache {
             "EX",
             60 * 60 * 24 * 7
         );
+    }
+
+    async addBulk(brands: CachedBrand[]) {
+        const pipeline = redis.pipeline();
+
+        await Promise.all(
+            brands.map((brand) => {
+                pipeline.set(
+                    this.genKey(brand.id),
+                    JSON.stringify(brand),
+                    "EX",
+                    60 * 60 * 24 * 7
+                );
+            })
+        );
+
+        await pipeline.exec();
     }
 
     async update(brand: CachedBrand) {
