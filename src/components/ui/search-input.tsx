@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { useQueryState } from "nuqs";
 import * as React from "react";

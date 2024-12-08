@@ -1,1 +1,2 @@
-export * from "./shop-page";
+export * from "./shop-filters";
+export * from "./shop-products";

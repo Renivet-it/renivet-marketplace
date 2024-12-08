@@ -18,6 +18,9 @@ export default clerkMiddleware(async (auth, req) => {
     if (url.pathname === "/auth")
         return NextResponse.redirect(new URL("/auth/signin", url));
 
+    if (url.pathname === "/products")
+        return NextResponse.redirect(new URL("/shop", url));
+
     const isAuth = await auth();
 
     if (isAuth.sessionId) {

@@ -5,6 +5,7 @@ import { addresses } from "./address";
 import { blogs } from "./blog";
 import { bannedBrandMembers, brandMembers, brands } from "./brand";
 import { roles } from "./role";
+import { wishlists } from "./wishlist";
 
 export const users = pgTable("users", {
     id: text("id").primaryKey().notNull().unique(),
@@ -76,6 +77,7 @@ export const userRelations = relations(users, ({ one, many }) => ({
         references: [brandMembers.memberId],
     }),
     bannedFromBrands: many(bannedBrandMembers),
+    wishlists: many(wishlists),
 }));
 
 export const userRoleRelations = relations(userRoles, ({ one }) => ({

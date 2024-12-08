@@ -8,7 +8,6 @@ import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
-    publicProcedure,
 } from "@/lib/trpc/trpc";
 import {
     generateBrandRoleSlug,
@@ -285,12 +284,6 @@ export const brandsRouter = createTRPCRouter({
 
             return data;
         }),
-    getBrandsMeta: publicProcedure.query(async ({ ctx }) => {
-        const { queries } = ctx;
-
-        const data = await queries.brands.getBrandsMeta();
-        return data;
-    }),
     getBrand: protectedProcedure
         .input(
             z.object({

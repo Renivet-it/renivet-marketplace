@@ -49,7 +49,14 @@ export function NavbarHome() {
         else setIsMenuHidden(false);
     });
 
-    const { data: user } = trpc.general.users.currentUser.useQuery();
+    const { data: user, isPending: isUserFetching } =
+        trpc.general.users.currentUser.useQuery();
+    const { data: userWishlist } =
+        trpc.general.users.wishlist.getWishlist.useQuery(
+            // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+            { userId: user?.id! },
+            { enabled: user !== undefined && !isUserFetching }
+        );
 
     const userPermissions = useMemo(() => {
         if (!user)
@@ -302,8 +309,16 @@ export function NavbarHome() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <Link href="/soon">
+                            <Link href="/profile/wishlist" className="relative">
+                                {userWishlist?.length
+                                    ? userWishlist.length > 0 && (
+                                          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                              {userWishlist.length}
+                                          </div>
+                                      )
+                                    : null}
                                 <Icons.Heart className="size-5" />
+                                <span className="sr-only">Wishlist</span>
                             </Link>
 
                             <Link href="/soon">
@@ -315,7 +330,7 @@ export function NavbarHome() {
                     <>
                         <div className="hidden items-center gap-1 md:flex">
                             <Button variant="ghost" size="sm" asChild>
-                                <Link href="/soon"> Become a Seller</Link>
+                                <Link href="/soon">Become a Seller</Link>
                             </Button>
 
                             <Button
