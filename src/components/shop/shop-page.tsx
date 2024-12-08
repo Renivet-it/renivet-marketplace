@@ -94,12 +94,16 @@ export function ShopPage({
         {
             page,
             limit,
+            search,
             isPublished: true,
             isAvailable: true,
             brandIds,
-            search,
-            minPrice: minPrice ?? undefined,
-            maxPrice: maxPrice ?? undefined,
+            minPrice: minPrice ? (minPrice < 0 ? 0 : minPrice) : undefined,
+            maxPrice: maxPrice
+                ? maxPrice > 10000
+                    ? 10000
+                    : maxPrice
+                : undefined,
             categoryId,
             subCategoryId,
             productTypeId,

@@ -18,6 +18,13 @@ interface PageProps {
         limit?: string;
         search?: string;
         brandIds?: string;
+        minPrice?: string;
+        maxPrice?: string;
+        categoryId?: string;
+        subCategoryId?: string;
+        productTypeId?: string;
+        sortBy?: "price" | "createdAt";
+        sortOrder?: "asc" | "desc";
     }>;
 }
 
@@ -37,13 +44,41 @@ async function ShopFetch({ searchParams }: PageProps) {
         limit: limitRaw,
         search: searchRaw,
         brandIds: brandIdsRaw,
+        minPrice: minPriceRaw,
+        maxPrice: maxPriceRaw,
+        categoryId: categoryIdRaw,
+        subCategoryId: subCategoryIdRaw,
+        productTypeId: productTypeIdRaw,
+        sortBy: sortByRaw,
+        sortOrder: sortOrderRaw,
     } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 30;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
-    const search = searchRaw?.length ? searchRaw : undefined;
-    const brandIds = brandIdsRaw?.length ? brandIdsRaw.split(",") : undefined;
+    const search = !!searchRaw?.length ? searchRaw : undefined;
+    const brandIds = !!brandIdsRaw?.length ? brandIdsRaw.split(",") : undefined;
+    const minPrice =
+        minPriceRaw && !isNaN(parseInt(minPriceRaw))
+            ? parseInt(minPriceRaw) < 0
+                ? 0
+                : parseInt(minPriceRaw)
+            : undefined;
+    const maxPrice =
+        maxPriceRaw && !isNaN(parseInt(maxPriceRaw))
+            ? parseInt(maxPriceRaw) > 10000
+                ? 10000
+                : parseInt(maxPriceRaw)
+            : undefined;
+    const categoryId = !!categoryIdRaw?.length ? categoryIdRaw : undefined;
+    const subCategoryId = !!subCategoryIdRaw?.length
+        ? subCategoryIdRaw
+        : undefined;
+    const productTypeId = !!productTypeIdRaw?.length
+        ? productTypeIdRaw
+        : undefined;
+    const sortBy = !!sortByRaw?.length ? sortByRaw : undefined;
+    const sortOrder = !!sortOrderRaw?.length ? sortOrderRaw : undefined;
 
     const [data, brandsMeta, categories, subCategories, productTypes] =
         await Promise.all([
@@ -54,6 +89,13 @@ async function ShopFetch({ searchParams }: PageProps) {
                 isAvailable: true,
                 isPublished: true,
                 brandIds,
+                minPrice,
+                maxPrice,
+                categoryId,
+                subCategoryId,
+                productTypeId,
+                sortBy,
+                sortOrder,
             }),
             brandQueries.getBrandsMeta(),
             categoryCache.getAll(),

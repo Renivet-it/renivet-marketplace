@@ -70,8 +70,8 @@ export function ShopFilters({
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [, setMinPrice] = useQueryState("minPrice", parseAsFloat);
-    const [, setMaxPrice] = useQueryState("maxPrice", parseAsFloat);
+    const [minPrice, setMinPrice] = useQueryState("minPrice", parseAsFloat);
+    const [maxPrice, setMaxPrice] = useQueryState("maxPrice", parseAsFloat);
     const [categoryId, setCategoryId] = useQueryState("categoryId", {
         defaultValue: "",
     });
@@ -92,7 +92,10 @@ export function ShopFilters({
         parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
     );
 
-    const [priceRange, setPriceRange] = useState<number[]>([0, 10000]);
+    const [priceRange, setPriceRange] = useState<number[]>([
+        minPrice ? (minPrice < 0 ? 0 : minPrice) : 0,
+        maxPrice ? (maxPrice > 10000 ? 10000 : maxPrice) : 10000,
+    ]);
 
     const handleCategoryChange = (value: string) => {
         setCategoryId(value);
