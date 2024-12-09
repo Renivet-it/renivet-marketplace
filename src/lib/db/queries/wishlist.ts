@@ -48,13 +48,18 @@ class UserWishlistQuery {
             ),
         });
 
-        const parsed = cachedWishlistSchema.optional().parse({
-            ...data,
-            product: {
-                ...data?.product,
-                price: data?.product.price.toString(),
-            },
-        });
+        const parsed = cachedWishlistSchema.optional().parse(
+            data
+                ? {
+                      ...data,
+                      product: {
+                          ...data?.product,
+                          price: data?.product.price.toString(),
+                      },
+                  }
+                : undefined
+        );
+
         return parsed;
     }
 
@@ -68,15 +73,10 @@ class UserWishlistQuery {
         return data;
     }
 
-    async deleteProductInWishlist(userId: string, productId: string) {
+    async deleteProductInWishlist(id: string) {
         const data = await db
             .delete(wishlists)
-            .where(
-                and(
-                    eq(wishlists.userId, userId),
-                    eq(wishlists.productId, productId)
-                )
-            )
+            .where(eq(wishlists.id, id))
             .returning()
             .then((res) => res[0]);
 

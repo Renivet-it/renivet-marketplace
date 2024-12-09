@@ -73,6 +73,8 @@ export const wishlistRouter = createTRPCRouter({
             const { user } = ctx;
             const { userId } = input;
 
+            console.log(user.id, userId);
+
             const isAuthorized = user.id === userId;
             if (!isAuthorized)
                 throw new TRPCError({
@@ -99,8 +101,7 @@ export const wishlistRouter = createTRPCRouter({
 
             const [data] = await Promise.all([
                 queries.userWishlists.deleteProductInWishlist(
-                    userId,
-                    productId
+                    existingWishlist.id
                 ),
                 userWishlistCache.remove(userId, productId),
             ]);

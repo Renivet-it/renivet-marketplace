@@ -302,6 +302,41 @@
       "when": 1733653989793,
       "tag": "0043_familiar_night_nurse",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1733734133564,
+      "tag": "0044_breezy_power_pack",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1733751042825,
+      "tag": "0045_dark_kate_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1733761021930,
+      "tag": "0046_lowly_jimmy_woo",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1733761069043,
+      "tag": "0047_bouncy_hammerhead",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1733762937843,
+      "tag": "0048_demonic_roxanne_simpson",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ export * from "./forgot-password-s2";
 export * from "./invite-create";
 export * from "./newsletter-subscribe";
 export * from "./phone-otp-verification";
+export * from "./product-cart-add";
 export * from "./product-categorize";
 export * from "./product-manage";
 export * from "./product-type-manage";

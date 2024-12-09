@@ -14,6 +14,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
+import { cartRouter } from "./cart";
 import { wishlistRouter } from "./wishlist";
 
 export const userAddressesRouter = createTRPCRouter({
@@ -378,4 +379,5 @@ export const usersRouter = createTRPCRouter({
     addresses: userAddressesRouter,
     roles: userRolesRouter,
     wishlist: wishlistRouter,
+    cart: cartRouter,
 });

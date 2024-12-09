@@ -51,12 +51,19 @@ export function NavbarHome() {
 
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
+
     const { data: userWishlist } =
         trpc.general.users.wishlist.getWishlist.useQuery(
             // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
             { userId: user?.id! },
             { enabled: user !== undefined && !isUserFetching }
         );
+
+    const { data: userCart } = trpc.general.users.cart.getCart.useQuery(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+        { userId: user?.id! },
+        { enabled: user !== undefined && !isUserFetching }
+    );
 
     const userPermissions = useMemo(() => {
         if (!user)
@@ -317,12 +324,22 @@ export function NavbarHome() {
                                           </div>
                                       )
                                     : null}
+
                                 <Icons.Heart className="size-5" />
                                 <span className="sr-only">Wishlist</span>
                             </Link>
 
-                            <Link href="/soon">
+                            <Link href="/profile/cart" className="relative">
+                                {userCart?.length
+                                    ? userCart.length > 0 && (
+                                          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                              {userCart.length}
+                                          </div>
+                                      )
+                                    : null}
+
                                 <Icons.ShoppingCart className="size-5" />
+                                <span className="sr-only">Cart</span>
                             </Link>
                         </div>
                     </div>

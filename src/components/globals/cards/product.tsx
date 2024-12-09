@@ -1,14 +1,11 @@
 "use client";
 
-import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button-general";
-import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
+import { WishlistButton } from "../buttons";
 
 interface PageProps extends GenericProps {
     product: ProductWithBrand;
@@ -28,49 +25,6 @@ export function ProductCard({
 
     const [isProductHovered, setIsProductHovered] = useState(false);
     const [isWishlistHovered, setIsWishlistHovered] = useState(false);
-
-    const { refetch } = trpc.general.users.wishlist.getWishlist.useQuery(
-        { userId: userId! },
-        { enabled: !!userId }
-    );
-
-    const { mutate: addToWishlist } =
-        trpc.general.users.wishlist.addProductInWishlist.useMutation({
-            onMutate: () => {
-                setIsProductWishlisted(!isProductWishlisted);
-                toast.success(
-                    isProductWishlisted
-                        ? "Removed from wishlist"
-                        : "Added to wishlist"
-                );
-            },
-            onSuccess: () => {
-                refetch();
-            },
-            onError: (err) => {
-                toast.error(err.message);
-                setIsProductWishlisted(isWishlisted);
-            },
-        });
-
-    const { mutate: removeFromWishlist } =
-        trpc.general.users.wishlist.removeProductInWishlist.useMutation({
-            onMutate: () => {
-                setIsProductWishlisted(!isProductWishlisted);
-                toast.success(
-                    isProductWishlisted
-                        ? "Removed from wishlist"
-                        : "Added to wishlist"
-                );
-            },
-            onSuccess: () => {
-                refetch();
-            },
-            onError: (err) => {
-                toast.error(err.message);
-                setIsProductWishlisted(isWishlisted);
-            },
-        });
 
     return (
         <div
@@ -105,36 +59,20 @@ export function ProductCard({
                                 : "translate-y-full"
                         )}
                     >
-                        <Button
-                            size="sm"
+                        <WishlistButton
                             className={cn(
                                 "w-full hover:bg-background hover:text-foreground",
                                 isProductWishlisted &&
                                     "bg-background font-semibold text-primary hover:bg-muted",
                                 !userId && "hidden"
                             )}
+                            userId={userId}
+                            productId={product.id}
+                            isProductWishlisted={isProductWishlisted}
+                            setIsProductWishlisted={setIsProductWishlisted}
                             onMouseEnter={() => setIsWishlistHovered(true)}
                             onMouseLeave={() => setIsWishlistHovered(false)}
-                            onClick={() =>
-                                isProductWishlisted
-                                    ? removeFromWishlist({
-                                          userId: userId!,
-                                          productId: product.id,
-                                      })
-                                    : addToWishlist({
-                                          userId: userId!,
-                                          productId: product.id,
-                                      })
-                            }
-                        >
-                            <Icons.Heart
-                                className={cn(
-                                    isProductWishlisted &&
-                                        "fill-primary stroke-primary"
-                                )}
-                            />
-                            {isProductWishlisted ? "Wishlisted" : "Wishlist"}
-                        </Button>
+                        />
                     </div>
                 </div>
 
