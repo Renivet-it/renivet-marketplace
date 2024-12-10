@@ -103,6 +103,20 @@ class UserCartQuery {
         return data;
     }
 
+    async updateStatusInCart(userId: string, status: boolean) {
+        const data = await db
+            .update(carts)
+            .set({
+                status,
+                updatedAt: new Date(),
+            })
+            .where(eq(carts.userId, userId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
     async deleteProductFromCart(id: string) {
         const data = await db
             .delete(carts)

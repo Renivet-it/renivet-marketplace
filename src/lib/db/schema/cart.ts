@@ -1,6 +1,7 @@
 import { Product } from "@/lib/validations";
 import { relations } from "drizzle-orm";
 import {
+    boolean,
     index,
     integer,
     jsonb,
@@ -29,6 +30,7 @@ export const carts = pgTable(
         quantity: integer("quantity").notNull().default(1),
         size: text("size").notNull().$type<Product["sizes"][number]["name"]>(),
         color: jsonb("color").$type<Product["colors"][number]>(),
+        status: boolean("status").notNull().default(true),
         ...timestamps,
     },
     (table) => ({

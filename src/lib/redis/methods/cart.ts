@@ -23,7 +23,11 @@ class UserCartCache {
                     (a, b) =>
                         new Date(b.createdAt).getTime() -
                         new Date(a.createdAt).getTime()
-                );
+                )
+                .sort((a, b) => {
+                    if (a.status === b.status) return 0;
+                    return a.status ? -1 : 1;
+                });
 
             await this.addBulk(cachedCarts);
             return cachedCarts;
@@ -40,6 +44,10 @@ class UserCartCache {
                         new Date(b.createdAt).getTime() -
                         new Date(a.createdAt).getTime()
                 )
+                .sort((a, b) => {
+                    if (a.status === b.status) return 0;
+                    return a.status ? -1 : 1;
+                })
         );
     }
 

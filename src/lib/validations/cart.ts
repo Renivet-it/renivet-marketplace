@@ -48,6 +48,10 @@ export const cartSchema = z.object({
                 .length(7, "Color hex must be 7 characters long"),
         })
         .nullable(),
+    status: z.boolean({
+        required_error: "Status is required",
+        invalid_type_error: "Status must be a boolean",
+    }),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -64,14 +68,22 @@ export const cartSchema = z.object({
 
 export const createCartSchema = cartSchema.omit({
     id: true,
+    status: true,
     createdAt: true,
     updatedAt: true,
 });
 
-export const updateCartSchema = createCartSchema.omit({
-    userId: true,
-    productId: true,
-});
+export const updateCartSchema = createCartSchema
+    .omit({
+        userId: true,
+        productId: true,
+    })
+    .extend({
+        status: z.boolean({
+            required_error: "Status is required",
+            invalid_type_error: "Status must be a boolean",
+        }),
+    });
 
 export const cartWithProductSchema = cartSchema.extend({
     product: productWithBrandSchema.omit({
