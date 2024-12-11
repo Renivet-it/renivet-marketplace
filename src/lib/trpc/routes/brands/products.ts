@@ -1,5 +1,6 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldBrandPermission } from "@/config/permissions";
+import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -23,6 +24,7 @@ export const productsRouter = createTRPCRouter({
                 page: z.number().min(1).default(1),
                 search: z.string().optional(),
                 brandIds: z.array(z.string()).optional(),
+                colors: z.array(z.string()).optional(),
                 minPrice: z.number().optional(),
                 maxPrice: z.number().optional(),
                 isAvailable: z.boolean().optional(),
@@ -142,13 +144,19 @@ export const productsRouter = createTRPCRouter({
             if (removedImages.length > 0)
                 await utApi.deleteFiles(removedImages.map((img) => img.key));
 
-            const slug = generateProductSlug(values.name, user.brand.name);
+            const slug =
+                values.name !== existingProduct.name
+                    ? generateProductSlug(values.name, user.brand.name)
+                    : existingProduct.slug;
 
-            const data = await queries.products.updateProduct(productId, {
-                ...values,
-                slug,
-            });
-
+            const [data] = await Promise.all([
+                queries.products.updateProduct(productId, {
+                    ...values,
+                    slug,
+                }),
+                userWishlistCache.dropAll(),
+                userCartCache.dropAll(),
+            ]);
             return data;
         }),
     categorizeProduct: protectedProcedure

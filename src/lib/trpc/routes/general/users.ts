@@ -14,6 +14,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
+import { cartRouter } from "./cart";
 import { wishlistRouter } from "./wishlist";
 
 export const userAddressesRouter = createTRPCRouter({
@@ -256,6 +257,14 @@ export const userRolesRouter = createTRPCRouter({
                     message: "Some roles not found",
                 });
 
+            const isUserInBrand = existingUser.brand !== null;
+            if (isUserInBrand)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Users associated with a brand cannot have site roles",
+                });
+
             const existingRoleIds = existingUser.roles.map((role) => role.id);
             const newRoles = existingRoles.filter(
                 (role) => !existingRoleIds.includes(role.id)
@@ -378,4 +387,5 @@ export const usersRouter = createTRPCRouter({
     addresses: userAddressesRouter,
     roles: userRolesRouter,
     wishlist: wishlistRouter,
+    cart: cartRouter,
 });

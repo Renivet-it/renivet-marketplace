@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { index, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { products } from "./product";
 import { users } from "./user";
@@ -22,6 +22,9 @@ export const wishlists = pgTable(
     },
     (table) => ({
         wishlistUserIdIdx: index("wishlist_user_id_idx").on(table.userId),
+        wishlistUserIdProductIdIdx: uniqueIndex(
+            "wishlist_user_id_product_id_idx"
+        ).on(table.userId, table.productId),
     })
 );
 

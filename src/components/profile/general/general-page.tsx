@@ -22,7 +22,7 @@ export function GeneralPage({ className, ...props }: GenericProps) {
     return (
         <div className={cn("space-y-5", className)} {...props}>
             <Card className="w-full rounded-none">
-                <CardHeader>
+                <CardHeader className="px-4 md:p-6">
                     <CardTitle>General Information</CardTitle>
                     <CardDescription>
                         Update your personal details and preferences
@@ -33,7 +33,7 @@ export function GeneralPage({ className, ...props }: GenericProps) {
             </Card>
 
             <Card className="w-full rounded-none">
-                <CardContent className="space-y-6 pt-6">
+                <CardContent className="space-y-6 p-4 md:p-6">
                     <UserEmailUpdateForm user={user} />
                     <UserPhoneUpdateForm user={user} />
                 </CardContent>

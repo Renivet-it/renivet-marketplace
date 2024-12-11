@@ -22,7 +22,7 @@ export default function Page() {
     return (
         <div className="space-y-5 md:basis-3/4">
             <Card className="w-full rounded-none">
-                <CardHeader>
+                <CardHeader className="px-4 md:p-6">
                     <CardTitle>Wishlist</CardTitle>
                     <CardDescription>
                         View and manage your wishlist
@@ -43,8 +43,8 @@ async function WishlistFetch() {
     const { userId } = await auth();
     if (!userId) redirect("/auth/signin");
 
-    const data = await userWishlistCache.get(userId);
-    return <WishlistPage initialData={data} userId={userId} />;
+    const userWishlist = await userWishlistCache.get(userId);
+    return <WishlistPage initialWishlist={userWishlist} userId={userId} />;
 }
 
 function WishlistSkeleton() {

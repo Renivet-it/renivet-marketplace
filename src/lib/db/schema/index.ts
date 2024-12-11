@@ -2,6 +2,7 @@ export * from "./address";
 export * from "./blog";
 export * from "./brand";
 export * from "./brand-waitlist";
+export * from "./cart";
 export * from "./category";
 export * from "./content";
 export * from "./newsletter-subscriber";

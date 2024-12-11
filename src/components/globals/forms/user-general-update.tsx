@@ -78,7 +78,7 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
             <form onSubmit={form.handleSubmit((values) => updateUser(values))}>
                 <Separator />
 
-                <CardContent className="space-y-6 pt-6">
+                <CardContent className="space-y-6 p-4 md:p-6">
                     <div className="grid gap-4 md:grid-cols-2 md:gap-6">
                         <FormField
                             control={form.control}

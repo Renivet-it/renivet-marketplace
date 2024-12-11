@@ -16,35 +16,41 @@ import { CachedWishlist } from "@/lib/validations";
 import Link from "next/link";
 
 interface PageProps extends GenericProps {
-    initialData: CachedWishlist[];
+    initialWishlist: CachedWishlist[];
     userId: string;
 }
 
 export function WishlistPage({
     className,
-    initialData,
+    initialWishlist,
     userId,
     ...props
 }: PageProps) {
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
         { userId },
-        { initialData }
+        { initialData: initialWishlist }
     );
 
-    return wishlist.length > 0 ? (
+    if (wishlist.length === 0) return <NoWishlistCard />;
+
+    return (
         <div
             className={cn(
-                "grid grid-cols-2 gap-5 p-6 md:grid-cols-3 xl:grid-cols-4",
+                "grid grid-cols-2 gap-5 p-4 md:grid-cols-3 md:p-6 xl:grid-cols-4",
                 className
             )}
             {...props}
         >
-            {wishlist.map((item) => (
-                <WishlistedProductCard key={item.id} wishlist={item} />
-            ))}
+            {wishlist.map((item) => {
+                return <WishlistedProductCard key={item.id} item={item} />;
+            })}
         </div>
-    ) : (
-        <div className="flex flex-col items-center justify-center gap-5 p-6">
+    );
+}
+
+function NoWishlistCard() {
+    return (
+        <div className="flex flex-col items-center justify-center gap-5 p-4 md:p-6">
             <EmptyPlaceholder
                 isBackgroundVisible={false}
                 className="w-full max-w-full border-none"

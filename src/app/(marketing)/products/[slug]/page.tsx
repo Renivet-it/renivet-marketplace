@@ -4,7 +4,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { siteConfig } from "@/config/site";
 import { productQueries } from "@/lib/db/queries";
+import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
 import { cn, getAbsoluteURL } from "@/lib/utils";
+import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -83,14 +85,23 @@ export default function Page({ params }: PageProps) {
 
 async function ProductFetch({ params }: PageProps) {
     const { slug } = await params;
+    const { userId } = await auth();
 
-    const existingProduct = await productQueries.getProductBySlug(
-        slug,
-        "published"
-    );
+    const [existingProduct, userWishlist, userCart] = await Promise.all([
+        productQueries.getProductBySlug(slug, "published"),
+        userId ? userWishlistCache.get(userId) : undefined,
+        userId ? userCartCache.get(userId) : undefined,
+    ]);
     if (!existingProduct) notFound();
 
-    return <ProductPage product={existingProduct} />;
+    return (
+        <ProductPage
+            product={existingProduct}
+            initialWishlist={userWishlist}
+            initialCart={userCart}
+            userId={userId ?? undefined}
+        />
+    );
 }
 
 function ProductSkeleton() {

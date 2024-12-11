@@ -9,6 +9,7 @@ import {
     FormField,
     FormItem,
     FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
 import { MultipleSelectorDash } from "@/components/ui/multi-select-dash";
 import { trpc } from "@/lib/trpc/client";
@@ -17,7 +18,6 @@ import { UpdateUserRoles, updateUserRolesSchema } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -80,19 +80,18 @@ export function UserRoleManageForm({ ...props }: PageProps) {
         },
     });
 
-    const roles = useMemo(
-        () =>
-            (props.type === "site"
-                ? siteRolesRaw?.map((role) => ({
-                      label: role.name,
-                      value: role.id,
-                  }))
-                : brandRolesRaw?.map((role) => ({
-                      label: role.name,
-                      value: role.id,
-                  }))) ?? [],
-        [brandRolesRaw, props.type, siteRolesRaw]
-    );
+    const isMemberInBrand = props.type === "site" && props.user.brand !== null;
+
+    const roles =
+        (props.type === "site"
+            ? siteRolesRaw?.map((role) => ({
+                  label: role.name,
+                  value: role.id,
+              }))
+            : brandRolesRaw?.map((role) => ({
+                  label: role.name,
+                  value: role.id,
+              }))) ?? [];
 
     const { mutate: updateSiteRoles, isPending: isSiteUpdating } =
         trpc.general.users.roles.updateRoles.useMutation({
@@ -157,7 +156,8 @@ export function UserRoleManageForm({ ...props }: PageProps) {
                                         (props.type === "site" &&
                                             isSiteRolesFetching) ||
                                         (props.type === "brand" &&
-                                            isBrandRolesFetching)
+                                            isBrandRolesFetching) ||
+                                        isMemberInBrand
                                     }
                                     defaultOptions={roles}
                                     value={
@@ -180,6 +180,15 @@ export function UserRoleManageForm({ ...props }: PageProps) {
                                     }
                                 />
                             </FormControl>
+
+                            {isMemberInBrand && (
+                                <p className="text-sm text-destructive">
+                                    * Users associated with a brand cannot have
+                                    site roles.
+                                </p>
+                            )}
+
+                            <FormMessage />
                         </FormItem>
                     )}
                 />

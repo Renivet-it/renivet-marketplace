@@ -23,6 +23,7 @@ interface PageProps {
         limit?: string;
         search?: string;
         brandIds?: string;
+        colors?: string;
         minPrice?: string;
         maxPrice?: string;
         categoryId?: string;
@@ -91,6 +92,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         limit: limitRaw,
         search: searchRaw,
         brandIds: brandIdsRaw,
+        colors: colorsRaw,
         minPrice: minPriceRaw,
         maxPrice: maxPriceRaw,
         categoryId: categoryIdRaw,
@@ -105,6 +107,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const search = !!searchRaw?.length ? searchRaw : undefined;
     const brandIds = !!brandIdsRaw?.length ? brandIdsRaw.split(",") : undefined;
+    const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const minPrice =
         minPriceRaw && !isNaN(parseInt(minPriceRaw))
             ? parseInt(minPriceRaw) < 0
@@ -135,6 +138,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             isAvailable: true,
             isPublished: true,
             brandIds,
+            colors,
             minPrice,
             maxPrice,
             categoryId,
@@ -179,11 +183,17 @@ function ShopFiltersSkeleton() {
             <div className="space-y-1">
                 <div className="space-y-2">
                     <Label className="font-semibold uppercase">Price</Label>
-
-                    <Skeleton className="h-7" />
+                    <Skeleton className="h-6" />
                 </div>
 
                 <Skeleton className="h-4 w-1/2" />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-1">
+                <Label className="font-semibold uppercase">Colors</Label>
+                <Skeleton className="h-10" />
             </div>
 
             <Separator />

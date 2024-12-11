@@ -60,22 +60,38 @@ export const productSchema = z.object({
             }
         )
         .min(1, "At least one size is required"),
-    colors: z.array(
-        z.object({
-            name: z
-                .string({
-                    required_error: "Color name is required",
-                    invalid_type_error: "Color name must be a string",
-                })
-                .min(1, "Color name must be at least 1 characters long"),
-            hex: z
-                .string({
-                    required_error: "Color hex is required",
-                    invalid_type_error: "Color hex must be a string",
-                })
-                .length(7, "Color hex must be 7 characters long"),
-        })
-    ),
+    colors: z
+        .array(
+            z.object({
+                name: z
+                    .string({
+                        required_error: "Color name is required",
+                        invalid_type_error: "Color name must be a string",
+                    })
+                    .min(1, "Color name must be at least 1 characters long"),
+                hex: z
+                    .string({
+                        required_error: "Color hex is required",
+                        invalid_type_error: "Color hex must be a string",
+                    })
+                    .length(7, "Color hex must be 7 characters long")
+                    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
+            })
+        )
+        .refine((colors) => {
+            const names = new Set();
+            const hexes = new Set();
+
+            for (const color of colors) {
+                if (names.has(color.name) || hexes.has(color.hex)) {
+                    return false;
+                }
+                names.add(color.name);
+                hexes.add(color.hex);
+            }
+
+            return true;
+        }, "Duplicate color names or hex values are not allowed"),
     brandId: z
         .string({
             required_error: "Brand ID is required",
