@@ -178,6 +178,7 @@ export const brandRequestsRouter = createTRPCRouter({
                     slug: generateBrandRoleSlug("Admin", newBrand.id),
                     position: 1,
                     sitePermissions: "0",
+                    isSiteRole: false,
                 });
 
                 await Promise.all([

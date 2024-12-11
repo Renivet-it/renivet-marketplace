@@ -59,6 +59,7 @@ export const rolesRouter = createTRPCRouter({
                 ...input,
                 slug,
                 position: cachedRoles.length + 1,
+                isSiteRole: true,
             });
 
             await roleCache.add({
