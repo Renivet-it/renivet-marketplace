@@ -73,7 +73,7 @@ export function WishlistedProductCard({
 
                         <button
                             className={cn(
-                                "absolute top-2 flex size-6 items-center justify-center rounded-full bg-foreground/40 text-background transition-all ease-in-out hover:bg-foreground/80 disabled:opacity-40 disabled:hover:bg-foreground/40",
+                                "absolute top-2 hidden size-6 items-center justify-center rounded-full bg-foreground/40 text-background transition-all ease-in-out hover:bg-foreground/80 disabled:opacity-40 disabled:hover:bg-foreground/40 md:flex",
                                 isProductHovered
                                     ? "right-2 translate-x-0"
                                     : "right-0 translate-x-full"
@@ -97,7 +97,7 @@ export function WishlistedProductCard({
 
                         <div
                             className={cn(
-                                "absolute bottom-0 w-full p-2 transition-all ease-in-out",
+                                "absolute bottom-0 hidden w-full p-2 transition-all ease-in-out md:inline-block",
                                 isProductHovered
                                     ? "translate-y-0"
                                     : "translate-y-full"
@@ -120,25 +120,51 @@ export function WishlistedProductCard({
                             </Button>
                         </div>
                     </div>
+                </Link>
 
-                    <div className="space-y-1 py-2 md:p-2">
-                        <div>
-                            <p className="truncate text-sm font-semibold">
-                                {item.product.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {item.product.brand.name}
-                            </p>
-                        </div>
-
-                        <p className="text-sm font-semibold">
-                            {Intl.NumberFormat("en-IN", {
-                                style: "currency",
-                                currency: "INR",
-                            }).format(parseFloat(item.product.price))}
+                <div className="space-y-1 py-2 md:p-2">
+                    <div>
+                        <p className="truncate text-sm font-semibold">
+                            {item.product.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {item.product.brand.name}
                         </p>
                     </div>
-                </Link>
+
+                    <p className="text-sm font-semibold">
+                        {Intl.NumberFormat("en-IN", {
+                            style: "currency",
+                            currency: "INR",
+                        }).format(parseFloat(item.product.price))}
+                    </p>
+                </div>
+
+                <div className="space-y-1 md:hidden">
+                    <Button
+                        size="sm"
+                        className="h-8 w-full text-xs"
+                        disabled={isRemoving}
+                        onClick={() => setIsMoveToCartModalOpen(true)}
+                    >
+                        Move to Cart
+                    </Button>
+
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 w-full text-xs"
+                        onClick={() =>
+                            removeFromWishlist({
+                                userId: item.userId,
+                                productId: item.productId,
+                            })
+                        }
+                        disabled={isRemoving}
+                    >
+                        Remove from Wishlist
+                    </Button>
+                </div>
             </div>
 
             <MoveProductToCartModal

@@ -53,7 +53,7 @@ export function ProductCard({
 
                     <div
                         className={cn(
-                            "absolute bottom-0 w-full p-2 transition-all ease-in-out",
+                            "absolute bottom-0 hidden w-full p-2 transition-all ease-in-out md:inline-block",
                             isProductHovered
                                 ? "translate-y-0"
                                 : "translate-y-full"
@@ -75,25 +75,47 @@ export function ProductCard({
                         />
                     </div>
                 </div>
+            </Link>
 
-                <div className="space-y-1 py-2 md:p-2">
-                    <div>
+            <div className="space-y-1 py-2 md:p-2">
+                <div>
+                    <div className="flex items-center gap-1">
                         <p className="truncate text-sm font-semibold">
                             {product.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                            {product.brand.name}
-                        </p>
-                    </div>
 
-                    <p className="text-sm font-semibold">
-                        {Intl.NumberFormat("en-IN", {
-                            style: "currency",
-                            currency: "INR",
-                        }).format(parseFloat(product.price))}
+                        <div className="md:hidden">
+                            <WishlistButton
+                                size="icon"
+                                className={cn(
+                                    "size-8 bg-background hover:bg-background",
+                                    isProductWishlisted &&
+                                        "font-semibold text-primary",
+                                    !userId && "hidden"
+                                )}
+                                iconClassName={cn("stroke-primary")}
+                                hideText
+                                userId={userId}
+                                productId={product.id}
+                                isProductWishlisted={isProductWishlisted}
+                                setIsProductWishlisted={setIsProductWishlisted}
+                                onMouseEnter={() => setIsWishlistHovered(true)}
+                                onMouseLeave={() => setIsWishlistHovered(false)}
+                            />
+                        </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        {product.brand.name}
                     </p>
                 </div>
-            </Link>
+
+                <p className="text-sm font-semibold">
+                    {Intl.NumberFormat("en-IN", {
+                        style: "currency",
+                        currency: "INR",
+                    }).format(parseFloat(product.price))}
+                </p>
+            </div>
         </div>
     );
 }

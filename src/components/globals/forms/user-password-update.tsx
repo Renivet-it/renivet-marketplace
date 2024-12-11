@@ -71,7 +71,7 @@ export function UserPasswordUpdateForm() {
             >
                 <Separator />
 
-                <CardContent className="space-y-6 pt-6">
+                <CardContent className="space-y-6 p-4 md:p-6">
                     <FormField
                         control={form.control}
                         name="currentPassword"

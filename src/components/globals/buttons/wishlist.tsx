@@ -14,6 +14,7 @@ interface WishlistButtonProps extends ButtonProps {
     userId?: string;
     productId: string;
     iconClassName?: string;
+    hideText?: boolean;
 }
 
 export function WishlistButton({
@@ -22,6 +23,7 @@ export function WishlistButton({
     productId,
     userId,
     iconClassName,
+    hideText,
     ...props
 }: WishlistButtonProps) {
     const router = useRouter();
@@ -94,7 +96,9 @@ export function WishlistButton({
                     iconClassName
                 )}
             />
-            {isProductWishlisted ? "Wishlisted" : "Wishlist"}
+            <span className={cn(hideText && "sr-only")}>
+                {isProductWishlisted ? "Wishlisted" : "Wishlist"}
+            </span>
         </Button>
     );
 }

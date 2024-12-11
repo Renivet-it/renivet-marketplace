@@ -78,18 +78,20 @@ export function CartPage({
 
     return (
         <div className={cn("space-y-5", className)} {...props}>
-            <div className="flex items-center justify-between gap-10 border p-4 md:p-6">
+            <div className="flex items-center justify-between gap-5 border p-4 md:gap-10 md:p-6">
                 <div className="w-full space-y-2">
                     <Progress
                         value={getProgress()}
-                        className="h-5 border border-green-700 bg-transparent"
+                        className="h-4 border border-green-700 bg-transparent md:h-5"
                         indicatorClassName="bg-green-700"
                     />
 
                     <div className="flex items-center gap-2 text-green-700">
-                        <Icons.CircleCheck className="size-5 rounded-full bg-green-700 stroke-background" />
+                        <div>
+                            <Icons.CircleCheck className="size-5 rounded-full bg-green-700 stroke-background" />
+                        </div>
 
-                        <p className="text-sm">
+                        <p className="text-xs md:text-sm">
                             {totalPrice < FREE_DELIVERY_THRESHOLD
                                 ? `Add ${formatPriceTag(
                                       FREE_DELIVERY_THRESHOLD - totalPrice,
@@ -100,11 +102,13 @@ export function CartPage({
                     </div>
                 </div>
 
-                {formatPriceTag(totalPrice, true)}
+                <p className="text-sm font-semibold md:text-base">
+                    {formatPriceTag(totalPrice, true)}
+                </p>
             </div>
 
             <div className="flex items-center justify-between gap-2 border p-4 md:p-6">
-                <div>{itemCount} item(s)</div>
+                <p className="text-sm md:text-base">{itemCount} item(s)</p>
 
                 <button
                     className="text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"

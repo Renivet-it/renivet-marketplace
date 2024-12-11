@@ -29,7 +29,7 @@ export function AddressesPage({ className, ...props }: GenericProps) {
     return (
         <div className={cn("space-y-5", className)} {...props}>
             <Card className="w-full rounded-none">
-                <CardHeader>
+                <CardHeader className="px-4 md:p-6">
                     <CardTitle>Addresses</CardTitle>
                     <CardDescription>
                         Manage your shipping and billing addresses
@@ -38,7 +38,7 @@ export function AddressesPage({ className, ...props }: GenericProps) {
 
                 <Separator />
 
-                <CardContent className="space-y-6 pt-6">
+                <CardContent className="space-y-6 p-4 md:p-6">
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {user.addresses
                             .sort(

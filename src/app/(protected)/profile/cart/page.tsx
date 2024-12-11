@@ -21,7 +21,7 @@ export default function Page() {
     return (
         <div className="space-y-5 md:basis-3/4">
             <Card className="w-full rounded-none">
-                <CardHeader>
+                <CardHeader className="px-4 md:p-6">
                     <CardTitle>Shopping Cart</CardTitle>
                     <CardDescription>View and manage your cart</CardDescription>
                 </CardHeader>

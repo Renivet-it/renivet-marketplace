@@ -17,7 +17,7 @@ export function SecurityPage({ className, ...props }: GenericProps) {
     return (
         <div className={cn("space-y-5", className)} {...props}>
             <Card className="w-full rounded-none">
-                <CardHeader>
+                <CardHeader className="px-4 md:p-6">
                     <CardTitle>Password & Security</CardTitle>
                     <CardDescription>
                         Update your password and security settings

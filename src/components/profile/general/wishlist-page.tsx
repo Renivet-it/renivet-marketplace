@@ -36,7 +36,7 @@ export function WishlistPage({
     return (
         <div
             className={cn(
-                "grid grid-cols-2 gap-5 p-6 md:grid-cols-3 xl:grid-cols-4",
+                "grid grid-cols-2 gap-5 p-4 md:grid-cols-3 md:p-6 xl:grid-cols-4",
                 className
             )}
             {...props}
@@ -50,7 +50,7 @@ export function WishlistPage({
 
 function NoWishlistCard() {
     return (
-        <div className="flex flex-col items-center justify-center gap-5 p-6">
+        <div className="flex flex-col items-center justify-center gap-5 p-4 md:p-6">
             <EmptyPlaceholder
                 isBackgroundVisible={false}
                 className="w-full max-w-full border-none"

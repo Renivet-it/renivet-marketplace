@@ -179,7 +179,7 @@ export function NavbarHome() {
                         <Link
                             aria-label="Mobile Cart Button"
                             className="sm:hidden"
-                            href="/cart"
+                            href="/profile/cart"
                         >
                             <Icons.ShoppingCart className="size-6" />
                         </Link>
