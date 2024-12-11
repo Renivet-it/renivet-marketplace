@@ -3,6 +3,7 @@
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
+import Link from "next/link";
 import {
     parseAsArrayOf,
     parseAsInteger,
@@ -11,7 +12,16 @@ import {
     useQueryState,
 } from "nuqs";
 import { ProductCard } from "../globals/cards";
+import { Icons } from "../icons";
+import { Button } from "../ui/button-general";
 import { Pagination } from "../ui/data-table-general";
+import {
+    EmptyPlaceholder,
+    EmptyPlaceholderContent,
+    EmptyPlaceholderDescription,
+    EmptyPlaceholderIcon,
+    EmptyPlaceholderTitle,
+} from "../ui/empty-placeholder-general";
 import { Separator } from "../ui/separator";
 
 interface PageProps extends GenericProps {
@@ -93,6 +103,8 @@ export function ShopProducts({
 
     const pages = Math.ceil(count / limit) ?? 1;
 
+    if (!products.length) return <NoProductCard />;
+
     return (
         <>
             <div
@@ -127,5 +139,34 @@ export function ShopProducts({
 
             <Pagination total={pages} />
         </>
+    );
+}
+
+function NoProductCard() {
+    return (
+        <div className="flex flex-col items-center justify-center gap-5 p-6">
+            <EmptyPlaceholder
+                isBackgroundVisible={false}
+                className="w-full max-w-full border-none"
+            >
+                <EmptyPlaceholderIcon>
+                    <Icons.AlertTriangle className="size-10" />
+                </EmptyPlaceholderIcon>
+
+                <EmptyPlaceholderContent>
+                    <EmptyPlaceholderTitle>
+                        No products found
+                    </EmptyPlaceholderTitle>
+                    <EmptyPlaceholderDescription>
+                        We couldn&apos;t find any products matching your search.
+                        Try again with different filters.
+                    </EmptyPlaceholderDescription>
+                </EmptyPlaceholderContent>
+
+                <Button asChild>
+                    <Link href="/">Go back</Link>
+                </Button>
+            </EmptyPlaceholder>
+        </div>
     );
 }
