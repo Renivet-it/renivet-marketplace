@@ -50,6 +50,20 @@ export const cartRouter = createTRPCRouter({
             const { queries } = ctx;
             const { userId, productId } = input;
 
+            const existingProduct =
+                await queries.products.getProduct(productId);
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (!existingProduct.isAvailable)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "This product is not available",
+                });
+
             const existingCart = await userCartCache.getProduct({
                 userId,
                 productId,

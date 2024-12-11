@@ -20,6 +20,8 @@ import {
 import PriceInput from "@/components/ui/price-input";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PRESET_COLORS } from "@/config/const";
 import { SIZES } from "@/config/sizes";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
@@ -35,7 +37,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useDropzone } from "@uploadthing/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -51,14 +53,13 @@ interface PageProps {
 
 export function ProductManageForm({ brandId, product }: PageProps) {
     const router = useRouter();
+    const [activeColor, setActiveColor] = useState<string>("#ffffff");
+    const [newColorName, setNewColorName] = useState<string>("");
 
     const editorRef = useRef<EditorRef>(null!);
 
     const [selectedSizes, setSelectedSizes] = useState<string[]>(
         product?.sizes.map((size) => size.name) ?? []
-    );
-    const [activeColorIndex, setActiveColorIndex] = useState<number | null>(
-        null
     );
     const [previews, setPreviews] = useState<string[]>(
         product?.imageUrls ?? []
@@ -155,25 +156,53 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             !selectedSizes.includes("One Size")) ||
         (size !== "One Size" && selectedSizes.includes("One Size"));
 
-    const onDrop = useCallback(
-        (acceptedFiles: File[]) => {
-            const remainingSlots = 5 - previews.length;
-            const newFiles = acceptedFiles.slice(0, remainingSlots);
+    const addColor = (
+        color: { name: string; hex: string },
+        forceAdd = true
+    ) => {
+        if (
+            !forceAdd &&
+            PRESET_COLORS.some(
+                (preset) =>
+                    preset.name.toLowerCase() === color.name.toLowerCase() ||
+                    preset.hex === color.hex
+            )
+        )
+            return toast.error("Color already exists in presets");
 
-            if (newFiles.length > 0) {
-                setFiles((prev) => [...prev, ...newFiles]);
+        if (
+            !colorsFields.some(
+                (field) => field.name === color.name || field.hex === color.hex
+            )
+        )
+            appendColors(color);
+    };
 
-                const newPreviews = newFiles.map((file) =>
-                    URL.createObjectURL(file)
-                );
-                setPreviews((prev) => [...prev, ...newPreviews]);
-
-                const currentUrls = form.getValues("imageUrls");
-                form.setValue("imageUrls", [...currentUrls, ...newPreviews]);
-            }
-        },
-        [previews.length, form]
+    const isCustomColorPresent = colorsFields.some(
+        (field) =>
+            !PRESET_COLORS.some(
+                (preset) =>
+                    preset.name.toLowerCase() === field.name.toLowerCase() ||
+                    preset.hex === field.hex
+            )
     );
+
+    const onDrop = (acceptedFiles: File[]) => {
+        const remainingSlots = 5 - previews.length;
+        const newFiles = acceptedFiles.slice(0, remainingSlots);
+
+        if (newFiles.length > 0) {
+            setFiles((prev) => [...prev, ...newFiles]);
+
+            const newPreviews = newFiles.map((file) =>
+                URL.createObjectURL(file)
+            );
+            setPreviews((prev) => [...prev, ...newPreviews]);
+
+            const currentUrls = form.getValues("imageUrls");
+            form.setValue("imageUrls", [...currentUrls, ...newPreviews]);
+        }
+    };
 
     const removeImage = (index: number) => {
         setPreviews((prev) => prev.filter((_, i) => i !== index));
@@ -450,103 +479,193 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                     )}
                 />
 
-                <div className={cn(colorsFields.length > 0 && "space-y-4")}>
+                <div className="space-y-4">
                     <div className="space-y-2">
                         <div className="text-sm font-medium">Colors</div>
 
-                        <Button
-                            type="button"
-                            variant="accent"
-                            onClick={() =>
-                                appendColors({ name: "", hex: "#ffffff" })
-                            }
-                            disabled={isCreating || isUpdating}
-                            className="w-full"
-                        >
-                            <Icons.Plus className="size-4" />
-                            Add Color
-                        </Button>
+                        <Tabs defaultValue="preset" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="preset">
+                                    Presets
+                                </TabsTrigger>
+                                <TabsTrigger value="custom">Custom</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="preset" className="mt-4">
+                                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                                    {PRESET_COLORS.map((color) => (
+                                        <Button
+                                            key={color.hex}
+                                            type="button"
+                                            variant="outline"
+                                            className="h-12 w-full overflow-hidden p-0 hover:bg-muted hover:text-foreground"
+                                            onClick={() => addColor(color)}
+                                        >
+                                            <div className="flex size-full items-center">
+                                                <div
+                                                    className="h-full w-1/3"
+                                                    style={{
+                                                        backgroundColor:
+                                                            color.hex,
+                                                    }}
+                                                />
+                                                <span className="flex h-full w-2/3 items-center justify-center border-l text-center text-xs">
+                                                    {color.name}
+                                                </span>
+                                            </div>
+                                        </Button>
+                                    ))}
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="custom" className="mt-4">
+                                <div className="flex items-end space-x-4">
+                                    <div className="grow">
+                                        <Input
+                                            placeholder="Color name"
+                                            value={newColorName}
+                                            onChange={(e) =>
+                                                setNewColorName(e.target.value)
+                                            }
+                                            className="mb-2"
+                                        />
+
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    className="h-10 w-full overflow-hidden p-0"
+                                                >
+                                                    <div className="flex size-full items-center">
+                                                        <div
+                                                            className="h-full w-1/3"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    activeColor,
+                                                            }}
+                                                        />
+
+                                                        <span className="flex h-full w-2/3 items-center justify-center border-l text-xs uppercase">
+                                                            {activeColor}
+                                                        </span>
+                                                    </div>
+                                                </Button>
+                                            </PopoverTrigger>
+
+                                            <PopoverContent className="w-auto border-0 bg-transparent p-0">
+                                                <HexColorPicker
+                                                    color={activeColor}
+                                                    onChange={setActiveColor}
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+
+                                    <Button
+                                        type="button"
+                                        onClick={() =>
+                                            addColor(
+                                                {
+                                                    name:
+                                                        newColorName.length > 0
+                                                            ? newColorName
+                                                            : "Custom",
+                                                    hex: activeColor,
+                                                },
+                                                false
+                                            )
+                                        }
+                                        className="mb-2"
+                                    >
+                                        <Icons.Plus className="mr-2 size-4" />
+                                        Add
+                                    </Button>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
                     </div>
 
-                    <div className="space-y-4">
-                        {colorsFields.length > 0 && <Separator />}
+                    {colorsFields.length > 0 && (
+                        <div className="space-y-2">
+                            <div className="text-sm font-medium">
+                                Selected Colors
+                            </div>
 
-                        {colorsFields.map((field, index) => (
-                            <div
-                                key={field.id}
-                                className="flex items-center gap-3"
-                            >
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setActiveColorIndex(index)
-                                            }
-                                            disabled={isCreating || isUpdating}
-                                            className="size-10 shrink-0 rounded border border-gray-700"
+                            {colorsFields.map((field, index) => (
+                                <div
+                                    key={field.id}
+                                    className="flex items-center gap-2 md:gap-4"
+                                >
+                                    <div>
+                                        <div
+                                            className="size-8 rounded-full border"
                                             style={{
-                                                backgroundColor: form.watch(
-                                                    `colors.${index}.hex`
-                                                ),
+                                                backgroundColor: field.hex,
                                             }}
                                         />
-                                    </PopoverTrigger>
+                                    </div>
 
-                                    <PopoverContent className="w-auto border-none bg-transparent p-0">
-                                        {activeColorIndex !== null && (
-                                            <HexColorPicker
-                                                color={form.watch(
-                                                    `colors.${activeColorIndex}.hex`
-                                                )}
-                                                onChange={(color) => {
-                                                    if (
-                                                        activeColorIndex !==
-                                                        null
-                                                    )
-                                                        form.setValue(
-                                                            `colors.${activeColorIndex}.hex`,
-                                                            color
-                                                        );
-                                                }}
-                                            />
-                                        )}
-                                    </PopoverContent>
-                                </Popover>
+                                    <div className="grow">
+                                        <FormField
+                                            control={form.control}
+                                            name={`colors.${index}.name`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Color name"
+                                                            readOnly
+                                                            className="focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
 
-                                <FormField
-                                    control={form.control}
-                                    name={`colors.${index}.name`}
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter color name"
-                                                    disabled={
-                                                        isCreating || isUpdating
-                                                    }
-                                                    {...field}
-                                                />
-                                            </FormControl>
+                                    <div className="w-24">
+                                        <FormField
+                                            control={form.control}
+                                            name={`colors.${index}.hex`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Hex"
+                                                            readOnly
+                                                            className="focus-visible:ring-0 focus-visible:ring-offset-0"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
 
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeColors(index)}
+                                        className="text-destructive"
+                                    >
+                                        <Icons.X className="size-4" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    disabled={isCreating || isUpdating}
-                                    onClick={() => removeColors(index)}
-                                    className="shrink-0 text-gray-400 hover:text-white"
-                                >
-                                    <Icons.X className="size-4" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
+                    {isCustomColorPresent && (
+                        <p className="text-sm text-destructive">
+                            * Custom colors are not included while filtering the
+                            products
+                        </p>
+                    )}
                 </div>
 
                 <FormField

@@ -1,6 +1,7 @@
 "use client";
 
-import { cn, formatPriceTag } from "@/lib/utils";
+import { PRESET_COLORS } from "@/config/const";
+import { cn, formatPriceTag, slugify } from "@/lib/utils";
 import {
     BrandMeta,
     CachedCategory,
@@ -85,13 +86,19 @@ export function ShopFilters({
                     </Button>
                 </SheetTrigger>
 
-                <SheetContent side="bottom" className="p-4 [&>button]:hidden">
-                    <SheetHeader className="sr-only text-start">
+                <SheetContent
+                    side="bottom"
+                    className="h-screen overflow-auto p-0 [&>button]:hidden"
+                    style={{
+                        scrollbarWidth: "none",
+                    }}
+                >
+                    <SheetHeader className="sr-only p-4 text-start">
                         <SheetTitle>Select Filters</SheetTitle>
                     </SheetHeader>
 
                     <ShopFiltersSection
-                        className={cn("w-auto basis-full", className)}
+                        className={cn("w-auto basis-full p-4", className)}
                         brandsMeta={brandsMeta}
                         categories={categories}
                         subCategories={subCategories}
@@ -99,9 +106,7 @@ export function ShopFilters({
                         {...props}
                     />
 
-                    <div className="mt-4 space-y-4">
-                        <Separator />
-
+                    <div className="sticky bottom-0 space-y-4 border-t bg-background p-4">
                         <SheetFooter>
                             <SheetClose asChild>
                                 <Button>Close</Button>
@@ -135,6 +140,10 @@ function ShopFiltersSection({
 }: PageProps) {
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
+        parseAsArrayOf(parseAsString, ",").withDefault([])
+    );
+    const [colors, setColors] = useQueryState(
+        "colors",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
     const [minPrice, setMinPrice] = useQueryState(
@@ -310,6 +319,45 @@ function ShopFiltersSection({
                     Reset Category
                 </Button>
             )}
+
+            <Separator />
+
+            <div className="space-y-1">
+                <Label className="font-semibold uppercase">Colors</Label>
+
+                <MultipleSelectorGeneral
+                    commandProps={{
+                        label: "Colors",
+                    }}
+                    defaultOptions={PRESET_COLORS.map((color) => ({
+                        label: color.name,
+                        value: slugify(color.name),
+                        hex: color.hex,
+                    })).sort((a, b) => a.value.localeCompare(b.value))}
+                    placeholder="Select colors"
+                    emptyIndicator={
+                        <p className="text-center text-sm">No results found</p>
+                    }
+                    value={PRESET_COLORS.filter((color) =>
+                        colors.includes(color.hex)
+                    ).map((color) => ({
+                        label: color.name,
+                        value: slugify(color.name),
+                        hex: color.hex,
+                    }))}
+                    onChange={(options) =>
+                        setColors(
+                            options.map(
+                                (option) =>
+                                    PRESET_COLORS.find(
+                                        (color) =>
+                                            slugify(color.name) === option.value
+                                    )?.hex ?? ""
+                            )
+                        )
+                    }
+                />
+            </div>
 
             <Separator />
 

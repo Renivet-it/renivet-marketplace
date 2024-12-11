@@ -37,6 +37,10 @@ export function ShopProducts({
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
+    const [colors] = useQueryState(
+        "colors",
+        parseAsArrayOf(parseAsString, ",").withDefault([])
+    );
     const [minPrice] = useQueryState("minPrice", parseAsInteger.withDefault(0));
     const [maxPrice] = useQueryState(
         "maxPrice",
@@ -70,6 +74,7 @@ export function ShopProducts({
             isPublished: true,
             isAvailable: true,
             brandIds,
+            colors,
             minPrice: minPrice < 0 ? 0 : minPrice,
             maxPrice: maxPrice > 10000 ? 10000 : maxPrice,
             categoryId,

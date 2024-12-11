@@ -45,7 +45,8 @@ export const cartSchema = z.object({
                     required_error: "Color hex is required",
                     invalid_type_error: "Color hex must be a string",
                 })
-                .length(7, "Color hex must be 7 characters long"),
+                .length(7, "Color hex must be 7 characters long")
+                .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
         })
         .nullable(),
     status: z.boolean({

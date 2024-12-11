@@ -37,6 +37,7 @@ class ProductQuery {
         isPublished,
         sortBy = "createdAt",
         sortOrder = "desc",
+        colors,
     }: {
         limit: number;
         page: number;
@@ -51,6 +52,7 @@ class ProductQuery {
         isPublished?: boolean;
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
+        colors?: string[];
     }) {
         const searchQuery = !!search?.length
             ? sql`(
@@ -77,6 +79,15 @@ class ProductQuery {
                 ? eq(products.isPublished, isPublished)
                 : undefined,
             eq(products.status, true),
+            !!colors?.length
+                ? sql`EXISTS (
+                SELECT 1 FROM jsonb_array_elements(${products.colors}) AS color
+                WHERE (color->>'hex')::text = ANY(${sql`ARRAY[${sql.join(
+                    colors.map((hex) => sql`${hex}::text`),
+                    ","
+                )}]`})
+              )`
+                : undefined,
         ];
 
         if (
@@ -244,7 +255,7 @@ class ProductQuery {
             ),
         });
 
-        return productWithBrandSchema.parse(data);
+        return productWithBrandSchema.optional().parse(data);
     }
 
     async createProduct(

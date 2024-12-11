@@ -140,6 +140,12 @@ class UserCartCache {
         if (!keys.length) return 0;
         return await redis.del(...keys);
     }
+
+    async dropAll() {
+        const keys = await redis.keys("cart:*");
+        if (!keys.length) return 0;
+        return await redis.del(...keys);
+    }
 }
 
 export const userCartCache = new UserCartCache();

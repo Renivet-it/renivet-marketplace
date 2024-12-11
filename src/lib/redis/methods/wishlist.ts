@@ -99,6 +99,12 @@ class UserWishlistCache {
         if (!keys.length) return 0;
         return await redis.del(...keys);
     }
+
+    async dropAll() {
+        const keys = await redis.keys("wishlist:*");
+        if (!keys.length) return 0;
+        return await redis.del(...keys);
+    }
 }
 
 export const userWishlistCache = new UserWishlistCache();

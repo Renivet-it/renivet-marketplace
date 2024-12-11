@@ -108,6 +108,10 @@ export function ProductCartAddForm({
                             type: "required",
                             message: "Color is required",
                         });
+                    if (!product.isAvailable)
+                        return toast.error(
+                            "This product is currently out of stock. You can still add it to your wishlist."
+                        );
 
                     addToCart(values);
                 })}
@@ -134,6 +138,7 @@ export function ProductCartAddForm({
                                         }}
                                         defaultValue={field.value?.hex}
                                         className="flex flex-wrap gap-2"
+                                        disabled={!product.isAvailable}
                                     >
                                         {product.colors.map((c) => (
                                             <FormItem key={c.name}>
@@ -142,6 +147,9 @@ export function ProductCartAddForm({
                                                         value={c.hex}
                                                         id={c.name}
                                                         className="sr-only"
+                                                        disabled={
+                                                            !product.isAvailable
+                                                        }
                                                     />
                                                 </FormControl>
 
@@ -153,7 +161,9 @@ export function ProductCartAddForm({
                                                                 "size-12 cursor-pointer rounded-full border border-foreground/10",
                                                                 c.hex ===
                                                                     color &&
-                                                                    "outline outline-2 outline-offset-1"
+                                                                    "outline outline-2 outline-offset-1",
+                                                                !product.isAvailable &&
+                                                                    "cursor-not-allowed opacity-50"
                                                             )}
                                                             style={{
                                                                 backgroundColor:
@@ -209,6 +219,7 @@ export function ProductCartAddForm({
                                     }}
                                     defaultValue={field.value}
                                     className="flex flex-wrap gap-2"
+                                    disabled={!product.isAvailable}
                                 >
                                     {product.sizes.map((s) => (
                                         <FormItem key={s.name}>
@@ -216,7 +227,10 @@ export function ProductCartAddForm({
                                                 <RadioGroupItem
                                                     value={s.name}
                                                     id={s.name}
-                                                    disabled={s.quantity === 0}
+                                                    disabled={
+                                                        s.quantity === 0 ||
+                                                        !product.isAvailable
+                                                    }
                                                     className="sr-only"
                                                 />
                                             </FormControl>
@@ -226,9 +240,12 @@ export function ProductCartAddForm({
                                                     <div
                                                         title={s.name}
                                                         className={cn(
-                                                            "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm disabled:cursor-not-allowed disabled:opacity-60",
+                                                            "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
                                                             s.name === size &&
-                                                                "bg-primary text-background"
+                                                                "bg-primary text-background",
+                                                            (s.quantity === 0 ||
+                                                                !product.isAvailable) &&
+                                                                "cursor-not-allowed opacity-50"
                                                         )}
                                                     >
                                                         <span>{s.name}</span>
@@ -256,6 +273,7 @@ export function ProductCartAddForm({
                         type="submit"
                         size="lg"
                         className="w-full font-semibold uppercase md:h-12 md:basis-2/3 md:text-base"
+                        disabled={!product.isAvailable}
                     >
                         <Icons.ShoppingCart />
                         Add to Cart
@@ -278,6 +296,13 @@ export function ProductCartAddForm({
                         )}
                     />
                 </div>
+
+                {!product.isAvailable && (
+                    <p className="text-sm text-destructive">
+                        * This product is currently out of stock. You can still
+                        add it to your wishlist.
+                    </p>
+                )}
             </form>
         </Form>
     );
