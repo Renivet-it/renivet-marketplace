@@ -55,6 +55,7 @@ class RoleQuery {
         values: CreateRole & {
             slug: string;
             position: number;
+            isSiteRole: boolean;
         }
     ) {
         const data = await db
