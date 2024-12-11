@@ -43,8 +43,8 @@ async function WishlistFetch() {
     const { userId } = await auth();
     if (!userId) redirect("/auth/signin");
 
-    const data = await userWishlistCache.get(userId);
-    return <WishlistPage initialData={data} userId={userId} />;
+    const userWishlist = await userWishlistCache.get(userId);
+    return <WishlistPage initialWishlist={userWishlist} userId={userId} />;
 }
 
 function WishlistSkeleton() {

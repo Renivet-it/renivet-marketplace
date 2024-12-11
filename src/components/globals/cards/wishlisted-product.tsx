@@ -9,22 +9,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { MoveProductToCartModal } from "../modals";
 
 interface PageProps extends GenericProps {
-    wishlist: CachedWishlist;
+    item: CachedWishlist;
 }
 
 export function WishlistedProductCard({
     className,
-    wishlist,
+    item,
     ...props
 }: PageProps) {
     const [isProductHovered, setIsProductHovered] = useState(false);
     const [isAddToCartHovered, setIsAddToCartHovered] = useState(false);
     const [isCrossHovered, setIsCrossHovered] = useState(false);
+    const [isMoveToCartModalOpen, setIsMoveToCartModalOpen] = useState(false);
 
     const { refetch } = trpc.general.users.wishlist.getWishlist.useQuery({
-        userId: wishlist.userId,
+        userId: item.userId,
     });
 
     const { mutate: removeFromWishlist, isPending: isRemoving } =
@@ -43,96 +45,108 @@ export function WishlistedProductCard({
         });
 
     return (
-        <div
-            className={cn("", className)}
-            title={wishlist.product.name}
-            {...props}
-            onMouseEnter={() => setIsProductHovered(true)}
-            onMouseLeave={() => setIsProductHovered(false)}
-        >
-            <Link
-                href={`/products/${wishlist.product.slug}`}
-                onClick={(e) => {
-                    if (isAddToCartHovered || isCrossHovered)
-                        e.preventDefault();
-                }}
-                target="_blank"
-                rel="noreferrer"
+        <>
+            <div
+                className={cn("", className)}
+                title={item.product.name}
+                {...props}
+                onMouseEnter={() => setIsProductHovered(true)}
+                onMouseLeave={() => setIsProductHovered(false)}
             >
-                <div className="relative aspect-[3/4] overflow-hidden">
-                    <Image
-                        src={wishlist.product.imageUrls[0]}
-                        alt={wishlist.product.name}
-                        width={1000}
-                        height={1000}
-                        className="size-full object-cover"
-                    />
+                <Link
+                    href={`/products/${item.product.slug}`}
+                    onClick={(e) => {
+                        if (isAddToCartHovered || isCrossHovered)
+                            e.preventDefault();
+                    }}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    <div className="relative aspect-[3/4] overflow-hidden">
+                        <Image
+                            src={item.product.imageUrls[0]}
+                            alt={item.product.name}
+                            width={1000}
+                            height={1000}
+                            className="size-full object-cover"
+                        />
 
-                    <button
-                        className={cn(
-                            "absolute top-2 flex size-6 items-center justify-center rounded-full bg-foreground/40 text-background transition-all ease-in-out hover:bg-foreground/80 disabled:opacity-40 disabled:hover:bg-foreground/40",
-                            isProductHovered
-                                ? "right-2 translate-x-0"
-                                : "right-0 translate-x-full"
-                        )}
-                        title="Remove from wishlist"
-                        onMouseEnter={() => setIsCrossHovered(true)}
-                        onMouseLeave={() => setIsCrossHovered(false)}
-                        onClick={() =>
-                            removeFromWishlist({
-                                userId: wishlist.userId,
-                                productId: wishlist.productId,
-                            })
-                        }
-                        disabled={isRemoving}
-                    >
-                        <Icons.X className="size-4" />
-                        <span className="sr-only">
-                            Remove {wishlist.product.name} from wishlist
-                        </span>
-                    </button>
-
-                    <div
-                        className={cn(
-                            "absolute bottom-0 w-full p-2 transition-all ease-in-out",
-                            isProductHovered
-                                ? "translate-y-0"
-                                : "translate-y-full"
-                        )}
-                    >
-                        <Button
-                            size="sm"
+                        <button
                             className={cn(
-                                "w-full hover:bg-background hover:text-foreground"
+                                "absolute top-2 flex size-6 items-center justify-center rounded-full bg-foreground/40 text-background transition-all ease-in-out hover:bg-foreground/80 disabled:opacity-40 disabled:hover:bg-foreground/40",
+                                isProductHovered
+                                    ? "right-2 translate-x-0"
+                                    : "right-0 translate-x-full"
                             )}
-                            onMouseEnter={() => setIsAddToCartHovered(true)}
-                            onMouseLeave={() => setIsAddToCartHovered(false)}
+                            title="Remove from wishlist"
+                            onMouseEnter={() => setIsCrossHovered(true)}
+                            onMouseLeave={() => setIsCrossHovered(false)}
+                            onClick={() =>
+                                removeFromWishlist({
+                                    userId: item.userId,
+                                    productId: item.productId,
+                                })
+                            }
                             disabled={isRemoving}
                         >
-                            <Icons.ShoppingCart />
-                            Move to Cart
-                        </Button>
-                    </div>
-                </div>
+                            <Icons.X className="size-4" />
+                            <span className="sr-only">
+                                Remove {item.product.name} from wishlist
+                            </span>
+                        </button>
 
-                <div className="space-y-1 py-2 md:p-2">
-                    <div>
-                        <p className="truncate text-sm font-semibold">
-                            {wishlist.product.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {wishlist.product.brand.name}
-                        </p>
+                        <div
+                            className={cn(
+                                "absolute bottom-0 w-full p-2 transition-all ease-in-out",
+                                isProductHovered
+                                    ? "translate-y-0"
+                                    : "translate-y-full"
+                            )}
+                        >
+                            <Button
+                                size="sm"
+                                className={cn(
+                                    "w-full hover:bg-background hover:text-foreground"
+                                )}
+                                onMouseEnter={() => setIsAddToCartHovered(true)}
+                                onMouseLeave={() =>
+                                    setIsAddToCartHovered(false)
+                                }
+                                disabled={isRemoving}
+                                onClick={() => setIsMoveToCartModalOpen(true)}
+                            >
+                                <Icons.ShoppingCart />
+                                Move to Cart
+                            </Button>
+                        </div>
                     </div>
 
-                    <p className="text-sm font-semibold">
-                        {Intl.NumberFormat("en-IN", {
-                            style: "currency",
-                            currency: "INR",
-                        }).format(parseFloat(wishlist.product.price))}
-                    </p>
-                </div>
-            </Link>
-        </div>
+                    <div className="space-y-1 py-2 md:p-2">
+                        <div>
+                            <p className="truncate text-sm font-semibold">
+                                {item.product.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {item.product.brand.name}
+                            </p>
+                        </div>
+
+                        <p className="text-sm font-semibold">
+                            {Intl.NumberFormat("en-IN", {
+                                style: "currency",
+                                currency: "INR",
+                            }).format(parseFloat(item.product.price))}
+                        </p>
+                    </div>
+                </Link>
+            </div>
+
+            <MoveProductToCartModal
+                item={item}
+                userId={item.userId}
+                isOpen={isMoveToCartModalOpen}
+                setIsOpen={setIsMoveToCartModalOpen}
+            />
+        </>
     );
 }

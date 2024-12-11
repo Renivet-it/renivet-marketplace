@@ -13,6 +13,7 @@ export * from "./invite-create";
 export * from "./newsletter-subscribe";
 export * from "./phone-otp-verification";
 export * from "./product-cart-add";
+export * from "./product-cart-move";
 export * from "./product-cart-quantity-change";
 export * from "./product-cart-size-change";
 export * from "./product-categorize";

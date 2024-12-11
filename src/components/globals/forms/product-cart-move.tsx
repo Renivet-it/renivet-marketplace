@@ -1,7 +1,7 @@
 "use client";
 
-import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import { DialogClose, DialogFooter } from "@/components/ui/dialog-general";
 import {
     Form,
     FormControl,
@@ -11,90 +11,58 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, handleClientError } from "@/lib/utils";
 import {
-    CachedCart,
+    CachedWishlist,
     CreateCart,
     createCartSchema,
-    ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { WishlistButton } from "../buttons";
 
 interface PageProps {
-    initialCart?: CachedCart[];
-    product: ProductWithBrand;
-    userId?: string;
-    isWishlisted: boolean;
+    item: CachedWishlist;
+    userId: string;
 }
 
-export function ProductCartAddForm({
-    product,
-    isWishlisted,
-    initialCart,
-    userId,
-}: PageProps) {
-    const [isProductWishlisted, setIsProductWishlisted] =
-        useState(isWishlisted);
-
-    const [color, setColor] = useQueryState("color", { defaultValue: "" });
-    const [size, setSize] = useQueryState(
-        "size",
-        parseAsStringLiteral([
-            "One Size",
-            "XS",
-            "S",
-            "M",
-            "L",
-            "XL",
-            "XXL",
-        ] as const)
-    );
-
+export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
     const form = useForm<CreateCart>({
         resolver: zodResolver(createCartSchema),
         defaultValues: {
-            color: product.colors.find((c) => c.hex === color) || null,
+            color: null,
             productId: product.id,
             userId: userId,
             quantity: 1,
-            size: product.sizes.find((s) => s.name === size)?.name,
+            size: undefined,
         },
     });
 
-    const { data: userCart, refetch } =
-        trpc.general.users.cart.getCart.useQuery(
-            { userId: userId! },
-            { enabled: !!userId, initialData: initialCart }
-        );
+    const { refetch: refetchCart } = trpc.general.users.cart.getCart.useQuery({
+        userId,
+    });
+    const { refetch: refetchWishlist } =
+        trpc.general.users.wishlist.getWishlist.useQuery({ userId });
 
-    const isProductInCart = userCart?.some(
-        (item) =>
-            item.productId === product.id &&
-            item.size === size &&
-            item.color?.hex === color
-    );
-
-    const { mutate: addToCart } =
-        trpc.general.users.cart.addProductInCart.useMutation({
+    const { mutate: moveToCart, isPending: isMoving } =
+        trpc.general.users.wishlist.moveProductToCart.useMutation({
             onMutate: () => {
+                const toastId = toast.success("Moving to cart...");
+                return { toastId };
+            },
+            onSuccess: ({ type }, _, { toastId }) => {
                 toast.success(
-                    isProductInCart
-                        ? "Increased quantity in cart"
-                        : "Added to cart"
+                    type === "add"
+                        ? "Added to cart"
+                        : "Increased quantity in cart",
+                    { id: toastId }
                 );
+                refetchCart();
+                refetchWishlist();
             },
-            onSuccess: () => {
-                refetch();
-            },
-            onError: (err) => {
-                toast.error(err.message);
+            onError: (err, _, ctx) => {
+                return handleClientError(err.message, ctx?.toastId);
             },
         });
 
@@ -109,7 +77,7 @@ export function ProductCartAddForm({
                             message: "Color is required",
                         });
 
-                    addToCart(values);
+                    moveToCart(values);
                 })}
             >
                 {product.colors.length > 0 && (
@@ -118,22 +86,20 @@ export function ProductCartAddForm({
                         name="color"
                         render={({ field }) => (
                             <FormItem className="space-y-4">
-                                <FormLabel className="font-semibold uppercase">
-                                    More Colors
-                                </FormLabel>
+                                <FormLabel>Select Colors</FormLabel>
 
                                 <FormControl>
                                     <RadioGroup
-                                        onValueChange={(value) => {
+                                        onValueChange={(value) =>
                                             field.onChange(
                                                 product.colors.find(
                                                     (c) => c.hex === value
                                                 ) || null
-                                            );
-                                            setColor(value);
-                                        }}
+                                            )
+                                        }
                                         defaultValue={field.value?.hex}
                                         className="flex flex-wrap gap-2"
+                                        disabled={isMoving}
                                     >
                                         {product.colors.map((c) => (
                                             <FormItem key={c.name}>
@@ -142,6 +108,7 @@ export function ProductCartAddForm({
                                                         value={c.hex}
                                                         id={c.name}
                                                         className="sr-only"
+                                                        disabled={isMoving}
                                                     />
                                                 </FormControl>
 
@@ -152,7 +119,8 @@ export function ProductCartAddForm({
                                                             className={cn(
                                                                 "size-12 cursor-pointer rounded-full border border-foreground/10",
                                                                 c.hex ===
-                                                                    color &&
+                                                                    field.value
+                                                                        ?.hex &&
                                                                     "outline outline-2 outline-offset-1"
                                                             )}
                                                             style={{
@@ -169,7 +137,8 @@ export function ProductCartAddForm({
                                                             className={cn(
                                                                 "text-sm",
                                                                 c.hex ===
-                                                                    color &&
+                                                                    field.value
+                                                                        ?.hex &&
                                                                     "font-semibold"
                                                             )}
                                                         >
@@ -188,27 +157,19 @@ export function ProductCartAddForm({
                     />
                 )}
 
-                <Separator />
-
                 <FormField
                     control={form.control}
                     name="size"
                     render={({ field }) => (
                         <FormItem className="space-y-4">
-                            <FormLabel className="font-semibold uppercase">
-                                Select Size
-                            </FormLabel>
+                            <FormLabel>Select Size</FormLabel>
 
                             <FormControl>
                                 <RadioGroup
-                                    onValueChange={(value) => {
-                                        field.onChange(value);
-                                        setSize(
-                                            value as ProductWithBrand["sizes"][number]["name"]
-                                        );
-                                    }}
+                                    onValueChange={field.onChange}
                                     defaultValue={field.value}
                                     className="flex flex-wrap gap-2"
+                                    disabled={isMoving}
                                 >
                                     {product.sizes.map((s) => (
                                         <FormItem key={s.name}>
@@ -227,7 +188,8 @@ export function ProductCartAddForm({
                                                         title={s.name}
                                                         className={cn(
                                                             "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm disabled:cursor-not-allowed disabled:opacity-60",
-                                                            s.name === size &&
+                                                            s.name ===
+                                                                field.value &&
                                                                 "bg-primary text-background"
                                                         )}
                                                     >
@@ -251,33 +213,21 @@ export function ProductCartAddForm({
                     )}
                 />
 
-                <div className="flex flex-col gap-2 md:flex-row md:gap-4">
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="reset" variant="ghost" size="sm">
+                            Cancel
+                        </Button>
+                    </DialogClose>
+
                     <Button
                         type="submit"
-                        size="lg"
-                        className="w-full font-semibold uppercase md:h-12 md:basis-2/3 md:text-base"
+                        size="sm"
+                        disabled={isMoving || !form.formState.isDirty}
                     >
-                        <Icons.ShoppingCart />
-                        Add to Cart
+                        Move to Cart
                     </Button>
-
-                    <WishlistButton
-                        type="button"
-                        variant="outline"
-                        size="lg"
-                        className={cn(
-                            "group w-full font-semibold uppercase md:h-12 md:basis-1/3 md:text-base"
-                        )}
-                        userId={userId}
-                        productId={product.id}
-                        isProductWishlisted={isProductWishlisted}
-                        setIsProductWishlisted={setIsProductWishlisted}
-                        iconClassName={cn(
-                            isWishlisted &&
-                                "fill-primary stroke-primary group-hover:fill-background group-hover:stroke-background"
-                        )}
-                    />
-                </div>
+                </DialogFooter>
             </form>
         </Form>
     );

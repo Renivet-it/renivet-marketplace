@@ -53,7 +53,6 @@ export const cachedWishlistSchema = wishlistSchema.extend({
     product: productWithBrandSchema
         .omit({
             categories: true,
-            colors: true,
             description: true,
             isPublished: true,
         })

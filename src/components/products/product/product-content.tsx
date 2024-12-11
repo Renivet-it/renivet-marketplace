@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductCartAdd } from "@/components/globals/forms";
+import { ProductCartAddForm } from "@/components/globals/forms";
 import { ProductShareModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
@@ -68,7 +68,7 @@ export function ProductContent({
                     </p>
                 </div>
 
-                <ProductCartAdd
+                <ProductCartAddForm
                     product={product}
                     userId={userId}
                     isWishlisted={isWishlisted}

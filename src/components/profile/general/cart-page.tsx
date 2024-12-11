@@ -3,11 +3,19 @@
 import { ProductCartCard } from "@/components/globals/cards";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import {
+    EmptyPlaceholder,
+    EmptyPlaceholderContent,
+    EmptyPlaceholderDescription,
+    EmptyPlaceholderIcon,
+    EmptyPlaceholderTitle,
+} from "@/components/ui/empty-placeholder-general";
 import { Progress } from "@/components/ui/progress";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import { cn, formatPriceTag, handleClientError } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
+import Link from "next/link";
 import { toast } from "sonner";
 
 interface PageProps extends GenericProps {
@@ -66,6 +74,8 @@ export function CartPage({
             },
         });
 
+    if (userCart.length === 0) return <NoCartCard />;
+
     return (
         <div className={cn("space-y-5", className)} {...props}>
             <div className="flex items-center justify-between gap-10 border p-4 md:p-6">
@@ -121,6 +131,34 @@ export function CartPage({
                 Proceed to Checkout
                 <Icons.ArrowRight />
             </Button>
+        </div>
+    );
+}
+
+function NoCartCard() {
+    return (
+        <div className="flex flex-col items-center justify-center gap-5 p-6">
+            <EmptyPlaceholder
+                isBackgroundVisible={false}
+                className="w-full max-w-full border-none"
+            >
+                <EmptyPlaceholderIcon>
+                    <Icons.AlertTriangle className="size-10" />
+                </EmptyPlaceholderIcon>
+
+                <EmptyPlaceholderContent>
+                    <EmptyPlaceholderTitle>
+                        Your cart is empty
+                    </EmptyPlaceholderTitle>
+                    <EmptyPlaceholderDescription>
+                        Continue shopping and keep adding products to your cart.
+                    </EmptyPlaceholderDescription>
+                </EmptyPlaceholderContent>
+
+                <Button asChild>
+                    <Link href="/shop">Continue Shopping</Link>
+                </Button>
+            </EmptyPlaceholder>
         </div>
     );
 }

@@ -62,7 +62,7 @@ export const cartRouter = createTRPCRouter({
                 await Promise.all([
                     queries.userCarts.updateProductInCart(existingCart.id, {
                         ...existingCart,
-                        quantity: existingCart.quantity + 1,
+                        quantity: existingCart.quantity + input.quantity,
                     }),
                     userCartCache.remove({
                         userId,

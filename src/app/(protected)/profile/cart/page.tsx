@@ -1,24 +1,14 @@
-import { Icons } from "@/components/icons";
 import { CartPage } from "@/components/profile";
-import { Button } from "@/components/ui/button-general";
 import {
     Card,
     CardDescription,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    EmptyPlaceholder,
-    EmptyPlaceholderContent,
-    EmptyPlaceholderDescription,
-    EmptyPlaceholderIcon,
-    EmptyPlaceholderTitle,
-} from "@/components/ui/empty-placeholder-general";
 import { Skeleton } from "@/components/ui/skeleton";
 import { userCartCache } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -49,34 +39,6 @@ async function CartFetch() {
     if (!userId) redirect("/auth/signin");
 
     const data = await userCartCache.get(userId);
-    if (data.length === 0)
-        return (
-            <div className="flex flex-col items-center justify-center gap-5 p-6">
-                <EmptyPlaceholder
-                    isBackgroundVisible={false}
-                    className="w-full max-w-full border-none"
-                >
-                    <EmptyPlaceholderIcon>
-                        <Icons.AlertTriangle className="size-10" />
-                    </EmptyPlaceholderIcon>
-
-                    <EmptyPlaceholderContent>
-                        <EmptyPlaceholderTitle>
-                            Your cart is empty
-                        </EmptyPlaceholderTitle>
-                        <EmptyPlaceholderDescription>
-                            Continue shopping and keep adding products to your
-                            cart.
-                        </EmptyPlaceholderDescription>
-                    </EmptyPlaceholderContent>
-
-                    <Button asChild>
-                        <Link href="/shop">Continue Shopping</Link>
-                    </Button>
-                </EmptyPlaceholder>
-            </div>
-        );
-
     return <CartPage initialData={data} userId={userId} />;
 }
 

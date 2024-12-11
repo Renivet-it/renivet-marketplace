@@ -1,3 +1,4 @@
+export * from "./move-product-to-cart";
 export * from "./move-product-to-wishlist";
 export * from "./remove-product-cart";
 export * from "./user-address-delete";
