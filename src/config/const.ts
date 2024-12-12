@@ -44,3 +44,11 @@ export const PRESET_COLORS = [
     { name: "Sky Blue", hex: "#87ceeb" },
     { name: "Indigo", hex: "#4b0082" },
 ];
+
+export const COSTS = {
+    GST: 0.18,
+    PLATFORM: 0.05,
+    GATEWAY: 0.02,
+} as const;
+
+export const DELIVERY_CHARGE = 50 as const;

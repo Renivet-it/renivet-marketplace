@@ -1,4 +1,9 @@
-import { DEFAULT_MESSAGES } from "@/config/const";
+import {
+    COSTS,
+    DEFAULT_MESSAGES,
+    DELIVERY_CHARGE,
+    FREE_DELIVERY_THRESHOLD,
+} from "@/config/const";
 import {
     BitFieldBrandPermission,
     BitFieldSitePermission,
@@ -385,4 +390,28 @@ export function generateProductSlug(productName: string, brandName: string) {
     return slugify(
         `${brandName} ${productName} ${Date.now()} ${Math.random().toString(36).substring(7)}`
     );
+}
+
+export function calculateTotalPrice(prices: number[]) {
+    const items = prices.reduce((acc, price) => acc + price, 0);
+    const platform = items * COSTS.PLATFORM;
+    const gateway = items * COSTS.GATEWAY;
+
+    let total = items + platform + gateway;
+    if (items < FREE_DELIVERY_THRESHOLD) total += DELIVERY_CHARGE;
+
+    return {
+        items: parseFloat(items.toFixed(2)),
+        platform: parseFloat((platform + gateway).toFixed(2)),
+        devliery: items < FREE_DELIVERY_THRESHOLD ? DELIVERY_CHARGE : 0,
+        total: parseFloat(total.toFixed(2)),
+    };
+}
+
+export function calculatePriceWithGST(price: number) {
+    return parseFloat((price + price * COSTS.GST).toFixed(2));
+}
+
+export function calculatePriceWithoutGST(price: number) {
+    return parseFloat((price / (1 + COSTS.GST)).toFixed(2));
 }
