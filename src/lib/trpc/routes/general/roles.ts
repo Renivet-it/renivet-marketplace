@@ -116,6 +116,12 @@ export const rolesRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
 
+            if (input[0].slug !== "admin")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Admin role cannot be moved",
+                });
+
             const existingRoles = await roleCache.getAll();
             if (existingRoles.length !== input.length)
                 throw new TRPCError({

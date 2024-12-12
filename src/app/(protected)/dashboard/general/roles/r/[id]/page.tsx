@@ -3,7 +3,7 @@ import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { roleCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -50,6 +50,7 @@ async function RoleEditFetch({ params }: PageProps) {
 
     const existingRole = await roleCache.get(id);
     if (!existingRole) notFound();
+    if (existingRole.slug === "admin") redirect("/dashboard/general/roles");
 
     return <RoleManageForm role={existingRole} type="site" />;
 }

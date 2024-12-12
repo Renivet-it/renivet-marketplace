@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/sidebar";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { cn, hasPermission } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 interface Props extends GenericProps {
@@ -77,7 +76,7 @@ export function NavMain({
                                     <SidebarMenuButton tooltip={item.title}>
                                         {Icon && <Icon />}
                                         <span>{item.title}</span>
-                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                        <Icons.ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
 
@@ -88,7 +87,10 @@ export function NavMain({
                                                 key={subItem.title}
                                             >
                                                 <SidebarMenuSubButton asChild>
-                                                    <Link href={subItem.url}>
+                                                    <Link
+                                                        href={subItem.url}
+                                                        prefetch
+                                                    >
                                                         {subItem.title}
                                                     </Link>
                                                 </SidebarMenuSubButton>

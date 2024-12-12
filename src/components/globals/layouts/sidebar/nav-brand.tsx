@@ -17,7 +17,6 @@ import {
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { cn, hasPermission } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 interface Props extends GenericProps {
@@ -64,7 +63,7 @@ export function NavBrand({
                                     <SidebarMenuButton tooltip={item.title}>
                                         {Icon && <Icon />}
                                         <span>{item.title}</span>
-                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                        <Icons.ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
 
@@ -75,7 +74,10 @@ export function NavBrand({
                                                 key={subItem.title}
                                             >
                                                 <SidebarMenuSubButton asChild>
-                                                    <Link href={subItem.url}>
+                                                    <Link
+                                                        href={subItem.url}
+                                                        prefetch
+                                                    >
                                                         {subItem.title}
                                                     </Link>
                                                 </SidebarMenuSubButton>

@@ -9,6 +9,9 @@ export const DEFAULT_MESSAGES = {
         SIGNIN_DISABLED: "Account sign in is currently disabled",
         FORGOT_PASSWORD_DISABLED:
             "Password recovery is currently disabled, please try again later",
+        USER_NOT_CUSTOMER:
+            "Only customers can perform this action, please sign in as a customer",
+        USER_NOT_LOGGED_IN: "You are not logged in",
     },
 } as const;
 

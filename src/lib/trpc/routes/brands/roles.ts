@@ -155,6 +155,12 @@ export const rolesRouter = createTRPCRouter({
             const { db, schemas } = ctx;
             const { id, roles } = input;
 
+            if (roles[0].slug !== generateBrandRoleSlug("Admin", id))
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Admin role cannot be moved",
+                });
+
             const existingBrand = await brandCache.get(id);
             if (!existingBrand)
                 throw new TRPCError({

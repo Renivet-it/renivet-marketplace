@@ -2,7 +2,8 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
-import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { cn, generateBrandRoleSlug } from "@/lib/utils";
 import { CachedBrand } from "@/lib/validations";
 import { Draggable } from "@hello-pangea/dnd";
 import Link from "next/link";
@@ -32,7 +33,10 @@ export function BrandRoleDraggableCard({
                 key={role.id}
                 draggableId={role.id}
                 index={index}
-                isDragDisabled={isDragDisabled}
+                isDragDisabled={
+                    isDragDisabled ||
+                    role.slug === generateBrandRoleSlug("Admin", brandId)
+                }
             >
                 {(provided) => (
                     // @ts-expect-error
@@ -70,6 +74,25 @@ export function BrandRoleDraggableCard({
                             >
                                 <Link
                                     href={`/dashboard/brands/${brandId}/roles/r/${role.id}`}
+                                    prefetch
+                                    className={cn(
+                                        role.slug ===
+                                            generateBrandRoleSlug(
+                                                "Admin",
+                                                brandId
+                                            ) &&
+                                            "cursor-default opacity-50 hover:bg-background hover:text-foreground"
+                                    )}
+                                    onClick={(e) => {
+                                        if (
+                                            role.slug ===
+                                            generateBrandRoleSlug(
+                                                "Admin",
+                                                brandId
+                                            )
+                                        )
+                                            e.preventDefault();
+                                    }}
                                 >
                                     <Icons.Edit className="size-4" />
                                     <span className="sr-only">Edit</span>
@@ -81,7 +104,12 @@ export function BrandRoleDraggableCard({
                                 variant="outline"
                                 className="size-8 rounded rounded-l-none md:size-10"
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                disabled={isDragDisabled || roles.length === 1}
+                                disabled={
+                                    isDragDisabled ||
+                                    roles.length === 1 ||
+                                    role.slug ===
+                                        generateBrandRoleSlug("Admin", brandId)
+                                }
                                 title="Delete Role"
                             >
                                 <Icons.X className="size-4" />
@@ -91,6 +119,10 @@ export function BrandRoleDraggableCard({
                     </li>
                 )}
             </Draggable>
+
+            {role.slug === generateBrandRoleSlug("Admin", brandId) && (
+                <Separator />
+            )}
 
             <BrandRoleDeleteModal
                 role={role}

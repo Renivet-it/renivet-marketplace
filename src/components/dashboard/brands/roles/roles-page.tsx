@@ -2,7 +2,7 @@
 
 import { BrandRoleDraggableCard } from "@/components/globals/cards";
 import { trpc } from "@/lib/trpc/client";
-import { handleClientError, reorder } from "@/lib/utils";
+import { generateBrandRoleSlug, handleClientError, reorder } from "@/lib/utils";
 import { CachedBrand } from "@/lib/validations";
 import { DragDropContext, Droppable, DropResult } from "@hello-pangea/dnd";
 import { useMutation } from "@tanstack/react-query";
@@ -53,6 +53,9 @@ export function RolesPage({ brandId, initialData }: PageProps) {
                 result.source.index,
                 result.destination.index
             ).map((role, index) => ({ ...role, position: index + 1 }));
+
+            if (newRoles[0].slug !== generateBrandRoleSlug("Admin", brandId))
+                throw new Error("Admin role cannot be moved");
 
             setRoles(newRoles);
             await reorderRolesAsync({

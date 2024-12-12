@@ -2,6 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { Button, ButtonProps } from "@/components/ui/button-general";
+import { DEFAULT_MESSAGES } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,9 @@ export function WishlistButton({
     ...props
 }: WishlistButtonProps) {
     const router = useRouter();
+
+    const { data: user, isPending: isUserFetching } =
+        trpc.general.users.currentUser.useQuery();
 
     const { refetch } = trpc.general.users.wishlist.getWishlist.useQuery(
         { userId: userId! },
@@ -75,7 +79,13 @@ export function WishlistButton({
         <Button
             size="sm"
             onClick={() => {
-                if (!userId) return router.push("/auth/signin");
+                if (isUserFetching)
+                    return toast.error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);
+                if (!userId || !user) return router.push("/auth/signin");
+                if (user.roles.length > 0)
+                    return toast.error(
+                        DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER
+                    );
 
                 if (isProductWishlisted)
                     removeFromWishlist({
