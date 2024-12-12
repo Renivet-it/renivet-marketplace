@@ -9,6 +9,9 @@ export const DEFAULT_MESSAGES = {
         SIGNIN_DISABLED: "Account sign in is currently disabled",
         FORGOT_PASSWORD_DISABLED:
             "Password recovery is currently disabled, please try again later",
+        USER_NOT_CUSTOMER:
+            "Only customers can perform this action, please sign in as a customer",
+        USER_NOT_LOGGED_IN: "You are not logged in",
     },
 } as const;
 
@@ -41,3 +44,11 @@ export const PRESET_COLORS = [
     { name: "Sky Blue", hex: "#87ceeb" },
     { name: "Indigo", hex: "#4b0082" },
 ];
+
+export const COSTS = {
+    GST: 0.18,
+    PLATFORM: 0.05,
+    GATEWAY: 0.02,
+} as const;
+
+export const DELIVERY_CHARGE = 50 as const;

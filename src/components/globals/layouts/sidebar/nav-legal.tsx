@@ -52,7 +52,7 @@ export function NavLegal({
                     return (
                         <SidebarMenuItem key={item.name}>
                             <SidebarMenuButton asChild>
-                                <Link href={item.url}>
+                                <Link href={item.url} prefetch>
                                     <Icon />
                                     <span>{item.name}</span>
                                 </Link>

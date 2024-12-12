@@ -2,6 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { CachedRole } from "@/lib/validations";
 import { Draggable } from "@hello-pangea/dnd";
@@ -30,7 +31,7 @@ export function RoleDraggableCard({
                 key={role.id}
                 draggableId={role.id}
                 index={index}
-                isDragDisabled={isDragDisabled}
+                isDragDisabled={isDragDisabled || role.slug === "admin"}
             >
                 {(provided) => (
                     // @ts-expect-error
@@ -63,11 +64,22 @@ export function RoleDraggableCard({
                                 size="icon"
                                 asChild
                                 className="size-8 rounded rounded-r-none border-r-0 md:size-10"
-                                disabled={isDragDisabled}
+                                disabled={
+                                    isDragDisabled || role.slug === "admin"
+                                }
                                 title="Edit Role"
                             >
                                 <Link
                                     href={`/dashboard/general/roles/r/${role.id}`}
+                                    prefetch
+                                    className={cn(
+                                        role.slug === "admin" &&
+                                            "cursor-default opacity-50 hover:bg-background hover:text-foreground"
+                                    )}
+                                    onClick={(e) => {
+                                        if (role.slug === "admin")
+                                            e.preventDefault();
+                                    }}
                                 >
                                     <Icons.Edit className="size-4" />
                                     <span className="sr-only">Edit</span>
@@ -79,7 +91,11 @@ export function RoleDraggableCard({
                                 variant="outline"
                                 className="size-8 rounded rounded-l-none md:size-10"
                                 onClick={() => setIsDeleteModalOpen(true)}
-                                disabled={isDragDisabled || roles.length === 1}
+                                disabled={
+                                    isDragDisabled ||
+                                    roles.length === 1 ||
+                                    role.slug === "admin"
+                                }
                                 title="Delete Role"
                             >
                                 <Icons.X className="size-4" />
@@ -89,6 +105,8 @@ export function RoleDraggableCard({
                     </li>
                 )}
             </Draggable>
+
+            {role.slug === "admin" && <Separator />}
 
             <RoleDeleteModal
                 role={role}

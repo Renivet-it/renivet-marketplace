@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { DEFAULT_MESSAGES } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -42,6 +43,9 @@ export function ProductCartAddForm({
 }: PageProps) {
     const [isProductWishlisted, setIsProductWishlisted] =
         useState(isWishlisted);
+
+    const { data: user, isPending: isUserFetching } =
+        trpc.general.users.currentUser.useQuery();
 
     const [color, setColor] = useQueryState("color", { defaultValue: "" });
     const [size, setSize] = useQueryState(
@@ -103,6 +107,19 @@ export function ProductCartAddForm({
             <form
                 className="space-y-3 md:space-y-5"
                 onSubmit={form.handleSubmit((values) => {
+                    if (isUserFetching)
+                        return toast.error(
+                            DEFAULT_MESSAGES.ERRORS.USER_FETCHING
+                        );
+                    if (!userId || !user)
+                        return toast.error(
+                            DEFAULT_MESSAGES.ERRORS.USER_NOT_LOGGED_IN
+                        );
+                    if (user.roles.length > 0)
+                        return toast.error(
+                            DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER
+                        );
+
                     if (product.colors.length > 0 && !values.color)
                         return form.setError("color", {
                             type: "required",

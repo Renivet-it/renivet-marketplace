@@ -180,6 +180,7 @@ export function NavbarHome() {
                             aria-label="Mobile Cart Button"
                             className="sm:hidden"
                             href="/profile/cart"
+                            prefetch
                         >
                             <Icons.ShoppingCart className="size-6" />
                         </Link>
@@ -191,7 +192,7 @@ export function NavbarHome() {
                                 asChild
                                 className="hidden lg:flex"
                             >
-                                <Link href="/become-a-seller">
+                                <Link href="/become-a-seller" prefetch>
                                     Become a Seller
                                 </Link>
                             </Button>
@@ -228,7 +229,7 @@ export function NavbarHome() {
                                                 isAuthorized && "hidden"
                                             )}
                                         >
-                                            <Icons.Package className="mr-2 size-4" />
+                                            <Icons.Package className="size-4" />
                                             <span>Orders</span>
                                         </DropdownMenuItem>
 
@@ -238,7 +239,7 @@ export function NavbarHome() {
                                                 isAuthorized && "hidden"
                                             )}
                                         >
-                                            <Icons.Heart className="mr-2 size-4" />
+                                            <Icons.Heart className="size-4" />
                                             <span>Wishlist</span>
                                         </DropdownMenuItem>
 
@@ -249,8 +250,8 @@ export function NavbarHome() {
                                             )}
                                             asChild
                                         >
-                                            <Link href="/dashboard">
-                                                <Icons.LayoutDashboard className="mr-2 size-4" />
+                                            <Link href="/dashboard" prefetch>
+                                                <Icons.LayoutDashboard className="size-4" />
                                                 <span>Dashboard</span>
                                             </Link>
                                         </DropdownMenuItem>
@@ -260,7 +261,7 @@ export function NavbarHome() {
                                             asChild
                                         >
                                             <Link href="/contact">
-                                                <Icons.LifeBuoy className="mr-2 size-4" />
+                                                <Icons.LifeBuoy className="size-4" />
                                                 <span>Contact Us</span>
                                             </Link>
                                         </DropdownMenuItem>
@@ -275,7 +276,7 @@ export function NavbarHome() {
                                                 isAuthorized && "hidden"
                                             )}
                                         >
-                                            <Icons.Ticket className="mr-2 size-4" />
+                                            <Icons.Ticket className="size-4" />
                                             <span>Coupons</span>
                                         </DropdownMenuItem>
 
@@ -287,7 +288,7 @@ export function NavbarHome() {
                                             asChild
                                         >
                                             <Link href="/profile/addresses">
-                                                <Icons.Home className="mr-2 size-4" />
+                                                <Icons.Home className="size-4" />
                                                 <span>Addresses</span>
                                             </Link>
                                         </DropdownMenuItem>
@@ -297,8 +298,8 @@ export function NavbarHome() {
                                             asChild
                                         >
                                             <Link href="/profile">
-                                                <Icons.User2 className="mr-2 size-4" />
-                                                <span>Edit Profile</span>
+                                                <Icons.User2 className="size-4" />
+                                                <span>Profile</span>
                                             </Link>
                                         </DropdownMenuItem>
                                     </DropdownMenuGroup>
@@ -310,7 +311,7 @@ export function NavbarHome() {
                                         disabled={isLoggingOut}
                                         onClick={() => handleLogout()}
                                     >
-                                        <Icons.LogOut className="mr-2 size-4" />
+                                        <Icons.LogOut className="size-4" />
                                         <span>Log out</span>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>

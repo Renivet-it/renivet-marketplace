@@ -131,9 +131,11 @@ export function CartPage({
                 ))}
             </div>
 
-            <Button className="w-full">
-                Proceed to Checkout
-                <Icons.ArrowRight />
+            <Button className="w-full" asChild>
+                <Link href="/checkout">
+                    Proceed to Checkout
+                    <Icons.ArrowRight />
+                </Link>
             </Button>
         </div>
     );

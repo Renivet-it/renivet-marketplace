@@ -21,11 +21,22 @@ import PriceInput from "@/components/ui/price-input";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PRESET_COLORS } from "@/config/const";
 import { SIZES } from "@/config/sizes";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
-import { cn, handleClientError } from "@/lib/utils";
+import {
+    calculatePriceWithGST,
+    calculatePriceWithoutGST,
+    cn,
+    handleClientError,
+} from "@/lib/utils";
 import {
     CreateProduct,
     createProductSchema,
@@ -70,7 +81,9 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         resolver: zodResolver(createProductSchema),
         defaultValues: {
             name: product?.name ?? "",
-            price: product?.price ?? "",
+            price: product?.price
+                ? calculatePriceWithoutGST(parseFloat(product.price)).toString()
+                : "",
             description:
                 product?.description ??
                 // eslint-disable-next-line quotes
@@ -303,8 +316,16 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                         ? updateProduct({
                               ...values,
                               isAvailable: product.isAvailable,
+                              price: calculatePriceWithGST(
+                                  parseFloat(values.price)
+                              ).toString(),
                           })
-                        : createProduct(values)
+                        : createProduct({
+                              ...values,
+                              price: calculatePriceWithGST(
+                                  parseFloat(values.price)
+                              ).toString(),
+                          })
                 )}
             >
                 <FormField
@@ -357,18 +378,49 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                             <FormLabel>Price</FormLabel>
 
                             <FormControl>
-                                <PriceInput
-                                    placeholder="998.00"
-                                    currency="INR"
-                                    symbol="₹"
-                                    disabled={isCreating || isUpdating}
-                                    {...field}
-                                    onChange={(e) => {
-                                        const regex = /^[0-9]*\.?[0-9]{0,2}$/;
-                                        if (regex.test(e.target.value))
-                                            field.onChange(e);
-                                    }}
-                                />
+                                <div className="flex items-center gap-2">
+                                    <PriceInput
+                                        placeholder="998.00"
+                                        currency="INR"
+                                        symbol="₹"
+                                        disabled={isCreating || isUpdating}
+                                        {...field}
+                                        onChange={(e) => {
+                                            const regex =
+                                                /^[0-9]*\.?[0-9]{0,2}$/;
+                                            if (regex.test(e.target.value))
+                                                field.onChange(e);
+                                        }}
+                                    />
+
+                                    <span>+</span>
+
+                                    <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <span className="cursor-pointer rounded-md bg-foreground/80 p-1 px-2 text-sm text-background">
+                                                    GST
+                                                </span>
+                                            </TooltipTrigger>
+
+                                            <TooltipContent>
+                                                We will add GST to the price
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+
+                                    <span>=</span>
+
+                                    <span>
+                                        {calculatePriceWithGST(
+                                            parseFloat(
+                                                field.value.length > 0
+                                                    ? field.value
+                                                    : "0"
+                                            )
+                                        )}
+                                    </span>
+                                </div>
                             </FormControl>
 
                             <FormMessage />

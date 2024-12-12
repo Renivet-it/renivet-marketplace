@@ -28,12 +28,14 @@ import {
 interface PageProps extends GenericProps {
     item: CachedCart;
     userId: string;
+    readOnly?: boolean;
 }
 
 export function ProductCartCard({
     className,
     item,
     userId,
+    readOnly,
     ...props
 }: PageProps) {
     const [isMoveToWishlistModalOpen, setIsMoveToWishlistModalOpen] =
@@ -80,23 +82,29 @@ export function ProductCartCard({
                         alt={item.product.name}
                         width={1000}
                         height={1000}
-                        className="size-full object-cover transition-all ease-in-out group-hover:brightness-50"
+                        className={cn(
+                            "size-full object-cover",
+                            !readOnly &&
+                                "transition-all ease-in-out group-hover:brightness-50"
+                        )}
                     />
 
-                    <Checkbox
-                        className="absolute left-2 top-2 rounded-none border bg-muted data-[state=checked]:bg-muted data-[state=checked]:text-foreground"
-                        disabled={isUpdating}
-                        checked={item.status}
-                        onCheckedChange={(value) =>
-                            updateProduct({
-                                userId,
-                                status: value as boolean,
-                                productId: item.product.id,
-                                size: item.size,
-                                color: item.color,
-                            })
-                        }
-                    />
+                    {!readOnly && (
+                        <Checkbox
+                            className="absolute left-2 top-2 rounded-none border bg-muted data-[state=checked]:bg-muted data-[state=checked]:text-foreground"
+                            disabled={isUpdating}
+                            checked={item.status}
+                            onCheckedChange={(value) =>
+                                updateProduct({
+                                    userId,
+                                    status: value as boolean,
+                                    productId: item.product.id,
+                                    size: item.size,
+                                    color: item.color,
+                                })
+                            }
+                        />
+                    )}
                 </div>
 
                 <div className="w-full space-y-2 md:space-y-4">
@@ -124,9 +132,14 @@ export function ProductCartCard({
                                 <button
                                     className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                                     disabled={isUpdating}
+                                    onClick={(e) => {
+                                        if (readOnly) e.preventDefault();
+                                    }}
                                 >
                                     <span>Size: {item.size}</span>
-                                    <Icons.ChevronDown className="size-3" />
+                                    {!readOnly && (
+                                        <Icons.ChevronDown className="size-3" />
+                                    )}
                                 </button>
                             </PopoverTrigger>
 
@@ -143,9 +156,14 @@ export function ProductCartCard({
                                 <button
                                     className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                                     disabled={isUpdating}
+                                    onClick={(e) => {
+                                        if (readOnly) e.preventDefault();
+                                    }}
                                 >
                                     <span>Qty: {item.quantity}</span>
-                                    <Icons.ChevronDown className="size-3" />
+                                    {!readOnly && (
+                                        <Icons.ChevronDown className="size-3" />
+                                    )}
                                 </button>
                             </PopoverTrigger>
 
@@ -177,27 +195,29 @@ export function ProductCartCard({
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setIsMoveToWishlistModalOpen(true)}
-                    >
-                        <Icons.Heart />
-                        Move to Wishlist
-                    </Button>
+                {!readOnly && (
+                    <div className="space-y-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setIsMoveToWishlistModalOpen(true)}
+                        >
+                            <Icons.Heart />
+                            Move to Wishlist
+                        </Button>
 
-                    <Button
-                        size="sm"
-                        variant="destructive"
-                        className="w-full"
-                        onClick={() => setIsRemoveModalOpen(true)}
-                    >
-                        <Icons.Trash2 />
-                        Remove from Cart
-                    </Button>
-                </div>
+                        <Button
+                            size="sm"
+                            variant="destructive"
+                            className="w-full"
+                            onClick={() => setIsRemoveModalOpen(true)}
+                        >
+                            <Icons.Trash2 />
+                            Remove from Cart
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <MoveProductToWishlistModal

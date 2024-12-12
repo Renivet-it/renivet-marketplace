@@ -14,7 +14,7 @@ export default function PriceInput({
     ...props
 }: PriceInputProps) {
     return (
-        <div className="relative flex rounded-lg shadow-sm shadow-black/5">
+        <div className="relative flex w-full rounded-lg shadow-sm shadow-black/5">
             <span className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-sm text-muted-foreground">
                 {symbol ?? "€"}
             </span>

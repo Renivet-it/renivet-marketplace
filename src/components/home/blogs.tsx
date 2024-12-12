@@ -37,6 +37,7 @@ export function Blogs({ className, blog, ...props }: PageProps) {
                         <Link
                             className="font-semibold uppercase underline underline-offset-2 md:text-lg"
                             href={`/blogs/${blog.slug}`}
+                            aria-description={`Read more about ${blog.title}`}
                         >
                             Read More
                         </Link>

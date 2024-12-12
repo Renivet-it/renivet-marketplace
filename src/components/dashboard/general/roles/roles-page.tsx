@@ -6,7 +6,6 @@ import { handleClientError, reorder } from "@/lib/utils";
 import { CachedRole } from "@/lib/validations";
 import { DragDropContext, Droppable, DropResult } from "@hello-pangea/dnd";
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -15,8 +14,6 @@ interface PageProps {
 }
 
 export function RolesPage({ initialData }: PageProps) {
-    const router = useRouter();
-
     const { data: rolesRaw, refetch } = trpc.general.roles.getRoles.useQuery(
         undefined,
         { initialData }
@@ -53,13 +50,15 @@ export function RolesPage({ initialData }: PageProps) {
                 result.destination.index
             ).map((role, index) => ({ ...role, position: index + 1 }));
 
+            if (newRoles[0].slug !== "admin")
+                throw new Error("Admin role cannot be moved");
+
             setRoles(newRoles);
             await reorderRolesAsync(newRoles);
         },
         onSuccess: (_, __, { toastId }) => {
             toast.success("Roles reordered", { id: toastId });
             refetch();
-            router.refresh();
         },
         onError: (err, _, ctx) => {
             setRoles(rolesRaw);

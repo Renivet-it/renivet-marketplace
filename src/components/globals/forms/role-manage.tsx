@@ -60,12 +60,15 @@ export function RoleManageForm({ role, ...props }: PageProps) {
         []
     );
 
-    const { refetch: siteRolesRefetch } =
-        trpc.general.roles.getRoles.useQuery();
+    const { refetch: siteRolesRefetch } = trpc.general.roles.getRoles.useQuery(
+        undefined,
+        { enabled: props.type === "site" }
+    );
     const { refetch: brandRolesRefetch } =
-        trpc.general.brands.getBrand.useQuery({
-            id: props.type === "brand" ? props.brandId : "",
-        });
+        trpc.general.brands.getBrand.useQuery(
+            { id: props.type === "brand" ? props.brandId : "" },
+            { enabled: props.type === "brand" }
+        );
 
     const { mutate: createSiteRole, isPending: isSiteRoleCreating } =
         trpc.general.roles.createRole.useMutation({
@@ -75,9 +78,8 @@ export function RoleManageForm({ role, ...props }: PageProps) {
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Role created", { id: toastId });
-                router.push("/dashboard/general/roles");
                 siteRolesRefetch();
-                router.refresh();
+                router.push("/dashboard/general/roles");
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -92,9 +94,8 @@ export function RoleManageForm({ role, ...props }: PageProps) {
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Role updated", { id: toastId });
-                router.push("/dashboard/general/roles");
                 siteRolesRefetch();
-                router.refresh();
+                router.push("/dashboard/general/roles");
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -109,11 +110,10 @@ export function RoleManageForm({ role, ...props }: PageProps) {
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Role created", { id: toastId });
+                brandRolesRefetch();
                 router.push(
                     `/dashboard/brands/${props.type === "brand" && props.brandId}/roles`
                 );
-                brandRolesRefetch();
-                router.refresh();
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -128,11 +128,10 @@ export function RoleManageForm({ role, ...props }: PageProps) {
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Role updated", { id: toastId });
+                brandRolesRefetch();
                 router.push(
                     `/dashboard/brands/${props.type === "brand" && props.brandId}/roles`
                 );
-                brandRolesRefetch();
-                router.refresh();
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);

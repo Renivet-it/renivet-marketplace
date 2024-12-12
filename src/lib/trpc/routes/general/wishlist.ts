@@ -1,3 +1,4 @@
+import { DEFAULT_MESSAGES } from "@/config/const";
 import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { createCartSchema, createWishlistSchema } from "@/lib/validations";
@@ -42,6 +43,12 @@ export const wishlistRouter = createTRPCRouter({
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not authorized to add to this wishlist",
+                });
+
+            if (user.roles.length > 0)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
                 });
 
             return next({ ctx, input });

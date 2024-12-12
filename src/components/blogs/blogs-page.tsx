@@ -39,7 +39,7 @@ export function BlogsPage({
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [tagId, setTagId] = useQueryState("tId");
-    const [search, setSearch] = useQueryState("search", {
+    const [search] = useQueryState("search", {
         defaultValue: "",
     });
 
@@ -68,8 +68,6 @@ export function BlogsPage({
                 classNames={{
                     wrapper: "md:hidden",
                 }}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
             />
 
             <div className="w-full basis-2/3">
@@ -109,8 +107,6 @@ export function BlogsPage({
                     classNames={{
                         wrapper: "hidden md:flex",
                     }}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
                 />
 
                 <h2 className="text-xl font-semibold uppercase md:text-3xl">
