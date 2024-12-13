@@ -1,16 +1,24 @@
 "use client";
 
+import {
+    createRazorPayOptions,
+    initializeRazorpayPayment,
+} from "@/lib/razorpay/client";
 import { trpc } from "@/lib/trpc/client";
 import {
     calculateTotalPrice,
     cn,
     convertValueToLabel,
     formatPriceTag,
+    handleClientError,
 } from "@/lib/utils";
 import { CachedCart, CachedUser } from "@/lib/validations";
+import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 import { ProductCartCard } from "../globals/cards";
+import { PaymentProcessingModal } from "../globals/modals";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
 import {
@@ -37,6 +45,16 @@ export function CheckoutPage({
     user,
     ...props
 }: PageProps) {
+    const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
+    const [processingModalTitle, setProcessingModalTitle] = useState("");
+    const [processingModalDescription, setProcessingModalDescription] =
+        useState("");
+    const [processingModalState, setProcessingModalState] = useState<
+        "pending" | "success" | "error"
+    >("pending");
+
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const [isAddressChangeModalOpen, setIsAddressChangeModalOpen] =
         useState(false);
 
@@ -54,6 +72,63 @@ export function CheckoutPage({
             .filter((item) => item.status)
             .map((item) => parseFloat(item.product.price) * item.quantity)
     );
+
+    const { mutateAsync: createOrderAsync } =
+        trpc.general.orders.createOrder.useMutation();
+
+    const createOrder = async () => {
+        if (!deliveryAddress) throw new Error("Select a delivery address");
+
+        return await createOrderAsync({
+            userId: user.id,
+            addressId: deliveryAddress.id,
+            deliveryAmount: priceList.devliery.toString(),
+            taxAmount: priceList.platform.toString(),
+            discountAmount: "0",
+            paymentMethod: null,
+            totalAmount: priceList.total.toString(),
+            totalItems: cart.filter((item) => item.status).length,
+        });
+    };
+
+    const handlePayment = async (orderId: string) => {
+        if (!deliveryAddress) throw new Error("Select a delivery address");
+
+        const options = createRazorPayOptions({
+            orderId,
+            deliveryAddress,
+            prices: priceList,
+            user,
+            setIsProcessingModalOpen,
+            setProcessingModalTitle,
+            setProcessingModalDescription,
+            setProcessingModalState,
+        });
+
+        initializeRazorpayPayment(options);
+    };
+
+    const { mutate: handlePlaceOrder } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Preparing your order...");
+            return { toastId };
+        },
+        mutationFn: async () => {
+            setIsProcessing(true);
+            const order = await createOrder();
+            await handlePayment(order.id);
+        },
+        onSuccess: (_, __, { toastId }) => {
+            toast.success("Payment initiated", { id: toastId });
+        },
+        onError: (err, _, ctx) => {
+            console.error(err);
+            handleClientError(err, ctx?.toastId);
+        },
+        onSettled: () => {
+            setIsProcessing(false);
+        },
+    });
 
     return (
         <>
@@ -193,7 +268,12 @@ export function CheckoutPage({
                         <Separator />
 
                         <div className="space-y-2">
-                            <Button size="sm" className="w-full">
+                            <Button
+                                size="sm"
+                                className="w-full"
+                                disabled={isProcessing}
+                                onClick={() => handlePlaceOrder()}
+                            >
                                 Place Order
                             </Button>
 
@@ -291,6 +371,14 @@ export function CheckoutPage({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <PaymentProcessingModal
+                isOpen={isProcessingModalOpen}
+                setIsOpen={setIsProcessingModalOpen}
+                title={processingModalTitle}
+                description={processingModalDescription}
+                state={processingModalState}
+            />
         </>
     );
 }

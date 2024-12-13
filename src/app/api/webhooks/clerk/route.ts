@@ -4,9 +4,9 @@ import { users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import { CResponse, handleError } from "@/lib/utils";
 import {
+    clerkWebhookSchema,
     userDeleteWebhookSchema,
     userWebhookSchema,
-    webhookSchema,
 } from "@/lib/validations";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
         const wh = new Webhook(env.SVIX_SECRET);
 
-        const { type, data } = webhookSchema.parse(
+        const { type, data } = clerkWebhookSchema.parse(
             wh.verify(JSON.stringify(payload), headers)
         );
 

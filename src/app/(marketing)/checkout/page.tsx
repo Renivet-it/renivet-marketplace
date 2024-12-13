@@ -3,6 +3,7 @@ import { GeneralShell } from "@/components/globals/layouts";
 import { userCache, userCartCache } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import Script from "next/script";
 import { Suspense } from "react";
 
 export default function Page() {
@@ -11,6 +12,7 @@ export default function Page() {
             <Suspense>
                 <CheckoutFetch />
             </Suspense>
+            <Script src="https://checkout.razorpay.com/v1/checkout.js" />
         </GeneralShell>
     );
 }

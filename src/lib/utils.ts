@@ -415,3 +415,11 @@ export function calculatePriceWithGST(price: number) {
 export function calculatePriceWithoutGST(price: number) {
     return parseFloat((price / (1 + COSTS.GST)).toFixed(2));
 }
+
+export function generateReceiptId() {
+    return `RNVT-RCPT-${generateId({ length: 8, casing: "upper" })}-${Date.now()}`;
+}
+
+export function convertPriceToPaise(price: number) {
+    return Math.round(price * 100);
+}

@@ -13,6 +13,7 @@ import {
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { categories, productTypes, subCategories } from "./category";
+import { orderItems } from "./order";
 
 export const products = pgTable(
     "products",
@@ -100,6 +101,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
         fields: [products.brandId],
         references: [brands.id],
     }),
+    orders: many(orderItems),
 }));
 
 export const productCategoriesRelations = relations(

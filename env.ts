@@ -35,6 +35,16 @@ export const env = createEnv({
             .string({ required_error: "RESEND_API_KEY is required" })
             .min(1, "RESEND_API_KEY is required"),
 
+        RAZOR_PAY_KEY_ID: z
+            .string({ required_error: "RAZOR_PAY_KEY_ID is required" })
+            .min(1, "RAZOR_PAY_KEY_ID is required"),
+        RAZOR_PAY_SECRET_KEY: z
+            .string({ required_error: "RAZOR_PAY_SECRET_KEY is required" })
+            .min(1, "RAZOR_PAY_SECRET_KEY is required"),
+        RAZOR_PAY_WEBHOOK_SECRET: z
+            .string({ required_error: "RAZOR_PAY_WEBHOOK_SECRET is required" })
+            .min(1, "RAZOR_PAY_WEBHOOK_SECRET is required"),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -45,6 +55,12 @@ export const env = createEnv({
                 required_error: "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required",
             })
             .min(1, "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required"),
+
+        NEXT_PUBLIC_RAZOR_PAY_KEY_ID: z
+            .string({
+                required_error: "NEXT_PUBLIC_RAZOR_PAY_KEY_ID is required",
+            })
+            .min(1, "NEXT_PUBLIC_RAZOR_PAY_KEY_ID is required"),
 
         NEXT_PUBLIC_FACEBOOK_APP_ID: z
             .string({
@@ -61,10 +77,14 @@ export const env = createEnv({
         JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
         RESEND_API_KEY: process.env.RESEND_API_KEY,
         GOOGLE_ANALYTICS_ID: process.env.GOOGLE_ANALYTICS_ID,
+        RAZOR_PAY_KEY_ID: process.env.RAZOR_PAY_KEY_ID,
+        RAZOR_PAY_SECRET_KEY: process.env.RAZOR_PAY_SECRET_KEY,
+        RAZOR_PAY_WEBHOOK_SECRET: process.env.RAZOR_PAY_WEBHOOK_SECRET,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+        NEXT_PUBLIC_RAZOR_PAY_KEY_ID: process.env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
         NEXT_PUBLIC_FACEBOOK_APP_ID: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
     },
     extends: [vercel()],

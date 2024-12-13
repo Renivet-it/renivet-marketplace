@@ -4,6 +4,7 @@ export * from "./brands-waitlist";
 export * from "./categories";
 export * from "./content";
 export * from "./newsletter-subscribers";
+export * from "./orders";
 export * from "./product-types";
 export * from "./roles";
 export * from "./sub-categories";

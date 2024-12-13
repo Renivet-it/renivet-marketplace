@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const webhookSchema = z.object({
+export const clerkWebhookSchema = z.object({
     data: z.any(),
     object: z.literal("event"),
     type: z.enum(["user.created", "user.updated", "user.deleted"]),
@@ -51,7 +51,7 @@ export const userDeleteSchema = z.object({
     id: z.string(),
 });
 
-export type WebhookData = z.infer<typeof webhookSchema>;
+export type ClerkWebhookData = z.infer<typeof clerkWebhookSchema>;
 export type UserWebhookData = z.infer<typeof userWebhookSchema>;
 export type UserDeleteWebhookData = z.infer<typeof userDeleteWebhookSchema>;
 export type UserDeleteData = z.infer<typeof userDeleteSchema>;
