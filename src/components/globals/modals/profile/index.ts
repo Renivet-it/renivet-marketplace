@@ -1,3 +1,4 @@
+export * from "./checkout";
 export * from "./move-product-to-cart";
 export * from "./move-product-to-wishlist";
 export * from "./remove-product-cart";

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { brandSchema } from "./brand";
+import { orderItemSchema } from "./order-item";
 import { productSchema } from "./product";
 
 export const orderSchema = z.object({
@@ -104,8 +105,11 @@ export const orderSchema = z.object({
 
 export const orderWithItemAndBrandSchema = orderSchema.extend({
     items: z.array(
-        productSchema.extend({
-            brand: brandSchema,
+        orderItemSchema.extend({
+            product: productSchema.extend({
+                price: z.number().nonnegative(),
+                brand: brandSchema,
+            }),
         })
     ),
 });

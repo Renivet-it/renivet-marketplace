@@ -10,13 +10,10 @@ import {
     cn,
     convertValueToLabel,
     formatPriceTag,
-    handleClientError,
 } from "@/lib/utils";
-import { CachedCart, CachedUser } from "@/lib/validations";
-import { useMutation } from "@tanstack/react-query";
+import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
 import { ProductCartCard } from "../globals/cards";
 import { PaymentProcessingModal } from "../globals/modals";
 import { Icons } from "../icons";
@@ -35,11 +32,11 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Separator } from "../ui/separator";
 
 interface PageProps extends GenericProps {
-    initialData: CachedCart[];
+    initialData: OrderWithItemAndBrand;
     user: CachedUser;
 }
 
-export function CheckoutPage({
+export function OrderPage({
     className,
     initialData,
     user,
@@ -58,8 +55,8 @@ export function CheckoutPage({
     const [isAddressChangeModalOpen, setIsAddressChangeModalOpen] =
         useState(false);
 
-    const { data: cart } = trpc.general.users.cart.getCart.useQuery(
-        { userId: user.id },
+    const { data: order } = trpc.general.orders.getOrder.useQuery(
+        { id: initialData.id },
         { initialData }
     );
 
@@ -68,30 +65,11 @@ export function CheckoutPage({
     >(user.addresses?.find((address) => address.isPrimary));
 
     const priceList = calculateTotalPrice(
-        cart
-            .filter((item) => item.status)
-            .map((item) => parseFloat(item.product.price) * item.quantity)
+        order.items.map((item) => item.product.price * item.quantity) || []
     );
 
-    const { mutateAsync: createOrderAsync } =
-        trpc.general.orders.createOrder.useMutation();
-
-    const createOrder = async () => {
-        if (!deliveryAddress) throw new Error("Select a delivery address");
-
-        return await createOrderAsync({
-            userId: user.id,
-            addressId: deliveryAddress.id,
-            deliveryAmount: priceList.devliery.toString(),
-            taxAmount: priceList.platform.toString(),
-            discountAmount: "0",
-            paymentMethod: null,
-            totalAmount: priceList.total.toString(),
-            totalItems: cart.filter((item) => item.status).length,
-        });
-    };
-
     const handlePayment = async (orderId: string) => {
+        setIsProcessing(true);
         if (!deliveryAddress) throw new Error("Select a delivery address");
 
         const options = createRazorPayOptions({
@@ -99,6 +77,7 @@ export function CheckoutPage({
             deliveryAddress,
             prices: priceList,
             user,
+            setIsProcessing,
             setIsProcessingModalOpen,
             setProcessingModalTitle,
             setProcessingModalDescription,
@@ -107,28 +86,6 @@ export function CheckoutPage({
 
         initializeRazorpayPayment(options);
     };
-
-    const { mutate: handlePlaceOrder } = useMutation({
-        onMutate: () => {
-            const toastId = toast.loading("Preparing your order...");
-            return { toastId };
-        },
-        mutationFn: async () => {
-            setIsProcessing(true);
-            const order = await createOrder();
-            await handlePayment(order.id);
-        },
-        onSuccess: (_, __, { toastId }) => {
-            toast.success("Payment initiated", { id: toastId });
-        },
-        onError: (err, _, ctx) => {
-            console.error(err);
-            handleClientError(err, ctx?.toastId);
-        },
-        onSettled: () => {
-            setIsProcessing(false);
-        },
-    });
 
     return (
         <>
@@ -139,7 +96,7 @@ export function CheckoutPage({
                 )}
                 {...props}
             >
-                <div className="w-full space-y-5 p-5">
+                <div className="w-full space-y-5 p-1 md:p-5">
                     <div className="grid grid-cols-3 gap-5 md:grid-cols-6">
                         <div className="hidden font-semibold md:inline-block">
                             1.
@@ -178,6 +135,8 @@ export function CheckoutPage({
                             <button
                                 className="text-xs text-primary hover:underline md:text-sm"
                                 onClick={() => {
+                                    if (order.paymentStatus === "paid") return;
+
                                     if (user.addresses.length === 0)
                                         return window.open(
                                             "/profile/addresses",
@@ -193,46 +152,30 @@ export function CheckoutPage({
 
                     <Separator />
 
-                    <div className="grid grid-cols-3 gap-5 md:grid-cols-6">
-                        <div className="hidden font-semibold md:inline-block">
-                            2.
-                        </div>
-
-                        <div className="font-semibold">Payment</div>
-
-                        <div className="md:col-span-3">
-                            <div className="text-sm text-muted-foreground">
-                                No payment information found
-                            </div>
-                        </div>
-
-                        <div className="flex items-start justify-end">
-                            <button className="text-xs text-primary hover:underline md:text-sm">
-                                Change
-                            </button>
-                        </div>
-                    </div>
-
-                    <Separator />
-
                     <div className="grid grid-cols-1 gap-5 md:grid-cols-6">
                         <div className="hidden font-semibold md:inline-block">
-                            3.
+                            2.
                         </div>
                         <div className="font-semibold">Review Items</div>
                     </div>
 
                     <div className="space-y-2">
-                        {cart
-                            .filter((item) => item.status)
-                            .map((item) => (
-                                <ProductCartCard
-                                    item={item}
-                                    key={item.id}
-                                    userId={user.id}
-                                    readOnly
-                                />
-                            ))}
+                        {order.items.map((item) => (
+                            <ProductCartCard
+                                item={{
+                                    ...item,
+                                    userId: user.id,
+                                    status: true,
+                                    product: {
+                                        ...item.product,
+                                        price: item.product.price.toString(),
+                                    },
+                                }}
+                                key={item.id}
+                                userId={user.id}
+                                readOnly
+                            />
+                        ))}
                     </div>
                 </div>
 
@@ -271,10 +214,29 @@ export function CheckoutPage({
                             <Button
                                 size="sm"
                                 className="w-full"
-                                disabled={isProcessing}
-                                onClick={() => handlePlaceOrder()}
+                                disabled={
+                                    isProcessing ||
+                                    !deliveryAddress ||
+                                    order.paymentStatus === "paid"
+                                }
+                                variant={
+                                    order.paymentStatus === "pending"
+                                        ? "default"
+                                        : order.paymentStatus === "paid"
+                                          ? "accent"
+                                          : order.paymentStatus === "failed"
+                                            ? "destructive"
+                                            : "secondary"
+                                }
+                                onClick={() => handlePayment(order.id)}
                             >
-                                Place Order
+                                {order.paymentStatus === "pending"
+                                    ? "Pay Now"
+                                    : order.paymentStatus === "paid"
+                                      ? "Already Paid"
+                                      : order.paymentStatus === "failed"
+                                        ? "Retry Payment"
+                                        : "Payment Pending"}
                             </Button>
 
                             <p className="text-xs text-destructive">

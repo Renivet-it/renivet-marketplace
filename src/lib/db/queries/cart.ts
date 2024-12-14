@@ -136,6 +136,16 @@ class UserCartQuery {
 
         return data;
     }
+
+    async dropActiveItemsFromCart(userId: string) {
+        const data = await db
+            .delete(carts)
+            .where(and(eq(carts.userId, userId), eq(carts.status, true)))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 }
 
 export const userCartQueries = new UserCartQuery();

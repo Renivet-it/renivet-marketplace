@@ -64,7 +64,7 @@ export function ProductContent({
                     </p>
 
                     <p className="text-xs font-semibold text-accent/80 md:text-sm">
-                        inclusive all taxes
+                        + 7% platform fee at checkout
                     </p>
                 </div>
 

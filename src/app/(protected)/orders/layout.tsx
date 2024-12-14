@@ -4,7 +4,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: {
-        default: "Checkout",
+        default: "Checkout Order",
         template: "%s | " + siteConfig.name,
     },
 };

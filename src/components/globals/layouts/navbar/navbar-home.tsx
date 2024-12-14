@@ -228,9 +228,15 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Package className="size-4" />
-                                            <span>Orders</span>
+                                            <Link
+                                                href="/profile/orders"
+                                                prefetch
+                                            >
+                                                <Icons.Package className="size-4" />
+                                                <span>Orders</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem
@@ -238,9 +244,15 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Heart className="size-4" />
-                                            <span>Wishlist</span>
+                                            <Link
+                                                href="/profile/wishlist"
+                                                prefetch
+                                            >
+                                                <Icons.Heart className="size-4" />
+                                                <span>Wishlist</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem

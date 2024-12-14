@@ -252,9 +252,11 @@ export function convertValueToLabel(value: string) {
         .replace(/([a-z])([A-Z])/g, "$1 $2")
         .split(/[_-\s]/)
         .map((x) =>
-            x.toLowerCase().includes("id")
-                ? x.toLowerCase().replace("id", "ID")
-                : x.charAt(0).toUpperCase() + x.slice(1)
+            x.toLowerCase() === "paid"
+                ? "Paid"
+                : x.toLowerCase().includes("id")
+                  ? x.toLowerCase().replace("id", "ID")
+                  : x.charAt(0).toUpperCase() + x.slice(1)
         )
         .join(" ");
 }

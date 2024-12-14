@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
         if (!isValid) throw new AppError("Invalid signature", "BAD_REQUEST");
 
         const payload = razorpayWebhookSchema.parse(JSON.parse(body));
-        console.log(payload);
 
         const orderId = payload.payload.payment.entity.order_id;
 
@@ -38,7 +37,7 @@ export async function POST(req: NextRequest) {
                     paymentId: payload.payload.payment.entity.id,
                     paymentMethod: payload.payload.payment.entity.method,
                     paymentStatus: "failed",
-                    status: "cancelled",
+                    status: "pending",
                 });
                 break;
         }
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 }
 
-export function validateWebhookSignature(
+function validateWebhookSignature(
     body: string,
     signature: string | null,
     secret: string | undefined

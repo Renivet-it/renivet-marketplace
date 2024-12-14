@@ -1,9 +1,8 @@
 import { env } from "@/../env";
-import { cancelPaymentOrder, verifyPayment } from "@/actions";
+import { verifyPayment } from "@/actions";
 import { siteConfig } from "@/config/site";
 import { CachedUser } from "@/lib/validations";
 import { RazorPayOptions } from "@/types";
-import { redirect } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
 import { wait } from "../utils";
 
@@ -12,6 +11,7 @@ export function createRazorPayOptions({
     deliveryAddress,
     prices,
     user,
+    setIsProcessing,
     setIsProcessingModalOpen,
     setProcessingModalTitle,
     setProcessingModalDescription,
@@ -29,6 +29,7 @@ export function createRazorPayOptions({
         id: string;
         email: string;
     };
+    setIsProcessing: Dispatch<SetStateAction<boolean>>;
     setIsProcessingModalOpen: Dispatch<SetStateAction<boolean>>;
     setProcessingModalTitle: Dispatch<SetStateAction<string>>;
     setProcessingModalDescription: Dispatch<SetStateAction<string>>;
@@ -80,7 +81,7 @@ export function createRazorPayOptions({
                 await wait(2000);
                 setIsProcessingModalOpen(false);
 
-                redirect("/profile/orders");
+                window.location.href = "/profile/orders";
             } catch (error) {
                 setProcessingModalTitle("Payment processing failed");
                 setProcessingModalDescription(
@@ -92,41 +93,12 @@ export function createRazorPayOptions({
 
                 await wait(2000);
                 setIsProcessingModalOpen(false);
+                setIsProcessing(false);
             }
         },
         modal: {
             ondismiss: async () => {
-                setIsProcessingModalOpen(true);
-                setProcessingModalTitle("Cancelling order...");
-                setProcessingModalDescription(
-                    "Please wait while we cancel your order"
-                );
-
-                try {
-                    await cancelPaymentOrder(orderId);
-
-                    setProcessingModalTitle("Order cancelled");
-                    setProcessingModalDescription(
-                        "Your order has been cancelled successfully. Redirecting..."
-                    );
-                    setProcessingModalState("success");
-
-                    await wait(2000);
-                    setIsProcessingModalOpen(false);
-                } catch (error) {
-                    setProcessingModalTitle("Order cancellation failed");
-                    setProcessingModalDescription(
-                        "Your order could not be cancelled. Please try again later. Reason: " +
-                            (error instanceof Error
-                                ? error.message
-                                : "Unknown") +
-                            ". If you were charged, please contact support."
-                    );
-                    setProcessingModalState("error");
-
-                    await wait(2000);
-                    setIsProcessingModalOpen(false);
-                }
+                setIsProcessing(false);
             },
         },
     };

@@ -1,7 +1,9 @@
+import { Product } from "@/lib/validations";
 import { relations } from "drizzle-orm";
 import {
     index,
     integer,
+    jsonb,
     numeric,
     pgTable,
     text,
@@ -92,6 +94,8 @@ export const orderItems = pgTable(
             .notNull()
             .references(() => products.id),
         quantity: integer("quantity").notNull().default(1),
+        size: text("size").notNull().$type<Product["sizes"][number]["name"]>(),
+        color: jsonb("color").$type<Product["colors"][number]>(),
         ...timestamps,
     },
     (table) => ({

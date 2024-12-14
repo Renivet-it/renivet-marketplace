@@ -13,6 +13,7 @@ export * from "./clerk-webhook";
 export * from "./home";
 export * from "./newsletter-subscriber";
 export * from "./order";
+export * from "./order-item";
 export * from "./product";
 export * from "./razorpay-webhook";
 export * from "./response";

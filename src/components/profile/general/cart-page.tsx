@@ -1,6 +1,7 @@
 "use client";
 
 import { ProductCartCard } from "@/components/globals/cards";
+import { CheckoutModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import {
@@ -16,6 +17,7 @@ import { trpc } from "@/lib/trpc/client";
 import { cn, formatPriceTag, handleClientError } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps extends GenericProps {
@@ -29,6 +31,8 @@ export function CartPage({
     userId,
     ...props
 }: PageProps) {
+    const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+
     const { data: userCart, refetch } =
         trpc.general.users.cart.getCart.useQuery({ userId }, { initialData });
 
@@ -77,67 +81,77 @@ export function CartPage({
     if (userCart.length === 0) return <NoCartCard />;
 
     return (
-        <div className={cn("space-y-5", className)} {...props}>
-            <div className="flex items-center justify-between gap-5 border p-4 md:gap-10 md:p-6">
-                <div className="w-full space-y-2">
-                    <Progress
-                        value={getProgress()}
-                        className="h-4 border border-green-700 bg-transparent md:h-5"
-                        indicatorClassName="bg-green-700"
-                    />
+        <>
+            <div className={cn("space-y-5", className)} {...props}>
+                <div className="flex items-center justify-between gap-5 border p-4 md:gap-10 md:p-6">
+                    <div className="w-full space-y-2">
+                        <Progress
+                            value={getProgress()}
+                            className="h-4 border border-green-700 bg-transparent md:h-5"
+                            indicatorClassName="bg-green-700"
+                        />
 
-                    <div className="flex items-center gap-2 text-green-700">
-                        <div>
-                            <Icons.CircleCheck className="size-5 rounded-full bg-green-700 stroke-background" />
+                        <div className="flex items-center gap-2 text-green-700">
+                            <div>
+                                <Icons.CircleCheck className="size-5 rounded-full bg-green-700 stroke-background" />
+                            </div>
+
+                            <p className="text-xs md:text-sm">
+                                {totalPrice < FREE_DELIVERY_THRESHOLD
+                                    ? `Add ${formatPriceTag(
+                                          FREE_DELIVERY_THRESHOLD - totalPrice,
+                                          true
+                                      )} to get free delivery`
+                                    : "Your order is eligible for free delivery"}
+                            </p>
                         </div>
-
-                        <p className="text-xs md:text-sm">
-                            {totalPrice < FREE_DELIVERY_THRESHOLD
-                                ? `Add ${formatPriceTag(
-                                      FREE_DELIVERY_THRESHOLD - totalPrice,
-                                      true
-                                  )} to get free delivery`
-                                : "Your order is eligible for free delivery"}
-                        </p>
                     </div>
+
+                    <p className="text-sm font-semibold md:text-base">
+                        {formatPriceTag(totalPrice, true)}
+                    </p>
                 </div>
 
-                <p className="text-sm font-semibold md:text-base">
-                    {formatPriceTag(totalPrice, true)}
-                </p>
-            </div>
+                <div className="flex items-center justify-between gap-2 border p-4 md:p-6">
+                    <p className="text-sm md:text-base">{itemCount} item(s)</p>
 
-            <div className="flex items-center justify-between gap-2 border p-4 md:p-6">
-                <p className="text-sm md:text-base">{itemCount} item(s)</p>
+                    <button
+                        className="text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() =>
+                            updateSelection({ userId, status: !isAllSelected })
+                        }
+                        disabled={isUpdating}
+                    >
+                        {isAllSelected ? "Deselect All" : "Select All"}
+                    </button>
+                </div>
 
-                <button
-                    className="text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() =>
-                        updateSelection({ userId, status: !isAllSelected })
-                    }
-                    disabled={isUpdating}
+                <div className="space-y-2">
+                    {userCart.map((item) => (
+                        <ProductCartCard
+                            item={item}
+                            key={item.id}
+                            userId={userId}
+                        />
+                    ))}
+                </div>
+
+                <Button
+                    className="w-full"
+                    disabled={totalPrice === 0}
+                    onClick={() => setIsCheckoutModalOpen(true)}
                 >
-                    {isAllSelected ? "Deselect All" : "Select All"}
-                </button>
-            </div>
-
-            <div className="space-y-2">
-                {userCart.map((item) => (
-                    <ProductCartCard
-                        item={item}
-                        key={item.id}
-                        userId={userId}
-                    />
-                ))}
-            </div>
-
-            <Button className="w-full" asChild>
-                <Link href="/checkout">
                     Proceed to Checkout
                     <Icons.ArrowRight />
-                </Link>
-            </Button>
-        </div>
+                </Button>
+            </div>
+
+            <CheckoutModal
+                isOpen={isCheckoutModalOpen}
+                setIsOpen={setIsCheckoutModalOpen}
+                userId={userId}
+            />
+        </>
     );
 }
 

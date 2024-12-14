@@ -4,14 +4,22 @@ import {
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
 } from "@/lib/validations";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { db } from "..";
 import { orders } from "../schema";
 
 class OrderQuery {
-    async getOrderById(orderId: string) {
+    async getOrderById(orderId: string, year?: number) {
         const data = await db.query.orders.findFirst({
-            where: eq(orders.id, orderId),
+            where: and(
+                eq(orders.id, orderId),
+                year
+                    ? and(
+                          gte(orders.createdAt, new Date(year, 0, 1)),
+                          lte(orders.createdAt, new Date(year, 11, 31))
+                      )
+                    : undefined
+            ),
             with: {
                 items: {
                     with: {
@@ -26,19 +34,23 @@ class OrderQuery {
         });
         if (!data) return null;
 
-        const parsed: OrderWithItemAndBrand = orderWithItemAndBrandSchema.parse(
-            {
-                ...data,
-                items: data.items.map(({ product }) => product),
-            }
-        );
+        const parsed: OrderWithItemAndBrand =
+            orderWithItemAndBrandSchema.parse(data);
 
         return parsed;
     }
 
-    async getOrdersByUserId(userId: string) {
+    async getOrdersByUserId(userId: string, year?: number) {
         const data = await db.query.orders.findMany({
-            where: eq(orders.userId, userId),
+            where: and(
+                eq(orders.userId, userId),
+                year
+                    ? and(
+                          gte(orders.createdAt, new Date(year, 0, 1)),
+                          lte(orders.createdAt, new Date(year, 11, 31))
+                      )
+                    : undefined
+            ),
             orderBy: [desc(orders.createdAt)],
             with: {
                 items: {
@@ -55,12 +67,7 @@ class OrderQuery {
 
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
-            .parse(
-                data.map((order) => ({
-                    ...order,
-                    items: order.items.map(({ product }) => product),
-                }))
-            );
+            .parse(data);
 
         return parsed;
     }
@@ -78,7 +85,10 @@ class OrderQuery {
     async updateOrderStatus(id: string, values: UpdateOrderStatus) {
         const data = await db
             .update(orders)
-            .set(values)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
             .where(eq(orders.id, id))
             .returning()
             .then((res) => res[0]);
