@@ -102,9 +102,9 @@ export function OrdersPage({
 
                     return (
                         <div key={order.id} className="space-y-5">
-                            <div key={order.id} className="border">
-                                <div className="flex items-center justify-between gap-5 bg-muted p-4 md:p-6">
-                                    <div className="flex items-center gap-10">
+                            <div className="border">
+                                <div className="flex flex-col justify-between gap-2 bg-muted p-4 md:flex-row md:items-center md:gap-5 md:p-6">
+                                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-10">
                                         <div className="space-y-1">
                                             <p className="text-xs uppercase">
                                                 Order Placed
@@ -164,7 +164,7 @@ export function OrdersPage({
                                         </div>
                                     </div>
 
-                                    <div className="space-y-1 text-end">
+                                    <div className="space-y-1 md:text-end">
                                         <div className="flex items-center gap-px text-sm">
                                             <p>Order #</p>
                                             <p>{order.id}</p>
@@ -178,9 +178,9 @@ export function OrdersPage({
                                     </div>
                                 </div>
 
-                                <div className="space-y-5 p-4 md:p-6">
+                                <div className="space-y-5 p-2 md:p-6">
                                     <div className="space-y-2">
-                                        <div className="flex items-center justify-between gap-2 bg-muted p-4 px-6">
+                                        <div className="flex flex-col justify-between gap-2 bg-muted p-4 md:flex-row md:items-center md:p-4 md:px-6">
                                             <div className="flex items-center gap-1">
                                                 <p className="text-sm font-semibold">
                                                     Order Status:
@@ -243,7 +243,7 @@ export function OrdersPage({
                                                 "pending" ||
                                                 order.paymentStatus ===
                                                     "failed") && (
-                                                <div className="flex items-center justify-between gap-2 bg-destructive p-1 px-6">
+                                                <div className="flex flex-col justify-between gap-2 bg-destructive p-2 md:flex-row md:items-center md:p-1 md:px-6">
                                                     <p className="text-sm text-destructive-foreground">
                                                         * Order is pending.
                                                         Please complete the
@@ -253,7 +253,7 @@ export function OrdersPage({
                                                     <Button
                                                         size="sm"
                                                         variant="link"
-                                                        className="text-destructive-foreground"
+                                                        className="h-auto w-min self-end p-0 text-destructive-foreground md:h-9 md:w-auto md:self-auto md:px-3"
                                                         asChild
                                                     >
                                                         <Link

@@ -5,6 +5,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { orderQueries } from "@/lib/db/queries";
 import { userCache } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
@@ -29,7 +31,7 @@ export default function Page() {
                 </CardHeader>
             </Card>
 
-            <Suspense>
+            <Suspense fallback={<OrdersSkeleton />}>
                 <OrdersFetch />
             </Suspense>
         </div>
@@ -47,4 +49,23 @@ async function OrdersFetch() {
     if (!user) redirect("/auth/signin");
 
     return <OrdersPage initialData={data} user={user} />;
+}
+
+function OrdersSkeleton() {
+    return (
+        <div className="space-y-5">
+            <div className="flex items-center gap-5">
+                <Skeleton className="h-5 w-[7.5rem]" />
+                <Skeleton className="h-10 w-36" />
+            </div>
+
+            {[...Array(3)].map((_, i, arr) => (
+                <div key={i} className="space-y-5">
+                    <Skeleton className="h-96 w-full" />
+
+                    {i !== arr.length - 1 && <Separator />}
+                </div>
+            ))}
+        </div>
+    );
 }
