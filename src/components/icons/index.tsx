@@ -65,6 +65,7 @@ import LucideIcons, {
     PlaneTakeoff,
     Plus,
     PlusCircle,
+    RotateCcw,
     Scale,
     ScrollText,
     Search,
@@ -74,6 +75,7 @@ import LucideIcons, {
     ShoppingCart,
     SlidersHorizontal,
     SquareTerminal,
+    Star,
     Store,
     Ticket,
     Trash,
@@ -89,6 +91,8 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Star,
+    RotateCcw,
     Filter,
     History,
     ListRestart,

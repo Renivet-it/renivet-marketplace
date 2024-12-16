@@ -49,6 +49,10 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
             },
         });
 
+    const maxQuantity =
+        item.product.sizes.find((size) => size.name === item.size)?.quantity ||
+        0;
+
     return (
         <Form {...form}>
             <form
@@ -87,7 +91,7 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                                     field.onChange(
                                                         Math.min(
                                                             field.value + 1,
-                                                            99
+                                                            maxQuantity
                                                         )
                                                     )
                                                 }
@@ -101,7 +105,7 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                                                     Math.min(
                                                                         prevValue +
                                                                             1,
-                                                                        99
+                                                                        maxQuantity
                                                                     )
                                                             );
                                                         }, 200);

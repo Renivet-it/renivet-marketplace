@@ -407,4 +407,53 @@ export const cartRouter = createTRPCRouter({
             ]);
             return data;
         }),
+    removeProductsInCart: protectedProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+                productIds: z.array(z.string()),
+            })
+        )
+        .use(({ ctx, input, next }) => {
+            const { user } = ctx;
+            const { userId } = input;
+
+            const isAuthorized = user.id === userId;
+            if (!isAuthorized)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not authorized to add to this cart",
+                });
+
+            return next({ ctx, input });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { userId, productIds } = input;
+
+            const existingCart = await userCartCache.get(userId);
+            if (!existingCart)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "This product is not in your cart",
+                });
+
+            const existingProducts = existingCart.filter((cart) =>
+                productIds.includes(cart.productId)
+            );
+            if (existingProducts.length === 0)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "These products are not in your cart",
+                });
+
+            const [data] = await Promise.all([
+                queries.userCarts.deleteProductsFromCart(
+                    existingProducts.map((cart) => cart.productId)
+                ),
+                userCartCache.drop(userId),
+            ]);
+
+            return data;
+        }),
 });

@@ -1,6 +1,10 @@
 "use client";
 
 import { ProductCartCard } from "@/components/globals/cards";
+import {
+    CheckoutModal,
+    UnavailableItemsModal,
+} from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import {
@@ -10,12 +14,20 @@ import {
     EmptyPlaceholderIcon,
     EmptyPlaceholderTitle,
 } from "@/components/ui/empty-placeholder-general";
+import {
+    Notice,
+    NoticeButton,
+    NoticeContent,
+    NoticeIcon,
+    NoticeTitle,
+} from "@/components/ui/notice-general";
 import { Progress } from "@/components/ui/progress";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import { cn, formatPriceTag, handleClientError } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps extends GenericProps {
@@ -29,17 +41,33 @@ export function CartPage({
     userId,
     ...props
 }: PageProps) {
+    const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+    const [isUnavailableModalOpen, setIsUnavailableModalOpen] = useState(false);
+
     const { data: userCart, refetch } =
         trpc.general.users.cart.getCart.useQuery({ userId }, { initialData });
 
-    const totalPrice = userCart
+    const availableCart = userCart.filter(
+        (item) =>
+            item.product.isAvailable &&
+            item.product.status &&
+            item.product.sizes.find(
+                (size) => size.name === item.size && size.quantity > 0
+            )
+    );
+
+    const unavailableCart = userCart.filter(
+        (item) => !availableCart.map((i) => i.id).includes(item.id)
+    );
+
+    const totalPrice = availableCart
         .filter((item) => item.status)
         .reduce(
             (acc, item) => acc + parseFloat(item.product.price) * item.quantity,
             0
         );
 
-    const itemCount = userCart
+    const itemCount = availableCart
         .filter((item) => item.status)
         .reduce((acc, item) => acc + item.quantity, 0);
 
@@ -48,7 +76,7 @@ export function CartPage({
         return progress > 100 ? 100 : progress;
     };
 
-    const isAllSelected = userCart.every((item) => item.status);
+    const isAllSelected = availableCart.every((item) => item.status);
 
     const { mutate: updateSelection, isPending: isUpdating } =
         trpc.general.users.cart.updateStatusInCart.useMutation({
@@ -74,70 +102,129 @@ export function CartPage({
             },
         });
 
-    if (userCart.length === 0) return <NoCartCard />;
+    if (availableCart.length === 0) return <NoCartCard />;
 
     return (
-        <div className={cn("space-y-5", className)} {...props}>
-            <div className="flex items-center justify-between gap-5 border p-4 md:gap-10 md:p-6">
-                <div className="w-full space-y-2">
-                    <Progress
-                        value={getProgress()}
-                        className="h-4 border border-green-700 bg-transparent md:h-5"
-                        indicatorClassName="bg-green-700"
-                    />
+        <>
+            <div className={cn("space-y-5", className)} {...props}>
+                {unavailableCart.length > 0 && (
+                    <Notice>
+                        <NoticeContent>
+                            <NoticeTitle>
+                                <NoticeIcon />
+                                <span>Warning</span>
+                            </NoticeTitle>
 
-                    <div className="flex items-center gap-2 text-green-700">
-                        <div>
-                            <Icons.CircleCheck className="size-5 rounded-full bg-green-700 stroke-background" />
+                            <p className="text-sm">
+                                {unavailableCart.length} item(s) in your cart
+                                are no longer available.
+                            </p>
+                        </NoticeContent>
+
+                        <NoticeButton asChild>
+                            <Button
+                                size="sm"
+                                className="text-xs"
+                                onClick={() => setIsUnavailableModalOpen(true)}
+                            >
+                                Show Item(s)
+                            </Button>
+                        </NoticeButton>
+                    </Notice>
+                )}
+
+                <div className="flex items-center justify-between gap-5 border p-4 md:gap-10 md:p-6">
+                    <div className="w-full space-y-2">
+                        <Progress
+                            value={getProgress()}
+                            className="h-4 border border-green-700 bg-transparent md:h-5"
+                            indicatorClassName="bg-green-700"
+                        />
+
+                        <div className="flex items-center gap-2 text-green-700">
+                            <div>
+                                <Icons.CircleCheck className="size-5 rounded-full bg-green-700 stroke-background" />
+                            </div>
+
+                            <p className="text-xs md:text-sm">
+                                {totalPrice < FREE_DELIVERY_THRESHOLD
+                                    ? `Add ${formatPriceTag(
+                                          FREE_DELIVERY_THRESHOLD - totalPrice,
+                                          true
+                                      )} to get free delivery`
+                                    : "Your order is eligible for free delivery"}
+                            </p>
                         </div>
-
-                        <p className="text-xs md:text-sm">
-                            {totalPrice < FREE_DELIVERY_THRESHOLD
-                                ? `Add ${formatPriceTag(
-                                      FREE_DELIVERY_THRESHOLD - totalPrice,
-                                      true
-                                  )} to get free delivery`
-                                : "Your order is eligible for free delivery"}
-                        </p>
                     </div>
+
+                    <p className="text-sm font-semibold md:text-base">
+                        {formatPriceTag(totalPrice, true)}
+                    </p>
                 </div>
 
-                <p className="text-sm font-semibold md:text-base">
-                    {formatPriceTag(totalPrice, true)}
-                </p>
-            </div>
+                <div className="flex items-center justify-between gap-2 border p-4 md:p-6">
+                    <p className="text-sm md:text-base">{itemCount} item(s)</p>
 
-            <div className="flex items-center justify-between gap-2 border p-4 md:p-6">
-                <p className="text-sm md:text-base">{itemCount} item(s)</p>
+                    <button
+                        className="text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() =>
+                            updateSelection({ userId, status: !isAllSelected })
+                        }
+                        disabled={isUpdating}
+                    >
+                        {isAllSelected ? "Deselect All" : "Select All"}
+                    </button>
+                </div>
 
-                <button
-                    className="text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() =>
-                        updateSelection({ userId, status: !isAllSelected })
+                <div className="space-y-2">
+                    {availableCart.map((item) => (
+                        <ProductCartCard
+                            item={item}
+                            key={item.id}
+                            userId={userId}
+                        />
+                    ))}
+                </div>
+
+                {!!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED && (
+                    <p className="text-xs text-destructive">
+                        * Checkouts are currently disabled due to testing
+                    </p>
+                )}
+
+                <Button
+                    className="w-full"
+                    disabled={
+                        totalPrice === 0 ||
+                        !!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED
                     }
-                    disabled={isUpdating}
+                    onClick={() => {
+                        if (!!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED)
+                            return toast.error(
+                                "Checkouts are currently disabled due to testing"
+                            );
+
+                        setIsCheckoutModalOpen(true);
+                    }}
                 >
-                    {isAllSelected ? "Deselect All" : "Select All"}
-                </button>
-            </div>
-
-            <div className="space-y-2">
-                {userCart.map((item) => (
-                    <ProductCartCard
-                        item={item}
-                        key={item.id}
-                        userId={userId}
-                    />
-                ))}
-            </div>
-
-            <Button className="w-full" asChild>
-                <Link href="/checkout">
                     Proceed to Checkout
                     <Icons.ArrowRight />
-                </Link>
-            </Button>
-        </div>
+                </Button>
+            </div>
+
+            <CheckoutModal
+                isOpen={isCheckoutModalOpen}
+                setIsOpen={setIsCheckoutModalOpen}
+                userId={userId}
+            />
+
+            <UnavailableItemsModal
+                isOpen={isUnavailableModalOpen}
+                setIsOpen={setIsUnavailableModalOpen}
+                unavailableCart={unavailableCart}
+                userId={userId}
+            />
+        </>
     );
 }
 

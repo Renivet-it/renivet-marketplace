@@ -4,7 +4,7 @@ import {
     Product,
     UpdateCart,
 } from "@/lib/validations";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "..";
 import { carts } from "../schema";
 
@@ -127,10 +127,30 @@ class UserCartQuery {
         return data;
     }
 
+    async deleteProductsFromCart(ids: string[]) {
+        const data = await db
+            .delete(carts)
+            .where(inArray(carts.productId, ids))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
     async dropUserCart(userId: string) {
         const data = await db
             .delete(carts)
             .where(eq(carts.userId, userId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async dropActiveItemsFromCart(userId: string) {
+        const data = await db
+            .delete(carts)
+            .where(and(eq(carts.userId, userId), eq(carts.status, true)))
             .returning()
             .then((res) => res[0]);
 

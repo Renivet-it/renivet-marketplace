@@ -12,7 +12,7 @@ const Notice = React.forwardRef<
     <div
         ref={ref}
         className={cn(
-            "flex flex-col items-center justify-between gap-4 border-2 border-red-500 bg-yellow-300/10 p-4 md:flex-row",
+            "flex flex-col justify-between gap-4 border-2 border-red-500 bg-yellow-300/10 p-4 md:flex-row md:items-center",
             className
         )}
         {...props}

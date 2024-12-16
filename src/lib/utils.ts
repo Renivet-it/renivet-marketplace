@@ -252,9 +252,11 @@ export function convertValueToLabel(value: string) {
         .replace(/([a-z])([A-Z])/g, "$1 $2")
         .split(/[_-\s]/)
         .map((x) =>
-            x.toLowerCase().includes("id")
-                ? x.toLowerCase().replace("id", "ID")
-                : x.charAt(0).toUpperCase() + x.slice(1)
+            x.toLowerCase() === "paid"
+                ? "Paid"
+                : x.toLowerCase().includes("id")
+                  ? x.toLowerCase().replace("id", "ID")
+                  : x.charAt(0).toUpperCase() + x.slice(1)
         )
         .join(" ");
 }
@@ -414,4 +416,29 @@ export function calculatePriceWithGST(price: number) {
 
 export function calculatePriceWithoutGST(price: number) {
     return parseFloat((price / (1 + COSTS.GST)).toFixed(2));
+}
+
+export function generateReceiptId() {
+    return `RNVT-RCPT-${generateId({ length: 8, casing: "upper" })}-${Date.now()}`;
+}
+
+export function convertPriceToPaise(price: number) {
+    return Math.round(price * 100);
+}
+
+export function convertPaiseToRupees(paise: number) {
+    return (paise / 100).toFixed(2);
+}
+
+export function convertMsToHumanReadable(ms: number) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    // if hours is greater than 0, then only all of show hours, minutes and seconds, else show only minutes and seconds
+    // if minutes is greater than 0, then only show minutes and seconds, else show only seconds
+    // if seconds is greater than 0, then only show seconds, else show 0 seconds
+    return `${hours > 0 ? `${hours}h ` : ""}${
+        minutes > 0 ? `${minutes % 60}m ` : ""
+    }${seconds % 60}s`;
 }

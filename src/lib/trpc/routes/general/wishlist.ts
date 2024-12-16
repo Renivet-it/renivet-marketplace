@@ -145,8 +145,6 @@ export const wishlistRouter = createTRPCRouter({
             const { user } = ctx;
             const { userId } = input;
 
-            console.log(user.id, userId);
-
             const isAuthorized = user.id === userId;
             if (!isAuthorized)
                 throw new TRPCError({

@@ -65,6 +65,15 @@ export function NavbarHome() {
         { enabled: user !== undefined && !isUserFetching }
     );
 
+    const availableCart = userCart?.filter(
+        (item) =>
+            item.product.isAvailable &&
+            item.product.status &&
+            item.product.sizes.find(
+                (size) => size.name === item.size && size.quantity > 0
+            )
+    );
+
     const userPermissions = useMemo(() => {
         if (!user)
             return {
@@ -228,9 +237,15 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Package className="size-4" />
-                                            <span>Orders</span>
+                                            <Link
+                                                href="/profile/orders"
+                                                prefetch
+                                            >
+                                                <Icons.Package className="size-4" />
+                                                <span>Orders</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem
@@ -238,9 +253,15 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Heart className="size-4" />
-                                            <span>Wishlist</span>
+                                            <Link
+                                                href="/profile/wishlist"
+                                                prefetch
+                                            >
+                                                <Icons.Heart className="size-4" />
+                                                <span>Wishlist</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem
@@ -331,10 +352,10 @@ export function NavbarHome() {
                             </Link>
 
                             <Link href="/profile/cart" className="relative">
-                                {userCart?.length
-                                    ? userCart.length > 0 && (
+                                {availableCart?.length
+                                    ? availableCart.length > 0 && (
                                           <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                                              {userCart.length}
+                                              {availableCart.length}
                                           </div>
                                       )
                                     : null}

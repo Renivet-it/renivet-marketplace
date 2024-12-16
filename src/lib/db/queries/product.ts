@@ -1,6 +1,7 @@
 import {
     CreateCategorizeProduct,
     CreateProduct,
+    Product,
     ProductWithBrand,
     productWithBrandSchema,
     UpdateProduct,
@@ -287,6 +288,31 @@ class ProductQuery {
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateProductStock(
+        values: {
+            productId: string;
+            sizes: Product["sizes"];
+        }[]
+    ) {
+        const data = await db.transaction(async (tx) => {
+            const promises = values.map(({ productId, sizes }) =>
+                tx
+                    .update(products)
+                    .set({
+                        sizes,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(products.id, productId))
+                    .returning()
+                    .then((res) => res[0])
+            );
+
+            return Promise.all(promises);
+        });
 
         return data;
     }
