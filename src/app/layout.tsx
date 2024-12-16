@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
-import { lora, poppins } from "./fonts";
+import { dmsans, rubik } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -91,7 +91,7 @@ export default function RootLayout({ children }: LayoutProps) {
         <html
             lang="en"
             suppressHydrationWarning
-            className={cn(poppins.variable, lora.variable)}
+            className={cn(dmsans.variable, rubik.variable)}
         >
             <ServerProvider>
                 <body

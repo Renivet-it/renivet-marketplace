@@ -4,9 +4,9 @@ import { BitFieldBrandPermission, BitFieldSitePermission } from "./permissions";
 export const siteConfig: SiteConfig = {
     name: "Renivet",
     description:
-        "A marketplace for digital products, services, and more. Buy and sell items with ease.",
+        "A marketplace bridging conscious consumers and responsible brands, setting a new standard for transparency and circularity in fashion. Sustainability isn't an option - it's the standard!",
     longDescription:
-        "Renivet is a marketplace for digital products, services, and more. Buy and sell items with ease. We offer a wide range of categories, including software, graphics, music, and more.",
+        "Renivet is a marketplace bridging conscious consumers and responsible brands, setting a new standard for transparency and circularity in fashion. Renivet transforms shopping into a step toward a circular fashion economy. Sustainability isn't an option - it's the standard!",
     keywords: [
         "marketplace",
         "digital products",
@@ -80,12 +80,12 @@ export const siteConfig: SiteConfig = {
                         href: "/about#team",
                     },
                     {
-                        name: "Awards",
-                        href: "/about#awards",
+                        name: "Contact Us",
+                        href: "/contact",
                     },
                     {
-                        name: "Testimonials",
-                        href: "/about#testimonials",
+                        name: "FAQs",
+                        href: "/about#faqs",
                     },
                     {
                         name: "Join Community",

@@ -6,6 +6,8 @@ import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
+import Marquee from "react-fast-marquee";
+import { Icons } from "../icons";
 import { Carousel, CarouselContent, CarouselItem } from "../ui/carousel";
 
 interface PageProps extends GenericProps {
@@ -27,7 +29,12 @@ export function Landing({ className, banners, ...props }: PageProps) {
                 ]}
                 className="h-[calc(100vh-20vh)] w-full"
             >
-                <CarouselContent className="ml-0">
+                <CarouselContent
+                    classNames={{
+                        wrapper: "size-full",
+                        inner: "size-full ml-0",
+                    }}
+                >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative size-full">
@@ -61,6 +68,20 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     ))}
                 </CarouselContent>
             </Carousel>
+
+            <Marquee autoFill speed={100}>
+                <p className="text-sm">Wear Product You Value</p>
+                <Icons.Heart className="size-3 fill-background md:size-4" />
+
+                <p className="text-sm">Trace Your Product Journey</p>
+                <Icons.Heart className="size-3 fill-background md:size-4" />
+
+                <p className="text-sm">Know Your Impact</p>
+                <Icons.Heart className="size-3 fill-background md:size-4" />
+
+                <p className="text-sm">Choose Consciously</p>
+                <Icons.Heart className="size-3 fill-background md:size-4" />
+            </Marquee>
         </section>
     );
 }

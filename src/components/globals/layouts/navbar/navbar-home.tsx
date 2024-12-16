@@ -149,7 +149,7 @@ export function NavbarHome() {
                 <Link
                     href="/"
                     title="Home"
-                    className="flex items-center gap-1 text-2xl font-bold hover:opacity-100 active:opacity-100"
+                    className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
                 >
                     <Renivet className="size-8" />
 
