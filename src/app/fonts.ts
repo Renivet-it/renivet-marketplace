@@ -1,22 +1,15 @@
-import { EB_Garamond, Lora, Poppins } from "next/font/google";
+import { DM_Sans, Rubik } from "next/font/google";
 
-export const poppins = Poppins({
+export const dmsans = DM_Sans({
     subsets: ["latin"],
     weight: ["400", "600", "800"],
     display: "swap",
-    variable: "--font-poppins",
+    variable: "--font-dmsans",
 });
 
-export const garamond = EB_Garamond({
-    subsets: ["latin"],
-    weight: ["400", "600", "800"],
-    display: "swap",
-    variable: "--font-garamond",
-});
-
-export const lora = Lora({
+export const rubik = Rubik({
     subsets: ["latin"],
     weight: ["400", "600", "700"],
     display: "swap",
-    variable: "--font-lora",
+    variable: "--font-rubik",
 });

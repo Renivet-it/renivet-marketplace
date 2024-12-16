@@ -12,28 +12,24 @@ import Link from "next/link";
 
 const demoData = [
     {
-        title: "T-Shirts",
-        img: "/images/collection1.jpeg",
-    },
-    {
-        title: "Hoodies",
-        img: "/images/collection2.jpeg",
+        title: "Shirts",
+        img: "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNdXmfcmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
     },
     {
         title: "T-shirts",
-        img: "/images/collection3.jpeg",
+        img: "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNjggAv9CmPpnZoHc5f2E4rFNLugdK3ty9ObjY",
     },
     {
-        title: "COLLECTION",
-        img: "/images/collection4.jpeg",
+        title: "Hoodies",
+        img: "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNYomR7rtw3Tk2oVEqIGCBSxlfdKnNFa10WH7c",
     },
     {
         title: "New Arrivals",
-        img: "/images/collection5.jpeg",
+        img: "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNVPXf8VBbpNcg6ZSKi0IGkAsjuLwQox3znmlt",
     },
     {
-        title: "Exclusive",
-        img: "/images/collection6.jpg",
+        title: "Festive Touches",
+        img: "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNXiY7fe3We049OUSYNxCLnRIka3FhcqBZlbsP",
     },
 ];
 
@@ -65,7 +61,7 @@ export function Collection({ className, ...props }: GenericProps) {
                                 className="text-center md:basis-1/2 lg:basis-1/4"
                             >
                                 <Link href="/soon" className="space-y-4">
-                                    <div className="h-80">
+                                    <div className="aspect-[3/3.5]">
                                         <Image
                                             width={1000}
                                             height={1000}

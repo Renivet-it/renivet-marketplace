@@ -78,6 +78,7 @@ export function WishlistButton({
     return (
         <Button
             size="sm"
+            variant="secondary"
             onClick={() => {
                 if (isUserFetching)
                     return toast.error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);

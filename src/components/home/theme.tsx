@@ -27,7 +27,7 @@ export function Theme({ className, ...props }: GenericProps) {
                     title: "Our Mission",
                     description:
                         "We're on a mission to make sustainability more than a trend—it's a commitment to shaping a future built on quality, longevity, and mindful choices. Inspired by our founder's journey through Europe, where sustainable living became a way of life, Renivet was born from the vision of bringing meaningful change into everyday choices.",
-                    image: "https://utfs.io/a/758cbqh2wo/E02w8qhSRFZnPtCq8YLrdBOITmVvY701358RpKx4iGDZJbQL",
+                    image: "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNvuHi3KvdPZsh5fuDbkAelMyqICmp3NU7X4nH",
                 },
             ];
             setData(mockData);

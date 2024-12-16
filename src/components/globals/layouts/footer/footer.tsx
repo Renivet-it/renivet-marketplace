@@ -20,7 +20,7 @@ export function Footer({ className, ...props }: GenericProps) {
                 <div className="flex w-full flex-col items-center justify-between lg:flex-row lg:items-start">
                     <div className="w-full space-y-6 p-10 px-5 md:p-10 lg:basis-1/3 lg:p-20">
                         <Link href="/" className="flex items-center gap-2">
-                            <Renivet className="size-8" />
+                            <Renivet className="size-8" isNegative />
 
                             <h1 className="text-4xl font-bold">
                                 {siteConfig.name}
@@ -48,8 +48,21 @@ export function Footer({ className, ...props }: GenericProps) {
 
                     <div className="grid w-full basis-2/3 grid-cols-2 gap-5 p-10 px-5 md:grid-cols-3 md:p-10 lg:p-20">
                         {siteConfig.footer.menu.map((category, i) => (
-                            <div key={i} className="space-y-3 lg:space-y-6">
-                                <h2 className="text-lg font-semibold uppercase lg:text-2xl">
+                            <div
+                                key={i}
+                                className={cn(
+                                    "space-y-3 lg:space-y-6",
+                                    category.name.toLowerCase() === "legal" &&
+                                        "space-y-0 lg:space-y-0"
+                                )}
+                            >
+                                <h2
+                                    className={cn(
+                                        "text-lg font-semibold uppercase lg:text-2xl",
+                                        category.name.toLowerCase() ===
+                                            "legal" && "hidden"
+                                    )}
+                                >
                                     {category.name}
                                 </h2>
 
