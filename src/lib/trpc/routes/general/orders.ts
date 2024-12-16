@@ -3,7 +3,11 @@ import { razorpay } from "@/lib/razorpay";
 import { userCartCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { convertPriceToPaise, generateReceiptId } from "@/lib/utils";
-import { createOrderItemSchema, createOrderSchema } from "@/lib/validations";
+import {
+    createOrderItemSchema,
+    createOrderSchema,
+    updateOrderStatusSchema,
+} from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -159,5 +163,101 @@ export const ordersRouter = createTRPCRouter({
                     message: "Failed to create order",
                 });
             }
+        }),
+    updateOrderStatus: protectedProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+                orderId: z.string(),
+                values: updateOrderStatusSchema,
+            })
+        )
+        .use(async ({ ctx, input, next }) => {
+            const { user, queries } = ctx;
+
+            const existingOrder = await queries.orders.getOrderById(
+                input.orderId
+            );
+            if (!existingOrder)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order not found",
+                });
+
+            if (existingOrder.userId !== user.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not allowed to update this order",
+                });
+
+            if (existingOrder.status === input.values.status)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Order is already in this status",
+                });
+
+            return next();
+        })
+        .mutation(async ({ input, ctx }) => {
+            const { queries } = ctx;
+
+            await queries.orders.updateOrderStatus(input.orderId, input.values);
+            return true;
+        }),
+    bulkUpdateOrderStatus: protectedProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+                orderIds: z.array(z.string()),
+                values: updateOrderStatusSchema,
+            })
+        )
+        .use(async ({ ctx, input, next }) => {
+            const { user, queries } = ctx;
+            if (user.id !== input.userId)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not allowed to update this user's orders",
+                });
+
+            const existingOrders = await queries.orders.getOrdersByIds(
+                input.orderIds
+            );
+
+            const nonExistingOrderIds = input.orderIds.filter(
+                (id) => !existingOrders.map((order) => order.id).includes(id)
+            );
+
+            if (existingOrders.length !== input.orderIds.length)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: `Order(s) not found: ${nonExistingOrderIds.join(", ")}`,
+                });
+
+            const isAllOrdersOfUser = existingOrders.every(
+                (order) => order.userId === user.id
+            );
+            if (!isAllOrdersOfUser)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not allowed to update this user's orders",
+                });
+
+            return next({
+                ctx: {
+                    ...ctx,
+                    existingOrders,
+                },
+            });
+        })
+        .mutation(async ({ input, ctx }) => {
+            const { existingOrders, queries } = ctx;
+
+            await queries.orders.bulkUpdateOrderStatus(
+                existingOrders.map((order) => order.id),
+                input.values
+            );
+
+            return true;
         }),
 });

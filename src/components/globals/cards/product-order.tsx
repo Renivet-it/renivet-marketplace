@@ -13,6 +13,11 @@ interface PageProps extends GenericProps {
 }
 
 export function ProductOrderCard({ className, item, ...props }: PageProps) {
+    const isAvailable =
+        item.product.isAvailable &&
+        item.product.status &&
+        item.product.sizes.filter((size) => size.quantity > 0).length > 0;
+
     return (
         <div
             key={item.id}
@@ -81,11 +86,24 @@ export function ProductOrderCard({ className, item, ...props }: PageProps) {
             </div>
 
             <div className="space-y-2">
-                <Button size="sm" variant="outline" className="w-full" asChild>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    disabled={!isAvailable}
+                    asChild
+                >
                     <Link
                         href={`/products/${item.product.slug}`}
                         target="_blank"
                         referrerPolicy="no-referrer"
+                        className={cn(
+                            !isAvailable &&
+                                "cursor-default opacity-50 hover:bg-background hover:text-foreground"
+                        )}
+                        onClick={(e) => {
+                            if (!isAvailable) e.preventDefault();
+                        }}
                     >
                         <Icons.RotateCcw />
                         Buy Again

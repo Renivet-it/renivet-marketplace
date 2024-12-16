@@ -1,5 +1,13 @@
 "use client";
 
+import { updateOrderAddress } from "@/actions";
+import {
+    Notice,
+    NoticeButton,
+    NoticeContent,
+    NoticeIcon,
+    NoticeTitle,
+} from "@/components/ui/notice-general";
 import {
     createRazorPayOptions,
     initializeRazorpayPayment,
@@ -8,12 +16,16 @@ import { trpc } from "@/lib/trpc/client";
 import {
     calculateTotalPrice,
     cn,
+    convertMsToHumanReadable,
     convertValueToLabel,
     formatPriceTag,
+    handleClientError,
 } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
+import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { ProductCartCard } from "../globals/cards";
 import { PaymentProcessingModal } from "../globals/modals";
 import { Icons } from "../icons";
@@ -55,9 +67,70 @@ export function OrderPage({
     const [isAddressChangeModalOpen, setIsAddressChangeModalOpen] =
         useState(false);
 
-    const { data: order } = trpc.general.orders.getOrder.useQuery(
+    const { data: order, refetch } = trpc.general.orders.getOrder.useQuery(
         { id: initialData.id },
         { initialData }
+    );
+
+    const [timeRemaining, setTimeRemaining] = useState<number>(
+        new Date(order.createdAt).getTime() + 900000 - Date.now()
+    );
+
+    const { mutate: updateOrder, isPending: isUpdating } =
+        trpc.general.orders.updateOrderStatus.useMutation({
+            onSuccess: () => {
+                refetch();
+            },
+        });
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTimeRemaining(
+                new Date(order.createdAt).getTime() + 900000 - Date.now()
+            );
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [order.createdAt]);
+
+    useEffect(() => {
+        if (timeRemaining > 0) return;
+        if (
+            timeRemaining <= 0 &&
+            ["paid", "refund_pending", "refunded", "refund_failed"].includes(
+                order.paymentStatus
+            )
+        )
+            return;
+        if (isProcessing) return;
+        if (isUpdating) return;
+
+        updateOrder({
+            orderId: order.id,
+            userId: user.id,
+            values: {
+                status: "cancelled",
+                paymentMethod: null,
+                paymentId: null,
+                paymentStatus: "failed",
+            },
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [timeRemaining, order.paymentStatus]);
+
+    const availableItems =
+        order.status === "pending"
+            ? order.items.filter(
+                  (item) =>
+                      item.product.isAvailable &&
+                      item.product.status &&
+                      item.product.sizes.filter((size) => size.quantity > 0)
+                          .length > 0
+              )
+            : order.items;
+
+    const unavailableItems = order.items.filter(
+        (item) => !availableItems.map((i) => i.id).includes(item.id)
     );
 
     const [deliveryAddress, setDeliveryAddress] = useState<
@@ -65,27 +138,52 @@ export function OrderPage({
     >(user.addresses?.find((address) => address.isPrimary));
 
     const priceList = calculateTotalPrice(
-        order.items.map((item) => item.product.price * item.quantity) || []
+        availableItems.map((item) => item.product.price * item.quantity) || []
     );
 
-    const handlePayment = async (orderId: string) => {
-        setIsProcessing(true);
-        if (!deliveryAddress) throw new Error("Select a delivery address");
+    const { mutate: initPayment, isPending: isPaymentInitializing } =
+        useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Initializing payment...");
+                return { toastId };
+            },
+            mutationFn: async ({ orderId }: { orderId: string }) => {
+                if (!deliveryAddress)
+                    throw new Error("Select a delivery address");
 
-        const options = createRazorPayOptions({
-            orderId,
-            deliveryAddress,
-            prices: priceList,
-            user,
-            setIsProcessing,
-            setIsProcessingModalOpen,
-            setProcessingModalTitle,
-            setProcessingModalDescription,
-            setProcessingModalState,
+                if (unavailableItems.length > 0)
+                    throw new Error("Some items are no longer available");
+
+                if (order.addressId !== deliveryAddress.id)
+                    await updateOrderAddress({
+                        orderId,
+                        addressId: deliveryAddress.id,
+                    });
+
+                setIsProcessing(true);
+
+                const options = createRazorPayOptions({
+                    orderId,
+                    deliveryAddress,
+                    prices: priceList,
+                    user,
+                    setIsProcessing,
+                    setIsProcessingModalOpen,
+                    setProcessingModalTitle,
+                    setProcessingModalDescription,
+                    setProcessingModalState,
+                    refetch,
+                });
+
+                initializeRazorpayPayment(options);
+            },
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Payment initialized", { id: toastId });
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
         });
-
-        initializeRazorpayPayment(options);
-    };
 
     return (
         <>
@@ -160,7 +258,29 @@ export function OrderPage({
                     </div>
 
                     <div className="space-y-2">
-                        {order.items.map((item) => (
+                        {unavailableItems.length > 0 && (
+                            <Notice>
+                                <NoticeContent>
+                                    <NoticeTitle>
+                                        <NoticeIcon />
+                                        <span>Warning</span>
+                                    </NoticeTitle>
+
+                                    <p className="text-sm">
+                                        {unavailableItems.length} item(s) are no
+                                        longer available.
+                                    </p>
+                                </NoticeContent>
+
+                                <NoticeButton asChild>
+                                    <Button size="sm" className="text-xs">
+                                        Show Item(s)
+                                    </Button>
+                                </NoticeButton>
+                            </Notice>
+                        )}
+
+                        {availableItems.map((item) => (
                             <ProductCartCard
                                 item={{
                                     ...item,
@@ -217,27 +337,65 @@ export function OrderPage({
                                 disabled={
                                     isProcessing ||
                                     !deliveryAddress ||
-                                    order.paymentStatus === "paid"
+                                    isPaymentInitializing ||
+                                    order.paymentStatus === "paid" ||
+                                    order.status !== "pending" ||
+                                    unavailableItems.length > 0 ||
+                                    isUpdating
                                 }
                                 variant={
-                                    order.paymentStatus === "pending"
-                                        ? "default"
-                                        : order.paymentStatus === "paid"
-                                          ? "accent"
-                                          : order.paymentStatus === "failed"
-                                            ? "destructive"
-                                            : "secondary"
+                                    unavailableItems.length > 0
+                                        ? "destructive"
+                                        : order.paymentStatus === "pending"
+                                          ? "default"
+                                          : order.paymentStatus === "paid"
+                                            ? "accent"
+                                            : order.paymentStatus === "failed"
+                                              ? "destructive"
+                                              : "secondary"
                                 }
-                                onClick={() => handlePayment(order.id)}
+                                onClick={() =>
+                                    initPayment({ orderId: order.id })
+                                }
                             >
-                                {order.paymentStatus === "pending"
-                                    ? "Pay Now"
-                                    : order.paymentStatus === "paid"
-                                      ? "Already Paid"
-                                      : order.paymentStatus === "failed"
-                                        ? "Retry Payment"
-                                        : "Payment Pending"}
+                                {unavailableItems.length > 0
+                                    ? "Aborted"
+                                    : order.paymentStatus === "pending"
+                                      ? "Pay Now"
+                                      : order.paymentStatus === "paid"
+                                        ? "Already Paid"
+                                        : order.paymentStatus === "failed" &&
+                                            order.status === "pending"
+                                          ? "Retry Payment"
+                                          : order.paymentStatus ===
+                                              "refund_pending"
+                                            ? "Refund Pending"
+                                            : order.paymentStatus === "refunded"
+                                              ? "Refunded"
+                                              : order.paymentStatus ===
+                                                  "refund_failed"
+                                                ? "Refund Failed"
+                                                : "Order Cancelled"}
                             </Button>
+
+                            {![
+                                "paid",
+                                "refund_pending",
+                                "refunded",
+                                "refund_failed",
+                            ].includes(order.paymentStatus) &&
+                                timeRemaining > 0 &&
+                                order.status !== "cancelled" && (
+                                    <p className="text-xs text-destructive">
+                                        *{" "}
+                                        <span className="font-semibold">
+                                            {convertMsToHumanReadable(
+                                                timeRemaining
+                                            )}
+                                        </span>{" "}
+                                        until order is cancelled
+                                    </p>
+                                )}
 
                             <p className="text-xs text-destructive">
                                 * By placing an order, you agree to our{" "}

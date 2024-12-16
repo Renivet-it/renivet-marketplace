@@ -83,6 +83,11 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                         Proceeding will create an order and will redirect you to
                         the payment page. This will also remove the items from
                         your cart.
+                        <br />
+                        <br />
+                        You will have to complete the payment within{" "}
+                        <span className="font-semibold">15 minutes</span>{" "}
+                        otherwise the order will be cancelled.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 

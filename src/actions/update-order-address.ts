@@ -3,7 +3,13 @@
 import { orderQueries } from "@/lib/db/queries";
 import { auth } from "@clerk/nextjs/server";
 
-export async function cancelPaymentOrder(orderId: string) {
+export async function updateOrderAddress({
+    orderId,
+    addressId,
+}: {
+    orderId: string;
+    addressId: string;
+}) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -12,10 +18,10 @@ export async function cancelPaymentOrder(orderId: string) {
     if (existingOrder.userId !== userId)
         throw new Error("Order does not belong to user");
 
-    await orderQueries.updateOrderStatus(existingOrder.id, {
-        status: "cancelled",
-        paymentId: null,
-        paymentMethod: null,
-        paymentStatus: "failed",
-    });
+    const updatedOrder = await orderQueries.updateOrderAddress(
+        existingOrder.id,
+        addressId
+    );
+
+    return updatedOrder;
 }

@@ -8,6 +8,7 @@ export * from "./content";
 export * from "./newsletter-subscriber";
 export * from "./order";
 export * from "./product";
+export * from "./refund";
 export * from "./role";
 export * from "./tag";
 export * from "./ticket";

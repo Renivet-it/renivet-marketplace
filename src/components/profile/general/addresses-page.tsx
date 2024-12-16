@@ -54,7 +54,7 @@ export function AddressesPage({ className, ...props }: GenericProps) {
                                 />
                             ))}
 
-                        <Card className="flex aspect-auto h-full items-center justify-center rounded-none xl:aspect-video">
+                        <Card className="flex aspect-video h-full items-center justify-center rounded-none md:aspect-auto">
                             <Button
                                 variant="ghost"
                                 className="size-full text-base font-semibold"

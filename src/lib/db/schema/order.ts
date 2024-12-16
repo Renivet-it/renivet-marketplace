@@ -13,6 +13,7 @@ import {
 import { timestamps } from "../helper";
 import { addresses } from "./address";
 import { products } from "./product";
+import { refunds } from "./refund";
 import { users } from "./user";
 
 export const orders = pgTable(
@@ -28,7 +29,14 @@ export const orders = pgTable(
         paymentId: text("payment_id"),
         paymentMethod: text("payment_method"),
         paymentStatus: text("payment_status", {
-            enum: ["pending", "paid", "failed"],
+            enum: [
+                "pending",
+                "paid",
+                "failed",
+                "refund_pending",
+                "refunded",
+                "refund_failed",
+            ],
         })
             .notNull()
             .default("pending"),
@@ -116,6 +124,7 @@ export const orderRelations = relations(orders, ({ one, many }) => ({
         fields: [orders.userId],
         references: [users.id],
     }),
+    refunds: many(refunds),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({

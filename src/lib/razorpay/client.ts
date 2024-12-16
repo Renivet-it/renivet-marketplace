@@ -16,6 +16,7 @@ export function createRazorPayOptions({
     setProcessingModalTitle,
     setProcessingModalDescription,
     setProcessingModalState,
+    refetch,
 }: {
     orderId: string;
     deliveryAddress: CachedUser["addresses"][number];
@@ -36,6 +37,7 @@ export function createRazorPayOptions({
     setProcessingModalState: Dispatch<
         SetStateAction<"pending" | "success" | "error">
     >;
+    refetch: () => void;
 }) {
     const options: RazorPayOptions = {
         key: env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
@@ -77,6 +79,7 @@ export function createRazorPayOptions({
                     "Your payment has been processed, and your order has been placed successfully. Redirecting..."
                 );
                 setProcessingModalState("success");
+                refetch();
 
                 await wait(2000);
                 setIsProcessingModalOpen(false);
@@ -90,8 +93,9 @@ export function createRazorPayOptions({
                         ". If you were charged, please contact support."
                 );
                 setProcessingModalState("error");
+                refetch();
 
-                await wait(2000);
+                await wait(10000);
                 setIsProcessingModalOpen(false);
                 setIsProcessing(false);
             }

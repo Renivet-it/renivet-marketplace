@@ -10,6 +10,7 @@ export * from "./category";
 export * from "./order";
 export * from "./product";
 export * from "./product-type";
+export * from "./refund";
 export * from "./role";
 export * from "./sub-category";
 export * from "./subscriber";

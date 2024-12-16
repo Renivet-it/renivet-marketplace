@@ -1,7 +1,10 @@
 "use client";
 
 import { ProductCartCard } from "@/components/globals/cards";
-import { CheckoutModal } from "@/components/globals/modals";
+import {
+    CheckoutModal,
+    UnavailableItemsModal,
+} from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import {
@@ -11,6 +14,13 @@ import {
     EmptyPlaceholderIcon,
     EmptyPlaceholderTitle,
 } from "@/components/ui/empty-placeholder-general";
+import {
+    Notice,
+    NoticeButton,
+    NoticeContent,
+    NoticeIcon,
+    NoticeTitle,
+} from "@/components/ui/notice-general";
 import { Progress } from "@/components/ui/progress";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
@@ -32,18 +42,32 @@ export function CartPage({
     ...props
 }: PageProps) {
     const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+    const [isUnavailableModalOpen, setIsUnavailableModalOpen] = useState(false);
 
     const { data: userCart, refetch } =
         trpc.general.users.cart.getCart.useQuery({ userId }, { initialData });
 
-    const totalPrice = userCart
+    const availableCart = userCart.filter(
+        (item) =>
+            item.product.isAvailable &&
+            item.product.status &&
+            item.product.sizes.find(
+                (size) => size.name === item.size && size.quantity > 0
+            )
+    );
+
+    const unavailableCart = userCart.filter(
+        (item) => !availableCart.map((i) => i.id).includes(item.id)
+    );
+
+    const totalPrice = availableCart
         .filter((item) => item.status)
         .reduce(
             (acc, item) => acc + parseFloat(item.product.price) * item.quantity,
             0
         );
 
-    const itemCount = userCart
+    const itemCount = availableCart
         .filter((item) => item.status)
         .reduce((acc, item) => acc + item.quantity, 0);
 
@@ -52,7 +76,7 @@ export function CartPage({
         return progress > 100 ? 100 : progress;
     };
 
-    const isAllSelected = userCart.every((item) => item.status);
+    const isAllSelected = availableCart.every((item) => item.status);
 
     const { mutate: updateSelection, isPending: isUpdating } =
         trpc.general.users.cart.updateStatusInCart.useMutation({
@@ -78,11 +102,37 @@ export function CartPage({
             },
         });
 
-    if (userCart.length === 0) return <NoCartCard />;
+    if (availableCart.length === 0) return <NoCartCard />;
 
     return (
         <>
             <div className={cn("space-y-5", className)} {...props}>
+                {unavailableCart.length > 0 && (
+                    <Notice>
+                        <NoticeContent>
+                            <NoticeTitle>
+                                <NoticeIcon />
+                                <span>Warning</span>
+                            </NoticeTitle>
+
+                            <p className="text-sm">
+                                {unavailableCart.length} item(s) in your cart
+                                are no longer available.
+                            </p>
+                        </NoticeContent>
+
+                        <NoticeButton asChild>
+                            <Button
+                                size="sm"
+                                className="text-xs"
+                                onClick={() => setIsUnavailableModalOpen(true)}
+                            >
+                                Show Item(s)
+                            </Button>
+                        </NoticeButton>
+                    </Notice>
+                )}
+
                 <div className="flex items-center justify-between gap-5 border p-4 md:gap-10 md:p-6">
                     <div className="w-full space-y-2">
                         <Progress
@@ -127,7 +177,7 @@ export function CartPage({
                 </div>
 
                 <div className="space-y-2">
-                    {userCart.map((item) => (
+                    {availableCart.map((item) => (
                         <ProductCartCard
                             item={item}
                             key={item.id}
@@ -136,10 +186,26 @@ export function CartPage({
                     ))}
                 </div>
 
+                {!!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED && (
+                    <p className="text-xs text-destructive">
+                        * Checkouts are currently disabled due to testing
+                    </p>
+                )}
+
                 <Button
                     className="w-full"
-                    disabled={totalPrice === 0}
-                    onClick={() => setIsCheckoutModalOpen(true)}
+                    disabled={
+                        totalPrice === 0 ||
+                        !!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED
+                    }
+                    onClick={() => {
+                        if (!!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED)
+                            return toast.error(
+                                "Checkouts are currently disabled due to testing"
+                            );
+
+                        setIsCheckoutModalOpen(true);
+                    }}
                 >
                     Proceed to Checkout
                     <Icons.ArrowRight />
@@ -149,6 +215,13 @@ export function CartPage({
             <CheckoutModal
                 isOpen={isCheckoutModalOpen}
                 setIsOpen={setIsCheckoutModalOpen}
+                userId={userId}
+            />
+
+            <UnavailableItemsModal
+                isOpen={isUnavailableModalOpen}
+                setIsOpen={setIsUnavailableModalOpen}
+                unavailableCart={unavailableCart}
                 userId={userId}
             />
         </>
