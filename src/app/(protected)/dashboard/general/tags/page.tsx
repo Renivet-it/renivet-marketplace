@@ -15,7 +15,7 @@ export default function Page() {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">Tags</div>
+                    <h1 className="text-2xl font-bold">Tags</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage tags for your blog posts
                     </p>

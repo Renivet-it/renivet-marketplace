@@ -1,7 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { Renivet } from "@/components/svgs";
+import { RenivetFull } from "@/components/svgs";
 import { Button } from "@/components/ui/button-general";
 import {
     DropdownMenu,
@@ -151,11 +151,7 @@ export function NavbarHome() {
                     title="Home"
                     className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
                 >
-                    <Renivet className="size-8" />
-
-                    <h4 className="text-xl font-bold uppercase md:text-2xl">
-                        {siteConfig.name}
-                    </h4>
+                    <RenivetFull width={120} height={36} />
                 </Link>
 
                 <ul className="hidden items-center gap-10 sm:flex">

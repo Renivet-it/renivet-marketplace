@@ -190,6 +190,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_CONTENT,
             },
             {
+                title: "Marketing Strip",
+                url: "/dashboard/general/marketing-strip",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
                 title: "About",
                 url: "/dashboard/general/about",
                 permissions: BitFieldSitePermission.MANAGE_CONTENT,

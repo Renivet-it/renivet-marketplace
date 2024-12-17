@@ -23,7 +23,7 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">Tickets</div>
+                    <h1 className="text-2xl font-bold">Tickets</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage the platform&apos;s tickets
                     </p>

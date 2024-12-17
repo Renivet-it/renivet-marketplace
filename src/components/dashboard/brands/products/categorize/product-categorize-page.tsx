@@ -30,7 +30,7 @@ export function ProductCategorizePage({
         <div className={cn("space-y-5", className)} {...props}>
             <div className="space-y-3 rounded-md bg-muted p-5">
                 <div className="flex items-start justify-between gap-2">
-                    <div className="text-lg font-semibold">{product.name}</div>
+                    <h2 className="text-xl font-semibold">{product.name}</h2>
                     <p className="bg-accent p-1 px-2 text-xs text-accent-foreground">
                         {product.brand.name}
                     </p>

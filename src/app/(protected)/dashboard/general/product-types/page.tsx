@@ -22,7 +22,7 @@ export default function Page() {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">Product Types</div>
+                    <h1 className="text-2xl font-bold">Product Types</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage product types for the products
                     </p>

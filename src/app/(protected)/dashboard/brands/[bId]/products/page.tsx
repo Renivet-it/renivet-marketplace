@@ -27,7 +27,7 @@ export default function Page(props: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">Products</div>
+                    <h1 className="text-2xl font-bold">Products</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage the brand&apos;s products
                     </p>

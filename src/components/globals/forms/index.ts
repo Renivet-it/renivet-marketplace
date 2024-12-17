@@ -10,6 +10,7 @@ export * from "./email-otp-verification-init";
 export * from "./forgot-password-s1";
 export * from "./forgot-password-s2";
 export * from "./invite-create";
+export * from "./marketing-strip-manage";
 export * from "./newsletter-subscribe";
 export * from "./phone-otp-verification";
 export * from "./product-cart-add";

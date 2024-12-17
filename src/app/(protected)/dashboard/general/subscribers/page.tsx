@@ -24,9 +24,9 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">
+                    <h1 className="text-2xl font-bold">
                         Newsletter Subscribers
-                    </div>
+                    </h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage the platform&apos;s newsletter subscribers
                     </p>

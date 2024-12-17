@@ -21,7 +21,7 @@ export default function Page({ params }: PageProps) {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Create New Product</div>
+                <h1 className="text-2xl font-bold">Create New Product</h1>
                 <p className="text-sm text-muted-foreground">
                     Create a new product for the brand
                 </p>

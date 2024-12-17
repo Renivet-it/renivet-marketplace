@@ -13,7 +13,7 @@ import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
@@ -31,11 +31,16 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
     const [search] = useQueryState("search", {
         defaultValue: "",
     });
+    const [isActive] = useQueryState(
+        "isActive",
+        parseAsBoolean.withDefault(true)
+    );
 
     const { refetch } = trpc.general.content.banners.getBanners.useQuery({
         page,
         limit,
         search,
+        isActive,
     });
 
     const { mutate: updateBannerStatus, isPending: isUpdating } =
@@ -101,7 +106,7 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
                             })
                         }
                     >
-                        Delete
+                        {banner.isActive ? "Deactivate" : "Activate"}
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

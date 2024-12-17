@@ -6,6 +6,8 @@ export * from "./brand-role-delete";
 export * from "./category-delete";
 export * from "./category-manage";
 export * from "./invite-create";
+export * from "./marketing-strip-delete";
+export * from "./marketing-strip-status";
 export * from "./product-type-delete";
 export * from "./product-type-manage";
 export * from "./role-delete";

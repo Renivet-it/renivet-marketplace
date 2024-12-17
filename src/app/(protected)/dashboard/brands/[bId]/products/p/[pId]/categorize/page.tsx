@@ -47,7 +47,7 @@ export default function Page({ params }: PageProps) {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Categorize Product</div>
+                <h1 className="text-2xl font-bold">Categorize Product</h1>
                 <p className="text-sm text-muted-foreground">
                     Categorize the product for better organization
                 </p>
