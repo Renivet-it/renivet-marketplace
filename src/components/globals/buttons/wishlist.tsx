@@ -107,7 +107,7 @@ export function WishlistButton({
                     iconClassName
                 )}
             />
-            <span className={cn(hideText && "sr-only")}>
+            <span className={cn("font-semibold", hideText && "sr-only")}>
                 {isProductWishlisted ? "Wishlisted" : "Wishlist"}
             </span>
         </Button>

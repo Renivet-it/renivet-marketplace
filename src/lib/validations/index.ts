@@ -1,6 +1,7 @@
 export * from "./address";
 export * from "./auth";
 export * from "./banned-brand-member";
+export * from "./banner";
 export * from "./blog";
 export * from "./brand";
 export * from "./brand-invite";
@@ -10,7 +11,7 @@ export * from "./brand-waitlist";
 export * from "./cart";
 export * from "./category";
 export * from "./clerk-webhook";
-export * from "./home";
+export * from "./marketing-strip";
 export * from "./newsletter-subscriber";
 export * from "./order";
 export * from "./order-item";

@@ -11,7 +11,7 @@ export default function Page() {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Create New Banner</div>
+                <h1 className="text-2xl font-bold">Create New Banner</h1>
                 <p className="text-sm text-muted-foreground">
                     Create a new banner and publish it to the platform
                 </p>

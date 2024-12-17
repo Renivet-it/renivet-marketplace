@@ -27,7 +27,9 @@ export function Blogs({ className, blog, ...props }: PageProps) {
                 <div className="flex w-full flex-col bg-muted lg:flex-row">
                     <div className="flex w-full flex-col items-center justify-center gap-5 p-6 text-center md:gap-10 md:p-10">
                         <h2 className="max-w-lg text-balance text-2xl font-semibold md:text-4xl">
-                            {blog.title}
+                            {blog.title.length > 50
+                                ? `${blog.title.slice(0, 50)}...`
+                                : blog.title}
                         </h2>
 
                         <p className="max-w-lg text-balance text-sm text-muted-foreground md:text-base">
@@ -43,7 +45,7 @@ export function Blogs({ className, blog, ...props }: PageProps) {
                         </Link>
                     </div>
 
-                    <div className="h-60 w-full overflow-hidden md:h-[25rem]">
+                    <div className="aspect-video w-full overflow-hidden">
                         <Image
                             src={
                                 blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL

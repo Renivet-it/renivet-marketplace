@@ -2,14 +2,18 @@ import { IntroModal } from "@/components/globals/modals";
 import {
     Arrivals,
     Blogs,
-    Collection,
     Expectations,
     Landing,
+    MarketingStrip,
     Offer,
     Popular,
     Theme,
 } from "@/components/home";
-import { bannerCache, blogCache } from "@/lib/redis/methods";
+import {
+    bannerCache,
+    blogCache,
+    marketingStripCache,
+} from "@/lib/redis/methods";
 import { Suspense } from "react";
 
 export default function Page() {
@@ -22,13 +26,15 @@ export default function Page() {
             >
                 <BannersFetch />
             </Suspense>
-            <Collection />
+            <Suspense>
+                <MarketingStripFetch />
+            </Suspense>
             <Offer />
             <Expectations />
             <Popular title="Best Sellers" />
             <Theme />
             <Arrivals title="New Arrivals" />
-            <Suspense fallback={null}>
+            <Suspense>
                 <BlogsFetch />
             </Suspense>
             <IntroModal />
@@ -53,4 +59,16 @@ async function BannersFetch() {
     );
 
     return <Landing banners={sorted} />;
+}
+
+async function MarketingStripFetch() {
+    const cachedMarktingStrip = await marketingStripCache.getAll();
+    if (!cachedMarktingStrip.length) return null;
+
+    const sorted = cachedMarktingStrip.sort(
+        (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return <MarketingStrip marketingStrip={sorted} />;
 }

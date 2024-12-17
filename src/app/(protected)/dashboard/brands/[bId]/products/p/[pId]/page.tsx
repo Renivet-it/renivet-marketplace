@@ -43,7 +43,7 @@ export default function Page({ params }: PageProps) {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Edit Product</div>
+                <h1 className="text-2xl font-bold">Edit Product</h1>
                 <p className="text-sm text-muted-foreground">
                     Edit the product and update it on the platform
                 </p>

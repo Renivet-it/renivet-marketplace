@@ -15,7 +15,7 @@ export default function Page() {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Create New Blog</div>
+                <h1 className="text-2xl font-bold">Create New Blog</h1>
                 <p className="text-sm text-muted-foreground">
                     Create a new blog post and publish it to the platform
                 </p>

@@ -3,6 +3,7 @@ export * from "./blog";
 export * from "./brand";
 export * from "./cart";
 export * from "./category";
+export * from "./marketing-strip";
 export * from "./product-type";
 export * from "./role";
 export * from "./sub-category";

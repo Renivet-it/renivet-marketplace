@@ -32,7 +32,7 @@ export default function Page({ params }: PageProps) {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Edit Role</div>
+                <h1 className="text-2xl font-bold">Edit Role</h1>
                 <p className="text-sm text-muted-foreground">
                     Edit the role details below
                 </p>

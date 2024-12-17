@@ -386,6 +386,13 @@
       "when": 1734364301360,
       "tag": "0055_same_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1734425902379,
+      "tag": "0056_loud_sumo",
+      "breakpoints": true
     }
   ]
 }

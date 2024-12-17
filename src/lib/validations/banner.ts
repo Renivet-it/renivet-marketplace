@@ -60,20 +60,7 @@ export const createBannerSchema = bannerSchema
 
 export const updateBannerSchema = createBannerSchema;
 
-export const cachedBannerSchema = bannerSchema.extend({
-    createdAt: z
-        .string({
-            required_error: "Created at is required",
-            invalid_type_error: "Created at must be a string",
-        })
-        .transform((x) => new Date(x)),
-    updatedAt: z
-        .string({
-            required_error: "Updated at is required",
-            invalid_type_error: "Updated at must be a string",
-        })
-        .transform((x) => new Date(x)),
-});
+export const cachedBannerSchema = bannerSchema;
 
 export type Banner = z.infer<typeof bannerSchema>;
 export type CreateBanner = z.infer<typeof createBannerSchema>;

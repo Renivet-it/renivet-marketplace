@@ -63,7 +63,7 @@ export function ProductCard({
                             className={cn(
                                 "w-full hover:bg-background hover:text-foreground",
                                 isProductWishlisted &&
-                                    "bg-background font-semibold text-primary hover:bg-muted",
+                                    "bg-background text-primary hover:bg-muted",
                                 !userId && "hidden"
                             )}
                             userId={userId}
@@ -89,8 +89,7 @@ export function ProductCard({
                                 size="icon"
                                 className={cn(
                                     "size-8 bg-background hover:bg-background",
-                                    isProductWishlisted &&
-                                        "font-semibold text-primary",
+                                    isProductWishlisted && "text-primary",
                                     !userId && "hidden"
                                 )}
                                 iconClassName={cn("stroke-primary")}

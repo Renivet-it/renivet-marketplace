@@ -178,7 +178,7 @@ export function ProductCategorizeForm({
                 )}
             >
                 <div className="space-y-4">
-                    <div className="text-sm font-medium">Categorize</div>
+                    <h3 className="text-sm font-semibold">Categorize</h3>
 
                     <div className="flex flex-wrap gap-2">
                         {categories
@@ -208,14 +208,14 @@ export function ProductCategorizeForm({
                 {sortedFields.length > 0 && (
                     <div className="space-y-4">
                         <div className="grid grid-cols-4 gap-4">
-                            <div className="text-sm font-medium">Category</div>
-                            <div className="text-sm font-medium">
+                            <h4 className="text-sm font-medium">Category</h4>
+                            <h4 className="text-sm font-medium">
                                 Sub Category
-                            </div>
-                            <div className="text-sm font-medium">
+                            </h4>
+                            <h4 className="text-sm font-medium">
                                 Product Type
-                            </div>
-                            <div className="text-sm font-medium">Action</div>
+                            </h4>
+                            <h4 className="text-sm font-medium">Action</h4>
                         </div>
 
                         <Separator />
