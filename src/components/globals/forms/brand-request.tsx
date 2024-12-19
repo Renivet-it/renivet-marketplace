@@ -1,7 +1,7 @@
 "use client";
 
-import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Form,
     FormControl,
@@ -11,78 +11,95 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-general";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea-general";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
-import {
-    cn,
-    convertBytesToHumanReadable,
-    getUploadThingFileKey,
-    handleClientError,
-} from "@/lib/utils";
+import { handleClientError } from "@/lib/utils";
 import {
     CreateBrandRequest,
     createBrandRequestSchema,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { useDropzone } from "@uploadthing/react";
-import Player from "next-video/player";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ElementRef, useCallback, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
-    generateClientDropzoneAccept,
-    generatePermittedFileTypes,
-} from "uploadthing/client";
+    BrandRequestBankVerificationUploaderDropzone,
+    BrandRequestDemoVideoUploaderDropzone,
+    BrandRequestIECCertificateUploaderDropzone,
+    BrandRequestLogoUploaderDropzone,
+    BrandRequestUdyamCertificateUploaderDropzone,
+} from "../dropzones";
 
 export function BrandRequestForm() {
     const router = useRouter();
 
-    const [preview, setPreview] = useState<string | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [logoFile, setLogoFile] = useState<File | null>(null);
 
-    const [file, setFile] = useState<File | null>(null);
-    const inputRef = useRef<ElementRef<"input">>(null!);
+    const [demoVideoPreview, setDemoVideoPreview] = useState<string | null>(
+        null
+    );
+    const [demoVideoFile, setDemoVideoFile] = useState<File | null>(null);
+
+    const [bankVerificationPreview, setBankVerificationPreview] = useState<
+        string | null
+    >(null);
+    const [bankVerificationFile, setBankVerificationFile] =
+        useState<File | null>(null);
+
+    const [udyamCertificatePreview, setUdyamCertificatePreview] = useState<
+        string | null
+    >(null);
+    const [udyamCertificateFile, setUdyamCertificateFile] =
+        useState<File | null>(null);
+
+    const [iecCertificatePreview, setIecCertificatePreview] = useState<
+        string | null
+    >(null);
+    const [iecCertificateFile, setIecCertificateFile] = useState<File | null>(
+        null
+    );
 
     const form = useForm<CreateBrandRequest>({
         resolver: zodResolver(createBrandRequestSchema),
         defaultValues: {
             name: "",
             email: "",
-            website: "",
-            demoUrl: "",
+            phone: "",
             message: "",
+            website: "",
+            logoUrl: "",
+            demoUrl: "",
+            gstin: "",
+            pan: "",
+            bankName: "",
+            bankAccountHolderName: "",
+            bankAccountNumber: "",
+            bankIfscCode: "",
+            bankAccountVerificationDocumentUrl: "",
+            authorizedSignatoryName: "",
+            authorizedSignatoryEmail: "",
+            authorizedSignatoryPhone: "",
+            hasAcceptedTerms: false,
+            udyamRegistrationCertificateUrl: "",
+            iecCertificateUrl: "",
         },
     });
 
-    const { startUpload, routeConfig } = useUploadThing(
+    const { startUpload: startDemoVideoUpload } = useUploadThing(
         "brandRequestDemoUploader"
     );
-
-    const onDrop = useCallback((acceptedFiles: File[]) => {
-        const file = acceptedFiles[0];
-        if (file) {
-            setFile(file);
-            const previewUrl = URL.createObjectURL(file);
-            setPreview(previewUrl);
-        }
-    }, []);
-
-    const removeVideo = () => {
-        setFile(null);
-        setPreview(null);
-        form.setValue("demoUrl", "");
-    };
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
-        accept: generateClientDropzoneAccept(
-            generatePermittedFileTypes(routeConfig).fileTypes
-        ),
-        maxFiles: 1,
-        maxSize: 32 * 1024 * 1024,
-    });
+    const { startUpload: startLogoUpload } = useUploadThing(
+        "brandRequestLogoUploader"
+    );
+    const { startUpload: startDocUpload } = useUploadThing(
+        "brandRequestDocUploader"
+    );
 
     const { mutateAsync: createRequestAsync } =
         trpc.general.brands.requests.createRequest.useMutation();
@@ -93,13 +110,50 @@ export function BrandRequestForm() {
             return { toastId };
         },
         mutationFn: async (values: CreateBrandRequest) => {
-            if (file) {
-                const res = await startUpload([file]);
-                if (!res?.length) throw new Error("Failed to upload video");
+            if (!logoFile) throw new Error("Logo is required");
+            if (!bankVerificationFile)
+                throw new Error("Bank verification document is required");
 
-                const video = res[0];
-                values.demoUrl = video.url;
-            }
+            const [
+                logoRes,
+                videoRes,
+                bankVerificationRes,
+                udyamCertRes,
+                iecCertRes,
+            ] = await Promise.all([
+                startLogoUpload([logoFile]),
+                demoVideoFile ? startDemoVideoUpload([demoVideoFile]) : null,
+                startDocUpload([bankVerificationFile]),
+                udyamCertificateFile
+                    ? startDocUpload([udyamCertificateFile])
+                    : null,
+                iecCertificateFile
+                    ? startDocUpload([iecCertificateFile])
+                    : null,
+            ]);
+
+            if (!logoRes?.length) throw new Error("Failed to upload logo");
+            if (demoVideoFile && !videoRes?.length)
+                throw new Error("Failed to upload demo video");
+            if (!bankVerificationRes?.length)
+                throw new Error("Failed to upload bank verification document");
+            if (udyamCertificateFile && !udyamCertRes?.length)
+                throw new Error("Failed to upload Udyam certificate");
+            if (iecCertificateFile && !iecCertRes?.length)
+                throw new Error("Failed to upload IEC certificate");
+
+            const logo = logoRes[0];
+            const demoVideo = videoRes ? videoRes[0] : null;
+            const bankVerification = bankVerificationRes[0];
+            const udyamCert = udyamCertRes ? udyamCertRes[0] : null;
+            const iecCert = iecCertRes ? iecCertRes[0] : null;
+
+            values.logoUrl = logo.url;
+            if (demoVideo) values.demoUrl = demoVideo.url;
+            values.bankAccountVerificationDocumentUrl = bankVerification.url;
+            if (udyamCert)
+                values.udyamRegistrationCertificateUrl = udyamCert.url;
+            if (iecCert) values.iecCertificateUrl = iecCert.url;
 
             await createRequestAsync(values);
         },
@@ -108,8 +162,22 @@ export function BrandRequestForm() {
                 "Request sent successfully, we'll get back to you soon",
                 { id: toastId }
             );
-            setPreview(null);
-            setFile(null);
+
+            setLogoPreview(null);
+            setLogoFile(null);
+
+            setDemoVideoPreview(null);
+            setDemoVideoFile(null);
+
+            setBankVerificationPreview(null);
+            setBankVerificationFile(null);
+
+            setUdyamCertificatePreview(null);
+            setUdyamCertificateFile(null);
+
+            setIecCertificatePreview(null);
+            setIecCertificateFile(null);
+
             form.reset(data);
             router.refresh();
         },
@@ -118,191 +186,508 @@ export function BrandRequestForm() {
         },
     });
 
+    useEffect(() => {
+        console.log(form.formState.isDirty);
+    }, [form.formState.isDirty]);
+
     return (
         <Form {...form}>
             <form
                 className="space-y-6"
                 onSubmit={form.handleSubmit((values) => sendRequest(values))}
             >
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Brand Name</FormLabel>
+                <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">
+                        General Information
+                    </h2>
 
-                            <FormControl>
-                                <Input
-                                    placeholder="Enter brand name"
-                                    disabled={isRequestSending}
-                                    {...field}
-                                />
-                            </FormControl>
+                    <Separator />
 
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                    <div className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Brand Name</FormLabel>
 
-                <div className="flex flex-col items-center gap-4 md:flex-row">
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                            <FormItem className="w-full">
-                                <FormLabel>Brand Email</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter brand name"
+                                            disabled={isRequestSending}
+                                            {...field}
+                                        />
+                                    </FormControl>
 
-                                <FormControl>
-                                    <Input
-                                        placeholder="Enter brand email"
-                                        disabled={isRequestSending}
-                                        {...field}
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>Brand Email</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter brand email"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="phone"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>Phone</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                inputMode="tel"
+                                                placeholder="Enter brand phone number"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                                onChange={(e) => {
+                                                    const value =
+                                                        e.target.value.replace(
+                                                            /[^0-9-+]/g,
+                                                            ""
+                                                        );
+
+                                                    field.onChange(value);
+                                                }}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="website"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>Brand Website</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter brand website"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <FormField
+                            control={form.control}
+                            name="message"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Message</FormLabel>
+
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder="Briefly discuss about your brand, your goals, and why you want to work with us"
+                                            minRows={8}
+                                            disabled={isRequestSending}
+                                            {...field}
+                                        />
+                                    </FormControl>
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="logoUrl"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>Logo</FormLabel>
+
+                                    <BrandRequestLogoUploaderDropzone
+                                        file={logoFile}
+                                        form={form}
+                                        isPending={isRequestSending}
+                                        preview={logoPreview}
+                                        setFile={setLogoFile}
+                                        setPreview={setLogoPreview}
                                     />
-                                </FormControl>
 
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                    <FormField
-                        control={form.control}
-                        name="website"
-                        render={({ field }) => (
-                            <FormItem className="w-full">
-                                <FormLabel>Brand Website</FormLabel>
+                        <FormField
+                            control={form.control}
+                            name="demoUrl"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>Demo Video</FormLabel>
 
-                                <FormControl>
-                                    <Input
-                                        placeholder="Enter brand website"
-                                        disabled={isRequestSending}
-                                        {...field}
+                                    <BrandRequestDemoVideoUploaderDropzone
+                                        file={demoVideoFile}
+                                        form={form}
+                                        isPending={isRequestSending}
+                                        preview={demoVideoPreview}
+                                        setFile={setDemoVideoFile}
+                                        setPreview={setDemoVideoPreview}
                                     />
-                                </FormControl>
 
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">
+                        Business Information
+                    </h2>
+
+                    <Separator />
+
+                    <div className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="gstin"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>GSTIN</FormLabel>
+
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter your brand's GST Identification Number"
+                                            disabled={isRequestSending}
+                                            {...field}
+                                        />
+                                    </FormControl>
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="pan"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>PAN</FormLabel>
+
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter your brand's Permanent Account Number"
+                                            disabled={isRequestSending}
+                                            {...field}
+                                        />
+                                    </FormControl>
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                            <FormField
+                                control={form.control}
+                                name="bankName"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>Bank Name</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter your brand's bank name"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="bankAccountHolderName"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>
+                                            Bank Account Holder Name
+                                        </FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter bank account holder name (with proper casing)"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                            <FormField
+                                control={form.control}
+                                name="bankAccountNumber"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>
+                                            Bank Account Number
+                                        </FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter bank account number"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="bankIfscCode"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>Bank IFSC Code</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter bank IFSC code"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <FormField
+                            control={form.control}
+                            name="bankAccountVerificationDocumentUrl"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Bank Verification Document (Cancelled
+                                        Cheque, Bank Statement, etc.)
+                                    </FormLabel>
+
+                                    <BrandRequestBankVerificationUploaderDropzone
+                                        file={bankVerificationFile}
+                                        form={form}
+                                        isPending={isRequestSending}
+                                        preview={bankVerificationPreview}
+                                        setFile={setBankVerificationFile}
+                                        setPreview={setBankVerificationPreview}
+                                    />
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="authorizedSignatoryName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Authorized Contact Person Name
+                                    </FormLabel>
+
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter authorized contact person name"
+                                            disabled={isRequestSending}
+                                            {...field}
+                                        />
+                                    </FormControl>
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                            <FormField
+                                control={form.control}
+                                name="authorizedSignatoryEmail"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>
+                                            Authorized Contact Person Email
+                                        </FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter authorized contact person email"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="authorizedSignatoryPhone"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>
+                                            Authorized Contact Person Phone
+                                        </FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                inputMode="tel"
+                                                placeholder="Enter authorized contact person phone number"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                                onChange={(e) => {
+                                                    const value =
+                                                        e.target.value.replace(
+                                                            /[^0-9-+]/g,
+                                                            ""
+                                                        );
+
+                                                    field.onChange(value);
+                                                }}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">
+                        Optional Information
+                    </h2>
+
+                    <Separator />
+
+                    <div className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="udyamRegistrationCertificateUrl"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Udyam Certificate (if applicable for
+                                        MSMEs)
+                                    </FormLabel>
+
+                                    <BrandRequestUdyamCertificateUploaderDropzone
+                                        file={udyamCertificateFile}
+                                        form={form}
+                                        isPending={isRequestSending}
+                                        preview={udyamCertificatePreview}
+                                        setFile={setUdyamCertificateFile}
+                                        setPreview={setUdyamCertificatePreview}
+                                    />
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="iecCertificateUrl"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>IEC Certificate</FormLabel>
+
+                                    <BrandRequestIECCertificateUploaderDropzone
+                                        file={iecCertificateFile}
+                                        form={form}
+                                        isPending={isRequestSending}
+                                        preview={iecCertificatePreview}
+                                        setFile={setIecCertificateFile}
+                                        setPreview={setIecCertificatePreview}
+                                    />
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                 </div>
 
                 <FormField
                     control={form.control}
-                    name="message"
+                    name="hasAcceptedTerms"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Message</FormLabel>
-
-                            <FormControl>
-                                <Textarea
-                                    placeholder="Briefly discuss about your brand, your goals, and why you want to work with us"
-                                    minRows={8}
-                                    disabled={isRequestSending}
-                                    {...field}
-                                />
-                            </FormControl>
-
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="demoUrl"
-                    render={() => (
-                        <FormItem>
-                            <FormLabel>Demo Video</FormLabel>
-
-                            {preview && (
-                                <div
-                                    className={cn(
-                                        "hidden space-y-2",
-                                        preview && "block"
-                                    )}
-                                >
-                                    <Player src={preview} autoPlay muted />
-
-                                    <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
-                                        <p className="text-sm font-semibold">
-                                            {file
-                                                ? `${
-                                                      file.name.length > 20
-                                                          ? `${file.name.slice(
-                                                                0,
-                                                                20
-                                                            )}...`
-                                                          : file.name
-                                                  } (${convertBytesToHumanReadable(file.size)})`
-                                                : getUploadThingFileKey(preview)
-                                                        .length > 20
-                                                  ? `${getUploadThingFileKey(
-                                                        preview
-                                                    ).slice(0, 20)}...`
-                                                  : getUploadThingFileKey(
-                                                        preview
-                                                    )}
-                                        </p>
-
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={removeVideo}
-                                                disabled={
-                                                    isRequestSending || !file
-                                                }
-                                            >
-                                                Remove Video
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                onClick={() =>
-                                                    inputRef.current.click()
-                                                }
-                                                disabled={isRequestSending}
-                                            >
-                                                Change Video
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div
-                                {...getRootProps()}
-                                className={cn(
-                                    "relative cursor-pointer border-2 border-dashed border-input p-8 py-16 text-center",
-                                    isDragActive &&
-                                        "border-green-500 bg-green-50",
-                                    isRequestSending &&
-                                        "cursor-not-allowed opacity-50",
-                                    preview && "hidden"
-                                )}
-                                onClick={() => inputRef.current.click()}
-                            >
+                            <div className="flex items-center gap-2">
                                 <FormControl>
-                                    <input
-                                        {...getInputProps()}
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
                                         disabled={isRequestSending}
-                                        ref={inputRef}
                                     />
                                 </FormControl>
 
-                                <div className="space-y-2 md:space-y-4">
-                                    <div className="flex justify-center">
-                                        <Icons.CloudUpload className="size-10 md:size-12" />
-                                    </div>
-
-                                    <div className="space-y-1 md:space-y-0">
-                                        <p className="text-sm md:text-base">
-                                            Choose a file or Drag and Drop
-                                        </p>
-                                        <p className="text-xs text-muted-foreground md:text-sm">
-                                            Video (32 MB | .mp4)
-                                        </p>
-                                    </div>
-                                </div>
+                                <FormLabel>
+                                    I agree to the{" "}
+                                    <Link
+                                        href="/terms"
+                                        target="_blank"
+                                        className="text-primary underline"
+                                    >
+                                        Terms and Conditions
+                                    </Link>{" "}
+                                    and{" "}
+                                    <Link
+                                        href="/privacy"
+                                        target="_blank"
+                                        className="text-primary underline"
+                                    >
+                                        Privacy Policy
+                                    </Link>{" "}
+                                    of the website.
+                                </FormLabel>
                             </div>
 
                             <FormMessage />

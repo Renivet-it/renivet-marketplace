@@ -64,6 +64,9 @@ class BrandRequestQuery {
         type?: "ne" | "eq"
     ) {
         const data = await db.query.brandRequests.findFirst({
+            with: {
+                owner: true,
+            },
             where: and(
                 eq(brandRequests.id, id),
                 !!status

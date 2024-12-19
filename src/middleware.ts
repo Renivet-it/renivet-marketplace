@@ -66,6 +66,12 @@ export default clerkMiddleware(async (auth, req) => {
                     .flat();
 
                 if (url.pathname !== "/dashboard/general") {
+                    if (
+                        url.pathname === "/dashboard/general/terms" ||
+                        url.pathname === "/dashboard/general/privacy"
+                    )
+                        return NextResponse.next();
+
                     const accessedRoute = routes.find((route) =>
                         url.pathname.startsWith(route.url)
                     );

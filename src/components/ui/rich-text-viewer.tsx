@@ -1,3 +1,5 @@
+"use client";
+
 import { Extension } from "@tiptap/core";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";

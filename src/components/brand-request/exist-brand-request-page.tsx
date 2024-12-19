@@ -7,12 +7,19 @@ import {
     NoticeIcon,
     NoticeTitle,
 } from "@/components/ui/notice-general";
-import { convertValueToLabel } from "@/lib/utils";
-import { BrandRequest } from "@/lib/validations";
+import { trpc } from "@/lib/trpc/client";
+import { convertValueToLabel, handleClientError } from "@/lib/utils";
+import {
+    BrandRequest,
+    BrandRequestWithoutConfidentials,
+} from "@/lib/validations";
 import Player from "next-video/player";
 import Link from "next/link";
 import { useState } from "react";
-import { RequestWithdrawModal } from "../globals/modals";
+import { toast } from "sonner";
+import { RequestWithdrawModal, ViewConfidentialModal } from "../globals/modals";
+import { Icons } from "../icons";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button-general";
 import {
@@ -26,11 +33,33 @@ import {
 import { Separator } from "../ui/separator";
 
 interface PageProps extends GenericProps {
-    brandRequest: BrandRequest;
+    brandRequest: BrandRequestWithoutConfidentials;
 }
 
 export function ExistBrandRequestPage({ brandRequest }: PageProps) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+    const [isConfidentialDataModalOpen, setIsConfidentialDataModalOpen] =
+        useState(false);
+    const [confidentialData, setConfidentialData] =
+        useState<BrandRequest | null>(null);
+
+    const { mutate: getConfidentialData, isPending: isDataFetching } =
+        trpc.general.brands.requests.getRequestByOwnerId.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Fetching confidential data...");
+                return { toastId };
+            },
+            onSuccess: (data, __, { toastId }) => {
+                toast.success("Confidential data fetched successfully", {
+                    id: toastId,
+                });
+                setConfidentialData(data as BrandRequest);
+                setIsConfidentialDataModalOpen(true);
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
 
     return (
         <>
@@ -70,7 +99,20 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                 <Card className="rounded-none">
                     <div className="flex items-center justify-between gap-5">
                         <CardHeader>
-                            <CardTitle>{brandRequest.name}</CardTitle>
+                            <div className="flex items-center gap-2">
+                                <Avatar className="size-6 rounded-none">
+                                    <AvatarImage
+                                        src={brandRequest.logoUrl}
+                                        alt={brandRequest.name}
+                                    />
+                                    <AvatarFallback>
+                                        {brandRequest.name[0]}
+                                    </AvatarFallback>
+                                </Avatar>
+
+                                <CardTitle>{brandRequest.name}</CardTitle>
+                            </div>
+
                             <CardDescription>
                                 Brand Request for {brandRequest.name} (
                                 {brandRequest.email})
@@ -79,6 +121,7 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
 
                         <div className="p-6">
                             <Badge
+                                className="rounded-none"
                                 variant={
                                     brandRequest.status === "pending"
                                         ? "default"
@@ -92,7 +135,9 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                         </div>
                     </div>
 
-                    <CardContent className="space-y-4">
+                    <Separator />
+
+                    <CardContent className="space-y-4 pt-6">
                         <p
                             className="text-sm text-muted-foreground"
                             dangerouslySetInnerHTML={{
@@ -102,15 +147,57 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                                 ),
                             }}
                         />
+
                         {brandRequest.demoUrl && (
-                            <>
+                            <div className="space-y-4">
                                 <Separator />
+
+                                <h5 className="font-medium">Demo Video:</h5>
                                 <Player src={brandRequest.demoUrl} />
-                            </>
+                            </div>
                         )}
+
+                        <Separator />
+
+                        <Notice>
+                            <NoticeContent>
+                                <NoticeTitle className="gap-2">
+                                    <Icons.Briefcase className="size-4" />
+                                    <span>Business Details (Confidential)</span>
+                                </NoticeTitle>
+
+                                <p className="text-sm">
+                                    Click the button to view the confidential
+                                    business details.
+                                </p>
+                            </NoticeContent>
+
+                            <NoticeButton asChild>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isDataFetching}
+                                    onClick={() => {
+                                        if (confidentialData)
+                                            setIsConfidentialDataModalOpen(
+                                                true
+                                            );
+                                        else
+                                            getConfidentialData({
+                                                ownerId: brandRequest.ownerId,
+                                                sendConfidentialData: true,
+                                            });
+                                    }}
+                                >
+                                    View Details
+                                </Button>
+                            </NoticeButton>
+                        </Notice>
                     </CardContent>
 
-                    <CardFooter className="justify-between gap-4 text-sm text-muted-foreground">
+                    <Separator />
+
+                    <CardFooter className="justify-between gap-4 pt-6 text-sm text-muted-foreground">
                         <Link
                             href={`mailto:${brandRequest.email}`}
                             className="hover:underline"
@@ -134,6 +221,14 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                 isOpen={isWithdrawModalOpen}
                 setIsOpen={setIsWithdrawModalOpen}
             />
+
+            {confidentialData && (
+                <ViewConfidentialModal
+                    brandRequest={confidentialData}
+                    isOpen={isConfidentialDataModalOpen}
+                    setIsOpen={setIsConfidentialDataModalOpen}
+                />
+            )}
         </>
     );
 }
