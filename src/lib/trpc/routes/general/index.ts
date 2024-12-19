@@ -3,6 +3,7 @@ export * from "./brands";
 export * from "./brands-waitlist";
 export * from "./categories";
 export * from "./content";
+export * from "./legal";
 export * from "./newsletter-subscribers";
 export * from "./orders";
 export * from "./product-types";

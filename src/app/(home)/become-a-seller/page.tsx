@@ -12,6 +12,7 @@ import {
 import { db } from "@/lib/db";
 import { brandRequestQueries } from "@/lib/db/queries";
 import { brandMembers } from "@/lib/db/schema";
+import { brandRequestWithoutConfidentialsSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";
@@ -66,8 +67,16 @@ async function BecomeASellerFetch() {
             brandRequestQueries.getRecentRejectedRequest(userId),
         ]);
 
-    if (existingBrandRequest)
-        return <ExistBrandRequestPage brandRequest={existingBrandRequest} />;
+    if (existingBrandRequest) {
+        const existingBrandRequestWithoutConfidentials =
+            brandRequestWithoutConfidentialsSchema.parse(existingBrandRequest);
+
+        return (
+            <ExistBrandRequestPage
+                brandRequest={existingBrandRequestWithoutConfidentials}
+            />
+        );
+    }
 
     if (existingBrandMember && !existingBrandMember.isOwner)
         return (

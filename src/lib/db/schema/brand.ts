@@ -18,14 +18,30 @@ export const brandRequests = pgTable("brand_requests", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     name: text("name").notNull(),
     email: text("email").notNull(),
+    phone: text("phone").notNull(),
+    message: text("message").notNull(),
     website: text("website").notNull(),
     ownerId: text("owner_id")
         .notNull()
         .references(() => users.id, {
             onDelete: "cascade",
         }),
+    logoUrl: text("logo_url").notNull(),
     demoUrl: text("demo_url"),
-    message: text("message").notNull(),
+    gstin: text("gstin").notNull(),
+    pan: text("pan").notNull(),
+    bankName: text("bank_name").notNull(),
+    bankAccountHolderName: text("bank_account_holder_name").notNull(),
+    bankAccountNumber: text("bank_account_number").notNull(),
+    bankIfscCode: text("bank_ifsc_code").notNull(),
+    bankAccountVerificationDocumentUrl: text(
+        "bank_account_verification_document_url"
+    ).notNull(),
+    authorizedSignatoryName: text("authorized_signatory_name").notNull(),
+    authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
+    authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
+    udyamRegistrationCertificateUrl: text("udyam_registration_certificate_url"),
+    iecCertificateUrl: text("iec_certificate_url"),
     status: text("status", {
         enum: ["pending", "approved", "rejected"],
     })
@@ -33,6 +49,7 @@ export const brandRequests = pgTable("brand_requests", {
         .default("pending"),
     rejectionReason: text("rejection_reason"),
     rejectedAt: timestamp("rejected_at"),
+    hasAcceptedTerms: boolean("has_accepted_terms").notNull().default(false),
     ...timestamps,
 });
 
@@ -50,6 +67,31 @@ export const brands = pgTable("brands", {
             onDelete: "cascade",
         }),
     bio: text("bio"),
+    ...timestamps,
+});
+
+export const brandConfidentials = pgTable("brand_confidentials", {
+    id: uuid("id")
+        .primaryKey()
+        .notNull()
+        .unique()
+        .references(() => brands.id, {
+            onDelete: "cascade",
+        }),
+    gstin: text("gstin").notNull(),
+    pan: text("pan").notNull(),
+    bankName: text("bank_name").notNull(),
+    bankAccountHolderName: text("bank_account_holder_name").notNull(),
+    bankAccountNumber: text("bank_account_number").notNull(),
+    bankIfscCode: text("bank_ifsc_code").notNull(),
+    bankAccountVerificationDocumentUrl: text(
+        "bank_account_verification_document_url"
+    ),
+    authorizedSignatoryName: text("authorized_signatory_name").notNull(),
+    authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
+    authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
+    udyamRegistrationCertificateUrl: text("udyam_registration_certificate_url"),
+    iecCertificateUrl: text("iec_certificate_url"),
     ...timestamps,
 });
 

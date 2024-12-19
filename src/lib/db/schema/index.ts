@@ -5,6 +5,7 @@ export * from "./brand-waitlist";
 export * from "./cart";
 export * from "./category";
 export * from "./content";
+export * from "./legal";
 export * from "./marketing-strip";
 export * from "./newsletter-subscriber";
 export * from "./order";

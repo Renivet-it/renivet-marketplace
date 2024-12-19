@@ -7,6 +7,7 @@ import LucideIcons, {
     AudioWaveform,
     BookOpen,
     Bot,
+    Briefcase,
     Calendar,
     Check,
     ChevronDown,
@@ -71,6 +72,7 @@ import LucideIcons, {
     Search,
     Settings2,
     Share,
+    Shield,
     ShoppingBag,
     ShoppingCart,
     SlidersHorizontal,
@@ -91,6 +93,8 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Briefcase,
+    Shield,
     Star,
     RotateCcw,
     Filter,

@@ -17,6 +17,7 @@ import {
 } from "@/lib/utils";
 import {
     brandRequestSchema,
+    brandRequestWithoutConfidentialsSchema,
     createBrandRequestSchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
@@ -53,6 +54,43 @@ export const brandRequestsRouter = createTRPCRouter({
             });
 
             return data;
+        }),
+    getRequestByOwnerId: protectedProcedure
+        .input(
+            z.object({
+                ownerId: z.string(),
+                sendConfidentialData: z.boolean().default(false),
+            })
+        )
+        .use(({ ctx, input, next }) => {
+            const { user } = ctx;
+            const { ownerId } = input;
+
+            if (user.id !== ownerId)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not allowed to view this request",
+                });
+
+            return next({ ctx, input });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { ownerId, sendConfidentialData } = input;
+
+            const data = await queries.brandRequests.getBrandRequestByOwnerId(
+                ownerId,
+                "rejected",
+                "ne"
+            );
+            if (!data)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand request not found",
+                });
+
+            if (sendConfidentialData) return data;
+            return brandRequestWithoutConfidentialsSchema.parse(data);
         }),
     createRequest: protectedProcedure
         .input(createBrandRequestSchema)

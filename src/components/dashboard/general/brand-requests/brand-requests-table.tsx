@@ -1,6 +1,8 @@
 "use client";
 
+import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button-dash";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
@@ -26,9 +28,9 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
+import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
-import { BrandRequestAction } from "./brand-request-action";
 
 export type TableBrandRequests = BrandRequestWithOwner & {
     registrant: string;
@@ -54,19 +56,19 @@ const columns: ColumnDef<TableBrandRequests>[] = [
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
-            const request = row.original;
+            const data = row.original;
 
             return (
                 <Badge
                     variant={
-                        request.status === "pending"
+                        data.status === "pending"
                             ? "default"
-                            : request.status === "approved"
+                            : data.status === "approved"
                               ? "secondary"
                               : "destructive"
                     }
                 >
-                    {convertValueToLabel(request.status)}
+                    {convertValueToLabel(data.status)}
                 </Badge>
             );
         },
@@ -75,15 +77,25 @@ const columns: ColumnDef<TableBrandRequests>[] = [
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => {
-            const request = row.original;
-            return format(new Date(request.createdAt), "MMM dd, yyyy");
+            const data = row.original;
+            return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
     {
         id: "actions",
         cell: ({ row }) => {
-            const request = row.original;
-            return <BrandRequestAction request={request} />;
+            const data = row.original;
+
+            return (
+                <Button variant="ghost" className="size-8 p-0" asChild>
+                    <Link
+                        href={`/dashboard/general/brands/requests/${data.id}`}
+                    >
+                        <Icons.Eye className="size-4" />
+                        <span className="sr-only">View</span>
+                    </Link>
+                </Button>
+            );
         },
     },
 ];

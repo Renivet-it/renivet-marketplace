@@ -7,6 +7,7 @@ export * from "./brand-member";
 export * from "./brand-request";
 export * from "./cart";
 export * from "./category";
+export * from "./legal";
 export * from "./marketing-strip";
 export * from "./order";
 export * from "./product";
