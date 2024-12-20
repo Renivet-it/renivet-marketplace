@@ -256,7 +256,7 @@ export function BrandRequestPage({ request }: PageProps) {
                                             />
 
                                             <button
-                                                className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-sm bg-background/10 text-background shadow-md backdrop-blur-sm disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-sm bg-foreground text-background shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                                                 disabled={isLogoDownloading}
                                                 onClick={() => downloadLogo()}
                                             >
@@ -368,22 +368,24 @@ export function BrandRequestPage({ request }: PageProps) {
                     </CardContent>
                 </Card>
 
-                <div className="flex flex-col items-center gap-2 md:flex-row">
-                    <Button
-                        variant="destructive"
-                        className="w-full"
-                        onClick={() => setIsRejectModalOpen(true)}
-                    >
-                        Reject
-                    </Button>
+                {request.status === "pending" && (
+                    <div className="flex flex-col items-center gap-2 md:flex-row">
+                        <Button
+                            variant="destructive"
+                            className="w-full"
+                            onClick={() => setIsRejectModalOpen(true)}
+                        >
+                            Reject
+                        </Button>
 
-                    <Button
-                        className="w-full"
-                        onClick={() => setIsApproveModalOpen(true)}
-                    >
-                        Approve
-                    </Button>
-                </div>
+                        <Button
+                            className="w-full"
+                            onClick={() => setIsApproveModalOpen(true)}
+                        >
+                            Approve
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <RequestApproveModal

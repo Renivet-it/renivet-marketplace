@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, formatPriceTag } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
@@ -109,10 +109,7 @@ export function ProductCard({
                 </div>
 
                 <p className="text-sm font-semibold">
-                    {Intl.NumberFormat("en-IN", {
-                        style: "currency",
-                        currency: "INR",
-                    }).format(parseFloat(product.price))}
+                    {formatPriceTag(parseFloat(product.price), true)}
                 </p>
             </div>
         </div>

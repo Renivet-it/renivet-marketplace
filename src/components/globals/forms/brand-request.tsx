@@ -148,12 +148,12 @@ export function BrandRequestForm() {
             const udyamCert = udyamCertRes ? udyamCertRes[0] : null;
             const iecCert = iecCertRes ? iecCertRes[0] : null;
 
-            values.logoUrl = logo.url;
-            if (demoVideo) values.demoUrl = demoVideo.url;
-            values.bankAccountVerificationDocumentUrl = bankVerification.url;
+            values.logoUrl = logo.appUrl;
+            if (demoVideo) values.demoUrl = demoVideo.appUrl;
+            values.bankAccountVerificationDocumentUrl = bankVerification.appUrl;
             if (udyamCert)
-                values.udyamRegistrationCertificateUrl = udyamCert.url;
-            if (iecCert) values.iecCertificateUrl = iecCert.url;
+                values.udyamRegistrationCertificateUrl = udyamCert.appUrl;
+            if (iecCert) values.iecCertificateUrl = iecCert.appUrl;
 
             await createRequestAsync(values);
         },

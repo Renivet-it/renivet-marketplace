@@ -70,6 +70,7 @@ import LucideIcons, {
     Scale,
     ScrollText,
     Search,
+    Send,
     Settings2,
     Share,
     Shield,
@@ -93,6 +94,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Send,
     Briefcase,
     Shield,
     Star,

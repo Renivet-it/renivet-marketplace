@@ -17,7 +17,7 @@ class ProductQuery {
             and(
                 eq(products.brandId, brandId),
                 status !== undefined
-                    ? eq(products.status, status === "active")
+                    ? eq(products.isDeleted, status === "deleted")
                     : undefined
             )
         );
@@ -39,6 +39,7 @@ class ProductQuery {
         sortBy = "createdAt",
         sortOrder = "desc",
         colors,
+        status,
     }: {
         limit: number;
         page: number;
@@ -54,6 +55,7 @@ class ProductQuery {
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
         colors?: string[];
+        status?: "idle" | "pending" | "approved" | "rejected";
     }) {
         const searchQuery = !!search?.length
             ? sql`(
@@ -79,7 +81,7 @@ class ProductQuery {
             isPublished !== undefined
                 ? eq(products.isPublished, isPublished)
                 : undefined,
-            eq(products.status, true),
+            eq(products.isDeleted, false),
             !!colors?.length
                 ? sql`EXISTS (
                 SELECT 1 FROM jsonb_array_elements(${products.colors}) AS color
@@ -89,6 +91,7 @@ class ProductQuery {
                 )}]`})
               )`
                 : undefined,
+            status !== undefined ? eq(products.status, status) : undefined,
         ];
 
         if (
@@ -262,6 +265,7 @@ class ProductQuery {
     async createProduct(
         values: CreateProduct & {
             slug: string;
+            sustainabilityCertificateUrl: string;
         }
     ) {
         const data = await db
@@ -277,12 +281,61 @@ class ProductQuery {
         productId: string,
         values: UpdateProduct & {
             slug: string;
+            sustainabilityCertificateUrl: string;
         }
     ) {
         const data = await db
             .update(products)
             .set({
                 ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(products.id, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async sendProductForReview(productId: string) {
+        const data = await db
+            .update(products)
+            .set({
+                isSentForReview: true,
+                status: "pending",
+                updatedAt: new Date(),
+            })
+            .where(eq(products.id, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async approveProduct(productId: string) {
+        const data = await db
+            .update(products)
+            .set({
+                status: "approved",
+                isSentForReview: false,
+                lastReviewedAt: new Date(),
+                updatedAt: new Date(),
+            })
+            .where(eq(products.id, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async rejectProduct(productId: string, rejectionReason: string | null) {
+        const data = await db
+            .update(products)
+            .set({
+                status: "rejected",
+                rejectionReason,
+                isSentForReview: false,
+                lastReviewedAt: new Date(),
                 updatedAt: new Date(),
             })
             .where(eq(products.id, productId))
@@ -356,7 +409,8 @@ class ProductQuery {
         const data = await db
             .update(products)
             .set({
-                status: false,
+                isDeleted: true,
+                isAvailable: false,
                 updatedAt: new Date(),
             })
             .where(eq(products.id, productId))

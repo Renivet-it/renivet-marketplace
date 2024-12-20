@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/popover";
 import PriceInput from "@/components/ui/price-input";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Tooltip,
@@ -35,6 +34,8 @@ import {
     calculatePriceWithGST,
     calculatePriceWithoutGST,
     cn,
+    convertBytesToHumanReadable,
+    getUploadThingFileKey,
     handleClientError,
 } from "@/lib/utils";
 import {
@@ -47,6 +48,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useDropzone } from "@uploadthing/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { HexColorPicker } from "react-colorful";
@@ -72,10 +74,18 @@ export function ProductManageForm({ brandId, product }: PageProps) {
     const [selectedSizes, setSelectedSizes] = useState<string[]>(
         product?.sizes.map((size) => size.name) ?? []
     );
-    const [previews, setPreviews] = useState<string[]>(
+
+    const [imagePreviews, setImagePreviews] = useState<string[]>(
         product?.imageUrls ?? []
     );
-    const [files, setFiles] = useState<File[]>([]);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
+
+    const [certificatePreview, setCertificatePreview] = useState<string | null>(
+        product?.sustainabilityCertificateUrl ?? null
+    );
+    const [certificateFile, setCertificateFile] = useState<File | null>(null);
+
+    const docInputRef = useRef<HTMLInputElement>(null!);
 
     const form = useForm<CreateProduct>({
         resolver: zodResolver(createProductSchema),
@@ -92,17 +102,21 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             sizes: product?.sizes ?? [],
             colors: product?.colors ?? [],
             imageUrls: product?.imageUrls ?? [],
-            isPublished: product?.isPublished ?? false,
+            sustainabilityCertificateUrl:
+                product?.sustainabilityCertificateUrl ?? null,
         },
     });
 
-    const { startUpload, routeConfig } = useUploadThing("productImageUploader");
+    const { startUpload: startImageUpload, routeConfig: imageRouteConfig } =
+        useUploadThing("productImageUploader");
+    const { startUpload: startDocUpload, routeConfig: docRouteConfig } =
+        useUploadThing("productCertificateUploader");
 
     useEffect(() => {
         return () => {
-            previews.forEach((preview) => URL.revokeObjectURL(preview));
+            imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
         };
-    }, [previews]);
+    }, [imagePreviews]);
 
     const {
         fields: sizesFields,
@@ -200,26 +214,35 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             )
     );
 
-    const onDrop = (acceptedFiles: File[]) => {
-        const remainingSlots = 5 - previews.length;
+    const onImagesDrop = (acceptedFiles: File[]) => {
+        const remainingSlots = 5 - imagePreviews.length;
         const newFiles = acceptedFiles.slice(0, remainingSlots);
 
         if (newFiles.length > 0) {
-            setFiles((prev) => [...prev, ...newFiles]);
+            setImageFiles((prev) => [...prev, ...newFiles]);
 
             const newPreviews = newFiles.map((file) =>
                 URL.createObjectURL(file)
             );
-            setPreviews((prev) => [...prev, ...newPreviews]);
+            setImagePreviews((prev) => [...prev, ...newPreviews]);
 
             const currentUrls = form.getValues("imageUrls");
             form.setValue("imageUrls", [...currentUrls, ...newPreviews]);
         }
     };
 
+    const onCertificateDrop = (acceptedFiles: File[]) => {
+        const file = acceptedFiles[0];
+        if (file) {
+            setCertificateFile(file);
+            const previewUrl = URL.createObjectURL(file);
+            setCertificatePreview(previewUrl);
+        }
+    };
+
     const removeImage = (index: number) => {
-        setPreviews((prev) => prev.filter((_, i) => i !== index));
-        setFiles((prev) => prev.filter((_, i) => i !== index));
+        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+        setImageFiles((prev) => prev.filter((_, i) => i !== index));
 
         const currentUrls = form.getValues("imageUrls");
         form.setValue(
@@ -228,14 +251,39 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         );
     };
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
+    const removeDoc = () => {
+        setCertificatePreview(null);
+        setCertificateFile(null);
+        form.setValue("sustainabilityCertificateUrl", "");
+    };
+
+    const {
+        getRootProps: getImageRootProps,
+        getInputProps: getImagesInputProps,
+        isDragActive: isImagesDragActive,
+    } = useDropzone({
+        onDrop: onImagesDrop,
         accept: generateClientDropzoneAccept(
-            generatePermittedFileTypes(routeConfig).fileTypes
+            generatePermittedFileTypes(imageRouteConfig).fileTypes
         ),
-        maxFiles: 5 - previews.length,
+        maxFiles: 5 - imagePreviews.length,
         maxSize: 4 * 1024 * 1024,
     });
+
+    const {
+        getRootProps: getDocRootProps,
+        getInputProps: getDocInputProps,
+        isDragActive: isDocDragActive,
+    } = useDropzone({
+        onDrop: onCertificateDrop,
+        accept: generateClientDropzoneAccept(
+            generatePermittedFileTypes(docRouteConfig).fileTypes
+        ),
+        maxFiles: 1,
+        maxSize: 4 * 1024 * 1024,
+    });
+
+    const fileKey = getUploadThingFileKey(certificatePreview || "");
 
     const { mutateAsync: createProductAsync } =
         trpc.brands.products.createProduct.useMutation();
@@ -248,11 +296,24 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: CreateProduct) => {
-            const res = await startUpload(files);
-            if (!res?.length) throw new Error("Failed to upload images");
+            if (!imageFiles.length)
+                throw new Error("At least 1 image is required");
+            if (!certificateFile)
+                throw new Error("Sustainability certificate is required");
 
-            const imageUrls = res.map((file) => file.appUrl);
+            const [imageRes, docRes] = await Promise.all([
+                startImageUpload(imageFiles),
+                startDocUpload([certificateFile]),
+            ]);
+
+            if (!imageRes?.length) throw new Error("Failed to upload images");
+            if (!docRes?.length) throw new Error("Failed to upload document");
+
+            const imageUrls = imageRes.map((file) => file.appUrl);
+            const docUrl = docRes[0].appUrl;
+
             values.imageUrls = imageUrls;
+            values.sustainabilityCertificateUrl = docUrl;
 
             if (values.imageUrls.length > 5)
                 throw new Error("Maximum 5 images allowed");
@@ -261,14 +322,12 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         },
         onSuccess: (data, _, { toastId }) => {
             toast.success(
-                "Product has been added, please add categorize your product for better organization",
+                "Product has been added, you can now send it for review",
                 { id: toastId }
             );
-            router.push(
-                `/dashboard/brands/${brandId}/products/p/${data.id}/categorize`
-            );
-            setPreviews([]);
-            setFiles([]);
+            router.push(`/dashboard/brands/${brandId}/products`);
+            setImagePreviews([]);
+            setImageFiles([]);
         },
         onError: (err, _, ctx) => {
             return handleClientError(err, ctx?.toastId);
@@ -282,25 +341,41 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         },
         mutationFn: async (values: UpdateProduct) => {
             if (!product) throw new Error("Product not found");
+            if (product.isSentForReview)
+                throw new Error("Product is under review");
 
-            if (files.length > 0) {
-                const res = await startUpload(files);
-                if (!res?.length) throw new Error("Failed to upload images");
-
-                const imageUrls = res.map((file) => file.appUrl);
-                values.imageUrls = [...values.imageUrls, ...imageUrls];
-            }
-
-            if (values.imageUrls.length > 5)
+            if (values.imageUrls.length + imageFiles.length > 5)
                 throw new Error("Maximum 5 images allowed");
+
+            const [imageRes, docRes] = await Promise.all([
+                imageFiles.length > 0
+                    ? startImageUpload(imageFiles)
+                    : undefined,
+                certificateFile ? startDocUpload([certificateFile]) : undefined,
+            ]);
+
+            if (imageRes && !imageRes.length)
+                throw new Error("Failed to upload images");
+            if (docRes && !docRes.length)
+                throw new Error("Failed to upload document");
+
+            const imageUrls = imageRes
+                ? imageRes.map((file) => file.appUrl)
+                : [];
+            const docUrl = docRes
+                ? docRes[0].appUrl
+                : values.sustainabilityCertificateUrl;
+
+            values.imageUrls = [...values.imageUrls, ...imageUrls];
+            values.sustainabilityCertificateUrl = docUrl;
 
             await updateProductAsync({ productId: product.id, values });
         },
         onSuccess: (_, __, { toastId }) => {
             toast.success("Product updated successfully", { id: toastId });
             router.push(`/dashboard/brands/${brandId}/products`);
-            setPreviews([]);
-            setFiles([]);
+            setImagePreviews([]);
+            setImageFiles([]);
         },
         onError: (err, _, ctx) => {
             return handleClientError(err, ctx?.toastId);
@@ -315,6 +390,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                     product
                         ? updateProduct({
                               ...values,
+                              isPublished: product.isPublished,
                               isAvailable: product.isAvailable,
                               price: calculatePriceWithGST(
                                   parseFloat(values.price)
@@ -338,7 +414,11 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                             <FormControl>
                                 <Input
                                     placeholder="THE BEAR HOUSE - Men Grey Slim Fit Tartan Checks Checked Casual Shirt"
-                                    disabled={isCreating || isUpdating}
+                                    disabled={
+                                        isCreating ||
+                                        isUpdating ||
+                                        product?.status === "approved"
+                                    }
                                     {...field}
                                 />
                             </FormControl>
@@ -358,7 +438,11 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                             <FormControl>
                                 <Editor
                                     {...field}
-                                    disabled={isCreating || isUpdating}
+                                    disabled={
+                                        isCreating ||
+                                        isUpdating ||
+                                        product?.status === "approved"
+                                    }
                                     ref={editorRef}
                                     content={field.value ?? ""}
                                     onChange={field.onChange}
@@ -732,16 +816,24 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                     {[...Array(5)].map((_, index) => (
                                         <div key={index} className="basis-1/5">
                                             <div className="relative aspect-square overflow-hidden rounded-md">
-                                                {index < previews.length ? (
+                                                {index <
+                                                imagePreviews.length ? (
                                                     <>
                                                         <Image
                                                             src={
-                                                                previews[index]
+                                                                imagePreviews[
+                                                                    index
+                                                                ]
                                                             }
                                                             alt={`Image ${index + 1}`}
                                                             width={1500}
                                                             height={1500}
-                                                            className="object-cover"
+                                                            className={cn(
+                                                                "object-cover",
+                                                                product?.status ===
+                                                                    "approved" &&
+                                                                    "opacity-70"
+                                                            )}
                                                         />
 
                                                         <Button
@@ -751,7 +843,9 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                             className="absolute right-1 top-1 size-6 rounded-full bg-foreground/50 hover:bg-foreground/70"
                                                             disabled={
                                                                 isCreating ||
-                                                                isUpdating
+                                                                isUpdating ||
+                                                                product?.status ===
+                                                                    "approved"
                                                             }
                                                             onClick={() =>
                                                                 removeImage(
@@ -762,21 +856,27 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                             <Icons.X className="size-4 text-background" />
                                                         </Button>
                                                     </>
-                                                ) : index === previews.length &&
-                                                  previews.length < 5 ? (
+                                                ) : index ===
+                                                      imagePreviews.length &&
+                                                  imagePreviews.length < 5 ? (
                                                     <div
-                                                        {...getRootProps()}
+                                                        {...getImageRootProps()}
                                                         className={cn(
                                                             "flex size-full cursor-pointer items-center justify-center rounded-md border border-dashed border-foreground/40",
-                                                            isDragActive &&
-                                                                "border-green-500 bg-green-500/10"
+                                                            isImagesDragActive &&
+                                                                "border-green-500 bg-green-500/10",
+                                                            product?.status ===
+                                                                "approved" &&
+                                                                "cursor-not-allowed"
                                                         )}
                                                     >
                                                         <input
-                                                            {...getInputProps()}
+                                                            {...getImagesInputProps()}
                                                             disabled={
                                                                 isCreating ||
-                                                                isUpdating
+                                                                isUpdating ||
+                                                                product?.status ===
+                                                                    "approved"
                                                             }
                                                         />
 
@@ -798,25 +898,120 @@ export function ProductManageForm({ brandId, product }: PageProps) {
 
                 <FormField
                     control={form.control}
-                    name="isPublished"
-                    render={({ field }) => (
+                    name="sustainabilityCertificateUrl"
+                    render={() => (
                         <FormItem>
-                            <div className="flex w-min flex-row-reverse items-center justify-start gap-2">
-                                <FormLabel className="whitespace-nowrap font-semibold">
-                                    Publish Immediately
-                                </FormLabel>
+                            <FormLabel>
+                                Sustainability Certificate or Declarations
+                            </FormLabel>
 
+                            {certificatePreview && (
+                                <div
+                                    className={cn(
+                                        "hidden space-y-2",
+                                        certificatePreview && "block"
+                                    )}
+                                >
+                                    <div className="size-full">
+                                        <object
+                                            data={certificatePreview}
+                                            type="application/pdf"
+                                            width="100%"
+                                            height={600}
+                                        >
+                                            <Link href={certificatePreview}>
+                                                Download Document
+                                            </Link>
+                                        </object>
+                                    </div>
+
+                                    <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
+                                        <p className="text-sm font-semibold">
+                                            {certificateFile
+                                                ? `${
+                                                      certificateFile.name
+                                                          .length > 20
+                                                          ? `${certificateFile.name.slice(0, 20)}...`
+                                                          : certificateFile.name
+                                                  } (${convertBytesToHumanReadable(certificateFile.size)})`
+                                                : fileKey.length > 20
+                                                  ? `${fileKey.slice(0, 20)}...`
+                                                  : fileKey}
+                                        </p>
+
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={removeDoc}
+                                                disabled={
+                                                    isCreating ||
+                                                    isUpdating ||
+                                                    !certificateFile ||
+                                                    !!product
+                                                }
+                                            >
+                                                Remove Document
+                                            </Button>
+
+                                            <Button
+                                                type="button"
+                                                onClick={() =>
+                                                    docInputRef.current.click()
+                                                }
+                                                disabled={
+                                                    isCreating ||
+                                                    isUpdating ||
+                                                    product?.status ===
+                                                        "approved"
+                                                }
+                                            >
+                                                Change Document
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div
+                                {...getDocRootProps()}
+                                className={cn(
+                                    "relative cursor-pointer rounded-md border-2 border-dashed border-input p-8 py-16 text-center",
+                                    isDocDragActive &&
+                                        "border-green-500 bg-green-50",
+                                    isCreating ||
+                                        (isUpdating &&
+                                            "cursor-not-allowed opacity-50"),
+                                    certificatePreview && "hidden"
+                                )}
+                                onClick={() => docInputRef.current.click()}
+                            >
                                 <FormControl>
-                                    <Switch
+                                    <input
+                                        {...getDocInputProps()}
                                         disabled={
-                                            !!product ||
                                             isCreating ||
-                                            isUpdating
+                                            isUpdating ||
+                                            product?.status === "approved"
                                         }
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
+                                        ref={docInputRef}
                                     />
                                 </FormControl>
+
+                                <div className="space-y-2 md:space-y-4">
+                                    <div className="flex justify-center">
+                                        <Icons.CloudUpload className="size-10 md:size-12" />
+                                    </div>
+
+                                    <div className="space-y-1 md:space-y-0">
+                                        <p className="text-sm md:text-base">
+                                            Choose a file or Drag and Drop
+                                        </p>
+                                        <p className="text-xs text-muted-foreground md:text-sm">
+                                            Document (4 MB | .pdf)
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <FormMessage />
@@ -830,7 +1025,8 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                     disabled={
                         isCreating ||
                         isUpdating ||
-                        (previews.every((preview) =>
+                        product?.isSentForReview ||
+                        (imagePreviews.every((preview) =>
                             product?.imageUrls.includes(preview)
                         ) &&
                             !form.formState.isDirty)

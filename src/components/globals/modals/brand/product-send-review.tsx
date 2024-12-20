@@ -1,5 +1,6 @@
 "use client";
 
+import { TableProduct } from "@/components/dashboard/brands/products";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -11,19 +12,24 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { BrandRequest } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import { parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    request: BrandRequest;
+    product: TableProduct;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
+    isResend?: boolean;
 }
 
-export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
+export function ProductSendReviewModal({
+    product,
+    isOpen,
+    setIsOpen,
+    isResend = false,
+}: PageProps) {
     const router = useRouter();
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
@@ -31,35 +37,36 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
     const [search] = useQueryState("search", {
         defaultValue: "",
     });
-    const [status] = useQueryState(
-        "status",
-        parseAsStringLiteral([
-            "pending",
-            "approved",
-            "rejected",
-        ] as const).withDefault("pending")
-    );
-    const { refetch } = trpc.general.brands.requests.getRequests.useQuery({
-        page,
+
+    const { refetch } = trpc.brands.products.getProducts.useQuery({
+        brandIds: [product.brandId],
         limit,
+        page,
         search,
-        status,
     });
 
-    const { mutate: approveRequest, isPending: isRequestApproving } =
-        trpc.general.brands.requests.updateRequestStatus.useMutation({
+    const { mutate: sendForReview, isPending: isSending } =
+        trpc.brands.products.sendProductForReview.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Approving brand request...");
+                const toastId = toast.loading(
+                    isResend
+                        ? "Resending product for review..."
+                        : "Sending product for review..."
+                );
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
-                toast.success("Brand request approved", {
-                    id: toastId,
-                });
-                setIsOpen(false);
+                toast.success(
+                    isResend
+                        ? "Product resent for review successfully"
+                        : "Product sent for review successfully",
+                    {
+                        id: toastId,
+                    }
+                );
                 refetch();
+                setIsOpen(false);
                 router.refresh();
-                router.push("/dashboard/general/brands/requests");
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -71,40 +78,35 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you sure you want to approve this request?
+                        Are you sure you want to {isResend ? "resend" : "send"}{" "}
+                        this product for review?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Approving this brand request will make it live on the
-                        platform. They will be notified about the approval.
+                        While the product is under review, you will not be able
+                        to make any changes to it.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
                 <AlertDialogFooter>
                     <Button
-                        type="button"
                         variant="ghost"
                         size="sm"
-                        disabled={isRequestApproving}
+                        disabled={isSending}
                         onClick={() => setIsOpen(false)}
                     >
                         Cancel
                     </Button>
 
                     <Button
-                        variant="destructive"
                         size="sm"
-                        disabled={isRequestApproving}
+                        disabled={isSending}
                         onClick={() =>
-                            approveRequest({
-                                id: request.id,
-                                data: {
-                                    status: "approved",
-                                    rejectionReason: null,
-                                },
+                            sendForReview({
+                                productId: product.id,
                             })
                         }
                     >
-                        Approve
+                        {isResend ? "Resend" : "Send"} for review
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -3,7 +3,7 @@ import {
     BitFieldBrandPermission,
     BitFieldSitePermission,
 } from "@/config/permissions";
-import { brandCache } from "@/lib/redis/methods";
+import { brandCache, userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -193,6 +193,40 @@ export const brandRequestsRouter = createTRPCRouter({
                     });
             }
 
+            const fileKeys = [];
+
+            if (data.status === "rejected") {
+                const logoKey = getUploadThingFileKey(
+                    existingBrandRequest.logoUrl
+                );
+                const bankVerificationKey = getUploadThingFileKey(
+                    existingBrandRequest.bankAccountVerificationDocumentUrl
+                );
+
+                fileKeys.push(logoKey, bankVerificationKey);
+
+                if (existingBrandRequest.demoUrl) {
+                    const demoKey = getUploadThingFileKey(
+                        existingBrandRequest.demoUrl
+                    );
+                    fileKeys.push(demoKey);
+                }
+
+                if (existingBrandRequest.udyamRegistrationCertificateUrl) {
+                    const udyamKey = getUploadThingFileKey(
+                        existingBrandRequest.udyamRegistrationCertificateUrl
+                    );
+                    fileKeys.push(udyamKey);
+                }
+
+                if (existingBrandRequest.iecCertificateUrl) {
+                    const iecKey = getUploadThingFileKey(
+                        existingBrandRequest.iecCertificateUrl
+                    );
+                    fileKeys.push(iecKey);
+                }
+            }
+
             const [, newBrand] = await Promise.all([
                 queries.brandRequests.updateBrandRequestStatus(id, {
                     ...data,
@@ -203,9 +237,9 @@ export const brandRequestsRouter = createTRPCRouter({
                     queries.brands.createBrand({
                         ...existingBrandRequest,
                         bio: null,
-                        logoUrl: null,
                         slug: slugify(existingBrandRequest.name),
                     }),
+                data.status === "rejected" && utApi.deleteFiles(fileKeys),
             ]);
 
             if (newBrand) {
@@ -237,6 +271,7 @@ export const brandRequestsRouter = createTRPCRouter({
                         roleId: brandAdminRole.id,
                         userId: newBrand.ownerId,
                     }),
+                    userCache.remove(newBrand.ownerId),
                 ]);
             }
 

@@ -254,9 +254,11 @@ export function convertValueToLabel(value: string) {
         .map((x) =>
             x.toLowerCase() === "paid"
                 ? "Paid"
-                : x.toLowerCase().includes("id")
-                  ? x.toLowerCase().replace("id", "ID")
-                  : x.charAt(0).toUpperCase() + x.slice(1)
+                : x.toLowerCase() === "idle"
+                  ? "Idle"
+                  : x.toLowerCase().includes("id")
+                    ? x.toLowerCase().replace("id", "ID")
+                    : x.charAt(0).toUpperCase() + x.slice(1)
         )
         .join(" ");
 }

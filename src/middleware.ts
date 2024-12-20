@@ -61,6 +61,9 @@ export default clerkMiddleware(async (auth, req) => {
             }
 
             if (url.pathname.startsWith("/dashboard/general")) {
+                if (existingUser.brand)
+                    return NextResponse.redirect(new URL("/dashboard", url));
+
                 const routes = generalSidebarConfig
                     .map((item) => item.items.map((subItem) => subItem))
                     .flat();
@@ -90,10 +93,10 @@ export default clerkMiddleware(async (auth, req) => {
                 }
             }
 
-            if (
-                url.pathname.startsWith("/dashboard/brands") &&
-                existingUser.brand
-            ) {
+            if (url.pathname.startsWith("/dashboard/brands")) {
+                if (!existingUser.brand)
+                    return NextResponse.redirect(new URL("/dashboard", url));
+
                 if (url.pathname === "/dashboard/brands")
                     return NextResponse.redirect(
                         new URL(

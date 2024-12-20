@@ -12,6 +12,7 @@ import {
 import { db } from "@/lib/db";
 import { brandRequestQueries } from "@/lib/db/queries";
 import { brandMembers } from "@/lib/db/schema";
+import { userCache } from "@/lib/redis/methods";
 import { brandRequestWithoutConfidentialsSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { format } from "date-fns";
@@ -51,21 +52,40 @@ async function BecomeASellerFetch() {
     const { userId } = await auth();
     if (!userId) redirect("/auth/signin");
 
-    const [existingBrandRequest, existingBrandMember, existingRejectedRequest] =
-        await Promise.all([
-            brandRequestQueries.getBrandRequestByOwnerId(
-                userId,
-                "rejected",
-                "ne"
-            ),
-            db.query.brandMembers.findFirst({
-                where: eq(brandMembers.memberId, userId),
-                with: {
-                    brand: true,
-                },
-            }),
-            brandRequestQueries.getRecentRejectedRequest(userId),
-        ]);
+    const [
+        existingBrandRequest,
+        existingBrandMember,
+        existingRejectedRequest,
+        existingUser,
+    ] = await Promise.all([
+        brandRequestQueries.getBrandRequestByOwnerId(userId, "rejected", "ne"),
+        db.query.brandMembers.findFirst({
+            where: eq(brandMembers.memberId, userId),
+            with: {
+                brand: true,
+            },
+        }),
+        brandRequestQueries.getRecentRejectedRequest(userId),
+        userCache.get(userId),
+    ]);
+
+    if (existingUser?.roles.some((role) => role.isSiteRole)) {
+        return (
+            <Notice>
+                <NoticeContent>
+                    <NoticeTitle>
+                        <NoticeIcon />
+                        <span>Warning</span>
+                    </NoticeTitle>
+
+                    <p className="text-sm">
+                        Only normal users can submit a brand request. You have
+                        access to the admin panel.
+                    </p>
+                </NoticeContent>
+            </Notice>
+        );
+    }
 
     if (existingBrandRequest) {
         const existingBrandRequestWithoutConfidentials =

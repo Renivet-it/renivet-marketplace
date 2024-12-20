@@ -8,12 +8,9 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { generateProductSlug, getUploadThingFileKey } from "@/lib/utils";
-import {
-    createCategorizeProductSchema,
-    createProductSchema,
-    updateProductSchema,
-} from "@/lib/validations";
+import { createProductSchema, updateProductSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
+import { format } from "date-fns";
 import { z } from "zod";
 
 export const productsRouter = createTRPCRouter({
@@ -34,6 +31,9 @@ export const productsRouter = createTRPCRouter({
                 categoryId: z.string().optional(),
                 subCategoryId: z.string().optional(),
                 productTypeId: z.string().optional(),
+                status: z
+                    .enum(["idle", "pending", "approved", "rejected"])
+                    .optional(),
             })
         )
         .query(async ({ input, ctx }) => {
@@ -74,6 +74,12 @@ export const productsRouter = createTRPCRouter({
             const { queries, user } = ctx;
             const { brandId, ...product } = input;
 
+            if (!product.sustainabilityCertificateUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Sustainability certificate is required",
+                });
+
             if (brandId !== user.brand?.id)
                 throw new TRPCError({
                     code: "FORBIDDEN",
@@ -94,6 +100,8 @@ export const productsRouter = createTRPCRouter({
 
             const data = await queries.products.createProduct({
                 ...product,
+                sustainabilityCertificateUrl:
+                    product.sustainabilityCertificateUrl!,
                 slug,
                 brandId,
             });
@@ -114,12 +122,46 @@ export const productsRouter = createTRPCRouter({
             const { productId, values } = input;
             const { queries, user } = ctx;
 
+            if (!values.sustainabilityCertificateUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Sustainability certificate is required",
+                });
+
             const existingProduct =
                 await queries.products.getProduct(productId);
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Product not found",
+                });
+
+            if (existingProduct.isPublished && !values.isPublished)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Once a product is published, it cannot be unpublished",
+                });
+
+            if (values.isPublished && existingProduct.status !== "approved")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Only approved products can be published",
+                });
+
+            if (
+                existingProduct.isPublished &&
+                (existingProduct.name !== values.name ||
+                    existingProduct.description !== values.description ||
+                    existingProduct.imageUrls.join() !==
+                        values.imageUrls.join() ||
+                    existingProduct.sustainabilityCertificateUrl !==
+                        values.sustainabilityCertificateUrl)
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "You cannot update the name, description, images, or sustainability certificate of a published product",
                 });
 
             if (existingProduct.brand.id !== user.brand?.id)
@@ -141,8 +183,25 @@ export const productsRouter = createTRPCRouter({
                 (img) => !inputImages.some((i) => i.key === img.key)
             );
 
+            const existingDoc = {
+                key: getUploadThingFileKey(
+                    existingProduct.sustainabilityCertificateUrl
+                ),
+                url: existingProduct.sustainabilityCertificateUrl,
+            };
+            const inputDoc = {
+                key: getUploadThingFileKey(values.sustainabilityCertificateUrl),
+                url: values.sustainabilityCertificateUrl,
+            };
+
+            const filesToBeDeleted = [];
+
+            if (existingDoc.key !== inputDoc.key)
+                filesToBeDeleted.push(existingDoc.key);
             if (removedImages.length > 0)
-                await utApi.deleteFiles(removedImages.map((img) => img.key));
+                filesToBeDeleted.push(...removedImages.map((img) => img.key));
+
+            await utApi.deleteFiles(filesToBeDeleted);
 
             const slug =
                 values.name !== existingProduct.name
@@ -152,6 +211,8 @@ export const productsRouter = createTRPCRouter({
             const [data] = await Promise.all([
                 queries.products.updateProduct(productId, {
                     ...values,
+                    sustainabilityCertificateUrl:
+                        values.sustainabilityCertificateUrl!,
                     slug,
                 }),
                 userWishlistCache.dropAll(),
@@ -159,13 +220,17 @@ export const productsRouter = createTRPCRouter({
             ]);
             return data;
         }),
-    categorizeProduct: protectedProcedure
-        .input(createCategorizeProductSchema)
+    sendProductForReview: protectedProcedure
+        .input(
+            z.object({
+                productId: z.string(),
+            })
+        )
         .use(
             isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
         )
         .mutation(async ({ input, ctx }) => {
-            const { productId, categories } = input;
+            const { productId } = input;
             const { queries, user } = ctx;
 
             const existingProduct =
@@ -182,35 +247,42 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const existingProductCategories = existingProduct.categories.map(
-                (x) => ({
-                    id: x.id,
-                    tag: `${x.category.id}-${x.subcategory.id}-${x.productType.id}`,
-                })
-            );
-            const inputCategories = categories.map(
-                (x) => `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
-            );
+            if (existingProduct.status === "pending")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product is already sent for review",
+                });
 
-            const addedCategories = categories.filter(
-                (x) =>
-                    !existingProductCategories.some(
-                        (y) =>
-                            y.tag ===
-                            `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
-                    )
-            );
+            if (existingProduct.status === "approved")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product is already approved",
+                });
 
-            const removedCategories = existingProductCategories.filter(
-                (x) => !inputCategories.some((y) => y === x.tag)
-            );
+            if (
+                existingProduct.status === "rejected" &&
+                existingProduct.lastReviewedAt &&
+                new Date(existingProduct.lastReviewedAt).getTime() >
+                    Date.now() - 1000 * 60 * 60 * 24 * 7
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `Product was rejected on ${format(
+                        new Date(existingProduct.lastReviewedAt),
+                        "MMMM dd, yyyy"
+                    )}. You still have to wait for ${
+                        7 -
+                        Math.floor(
+                            (Date.now() -
+                                new Date(
+                                    existingProduct.lastReviewedAt
+                                ).getTime()) /
+                                (1000 * 60 * 60 * 24)
+                        )
+                    } days before you can resend for review`,
+                });
 
-            const data = await queries.products.categorizeProduct(
-                productId,
-                addedCategories,
-                removedCategories.map((x) => x.id)
-            );
-
+            const data = await queries.products.sendProductForReview(productId);
             return data;
         }),
     deleteProduct: protectedProcedure

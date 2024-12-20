@@ -58,8 +58,9 @@ export const brands = pgTable("brands", {
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     email: text("email").notNull().unique(),
+    phone: text("phone").notNull(),
     website: text("website").notNull(),
-    logoUrl: text("logo_url"),
+    logoUrl: text("logo_url").notNull(),
     ownerId: text("owner_id")
         .notNull()
         .unique()

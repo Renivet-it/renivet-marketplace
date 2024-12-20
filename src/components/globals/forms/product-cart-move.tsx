@@ -31,11 +31,12 @@ export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
     const form = useForm<CreateCart>({
         resolver: zodResolver(createCartSchema),
         defaultValues: {
-            color: null,
+            color: product.colors.length === 1 ? product.colors[0] : null,
             productId: product.id,
             userId: userId,
             quantity: 1,
-            size: undefined,
+            size:
+                product.sizes.length === 1 ? product.sizes[0].name : undefined,
         },
     });
 
@@ -189,6 +190,9 @@ export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
                                                         className={cn(
                                                             "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm disabled:cursor-not-allowed disabled:opacity-60",
                                                             s.name ===
+                                                                "One Size" &&
+                                                                "size-auto px-3",
+                                                            s.name ===
                                                                 field.value &&
                                                                 "bg-primary text-background"
                                                         )}
@@ -220,11 +224,7 @@ export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
                         </Button>
                     </DialogClose>
 
-                    <Button
-                        type="submit"
-                        size="sm"
-                        disabled={isMoving || !form.formState.isDirty}
-                    >
+                    <Button type="submit" size="sm" disabled={isMoving}>
                         Move to Cart
                     </Button>
                 </DialogFooter>

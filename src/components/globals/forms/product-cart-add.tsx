@@ -23,7 +23,7 @@ import {
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { WishlistButton } from "../buttons";
@@ -60,6 +60,14 @@ export function ProductCartAddForm({
             "XXL",
         ] as const)
     );
+
+    useEffect(() => {
+        if (product.sizes.length === 1 && product.sizes[0].name === "One Size")
+            setSize("One Size");
+
+        if (product.colors.length === 1) setColor(product.colors[0].hex);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [product.sizes, product.colors]);
 
     const form = useForm<CreateCart>({
         resolver: zodResolver(createCartSchema),
@@ -260,6 +268,9 @@ export function ProductCartAddForm({
                                                             "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
                                                             s.name === size &&
                                                                 "bg-primary text-background",
+                                                            s.name ===
+                                                                "One Size" &&
+                                                                "size-auto px-3",
                                                             (s.quantity === 0 ||
                                                                 !product.isAvailable) &&
                                                                 "cursor-not-allowed opacity-50"

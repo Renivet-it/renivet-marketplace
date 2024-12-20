@@ -7,7 +7,7 @@ import {
     numeric,
     pgTable,
     text,
-    uniqueIndex,
+    timestamp,
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
@@ -48,12 +48,24 @@ export const products = pgTable(
             .$type<Product["imageUrls"]>()
             .default([])
             .notNull(),
+        sustainabilityCertificateUrl: text(
+            "sustainability_certificate_url"
+        ).notNull(),
+        isSentForReview: boolean("is_sent_for_review").default(false).notNull(),
         isAvailable: boolean("is_available").default(true).notNull(),
         isPublished: boolean("is_published").default(false).notNull(),
-        status: boolean("status").default(true).notNull(),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        status: text("status", {
+            enum: ["idle", "pending", "approved", "rejected"],
+        })
+            .default("idle")
+            .notNull(),
+        rejectionReason: text("rejection_reason"),
+        lastReviewedAt: timestamp("last_reviewed_at"),
         ...timestamps,
     },
     (table) => ({
+        productStatusIdx: index("product_status_idx").on(table.status),
         productFtsIdx: index("product_fts_idx").using(
             "gin",
             sql`(
@@ -87,7 +99,7 @@ export const productCategories = pgTable(
         ...timestamps,
     },
     (table) => ({
-        catSubCatTypeIdx: uniqueIndex("cat_sub_cat_type_idx").on(
+        catSubCatTypeIdx: index("cat_sub_cat_type_idx").on(
             table.categoryId,
             table.subcategoryId,
             table.productTypeId

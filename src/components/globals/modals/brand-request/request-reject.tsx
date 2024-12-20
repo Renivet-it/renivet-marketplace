@@ -26,6 +26,7 @@ import {
     rejectBrandRequestSchema,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { useForm } from "react-hook-form";
@@ -38,6 +39,8 @@ interface PageProps {
 }
 
 export function RequestRejectModal({ request, isOpen, setIsOpen }: PageProps) {
+    const router = useRouter();
+
     const form = useForm<RejectBrandRequest>({
         resolver: zodResolver(rejectBrandRequestSchema),
         defaultValues: {
@@ -77,6 +80,8 @@ export function RequestRejectModal({ request, isOpen, setIsOpen }: PageProps) {
                 });
                 setIsOpen(false);
                 refetch();
+                router.refresh();
+                router.push("/dashboard/general/brands/requests");
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);

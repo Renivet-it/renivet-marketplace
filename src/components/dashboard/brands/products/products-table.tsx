@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
@@ -18,7 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, convertValueToLabel, formatPriceTag } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import {
     ColumnDef,
@@ -52,14 +53,7 @@ const columns: ColumnDef<TableProduct>[] = [
         header: "Price",
         cell: ({ row }) => {
             const data = row.original;
-            return (
-                <span>
-                    {Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "INR",
-                    }).format(parseFloat(data.price))}
-                </span>
-            );
+            return <span>{formatPriceTag(parseFloat(data.price), true)}</span>;
         },
     },
     {
@@ -222,6 +216,27 @@ const columns: ColumnDef<TableProduct>[] = [
         cell: ({ row }) => {
             const data = row.original;
             return data.visibility ? "Public" : "Private";
+        },
+    },
+    {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+            const data = row.original;
+
+            return (
+                <Badge
+                    variant={
+                        data.status === "approved"
+                            ? "secondary"
+                            : data.status === "rejected"
+                              ? "destructive"
+                              : "default"
+                    }
+                >
+                    {convertValueToLabel(data.status)}
+                </Badge>
+            );
         },
     },
     {
