@@ -220,6 +220,10 @@ export const brandRequestsRouter = createTRPCRouter({
                 });
 
                 await Promise.all([
+                    db.insert(schemas.brandConfidentials).values({
+                        ...existingBrandRequest,
+                        id: newBrand.id,
+                    }),
                     queries.brandMembers.createBrandMember({
                         brandId: newBrand.id,
                         memberId: newBrand.ownerId,
