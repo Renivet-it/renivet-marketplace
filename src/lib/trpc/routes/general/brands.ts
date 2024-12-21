@@ -3,7 +3,8 @@ import {
     BitFieldBrandPermission,
     BitFieldSitePermission,
 } from "@/config/permissions";
-import { brandCache } from "@/lib/redis/methods";
+import { razorpay } from "@/lib/razorpay";
+import { brandCache, userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -19,6 +20,7 @@ import {
     brandRequestSchema,
     brandRequestWithoutConfidentialsSchema,
     createBrandRequestSchema,
+    linkBrandRequestToRazorpaySchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -191,6 +193,46 @@ export const brandRequestsRouter = createTRPCRouter({
                         code: "CONFLICT",
                         message: "Brand with this name already exists",
                     });
+
+                if (!existingBrandRequest.rzpAccountId)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Razorpay Account ID is required",
+                    });
+            }
+
+            const fileKeys = [];
+
+            if (data.status === "rejected") {
+                const logoKey = getUploadThingFileKey(
+                    existingBrandRequest.logoUrl
+                );
+                const bankVerificationKey = getUploadThingFileKey(
+                    existingBrandRequest.bankAccountVerificationDocumentUrl
+                );
+
+                fileKeys.push(logoKey, bankVerificationKey);
+
+                if (existingBrandRequest.demoUrl) {
+                    const demoKey = getUploadThingFileKey(
+                        existingBrandRequest.demoUrl
+                    );
+                    fileKeys.push(demoKey);
+                }
+
+                if (existingBrandRequest.udyamRegistrationCertificateUrl) {
+                    const udyamKey = getUploadThingFileKey(
+                        existingBrandRequest.udyamRegistrationCertificateUrl
+                    );
+                    fileKeys.push(udyamKey);
+                }
+
+                if (existingBrandRequest.iecCertificateUrl) {
+                    const iecKey = getUploadThingFileKey(
+                        existingBrandRequest.iecCertificateUrl
+                    );
+                    fileKeys.push(iecKey);
+                }
             }
 
             const [, newBrand] = await Promise.all([
@@ -203,9 +245,10 @@ export const brandRequestsRouter = createTRPCRouter({
                     queries.brands.createBrand({
                         ...existingBrandRequest,
                         bio: null,
-                        logoUrl: null,
                         slug: slugify(existingBrandRequest.name),
+                        rzpAccountId: existingBrandRequest.rzpAccountId!,
                     }),
+                data.status === "rejected" && utApi.deleteFiles(fileKeys),
             ]);
 
             if (newBrand) {
@@ -220,10 +263,20 @@ export const brandRequestsRouter = createTRPCRouter({
                 });
 
                 await Promise.all([
+                    db.insert(schemas.brandConfidentials).values({
+                        ...existingBrandRequest,
+                        id: newBrand.id,
+                    }),
                     queries.brandMembers.createBrandMember({
                         brandId: newBrand.id,
                         memberId: newBrand.ownerId,
                         isOwner: true,
+                    }),
+                    razorpay.accounts.edit(newBrand.rzpAccountId, {
+                        notes: {
+                            brandId: newBrand.id,
+                            ownerId: newBrand.ownerId,
+                        },
                     }),
                     db.insert(schemas.brandRoles).values({
                         brandId: newBrand.id,
@@ -233,10 +286,39 @@ export const brandRequestsRouter = createTRPCRouter({
                         roleId: brandAdminRole.id,
                         userId: newBrand.ownerId,
                     }),
+                    userCache.remove(newBrand.ownerId),
                 ]);
             }
 
             return true;
+        }),
+    linkRzpAccount: protectedProcedure
+        .input(linkBrandRequestToRazorpaySchema)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            const existingBrandRequest =
+                await queries.brandRequests.getBrandRequest(
+                    input.id,
+                    "pending"
+                );
+            if (!existingBrandRequest)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand request not found",
+                });
+
+            if (existingBrandRequest.rzpAccountId)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Razorpay Account ID is already linked",
+                });
+
+            const updatedBrandRequest =
+                await queries.brandRequests.linkBrandRequestToRazorpay(input);
+
+            return updatedBrandRequest;
         }),
     deleteRequest: protectedProcedure
         .input(

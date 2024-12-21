@@ -4,6 +4,7 @@ import {
     ProductAvailablityModal,
     ProductDeleteModal,
     ProductPublishModal,
+    ProductSendReviewModal,
 } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
@@ -26,6 +27,8 @@ interface PageProps {
 }
 
 export function ProductAction({ product }: PageProps) {
+    const [isSendForReviewModalOpen, setIsSendForReviewModalOpen] =
+        useState(false);
     const [isAvailablityModalOpen, setIsAvailablityModalOpen] = useState(false);
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -49,18 +52,20 @@ export function ProductAction({ product }: PageProps) {
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
                     <DropdownMenuGroup>
-                        <DropdownMenuItem
-                            asChild
-                            disabled={!product.isPublished}
-                        >
-                            <Link
-                                href={`/products/${product.slug}`}
-                                target="_blank"
+                        {product.isPublished && (
+                            <DropdownMenuItem
+                                asChild
+                                disabled={!product.isPublished}
                             >
-                                <Icons.Eye className="size-4" />
-                                <span>View</span>
-                            </Link>
-                        </DropdownMenuItem>
+                                <Link
+                                    href={`/products/${product.slug}`}
+                                    target="_blank"
+                                >
+                                    <Icons.Eye className="size-4" />
+                                    <span>View</span>
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
 
                         <DropdownMenuItem
                             onClick={() => handleCopyId(product.id)}
@@ -73,7 +78,10 @@ export function ProductAction({ product }: PageProps) {
                     <DropdownMenuSeparator />
 
                     <DropdownMenuGroup>
-                        <DropdownMenuItem asChild>
+                        <DropdownMenuItem
+                            disabled={product.isSentForReview}
+                            asChild
+                        >
                             <Link
                                 href={`/dashboard/brands/${product.brandId}/products/p/${product.id}`}
                             >
@@ -82,44 +90,58 @@ export function ProductAction({ product }: PageProps) {
                             </Link>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem asChild>
-                            <Link
-                                href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/categorize`}
+                        {product.isPublished && (
+                            <DropdownMenuItem
+                                disabled={
+                                    product.isSentForReview ||
+                                    !product.isPublished
+                                }
+                                onClick={() => setIsAvailablityModalOpen(true)}
                             >
-                                <Icons.Pencil className="size-4" />
-                                <span>Categorize</span>
-                            </Link>
-                        </DropdownMenuItem>
+                                {product.isAvailable ? (
+                                    <Icons.X className="size-4" />
+                                ) : (
+                                    <Icons.Check className="size-4" />
+                                )}
+                                <span>
+                                    {product.isAvailable
+                                        ? "Mark as Unavailable"
+                                        : "Mark as Available"}
+                                </span>
+                            </DropdownMenuItem>
+                        )}
 
-                        <DropdownMenuItem
-                            onClick={() => setIsAvailablityModalOpen(true)}
-                        >
-                            {product.isAvailable ? (
-                                <Icons.X className="size-4" />
-                            ) : (
-                                <Icons.Check className="size-4" />
-                            )}
-                            <span>
-                                {product.isAvailable
-                                    ? "Mark as Unavailable"
-                                    : "Mark as Available"}
-                            </span>
-                        </DropdownMenuItem>
+                        {product.status === "idle" && (
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    setIsSendForReviewModalOpen(true)
+                                }
+                            >
+                                <Icons.Shield className="size-4" />
+                                <span>Send for Review</span>
+                            </DropdownMenuItem>
+                        )}
 
-                        <DropdownMenuItem
-                            onClick={() => setIsPublishModalOpen(true)}
-                        >
-                            {product.isPublished ? (
-                                <Icons.LockKeyhole className="size-4" />
-                            ) : (
-                                <Icons.LockKeyholeOpen className="size-4" />
+                        {product.status === "rejected" && (
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    setIsSendForReviewModalOpen(true)
+                                }
+                            >
+                                <Icons.Shield className="size-4" />
+                                <span>Resend for Review</span>
+                            </DropdownMenuItem>
+                        )}
+
+                        {!product.isPublished &&
+                            product.status === "approved" && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsPublishModalOpen(true)}
+                                >
+                                    <Icons.Send className="size-4" />
+                                    <span>Publish Product</span>
+                                </DropdownMenuItem>
                             )}
-                            <span>
-                                {product.isPublished
-                                    ? "Make Private"
-                                    : "Make Public"}
-                            </span>
-                        </DropdownMenuItem>
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
@@ -149,6 +171,13 @@ export function ProductAction({ product }: PageProps) {
                 product={product}
                 isOpen={isDeleteModalOpen}
                 setIsOpen={setIsDeleteModalOpen}
+            />
+
+            <ProductSendReviewModal
+                product={product}
+                isOpen={isSendForReviewModalOpen}
+                setIsOpen={setIsSendForReviewModalOpen}
+                isResend={product.status === "rejected"}
             />
         </>
     );

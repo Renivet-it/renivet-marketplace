@@ -326,14 +326,14 @@ export function RoleManageForm({ role, ...props }: PageProps) {
                                         {brandPermissions.map((permission) => (
                                             <div
                                                 key={permission.bit}
-                                                className="flex items-center justify-between gap-5 rounded-md bg-muted p-6"
+                                                className="flex items-center justify-between gap-5 rounded-md bg-muted p-5"
                                             >
                                                 <div className="space-y-1">
-                                                    <p>
+                                                    <h3>
                                                         {convertValueToLabel(
                                                             permission.name
                                                         )}
-                                                    </p>
+                                                    </h3>
                                                     <p className="text-sm text-muted-foreground">
                                                         {permission.description}
                                                     </p>

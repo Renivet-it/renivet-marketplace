@@ -365,7 +365,9 @@ export function NavbarHome() {
                     <>
                         <div className="hidden items-center gap-1 md:flex">
                             <Button variant="ghost" size="sm" asChild>
-                                <Link href="/soon">Become a Seller</Link>
+                                <Link href="/become-a-seller">
+                                    Become a Seller
+                                </Link>
                             </Button>
 
                             <Button

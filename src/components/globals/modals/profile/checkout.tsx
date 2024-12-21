@@ -126,6 +126,8 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                     userCart
                                         ?.filter((item) => item.status)
                                         .map((item) => ({
+                                            price: item.product.price,
+                                            brandId: item.product.brandId,
                                             productId: item.product.id,
                                             quantity: item.quantity,
                                             size: item.size,

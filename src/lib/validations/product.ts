@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { convertEmptyStringToNull } from "../utils";
 import { brandSchema } from "./brand";
 import {
     categorySchema,
@@ -108,6 +109,17 @@ export const productSchema = z.object({
                 .url("Image URL is invalid")
         )
         .min(1, "At least one image URL is required"),
+    sustainabilityCertificateUrl: z
+        .string({
+            required_error: "Sustainability certificate URL is required",
+            invalid_type_error:
+                "Sustainability certificate URL must be a string",
+        })
+        .url("Sustainability certificate URL is invalid"),
+    isSentForReview: z.boolean({
+        required_error: "Review status is required",
+        invalid_type_error: "Review status must be a boolean",
+    }),
     isAvailable: z.boolean({
         required_error: "Availability is required",
         invalid_type_error: "Availability must be a boolean",
@@ -116,10 +128,31 @@ export const productSchema = z.object({
         required_error: "Published status is required",
         invalid_type_error: "Published status must be a boolean",
     }),
-    status: z.boolean({
-        required_error: "Status is required",
-        invalid_type_error: "Status must be a boolean",
+    isDeleted: z.boolean({
+        required_error: "Deleted status is required",
+        invalid_type_error: "Deleted status must be a boolean",
     }),
+    status: z.enum(["idle", "pending", "approved", "rejected"], {
+        required_error: "Status is required",
+        invalid_type_error:
+            "Status must be one of 'idle', 'pending', 'approved', 'rejected'",
+    }),
+    rejectionReason: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                required_error: "Rejection reason is required",
+                invalid_type_error: "Rejection reason must be a string",
+            })
+            .nullable()
+    ),
+    lastReviewedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Last reviewed at is required",
+            invalid_type_error: "Last reviewed at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -163,14 +196,33 @@ export const productWithBrandSchema = productSchema.extend({
     ),
 });
 
-export const createProductSchema = productSchema.omit({
-    id: true,
-    slug: true,
-    isAvailable: true,
-    status: true,
-    createdAt: true,
-    updatedAt: true,
-});
+export const createProductSchema = productSchema
+    .omit({
+        id: true,
+        slug: true,
+        isAvailable: true,
+        status: true,
+        isDeleted: true,
+        isPublished: true,
+        isSentForReview: true,
+        rejectionReason: true,
+        lastReviewedAt: true,
+        createdAt: true,
+        updatedAt: true,
+    })
+    .extend({
+        sustainabilityCertificateUrl: z.preprocess(
+            convertEmptyStringToNull,
+            z
+                .string({
+                    required_error:
+                        "Sustainability certificate URL is required",
+                    invalid_type_error:
+                        "Sustainability certificate URL must be a string",
+                })
+                .nullable()
+        ),
+    });
 
 export const updateProductSchema = createProductSchema
     .omit({
@@ -178,7 +230,13 @@ export const updateProductSchema = createProductSchema
     })
     .extend({
         isAvailable: productSchema.shape.isAvailable,
+        isPublished: productSchema.shape.isPublished,
     });
+
+export const rejectProductSchema = productSchema.pick({
+    id: true,
+    rejectionReason: true,
+});
 
 export const categorizeProductSchema = z.object({
     id: z
@@ -257,6 +315,7 @@ export type Product = z.infer<typeof productSchema>;
 export type ProductWithBrand = z.infer<typeof productWithBrandSchema>;
 export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;
+export type RejectProduct = z.infer<typeof rejectProductSchema>;
 export type CategorizeProduct = z.infer<typeof categorizeProductSchema>;
 export type CreateCategorizeProduct = z.infer<
     typeof createCategorizeProductSchema

@@ -1,11 +1,12 @@
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { razorpay } from "@/lib/razorpay";
-import { userCartCache } from "@/lib/redis/methods";
+import { brandCache, userCartCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { convertPriceToPaise, generateReceiptId } from "@/lib/utils";
 import {
     createOrderItemSchema,
     createOrderSchema,
+    productSchema,
     updateOrderStatusSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -66,9 +67,14 @@ export const ordersRouter = createTRPCRouter({
         .input(
             createOrderSchema.omit({ id: true, receiptId: true }).extend({
                 items: z.array(
-                    createOrderItemSchema.omit({
-                        orderId: true,
-                    })
+                    createOrderItemSchema
+                        .omit({
+                            orderId: true,
+                        })
+                        .extend({
+                            brandId: z.string(),
+                            price: productSchema.shape.price,
+                        })
                 ),
             })
         )
@@ -104,6 +110,20 @@ export const ordersRouter = createTRPCRouter({
 
             const receiptId = generateReceiptId();
 
+            const cachedAllBrands = await brandCache.getAll();
+
+            const brandIds = input.items.map((item) => item.brandId);
+
+            const existingBrands = cachedAllBrands.filter((brand) =>
+                brandIds.includes(brand.id)
+            );
+
+            if (existingBrands.length !== brandIds.length)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order contains invalid brand(s)",
+                });
+
             try {
                 const rpzOrder = await razorpay.orders.create({
                     amount: convertPriceToPaise(parseFloat(input.totalAmount)),
@@ -136,6 +156,20 @@ export const ordersRouter = createTRPCRouter({
                         parseFloat(input.deliveryAmount)
                     ),
                     receipt: receiptId,
+                    transfers: existingBrands.map((brand) => ({
+                        account: brand.rzpAccountId,
+                        amount: convertPriceToPaise(
+                            input.items
+                                .filter((item) => item.brandId === brand.id)
+                                .reduce(
+                                    (acc, item) =>
+                                        acc +
+                                        parseFloat(item.price) * item.quantity,
+                                    0
+                                )
+                        ),
+                        currency: "INR",
+                    })),
                 });
 
                 const newOrder = await queries.orders.createOrder({

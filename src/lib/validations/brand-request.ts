@@ -9,6 +9,13 @@ export const brandRequestSchema = z.object({
             invalid_type_error: "ID must be a string",
         })
         .uuid("ID is invalid"),
+    rzpAccountId: z
+        .string({
+            required_error: "Razorpay Account ID is required",
+            invalid_type_error: "Razorpay Account ID must be a string",
+        })
+        .min(1, "Razorpay Account ID must be at least 1 characters long")
+        .nullable(),
     name: z
         .string({
             required_error: "Name is required",
@@ -144,6 +151,40 @@ export const brandRequestSchema = z.object({
             .url("IEC Certificate URL is invalid")
             .nullable()
     ),
+    addressLine1: z
+        .string({
+            required_error: "Address Line 1 is required",
+            invalid_type_error: "Address Line 1 must be a string",
+        })
+        .min(1, "Address Line 1 must be at least 1 characters long"),
+    addressLine2: z.string({
+        required_error: "Address Line 2 is required",
+        invalid_type_error: "Address Line 2 must be a string",
+    }),
+    city: z
+        .string({
+            required_error: "City is required",
+            invalid_type_error: "City must be a string",
+        })
+        .min(1, "City must be at least 1 characters long"),
+    state: z
+        .string({
+            required_error: "State is required",
+            invalid_type_error: "State must be a string",
+        })
+        .min(1, "State must be at least 1 characters long"),
+    postalCode: z
+        .string({
+            required_error: "Postal Code is required",
+            invalid_type_error: "Postal Code must be a string",
+        })
+        .min(1, "Postal Code must be at least 1 characters long"),
+    country: z
+        .string({
+            required_error: "Country is required",
+            invalid_type_error: "Country must be a string",
+        })
+        .min(1, "Country must be at least 1 characters long"),
     status: z.enum(["pending", "approved", "rejected"], {
         required_error: "Status is required",
         invalid_type_error:
@@ -197,6 +238,12 @@ export const brandRequestConfidentialsSchema = brandRequestSchema.pick({
     authorizedSignatoryPhone: true,
     udyamRegistrationCertificateUrl: true,
     iecCertificateUrl: true,
+    addressLine1: true,
+    addressLine2: true,
+    city: true,
+    state: true,
+    postalCode: true,
+    country: true,
 });
 
 export const brandRequestWithoutConfidentialsSchema = brandRequestSchema.omit({
@@ -255,6 +302,23 @@ export const rejectBrandRequestSchema = brandRequestSchema.pick({
     rejectionReason: true,
 });
 
+export const linkBrandRequestToRazorpaySchema = brandRequestSchema.pick({
+    id: true,
+    name: true,
+    email: true,
+    phone: true,
+    authorizedSignatoryName: true,
+    addressLine1: true,
+    addressLine2: true,
+    city: true,
+    state: true,
+    postalCode: true,
+    country: true,
+    pan: true,
+    gstin: true,
+    ownerId: true,
+});
+
 export type BrandRequest = z.infer<typeof brandRequestSchema>;
 export type BrandRequestWithoutConfidentials = z.infer<
     typeof brandRequestWithoutConfidentialsSchema
@@ -265,3 +329,6 @@ export type UpdateBrandRequestStatus = z.infer<
     typeof updateBrandRequestStatusSchema
 >;
 export type RejectBrandRequest = z.infer<typeof rejectBrandRequestSchema>;
+export type LinkBrandRequestToRazorpay = z.infer<
+    typeof linkBrandRequestToRazorpaySchema
+>;

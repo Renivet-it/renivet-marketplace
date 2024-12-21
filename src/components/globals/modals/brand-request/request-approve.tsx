@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import { BrandRequest } from "@/lib/validations";
+import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
@@ -23,6 +24,8 @@ interface PageProps {
 }
 
 export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
+    const router = useRouter();
+
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search] = useQueryState("search", {
@@ -36,6 +39,7 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
             "rejected",
         ] as const).withDefault("pending")
     );
+
     const { refetch } = trpc.general.brands.requests.getRequests.useQuery({
         page,
         limit,
@@ -50,11 +54,11 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
-                toast.success("Brand request approved", {
-                    id: toastId,
-                });
+                toast.success("Brand request approved", { id: toastId });
                 setIsOpen(false);
                 refetch();
+                router.refresh();
+                router.push("/dashboard/general/brands/requests");
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -70,7 +74,9 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                         Approving this brand request will make it live on the
-                        platform. They will be notified about the approval.
+                        platform. You must complete the KYC process on Razorpay
+                        before approving this request, else the brand will not
+                        be able to receive payments.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 

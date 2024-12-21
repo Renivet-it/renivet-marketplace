@@ -12,6 +12,12 @@ export const brandSchema = z.object({
             invalid_type_error: "ID must be a string",
         })
         .uuid("ID is invalid"),
+    rzpAccountId: z
+        .string({
+            required_error: "Razorpay Account ID is required",
+            invalid_type_error: "Razorpay Account ID must be a string",
+        })
+        .min(1, "Razorpay Account ID must be at least 1 characters long"),
     name: z
         .string({
             required_error: "Name is required",
@@ -30,21 +36,23 @@ export const brandSchema = z.object({
             invalid_type_error: "Email must be a string",
         })
         .email("Email is invalid"),
+    phone: z
+        .string({
+            required_error: "Phone is required",
+            invalid_type_error: "Phone must be a string",
+        })
+        .min(10, "Phone must be at least 10 characters long"),
     website: z
         .string({
             required_error: "Website is required",
             invalid_type_error: "Website must be a string",
         })
         .url("Website is invalid"),
-    logoUrl: z.preprocess(
-        convertEmptyStringToNull,
-        z
-            .string({
-                invalid_type_error: "Logo URL must be a string",
-            })
-            .url("Logo URL is invalid")
-            .nullable()
-    ),
+    logoUrl: z
+        .string({
+            invalid_type_error: "Logo URL must be a string",
+        })
+        .url("Logo URL is invalid"),
     ownerId: z
         .string({
             required_error: "Owner ID is required",

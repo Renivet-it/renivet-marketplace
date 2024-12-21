@@ -1,7 +1,9 @@
+import { razorpay } from "@/lib/razorpay";
 import {
     BrandRequest,
     brandRequestWithOwnerSchema,
     CreateBrandRequest,
+    LinkBrandRequestToRazorpay,
     UpdateBrandRequestStatus,
 } from "@/lib/validations";
 import { and, desc, eq, gt, ilike, ne } from "drizzle-orm";
@@ -112,6 +114,64 @@ class BrandRequestQuery {
         });
 
         return data;
+    }
+
+    async linkBrandRequestToRazorpay(values: LinkBrandRequestToRazorpay) {
+        try {
+            const account = await razorpay.accounts.create({
+                email: values.email,
+                phone: values.phone,
+                type: "route",
+                legal_business_name: values.name,
+                business_type: "partnership",
+                contact_name: values.authorizedSignatoryName,
+                notes: {
+                    brandId: `req_${values.id}`,
+                    ownerId: values.ownerId,
+                },
+                profile: {
+                    category: "ecommerce",
+                    subcategory: "men_and_boys_clothing_stores",
+                    addresses: {
+                        registered: {
+                            street1: values.addressLine1,
+                            street2: values.addressLine2,
+                            city: values.city,
+                            state: values.state,
+                            postal_code: values.postalCode,
+                            country: values.country,
+                        },
+                    },
+                },
+                legal_info: {
+                    pan: values.pan,
+                    gst: values.gstin,
+                },
+            });
+
+            const data = await db
+                .update(brandRequests)
+                .set({
+                    rzpAccountId: account.id,
+                    updatedAt: new Date(),
+                })
+                .where(eq(brandRequests.id, values.id))
+                .returning()
+                .then((res) => res[0]);
+
+            return data;
+        } catch (error) {
+            if (
+                Object.prototype.hasOwnProperty.call(error, "error") &&
+                Object.prototype.hasOwnProperty.call(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (error as any).error,
+                    "description"
+                )
+            )
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                throw new Error((error as any).error.description);
+        }
     }
 
     async createBrandRequest(

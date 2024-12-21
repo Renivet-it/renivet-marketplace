@@ -58,7 +58,7 @@ export function DataTable<T>({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className="max-w-60"
+                                            className="min-w-28"
                                         >
                                             {flexRender(
                                                 cell.column.columnDef.cell,

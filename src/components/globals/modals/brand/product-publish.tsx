@@ -41,23 +41,14 @@ export function ProductPublishModal({ product, isOpen, setIsOpen }: PageProps) {
 
     const { mutate: updateProduct, isPending: isUpdating } =
         trpc.brands.products.updateProduct.useMutation({
-            onMutate: ({ values }) => {
-                const toastId = toast.loading(
-                    !values.isPublished
-                        ? "Unpublishing product..."
-                        : "Publishing product..."
-                );
+            onMutate: () => {
+                const toastId = toast.loading("Publishing product...");
                 return { toastId };
             },
-            onSuccess: (_, { values }, { toastId }) => {
-                toast.success(
-                    !values.isPublished
-                        ? "Product is now private"
-                        : "Product is now public",
-                    {
-                        id: toastId,
-                    }
-                );
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Product is now published on the marketplace", {
+                    id: toastId,
+                });
                 refetch();
                 setIsOpen(false);
                 router.refresh();
@@ -72,14 +63,11 @@ export function ProductPublishModal({ product, isOpen, setIsOpen }: PageProps) {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you sure you want to{" "}
-                        {product.isPublished ? "unpublish" : "publish"} this
-                        product?
+                        Are you sure you want to publish this product?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        {product.isPublished
-                            ? "People will no longer be able to see or purchase this product. Are you sure you want to unpublish it?"
-                            : "People will be able to see and purchase this product. Are you sure you want to publish it?"}
+                        People will be able to see and purchase this product.
+                        Are you sure you want to publish it?
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
@@ -102,12 +90,12 @@ export function ProductPublishModal({ product, isOpen, setIsOpen }: PageProps) {
                                 productId: product.id,
                                 values: {
                                     ...product,
-                                    isPublished: !product.isPublished,
+                                    isPublished: true,
                                 },
                             })
                         }
                     >
-                        {product.isPublished ? "Unpublish" : "Publish"}
+                        Publish
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

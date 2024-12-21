@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button-general";
-import { cn } from "@/lib/utils";
+import { cn, formatPriceTag } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -38,10 +38,7 @@ export function ProductShowcaseCard({
                     </h3>
 
                     <p className="mb-1 text-sm font-semibold">
-                        {Intl.NumberFormat("en-IN", {
-                            style: "currency",
-                            currency: "INR",
-                        }).format(product.price)}
+                        {formatPriceTag(product.price, true)}
                     </p>
 
                     <p className="truncate text-sm text-muted-foreground">
