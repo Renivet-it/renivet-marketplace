@@ -16,6 +16,7 @@ import { users } from "./user";
 
 export const brandRequests = pgTable("brand_requests", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    rzpAccountId: text("rzp_account_id"),
     name: text("name").notNull(),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
@@ -42,6 +43,12 @@ export const brandRequests = pgTable("brand_requests", {
     authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
     udyamRegistrationCertificateUrl: text("udyam_registration_certificate_url"),
     iecCertificateUrl: text("iec_certificate_url"),
+    addressLine1: text("address_line_1").notNull(),
+    addressLine2: text("address_line_2").notNull(),
+    city: text("city").notNull(),
+    state: text("state").notNull(),
+    postalCode: text("postal_code").notNull(),
+    country: text("country").notNull(),
     status: text("status", {
         enum: ["pending", "approved", "rejected"],
     })
@@ -55,6 +62,7 @@ export const brandRequests = pgTable("brand_requests", {
 
 export const brands = pgTable("brands", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    rzpAccountId: text("rzp_account_id").notNull(),
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     email: text("email").notNull().unique(),
@@ -93,6 +101,12 @@ export const brandConfidentials = pgTable("brand_confidentials", {
     authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
     udyamRegistrationCertificateUrl: text("udyam_registration_certificate_url"),
     iecCertificateUrl: text("iec_certificate_url"),
+    addressLine1: text("address_line1").notNull(),
+    addressLine2: text("address_line2").notNull(),
+    city: text("city").notNull(),
+    state: text("state").notNull(),
+    postalCode: text("postal_code").notNull(),
+    country: text("country").notNull(),
     ...timestamps,
 });
 

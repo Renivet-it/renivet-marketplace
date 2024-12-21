@@ -39,6 +39,7 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
             "rejected",
         ] as const).withDefault("pending")
     );
+
     const { refetch } = trpc.general.brands.requests.getRequests.useQuery({
         page,
         limit,
@@ -53,9 +54,7 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
-                toast.success("Brand request approved", {
-                    id: toastId,
-                });
+                toast.success("Brand request approved", { id: toastId });
                 setIsOpen(false);
                 refetch();
                 router.refresh();
@@ -75,7 +74,9 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                         Approving this brand request will make it live on the
-                        platform. They will be notified about the approval.
+                        platform. You must complete the KYC process on Razorpay
+                        before approving this request, else the brand will not
+                        be able to receive payments.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 

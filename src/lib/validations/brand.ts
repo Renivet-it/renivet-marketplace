@@ -12,6 +12,12 @@ export const brandSchema = z.object({
             invalid_type_error: "ID must be a string",
         })
         .uuid("ID is invalid"),
+    rzpAccountId: z
+        .string({
+            required_error: "Razorpay Account ID is required",
+            invalid_type_error: "Razorpay Account ID must be a string",
+        })
+        .min(1, "Razorpay Account ID must be at least 1 characters long"),
     name: z
         .string({
             required_error: "Name is required",

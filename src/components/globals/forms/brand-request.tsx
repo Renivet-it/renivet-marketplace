@@ -1,5 +1,6 @@
 "use client";
 
+import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -15,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea-general";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
-import { handleClientError } from "@/lib/utils";
+import { cn, handleClientError } from "@/lib/utils";
 import {
     CreateBrandRequest,
     createBrandRequestSchema,
@@ -24,7 +25,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -37,6 +38,8 @@ import {
 
 export function BrandRequestForm() {
     const router = useRouter();
+
+    const [currentStage, setCurrentStage] = useState(1);
 
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -88,6 +91,12 @@ export function BrandRequestForm() {
             hasAcceptedTerms: false,
             udyamRegistrationCertificateUrl: "",
             iecCertificateUrl: "",
+            addressLine1: "",
+            addressLine2: "",
+            city: "",
+            state: "",
+            postalCode: "",
+            country: "IN",
         },
     });
 
@@ -186,17 +195,18 @@ export function BrandRequestForm() {
         },
     });
 
-    useEffect(() => {
-        console.log(form.formState.isDirty);
-    }, [form.formState.isDirty]);
-
     return (
         <Form {...form}>
             <form
                 className="space-y-6"
                 onSubmit={form.handleSubmit((values) => sendRequest(values))}
             >
-                <div className="space-y-4">
+                <div
+                    className={cn(
+                        "space-y-4",
+                        currentStage === 1 ? "block" : "hidden"
+                    )}
+                >
                     <h2 className="text-xl font-semibold">
                         General Information
                     </h2>
@@ -361,7 +371,12 @@ export function BrandRequestForm() {
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                <div
+                    className={cn(
+                        "space-y-4",
+                        currentStage === 2 ? "block" : "hidden"
+                    )}
+                >
                     <h2 className="text-xl font-semibold">
                         Business Information
                     </h2>
@@ -600,7 +615,151 @@ export function BrandRequestForm() {
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                <div
+                    className={cn(
+                        "space-y-4",
+                        currentStage === 3 ? "block" : "hidden"
+                    )}
+                >
+                    <h2 className="text-xl font-semibold">
+                        Address Information
+                    </h2>
+
+                    <Separator />
+
+                    <div className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="addressLine1"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Street 1</FormLabel>
+
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter brand's registered street address"
+                                            disabled={isRequestSending}
+                                            {...field}
+                                        />
+                                    </FormControl>
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="addressLine2"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Street 2</FormLabel>
+
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter brand's registered street address"
+                                            disabled={isRequestSending}
+                                            {...field}
+                                        />
+                                    </FormControl>
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                            <FormField
+                                control={form.control}
+                                name="city"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>City</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter brand's registered city"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="state"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>State</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter brand's registered state"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                            <FormField
+                                control={form.control}
+                                name="postalCode"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>Postal Code</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter brand's registered postal code"
+                                                disabled={isRequestSending}
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="country"
+                                render={({ field }) => (
+                                    <FormItem className="w-full">
+                                        <FormLabel>Country</FormLabel>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter brand's registered country"
+                                                disabled
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    className={cn(
+                        "space-y-4",
+                        currentStage === 4 ? "block" : "hidden"
+                    )}
+                >
                     <h2 className="text-xl font-semibold">
                         Optional Information
                     </h2>
@@ -659,7 +818,12 @@ export function BrandRequestForm() {
                     control={form.control}
                     name="hasAcceptedTerms"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem
+                            className={cn(
+                                "space-y-4",
+                                currentStage === 4 ? "block" : "hidden"
+                            )}
+                        >
                             <div className="flex items-center gap-2">
                                 <FormControl>
                                     <Checkbox
@@ -695,13 +859,67 @@ export function BrandRequestForm() {
                     )}
                 />
 
-                <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isRequestSending || !form.formState.isDirty}
-                >
-                    Send Request
-                </Button>
+                <div className="flex items-center justify-between gap-5">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={currentStage === 1}
+                        onClick={() => setCurrentStage(currentStage - 1)}
+                    >
+                        <Icons.ChevronLeft />
+                        Previous
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(currentStage === 4 && "hidden")}
+                        disabled={
+                            currentStage === 4 ||
+                            (currentStage === 1 &&
+                                (form.watch("name").length === 0 ||
+                                    form.watch("email").length === 0 ||
+                                    form.watch("phone").length === 0 ||
+                                    form.watch("website").length === 0 ||
+                                    form.watch("message").length === 0 ||
+                                    !logoFile)) ||
+                            (currentStage === 2 &&
+                                (form.watch("gstin").length === 0 ||
+                                    form.watch("pan").length === 0 ||
+                                    form.watch("bankName").length === 0 ||
+                                    form.watch("bankAccountHolderName")
+                                        .length === 0 ||
+                                    form.watch("bankAccountNumber").length ===
+                                        0 ||
+                                    form.watch("bankIfscCode").length === 0 ||
+                                    !bankVerificationFile ||
+                                    form.watch("authorizedSignatoryName")
+                                        .length === 0 ||
+                                    form.watch("authorizedSignatoryEmail")
+                                        .length === 0 ||
+                                    form.watch("authorizedSignatoryPhone")
+                                        .length === 0)) ||
+                            (currentStage === 3 &&
+                                (form.watch("addressLine1").length === 0 ||
+                                    form.watch("city").length === 0 ||
+                                    form.watch("state").length === 0 ||
+                                    form.watch("postalCode").length === 0))
+                        }
+                        onClick={() => setCurrentStage(currentStage + 1)}
+                    >
+                        Next
+                        <Icons.ChevronRight />
+                    </Button>
+
+                    <Button
+                        type="submit"
+                        className={cn(currentStage === 4 ? "flex" : "hidden")}
+                        disabled={isRequestSending || !form.formState.isDirty}
+                    >
+                        Send Request
+                        <Icons.SendHorizonal />
+                    </Button>
+                </div>
             </form>
         </Form>
     );

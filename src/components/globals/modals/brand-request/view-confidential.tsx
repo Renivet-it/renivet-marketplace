@@ -63,7 +63,9 @@ export function ViewConfidentialModal({
                                     <h5 className="text-sm font-medium">
                                         {convertValueToLabel(key)}
                                     </h5>
-                                    <p className="text-sm">{finalValue}</p>
+                                    <p className="break-words text-sm">
+                                        {finalValue}
+                                    </p>
                                 </div>
                             );
                         }

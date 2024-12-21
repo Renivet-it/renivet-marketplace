@@ -74,6 +74,19 @@ export function handleError(error: unknown) {
             message: "BAD_REQUEST",
             longMessage: sanitizeError(error),
         });
+    else if (
+        Object.prototype.hasOwnProperty.call(error, "error") &&
+        Object.prototype.hasOwnProperty.call(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (error as any).error,
+            "description"
+        )
+    )
+        return CResponse({
+            message: "BAD_REQUEST",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            longMessage: (error as any).error.description,
+        });
     else if (error instanceof Error)
         return CResponse({
             message: "INTERNAL_SERVER_ERROR",
@@ -83,7 +96,17 @@ export function handleError(error: unknown) {
 }
 
 export function handleClientError(error: unknown, toastId?: string | number) {
-    if (error instanceof Error)
+    if (
+        Object.prototype.hasOwnProperty.call(error, "error") &&
+        Object.prototype.hasOwnProperty.call(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (error as any).error,
+            "description"
+        )
+    )
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return toast.error((error as any).error.description, { id: toastId });
+    else if (error instanceof Error)
         return toast.error(error.message, { id: toastId });
     else toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, { id: toastId });
 }

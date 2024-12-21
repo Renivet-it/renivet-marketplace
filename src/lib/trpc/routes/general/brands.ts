@@ -3,6 +3,7 @@ import {
     BitFieldBrandPermission,
     BitFieldSitePermission,
 } from "@/config/permissions";
+import { razorpay } from "@/lib/razorpay";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -19,6 +20,7 @@ import {
     brandRequestSchema,
     brandRequestWithoutConfidentialsSchema,
     createBrandRequestSchema,
+    linkBrandRequestToRazorpaySchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -191,6 +193,12 @@ export const brandRequestsRouter = createTRPCRouter({
                         code: "CONFLICT",
                         message: "Brand with this name already exists",
                     });
+
+                if (!existingBrandRequest.rzpAccountId)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Razorpay Account ID is required",
+                    });
             }
 
             const fileKeys = [];
@@ -238,6 +246,7 @@ export const brandRequestsRouter = createTRPCRouter({
                         ...existingBrandRequest,
                         bio: null,
                         slug: slugify(existingBrandRequest.name),
+                        rzpAccountId: existingBrandRequest.rzpAccountId!,
                     }),
                 data.status === "rejected" && utApi.deleteFiles(fileKeys),
             ]);
@@ -263,6 +272,12 @@ export const brandRequestsRouter = createTRPCRouter({
                         memberId: newBrand.ownerId,
                         isOwner: true,
                     }),
+                    razorpay.accounts.edit(newBrand.rzpAccountId, {
+                        notes: {
+                            brandId: newBrand.id,
+                            ownerId: newBrand.ownerId,
+                        },
+                    }),
                     db.insert(schemas.brandRoles).values({
                         brandId: newBrand.id,
                         roleId: brandAdminRole.id,
@@ -276,6 +291,34 @@ export const brandRequestsRouter = createTRPCRouter({
             }
 
             return true;
+        }),
+    linkRzpAccount: protectedProcedure
+        .input(linkBrandRequestToRazorpaySchema)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            const existingBrandRequest =
+                await queries.brandRequests.getBrandRequest(
+                    input.id,
+                    "pending"
+                );
+            if (!existingBrandRequest)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand request not found",
+                });
+
+            if (existingBrandRequest.rzpAccountId)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Razorpay Account ID is already linked",
+                });
+
+            const updatedBrandRequest =
+                await queries.brandRequests.linkBrandRequestToRazorpay(input);
+
+            return updatedBrandRequest;
         }),
     deleteRequest: protectedProcedure
         .input(

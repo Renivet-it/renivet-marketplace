@@ -470,6 +470,41 @@
       "when": 1734713006534,
       "tag": "0067_spicy_sunfire",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1734761783690,
+      "tag": "0068_common_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1734761804238,
+      "tag": "0069_real_wilson_fisk",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1734761871167,
+      "tag": "0070_little_taskmaster",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1734766300033,
+      "tag": "0071_plain_gamma_corps",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1734766419857,
+      "tag": "0072_steep_franklin_storm",
+      "breakpoints": true
     }
   ]
 }
