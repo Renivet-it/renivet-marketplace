@@ -307,6 +307,7 @@ export function BrandRequestForm() {
                                                 placeholder="Enter brand website"
                                                 disabled={isRequestSending}
                                                 {...field}
+                                                value={field.value || ""}
                                             />
                                         </FormControl>
 
@@ -904,7 +905,6 @@ export function BrandRequestForm() {
                                 (form.watch("name").length === 0 ||
                                     form.watch("email").length === 0 ||
                                     form.watch("phone").length === 0 ||
-                                    form.watch("website").length === 0 ||
                                     form.watch("message").length === 0 ||
                                     !logoFile)) ||
                             (currentStage === 2 &&

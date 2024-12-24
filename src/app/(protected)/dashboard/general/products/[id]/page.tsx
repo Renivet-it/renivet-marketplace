@@ -144,13 +144,17 @@ async function ProductReviewFetch({ params }: PageProps) {
 
                             <div>
                                 <h5 className="text-sm font-medium">Website</h5>
-                                <Link
-                                    href={existingProduct.brand.website}
-                                    className="break-words text-sm text-primary underline"
-                                    target="_blank"
-                                >
-                                    {existingProduct.brand.website}
-                                </Link>
+                                {existingProduct.brand.website ? (
+                                    <Link
+                                        href={existingProduct.brand.website}
+                                        className="break-words text-sm text-primary underline"
+                                        target="_blank"
+                                    >
+                                        {existingProduct.brand.website}
+                                    </Link>
+                                ) : (
+                                    <p className="text-sm text-primary">N/A</p>
+                                )}
                             </div>
 
                             <div>

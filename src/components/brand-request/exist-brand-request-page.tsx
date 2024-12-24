@@ -193,6 +193,8 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                                 </Button>
                             </NoticeButton>
                         </Notice>
+
+                        <Separator />
                     </CardContent>
 
                     <Separator />
@@ -205,13 +207,17 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                             {brandRequest.email}
                         </Link>
 
-                        <Link
-                            href={brandRequest.website}
-                            className="hover:underline"
-                            target="_blank"
-                        >
-                            {brandRequest.website}
-                        </Link>
+                        {brandRequest.website ? (
+                            <Link
+                                href={brandRequest.website}
+                                className="hover:underline"
+                                target="_blank"
+                            >
+                                {brandRequest.website}
+                            </Link>
+                        ) : (
+                            <p>N/A</p>
+                        )}
                     </CardFooter>
                 </Card>
             </div>

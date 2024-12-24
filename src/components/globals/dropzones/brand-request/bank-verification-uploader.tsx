@@ -14,6 +14,7 @@ import { useDropzone } from "@uploadthing/react";
 import Link from "next/link";
 import { Dispatch, SetStateAction, useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
+import { toast } from "sonner";
 import {
     generateClientDropzoneAccept,
     generatePermittedFileTypes,
@@ -42,12 +43,15 @@ export function BrandRequestBankVerificationUploaderDropzone({
 
     const onDrop = (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
-        if (file) {
-            setFile(file);
-            const previewUrl = URL.createObjectURL(file);
-            setPreview(previewUrl);
-            form.setValue("bankAccountVerificationDocumentUrl", previewUrl);
-        }
+        if (!file)
+            return toast.error(
+                "Could not upload file, did you select a file? If you did, was it under the size limit?"
+            );
+
+        setFile(file);
+        const previewUrl = URL.createObjectURL(file);
+        setPreview(previewUrl);
+        form.setValue("bankAccountVerificationDocumentUrl", previewUrl);
     };
 
     const removeDoc = () => {

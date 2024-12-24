@@ -10,6 +10,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
+import { brandSubscriptions } from "./brand-subscription";
 import { products } from "./product";
 import { brandRoles, roles } from "./role";
 import { users } from "./user";
@@ -21,7 +22,7 @@ export const brandRequests = pgTable("brand_requests", {
     email: text("email").notNull(),
     phone: text("phone").notNull(),
     message: text("message").notNull(),
-    website: text("website").notNull(),
+    website: text("website"),
     ownerId: text("owner_id")
         .notNull()
         .references(() => users.id, {
@@ -67,7 +68,7 @@ export const brands = pgTable("brands", {
     slug: text("slug").notNull().unique(),
     email: text("email").notNull().unique(),
     phone: text("phone").notNull(),
-    website: text("website").notNull(),
+    website: text("website"),
     logoUrl: text("logo_url").notNull(),
     ownerId: text("owner_id")
         .notNull()
@@ -203,6 +204,7 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     roles: many(brandRoles),
     bannedMembers: many(bannedBrandMembers),
     products: many(products),
+    subscriptions: many(brandSubscriptions),
 }));
 
 export const brandInviteRelations = relations(brandInvites, ({ one }) => ({

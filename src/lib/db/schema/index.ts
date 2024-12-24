@@ -1,6 +1,7 @@
 export * from "./address";
 export * from "./blog";
 export * from "./brand";
+export * from "./brand-subscription";
 export * from "./brand-waitlist";
 export * from "./cart";
 export * from "./category";
@@ -9,6 +10,7 @@ export * from "./legal";
 export * from "./marketing-strip";
 export * from "./newsletter-subscriber";
 export * from "./order";
+export * from "./plan";
 export * from "./product";
 export * from "./refund";
 export * from "./role";

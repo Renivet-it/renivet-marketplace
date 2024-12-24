@@ -40,12 +40,15 @@ export const brandRequestSchema = z.object({
             invalid_type_error: "Message must be a string",
         })
         .min(5, "Message must be at least 5 characters long"),
-    website: z
-        .string({
-            required_error: "Website is required",
-            invalid_type_error: "Website must be a string",
-        })
-        .url("Website is invalid"),
+    website: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Website must be a string",
+            })
+            .url("Website is invalid")
+            .nullable()
+    ),
     ownerId: z
         .string({
             required_error: "Owner ID is required",
