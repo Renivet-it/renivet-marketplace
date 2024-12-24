@@ -268,6 +268,7 @@ export const brandRequestWithOwnerSchema = brandRequestSchema.extend({
 export const createBrandRequestSchema = brandRequestSchema
     .omit({
         id: true,
+        rzpAccountId: true,
         createdAt: true,
         updatedAt: true,
         ownerId: true,

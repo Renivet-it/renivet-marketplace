@@ -12,6 +12,13 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-general";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select-general";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea-general";
 import { trpc } from "@/lib/trpc/client";
@@ -23,6 +30,7 @@ import {
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { State } from "country-state-city";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -67,6 +75,8 @@ export function BrandRequestForm() {
     const [iecCertificateFile, setIecCertificateFile] = useState<File | null>(
         null
     );
+
+    const states = State.getStatesOfCountry("IN");
 
     const form = useForm<CreateBrandRequest>({
         resolver: zodResolver(createBrandRequestSchema),
@@ -696,13 +706,27 @@ export function BrandRequestForm() {
                                     <FormItem className="w-full">
                                         <FormLabel>State</FormLabel>
 
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Enter brand's registered state"
-                                                disabled={isRequestSending}
-                                                {...field}
-                                            />
-                                        </FormControl>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            defaultValue={field.value}
+                                        >
+                                            <SelectTrigger>
+                                                <FormControl>
+                                                    <SelectValue placeholder="Select brand's registered state" />
+                                                </FormControl>
+                                            </SelectTrigger>
+
+                                            <SelectContent>
+                                                {states.map((state) => (
+                                                    <SelectItem
+                                                        key={state.isoCode}
+                                                        value={state.name}
+                                                    >
+                                                        {state.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
 
                                         <FormMessage />
                                     </FormItem>
