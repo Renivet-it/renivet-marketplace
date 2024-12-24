@@ -258,13 +258,17 @@ export function BrandRequestPage({ request }: PageProps) {
 
                             <div>
                                 <h5 className="text-sm font-medium">Website</h5>
-                                <Link
-                                    href={request.website}
-                                    className="break-words text-sm text-primary underline"
-                                    target="_blank"
-                                >
-                                    {request.website}
-                                </Link>
+                                {request.website ? (
+                                    <Link
+                                        href={request.website}
+                                        className="break-words text-sm text-primary underline"
+                                        target="_blank"
+                                    >
+                                        {request.website}
+                                    </Link>
+                                ) : (
+                                    <p className="text-sm text-primary">N/A</p>
+                                )}
                             </div>
 
                             <div>

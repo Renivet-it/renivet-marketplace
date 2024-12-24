@@ -2,6 +2,7 @@ import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
 import { bannedBrandMemberSchema } from "./banned-brand-member";
 import { brandInviteSchema } from "./brand-invite";
+import { brandSubscriptionSchema } from "./brand-subscription";
 import { roleSchema } from "./role";
 import { safeUserSchema } from "./user";
 
@@ -42,12 +43,15 @@ export const brandSchema = z.object({
             invalid_type_error: "Phone must be a string",
         })
         .min(10, "Phone must be at least 10 characters long"),
-    website: z
-        .string({
-            required_error: "Website is required",
-            invalid_type_error: "Website must be a string",
-        })
-        .url("Website is invalid"),
+    website: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Website must be a string",
+            })
+            .url("Website is invalid")
+            .nullable()
+    ),
     logoUrl: z
         .string({
             invalid_type_error: "Logo URL must be a string",
@@ -97,6 +101,7 @@ export const brandWithOwnerMembersAndRolesSchema = z.lazy(() =>
                 isSiteRole: true,
             })
         ),
+        subscriptions: brandSubscriptionSchema.array(),
     })
 );
 
@@ -111,6 +116,7 @@ export const cachedBrandSchema = z.lazy(() =>
         ),
         invites: brandInviteSchema.array(),
         bannedMembers: bannedBrandMemberSchema.array(),
+        // subscriptions: brandSubscriptionSchema.array(),
     })
 );
 

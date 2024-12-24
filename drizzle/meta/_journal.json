@@ -505,6 +505,20 @@
       "when": 1734766419857,
       "tag": "0072_steep_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1734892067697,
+      "tag": "0073_slippery_green_goblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1735026616331,
+      "tag": "0074_late_owl",
+      "breakpoints": true
     }
   ]
 }
