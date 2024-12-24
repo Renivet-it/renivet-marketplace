@@ -14,7 +14,7 @@ import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import { CachedLegal, CreateLegal, createLegalSchema } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -32,10 +32,6 @@ export function PrivacyManageForm({ legal }: PageProps) {
             termsOfService: legal?.termsOfService || "",
         },
     });
-
-    useEffect(() => {
-        console.log(form.formState.errors);
-    }, [form]);
 
     const { mutate: updateLegal, isPending: isUpdating } =
         trpc.general.legal.updateLegal.useMutation({
