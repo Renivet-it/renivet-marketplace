@@ -323,10 +323,11 @@ export function BrandRequestPage({ request }: PageProps) {
                                 <p
                                     className="rounded-sm bg-muted p-2 text-sm"
                                     dangerouslySetInnerHTML={{
-                                        __html: request.message.replace(
-                                            /(?:\r\n|\r|\n)/g,
-                                            "<br />"
-                                        ),
+                                        __html:
+                                            request.message?.replace(
+                                                /(?:\r\n|\r|\n)/g,
+                                                "<br />"
+                                            ) || "N/A",
                                     }}
                                 />
                             </div>

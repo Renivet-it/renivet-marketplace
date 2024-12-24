@@ -21,7 +21,7 @@ export const brandRequests = pgTable("brand_requests", {
     name: text("name").notNull(),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
-    message: text("message").notNull(),
+    message: text("message"),
     website: text("website"),
     ownerId: text("owner_id")
         .notNull()
