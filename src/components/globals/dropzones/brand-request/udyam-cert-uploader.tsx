@@ -2,7 +2,9 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FormControl } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { useUploadThing } from "@/lib/uploadthing";
 import {
     cn,
@@ -12,7 +14,7 @@ import {
 import { CreateBrandRequest } from "@/lib/validations";
 import { useDropzone } from "@uploadthing/react";
 import Link from "next/link";
-import { Dispatch, SetStateAction, useRef } from "react";
+import { Dispatch, SetStateAction, useRef, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import {
     generateClientDropzoneAccept,
@@ -36,6 +38,8 @@ export function BrandRequestUdyamCertificateUploaderDropzone({
     form,
     isPending,
 }: PageProps) {
+    const [isSelected, setIsSelected] = useState(false);
+
     const inputRef = useRef<HTMLInputElement>(null!);
 
     const { routeConfig } = useUploadThing("brandRequestDocUploader");
@@ -68,86 +72,113 @@ export function BrandRequestUdyamCertificateUploaderDropzone({
 
     return (
         <>
-            {preview && (
-                <div className={cn("hidden space-y-2", preview && "block")}>
-                    <div className="size-full">
-                        <object
-                            data={preview}
-                            type="application/pdf"
-                            width="100%"
-                            height={600}
+            <div className="flex items-center gap-2">
+                <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={(checked) => setIsSelected(!!checked)}
+                    id="udyam-certificate"
+                    name="udyam-certificate"
+                />
+
+                <Label
+                    className="text-sm text-muted-foreground"
+                    htmlFor="udyam-certificate"
+                >
+                    I have a Udyam Registration Certificate
+                </Label>
+            </div>
+
+            {isSelected && (
+                <>
+                    {preview && (
+                        <div
+                            className={cn(
+                                "hidden space-y-2",
+                                preview && "block"
+                            )}
                         >
-                            <Link href={preview}>Download Document</Link>
-                        </object>
-                    </div>
+                            <div className="size-full">
+                                <object
+                                    data={preview}
+                                    type="application/pdf"
+                                    width="100%"
+                                    height={300}
+                                >
+                                    <Link href={preview}>
+                                        Download Document
+                                    </Link>
+                                </object>
+                            </div>
 
-                    <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
-                        <p className="text-sm font-semibold">
-                            {file
-                                ? `${
-                                      file.name.length > 20
-                                          ? `${file.name.slice(0, 20)}...`
-                                          : file.name
-                                  } (${convertBytesToHumanReadable(file.size)})`
-                                : fileKey.length > 20
-                                  ? `${fileKey.slice(0, 20)}...`
-                                  : fileKey}
-                        </p>
+                            <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
+                                <p className="text-sm font-semibold">
+                                    {file
+                                        ? `${
+                                              file.name.length > 20
+                                                  ? `${file.name.slice(0, 20)}...`
+                                                  : file.name
+                                          } (${convertBytesToHumanReadable(file.size)})`
+                                        : fileKey.length > 20
+                                          ? `${fileKey.slice(0, 20)}...`
+                                          : fileKey}
+                                </p>
 
-                        <div className="flex items-center gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={removeDoc}
-                                disabled={isPending || !file}
-                            >
-                                Remove Document
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={() => inputRef.current.click()}
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={removeDoc}
+                                        disabled={isPending || !file}
+                                    >
+                                        Remove Document
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={() => inputRef.current.click()}
+                                        disabled={isPending}
+                                    >
+                                        Change Document
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div
+                        {...getRootProps()}
+                        className={cn(
+                            "relative cursor-pointer border-2 border-dashed border-input p-8 py-16 text-center",
+                            isDragActive && "border-green-500 bg-green-50",
+                            isPending && "cursor-not-allowed opacity-50",
+                            preview && "hidden"
+                        )}
+                        onClick={() => inputRef.current.click()}
+                    >
+                        <FormControl>
+                            <input
+                                {...getInputProps()}
                                 disabled={isPending}
-                            >
-                                Change Document
-                            </Button>
+                                ref={inputRef}
+                            />
+                        </FormControl>
+
+                        <div className="space-y-2 md:space-y-4">
+                            <div className="flex justify-center">
+                                <Icons.CloudUpload className="size-10 md:size-12" />
+                            </div>
+
+                            <div className="space-y-1 md:space-y-0">
+                                <p className="text-sm md:text-base">
+                                    Choose a file or Drag and Drop
+                                </p>
+                                <p className="text-xs text-muted-foreground md:text-sm">
+                                    Document (4 MB | .pdf)
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
-
-            <div
-                {...getRootProps()}
-                className={cn(
-                    "relative cursor-pointer border-2 border-dashed border-input p-8 py-16 text-center",
-                    isDragActive && "border-green-500 bg-green-50",
-                    isPending && "cursor-not-allowed opacity-50",
-                    preview && "hidden"
-                )}
-                onClick={() => inputRef.current.click()}
-            >
-                <FormControl>
-                    <input
-                        {...getInputProps()}
-                        disabled={isPending}
-                        ref={inputRef}
-                    />
-                </FormControl>
-
-                <div className="space-y-2 md:space-y-4">
-                    <div className="flex justify-center">
-                        <Icons.CloudUpload className="size-10 md:size-12" />
-                    </div>
-
-                    <div className="space-y-1 md:space-y-0">
-                        <p className="text-sm md:text-base">
-                            Choose a file or Drag and Drop
-                        </p>
-                        <p className="text-xs text-muted-foreground md:text-sm">
-                            Document (4 MB | .pdf)
-                        </p>
-                    </div>
-                </div>
-            </div>
         </>
     );
 }
