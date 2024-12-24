@@ -71,14 +71,16 @@ export function BrandRequestLogoUploaderDropzone({
         <>
             {preview && (
                 <div className={cn("hidden space-y-2", preview && "block")}>
-                    <div className="aspect-square size-full">
-                        <Image
-                            src={preview}
-                            alt="Preview Image"
-                            width={500}
-                            height={500}
-                            className="size-full object-cover"
-                        />
+                    <div className="flex items-center justify-center">
+                        <div className="aspect-square max-w-72">
+                            <Image
+                                src={preview}
+                                alt="Preview Image"
+                                width={500}
+                                height={500}
+                                className="size-full object-cover"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex flex-col items-center justify-between gap-2 md:flex-row">

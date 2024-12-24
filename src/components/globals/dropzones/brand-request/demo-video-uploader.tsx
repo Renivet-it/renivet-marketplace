@@ -70,7 +70,14 @@ export function BrandRequestDemoVideoUploaderDropzone({
         <>
             {preview && (
                 <div className={cn("hidden space-y-2", preview && "block")}>
-                    <Player src={preview} autoPlay muted />
+                    <div className="flex items-center justify-center">
+                        <Player
+                            className="max-w-96"
+                            src={preview}
+                            autoPlay
+                            muted
+                        />
+                    </div>
 
                     <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
                         <p className="text-sm font-semibold">

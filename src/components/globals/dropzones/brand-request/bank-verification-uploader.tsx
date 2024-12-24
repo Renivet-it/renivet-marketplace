@@ -80,7 +80,7 @@ export function BrandRequestBankVerificationUploaderDropzone({
                             data={preview}
                             type="application/pdf"
                             width="100%"
-                            height={600}
+                            height={300}
                         >
                             <Link href={preview}>Download Document</Link>
                         </object>
