@@ -141,10 +141,11 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                         <p
                             className="text-sm text-muted-foreground"
                             dangerouslySetInnerHTML={{
-                                __html: brandRequest.message.replace(
-                                    /(?:\r\n|\r|\n)/g,
-                                    "<br />"
-                                ),
+                                __html:
+                                    brandRequest.message?.replace(
+                                        /(?:\r\n|\r|\n)/g,
+                                        "<br />"
+                                    ) || "N/A",
                             }}
                         />
 

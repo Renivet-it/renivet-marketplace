@@ -34,12 +34,15 @@ export const brandRequestSchema = z.object({
             invalid_type_error: "Phone must be a string",
         })
         .min(10, "Phone must be at least 10 characters long"),
-    message: z
-        .string({
-            required_error: "Message is required",
-            invalid_type_error: "Message must be a string",
-        })
-        .min(5, "Message must be at least 5 characters long"),
+    message: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Message must be a string",
+            })
+            .min(1, "Message must be at least 1 characters long")
+            .nullable()
+    ),
     website: z.preprocess(
         convertEmptyStringToNull,
         z
