@@ -13,6 +13,7 @@ export * from "./invite-create";
 export * from "./marketing-strip-manage";
 export * from "./newsletter-subscribe";
 export * from "./phone-otp-verification";
+export * from "./plan-manage";
 export * from "./privacy-manage";
 export * from "./product-approve";
 export * from "./product-cart-add";

@@ -65,6 +65,13 @@ interface EditorProps {
     content: string;
     onChange: (content: string) => void;
     disabled?: boolean;
+    classNames?: {
+        outerWrapper?: string;
+        toolbarWrapper?: string;
+        toolbar?: string;
+        innerWrapper?: string;
+        editor?: string;
+    };
 }
 
 export interface EditorRef {
@@ -95,12 +102,23 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
         <div
             className={cn(
                 "relative w-full overflow-hidden rounded-md border border-input pb-3",
-                props.disabled && "cursor-not-allowed opacity-50"
+                props.disabled && "cursor-not-allowed opacity-50",
+                props?.classNames?.outerWrapper
             )}
         >
-            <div className="sticky left-0 top-0 z-20 flex w-full items-center justify-between border-b border-input bg-background p-2">
+            <div
+                className={cn(
+                    "sticky left-0 top-0 z-20 flex w-full items-center justify-between border-b border-input bg-background p-2",
+                    props?.classNames?.toolbarWrapper
+                )}
+            >
                 <ToolbarProvider editor={editor}>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div
+                        className={cn(
+                            "flex flex-wrap items-center gap-2",
+                            props?.classNames?.toolbar
+                        )}
+                    >
                         <UndoToolbar disabled={props.disabled} />
                         <RedoToolbar />
                         <Separator orientation="vertical" className="h-7" />
@@ -127,11 +145,15 @@ const Editor = forwardRef<EditorRef, EditorProps>((props, ref) => {
                 }}
                 className={cn(
                     "min-h-72 cursor-text bg-background text-sm",
-                    props.disabled && "cursor-not-allowed"
+                    props.disabled && "cursor-not-allowed",
+                    props?.classNames?.innerWrapper
                 )}
             >
                 <EditorContent
-                    className="px-4 pt-2 disabled:cursor-not-allowed"
+                    className={cn(
+                        "px-4 pt-2 disabled:cursor-not-allowed",
+                        props?.classNames?.editor
+                    )}
                     editor={editor}
                 />
             </div>

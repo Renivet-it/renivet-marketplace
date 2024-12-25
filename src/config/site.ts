@@ -258,6 +258,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_SETTINGS |
                     BitFieldSitePermission.VIEW_SETTINGS,
             },
+            {
+                title: "Plans",
+                url: "/dashboard/general/plans",
+                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
         ],
     },
     {
