@@ -1,6 +1,6 @@
 "use client";
 
-import { cn, formatPriceTag } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
@@ -109,7 +109,10 @@ export function ProductCard({
                 </div>
 
                 <p className="text-sm font-semibold">
-                    {formatPriceTag(parseFloat(product.price), true)}
+                    {formatPriceTag(
+                        parseFloat(convertPaiseToRupees(product.price)),
+                        true
+                    )}
                 </p>
             </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
-import { cn, formatPriceTag } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { OrderWithItemAndBrand } from "@/lib/validations";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -15,8 +15,10 @@ interface PageProps extends GenericProps {
 export function ProductOrderCard({ className, item, ...props }: PageProps) {
     const isAvailable =
         item.product.isAvailable &&
-        item.product.status &&
-        item.product.sizes.filter((size) => size.quantity > 0).length > 0;
+        !item.product.isDeleted &&
+        item.productVariant.isAvailable &&
+        !item.productVariant.isDeleted &&
+        item.productVariant.quantity > 0;
 
     return (
         <div
@@ -58,7 +60,7 @@ export function ProductOrderCard({ className, item, ...props }: PageProps) {
 
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">
-                        Size: {item.size}
+                        Size: {item.productVariant.size}
                     </div>
 
                     <div className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">
@@ -67,16 +69,17 @@ export function ProductOrderCard({ className, item, ...props }: PageProps) {
                 </div>
 
                 <div className="text-lg font-semibold md:text-xl">
-                    {formatPriceTag(item.product.price, true)}
+                    {formatPriceTag(
+                        parseFloat(convertPaiseToRupees(item.product.price)),
+                        true
+                    )}
                 </div>
 
                 <div>
-                    {item.color && (
-                        <p className="text-sm">
-                            <span className="font-semibold">Color: </span>
-                            {item.color.name}
-                        </p>
-                    )}
+                    <p className="text-sm">
+                        <span className="font-semibold">Color: </span>
+                        {item.productVariant.color.name}
+                    </p>
 
                     <p className="text-sm">
                         <span className="font-semibold">Added on: </span>

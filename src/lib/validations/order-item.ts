@@ -13,12 +13,12 @@ export const orderItemSchema = z.object({
             invalid_type_error: "Order ID must be a string",
         })
         .min(1, "Order ID is invalid"),
-    productId: z
+    sku: z
         .string({
-            required_error: "Product ID is required",
-            invalid_type_error: "Product ID must be a string",
+            required_error: "SKU is required",
+            invalid_type_error: "SKU must be a string",
         })
-        .uuid("Product ID is invalid"),
+        .min(1, "SKU is invalid"),
     quantity: z
         .number({
             required_error: "Quantity is required",
@@ -26,27 +26,6 @@ export const orderItemSchema = z.object({
         })
         .int("Quantity must be an integer")
         .positive("Quantity must be positive"),
-    size: z.enum(["One Size", "XS", "S", "M", "L", "XL", "XXL"], {
-        required_error: "Size is required",
-        invalid_type_error: "Size must be a string",
-    }),
-    color: z
-        .object({
-            name: z
-                .string({
-                    required_error: "Color name is required",
-                    invalid_type_error: "Color name must be a string",
-                })
-                .min(1, "Color name must be at least 1 characters long"),
-            hex: z
-                .string({
-                    required_error: "Color hex is required",
-                    invalid_type_error: "Color hex must be a string",
-                })
-                .length(7, "Color hex must be 7 characters long")
-                .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
-        })
-        .nullable(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

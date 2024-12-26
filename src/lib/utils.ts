@@ -460,10 +460,11 @@ export function convertMsToHumanReadable(ms: number) {
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
 
-    // if hours is greater than 0, then only all of show hours, minutes and seconds, else show only minutes and seconds
-    // if minutes is greater than 0, then only show minutes and seconds, else show only seconds
-    // if seconds is greater than 0, then only show seconds, else show 0 seconds
     return `${hours > 0 ? `${hours}h ` : ""}${
         minutes > 0 ? `${minutes % 60}m ` : ""
     }${seconds % 60}s`;
+}
+
+export function generateSKU() {
+    return (init({ length: 6 })() + "-" + init({ length: 4 })()).toUpperCase();
 }

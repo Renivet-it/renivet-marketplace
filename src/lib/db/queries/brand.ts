@@ -72,6 +72,7 @@ class BrandQuery {
                         member: true,
                     },
                 },
+                subscriptions: true,
             },
             where: !!search?.length
                 ? ilike(brands.name, `%${search}%`)
@@ -127,6 +128,7 @@ class BrandQuery {
                         member: true,
                     },
                 },
+                subscriptions: true,
             },
         });
         if (!data) return null;

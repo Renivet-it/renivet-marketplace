@@ -24,7 +24,12 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
-import { cn, formatPriceTag, handleClientError } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatPriceTag,
+    handleClientError,
+} from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
@@ -49,10 +54,15 @@ export function CartPage({
 
     const availableCart = userCart.filter(
         (item) =>
-            item.product.isAvailable &&
-            item.product.status &&
-            item.product.sizes.find(
-                (size) => size.name === item.size && size.quantity > 0
+            item.item.isAvailable &&
+            item.item.status &&
+            item.item.variants.find(
+                (v) =>
+                    v.quantity > 0 &&
+                    v.sku === item.sku &&
+                    v.isAvailable &&
+                    v.size === item.size &&
+                    JSON.stringify(v.color) === JSON.stringify(item.color)
             )
     );
 
@@ -60,12 +70,15 @@ export function CartPage({
         (item) => !availableCart.map((i) => i.id).includes(item.id)
     );
 
+    console.log({
+        uc: userCart.map((i) => i.id),
+        ac: availableCart.map((i) => i.id),
+        uc2: unavailableCart.map((i) => i.id),
+    });
+
     const totalPrice = availableCart
         .filter((item) => item.status)
-        .reduce(
-            (acc, item) => acc + parseFloat(item.product.price) * item.quantity,
-            0
-        );
+        .reduce((acc, item) => acc + item.item.price * item.quantity, 0);
 
     const itemCount = availableCart
         .filter((item) => item.status)
@@ -102,7 +115,7 @@ export function CartPage({
             },
         });
 
-    if (availableCart.length === 0) return <NoCartCard />;
+    if (userCart.length === 0) return <NoCartCard />;
 
     return (
         <>
@@ -149,16 +162,23 @@ export function CartPage({
                             <p className="text-xs md:text-sm">
                                 {totalPrice < FREE_DELIVERY_THRESHOLD
                                     ? `Add ${formatPriceTag(
-                                          FREE_DELIVERY_THRESHOLD - totalPrice,
-                                          true
+                                          parseFloat(
+                                              convertPaiseToRupees(
+                                                  FREE_DELIVERY_THRESHOLD -
+                                                      totalPrice
+                                              )
+                                          )
                                       )} to get free delivery`
                                     : "Your order is eligible for free delivery"}
                             </p>
                         </div>
                     </div>
 
-                    <p className="text-sm font-semibold md:text-base">
-                        {formatPriceTag(totalPrice, true)}
+                    <p className="font-semibold md:text-lg">
+                        {formatPriceTag(
+                            parseFloat(convertPaiseToRupees(totalPrice)),
+                            true
+                        )}
                     </p>
                 </div>
 

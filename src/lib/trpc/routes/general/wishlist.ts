@@ -3,6 +3,7 @@ import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { createCartSchema, createWishlistSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
+import { and, eq, gt } from "drizzle-orm";
 import { z } from "zod";
 
 export const wishlistRouter = createTRPCRouter({
@@ -90,12 +91,41 @@ export const wishlistRouter = createTRPCRouter({
             return next({ ctx, input });
         })
         .mutation(async ({ ctx, input }) => {
-            const { queries } = ctx;
-            const { userId, productId, color, size, quantity } = input;
+            const { queries, db, schemas } = ctx;
+            const { userId, sku, quantity } = input;
+
+            const existingVariant = await db.query.productVariants.findFirst({
+                where: and(
+                    eq(schemas.productVariants.sku, sku),
+                    eq(schemas.productVariants.isAvailable, true),
+                    gt(schemas.productVariants.quantity, 0),
+                    eq(schemas.productVariants.isDeleted, false)
+                ),
+                with: {
+                    product: true,
+                },
+            });
+            if (!existingVariant)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product variant not found",
+                });
+
+            if (
+                !existingVariant.isAvailable ||
+                !existingVariant.product.isAvailable ||
+                existingVariant.isDeleted ||
+                existingVariant.product.isDeleted ||
+                existingVariant.quantity < quantity
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "This product is not available",
+                });
 
             const existingWishlist = await userWishlistCache.getProduct(
                 userId,
-                productId
+                existingVariant.productId
             );
             if (!existingWishlist)
                 throw new TRPCError({
@@ -105,9 +135,7 @@ export const wishlistRouter = createTRPCRouter({
 
             const existingCart = await userCartCache.getProduct({
                 userId,
-                productId,
-                size,
-                color: color?.hex,
+                sku,
             });
 
             if (!existingCart)
@@ -127,12 +155,7 @@ export const wishlistRouter = createTRPCRouter({
                     queries.userWishlists.deleteProductInWishlist(
                         existingWishlist.id
                     ),
-                    userCartCache.remove({
-                        userId,
-                        productId,
-                        size,
-                        color: color?.hex,
-                    }),
+                    userCartCache.remove({ userId, sku }),
                 ]);
 
             return {

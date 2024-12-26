@@ -20,7 +20,7 @@ export const DEFAULT_AVATAR_URL =
 export const DEFAULT_BLOG_THUMBNAIL_URL =
     "https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNprAppIYoKFqlYMSWzhgNZG6Cm5OtIUjre39T" as const;
 
-export const FREE_DELIVERY_THRESHOLD = 499 as const;
+export const FREE_DELIVERY_THRESHOLD = 49900 as const;
 
 export const PRESET_COLORS = [
     { name: "Red", hex: "#ff0000" },

@@ -43,7 +43,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
     const priceList = calculateTotalPrice(
         userCart
             ?.filter((item) => item.status)
-            .map((item) => parseFloat(item.product.price) * item.quantity) || []
+            .map((item) => item.item.price * item.quantity) || []
     );
 
     const { mutate: createOrder, isPending: isOrderCreating } =
@@ -100,7 +100,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                         Cancel
                     </Button>
 
-                    <Button
+                    {/* <Button
                         size="sm"
                         disabled={isUserFetching || isOrderCreating}
                         onClick={() => {
@@ -137,7 +137,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                         }}
                     >
                         Proceed to checkout
-                    </Button>
+                    </Button> */}
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

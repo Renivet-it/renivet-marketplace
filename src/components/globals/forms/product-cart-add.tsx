@@ -10,15 +10,19 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input-general";
+import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { SIZES } from "@/config/sizes";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
     CachedCart,
     CreateCart,
     createCartSchema,
+    ProductVariant,
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,24 +65,53 @@ export function ProductCartAddForm({
         ] as const)
     );
 
-    useEffect(() => {
-        if (product.sizes.length === 1 && product.sizes[0].name === "One Size")
-            setSize("One Size");
-
-        if (product.colors.length === 1) setColor(product.colors[0].hex);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [product.sizes, product.colors]);
+    const [sku, setSku] = useState<string | undefined>();
 
     const form = useForm<CreateCart>({
         resolver: zodResolver(createCartSchema),
         defaultValues: {
-            color: product.colors.find((c) => c.hex === color) || null,
-            productId: product.id,
             userId: userId,
             quantity: 1,
-            size: product.sizes.find((s) => s.name === size)?.name,
+            sku: sku || "",
         },
     });
+
+    const sizes = Array.from(
+        new Set(
+            product.variants
+                .map((v) => v.size)
+                .sort(
+                    (a, b) =>
+                        SIZES.indexOf(a) - SIZES.indexOf(b) ||
+                        a.localeCompare(b)
+                )
+        )
+    );
+
+    const colors = product.variants
+        .filter((v) => !v.isDeleted)
+        .filter((v) => v.size === size)
+        .map((v) => v.color)
+        .sort(
+            (a, b) => a.name.localeCompare(b.name) || a.hex.localeCompare(b.hex)
+        );
+
+    useEffect(() => {
+        if (product.variants.length === 1) setSize(product.variants[0].size);
+        if (product.variants.length === 1)
+            setColor(product.variants[0].color.hex);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const currentSku = product.variants.find(
+            (v) => v.color.hex === color && v.size === size
+        )?.sku;
+
+        setSku(currentSku);
+        form.setValue("sku", currentSku || "");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [color, size]);
 
     const { data: userCart, refetch } =
         trpc.general.users.cart.getCart.useQuery(
@@ -86,12 +119,7 @@ export function ProductCartAddForm({
             { enabled: !!userId, initialData: initialCart }
         );
 
-    const isProductInCart = userCart?.some(
-        (item) =>
-            item.productId === product.id &&
-            item.size === size &&
-            item.color?.hex === color
-    );
+    const isProductInCart = userCart?.some((item) => item.sku === sku);
 
     const { mutate: addToCart } =
         trpc.general.users.cart.addProductInCart.useMutation({
@@ -128,11 +156,9 @@ export function ProductCartAddForm({
                             DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER
                         );
 
-                    if (product.colors.length > 0 && !values.color)
-                        return form.setError("color", {
-                            type: "required",
-                            message: "Color is required",
-                        });
+                    if (!values.sku)
+                        return toast.error("Please select a size or color");
+
                     if (!product.isAvailable)
                         return toast.error(
                             "This product is currently out of stock. You can still add it to your wishlist."
@@ -141,44 +167,89 @@ export function ProductCartAddForm({
                     addToCart(values);
                 })}
             >
-                {product.colors.length > 0 && (
-                    <FormField
-                        control={form.control}
-                        name="color"
-                        render={({ field }) => (
-                            <FormItem className="space-y-4">
-                                <FormLabel className="font-semibold uppercase">
+                <div className="space-y-4">
+                    <Label className="font-semibold uppercase">
+                        Select Size
+                    </Label>
+
+                    <RadioGroup
+                        onValueChange={(value) => {
+                            setSize(value as ProductVariant["size"]);
+                            setColor("");
+                        }}
+                        defaultValue={size!}
+                        className="flex flex-wrap gap-2"
+                        disabled={!product.isAvailable}
+                    >
+                        {sizes.map((s, i) => (
+                            <div key={i}>
+                                <RadioGroupItem
+                                    value={s}
+                                    id={s}
+                                    disabled={!product.isAvailable}
+                                    className="sr-only"
+                                />
+
+                                <Label htmlFor={s}>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div
+                                            title={s}
+                                            className={cn(
+                                                "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
+                                                s === size &&
+                                                    "bg-primary text-background",
+                                                s === "One Size" &&
+                                                    "size-auto px-3",
+                                                !product.isAvailable &&
+                                                    "cursor-not-allowed opacity-50"
+                                            )}
+                                        >
+                                            <span>{s}</span>
+                                        </div>
+                                    </div>
+                                </Label>
+                            </div>
+                        ))}
+                    </RadioGroup>
+                </div>
+
+                {size && (
+                    <>
+                        <Separator />
+
+                        {
+                            <div className="space-y-4">
+                                <Label className="font-semibold uppercase">
                                     More Colors
-                                </FormLabel>
+                                </Label>
 
-                                <FormControl>
-                                    <RadioGroup
-                                        onValueChange={(value) => {
-                                            field.onChange(
-                                                product.colors.find(
-                                                    (c) => c.hex === value
-                                                ) || null
-                                            );
-                                            setColor(value);
-                                        }}
-                                        defaultValue={field.value?.hex}
-                                        className="flex flex-wrap gap-2"
-                                        disabled={!product.isAvailable}
-                                    >
-                                        {product.colors.map((c) => (
-                                            <FormItem key={c.name}>
-                                                <FormControl>
-                                                    <RadioGroupItem
-                                                        value={c.hex}
-                                                        id={c.name}
-                                                        className="sr-only"
-                                                        disabled={
-                                                            !product.isAvailable
-                                                        }
-                                                    />
-                                                </FormControl>
+                                <RadioGroup
+                                    onValueChange={(value) => setColor(value)}
+                                    defaultValue={color}
+                                    className="flex flex-wrap gap-2"
+                                    disabled={!product.isAvailable}
+                                >
+                                    {colors.map((c) => {
+                                        const variant = product.variants.find(
+                                            (v) =>
+                                                v.size === size &&
+                                                v.color.hex === c.hex
+                                        );
 
-                                                <FormLabel htmlFor={c.name}>
+                                        return (
+                                            <div key={c.name}>
+                                                <RadioGroupItem
+                                                    value={c.hex}
+                                                    id={c.name}
+                                                    className="sr-only"
+                                                    disabled={
+                                                        !product.isAvailable ||
+                                                        !variant?.isAvailable ||
+                                                        variant?.quantity === 0
+                                                    }
+                                                />
+
+                                                <Label htmlFor={c.name}>
                                                     <div className="flex flex-col items-center gap-2">
                                                         <div
                                                             title={c.name}
@@ -187,7 +258,10 @@ export function ProductCartAddForm({
                                                                 c.hex ===
                                                                     color &&
                                                                     "outline outline-2 outline-offset-1",
-                                                                !product.isAvailable &&
+                                                                (!product.isAvailable ||
+                                                                    !variant?.isAvailable ||
+                                                                    variant?.quantity ===
+                                                                        0) &&
                                                                     "cursor-not-allowed opacity-50"
                                                             )}
                                                             style={{
@@ -205,90 +279,46 @@ export function ProductCartAddForm({
                                                                 "text-sm",
                                                                 c.hex ===
                                                                     color &&
-                                                                    "font-semibold"
+                                                                    "font-semibold",
+                                                                (!variant?.isAvailable ||
+                                                                    variant?.quantity ===
+                                                                        0) &&
+                                                                    "text-destructive line-through"
                                                             )}
                                                         >
                                                             {c.name}
                                                         </span>
+
+                                                        {!!variant?.quantity &&
+                                                            variant.quantity <
+                                                                3 && (
+                                                                <span className="text-xs text-destructive">
+                                                                    {
+                                                                        variant.quantity
+                                                                    }{" "}
+                                                                    left
+                                                                </span>
+                                                            )}
                                                     </div>
-                                                </FormLabel>
-                                            </FormItem>
-                                        ))}
-                                    </RadioGroup>
-                                </FormControl>
-
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                                                </Label>
+                                            </div>
+                                        );
+                                    })}
+                                </RadioGroup>
+                            </div>
+                        }
+                    </>
                 )}
-
-                <Separator />
 
                 <FormField
                     control={form.control}
-                    name="size"
+                    name="sku"
                     render={({ field }) => (
-                        <FormItem className="space-y-4">
-                            <FormLabel className="font-semibold uppercase">
-                                Select Size
-                            </FormLabel>
+                        <FormItem>
+                            <FormLabel className="hidden">SKU</FormLabel>
 
                             <FormControl>
-                                <RadioGroup
-                                    onValueChange={(value) => {
-                                        field.onChange(value);
-                                        setSize(
-                                            value as ProductWithBrand["sizes"][number]["name"]
-                                        );
-                                    }}
-                                    defaultValue={field.value}
-                                    className="flex flex-wrap gap-2"
-                                    disabled={!product.isAvailable}
-                                >
-                                    {product.sizes.map((s) => (
-                                        <FormItem key={s.name}>
-                                            <FormControl>
-                                                <RadioGroupItem
-                                                    value={s.name}
-                                                    id={s.name}
-                                                    disabled={
-                                                        s.quantity === 0 ||
-                                                        !product.isAvailable
-                                                    }
-                                                    className="sr-only"
-                                                />
-                                            </FormControl>
-
-                                            <FormLabel htmlFor={s.name}>
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <div
-                                                        title={s.name}
-                                                        className={cn(
-                                                            "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
-                                                            s.name === size &&
-                                                                "bg-primary text-background",
-                                                            s.name ===
-                                                                "One Size" &&
-                                                                "size-auto px-3",
-                                                            (s.quantity === 0 ||
-                                                                !product.isAvailable) &&
-                                                                "cursor-not-allowed opacity-50"
-                                                        )}
-                                                    >
-                                                        <span>{s.name}</span>
-                                                    </div>
-
-                                                    {s.quantity < 3 && (
-                                                        <span className="text-xs text-destructive">
-                                                            {s.quantity} left
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </FormLabel>
-                                        </FormItem>
-                                    ))}
-                                </RadioGroup>
+                                <Input {...field} readOnly className="hidden" />
                             </FormControl>
 
                             <FormMessage />

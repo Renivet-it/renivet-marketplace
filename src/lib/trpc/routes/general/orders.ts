@@ -2,7 +2,7 @@ import { DEFAULT_MESSAGES } from "@/config/const";
 import { razorpay } from "@/lib/razorpay";
 import { brandCache, userCartCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { convertPriceToPaise, generateReceiptId } from "@/lib/utils";
+import { generateReceiptId } from "@/lib/utils";
 import {
     createOrderItemSchema,
     createOrderSchema,
@@ -126,7 +126,7 @@ export const ordersRouter = createTRPCRouter({
 
             try {
                 const rpzOrder = await razorpay.orders.create({
-                    amount: convertPriceToPaise(parseFloat(input.totalAmount)),
+                    amount: input.totalAmount,
                     currency: "INR",
                     customer_details: {
                         name: user.firstName + " " + user.lastName,
@@ -152,22 +152,16 @@ export const ordersRouter = createTRPCRouter({
                         contact: existingAddress.phone,
                     },
                     line_items_total: input.totalItems,
-                    shipping_fee: convertPriceToPaise(
-                        parseFloat(input.deliveryAmount)
-                    ),
+                    shipping_fee: input.deliveryAmount,
                     receipt: receiptId,
                     transfers: existingBrands.map((brand) => ({
                         account: brand.rzpAccountId,
-                        amount: convertPriceToPaise(
-                            input.items
-                                .filter((item) => item.brandId === brand.id)
-                                .reduce(
-                                    (acc, item) =>
-                                        acc +
-                                        parseFloat(item.price) * item.quantity,
-                                    0
-                                )
-                        ),
+                        amount: input.items
+                            .filter((item) => item.brandId === brand.id)
+                            .reduce(
+                                (acc, item) => acc + item.price * item.quantity,
+                                0
+                            ),
                         currency: "INR",
                     })),
                 });

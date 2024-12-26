@@ -23,10 +23,8 @@ class OrderQuery {
             with: {
                 items: {
                     with: {
-                        product: {
-                            with: {
-                                brand: true,
-                            },
+                        productVariant: {
+                            with: { product: { with: { brand: true } } },
                         },
                     },
                 },
@@ -35,7 +33,21 @@ class OrderQuery {
 
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
-            .parse(data);
+            .parse(
+                data.map((d) => ({
+                    ...d,
+                    items: d.items.map(
+                        ({
+                            productVariant: { product, ...restV },
+                            ...rest
+                        }) => ({
+                            ...rest,
+                            productVariant: restV,
+                            product,
+                        })
+                    ),
+                }))
+            );
 
         return parsed;
     }
@@ -54,10 +66,8 @@ class OrderQuery {
             with: {
                 items: {
                     with: {
-                        product: {
-                            with: {
-                                brand: true,
-                            },
+                        productVariant: {
+                            with: { product: { with: { brand: true } } },
                         },
                     },
                 },
@@ -65,8 +75,18 @@ class OrderQuery {
         });
         if (!data) return null;
 
-        const parsed: OrderWithItemAndBrand =
-            orderWithItemAndBrandSchema.parse(data);
+        const parsed: OrderWithItemAndBrand = orderWithItemAndBrandSchema.parse(
+            {
+                ...data,
+                items: data.items.map(
+                    ({ productVariant: { product, ...restV }, ...rest }) => ({
+                        ...rest,
+                        productVariant: restV,
+                        product,
+                    })
+                ),
+            }
+        );
 
         return parsed;
     }
@@ -86,10 +106,8 @@ class OrderQuery {
             with: {
                 items: {
                     with: {
-                        product: {
-                            with: {
-                                brand: true,
-                            },
+                        productVariant: {
+                            with: { product: { with: { brand: true } } },
                         },
                     },
                 },
@@ -98,7 +116,21 @@ class OrderQuery {
 
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
-            .parse(data);
+            .parse(
+                data.map((d) => ({
+                    ...d,
+                    items: d.items.map(
+                        ({
+                            productVariant: { product, ...restV },
+                            ...rest
+                        }) => ({
+                            ...rest,
+                            productVariant: restV,
+                            product,
+                        })
+                    ),
+                }))
+            );
 
         return parsed;
     }

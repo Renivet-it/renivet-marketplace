@@ -49,9 +49,12 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
             },
         });
 
-    const maxQuantity =
-        item.product.sizes.find((size) => size.name === item.size)?.quantity ||
-        0;
+    const variant = item.item.variants.find(
+        (v) =>
+            v.size === item.size &&
+            JSON.stringify(v.color) === JSON.stringify(item.color)
+    );
+    const maxQuantity = variant?.quantity || 0;
 
     return (
         <Form {...form}>
@@ -59,10 +62,8 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                 className="space-y-4"
                 onSubmit={form.handleSubmit((values) =>
                     updateProduct({
-                        productId: item.product.id,
                         userId,
-                        color: item.color,
-                        size: item.size,
+                        sku: item.sku,
                         quantity: values.quantity,
                     })
                 )}

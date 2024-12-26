@@ -28,7 +28,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { cn, formatPriceTag } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import { format } from "date-fns";
 import Autoplay from "embla-carousel-autoplay";
@@ -43,8 +43,7 @@ interface PageProps extends GenericProps {
 export function ProductReviewPage({ className, product, ...props }: PageProps) {
     const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false);
     const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
-
-    const stock = product.sizes.reduce((acc, x) => acc + x.quantity, 0);
+    const [isVariantsModalOpen, setIsVariantsModalOpen] = useState(false);
 
     return (
         <>
@@ -73,7 +72,10 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 <div>
                     <h5 className="text-sm font-medium">Price</h5>
                     <p className="text-sm">
-                        {formatPriceTag(parseFloat(product.price), true)}
+                        {formatPriceTag(
+                            parseFloat(convertPaiseToRupees(product.price)),
+                            true
+                        )}
                     </p>
                 </div>
 
@@ -126,93 +128,20 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 </div>
 
                 <div>
-                    <h5 className="text-sm font-medium">Colors</h5>
-                    {product.colors.length === 0 ? (
-                        <span className="text-sm">N/A</span>
-                    ) : (
-                        <div className="flex gap-1">
-                            {product.colors.map((color, i) => (
-                                <div
-                                    key={i}
-                                    title={color.name}
-                                    className="size-5 rounded-full"
-                                    style={{
-                                        backgroundColor: color.hex,
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div>
-                    <h5 className="text-sm font-medium">Sizes</h5>
-                    {product.colors.length === 0 ? (
-                        <span className="text-sm">N/A</span>
-                    ) : (
-                        <div className="flex gap-1">
-                            {product.sizes.length === 0 ? (
-                                <span>N/A</span>
-                            ) : (
-                                <Popover>
-                                    <PopoverTrigger
-                                        title="Click to view"
-                                        className="text-sm underline"
-                                    >
-                                        View
-                                    </PopoverTrigger>
-
-                                    <PopoverContent className="w-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Count</TableHead>
-                                                    <TableHead>Size</TableHead>
-                                                    <TableHead className="text-right">
-                                                        Quantity
-                                                    </TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-
-                                            <TableBody>
-                                                {product.sizes.map((x, i) => (
-                                                    <TableRow key={x.name}>
-                                                        <TableCell>
-                                                            {i + 1}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {x.name}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            {x.quantity}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-
-                                            <TableFooter>
-                                                <TableRow>
-                                                    <TableCell colSpan={2}>
-                                                        Total
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        {stock}
-                                                    </TableCell>
-                                                </TableRow>
-                                            </TableFooter>
-                                        </Table>
-                                    </PopoverContent>
-                                </Popover>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <div>
                     <h5 className="text-sm font-medium">Images</h5>
                     <button
                         className="text-sm text-primary underline"
                         onClick={() => setIsImagesModalOpen(true)}
+                    >
+                        View
+                    </button>
+                </div>
+
+                <div>
+                    <h5 className="text-sm font-medium">Variants</h5>
+                    <button
+                        className="text-sm text-primary underline"
+                        onClick={() => setIsVariantsModalOpen(true)}
                     >
                         View
                     </button>
@@ -231,7 +160,7 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 </div>
 
                 <div>
-                    <h5 className="text-sm font-medium">Created On</h5>
+                    <h5 className="text-sm font-medium">Added On</h5>
                     <p className="text-sm">
                         {format(new Date(product.createdAt), "MMM dd, yyyy")}
                     </p>
@@ -297,6 +226,70 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                         <CarouselPrevious />
                         <CarouselNext />
                     </Carousel>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isVariantsModalOpen}
+                onOpenChange={setIsVariantsModalOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            Variants of &ldquo;{product.name}&rdquo;
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>SKU</TableHead>
+                                <TableHead>Size</TableHead>
+                                <TableHead>Color</TableHead>
+                                <TableHead>Availablity</TableHead>
+                                <TableHead className="text-right">
+                                    Quantity
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+
+                        <TableBody>
+                            {product.variants.map((x, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>{x.sku}</TableCell>
+                                    <TableCell>{x.size}</TableCell>
+                                    <TableCell>
+                                        <div
+                                            key={i}
+                                            title={x.color.name}
+                                            className="size-5 rounded-full border border-foreground/20"
+                                            style={{
+                                                backgroundColor: x.color.hex,
+                                            }}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        {x.isAvailable ? "Yes" : "No"}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {x.quantity}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+
+                        <TableFooter>
+                            <TableRow>
+                                <TableCell colSpan={4}>Total</TableCell>
+                                <TableCell className="text-right">
+                                    {product.variants.reduce(
+                                        (acc, x) => acc + x.quantity,
+                                        0
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        </TableFooter>
+                    </Table>
                 </DialogContent>
             </Dialog>
         </>

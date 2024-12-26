@@ -14,7 +14,11 @@ import {
     SelectValue,
 } from "@/components/ui/select-dash";
 import { trpc } from "@/lib/trpc/client";
-import { convertValueToLabel, formatPriceTag } from "@/lib/utils";
+import {
+    convertPaiseToRupees,
+    convertValueToLabel,
+    formatPriceTag,
+} from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import {
     ColumnDef,
@@ -52,7 +56,14 @@ const columns: ColumnDef<TableProduct>[] = [
         header: "Price",
         cell: ({ row }) => {
             const data = row.original;
-            return <span>{formatPriceTag(parseFloat(data.price), true)}</span>;
+            return (
+                <span>
+                    {formatPriceTag(
+                        parseFloat(convertPaiseToRupees(data.price)),
+                        true
+                    )}
+                </span>
+            );
         },
     },
     {
@@ -144,7 +155,10 @@ export function ProductsReviewTable({ initialData }: PageProps) {
         () =>
             dataRaw.map((x) => ({
                 ...x,
-                stock: x.sizes.reduce((acc, x) => acc + x.quantity, 0),
+                stock: x.variants.reduce(
+                    (acc, variant) => acc + variant.quantity,
+                    0
+                ),
                 brandName: x.brand.name,
             })),
         [dataRaw]

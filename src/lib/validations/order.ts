@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { brandSchema } from "./brand";
 import { orderItemSchema } from "./order-item";
-import { productSchema } from "./product";
+import { productSchema, productVariantSchema } from "./product";
 
 export const orderSchema = z.object({
     id: z
@@ -65,37 +65,21 @@ export const orderSchema = z.object({
         .int("Total Items must be an integer")
         .positive("Total Items must be a positive number"),
     taxAmount: z
-        .string({
-            required_error: "Tax Amount is required",
-            invalid_type_error: "Tax Amount must be a number",
-        })
-        .refine((v) => !isNaN(parseFloat(v)), {
-            message: "Tax Amount must be a number",
-        }),
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().min(0, "Tax Amount must be a positive number")),
     deliveryAmount: z
-        .string({
-            required_error: "Delivery Amount is required",
-            invalid_type_error: "Delivery Amount must be a number",
-        })
-        .refine((v) => !isNaN(parseFloat(v)), {
-            message: "Delivery Amount must be a number",
-        }),
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().min(0, "Delivery Amount must be a positive number")),
     discountAmount: z
-        .string({
-            required_error: "Discount Amount is required",
-            invalid_type_error: "Discount Amount must be a number",
-        })
-        .refine((v) => !isNaN(parseFloat(v)), {
-            message: "Discount Amount must be a number",
-        }),
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().min(0, "Discount Amount must be a positive number")),
     totalAmount: z
-        .string({
-            required_error: "Total Amount is required",
-            invalid_type_error: "Total Amount must be a number",
-        })
-        .refine((v) => !isNaN(parseFloat(v)), {
-            message: "Total Amount must be a number",
-        }),
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().min(0, "Total Amount must be a positive number")),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -113,6 +97,7 @@ export const orderSchema = z.object({
 export const orderWithItemAndBrandSchema = orderSchema.extend({
     items: z.array(
         orderItemSchema.extend({
+            productVariant: productVariantSchema,
             product: productSchema.extend({
                 price: z.number().nonnegative(),
                 brand: brandSchema,

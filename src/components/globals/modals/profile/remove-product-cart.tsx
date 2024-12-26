@@ -76,9 +76,8 @@ export function RemoveProductFromCartModal({
                         disabled={isRemoving}
                         onClick={() =>
                             removeProduct({
-                                ...item,
-                                productId: item.product.id,
                                 userId,
+                                sku: item.sku,
                             })
                         }
                     >

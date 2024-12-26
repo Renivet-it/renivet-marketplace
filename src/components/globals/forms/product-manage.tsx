@@ -6,35 +6,31 @@ import { Editor, EditorRef } from "@/components/ui/editor";
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import PriceInput from "@/components/ui/price-input";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { PRESET_COLORS } from "@/config/const";
-import { SIZES } from "@/config/sizes";
+    Table,
+    TableBody,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import {
-    calculatePriceWithGST,
-    calculatePriceWithoutGST,
     cn,
     convertBytesToHumanReadable,
+    convertPaiseToRupees,
+    convertPriceToPaise,
+    generateSKU,
     getUploadThingFileKey,
     handleClientError,
 } from "@/lib/utils";
@@ -50,14 +46,15 @@ import { useDropzone } from "@uploadthing/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { HexColorPicker } from "react-colorful";
+import Papa from "papaparse";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
     generateClientDropzoneAccept,
     generatePermittedFileTypes,
 } from "uploadthing/client";
+import { ProductVariantManage } from "./product-variant-manage";
 
 interface PageProps {
     brandId: string;
@@ -66,14 +63,12 @@ interface PageProps {
 
 export function ProductManageForm({ brandId, product }: PageProps) {
     const router = useRouter();
-    const [activeColor, setActiveColor] = useState<string>("#ffffff");
-    const [newColorName, setNewColorName] = useState<string>("");
+
+    const [bulkUploadProgress, setBulkUploadProgress] = useState<number>(0);
+    const [isBulkUploading, setIsBulkUploading] = useState<boolean>(false);
 
     const editorRef = useRef<EditorRef>(null!);
-
-    const [selectedSizes, setSelectedSizes] = useState<string[]>(
-        product?.sizes.map((size) => size.name) ?? []
-    );
+    const csvUploadInputRef = useRef<HTMLInputElement>(null!);
 
     const [imagePreviews, setImagePreviews] = useState<string[]>(
         product?.imageUrls ?? []
@@ -92,18 +87,29 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         defaultValues: {
             name: product?.name ?? "",
             price: product?.price
-                ? calculatePriceWithoutGST(parseFloat(product.price)).toString()
-                : "",
+                ? parseFloat(convertPaiseToRupees(product.price))
+                : 0,
             description:
                 product?.description ??
                 // eslint-disable-next-line quotes
                 '<p><strong>Product Details </strong></p><p>Grey tartan checked opaque Casual shirt,  has a spread collar, button placket, 1 patch pocket, long regular sleeves, curved hem</p><p></p><p><strong>Size &amp; Fit</strong></p><p>Brand Fit:</p><p>Fit: Slim Fit</p><p>Size worn by the model: M</p><p>Chest: 38"</p><p>Height: 6\'1"</p><p></p><p><strong>Material &amp; Care</strong></p><p>100% Cotton</p><p>Machine Wash</p>',
             brandId,
-            sizes: product?.sizes ?? [],
-            colors: product?.colors ?? [],
             imageUrls: product?.imageUrls ?? [],
             sustainabilityCertificateUrl:
                 product?.sustainabilityCertificateUrl ?? null,
+            variants: !!product?.variants.length
+                ? product?.variants
+                : [
+                      {
+                          sku: generateSKU(),
+                          size: "M",
+                          color: {
+                              name: "White",
+                              hex: "#FFFFFF",
+                          },
+                          quantity: 0,
+                      },
+                  ],
         },
     });
 
@@ -118,101 +124,10 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         };
     }, [imagePreviews]);
 
-    const {
-        fields: sizesFields,
-        append: appendSizes,
-        remove: removeSizes,
-    } = useFieldArray({
-        name: "sizes",
+    const { fields, append, remove, replace } = useFieldArray({
         control: form.control,
+        name: "variants",
     });
-
-    const {
-        fields: colorsFields,
-        append: appendColors,
-        remove: removeColors,
-    } = useFieldArray({
-        name: "colors",
-        control: form.control,
-    });
-
-    const handleSizeToggle = (size: string) => {
-        if (size === "One Size") {
-            if (selectedSizes.includes("One Size")) {
-                setSelectedSizes([]);
-                form.setValue("sizes", []);
-            } else {
-                setSelectedSizes(["One Size"]);
-                form.setValue("sizes", [
-                    { name: "One Size" as const, quantity: 0 },
-                ]);
-            }
-            return;
-        }
-
-        if (selectedSizes.includes("One Size")) return;
-
-        setSelectedSizes((prev) => {
-            const newSizes = selectedSizes.includes(size)
-                ? prev.filter((s) => s !== size)
-                : [...prev, size];
-
-            if (selectedSizes.includes(size)) {
-                const index = selectedSizes.findIndex(
-                    (field) => field === size
-                );
-                if (index !== -1) removeSizes(index);
-            } else {
-                const existingIndex = sizesFields.findIndex(
-                    (field) => field.name === size
-                );
-                if (existingIndex === -1)
-                    appendSizes({
-                        name: size as ProductWithBrand["sizes"][number]["name"],
-                        quantity: 0,
-                    });
-            }
-
-            return newSizes;
-        });
-    };
-
-    const isSizeDisabled = (size: string) =>
-        (size === "One Size" &&
-            selectedSizes.length > 0 &&
-            !selectedSizes.includes("One Size")) ||
-        (size !== "One Size" && selectedSizes.includes("One Size"));
-
-    const addColor = (
-        color: { name: string; hex: string },
-        forceAdd = true
-    ) => {
-        if (
-            !forceAdd &&
-            PRESET_COLORS.some(
-                (preset) =>
-                    preset.name.toLowerCase() === color.name.toLowerCase() ||
-                    preset.hex === color.hex
-            )
-        )
-            return toast.error("Color already exists in presets");
-
-        if (
-            !colorsFields.some(
-                (field) => field.name === color.name || field.hex === color.hex
-            )
-        )
-            appendColors(color);
-    };
-
-    const isCustomColorPresent = colorsFields.some(
-        (field) =>
-            !PRESET_COLORS.some(
-                (preset) =>
-                    preset.name.toLowerCase() === field.name.toLowerCase() ||
-                    preset.hex === field.hex
-            )
-    );
 
     const onImagesDrop = (acceptedFiles: File[]) => {
         const remainingSlots = 5 - imagePreviews.length;
@@ -284,6 +199,115 @@ export function ProductManageForm({ brandId, product }: PageProps) {
     });
 
     const fileKey = getUploadThingFileKey(certificatePreview || "");
+
+    const handleBulkVariantUpload = useCallback(
+        async (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            setIsBulkUploading(true);
+            setBulkUploadProgress(0);
+
+            Papa.parse(file, {
+                complete: async (result) => {
+                    try {
+                        const seenCombinations = new Set<string>();
+                        const parsedVariants = result.data
+                            .slice(1)
+                            .filter(
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                (row: any) => {
+                                    if (
+                                        !row[0] ||
+                                        !row[1] ||
+                                        !row[2] ||
+                                        !row[3]
+                                    )
+                                        return false;
+                                    const combination = `${row[0]}-${row[1]}-${row[2]}`;
+                                    if (seenCombinations.has(combination))
+                                        return false;
+                                    seenCombinations.add(combination);
+                                    return true;
+                                }
+                            )
+                            .map(
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                (row: any) => ({
+                                    size: row[0],
+                                    color: { name: row[1], hex: row[2] },
+                                    quantity: parseInt(row[3]),
+                                })
+                            );
+
+                        const currentFields = fields;
+                        const newVariants: CreateProduct["variants"] = [];
+
+                        parsedVariants.forEach((newVariant) => {
+                            const existingVariantIndex =
+                                currentFields.findIndex(
+                                    (field) =>
+                                        field.size === newVariant.size &&
+                                        field.color.name ===
+                                            newVariant.color.name &&
+                                        field.color.hex === newVariant.color.hex
+                                );
+
+                            if (existingVariantIndex !== -1)
+                                currentFields[existingVariantIndex].quantity =
+                                    newVariant.quantity;
+                            else
+                                newVariants.push({
+                                    sku: generateSKU(),
+                                    ...newVariant,
+                                });
+                        });
+
+                        const combinedVariants = [
+                            ...currentFields,
+                            ...newVariants,
+                        ];
+
+                        const validatedVariants =
+                            createProductSchema.shape.variants.parse(
+                                combinedVariants
+                            );
+
+                        replace(validatedVariants);
+                        toast.success("Variants uploaded successfully");
+                    } catch (err) {
+                        console.error(err);
+                        toast.error("Failed to upload variants");
+                    } finally {
+                        setIsBulkUploading(false);
+                        setBulkUploadProgress(0);
+                        e.target.value = "";
+                    }
+                },
+            });
+        },
+        [fields, replace]
+    );
+
+    const hasDuplicatedSizeColorCombination = () => {
+        const seenCombinations = new Set<string>();
+        return fields.some((field) => {
+            const combination = `${field.size}-${field.color.name}-${field.color.hex}`;
+            if (seenCombinations.has(combination)) return true;
+            seenCombinations.add(combination);
+            return false;
+        });
+    };
+
+    const filterDuplicatedSizeColorCombination = () => {
+        const seenCombinations = new Set<string>();
+        return fields.filter((field) => {
+            const combination = `${field.size}-${field.color.name}-${field.color.hex}`;
+            if (seenCombinations.has(combination)) return false;
+            seenCombinations.add(combination);
+            return true;
+        });
+    };
 
     const { mutateAsync: createProductAsync } =
         trpc.brands.products.createProduct.useMutation();
@@ -386,23 +410,30 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         <Form {...form}>
             <form
                 className="space-y-6"
-                onSubmit={form.handleSubmit((values) =>
-                    product
+                onSubmit={form.handleSubmit((values) => {
+                    if (hasDuplicatedSizeColorCombination()) {
+                        const filteredVariants =
+                            filterDuplicatedSizeColorCombination();
+                        form.setValue("variants", filteredVariants);
+
+                        toast.error(
+                            "Duplicate size and color combinations are not allowed, and have been removed. Click the button again to proceed."
+                        );
+                        return;
+                    }
+
+                    return product
                         ? updateProduct({
                               ...values,
                               isPublished: product.isPublished,
                               isAvailable: product.isAvailable,
-                              price: calculatePriceWithGST(
-                                  parseFloat(values.price)
-                              ).toString(),
+                              price: convertPriceToPaise(values.price),
                           })
                         : createProduct({
                               ...values,
-                              price: calculatePriceWithGST(
-                                  parseFloat(values.price)
-                              ).toString(),
-                          })
-                )}
+                              price: convertPriceToPaise(values.price),
+                          });
+                })}
             >
                 <FormField
                     control={form.control}
@@ -462,347 +493,28 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                             <FormLabel>Price</FormLabel>
 
                             <FormControl>
-                                <div className="flex items-center gap-2">
-                                    <PriceInput
-                                        placeholder="998.00"
-                                        currency="INR"
-                                        symbol="₹"
-                                        disabled={isCreating || isUpdating}
-                                        {...field}
-                                        onChange={(e) => {
-                                            const regex =
-                                                /^[0-9]*\.?[0-9]{0,2}$/;
-                                            if (regex.test(e.target.value))
-                                                field.onChange(e);
-                                        }}
-                                    />
-
-                                    <span>+</span>
-
-                                    <TooltipProvider delayDuration={0}>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <span className="cursor-pointer rounded-md bg-foreground/80 p-1 px-2 text-sm text-background">
-                                                    GST
-                                                </span>
-                                            </TooltipTrigger>
-
-                                            <TooltipContent>
-                                                We will add GST to the price
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-
-                                    <span>=</span>
-
-                                    <span>
-                                        {calculatePriceWithGST(
-                                            parseFloat(
-                                                field.value.length > 0
-                                                    ? field.value
-                                                    : "0"
-                                            )
-                                        )}
-                                    </span>
-                                </div>
+                                <PriceInput
+                                    placeholder="998.00"
+                                    currency="INR"
+                                    symbol="₹"
+                                    disabled={isCreating || isUpdating}
+                                    {...field}
+                                    onChange={(e) => {
+                                        const regex = /^[0-9]*\.?[0-9]{0,2}$/;
+                                        if (regex.test(e.target.value))
+                                            field.onChange(e);
+                                    }}
+                                />
                             </FormControl>
+
+                            <FormDescription>
+                                inclusive of all taxes
+                            </FormDescription>
 
                             <FormMessage />
                         </FormItem>
                     )}
                 />
-
-                <FormField
-                    control={form.control}
-                    name="sizes"
-                    render={() => (
-                        <FormItem
-                            className={cn(
-                                sizesFields.length > 0 && "space-y-4"
-                            )}
-                        >
-                            <div className="space-y-2">
-                                <FormLabel>Sizes</FormLabel>
-
-                                <FormControl>
-                                    <div className="flex flex-wrap gap-2">
-                                        {SIZES.map((size) => (
-                                            <Button
-                                                key={size}
-                                                type="button"
-                                                variant={
-                                                    selectedSizes.includes(size)
-                                                        ? "default"
-                                                        : "outline"
-                                                }
-                                                onClick={() =>
-                                                    handleSizeToggle(size)
-                                                }
-                                                disabled={
-                                                    isSizeDisabled(size) ||
-                                                    isCreating ||
-                                                    isUpdating
-                                                }
-                                                className="min-w-[80px]"
-                                            >
-                                                {size}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                </FormControl>
-
-                                <FormMessage />
-                            </div>
-
-                            <div className="space-y-2">
-                                {sizesFields.length > 0 && <Separator />}
-
-                                {sizesFields
-                                    .sort(
-                                        (a, b) =>
-                                            SIZES.indexOf(a.name) -
-                                            SIZES.indexOf(b.name)
-                                    )
-                                    .map((field, index) => (
-                                        <FormField
-                                            key={field.id}
-                                            control={form.control}
-                                            name={`sizes.${index}.quantity`}
-                                            render={({
-                                                field: {
-                                                    value,
-                                                    onChange,
-                                                    ...fieldProps
-                                                },
-                                            }) => (
-                                                <FormItem className="flex items-center gap-4">
-                                                    <FormLabel className="min-w-6 whitespace-nowrap">
-                                                        {
-                                                            sizesFields[index]
-                                                                .name
-                                                        }
-                                                        :
-                                                    </FormLabel>
-
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Enter quantity"
-                                                            type="number"
-                                                            disabled={
-                                                                isCreating ||
-                                                                isUpdating
-                                                            }
-                                                            {...fieldProps}
-                                                            value={value || ""}
-                                                            onChange={(e) =>
-                                                                onChange(
-                                                                    parseInt(
-                                                                        e.target
-                                                                            .value
-                                                                    ) || 0
-                                                                )
-                                                            }
-                                                        />
-                                                    </FormControl>
-
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    ))}
-                            </div>
-                        </FormItem>
-                    )}
-                />
-
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <div className="text-sm font-medium">Colors</div>
-
-                        <Tabs defaultValue="preset" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="preset">
-                                    Presets
-                                </TabsTrigger>
-                                <TabsTrigger value="custom">Custom</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="preset" className="mt-4">
-                                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                                    {PRESET_COLORS.map((color) => (
-                                        <Button
-                                            key={color.hex}
-                                            type="button"
-                                            variant="outline"
-                                            className="h-12 w-full overflow-hidden p-0 hover:bg-muted hover:text-foreground"
-                                            onClick={() => addColor(color)}
-                                        >
-                                            <div className="flex size-full items-center">
-                                                <div
-                                                    className="h-full w-1/3"
-                                                    style={{
-                                                        backgroundColor:
-                                                            color.hex,
-                                                    }}
-                                                />
-                                                <span className="flex h-full w-2/3 items-center justify-center border-l text-center text-xs">
-                                                    {color.name}
-                                                </span>
-                                            </div>
-                                        </Button>
-                                    ))}
-                                </div>
-                            </TabsContent>
-
-                            <TabsContent value="custom" className="mt-4">
-                                <div className="flex items-end space-x-4">
-                                    <div className="grow">
-                                        <Input
-                                            placeholder="Color name"
-                                            value={newColorName}
-                                            onChange={(e) =>
-                                                setNewColorName(e.target.value)
-                                            }
-                                            className="mb-2"
-                                        />
-
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="h-10 w-full overflow-hidden p-0"
-                                                >
-                                                    <div className="flex size-full items-center">
-                                                        <div
-                                                            className="h-full w-1/3"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    activeColor,
-                                                            }}
-                                                        />
-
-                                                        <span className="flex h-full w-2/3 items-center justify-center border-l text-xs uppercase">
-                                                            {activeColor}
-                                                        </span>
-                                                    </div>
-                                                </Button>
-                                            </PopoverTrigger>
-
-                                            <PopoverContent className="w-auto border-0 bg-transparent p-0">
-                                                <HexColorPicker
-                                                    color={activeColor}
-                                                    onChange={setActiveColor}
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-
-                                    <Button
-                                        type="button"
-                                        onClick={() =>
-                                            addColor(
-                                                {
-                                                    name:
-                                                        newColorName.length > 0
-                                                            ? newColorName
-                                                            : "Custom",
-                                                    hex: activeColor,
-                                                },
-                                                false
-                                            )
-                                        }
-                                        className="mb-2"
-                                    >
-                                        <Icons.Plus className="mr-2 size-4" />
-                                        Add
-                                    </Button>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </div>
-
-                    {colorsFields.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="text-sm font-medium">
-                                Selected Colors
-                            </div>
-
-                            {colorsFields.map((field, index) => (
-                                <div
-                                    key={field.id}
-                                    className="flex items-center gap-2 md:gap-4"
-                                >
-                                    <div>
-                                        <div
-                                            className="size-8 rounded-full border"
-                                            style={{
-                                                backgroundColor: field.hex,
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div className="grow">
-                                        <FormField
-                                            control={form.control}
-                                            name={`colors.${index}.name`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Color name"
-                                                            readOnly
-                                                            className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-
-                                    <div className="w-24">
-                                        <FormField
-                                            control={form.control}
-                                            name={`colors.${index}.hex`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl>
-                                                        <Input
-                                                            placeholder="Hex"
-                                                            readOnly
-                                                            className="focus-visible:ring-0 focus-visible:ring-offset-0"
-                                                            {...field}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeColors(index)}
-                                        className="text-destructive"
-                                    >
-                                        <Icons.X className="size-4" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {isCustomColorPresent && (
-                        <p className="text-sm text-destructive">
-                            * Custom colors are not included while filtering the
-                            products
-                        </p>
-                    )}
-                </div>
 
                 <FormField
                     control={form.control}
@@ -1018,6 +730,106 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                         </FormItem>
                     )}
                 />
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-lg font-semibold text-foreground">
+                            Product Variants
+                        </h2>
+
+                        <Button size="sm" disabled={isCreating || isUpdating}>
+                            Download Template
+                            <Icons.Download />
+                        </Button>
+                    </div>
+
+                    <div className="flex min-h-32 items-center justify-center rounded-md bg-muted p-4">
+                        <input
+                            type="file"
+                            accept=".csv"
+                            ref={csvUploadInputRef}
+                            className="hidden"
+                            onChange={handleBulkVariantUpload}
+                            disabled={
+                                isBulkUploading || isCreating || isUpdating
+                            }
+                        />
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => csvUploadInputRef.current.click()}
+                            disabled={
+                                isBulkUploading || isCreating || isUpdating
+                            }
+                        >
+                            Bulk Upload Variants
+                        </Button>
+                    </div>
+
+                    {isBulkUploading && (
+                        <Progress
+                            value={bulkUploadProgress}
+                            className="border border-green-700 bg-transparent"
+                            indicatorClassName="bg-green-700"
+                        />
+                    )}
+
+                    <div className="relative">
+                        <Separator />
+                        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-sm">
+                            OR
+                        </span>
+                    </div>
+
+                    <Table className="border">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>SKU</TableHead>
+                                <TableHead>Size</TableHead>
+                                <TableHead>Color</TableHead>
+                                <TableHead>Quantity</TableHead>
+                                <TableHead>Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+
+                        <TableBody>
+                            {fields.map((field, index) => (
+                                <ProductVariantManage
+                                    key={field.sku}
+                                    field={field}
+                                    index={index}
+                                    isCreating={isCreating}
+                                    isUpdating={isUpdating}
+                                    form={form}
+                                    remove={remove}
+                                    product={product}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                            const newSku = generateSKU();
+
+                            append({
+                                sku: newSku,
+                                size: "M",
+                                color: { name: "White", hex: "#FFFFFF" },
+                                quantity: 0,
+                            });
+                        }}
+                        disabled={isCreating || isUpdating}
+                    >
+                        <Icons.Plus className="size-4" />
+                        Add Variant
+                    </Button>
+                </div>
 
                 <Button
                     type="submit"

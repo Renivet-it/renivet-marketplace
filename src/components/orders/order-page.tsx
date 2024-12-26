@@ -17,16 +17,18 @@ import {
     calculateTotalPrice,
     cn,
     convertMsToHumanReadable,
+    convertPaiseToRupees,
     convertValueToLabel,
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ProductCartCard } from "../globals/cards";
 import { PaymentProcessingModal } from "../globals/modals";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
@@ -123,9 +125,10 @@ export function OrderPage({
             ? order.items.filter(
                   (item) =>
                       item.product.isAvailable &&
-                      item.product.status &&
-                      item.product.sizes.filter((size) => size.quantity > 0)
-                          .length > 0
+                      !item.product.isDeleted &&
+                      item.productVariant.isAvailable &&
+                      !item.productVariant.isDeleted &&
+                      item.productVariant.quantity > 0
               )
             : order.items;
 
@@ -281,20 +284,89 @@ export function OrderPage({
                         )}
 
                         {availableItems.map((item) => (
-                            <ProductCartCard
-                                item={{
-                                    ...item,
-                                    userId: user.id,
-                                    status: true,
-                                    product: {
-                                        ...item.product,
-                                        price: item.product.price.toString(),
-                                    },
-                                }}
+                            <div
                                 key={item.id}
-                                userId={user.id}
-                                readOnly
-                            />
+                                className={cn(
+                                    "relative flex flex-col gap-3 border p-4 md:flex-row md:gap-5 md:p-6",
+                                    className
+                                )}
+                                {...props}
+                            >
+                                <div className="group aspect-[4/5] size-full max-w-36 shrink-0">
+                                    <Image
+                                        src={item.product.imageUrls[0]}
+                                        alt={item.product.name}
+                                        width={1000}
+                                        height={1000}
+                                        className="size-full object-cover"
+                                    />
+                                </div>
+
+                                <div className="w-full space-y-2 md:space-y-4">
+                                    <div className="space-y-1">
+                                        <h2 className="text-lg font-semibold leading-tight md:text-2xl md:leading-normal">
+                                            <Link
+                                                href={`/products/${item.product.slug}`}
+                                                target="_blank"
+                                                referrerPolicy="no-referrer"
+                                            >
+                                                {item.product.name}
+                                            </Link>
+                                        </h2>
+
+                                        <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground">
+                                            <Link
+                                                href={`/brands/${item.product.brand.id}`}
+                                            >
+                                                {item.product.brand.name}
+                                            </Link>
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                                            <span>Qty: {item.quantity}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-lg font-semibold md:text-xl">
+                                        {formatPriceTag(
+                                            parseFloat(
+                                                convertPaiseToRupees(
+                                                    item.product.price
+                                                )
+                                            ),
+                                            true
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <p className="text-sm">
+                                            <span className="font-semibold">
+                                                Size:{" "}
+                                            </span>
+                                            {item.productVariant.size}
+                                        </p>
+
+                                        <p className="text-sm">
+                                            <span className="font-semibold">
+                                                Color:{" "}
+                                            </span>
+                                            {item.productVariant.color.name}
+                                        </p>
+
+                                        <p className="text-sm">
+                                            <span className="font-semibold">
+                                                Added on:{" "}
+                                            </span>
+                                            {format(
+                                                new Date(item.createdAt),
+                                                "MMM dd, yyyy"
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>

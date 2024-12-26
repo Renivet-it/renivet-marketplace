@@ -1,7 +1,7 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, convertPriceToPaise } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
 import Link from "next/link";
 import {
@@ -85,8 +85,8 @@ export function ShopProducts({
             isAvailable: true,
             brandIds,
             colors,
-            minPrice: minPrice < 0 ? 0 : minPrice,
-            maxPrice: maxPrice > 10000 ? 10000 : maxPrice,
+            minPrice: convertPriceToPaise(minPrice < 0 ? 0 : minPrice),
+            maxPrice: convertPriceToPaise(maxPrice > 10000 ? 10000 : maxPrice),
             categoryId,
             subCategoryId,
             productTypeId,

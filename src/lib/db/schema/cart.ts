@@ -1,16 +1,14 @@
-import { Product } from "@/lib/validations";
 import { relations } from "drizzle-orm";
 import {
     boolean,
     index,
     integer,
-    jsonb,
     pgTable,
     text,
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
-import { products } from "./product";
+import { productVariants } from "./product";
 import { users } from "./user";
 
 export const carts = pgTable(
@@ -22,22 +20,20 @@ export const carts = pgTable(
             .references(() => users.id, {
                 onDelete: "cascade",
             }),
-        productId: uuid("product_id")
+        sku: text("sku")
             .notNull()
-            .references(() => products.id, {
+            .references(() => productVariants.sku, {
                 onDelete: "cascade",
             }),
         quantity: integer("quantity").notNull().default(1),
-        size: text("size").notNull().$type<Product["sizes"][number]["name"]>(),
-        color: jsonb("color").$type<Product["colors"][number]>(),
         status: boolean("status").notNull().default(true),
         ...timestamps,
     },
     (table) => ({
         cartUserIdIdx: index("cart_user_id_idx").on(table.userId),
-        cartUserIdProductIdIdx: index("cart_user_id_product_id_idx").on(
+        cartUserIdSkuIdx: index("cart_user_id_sku_idx").on(
             table.userId,
-            table.productId
+            table.sku
         ),
     })
 );
@@ -47,8 +43,8 @@ export const cartRelations = relations(carts, ({ one }) => ({
         fields: [carts.userId],
         references: [users.id],
     }),
-    product: one(products, {
-        fields: [carts.productId],
-        references: [products.id],
+    item: one(productVariants, {
+        fields: [carts.sku],
+        references: [productVariants.sku],
     }),
 }));

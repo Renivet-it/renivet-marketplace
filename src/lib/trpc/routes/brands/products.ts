@@ -11,6 +11,7 @@ import { generateProductSlug, getUploadThingFileKey } from "@/lib/utils";
 import { createProductSchema, updateProductSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 export const productsRouter = createTRPCRouter({
@@ -71,7 +72,7 @@ export const productsRouter = createTRPCRouter({
             isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
         )
         .mutation(async ({ input, ctx }) => {
-            const { queries, user } = ctx;
+            const { queries, user, db, schemas } = ctx;
             const { brandId, ...product } = input;
 
             if (!product.sustainabilityCertificateUrl)
@@ -106,6 +107,13 @@ export const productsRouter = createTRPCRouter({
                 brandId,
             });
 
+            await db.insert(schemas.productVariants).values(
+                input.variants.map((variant) => ({
+                    ...variant,
+                    productId: data.id,
+                }))
+            );
+
             return data;
         }),
     updateProduct: protectedProcedure
@@ -120,7 +128,7 @@ export const productsRouter = createTRPCRouter({
         )
         .mutation(async ({ input, ctx }) => {
             const { productId, values } = input;
-            const { queries, user } = ctx;
+            const { queries, user, db, schemas } = ctx;
 
             if (!values.sustainabilityCertificateUrl)
                 throw new TRPCError({
@@ -208,6 +216,46 @@ export const productsRouter = createTRPCRouter({
                     ? generateProductSlug(values.name, user.brand.name)
                     : existingProduct.slug;
 
+            const existingSkus = existingProduct.variants.map((v) => v.sku);
+            const inputSkus = values.variants.map((v) => v.sku);
+
+            const variantsToBeDeleted = existingSkus.filter(
+                (sku) => !inputSkus.includes(sku)
+            );
+            const variantsToBeAdded = values.variants.filter(
+                (v) => !existingSkus.includes(v.sku)
+            );
+
+            const variantsToBeUpdated = values.variants.filter((v) =>
+                existingSkus.includes(v.sku)
+            );
+
+            const filteredVariantsToBeUpdated = variantsToBeUpdated.filter(
+                (v) => {
+                    const existingVariant = existingProduct.variants.find(
+                        (ev) => ev.sku === v.sku
+                    );
+                    if (!existingVariant) return false;
+
+                    return (
+                        JSON.stringify({
+                            sku: v.sku,
+                            size: v.size,
+                            colorName: v.color.name,
+                            colorHex: v.color.hex,
+                            quantity: v.quantity,
+                        }) !==
+                        JSON.stringify({
+                            sku: existingVariant.sku,
+                            size: existingVariant.size,
+                            colorName: existingVariant.color.name,
+                            colorHex: existingVariant.color.hex,
+                            quantity: existingVariant.quantity,
+                        })
+                    );
+                }
+            );
+
             const [data] = await Promise.all([
                 queries.products.updateProduct(productId, {
                     ...values,
@@ -216,6 +264,81 @@ export const productsRouter = createTRPCRouter({
                     slug,
                 }),
                 userWishlistCache.dropAll(),
+                userCartCache.dropAll(),
+                variantsToBeDeleted.length > 0 &&
+                    db
+                        .update(schemas.productVariants)
+                        .set({
+                            isDeleted: true,
+                            isAvailable: false,
+                        })
+                        .where(
+                            inArray(
+                                schemas.productVariants.sku,
+                                variantsToBeDeleted
+                            )
+                        ),
+                variantsToBeAdded.length > 0 &&
+                    db.insert(schemas.productVariants).values(
+                        variantsToBeAdded.map((variant) => ({
+                            ...variant,
+                            productId,
+                        }))
+                    ),
+            ]);
+
+            if (filteredVariantsToBeUpdated.length > 0)
+                await Promise.all(
+                    filteredVariantsToBeUpdated.map(({ sku, ...rest }) =>
+                        db
+                            .update(schemas.productVariants)
+                            .set(rest)
+                            .where(eq(schemas.productVariants.sku, sku))
+                    )
+                );
+
+            return data;
+        }),
+    updateVariantAvailability: protectedProcedure
+        .input(
+            z.object({
+                productId: z.string(),
+                sku: z.string(),
+                isAvailable: z.boolean(),
+            })
+        )
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { productId, sku, isAvailable } = input;
+            const { queries, user } = ctx;
+
+            const existingProduct =
+                await queries.products.getProduct(productId);
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (existingProduct.brand.id !== user.brand?.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not a member of this brand",
+                });
+
+            const existingVariant = existingProduct.variants.find(
+                (v) => v.sku === sku
+            );
+            if (!existingVariant)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Variant not found",
+                });
+
+            const [data] = await Promise.all([
+                queries.products.updateVariantAvailability(sku, isAvailable),
                 userCartCache.dropAll(),
             ]);
             return data;
