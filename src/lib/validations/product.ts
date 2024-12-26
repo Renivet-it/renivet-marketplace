@@ -33,66 +33,9 @@ export const productSchema = z.object({
         })
         .min(3, "Description must be at least 3 characters long"),
     price: z
-        .string({
-            required_error: "Price is required",
-            invalid_type_error: "Price must be a number",
-        })
-        .refine((v) => !isNaN(parseFloat(v)), {
-            message: "Price must be a number",
-        }),
-    sizes: z
-        .array(
-            z.object({
-                name: z.enum(["One Size", "XS", "S", "M", "L", "XL", "XXL"], {
-                    required_error: "Size name is required",
-                    invalid_type_error: "Size name must be a string",
-                }),
-                quantity: z
-                    .number({
-                        required_error: "Size quantity is required",
-                        invalid_type_error: "Size quantity must be a number",
-                    })
-                    .int("Size quantity must be an integer")
-                    .min(0, "Size quantity must be a positive number"),
-            }),
-            {
-                invalid_type_error: "Sizes must be an array of objects",
-                required_error: "Sizes are required",
-            }
-        )
-        .min(1, "At least one size is required"),
-    colors: z
-        .array(
-            z.object({
-                name: z
-                    .string({
-                        required_error: "Color name is required",
-                        invalid_type_error: "Color name must be a string",
-                    })
-                    .min(1, "Color name must be at least 1 characters long"),
-                hex: z
-                    .string({
-                        required_error: "Color hex is required",
-                        invalid_type_error: "Color hex must be a string",
-                    })
-                    .length(7, "Color hex must be 7 characters long")
-                    .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
-            })
-        )
-        .refine((colors) => {
-            const names = new Set();
-            const hexes = new Set();
-
-            for (const color of colors) {
-                if (names.has(color.name) || hexes.has(color.hex)) {
-                    return false;
-                }
-                names.add(color.name);
-                hexes.add(color.hex);
-            }
-
-            return true;
-        }, "Duplicate color names or hex values are not allowed"),
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().min(0, "Amount must be positive")),
     brandId: z
         .string({
             required_error: "Brand ID is required",
@@ -167,8 +110,70 @@ export const productSchema = z.object({
         .transform((v) => new Date(v)),
 });
 
+export const productVariantSchema = z.object({
+    sku: z
+        .string({
+            required_error: "SKU is required",
+            invalid_type_error: "SKU must be a string",
+        })
+        .min(3, "SKU must be at least 3 characters long"),
+    productId: z
+        .string({
+            required_error: "Product ID is required",
+            invalid_type_error: "Product ID must be a string",
+        })
+        .uuid("Product ID is invalid"),
+    size: z.enum(["One Size", "XS", "S", "M", "L", "XL", "XXL"], {
+        required_error: "Size is required",
+        invalid_type_error: "Size must be a string",
+    }),
+    color: z.object({
+        name: z
+            .string({
+                required_error: "Color name is required",
+                invalid_type_error: "Color name must be a string",
+            })
+            .min(1, "Color name must be at least 1 characters long"),
+        hex: z
+            .string({
+                required_error: "Color hex is required",
+                invalid_type_error: "Color hex must be a string",
+            })
+            .length(7, "Color hex must be 7 characters long")
+            .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
+    }),
+    quantity: z
+        .number({
+            required_error: "Quantity is required",
+            invalid_type_error: "Quantity must be a number",
+        })
+        .int("Quantity must be an integer")
+        .min(0, "Quantity must be a positive number"),
+    isAvailable: z.boolean({
+        required_error: "Availability is required",
+        invalid_type_error: "Availability must be a boolean",
+    }),
+    isDeleted: z.boolean({
+        required_error: "Deleted status is required",
+        invalid_type_error: "Deleted status must be a boolean",
+    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
 export const productWithBrandSchema = productSchema.extend({
     brand: brandSchema,
+    variants: z.array(productVariantSchema),
     categories: z.array(
         z.object({
             id: z
@@ -215,13 +220,21 @@ export const createProductSchema = productSchema
             convertEmptyStringToNull,
             z
                 .string({
-                    required_error:
-                        "Sustainability certificate URL is required",
                     invalid_type_error:
                         "Sustainability certificate URL must be a string",
                 })
                 .nullable()
         ),
+        variants: z
+            .array(
+                productVariantSchema.pick({
+                    sku: true,
+                    color: true,
+                    size: true,
+                    quantity: true,
+                })
+            )
+            .min(1, "At least one variant is required"),
     });
 
 export const updateProductSchema = createProductSchema
@@ -312,6 +325,7 @@ export const createCategorizeProductSchema = z
     );
 
 export type Product = z.infer<typeof productSchema>;
+export type ProductVariant = z.infer<typeof productVariantSchema>;
 export type ProductWithBrand = z.infer<typeof productWithBrandSchema>;
 export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;

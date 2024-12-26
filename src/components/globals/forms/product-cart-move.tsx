@@ -10,7 +10,11 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input-general";
+import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
+import { SIZES } from "@/config/sizes";
 import { trpc } from "@/lib/trpc/client";
 import { cn, handleClientError } from "@/lib/utils";
 import {
@@ -19,6 +23,7 @@ import {
     createCartSchema,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -28,17 +33,55 @@ interface PageProps {
 }
 
 export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
+    const [sku, setSku] = useState<string | undefined>();
+    const [size, setSize] = useState<string | undefined>();
+    const [color, setColor] = useState<string | undefined>();
+
     const form = useForm<CreateCart>({
         resolver: zodResolver(createCartSchema),
         defaultValues: {
-            color: product.colors.length === 1 ? product.colors[0] : null,
-            productId: product.id,
             userId: userId,
             quantity: 1,
-            size:
-                product.sizes.length === 1 ? product.sizes[0].name : undefined,
+            sku: sku || "",
         },
     });
+
+    const sizes = Array.from(
+        new Set(
+            product.variants
+                .map((v) => v.size)
+                .sort(
+                    (a, b) =>
+                        SIZES.indexOf(a) - SIZES.indexOf(b) ||
+                        a.localeCompare(b)
+                )
+        )
+    );
+
+    const colors = product.variants
+        .filter((v) => !v.isDeleted)
+        .filter((v) => v.size === size)
+        .map((v) => v.color)
+        .sort(
+            (a, b) => a.name.localeCompare(b.name) || a.hex.localeCompare(b.hex)
+        );
+
+    useEffect(() => {
+        if (product.variants.length === 1) setSize(product.variants[0].size);
+        if (product.variants.length === 1)
+            setColor(product.variants[0].color.hex);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const currentSku = product.variants.find(
+            (v) => v.color.hex === color && v.size === size
+        )?.sku;
+
+        setSku(currentSku);
+        form.setValue("sku", currentSku || "");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [color, size]);
 
     const { refetch: refetchCart } = trpc.general.users.cart.getCart.useQuery({
         userId,
@@ -49,7 +92,7 @@ export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
     const { mutate: moveToCart, isPending: isMoving } =
         trpc.general.users.wishlist.moveProductToCart.useMutation({
             onMutate: () => {
-                const toastId = toast.success("Moving to cart...");
+                const toastId = toast.loading("Moving to cart...");
                 return { toastId };
             },
             onSuccess: ({ type }, _, { toastId }) => {
@@ -72,57 +115,112 @@ export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
             <form
                 className="space-y-3 md:space-y-5"
                 onSubmit={form.handleSubmit((values) => {
-                    if (product.colors.length > 0 && !values.color)
-                        return form.setError("color", {
-                            type: "required",
-                            message: "Color is required",
-                        });
+                    if (!values.sku)
+                        return toast.error("Please select a size or color");
+                    if (!product.isAvailable)
+                        return toast.error(
+                            "This product is currently out of stock. You can still add it to your wishlist."
+                        );
 
                     moveToCart(values);
                 })}
             >
-                {product.colors.length > 0 && (
-                    <FormField
-                        control={form.control}
-                        name="color"
-                        render={({ field }) => (
-                            <FormItem className="space-y-4">
-                                <FormLabel>Select Colors</FormLabel>
+                <div className="space-y-4">
+                    <Label className="font-semibold uppercase">
+                        Select Size
+                    </Label>
 
-                                <FormControl>
-                                    <RadioGroup
-                                        onValueChange={(value) =>
-                                            field.onChange(
-                                                product.colors.find(
-                                                    (c) => c.hex === value
-                                                ) || null
-                                            )
-                                        }
-                                        defaultValue={field.value?.hex}
-                                        className="flex flex-wrap gap-2"
-                                        disabled={isMoving}
-                                    >
-                                        {product.colors.map((c) => (
-                                            <FormItem key={c.name}>
-                                                <FormControl>
-                                                    <RadioGroupItem
-                                                        value={c.hex}
-                                                        id={c.name}
-                                                        className="sr-only"
-                                                        disabled={isMoving}
-                                                    />
-                                                </FormControl>
+                    <RadioGroup
+                        onValueChange={(value) => {
+                            setSize(value);
+                            setColor(undefined);
+                        }}
+                        defaultValue={size!}
+                        className="flex flex-wrap gap-2"
+                        disabled={!product.isAvailable}
+                    >
+                        {sizes.map((s, i) => (
+                            <div key={i}>
+                                <RadioGroupItem
+                                    value={s}
+                                    id={s}
+                                    disabled={!product.isAvailable}
+                                    className="sr-only"
+                                />
 
-                                                <FormLabel htmlFor={c.name}>
+                                <Label htmlFor={s}>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div
+                                            title={s}
+                                            className={cn(
+                                                "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
+                                                s === size &&
+                                                    "bg-primary text-background",
+                                                s === "One Size" &&
+                                                    "size-auto px-3",
+                                                !product.isAvailable &&
+                                                    "cursor-not-allowed opacity-50"
+                                            )}
+                                        >
+                                            <span>{s}</span>
+                                        </div>
+                                    </div>
+                                </Label>
+                            </div>
+                        ))}
+                    </RadioGroup>
+                </div>
+
+                {size && (
+                    <>
+                        <Separator />
+
+                        {
+                            <div className="space-y-4">
+                                <Label className="font-semibold uppercase">
+                                    More Colors
+                                </Label>
+
+                                <RadioGroup
+                                    onValueChange={(value) => setColor(value)}
+                                    defaultValue={color}
+                                    className="flex flex-wrap gap-2"
+                                    disabled={!product.isAvailable}
+                                >
+                                    {colors.map((c) => {
+                                        const variant = product.variants.find(
+                                            (v) =>
+                                                v.size === size &&
+                                                v.color.hex === c.hex
+                                        );
+
+                                        return (
+                                            <div key={c.name}>
+                                                <RadioGroupItem
+                                                    value={c.hex}
+                                                    id={c.name}
+                                                    className="sr-only"
+                                                    disabled={
+                                                        !product.isAvailable ||
+                                                        !variant?.isAvailable ||
+                                                        variant?.quantity === 0
+                                                    }
+                                                />
+
+                                                <Label htmlFor={c.name}>
                                                     <div className="flex flex-col items-center gap-2">
                                                         <div
                                                             title={c.name}
                                                             className={cn(
                                                                 "size-12 cursor-pointer rounded-full border border-foreground/10",
                                                                 c.hex ===
-                                                                    field.value
-                                                                        ?.hex &&
-                                                                    "outline outline-2 outline-offset-1"
+                                                                    color &&
+                                                                    "outline outline-2 outline-offset-1",
+                                                                (!product.isAvailable ||
+                                                                    !variant?.isAvailable ||
+                                                                    variant?.quantity ===
+                                                                        0) &&
+                                                                    "cursor-not-allowed opacity-50"
                                                             )}
                                                             style={{
                                                                 backgroundColor:
@@ -138,78 +236,47 @@ export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
                                                             className={cn(
                                                                 "text-sm",
                                                                 c.hex ===
-                                                                    field.value
-                                                                        ?.hex &&
-                                                                    "font-semibold"
+                                                                    color &&
+                                                                    "font-semibold",
+                                                                (!variant?.isAvailable ||
+                                                                    variant?.quantity ===
+                                                                        0) &&
+                                                                    "text-destructive line-through"
                                                             )}
                                                         >
                                                             {c.name}
                                                         </span>
-                                                    </div>
-                                                </FormLabel>
-                                            </FormItem>
-                                        ))}
-                                    </RadioGroup>
-                                </FormControl>
 
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                                                        {!!variant?.quantity &&
+                                                            variant.quantity <
+                                                                3 && (
+                                                                <span className="text-xs text-destructive">
+                                                                    {
+                                                                        variant.quantity
+                                                                    }{" "}
+                                                                    left
+                                                                </span>
+                                                            )}
+                                                    </div>
+                                                </Label>
+                                            </div>
+                                        );
+                                    })}
+                                </RadioGroup>
+                            </div>
+                        }
+                    </>
                 )}
 
                 <FormField
                     control={form.control}
-                    name="size"
+                    name="sku"
                     render={({ field }) => (
-                        <FormItem className="space-y-4">
-                            <FormLabel>Select Size</FormLabel>
+                        <FormItem>
+                            <FormLabel className="hidden">SKU</FormLabel>
 
                             <FormControl>
-                                <RadioGroup
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                    className="flex flex-wrap gap-2"
-                                    disabled={isMoving}
-                                >
-                                    {product.sizes.map((s) => (
-                                        <FormItem key={s.name}>
-                                            <FormControl>
-                                                <RadioGroupItem
-                                                    value={s.name}
-                                                    id={s.name}
-                                                    disabled={s.quantity === 0}
-                                                    className="sr-only"
-                                                />
-                                            </FormControl>
-
-                                            <FormLabel htmlFor={s.name}>
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <div
-                                                        title={s.name}
-                                                        className={cn(
-                                                            "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm disabled:cursor-not-allowed disabled:opacity-60",
-                                                            s.name ===
-                                                                "One Size" &&
-                                                                "size-auto px-3",
-                                                            s.name ===
-                                                                field.value &&
-                                                                "bg-primary text-background"
-                                                        )}
-                                                    >
-                                                        <span>{s.name}</span>
-                                                    </div>
-
-                                                    {s.quantity < 3 && (
-                                                        <span className="text-xs text-destructive">
-                                                            {s.quantity} left
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </FormLabel>
-                                        </FormItem>
-                                    ))}
-                                </RadioGroup>
+                                <Input {...field} readOnly className="hidden" />
                             </FormControl>
 
                             <FormMessage />

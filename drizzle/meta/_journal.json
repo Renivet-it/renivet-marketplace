@@ -526,6 +526,34 @@
       "when": 1735038268895,
       "tag": "0075_omniscient_iron_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1735110346879,
+      "tag": "0076_fearless_king_bedlam",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1735119360469,
+      "tag": "0077_pink_fallen_one",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1735140834286,
+      "tag": "0078_oval_nightmare",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1735194352848,
+      "tag": "0079_condemned_trish_tilby",
+      "breakpoints": true
     }
   ]
 }

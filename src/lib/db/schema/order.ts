@@ -1,10 +1,7 @@
-import { Product } from "@/lib/validations";
 import { relations } from "drizzle-orm";
 import {
     index,
     integer,
-    jsonb,
-    numeric,
     pgTable,
     text,
     uniqueIndex,
@@ -12,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
-import { products } from "./product";
+import { productVariants } from "./product";
 import { refunds } from "./refund";
 import { users } from "./user";
 
@@ -55,21 +52,10 @@ export const orders = pgTable(
             .notNull()
             .references(() => addresses.id),
         totalItems: integer("total_items").notNull(),
-        taxAmount: numeric("tax_amount", { precision: 10, scale: 2 }).notNull(),
-        deliveryAmount: numeric("delivery_amount", {
-            precision: 10,
-            scale: 2,
-        }).notNull(),
-        discountAmount: numeric("discount_amount", {
-            precision: 10,
-            scale: 2,
-        })
-            .notNull()
-            .default("0"),
-        totalAmount: numeric("total_amount", {
-            precision: 10,
-            scale: 2,
-        }).notNull(),
+        taxAmount: integer("tax_amount").notNull(),
+        deliveryAmount: integer("delivery_amount").notNull(),
+        discountAmount: integer("discount_amount").notNull().default(0),
+        totalAmount: integer("total_amount").notNull(),
         ...timestamps,
     },
     (table) => ({
@@ -98,19 +84,15 @@ export const orderItems = pgTable(
             .references(() => orders.id, {
                 onDelete: "cascade",
             }),
-        productId: uuid("product_id")
+        sku: text("sku")
             .notNull()
-            .references(() => products.id),
+            .references(() => productVariants.sku),
         quantity: integer("quantity").notNull().default(1),
-        size: text("size").notNull().$type<Product["sizes"][number]["name"]>(),
-        color: jsonb("color").$type<Product["colors"][number]>(),
         ...timestamps,
     },
     (table) => ({
         orderItemOrderIdIdx: index("order_item_order_id_idx").on(table.orderId),
-        orderItemProductIdIdx: index("order_item_product_id_idx").on(
-            table.productId
-        ),
+        orderItemSkuIdx: index("order_item_sku_idx").on(table.sku),
     })
 );
 
@@ -132,8 +114,8 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
         fields: [orderItems.orderId],
         references: [orders.id],
     }),
-    product: one(products, {
-        fields: [orderItems.productId],
-        references: [products.id],
+    productVariant: one(productVariants, {
+        fields: [orderItems.sku],
+        references: [productVariants.sku],
     }),
 }));

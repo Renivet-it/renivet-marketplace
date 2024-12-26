@@ -10,8 +10,14 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog-general";
 import { trpc } from "@/lib/trpc/client";
-import { cn, formatPriceTag, handleClientError } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatPriceTag,
+    handleClientError,
+} from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
+import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
 import { Dispatch, SetStateAction } from "react";
@@ -71,40 +77,70 @@ export function UnavailableItemsModal({
                         >
                             <div className="group relative aspect-[4/5] size-full max-w-36 shrink-0">
                                 <Image
-                                    src={item.product.imageUrls[0]}
-                                    alt={item.product.name}
+                                    src={item.item.imageUrls[0]}
+                                    alt={item.item.name}
                                     width={1000}
                                     height={1000}
                                     className={cn("size-full object-cover")}
                                 />
                             </div>
 
-                            <div className="w-full space-y-2 md:space-y-4">
+                            <div className="w-full space-y-2">
                                 <div className="space-y-1">
-                                    <h2 className="text-lg font-semibold leading-tight md:text-2xl md:leading-normal">
+                                    <h2 className="font-semibold leading-tight md:text-xl md:leading-normal">
                                         <Link
-                                            href={`/products/${item.product.slug}`}
+                                            href={`/products/${item.item.slug}`}
                                             target="_blank"
                                             referrerPolicy="no-referrer"
                                         >
-                                            {item.product.name}
+                                            {item.item.name}
                                         </Link>
                                     </h2>
 
                                     <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground">
                                         <Link
-                                            href={`/brands/${item.product.brand.id}`}
+                                            href={`/brands/${item.item.brand.id}`}
                                         >
-                                            {item.product.brand.name}
+                                            {item.item.brand.name}
                                         </Link>
                                     </p>
                                 </div>
 
-                                <div className="text-lg font-semibold md:text-xl">
+                                <div className="text-sm font-semibold md:text-lg">
                                     {formatPriceTag(
-                                        parseFloat(item.product.price),
+                                        parseFloat(
+                                            convertPaiseToRupees(
+                                                item.item.price
+                                            )
+                                        ),
                                         true
                                     )}
+                                </div>
+
+                                <div>
+                                    <p className="text-sm">
+                                        <span className="font-semibold">
+                                            Size:{" "}
+                                        </span>
+                                        {item.size}
+                                    </p>
+
+                                    <p className="text-sm">
+                                        <span className="font-semibold">
+                                            Color:{" "}
+                                        </span>
+                                        {item.color.name}
+                                    </p>
+
+                                    <p className="text-sm">
+                                        <span className="font-semibold">
+                                            Added on:{" "}
+                                        </span>
+                                        {format(
+                                            new Date(item.createdAt),
+                                            "MMM dd, yyyy"
+                                        )}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -118,9 +154,7 @@ export function UnavailableItemsModal({
                         onClick={() => {
                             removeProducts({
                                 userId,
-                                productIds: unavailableCart.map(
-                                    (x) => x.productId
-                                ),
+                                skus: unavailableCart.map((item) => item.sku),
                             });
                         }}
                     >

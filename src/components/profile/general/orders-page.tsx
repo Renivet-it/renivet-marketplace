@@ -70,9 +70,10 @@ export function OrdersPage({
             ? order.items.filter(
                   (item) =>
                       item.product.isAvailable &&
-                      item.product.status &&
-                      item.product.sizes.filter((size) => size.quantity > 0)
-                          .length > 0
+                      !item.product.isDeleted &&
+                      item.productVariant.isAvailable &&
+                      !item.productVariant.isDeleted &&
+                      item.productVariant.quantity > 0
               ).length > 0
             : true
     );
@@ -81,10 +82,11 @@ export function OrdersPage({
         order.status === "pending"
             ? order.items.filter(
                   (item) =>
-                      !item.product.isAvailable ||
-                      !item.product.status ||
-                      item.product.sizes.filter((size) => size.quantity > 0)
-                          .length === 0
+                      !item.product.isAvailable &&
+                      item.product.isDeleted &&
+                      !item.productVariant.isAvailable &&
+                      item.productVariant.isDeleted &&
+                      item.productVariant.quantity === 0
               ).length > 0
             : false
     );
@@ -170,10 +172,10 @@ export function OrdersPage({
                                 ? order.items.filter(
                                       (item) =>
                                           item.product.isAvailable &&
-                                          item.product.status &&
-                                          item.product.sizes.filter(
-                                              (size) => size.quantity > 0
-                                          ).length > 0
+                                          !item.product.isDeleted &&
+                                          item.productVariant.isAvailable &&
+                                          !item.productVariant.isDeleted &&
+                                          item.productVariant.quantity > 0
                                   )
                                 : order.items;
 

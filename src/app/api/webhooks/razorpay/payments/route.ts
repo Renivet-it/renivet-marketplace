@@ -34,19 +34,14 @@ export async function POST(req: NextRequest) {
                     const isStockAvailable = existingOrder.items.every(
                         (item) => {
                             const quantity = item.quantity;
-                            const size = item.size;
-                            const existingProductSizes = item.product.sizes;
-
-                            const existingSizeIndex =
-                                existingProductSizes.findIndex(
-                                    (existingSize) => existingSize.name === size
-                                );
+                            const stock = item.productVariant.quantity;
 
                             return (
-                                existingProductSizes[existingSizeIndex]
-                                    .quantity >= quantity &&
-                                item.product.status &&
-                                item.product.isAvailable
+                                stock >= quantity &&
+                                !item.product.isDeleted &&
+                                item.product.isAvailable &&
+                                item.productVariant.isAvailable &&
+                                !item.productVariant.isDeleted
                             );
                         }
                     );
@@ -85,23 +80,12 @@ export async function POST(req: NextRequest) {
                     const updateProductStockData = existingOrder.items.map(
                         (item) => {
                             const quantity = item.quantity;
-                            const size = item.size;
-                            const existingProductSizes = item.product.sizes;
-
-                            const existingSizeIndex =
-                                existingProductSizes.findIndex(
-                                    (existingSize) => existingSize.name === size
-                                );
-
-                            const updatedQuantity =
-                                existingProductSizes[existingSizeIndex]
-                                    .quantity - quantity;
-                            existingProductSizes[existingSizeIndex].quantity =
-                                updatedQuantity;
+                            const stock = item.productVariant.quantity;
+                            const updatedQuantity = stock - quantity;
 
                             return {
-                                productId: item.productId,
-                                sizes: existingProductSizes,
+                                sku: item.productVariant.sku,
+                                quantity: updatedQuantity,
                             };
                         }
                     );

@@ -5,7 +5,7 @@ import { ProductShareModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { Separator } from "@/components/ui/separator";
-import { cn, formatPriceTag } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { CachedCart, ProductWithBrand } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
@@ -60,7 +60,9 @@ export function ProductContent({
 
                 <div className="md:space-y-1">
                     <p className="text-2xl font-semibold md:text-3xl">
-                        {formatPriceTag(parseFloat(product.price))}
+                        {formatPriceTag(
+                            parseFloat(convertPaiseToRupees(product.price))
+                        )}
                     </p>
 
                     <p className="text-xs font-semibold text-accent/80 md:text-sm">

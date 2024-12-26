@@ -67,10 +67,15 @@ export function NavbarHome() {
 
     const availableCart = userCart?.filter(
         (item) =>
-            item.product.isAvailable &&
-            item.product.status &&
-            item.product.sizes.find(
-                (size) => size.name === item.size && size.quantity > 0
+            item.item.isAvailable &&
+            item.item.status &&
+            item.item.variants.find(
+                (v) =>
+                    v.quantity > 0 &&
+                    v.sku === item.sku &&
+                    v.isAvailable &&
+                    v.size === item.size &&
+                    JSON.stringify(v.color) === JSON.stringify(item.color)
             )
     );
 

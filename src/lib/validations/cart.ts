@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { brandSchema } from "./brand";
-import { productWithBrandSchema } from "./product";
+import { productVariantSchema, productWithBrandSchema } from "./product";
 
 export const cartSchema = z.object({
     id: z
@@ -15,12 +15,12 @@ export const cartSchema = z.object({
             invalid_type_error: "User ID must be a string",
         })
         .min(1, "User ID is required"),
-    productId: z
+    sku: z
         .string({
-            required_error: "Product ID is required",
-            invalid_type_error: "Product ID must be a string",
+            required_error: "SKU is required",
+            invalid_type_error: "SKU must be a string",
         })
-        .uuid("Product ID is invalid"),
+        .min(1, "SKU is required"),
     quantity: z
         .number({
             required_error: "Quantity is required",
@@ -28,27 +28,6 @@ export const cartSchema = z.object({
         })
         .int("Quantity must be an integer")
         .positive("Quantity must be positive"),
-    size: z.enum(["One Size", "XS", "S", "M", "L", "XL", "XXL"], {
-        required_error: "Size is required",
-        invalid_type_error: "Size must be a string",
-    }),
-    color: z
-        .object({
-            name: z
-                .string({
-                    required_error: "Color name is required",
-                    invalid_type_error: "Color name must be a string",
-                })
-                .min(1, "Color name must be at least 1 characters long"),
-            hex: z
-                .string({
-                    required_error: "Color hex is required",
-                    invalid_type_error: "Color hex must be a string",
-                })
-                .length(7, "Color hex must be 7 characters long")
-                .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
-        })
-        .nullable(),
     status: z.boolean({
         required_error: "Status is required",
         invalid_type_error: "Status must be a boolean",
@@ -67,17 +46,25 @@ export const cartSchema = z.object({
         .transform((v) => new Date(v)),
 });
 
-export const createCartSchema = cartSchema.omit({
-    id: true,
-    status: true,
-    createdAt: true,
-    updatedAt: true,
-});
+export const createCartSchema = cartSchema
+    .pick({
+        userId: true,
+        sku: true,
+        quantity: true,
+    })
+    .extend({
+        sku: z
+            .string({
+                required_error: "Missing color or size",
+                invalid_type_error: "SKU must be a string",
+            })
+            .min(1, "Missing color or size"),
+    });
 
 export const updateCartSchema = createCartSchema
     .omit({
         userId: true,
-        productId: true,
+        sku: true,
     })
     .extend({
         status: z.boolean({
@@ -93,10 +80,11 @@ export const cartWithProductSchema = cartSchema.extend({
 });
 
 export const cachedCartSchema = cartSchema.extend({
-    product: productWithBrandSchema
+    size: productVariantSchema.shape.size,
+    color: productVariantSchema.shape.color,
+    item: productWithBrandSchema
         .omit({
             categories: true,
-            colors: true,
             description: true,
             isPublished: true,
         })

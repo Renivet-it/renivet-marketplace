@@ -1,10 +1,11 @@
-import { Product } from "@/lib/validations";
+import { generateSKU } from "@/lib/utils";
+import { Product, ProductVariant } from "@/lib/validations";
 import { relations, sql } from "drizzle-orm";
 import {
     boolean,
     index,
+    integer,
     jsonb,
-    numeric,
     pgTable,
     text,
     timestamp,
@@ -22,23 +23,7 @@ export const products = pgTable(
         name: text("name").notNull(),
         slug: text("slug").notNull().unique(),
         description: text("description").notNull(),
-        price: numeric("price", {
-            precision: 10,
-            scale: 2,
-        }).notNull(),
-        sizes: jsonb("sizes")
-            .$type<Product["sizes"]>()
-            .default([
-                {
-                    name: "One Size",
-                    quantity: 0,
-                },
-            ])
-            .notNull(),
-        colors: jsonb("colors")
-            .$type<Product["colors"]>()
-            .default([])
-            .notNull(),
+        price: integer("price").notNull(),
         brandId: uuid("brand_id")
             .notNull()
             .references(() => brands.id, {
@@ -72,6 +57,38 @@ export const products = pgTable(
             setweight(to_tsvector('english', ${table.name}), 'A') ||
             setweight(to_tsvector('english', ${table.description}), 'B')
         )`
+        ),
+    })
+);
+
+export const productVariants = pgTable(
+    "product_variants",
+    {
+        sku: text("sku")
+            .notNull()
+            .primaryKey()
+            .unique()
+            .$defaultFn(generateSKU),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        size: text("size").notNull().$type<ProductVariant["size"][number]>(),
+        color: jsonb("color").notNull().$type<ProductVariant["color"]>(),
+        quantity: integer("quantity").notNull().default(0),
+        isAvailable: boolean("is_available").default(true).notNull(),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        ...timestamps,
+    },
+    (table) => ({
+        productVariantProductIdIdx: index("product_variant_product_id_idx").on(
+            table.productId
+        ),
+        productVariantColorIdx: index("product_variant_color_idx").on(
+            table.color
+        ),
+        productVariantSizeColorIdx: index("product_variant_size_color_idx").on(
+            table.size,
+            table.color
         ),
     })
 );
@@ -114,7 +131,18 @@ export const productsRelations = relations(products, ({ one, many }) => ({
         references: [brands.id],
     }),
     orders: many(orderItems),
+    variants: many(productVariants),
 }));
+
+export const productVariantsRelations = relations(
+    productVariants,
+    ({ one }) => ({
+        product: one(products, {
+            fields: [productVariants.productId],
+            references: [products.id],
+        }),
+    })
+);
 
 export const productCategoriesRelations = relations(
     productCategories,

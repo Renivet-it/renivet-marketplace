@@ -9,17 +9,19 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { trpc } from "@/lib/trpc/client";
-import { cn, formatPriceTag, handleClientError } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatPriceTag,
+    handleClientError,
+} from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-    ProductCartQuantityChangeForm,
-    ProductCartSizeChangeForm,
-} from "../forms";
+import { ProductCartQuantityChangeForm } from "../forms";
 import {
     MoveProductToWishlistModal,
     RemoveProductFromCartModal,
@@ -78,8 +80,8 @@ export function ProductCartCard({
             >
                 <div className="group relative aspect-[4/5] size-full max-w-36 shrink-0">
                     <Image
-                        src={item.product.imageUrls[0]}
-                        alt={item.product.name}
+                        src={item.item.imageUrls[0]}
+                        alt={item.item.name}
                         width={1000}
                         height={1000}
                         className={cn(
@@ -98,9 +100,7 @@ export function ProductCartCard({
                                 updateProduct({
                                     userId,
                                     status: value as boolean,
-                                    productId: item.product.id,
-                                    size: item.size,
-                                    color: item.color,
+                                    sku: item.sku,
                                 })
                             }
                         />
@@ -111,46 +111,22 @@ export function ProductCartCard({
                     <div className="space-y-1">
                         <h2 className="text-lg font-semibold leading-tight md:text-2xl md:leading-normal">
                             <Link
-                                href={`/products/${item.product.slug}`}
+                                href={`/products/${item.item.slug}`}
                                 target="_blank"
                                 referrerPolicy="no-referrer"
                             >
-                                {item.product.name}
+                                {item.item.name}
                             </Link>
                         </h2>
 
                         <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground">
-                            <Link href={`/brands/${item.product.brand.id}`}>
-                                {item.product.brand.name}
+                            <Link href={`/brands/${item.item.brand.id}`}>
+                                {item.item.brand.name}
                             </Link>
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <button
-                                    className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={isUpdating}
-                                    onClick={(e) => {
-                                        if (readOnly) e.preventDefault();
-                                    }}
-                                >
-                                    <span>Size: {item.size}</span>
-                                    {!readOnly && (
-                                        <Icons.ChevronDown className="size-3" />
-                                    )}
-                                </button>
-                            </PopoverTrigger>
-
-                            <PopoverContent className="rounded-none">
-                                <ProductCartSizeChangeForm
-                                    item={item}
-                                    userId={userId}
-                                />
-                            </PopoverContent>
-                        </Popover>
-
                         <Popover>
                             <PopoverTrigger asChild>
                                 <button
@@ -177,16 +153,22 @@ export function ProductCartCard({
                     </div>
 
                     <div className="text-lg font-semibold md:text-xl">
-                        {formatPriceTag(parseFloat(item.product.price), true)}
+                        {formatPriceTag(
+                            parseFloat(convertPaiseToRupees(item.item.price)),
+                            true
+                        )}
                     </div>
 
                     <div>
-                        {item.color && (
-                            <p className="text-sm">
-                                <span className="font-semibold">Color: </span>
-                                {item.color.name}
-                            </p>
-                        )}
+                        <p className="text-sm">
+                            <span className="font-semibold">Size: </span>
+                            {item.size}
+                        </p>
+
+                        <p className="text-sm">
+                            <span className="font-semibold">Color: </span>
+                            {item.color.name}
+                        </p>
 
                         <p className="text-sm">
                             <span className="font-semibold">Added on: </span>

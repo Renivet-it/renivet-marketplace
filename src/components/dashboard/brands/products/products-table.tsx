@@ -19,7 +19,11 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertValueToLabel, formatPriceTag } from "@/lib/utils";
+import {
+    convertPaiseToRupees,
+    convertValueToLabel,
+    formatPriceTag,
+} from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import {
     ColumnDef,
@@ -39,7 +43,6 @@ import { ProductAction } from "./product-action";
 
 export type TableProduct = ProductWithBrand & {
     visibility: boolean;
-    stock: number;
 };
 
 const columns: ColumnDef<TableProduct>[] = [
@@ -53,7 +56,14 @@ const columns: ColumnDef<TableProduct>[] = [
         header: "Price",
         cell: ({ row }) => {
             const data = row.original;
-            return <span>{formatPriceTag(parseFloat(data.price), true)}</span>;
+            return (
+                <span>
+                    {formatPriceTag(
+                        parseFloat(convertPaiseToRupees(data.price)),
+                        true
+                    )}
+                </span>
+            );
         },
     },
     {
@@ -104,12 +114,14 @@ const columns: ColumnDef<TableProduct>[] = [
         },
     },
     {
-        accessorKey: "sizes",
-        header: "Sizes",
+        accessorKey: "variants",
+        header: "Variants",
         cell: ({ row }) => {
             const data = row.original;
 
-            return data.sizes.length === 0 ? (
+            const toBeMapped = data.variants.filter((x) => !x.isDeleted);
+
+            return toBeMapped.length === 0 ? (
                 <span>N/A</span>
             ) : (
                 <Popover>
@@ -117,12 +129,14 @@ const columns: ColumnDef<TableProduct>[] = [
                         View
                     </PopoverTrigger>
 
-                    <PopoverContent className="w-auto">
+                    <PopoverContent className="max-h-60 w-auto overflow-scroll">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Count</TableHead>
                                     <TableHead>Size</TableHead>
+                                    <TableHead>Color</TableHead>
+                                    <TableHead>Availablity</TableHead>
                                     <TableHead className="text-right">
                                         Quantity
                                     </TableHead>
@@ -130,10 +144,24 @@ const columns: ColumnDef<TableProduct>[] = [
                             </TableHeader>
 
                             <TableBody>
-                                {data.sizes.map((x, i) => (
-                                    <TableRow key={x.name}>
+                                {toBeMapped.map((x, i) => (
+                                    <TableRow key={i}>
                                         <TableCell>{i + 1}</TableCell>
-                                        <TableCell>{x.name}</TableCell>
+                                        <TableCell>{x.size}</TableCell>
+                                        <TableCell>
+                                            <div
+                                                key={i}
+                                                title={x.color.name}
+                                                className="size-5 rounded-full border border-foreground/20"
+                                                style={{
+                                                    backgroundColor:
+                                                        x.color.hex,
+                                                }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {x.isAvailable ? "Yes" : "No"}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             {x.quantity}
                                         </TableCell>
@@ -143,62 +171,18 @@ const columns: ColumnDef<TableProduct>[] = [
 
                             <TableFooter>
                                 <TableRow>
-                                    <TableCell colSpan={2}>Total</TableCell>
+                                    <TableCell colSpan={4}>Total</TableCell>
                                     <TableCell className="text-right">
-                                        {data.stock}
+                                        {data.variants.reduce(
+                                            (acc, x) => acc + x.quantity,
+                                            0
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             </TableFooter>
                         </Table>
                     </PopoverContent>
                 </Popover>
-            );
-        },
-    },
-    {
-        accessorKey: "stock",
-        header: "Stock",
-    },
-    {
-        accessorKey: "colors",
-        header: "Colors",
-        cell: ({ row }) => {
-            const data = row.original;
-
-            return data.colors.length === 0 ? (
-                <span>N/A</span>
-            ) : (
-                <div className="flex gap-1">
-                    {data.colors.slice(0, 3).map((color, i) => (
-                        <div
-                            key={i}
-                            title={
-                                data.colors.length > 3 && i === 2
-                                    ? data.colors
-                                          .slice(2)
-                                          .map((x) => x.name)
-                                          .join(", ")
-                                    : color.name
-                            }
-                            className={cn(
-                                "size-5 rounded-full",
-                                data.colors.length > 3 && i === 2 && "relative"
-                            )}
-                            style={{
-                                backgroundColor:
-                                    data.colors.length > 3 && i === 2
-                                        ? "#000"
-                                        : color.hex,
-                            }}
-                        >
-                            {data.colors.length > 3 && i === 2 && (
-                                <span className="absolute inset-0 flex size-full cursor-default items-center justify-center text-xs text-background">
-                                    +3
-                                </span>
-                            )}
-                        </div>
-                    ))}
-                </div>
             );
         },
     },
@@ -290,7 +274,6 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
             dataRaw.map((x) => ({
                 ...x,
                 visibility: x.isPublished,
-                stock: x.sizes.reduce((acc, x) => acc + x.quantity, 0),
             })),
         [dataRaw]
     );

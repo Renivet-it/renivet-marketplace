@@ -79,8 +79,8 @@ export function MoveProductToWishlistModal({
                         disabled={isMoving}
                         onClick={() =>
                             moveProduct({
-                                ...item,
-                                productId: item.product.id,
+                                productId: item.item.id,
+                                sku: item.sku,
                                 userId,
                             })
                         }

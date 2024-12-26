@@ -1,14 +1,13 @@
 import {
     CreateCategorizeProduct,
     CreateProduct,
-    Product,
     ProductWithBrand,
     productWithBrandSchema,
     UpdateProduct,
 } from "@/lib/validations";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { productCategories, products } from "../schema";
+import { productCategories, products, productVariants } from "../schema";
 
 class ProductQuery {
     async getProductCount(brandId: string, status?: "active" | "deleted") {
@@ -69,12 +68,8 @@ class ProductQuery {
             !!brandIds?.length
                 ? inArray(products.brandId, brandIds)
                 : undefined,
-            !!minPrice
-                ? gte(products.price, sql`cast(${minPrice} as numeric)`)
-                : undefined,
-            !!maxPrice
-                ? lte(products.price, sql`cast(${maxPrice} as numeric)`)
-                : undefined,
+            !!minPrice ? gte(products.price, minPrice) : undefined,
+            !!maxPrice ? lte(products.price, maxPrice) : undefined,
             isAvailable !== undefined
                 ? eq(products.isAvailable, isAvailable)
                 : undefined,
@@ -84,12 +79,14 @@ class ProductQuery {
             eq(products.isDeleted, false),
             !!colors?.length
                 ? sql`EXISTS (
-                SELECT 1 FROM jsonb_array_elements(${products.colors}) AS color
-                WHERE (color->>'hex')::text = ANY(${sql`ARRAY[${sql.join(
-                    colors.map((hex) => sql`${hex}::text`),
-                    ","
-                )}]`})
-              )`
+                    SELECT 1 FROM ${productVariants} AS v
+                    WHERE v.product_id = ${products.id}
+                    AND v.is_deleted = false
+                    AND v.color->>'hex' = ANY(${sql`ARRAY[${sql.join(
+                        colors.map((hex) => sql`${hex}::text`),
+                        ","
+                    )}]`})
+                )`
                 : undefined,
             status !== undefined ? eq(products.status, status) : undefined,
         ];
@@ -129,6 +126,7 @@ class ProductQuery {
                             productType: true,
                         },
                     },
+                    variants: true,
                 },
                 limit,
                 offset: (page - 1) * limit,
@@ -181,6 +179,7 @@ class ProductQuery {
                         productType: true,
                     },
                 },
+                variants: true,
             },
             where: and(...filters),
             limit,
@@ -227,6 +226,7 @@ class ProductQuery {
                         productType: true,
                     },
                 },
+                variants: true,
             },
             where: and(
                 eq(products.id, productId),
@@ -250,6 +250,7 @@ class ProductQuery {
                         productType: true,
                     },
                 },
+                variants: true,
             },
             where: and(
                 eq(products.slug, slug),
@@ -347,25 +348,39 @@ class ProductQuery {
 
     async updateProductStock(
         values: {
-            productId: string;
-            sizes: Product["sizes"];
+            sku: string;
+            quantity: number;
         }[]
     ) {
         const data = await db.transaction(async (tx) => {
-            const promises = values.map(({ productId, sizes }) =>
+            const promises = values.map(({ quantity, sku }) =>
                 tx
-                    .update(products)
+                    .update(productVariants)
                     .set({
-                        sizes,
+                        quantity,
                         updatedAt: new Date(),
                     })
-                    .where(eq(products.id, productId))
+                    .where(eq(productVariants.sku, sku))
                     .returning()
                     .then((res) => res[0])
             );
 
             return Promise.all(promises);
         });
+
+        return data;
+    }
+
+    async updateVariantAvailability(sku: string, isAvailable: boolean) {
+        const data = await db
+            .update(productVariants)
+            .set({
+                isAvailable,
+                updatedAt: new Date(),
+            })
+            .where(eq(productVariants.sku, sku))
+            .returning()
+            .then((res) => res[0]);
 
         return data;
     }

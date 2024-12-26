@@ -1,10 +1,5 @@
-import {
-    cachedCartSchema,
-    CreateCart,
-    Product,
-    UpdateCart,
-} from "@/lib/validations";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { cachedCartSchema, CreateCart, UpdateCart } from "@/lib/validations";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "..";
 import { carts } from "../schema";
 
@@ -17,9 +12,14 @@ class UserCartQuery {
     async getUserCart(userId: string) {
         const data = await db.query.carts.findMany({
             with: {
-                product: {
+                item: {
                     with: {
-                        brand: true,
+                        product: {
+                            with: {
+                                brand: true,
+                                variants: true,
+                            },
+                        },
                     },
                 },
             },
@@ -29,50 +29,38 @@ class UserCartQuery {
         const parsed = cachedCartSchema.array().parse(
             data.map((x) => ({
                 ...x,
-                product: {
-                    ...x.product,
-                    price: x.product.price.toString(),
-                },
+                size: x.item.size,
+                color: x.item.color,
+                item: x.item.product,
             }))
         );
         return parsed;
     }
 
-    async getProductInCart({
-        userId,
-        productId,
-        size,
-        color,
-    }: {
-        userId: string;
-        productId: string;
-        size?: Product["sizes"][number]["name"];
-        color?: string;
-    }) {
+    async getProductInCart({ userId, sku }: { userId: string; sku: string }) {
         const data = await db.query.carts.findFirst({
             with: {
-                product: {
+                item: {
                     with: {
-                        brand: true,
+                        product: {
+                            with: {
+                                brand: true,
+                                variants: true,
+                            },
+                        },
                     },
                 },
             },
-            where: and(
-                eq(carts.userId, userId),
-                eq(carts.productId, productId),
-                size ? eq(carts.size, size) : undefined,
-                color ? sql`color->>'hex' = ${color}` : undefined
-            ),
+            where: and(eq(carts.userId, userId), eq(carts.sku, sku)),
         });
 
         const parsed = cachedCartSchema.optional().parse(
             data
                 ? {
                       ...data,
-                      product: {
-                          ...data?.product,
-                          price: data?.product.price.toString(),
-                      },
+                      size: data.item.size,
+                      color: data.item.color,
+                      item: data.item.product,
                   }
                 : undefined
         );
@@ -127,10 +115,10 @@ class UserCartQuery {
         return data;
     }
 
-    async deleteProductsFromCart(ids: string[]) {
+    async deleteProductsFromCart(userId: string, skus: string[]) {
         const data = await db
             .delete(carts)
-            .where(inArray(carts.productId, ids))
+            .where(and(inArray(carts.sku, skus), eq(carts.userId, userId)))
             .returning()
             .then((res) => res[0]);
 

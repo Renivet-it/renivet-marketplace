@@ -3,7 +3,12 @@
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { trpc } from "@/lib/trpc/client";
-import { cn, formatPriceTag, handleClientError } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatPriceTag,
+    handleClientError,
+} from "@/lib/utils";
 import { CachedWishlist } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
@@ -133,7 +138,12 @@ export function WishlistedProductCard({
                     </div>
 
                     <p className="text-sm font-semibold">
-                        {formatPriceTag(parseFloat(item.product.price), true)}
+                        {formatPriceTag(
+                            parseFloat(
+                                convertPaiseToRupees(item.product.price)
+                            ),
+                            true
+                        )}
                     </p>
                 </div>
 

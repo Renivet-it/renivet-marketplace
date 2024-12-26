@@ -77,10 +77,10 @@ export function UnavailableOrdersModal({
                                 ? order.items.filter(
                                       (item) =>
                                           item.product.isAvailable &&
-                                          item.product.status &&
-                                          item.product.sizes.filter(
-                                              (size) => size.quantity > 0
-                                          ).length > 0
+                                          !item.product.isDeleted &&
+                                          item.productVariant.isAvailable &&
+                                          !item.productVariant.isDeleted &&
+                                          item.productVariant.quantity > 0
                                   )
                                 : order.items;
 

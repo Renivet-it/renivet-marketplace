@@ -12,7 +12,7 @@ import {
     subCategoryCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
-import { cn } from "@/lib/utils";
+import { cn, convertPriceToPaise } from "@/lib/utils";
 import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
@@ -139,8 +139,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             isPublished: true,
             brandIds,
             colors,
-            minPrice,
-            maxPrice,
+            minPrice: convertPriceToPaise(minPrice),
+            maxPrice: convertPriceToPaise(maxPrice),
             categoryId,
             subCategoryId,
             productTypeId,

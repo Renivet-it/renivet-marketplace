@@ -464,3 +464,7 @@ export function convertMsToHumanReadable(ms: number) {
         minutes > 0 ? `${minutes % 60}m ` : ""
     }${seconds % 60}s`;
 }
+
+export function generateSKU() {
+    return (init({ length: 6 })() + "-" + init({ length: 4 })()).toUpperCase();
+}

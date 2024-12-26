@@ -15,6 +15,7 @@ class UserWishlistQuery {
                 product: {
                     with: {
                         brand: true,
+                        variants: true,
                     },
                 },
             },
@@ -39,6 +40,7 @@ class UserWishlistQuery {
                 product: {
                     with: {
                         brand: true,
+                        variants: true,
                     },
                 },
             },
