@@ -419,7 +419,7 @@ export const productsRouter = createTRPCRouter({
         )
         .mutation(async ({ input, ctx }) => {
             const { productId } = input;
-            const { queries, user } = ctx;
+            const { queries, user, db, schemas } = ctx;
 
             const existingProduct =
                 await queries.products.getProduct(productId);
@@ -435,7 +435,20 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const data = await queries.products.softDeleteProduct(productId);
+            const variants = existingProduct.variants.map((v) => v.sku);
+
+            const data = await Promise.all([
+                queries.products.softDeleteProduct(productId),
+                db
+                    .update(schemas.productVariants)
+                    .set({
+                        isDeleted: true,
+                        isAvailable: false,
+                    })
+                    .where(inArray(schemas.productVariants.sku, variants)),
+                userCartCache.dropAll(),
+                userWishlistCache.dropAll(),
+            ]);
             return data;
         }),
 });
