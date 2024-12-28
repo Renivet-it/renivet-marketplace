@@ -49,7 +49,7 @@ export const brandRequestSchema = z.object({
             .string({
                 invalid_type_error: "Website must be a string",
             })
-            .url("Website is invalid")
+            .url("Website is invalid, include http or https")
             .nullable()
     ),
     ownerId: z
