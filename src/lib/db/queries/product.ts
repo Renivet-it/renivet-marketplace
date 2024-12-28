@@ -215,7 +215,11 @@ class ProductQuery {
         };
     }
 
-    async getProduct(productId: string, visibility?: "published" | "draft") {
+    async getProduct(
+        productId: string,
+        visibility?: "published" | "draft",
+        status?: "idle" | "pending" | "approved" | "rejected"
+    ) {
         const data = await db.query.products.findFirst({
             with: {
                 brand: true,
@@ -232,14 +236,19 @@ class ProductQuery {
                 eq(products.id, productId),
                 visibility !== undefined
                     ? eq(products.isPublished, visibility === "published")
-                    : undefined
+                    : undefined,
+                status !== undefined ? eq(products.status, status) : undefined
             ),
         });
 
         return productWithBrandSchema.parse(data);
     }
 
-    async getProductBySlug(slug: string, visibility?: "published" | "draft") {
+    async getProductBySlug(
+        slug: string,
+        visibility?: "published" | "draft",
+        status?: "idle" | "pending" | "approved" | "rejected"
+    ) {
         const data = await db.query.products.findFirst({
             with: {
                 brand: true,
@@ -256,7 +265,8 @@ class ProductQuery {
                 eq(products.slug, slug),
                 visibility !== undefined
                     ? eq(products.isPublished, visibility === "published")
-                    : undefined
+                    : undefined,
+                status !== undefined ? eq(products.status, status) : undefined
             ),
         });
 

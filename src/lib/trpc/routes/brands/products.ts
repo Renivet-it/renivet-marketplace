@@ -8,7 +8,11 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { generateProductSlug, getUploadThingFileKey } from "@/lib/utils";
-import { createProductSchema, updateProductSchema } from "@/lib/validations";
+import {
+    createCategorizeProductSchema,
+    createProductSchema,
+    updateProductSchema,
+} from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { eq, inArray } from "drizzle-orm";
@@ -299,6 +303,70 @@ export const productsRouter = createTRPCRouter({
 
             return data;
         }),
+    categorizeProduct: protectedProcedure
+        .input(createCategorizeProductSchema)
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { productId, categories } = input;
+            const { queries, user } = ctx;
+
+            const existingProduct =
+                await queries.products.getProduct(productId);
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (existingProduct.brand.id !== user.brand?.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not a member of this brand",
+                });
+
+            if (
+                existingProduct.status === "approved" ||
+                existingProduct.status === "pending"
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Product cannot be categorized after approval or if it is under review",
+                });
+
+            const existingProductCategories = existingProduct.categories.map(
+                (x) => ({
+                    id: x.id,
+                    tag: `${x.category.id}-${x.subcategory.id}-${x.productType.id}`,
+                })
+            );
+            const inputCategories = categories.map(
+                (x) => `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
+            );
+
+            const addedCategories = categories.filter(
+                (x) =>
+                    !existingProductCategories.some(
+                        (y) =>
+                            y.tag ===
+                            `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
+                    )
+            );
+
+            const removedCategories = existingProductCategories.filter(
+                (x) => !inputCategories.some((y) => y === x.tag)
+            );
+
+            const data = await queries.products.categorizeProduct(
+                productId,
+                addedCategories,
+                removedCategories.map((x) => x.id)
+            );
+
+            return data;
+        }),
     updateVariantAvailability: protectedProcedure
         .input(
             z.object({
@@ -380,6 +448,13 @@ export const productsRouter = createTRPCRouter({
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "Product is already approved",
+                });
+
+            if (existingProduct.categories.length === 0)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Product must be categorized before sending for review",
                 });
 
             if (

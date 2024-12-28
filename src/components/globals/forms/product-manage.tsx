@@ -344,12 +344,14 @@ export function ProductManageForm({ brandId, product }: PageProps) {
 
             return await createProductAsync(values);
         },
-        onSuccess: (data, _, { toastId }) => {
+        onSuccess: (data, __, { toastId }) => {
             toast.success(
-                "Product has been added, you can now send it for review",
+                "Product has been added, categorize it now and send for review",
                 { id: toastId }
             );
-            router.push(`/dashboard/brands/${brandId}/products`);
+            router.push(
+                `/dashboard/brands/${brandId}/products/p/${data.id}/categorize`
+            );
             setImagePreviews([]);
             setImageFiles([]);
         },
