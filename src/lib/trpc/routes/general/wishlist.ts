@@ -58,14 +58,19 @@ export const wishlistRouter = createTRPCRouter({
             const { queries } = ctx;
             const { userId, productId } = input;
 
-            const existingWishlist = await userWishlistCache.getProduct(
-                userId,
-                productId
-            );
+            const [existingWishlist, existingProduct] = await Promise.all([
+                userWishlistCache.getProduct(userId, productId),
+                queries.products.getProduct(productId, "published", "approved"),
+            ]);
             if (existingWishlist)
                 throw new TRPCError({
                     code: "CONFLICT",
                     message: "This product is already in your wishlist",
+                });
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
                 });
 
             const data = await queries.userWishlists.addProductInWishlist({
@@ -116,7 +121,9 @@ export const wishlistRouter = createTRPCRouter({
                 !existingVariant.product.isAvailable ||
                 existingVariant.isDeleted ||
                 existingVariant.product.isDeleted ||
-                existingVariant.quantity < quantity
+                existingVariant.quantity < quantity ||
+                existingVariant.product.status !== "approved" ||
+                !existingVariant.product.isPublished
             )
                 throw new TRPCError({
                     code: "BAD_REQUEST",

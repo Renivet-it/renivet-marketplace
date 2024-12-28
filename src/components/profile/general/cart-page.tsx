@@ -70,12 +70,6 @@ export function CartPage({
         (item) => !availableCart.map((i) => i.id).includes(item.id)
     );
 
-    console.log({
-        uc: userCart.map((i) => i.id),
-        ac: availableCart.map((i) => i.id),
-        uc2: unavailableCart.map((i) => i.id),
-    });
-
     const totalPrice = availableCart
         .filter((item) => item.status)
         .reduce((acc, item) => acc + item.item.price * item.quantity, 0);

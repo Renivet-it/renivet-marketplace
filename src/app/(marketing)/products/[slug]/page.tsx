@@ -24,7 +24,8 @@ export async function generateMetadata({
 
     const existingProduct = await productQueries.getProductBySlug(
         slug,
-        "published"
+        "published",
+        "approved"
     );
     if (!existingProduct)
         return {
@@ -88,7 +89,7 @@ async function ProductFetch({ params }: PageProps) {
     const { userId } = await auth();
 
     const [existingProduct, userWishlist, userCart] = await Promise.all([
-        productQueries.getProductBySlug(slug, "published"),
+        productQueries.getProductBySlug(slug, "published", "approved"),
         userId ? userWishlistCache.get(userId) : undefined,
         userId ? userCartCache.get(userId) : undefined,
     ]);

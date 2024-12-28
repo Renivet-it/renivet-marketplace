@@ -4,19 +4,21 @@ import {
     isTRPCAuth,
     protectedProcedure,
 } from "@/lib/trpc/trpc";
-import {
-    createCategorizeProductSchema,
-    rejectProductSchema,
-} from "@/lib/validations";
+import { rejectProductSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 
 export const productReviewsRouter = createTRPCRouter({
     approveProduct: protectedProcedure
-        .input(createCategorizeProductSchema)
+        .input(
+            z.object({
+                productId: z.string(),
+            })
+        )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
         .mutation(async ({ input, ctx }) => {
             const { queries } = ctx;
-            const { productId, categories } = input;
+            const { productId } = input;
 
             const existingProduct =
                 await queries.products.getProduct(productId);
@@ -32,37 +34,7 @@ export const productReviewsRouter = createTRPCRouter({
                     message: "Only pending products can be approved",
                 });
 
-            const existingProductCategories = existingProduct.categories.map(
-                (x) => ({
-                    id: x.id,
-                    tag: `${x.category.id}-${x.subcategory.id}-${x.productType.id}`,
-                })
-            );
-            const inputCategories = categories.map(
-                (x) => `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
-            );
-
-            const addedCategories = categories.filter(
-                (x) =>
-                    !existingProductCategories.some(
-                        (y) =>
-                            y.tag ===
-                            `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
-                    )
-            );
-
-            const removedCategories = existingProductCategories.filter(
-                (x) => !inputCategories.some((y) => y === x.tag)
-            );
-
-            const data = await Promise.all([
-                queries.products.approveProduct(productId),
-                queries.products.categorizeProduct(
-                    productId,
-                    addedCategories,
-                    removedCategories.map((x) => x.id)
-                ),
-            ]);
+            const data = await queries.products.approveProduct(productId);
             return data;
         }),
     rejectProduct: protectedProcedure

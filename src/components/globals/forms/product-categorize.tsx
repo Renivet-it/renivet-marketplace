@@ -40,7 +40,7 @@ interface PageProps {
     allProductTypes: CachedProductType[];
 }
 
-export function ProductApproveForm({
+export function ProductCategorizeForm({
     product,
     allCategories,
     allProductTypes,
@@ -153,18 +153,16 @@ export function ProductApproveForm({
         [fields]
     );
 
-    const { mutate: approveProduct, isPending: isApproving } =
-        trpc.general.productReviews.approveProduct.useMutation({
+    const { mutate: categorizeProduct, isPending: isCategorizing } =
+        trpc.brands.products.categorizeProduct.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Approving product...");
+                const toastId = toast.loading("Saving changes...");
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
-                toast.success("Product approved successfully", {
-                    id: toastId,
-                });
+                toast.success("Changes saved successfully", { id: toastId });
                 refetch();
-                router.push("/dashboard/general/products");
+                router.push(`/dashboard/brands/${product.brandId}/products`);
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -175,10 +173,12 @@ export function ProductApproveForm({
         <Form {...form}>
             <form
                 className="space-y-6"
-                onSubmit={form.handleSubmit((values) => approveProduct(values))}
+                onSubmit={form.handleSubmit((values) =>
+                    categorizeProduct(values)
+                )}
             >
-                <div className="space-y-2">
-                    <h3 className="text-sm">Categorize</h3>
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold">Categorize</h3>
 
                     <div className="flex flex-wrap gap-2">
                         {categories
@@ -192,7 +192,7 @@ export function ProductApproveForm({
                                         handleCategoryClick(category.id)
                                     }
                                     className="min-w-[80px]"
-                                    disabled={isApproving}
+                                    disabled={isCategorizing}
                                 >
                                     <span>{category.name}</span>
                                     {categoryCounts[category.id] > 0 && (
@@ -254,7 +254,7 @@ export function ProductApproveForm({
                                                     }
                                                     defaultValue={field.value}
                                                     disabled={
-                                                        isApproving ||
+                                                        isCategorizing ||
                                                         getSubcategoriesForCategory(
                                                             category?.id || ""
                                                         ).length === 0
@@ -294,7 +294,7 @@ export function ProductApproveForm({
                                                     }
                                                     defaultValue={field.value}
                                                     disabled={
-                                                        isApproving ||
+                                                        isCategorizing ||
                                                         getProductTypesForSubcategory(
                                                             form.watch(
                                                                 subCategoryField
@@ -333,7 +333,7 @@ export function ProductApproveForm({
                                         size="icon"
                                         onClick={() => handleRemove(field.id)}
                                         className="size-8"
-                                        disabled={isApproving}
+                                        disabled={isCategorizing}
                                     >
                                         <Icons.X className="size-4" />
                                     </Button>
@@ -348,9 +348,9 @@ export function ProductApproveForm({
                 <Button
                     type="submit"
                     className="w-full"
-                    disabled={isApproving || !form.formState.isDirty}
+                    disabled={isCategorizing || !form.formState.isDirty}
                 >
-                    Approve
+                    Save
                 </Button>
             </form>
         </Form>

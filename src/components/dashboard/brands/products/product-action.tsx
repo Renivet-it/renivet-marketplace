@@ -77,6 +77,22 @@ export function ProductAction({ product }: PageProps) {
 
                     <DropdownMenuSeparator />
 
+                    {!product.isPublished &&
+                        (product.status === "idle" ||
+                            product.status === "rejected") && (
+                            <DropdownMenuItem
+                                asChild
+                                disabled={product.isPublished}
+                            >
+                                <Link
+                                    href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/categorize`}
+                                >
+                                    <Icons.Pencil className="size-4" />
+                                    <span>Categorize</span>
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
+
                     <DropdownMenuGroup>
                         <DropdownMenuItem
                             disabled={product.isSentForReview}

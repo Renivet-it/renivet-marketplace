@@ -137,6 +137,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             search,
             isAvailable: true,
             isPublished: true,
+            status: "approved",
             brandIds,
             colors,
             minPrice: convertPriceToPaise(minPrice),

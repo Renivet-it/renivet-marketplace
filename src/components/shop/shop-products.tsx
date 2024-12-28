@@ -83,6 +83,7 @@ export function ShopProducts({
             search,
             isPublished: true,
             isAvailable: true,
+            status: "approved",
             brandIds,
             colors,
             minPrice: convertPriceToPaise(minPrice < 0 ? 0 : minPrice),

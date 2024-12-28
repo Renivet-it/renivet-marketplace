@@ -12,13 +12,7 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { productQueries } from "@/lib/db/queries";
-import {
-    brandCache,
-    categoryCache,
-    productTypeCache,
-    subCategoryCache,
-    userCache,
-} from "@/lib/redis/methods";
+import { brandCache, userCache } from "@/lib/redis/methods";
 import { convertValueToLabel } from "@/lib/utils";
 import { format } from "date-fns";
 import { Metadata } from "next";
@@ -65,18 +59,9 @@ async function ProductReviewFetch({ params }: PageProps) {
     const existingProduct = await productQueries.getProduct(id);
     if (!existingProduct) notFound();
 
-    const [
-        existingBrand,
-        existingOwner,
-        categories,
-        subCategories,
-        productTypes,
-    ] = await Promise.all([
+    const [existingBrand, existingOwner] = await Promise.all([
         brandCache.get(existingProduct.brand.id),
         userCache.get(existingProduct.brand.ownerId),
-        categoryCache.getAll(),
-        subCategoryCache.getAll(),
-        productTypeCache.getAll(),
     ]);
 
     if (!existingBrand) notFound();
@@ -258,12 +243,7 @@ async function ProductReviewFetch({ params }: PageProps) {
                         <Separator />
 
                         <CardContent className="pt-6">
-                            <ProductActionPage
-                                product={existingProduct}
-                                allCategories={categories}
-                                allSubCategories={subCategories}
-                                allProductTypes={productTypes}
-                            />
+                            <ProductActionPage product={existingProduct} />
                         </CardContent>
                     </Card>
                 )}

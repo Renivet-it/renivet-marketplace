@@ -74,7 +74,9 @@ export const cartRouter = createTRPCRouter({
                 !existingVariant.product.isAvailable ||
                 existingVariant.isDeleted ||
                 existingVariant.product.isDeleted ||
-                existingVariant.quantity < quantity
+                existingVariant.quantity < quantity ||
+                existingVariant.product.status !== "approved" ||
+                !existingVariant.product.isPublished
             )
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -156,7 +158,8 @@ export const cartRouter = createTRPCRouter({
                 !existingCart.item.isAvailable ||
                 selectedVariant.isDeleted ||
                 existingCart.item.isDeleted ||
-                selectedVariant.quantity < quantity
+                selectedVariant.quantity < quantity ||
+                existingCart.item.status !== "approved"
             )
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -191,7 +194,7 @@ export const cartRouter = createTRPCRouter({
             if (!isAuthorized)
                 throw new TRPCError({
                     code: "FORBIDDEN",
-                    message: "You are not authorized to add to this cart",
+                    message: "You are not authorized to update this cart",
                 });
 
             return next({ ctx, input });
@@ -209,6 +212,27 @@ export const cartRouter = createTRPCRouter({
                     throw new TRPCError({
                         code: "NOT_FOUND",
                         message: "This variant is not in your cart",
+                    });
+
+                const existingVariant = existingCart.item.variants.find(
+                    (variant) => variant.sku === sku
+                );
+                if (!existingVariant)
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: "This variant is not in your cart",
+                    });
+
+                if (
+                    !existingVariant.isAvailable ||
+                    existingVariant.isDeleted ||
+                    !existingCart.item.isAvailable ||
+                    existingCart.item.isDeleted ||
+                    existingCart.item.status !== "approved"
+                )
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "This product is not available",
                     });
 
                 const [data] = await Promise.all([
@@ -270,6 +294,21 @@ export const cartRouter = createTRPCRouter({
                     code: "BAD_REQUEST",
                     message:
                         "This product is already in your wishlist, you can remove it from your cart instead",
+                });
+
+            const existingVariant = existingCart.item.variants.find(
+                (variant) => variant.sku === sku
+            );
+            if (!existingVariant)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "This variant is not in your cart",
+                });
+
+            if (existingCart.item.status !== "approved")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "This product is not available",
                 });
 
             const [data] = await Promise.all([
