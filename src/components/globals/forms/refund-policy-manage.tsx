@@ -22,7 +22,7 @@ interface PageProps {
     legal: CachedLegal | null;
 }
 
-export function PrivacyManageForm({ legal }: PageProps) {
+export function RefundPolicyManageForm({ legal }: PageProps) {
     const editorRef = useRef<EditorRef>(null!);
 
     const form = useForm<CreateLegal>({
@@ -38,15 +38,15 @@ export function PrivacyManageForm({ legal }: PageProps) {
     const { mutate: updateLegal, isPending: isUpdating } =
         trpc.general.legal.updateLegal.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Updating privacy policy...");
+                const toastId = toast.loading("Updating refund policy...");
                 return { toastId };
             },
             onSuccess: (_, values, { toastId }) => {
-                toast.success("Privacy policy updated successfully", {
+                toast.success("Refund policy updated successfully", {
                     id: toastId,
                 });
                 form.reset({
-                    privacyPolicy: values.privacyPolicy as string,
+                    refundPolicy: values.refundPolicy as string,
                 });
             },
             onError: (err, _, ctx) => {
@@ -62,11 +62,11 @@ export function PrivacyManageForm({ legal }: PageProps) {
             >
                 <FormField
                     control={form.control}
-                    name="privacyPolicy"
+                    name="refundPolicy"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="sr-only">
-                                Privacy Policy
+                                Refund Policy
                             </FormLabel>
 
                             <FormControl>
@@ -88,7 +88,7 @@ export function PrivacyManageForm({ legal }: PageProps) {
                     disabled={!form.formState.isDirty || isUpdating}
                     className="w-full"
                 >
-                    {legal?.privacyPolicy ? "Update" : "Add"} Privacy Policy
+                    {legal?.refundPolicy ? "Update" : "Add"} Refund Policy
                 </Button>
             </form>
         </Form>

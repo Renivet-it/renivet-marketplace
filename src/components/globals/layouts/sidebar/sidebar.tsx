@@ -43,15 +43,27 @@ const data: Sidebar = {
     navMain: generalSidebarConfig,
     legal: [
         {
+            name: "Terms of Services",
+            url: "/dashboard/general/terms",
+            icon: "ScrollText",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+        },
+        {
             name: "Privacy Policy",
             url: "/dashboard/general/privacy",
             icon: "Scale",
             permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
         {
-            name: "Terms of Services",
-            url: "/dashboard/general/terms",
-            icon: "ScrollText",
+            name: "Shipping Policy",
+            url: "/dashboard/general/shipping-policy",
+            icon: "Truck",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+        },
+        {
+            name: "Refund Policy",
+            url: "/dashboard/general/refund-policy",
+            icon: "RefreshCcw",
             permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
     ],
@@ -119,6 +131,7 @@ export function Sidebar() {
             <SidebarFooter>
                 <NavUser />
             </SidebarFooter>
+
             <SidebarRail />
         </ShadSidebar>
     );

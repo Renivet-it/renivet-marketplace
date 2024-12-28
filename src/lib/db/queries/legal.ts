@@ -34,6 +34,16 @@ class LegalQuery {
                     values.updated === "all"
                         ? new Date()
                         : undefined,
+                spUpdatedAt:
+                    values.updated === "shippingPolicy" ||
+                    values.updated === "all"
+                        ? new Date()
+                        : undefined,
+                rpUpdatedAt:
+                    values.updated === "refundPolicy" ||
+                    values.updated === "all"
+                        ? new Date()
+                        : undefined,
             })
             .returning()
             .then((res) => res[0]);

@@ -18,7 +18,7 @@ export function Footer({ className, ...props }: GenericProps) {
         >
             <div className="flex w-full max-w-5xl flex-col items-center justify-between xl:max-w-[100rem]">
                 <div className="flex w-full flex-col items-center justify-between lg:flex-row lg:items-start">
-                    <div className="w-full space-y-6 p-10 px-5 md:p-10 lg:basis-1/3 lg:p-20">
+                    <div className="flex w-full flex-col items-center gap-6 p-10 px-5 md:p-10 lg:basis-1/3 lg:items-start lg:p-20">
                         <Link href="/" className="flex items-center gap-2">
                             <Renivet className="size-8" isNegative />
 
@@ -27,21 +27,23 @@ export function Footer({ className, ...props }: GenericProps) {
                             </h1>
                         </Link>
 
-                        <p className="text-primary-foreground/80">
+                        <p className="text-center text-primary-foreground/80 lg:text-start">
                             {siteConfig.description}
                         </p>
 
-                        <Button
-                            variant="outline"
-                            className="min-w-40 border-background bg-transparent font-semibold hover:bg-background hover:text-black"
-                            size="lg"
-                            asChild
-                        >
-                            <Link href="/">
-                                <span>Get Started</span>
-                                <Icons.ArrowRight />
-                            </Link>
-                        </Button>
+                        <div>
+                            <Button
+                                variant="outline"
+                                className="min-w-40 border-background bg-transparent font-semibold hover:bg-background hover:text-black"
+                                size="lg"
+                                asChild
+                            >
+                                <Link href="/">
+                                    <span>Get Started</span>
+                                    <Icons.ArrowRight />
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="mx-5 h-px self-stretch bg-background lg:mx-0 lg:h-auto lg:w-px" />

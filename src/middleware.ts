@@ -71,7 +71,9 @@ export default clerkMiddleware(async (auth, req) => {
                 if (url.pathname !== "/dashboard/general") {
                     if (
                         url.pathname === "/dashboard/general/terms" ||
-                        url.pathname === "/dashboard/general/privacy"
+                        url.pathname === "/dashboard/general/privacy" ||
+                        url.pathname === "/dashboard/general/shipping-policy" ||
+                        url.pathname === "/dashboard/general/refund-policy"
                     )
                         return NextResponse.next();
 
