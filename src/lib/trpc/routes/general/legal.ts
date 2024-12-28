@@ -18,7 +18,12 @@ export const legalRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_SETTINGS))
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { termsOfService, privacyPolicy } = input;
+            const {
+                termsOfService,
+                privacyPolicy,
+                refundPolicy,
+                shippingPolicy,
+            } = input;
 
             const existingLegal = await queries.legal.getLegal();
             if (existingLegal) {
@@ -30,17 +35,25 @@ export const legalRouter = createTRPCRouter({
                           ? "privacyPolicy"
                           : termsOfService !== existingLegal.termsOfService
                             ? "termsOfService"
-                            : null;
+                            : refundPolicy !== existingLegal.refundPolicy
+                              ? "refundPolicy"
+                              : shippingPolicy !== existingLegal.shippingPolicy
+                                ? "shippingPolicy"
+                                : null;
 
                 await queries.legal.updateLegal({
                     termsOfService,
                     privacyPolicy,
+                    refundPolicy,
+                    shippingPolicy,
                     updated,
                 });
             } else
                 await queries.legal.createLegal({
                     termsOfService,
                     privacyPolicy,
+                    refundPolicy,
+                    shippingPolicy,
                 });
 
             await legalCache.remove();

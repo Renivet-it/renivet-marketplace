@@ -30,6 +30,8 @@ export function TermsManageForm({ legal }: PageProps) {
         defaultValues: {
             privacyPolicy: legal?.privacyPolicy || "",
             termsOfService: legal?.termsOfService || "",
+            refundPolicy: legal?.refundPolicy || "",
+            shippingPolicy: legal?.shippingPolicy || "",
         },
     });
 

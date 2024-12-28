@@ -74,8 +74,8 @@ declare global {
         contact: {
             officeHours: string;
             email: string;
-            phone: string;
-            location: string;
+            phone?: string;
+            location?: string;
         };
     };
 

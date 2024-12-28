@@ -66,6 +66,7 @@ import LucideIcons, {
     PlaneTakeoff,
     Plus,
     PlusCircle,
+    RefreshCcw,
     RotateCcw,
     Scale,
     ScrollText,
@@ -84,6 +85,7 @@ import LucideIcons, {
     Ticket,
     Trash,
     Trash2,
+    Truck,
     Twitter,
     User,
     User2,
@@ -95,6 +97,8 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Truck,
+    RefreshCcw,
     SendHorizonal,
     Send,
     Briefcase,

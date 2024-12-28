@@ -37,8 +37,6 @@ export const siteConfig: SiteConfig = {
     contact: {
         officeHours: "Monday - Friday, 9:00 AM - 5:00 PM",
         email: "support@renivet.com",
-        phone: "+1 (234) 567-8901",
-        location: "1234 Main Street, New York, NY 10001",
     },
     menu: [
         {
@@ -130,12 +128,12 @@ export const siteConfig: SiteConfig = {
                         href: "/privacy",
                     },
                     {
-                        name: "Cookie Policy",
-                        href: "/cookies",
+                        name: "Shipping Policy",
+                        href: "/shipping-policy",
                     },
                     {
                         name: "Refund Policy",
-                        href: "/refund",
+                        href: "/refund-policy",
                     },
                 ],
             },
