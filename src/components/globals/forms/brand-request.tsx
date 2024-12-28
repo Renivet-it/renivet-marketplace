@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea-general";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
-import { cn, handleClientError } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
     CreateBrandRequest,
     createBrandRequestSchema,
@@ -33,7 +33,7 @@ import { useMutation } from "@tanstack/react-query";
 import { State } from "country-state-city";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -123,6 +123,68 @@ export function BrandRequestForm() {
     const { mutateAsync: createRequestAsync } =
         trpc.general.brands.requests.createRequest.useMutation();
 
+    useEffect(() => {
+        const formState = form.formState;
+
+        if (Object.keys(formState.errors).length > 0) {
+            const errorFields = Object.keys(formState.errors);
+
+            const step1Fields = [
+                "name",
+                "email",
+                "phone",
+                "message",
+                "logoUrl",
+                "website",
+                "demoUrl",
+            ];
+            const step2Fields = [
+                "gstin",
+                "pan",
+                "bankName",
+                "bankAccountHolderName",
+                "bankAccountNumber",
+                "bankIfscCode",
+                "bankAccountVerificationDocumentUrl",
+                "authorizedSignatoryName",
+                "authorizedSignatoryEmail",
+                "authorizedSignatoryPhone",
+            ];
+            const step3Fields = [
+                "addressLine1",
+                "addressLine2",
+                "city",
+                "state",
+                "postalCode",
+                "country",
+            ];
+            const step4Fields = [
+                "hasAcceptedTerms",
+                "udyamRegistrationCertificateUrl",
+                "iecCertificateUrl",
+            ];
+
+            if (errorFields.some((field) => step1Fields.includes(field)))
+                setCurrentStage(1);
+            else if (errorFields.some((field) => step2Fields.includes(field)))
+                setCurrentStage(2);
+            else if (errorFields.some((field) => step3Fields.includes(field)))
+                setCurrentStage(3);
+            else if (errorFields.some((field) => step4Fields.includes(field)))
+                setCurrentStage(4);
+
+            const errorMessages = errorFields.map(
+                (field) =>
+                    formState.errors[field as keyof typeof formState.errors]
+                        ?.message
+            );
+            toast.error(errorMessages.join(", "), {
+                duration: 5000,
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.formState.errors]);
+
     const { mutate: sendRequest, isPending: isRequestSending } = useMutation({
         onMutate: () => {
             const toastId = toast.loading("Sending request...");
@@ -201,7 +263,25 @@ export function BrandRequestForm() {
             router.refresh();
         },
         onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
+            const errorMessage =
+                err instanceof Error ? err.message : "An error occurred";
+            toast.error(errorMessage, {
+                id: ctx?.toastId,
+                duration: 5000,
+            });
+
+            if (
+                !logoFile ||
+                !form.getValues("name") ||
+                !form.getValues("email") ||
+                !form.getValues("phone")
+            ) {
+                setCurrentStage(1);
+            } else if (!form.getValues("gstin") || !bankVerificationFile) {
+                setCurrentStage(2);
+            } else if (!form.getValues("addressLine1")) {
+                setCurrentStage(3);
+            }
         },
     });
 
