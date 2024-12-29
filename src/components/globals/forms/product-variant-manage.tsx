@@ -31,16 +31,8 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select-dash";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { PRESET_COLORS } from "@/config/const";
-import { SIZES } from "@/config/sizes";
 import { trpc } from "@/lib/trpc/client";
 import { cn, handleClientError } from "@/lib/utils";
 import { CreateProduct, ProductWithBrand } from "@/lib/validations";
@@ -143,29 +135,16 @@ export function ProductVariantManage({
                             <FormItem className="flex-1">
                                 <FormLabel className="hidden">Size</FormLabel>
 
-                                <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                    disabled={
-                                        isCreating ||
-                                        isUpdating ||
-                                        isVariantUpdating
-                                    }
-                                >
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select a size" />
-                                        </SelectTrigger>
-                                    </FormControl>
-
-                                    <SelectContent>
-                                        {SIZES.map((size) => (
-                                            <SelectItem key={size} value={size}>
-                                                {size}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        disabled={
+                                            isCreating ||
+                                            isUpdating ||
+                                            isVariantUpdating
+                                        }
+                                    />
+                                </FormControl>
 
                                 <FormMessage />
                             </FormItem>

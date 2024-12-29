@@ -66,7 +66,7 @@ export function ProductContent({
                     </p>
 
                     <p className="text-xs font-semibold text-accent/80 md:text-sm">
-                        + 7% platform fee at checkout
+                        + 2% gateway fee at checkout
                     </p>
                 </div>
 

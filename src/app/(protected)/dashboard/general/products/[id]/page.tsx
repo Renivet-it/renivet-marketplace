@@ -11,6 +11,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries } from "@/lib/db/queries";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { convertValueToLabel } from "@/lib/utils";
@@ -46,7 +47,7 @@ export async function generateMetadata({
 export default function Page({ params }: PageProps) {
     return (
         <DashShell>
-            <Suspense>
+            <Suspense fallback={<ProductReviewSkeleton />}>
                 <ProductReviewFetch params={params} />
             </Suspense>
         </DashShell>
@@ -247,6 +248,27 @@ async function ProductReviewFetch({ params }: PageProps) {
                         </CardContent>
                     </Card>
                 )}
+            </div>
+        </>
+    );
+}
+
+function ProductReviewSkeleton() {
+    return (
+        <>
+            <div className="flex items-center justify-between gap-2">
+                <div className="w-full space-y-1">
+                    <Skeleton className="h-7 rounded-md" />
+                    <Skeleton className="h-4 w-1/2 rounded-md" />
+                </div>
+
+                <Skeleton className="h-5 w-24 rounded-full" />
+            </div>
+
+            <div className="space-y-6">
+                <Skeleton className="h-52 rounded-md" />
+                <Skeleton className="h-36 rounded-md" />
+                <Skeleton className="h-96 rounded-md" />
             </div>
         </>
     );
