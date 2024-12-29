@@ -123,10 +123,12 @@ export const productVariantSchema = z.object({
             invalid_type_error: "Product ID must be a string",
         })
         .uuid("Product ID is invalid"),
-    size: z.enum(["One Size", "XS", "S", "M", "L", "XL", "XXL"], {
-        required_error: "Size is required",
-        invalid_type_error: "Size must be a string",
-    }),
+    size: z
+        .string({
+            required_error: "Size is required",
+            invalid_type_error: "Size must be a string",
+        })
+        .min(1, "Size must be at least 1 characters long"),
     color: z.object({
         name: z
             .string({

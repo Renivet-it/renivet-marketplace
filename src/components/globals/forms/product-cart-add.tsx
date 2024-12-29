@@ -15,18 +15,16 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
-import { SIZES } from "@/config/sizes";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
     CachedCart,
     CreateCart,
     createCartSchema,
-    ProductVariant,
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -51,19 +49,8 @@ export function ProductCartAddForm({
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
 
-    const [color, setColor] = useQueryState("color", { defaultValue: "" });
-    const [size, setSize] = useQueryState(
-        "size",
-        parseAsStringLiteral([
-            "One Size",
-            "XS",
-            "S",
-            "M",
-            "L",
-            "XL",
-            "XXL",
-        ] as const)
-    );
+    const [size, setSize] = useQueryState("size");
+    const [color, setColor] = useQueryState("color");
 
     const [sku, setSku] = useState<string | undefined>();
 
@@ -77,15 +64,7 @@ export function ProductCartAddForm({
     });
 
     const sizes = Array.from(
-        new Set(
-            product.variants
-                .map((v) => v.size)
-                .sort(
-                    (a, b) =>
-                        SIZES.indexOf(a) - SIZES.indexOf(b) ||
-                        a.localeCompare(b)
-                )
-        )
+        new Set(product.variants.map((v) => v.size).sort())
     );
 
     const colors = product.variants
@@ -95,13 +74,6 @@ export function ProductCartAddForm({
         .sort(
             (a, b) => a.name.localeCompare(b.name) || a.hex.localeCompare(b.hex)
         );
-
-    useEffect(() => {
-        if (product.variants.length === 1) setSize(product.variants[0].size);
-        if (product.variants.length === 1)
-            setColor(product.variants[0].color.hex);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     useEffect(() => {
         const currentSku = product.variants.find(
@@ -174,8 +146,8 @@ export function ProductCartAddForm({
 
                     <RadioGroup
                         onValueChange={(value) => {
-                            setSize(value as ProductVariant["size"]);
-                            setColor("");
+                            setSize(value);
+                            setColor(null);
                         }}
                         defaultValue={size!}
                         className="flex flex-wrap gap-2"
@@ -198,7 +170,7 @@ export function ProductCartAddForm({
                                                 "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
                                                 s === size &&
                                                     "bg-primary text-background",
-                                                s === "One Size" &&
+                                                s.length > 2 &&
                                                     "size-auto px-3",
                                                 !product.isAvailable &&
                                                     "cursor-not-allowed opacity-50"
@@ -224,8 +196,9 @@ export function ProductCartAddForm({
                                 </Label>
 
                                 <RadioGroup
+                                    key={size}
                                     onValueChange={(value) => setColor(value)}
-                                    defaultValue={color}
+                                    defaultValue={color ?? undefined}
                                     className="flex flex-wrap gap-2"
                                     disabled={!product.isAvailable}
                                 >

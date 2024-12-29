@@ -72,7 +72,7 @@ export const productVariants = pgTable(
         productId: uuid("product_id")
             .notNull()
             .references(() => products.id, { onDelete: "cascade" }),
-        size: text("size").notNull().$type<ProductVariant["size"][number]>(),
+        size: text("size").notNull(),
         color: jsonb("color").notNull().$type<ProductVariant["color"]>(),
         quantity: integer("quantity").notNull().default(0),
         isAvailable: boolean("is_available").default(true).notNull(),
