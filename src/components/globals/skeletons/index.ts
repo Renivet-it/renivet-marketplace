@@ -1,1 +1,2 @@
-export * from "./table-skeleton";
+export * from "./legal";
+export * from "./table";

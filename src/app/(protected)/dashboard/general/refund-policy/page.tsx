@@ -1,5 +1,6 @@
 import { RefundPolicyManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
+import { LegalSkeleton } from "@/components/globals/skeletons";
 import { legalCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import { Suspense } from "react";
@@ -21,7 +22,7 @@ export default function Page() {
                 </div>
             </div>
 
-            <Suspense>
+            <Suspense fallback={<LegalSkeleton />}>
                 <RefundPolicyFetch />
             </Suspense>
         </DashShell>
