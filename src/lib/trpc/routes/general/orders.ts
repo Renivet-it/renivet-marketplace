@@ -111,7 +111,6 @@ export const ordersRouter = createTRPCRouter({
             const receiptId = generateReceiptId();
 
             const cachedAllBrands = await brandCache.getAll();
-
             const brandIds = input.items.map((item) => item.brandId);
 
             const existingBrands = cachedAllBrands.filter((brand) =>
@@ -151,6 +150,27 @@ export const ordersRouter = createTRPCRouter({
                         },
                         contact: existingAddress.phone,
                     },
+                    line_items: [
+                        {
+                            variant_id: "",
+                            sku: "",
+                            name: "",
+                            description: "",
+                            dimensions: {
+                                height: "",
+                                width: "",
+                                length: "",
+                            },
+                            weight: "",
+                            quantity: 0,
+                            image_url: "",
+                            product_url: "",
+                            type: "",
+                            offer_price: "",
+                            tax_amount: 0,
+                            price: "",
+                        },
+                    ],
                     line_items_total: input.totalItems,
                     shipping_fee: input.deliveryAmount,
                     receipt: receiptId,

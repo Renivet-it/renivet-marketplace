@@ -161,21 +161,6 @@ export const productsRouter = createTRPCRouter({
                     message: "Only approved products can be published",
                 });
 
-            if (
-                existingProduct.isPublished &&
-                (existingProduct.name !== values.name ||
-                    existingProduct.description !== values.description ||
-                    existingProduct.imageUrls.join() !==
-                        values.imageUrls.join() ||
-                    existingProduct.sustainabilityCertificateUrl !==
-                        values.sustainabilityCertificateUrl)
-            )
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message:
-                        "You cannot update the name, description, images, or sustainability certificate of a published product",
-                });
-
             if (existingProduct.brand.id !== user.brand?.id)
                 throw new TRPCError({
                     code: "FORBIDDEN",
@@ -214,11 +199,6 @@ export const productsRouter = createTRPCRouter({
                 filesToBeDeleted.push(...removedImages.map((img) => img.key));
 
             await utApi.deleteFiles(filesToBeDeleted);
-
-            const slug =
-                values.name !== existingProduct.name
-                    ? generateProductSlug(values.name, user.brand.name)
-                    : existingProduct.slug;
 
             const existingSkus = existingProduct.variants.map((v) => v.sku);
             const inputSkus = values.variants.map((v) => v.sku);
@@ -265,7 +245,6 @@ export const productsRouter = createTRPCRouter({
                     ...values,
                     sustainabilityCertificateUrl:
                         values.sustainabilityCertificateUrl!,
-                    slug,
                 }),
                 userWishlistCache.dropAll(),
                 userCartCache.dropAll(),
