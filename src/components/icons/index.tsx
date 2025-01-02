@@ -16,6 +16,7 @@ import LucideIcons, {
     ChevronUp,
     CircleCheck,
     Clipboard,
+    Clock,
     CloudUpload,
     Command,
     Cookie,
@@ -97,6 +98,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Clock,
     Truck,
     RefreshCcw,
     SendHorizonal,

@@ -2,6 +2,7 @@ export * from "./banned-brand-member";
 export * from "./banner";
 export * from "./blog";
 export * from "./brand";
+export * from "./brand-confidential";
 export * from "./brand-invite";
 export * from "./brand-member";
 export * from "./brand-request";

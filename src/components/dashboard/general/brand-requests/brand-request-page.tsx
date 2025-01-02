@@ -3,7 +3,6 @@
 import {
     RequestApproveModal,
     RequestRejectModal,
-    RequestRzpLinkModal,
 } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
@@ -15,16 +14,8 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import {
-    cn,
-    convertValueToLabel,
-    handleClientError,
-    slugify,
-} from "@/lib/utils";
-import {
-    brandRequestConfidentialsSchema,
-    BrandRequestWithOwner,
-} from "@/lib/validations";
+import { convertValueToLabel, handleClientError, slugify } from "@/lib/utils";
+import { BrandRequestWithOwner } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import Player from "next-video/player";
@@ -40,7 +31,14 @@ interface PageProps {
 export function BrandRequestPage({ request }: PageProps) {
     const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-    const [isLinkRzpModalOpen, setIsLinkRzpModalOpen] = useState(false);
+
+    const websiteUrlRaw = request.website;
+    const doesUrlIncludeHttp =
+        websiteUrlRaw?.includes("http://") ||
+        websiteUrlRaw?.includes("https://");
+    const websiteUrl = doesUrlIncludeHttp
+        ? websiteUrlRaw
+        : `http://${websiteUrlRaw}`;
 
     const { mutate: downloadLogo, isPending: isLogoDownloading } = useMutation({
         onMutate: () => {
@@ -218,30 +216,6 @@ export function BrandRequestPage({ request }: PageProps) {
                             </div>
 
                             <div>
-                                <h5 className="text-sm font-medium">
-                                    Razorpay ID
-                                </h5>
-                                <button
-                                    className={cn(
-                                        "cursor-default break-all text-start text-sm text-primary",
-                                        request.rzpAccountId &&
-                                            "cursor-pointer underline"
-                                    )}
-                                    onClick={() => {
-                                        if (!request.rzpAccountId) return;
-                                        navigator.clipboard.writeText(
-                                            request.rzpAccountId
-                                        );
-                                        return toast.success(
-                                            "ID copied to clipboard"
-                                        );
-                                    }}
-                                >
-                                    {request.rzpAccountId}
-                                </button>
-                            </div>
-
-                            <div>
                                 <h5 className="text-sm font-medium">Email</h5>
                                 <Link
                                     href={`mailto:${request.email}`}
@@ -258,9 +232,9 @@ export function BrandRequestPage({ request }: PageProps) {
 
                             <div>
                                 <h5 className="text-sm font-medium">Website</h5>
-                                {request.website ? (
+                                {websiteUrl ? (
                                     <Link
-                                        href={request.website}
+                                        href={websiteUrl}
                                         className="break-words text-sm text-primary underline"
                                         target="_blank"
                                     >
@@ -360,117 +334,23 @@ export function BrandRequestPage({ request }: PageProps) {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Business Information</CardTitle>
-                    </CardHeader>
-
-                    <Separator />
-
-                    <CardContent className="pt-6">
-                        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                            {Object.keys(
-                                brandRequestConfidentialsSchema.shape
-                            ).map((key) => {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const value = (request as any)[key];
-                                const finalValue = !value ? (
-                                    "N/A"
-                                ) : typeof value === "string" &&
-                                  (value.startsWith("http://") ||
-                                      value.startsWith("https://")) ? (
-                                    <Link
-                                        href={value}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-primary underline"
-                                    >
-                                        Click here
-                                    </Link>
-                                ) : (
-                                    value
-                                );
-
-                                return (
-                                    <div key={key}>
-                                        <h5 className="text-sm font-medium">
-                                            {convertValueToLabel(key)}
-                                        </h5>
-                                        <p className="text-sm">{finalValue}</p>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
-
                 {request.status === "pending" && (
-                    <>
-                        {!request.rzpAccountId ? (
-                            <div className="rounded-md border bg-muted p-6 text-sm text-destructive">
-                                <p>
-                                    <span className="font-semibold">Note:</span>{" "}
-                                    Use the{" "}
-                                    <span className="font-semibold">
-                                        &quot;Link to Razorpay&quot;
-                                    </span>{" "}
-                                    button to create a Razorpay account for this
-                                    brand. Once the account is created,
-                                    you&apos;ll be redirected to the Razorpay
-                                    dashboard where you will need to manually
-                                    complete the KYC process for the brand.
-                                    After the KYC process is completed, you can
-                                    approve the brand request.
-                                </p>
-                                <br />
-                                <p>
-                                    If you want to reject the brand request,
-                                    directly use the{" "}
-                                    <span className="font-semibold">
-                                        &quot;Reject&quot;
-                                    </span>{" "}
-                                    button. You don&apos;t need to create a
-                                    Razorpay account to reject the brand
-                                    request. Once account is linked to Razorpay,
-                                    you cannot reject the brand request.
-                                </p>
-                            </div>
-                        ) : (
-                            <></>
-                        )}
+                    <div className="flex flex-col items-center gap-2 md:flex-row">
+                        <Button
+                            variant="destructive"
+                            className="w-full"
+                            onClick={() => setIsRejectModalOpen(true)}
+                        >
+                            Reject
+                        </Button>
 
-                        <div className="flex flex-col items-center gap-2 md:flex-row">
-                            {request.rzpAccountId ? (
-                                <Button
-                                    className="w-full"
-                                    onClick={() => setIsApproveModalOpen(true)}
-                                >
-                                    Approve
-                                </Button>
-                            ) : (
-                                <>
-                                    <Button
-                                        variant="destructive"
-                                        className="w-full"
-                                        onClick={() =>
-                                            setIsRejectModalOpen(true)
-                                        }
-                                    >
-                                        Reject
-                                    </Button>
-
-                                    <Button
-                                        className="w-full"
-                                        onClick={() =>
-                                            setIsLinkRzpModalOpen(true)
-                                        }
-                                    >
-                                        Link to Razorpay
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                    </>
+                        <Button
+                            className="w-full"
+                            onClick={() => setIsApproveModalOpen(true)}
+                        >
+                            Approve
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -484,12 +364,6 @@ export function BrandRequestPage({ request }: PageProps) {
                 request={request}
                 isOpen={isRejectModalOpen}
                 setIsOpen={setIsRejectModalOpen}
-            />
-
-            <RequestRzpLinkModal
-                request={request}
-                isOpen={isLinkRzpModalOpen}
-                setIsOpen={setIsLinkRzpModalOpen}
             />
         </>
     );

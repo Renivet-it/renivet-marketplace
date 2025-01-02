@@ -3,7 +3,7 @@ import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { db } from "@/lib/db";
-import { brandQueries } from "@/lib/db/queries";
+import { brandConfidentialQueries, brandQueries } from "@/lib/db/queries";
 import { brandRequests } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Metadata } from "next";
@@ -39,6 +39,10 @@ export default function Page({ searchParams }: PageProps) {
                 <BrandRequestsFetch />
             </Suspense>
 
+            <Suspense>
+                <BrandVerificationFetch />
+            </Suspense>
+
             <Suspense fallback={<TableSkeleton />}>
                 <BrandsFetch searchParams={searchParams} />
             </Suspense>
@@ -66,6 +70,30 @@ async function BrandRequestsFetch() {
             <button>
                 <Icons.ArrowRight className="size-4" />
                 <span className="sr-only">View pending brand requests</span>
+            </button>
+        </Link>
+    );
+}
+
+async function BrandVerificationFetch() {
+    const data = await brandConfidentialQueries.getCount("pending");
+    if (data === 0) return null;
+
+    return (
+        <Link
+            href="/dashboard/general/brands/verifications"
+            className="flex items-center justify-between gap-5 rounded-md bg-destructive p-2 px-4 text-sm text-destructive-foreground"
+        >
+            <p>
+                You have <span className="font-semibold">{data}</span> pending
+                brand verifications
+            </p>
+
+            <button>
+                <Icons.ArrowRight className="size-4" />
+                <span className="sr-only">
+                    View pending brand verifications
+                </span>
             </button>
         </Link>
     );

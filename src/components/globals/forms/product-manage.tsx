@@ -348,38 +348,40 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: CreateProduct) => {
-            if (!imageFiles.length)
-                throw new Error("At least 1 image is required");
-            if (!certificateFile)
-                throw new Error("Sustainability certificate is required");
+            throw new Error("Product creation is disabled");
 
-            const [imageRes, docRes] = await Promise.all([
-                startImageUpload(imageFiles),
-                startDocUpload([certificateFile]),
-            ]);
+            // if (!imageFiles.length)
+            //     throw new Error("At least 1 image is required");
+            // if (!certificateFile)
+            //     throw new Error("Sustainability certificate is required");
 
-            if (!imageRes?.length) throw new Error("Failed to upload images");
-            if (!docRes?.length) throw new Error("Failed to upload document");
+            // const [imageRes, docRes] = await Promise.all([
+            //     startImageUpload(imageFiles),
+            //     startDocUpload([certificateFile]),
+            // ]);
 
-            const imageUrls = imageRes.map((file) => file.appUrl);
-            const docUrl = docRes[0].appUrl;
+            // if (!imageRes?.length) throw new Error("Failed to upload images");
+            // if (!docRes?.length) throw new Error("Failed to upload document");
 
-            values.imageUrls = imageUrls;
-            values.sustainabilityCertificateUrl = docUrl;
+            // const imageUrls = imageRes.map((file) => file.appUrl);
+            // const docUrl = docRes[0].appUrl;
 
-            if (values.imageUrls.length > 5)
-                throw new Error("Maximum 5 images allowed");
+            // values.imageUrls = imageUrls;
+            // values.sustainabilityCertificateUrl = docUrl;
 
-            return await createProductAsync(values);
+            // if (values.imageUrls.length > 5)
+            //     throw new Error("Maximum 5 images allowed");
+
+            // return await createProductAsync(values);
         },
         onSuccess: (data, __, { toastId }) => {
             toast.success(
                 "Product has been added, categorize it now and send for review",
                 { id: toastId }
             );
-            router.push(
-                `/dashboard/brands/${brandId}/products/p/${data.id}/categorize`
-            );
+            // router.push(
+            //     `/dashboard/brands/${brandId}/products/p/${data.id}/categorize`
+            // );
             setImagePreviews([]);
             setImageFiles([]);
         },
@@ -394,36 +396,38 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: UpdateProduct) => {
-            if (!product) throw new Error("Product not found");
-            if (product.isSentForReview)
-                throw new Error("Product is under review");
+            throw new Error("Product creation is disabled");
 
-            if (values.imageUrls.length + imageFiles.length > 5)
-                throw new Error("Maximum 5 images allowed");
+            // if (!product) throw new Error("Product not found");
+            // if (product.isSentForReview)
+            //     throw new Error("Product is under review");
 
-            const [imageRes, docRes] = await Promise.all([
-                imageFiles.length > 0
-                    ? startImageUpload(imageFiles)
-                    : undefined,
-                certificateFile ? startDocUpload([certificateFile]) : undefined,
-            ]);
+            // if (values.imageUrls.length + imageFiles.length > 5)
+            //     throw new Error("Maximum 5 images allowed");
 
-            if (imageRes && !imageRes.length)
-                throw new Error("Failed to upload images");
-            if (docRes && !docRes.length)
-                throw new Error("Failed to upload document");
+            // const [imageRes, docRes] = await Promise.all([
+            //     imageFiles.length > 0
+            //         ? startImageUpload(imageFiles)
+            //         : undefined,
+            //     certificateFile ? startDocUpload([certificateFile]) : undefined,
+            // ]);
 
-            const imageUrls = imageRes
-                ? imageRes.map((file) => file.appUrl)
-                : [];
-            const docUrl = docRes
-                ? docRes[0].appUrl
-                : values.sustainabilityCertificateUrl;
+            // if (imageRes && !imageRes.length)
+            //     throw new Error("Failed to upload images");
+            // if (docRes && !docRes.length)
+            //     throw new Error("Failed to upload document");
 
-            values.imageUrls = [...values.imageUrls, ...imageUrls];
-            values.sustainabilityCertificateUrl = docUrl;
+            // const imageUrls = imageRes
+            //     ? imageRes.map((file) => file.appUrl)
+            //     : [];
+            // const docUrl = docRes
+            //     ? docRes[0].appUrl
+            //     : values.sustainabilityCertificateUrl;
 
-            await updateProductAsync({ productId: product.id, values });
+            // values.imageUrls = [...values.imageUrls, ...imageUrls];
+            // values.sustainabilityCertificateUrl = docUrl;
+
+            // await updateProductAsync({ productId: product.id, values });
         },
         onSuccess: (_, __, { toastId }) => {
             toast.success("Product updated successfully", { id: toastId });

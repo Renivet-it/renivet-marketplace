@@ -11,7 +11,7 @@ import {
     convertBytesToHumanReadable,
     getUploadThingFileKey,
 } from "@/lib/utils";
-import { CreateBrandRequest } from "@/lib/validations";
+import { CreateBrandConfidential } from "@/lib/validations";
 import { useDropzone } from "@uploadthing/react";
 import Link from "next/link";
 import { Dispatch, SetStateAction, useRef, useState } from "react";
@@ -26,7 +26,7 @@ interface PageProps {
     file: File | null;
     setFile: Dispatch<SetStateAction<File | null>>;
     setPreview: Dispatch<SetStateAction<string | null>>;
-    form: UseFormReturn<CreateBrandRequest>;
+    form: UseFormReturn<CreateBrandConfidential>;
     isPending: boolean;
 }
 

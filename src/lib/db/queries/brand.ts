@@ -1,4 +1,11 @@
-import { CachedBrand, cachedBrandSchema, CreateBrand } from "@/lib/validations";
+import { razorpay } from "@/lib/razorpay";
+import {
+    CachedBrand,
+    cachedBrandSchema,
+    CreateBrand,
+    LinkBrandToRazorpay,
+    UpdateBrandConfidentialStatus,
+} from "@/lib/validations";
 import { desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { brands } from "../schema";
@@ -150,6 +157,64 @@ class BrandQuery {
         return data;
     }
 
+    async linkBrandToRazorpay(values: LinkBrandToRazorpay) {
+        try {
+            const account = await razorpay.accounts.create({
+                email: values.email,
+                phone: values.phone,
+                type: "route",
+                legal_business_name: values.name,
+                business_type: "partnership",
+                contact_name: values.authorizedSignatoryName,
+                notes: {
+                    brandId: `req_${values.id}`,
+                    ownerId: values.ownerId,
+                },
+                profile: {
+                    category: "ecommerce",
+                    subcategory: "men_and_boys_clothing_stores",
+                    addresses: {
+                        registered: {
+                            street1: values.addressLine1,
+                            street2: values.addressLine2,
+                            city: values.city,
+                            state: values.state,
+                            postal_code: values.postalCode,
+                            country: values.country,
+                        },
+                    },
+                },
+                legal_info: {
+                    pan: values.pan,
+                    gst: values.gstin,
+                },
+            });
+
+            const data = await db
+                .update(brands)
+                .set({
+                    rzpAccountId: account.id,
+                    updatedAt: new Date(),
+                })
+                .where(eq(brands.id, values.id))
+                .returning()
+                .then((res) => res[0]);
+
+            return data;
+        } catch (error) {
+            if (
+                Object.prototype.hasOwnProperty.call(error, "error") &&
+                Object.prototype.hasOwnProperty.call(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (error as any).error,
+                    "description"
+                )
+            )
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                throw new Error((error as any).error.description);
+        }
+    }
+
     async createBrand(
         values: CreateBrand & {
             slug: string;
@@ -158,6 +223,24 @@ class BrandQuery {
         const data = await db
             .insert(brands)
             .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBrandConfidentialStatus(values: UpdateBrandConfidentialStatus) {
+        const data = await db
+            .update(brands)
+            .set({
+                ...values,
+                confidentialVerificationRejectedAt:
+                    values.confidentialVerificationRejectedAt
+                        ? new Date(values.confidentialVerificationRejectedAt)
+                        : null,
+                updatedAt: new Date(),
+            })
+            .where(eq(brands.id, values.id))
             .returning()
             .then((res) => res[0]);
 

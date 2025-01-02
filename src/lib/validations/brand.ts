@@ -13,12 +13,16 @@ export const brandSchema = z.object({
             invalid_type_error: "ID must be a string",
         })
         .uuid("ID is invalid"),
-    rzpAccountId: z
-        .string({
-            required_error: "Razorpay Account ID is required",
-            invalid_type_error: "Razorpay Account ID must be a string",
-        })
-        .min(1, "Razorpay Account ID must be at least 1 characters long"),
+    rzpAccountId: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                required_error: "Razorpay Account ID is required",
+                invalid_type_error: "Razorpay Account ID must be a string",
+            })
+            .min(1, "Razorpay Account ID must be at least 1 characters long")
+            .nullable()
+    ),
     name: z
         .string({
             required_error: "Name is required",
@@ -49,7 +53,10 @@ export const brandSchema = z.object({
             .string({
                 invalid_type_error: "Website must be a string",
             })
-            .url("Website is invalid")
+            .regex(
+                /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
+                "Website is invalid"
+            )
             .nullable()
     ),
     logoUrl: z
@@ -71,6 +78,37 @@ export const brandSchema = z.object({
             })
             .nullable()
     ),
+    isConfidentialSentForVerification: z.boolean({
+        required_error: "Is confidential sent for verification is required",
+        invalid_type_error:
+            "Is confidential sent for verification must be a boolean",
+    }),
+    confidentialVerificationStatus: z.enum(
+        ["pending", "approved", "rejected"],
+        {
+            required_error: "Status is required",
+            invalid_type_error:
+                "Status must be one of: pending, approved, rejected",
+        }
+    ),
+    confidentialVerificationRejectedReason: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error:
+                    "Confidential verification rejected reason must be a string",
+            })
+            .nullable()
+    ),
+    confidentialVerificationRejectedAt: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .union([z.string(), z.date()], {
+                invalid_type_error:
+                    "Confidential verification rejected at must be a date",
+            })
+            .nullable()
+    ),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -87,10 +125,28 @@ export const brandSchema = z.object({
 
 export const createBrandSchema = brandSchema.omit({
     id: true,
+    rzpAccountId: true,
     slug: true,
+    isConfidentialSentForVerification: true,
+    confidentialVerificationStatus: true,
+    confidentialVerificationRejectedReason: true,
+    confidentialVerificationRejectedAt: true,
     createdAt: true,
     updatedAt: true,
 });
+
+export const updateBrandConfidentialStatusSchema = brandSchema
+    .pick({
+        id: true,
+        isConfidentialSentForVerification: true,
+        confidentialVerificationStatus: true,
+        confidentialVerificationRejectedReason: true,
+        confidentialVerificationRejectedAt: true,
+    })
+    .partial()
+    .extend({
+        id: brandSchema.shape.id,
+    });
 
 export const brandWithOwnerMembersAndRolesSchema = z.lazy(() =>
     brandSchema.extend({
@@ -116,7 +172,6 @@ export const cachedBrandSchema = z.lazy(() =>
         ),
         invites: brandInviteSchema.array(),
         bannedMembers: bannedBrandMemberSchema.array(),
-        // subscriptions: brandSubscriptionSchema.array(),
     })
 );
 
@@ -129,6 +184,9 @@ export const brandMetaSchema = brandSchema.pick({
 
 export type Brand = z.infer<typeof brandSchema>;
 export type CreateBrand = z.infer<typeof createBrandSchema>;
+export type UpdateBrandConfidentialStatus = z.infer<
+    typeof updateBrandConfidentialStatusSchema
+>;
 export type BrandWithOwnerMembersAndRoles = z.infer<
     typeof brandWithOwnerMembersAndRolesSchema
 >;

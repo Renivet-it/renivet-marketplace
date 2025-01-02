@@ -82,8 +82,15 @@ async function NewProductButton({ params }: PageProps) {
     const { bId } = await params;
 
     return (
-        <Button asChild className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm">
-            <Link href={`/dashboard/brands/${bId}/products/new`}>
+        <Button
+            asChild
+            className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
+            disabled
+        >
+            <Link
+                // href={`/dashboard/brands/${bId}/products/new`}
+                href="#"
+            >
                 <Icons.PlusCircle className="size-5" />
                 Create New Product
             </Link>

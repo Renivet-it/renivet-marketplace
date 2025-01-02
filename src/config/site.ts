@@ -338,6 +338,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
+                    title: "Verification",
+                    url: `/dashboard/brands/${brandId}/verification`,
+                    permissions: BitFieldBrandPermission.ADMINISTRATOR,
+                },
+                {
                     title: "Roles",
                     url: `/dashboard/brands/${brandId}/roles`,
                     permissions: BitFieldBrandPermission.MANAGE_ROLES,

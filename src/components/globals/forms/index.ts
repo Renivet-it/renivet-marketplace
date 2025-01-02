@@ -1,6 +1,7 @@
 export * from "./address-manage";
 export * from "./banner-manage";
 export * from "./blog-manage";
+export * from "./brand-confidential";
 export * from "./brand-request";
 export * from "./brand-waitlist";
 export * from "./category-manage";

@@ -3,7 +3,11 @@ import {
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { db } from "@/lib/db";
-import { brandRequests, brandsWaitlist } from "@/lib/db/schema";
+import {
+    brandConfidentials,
+    brandRequests,
+    brandsWaitlist,
+} from "@/lib/db/schema";
 import { jwt } from "@/lib/jose";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
@@ -243,20 +247,21 @@ export const uploadRouter = {
                     code: "FORBIDDEN",
                     message: "You're not authorized",
                 });
+            if (!existingUser.brand)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not part of a brand",
+                });
 
-            const existingBrandRequest = await db.query.brandRequests.findFirst(
-                {
-                    where: and(
-                        eq(brandRequests.ownerId, auth.userId),
-                        ne(brandRequests.status, "rejected")
-                    ),
-                }
-            );
-            if (existingBrandRequest)
+            const existingBrandConf =
+                await db.query.brandConfidentials.findFirst({
+                    where: eq(brandConfidentials.id, existingUser.brand.id),
+                });
+            if (existingBrandConf)
                 throw new UploadThingError({
                     code: "FORBIDDEN",
                     message:
-                        "You have already submitted a brand request, withdraw it if you want to submit a new one",
+                        "Your brand has already submitted the confidential information",
                 });
 
             return { userId: auth.userId };

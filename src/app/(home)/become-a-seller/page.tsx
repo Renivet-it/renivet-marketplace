@@ -13,7 +13,6 @@ import { db } from "@/lib/db";
 import { brandRequestQueries } from "@/lib/db/queries";
 import { brandMembers } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
-import { brandRequestWithoutConfidentialsSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { format } from "date-fns";
 import { eq } from "drizzle-orm";
@@ -87,16 +86,8 @@ async function BecomeASellerFetch() {
         );
     }
 
-    if (existingBrandRequest) {
-        const existingBrandRequestWithoutConfidentials =
-            brandRequestWithoutConfidentialsSchema.parse(existingBrandRequest);
-
-        return (
-            <ExistBrandRequestPage
-                brandRequest={existingBrandRequestWithoutConfidentials}
-            />
-        );
-    }
+    if (existingBrandRequest)
+        return <ExistBrandRequestPage brandRequest={existingBrandRequest} />;
 
     if (existingBrandMember && !existingBrandMember.isOwner)
         return (
@@ -139,11 +130,17 @@ async function BecomeASellerFetch() {
                                 new Date(
                                     existingRejectedRequest.rejectedAt!
                                 ).getTime() +
-                                    1000 * 60 * 60 * 24 * 7,
+                                    1000 * 60 * 60 * 24 * 3,
                                 "MMMM d, yyyy"
                             )}
                         </strong>
                         .
+                    </p>
+
+                    <p className="text-sm">
+                        <span className="font-semibold">Reason: </span>{" "}
+                        {existingRejectedRequest.rejectionReason ||
+                            "No reason provided."}
                     </p>
                 </NoticeContent>
             </Notice>

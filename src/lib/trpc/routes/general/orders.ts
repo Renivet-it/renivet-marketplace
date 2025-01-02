@@ -123,6 +123,16 @@ export const ordersRouter = createTRPCRouter({
                     message: "Order contains invalid brand(s)",
                 });
 
+            const hasRazorpayAccount = existingBrands.every(
+                (brand) => brand.rzpAccountId !== null
+            );
+            if (!hasRazorpayAccount)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "One or more brands do not have a Razorpay account",
+                });
+
             try {
                 const rpzOrder = await razorpay.orders.create({
                     amount: input.totalAmount,
@@ -150,32 +160,11 @@ export const ordersRouter = createTRPCRouter({
                         },
                         contact: existingAddress.phone,
                     },
-                    line_items: [
-                        {
-                            variant_id: "",
-                            sku: "",
-                            name: "",
-                            description: "",
-                            dimensions: {
-                                height: "",
-                                width: "",
-                                length: "",
-                            },
-                            weight: "",
-                            quantity: 0,
-                            image_url: "",
-                            product_url: "",
-                            type: "",
-                            offer_price: "",
-                            tax_amount: 0,
-                            price: "",
-                        },
-                    ],
                     line_items_total: input.totalItems,
                     shipping_fee: input.deliveryAmount,
                     receipt: receiptId,
                     transfers: existingBrands.map((brand) => ({
-                        account: brand.rzpAccountId,
+                        account: brand.rzpAccountId!,
                         amount: input.items
                             .filter((item) => item.brandId === brand.id)
                             .reduce(

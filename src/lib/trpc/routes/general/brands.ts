@@ -3,7 +3,6 @@ import {
     BitFieldBrandPermission,
     BitFieldSitePermission,
 } from "@/config/permissions";
-import { razorpay } from "@/lib/razorpay";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -11,6 +10,7 @@ import {
     protectedProcedure,
 } from "@/lib/trpc/trpc";
 import {
+    convertEmptyStringToNull,
     generateBrandRoleSlug,
     getUploadThingFileKey,
     hasPermission,
@@ -18,9 +18,8 @@ import {
 } from "@/lib/utils";
 import {
     brandRequestSchema,
-    brandRequestWithoutConfidentialsSchema,
     createBrandRequestSchema,
-    linkBrandRequestToRazorpaySchema,
+    linkBrandToRazorpaySchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -61,7 +60,6 @@ export const brandRequestsRouter = createTRPCRouter({
         .input(
             z.object({
                 ownerId: z.string(),
-                sendConfidentialData: z.boolean().default(false),
             })
         )
         .use(({ ctx, input, next }) => {
@@ -78,7 +76,7 @@ export const brandRequestsRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { ownerId, sendConfidentialData } = input;
+            const { ownerId } = input;
 
             const data = await queries.brandRequests.getBrandRequestByOwnerId(
                 ownerId,
@@ -91,8 +89,7 @@ export const brandRequestsRouter = createTRPCRouter({
                     message: "Brand request not found",
                 });
 
-            if (sendConfidentialData) return data;
-            return brandRequestWithoutConfidentialsSchema.parse(data);
+            return data;
         }),
     createRequest: protectedProcedure
         .input(createBrandRequestSchema)
@@ -193,47 +190,9 @@ export const brandRequestsRouter = createTRPCRouter({
                         code: "CONFLICT",
                         message: "Brand with this name already exists",
                     });
-
-                if (!existingBrandRequest.rzpAccountId)
-                    throw new TRPCError({
-                        code: "BAD_REQUEST",
-                        message: "Razorpay Account ID is required",
-                    });
             }
 
-            const fileKeys = [];
-
-            if (data.status === "rejected") {
-                const logoKey = getUploadThingFileKey(
-                    existingBrandRequest.logoUrl
-                );
-                const bankVerificationKey = getUploadThingFileKey(
-                    existingBrandRequest.bankAccountVerificationDocumentUrl
-                );
-
-                fileKeys.push(logoKey, bankVerificationKey);
-
-                if (existingBrandRequest.demoUrl) {
-                    const demoKey = getUploadThingFileKey(
-                        existingBrandRequest.demoUrl
-                    );
-                    fileKeys.push(demoKey);
-                }
-
-                if (existingBrandRequest.udyamRegistrationCertificateUrl) {
-                    const udyamKey = getUploadThingFileKey(
-                        existingBrandRequest.udyamRegistrationCertificateUrl
-                    );
-                    fileKeys.push(udyamKey);
-                }
-
-                if (existingBrandRequest.iecCertificateUrl) {
-                    const iecKey = getUploadThingFileKey(
-                        existingBrandRequest.iecCertificateUrl
-                    );
-                    fileKeys.push(iecKey);
-                }
-            }
+            const logoKey = getUploadThingFileKey(existingBrandRequest.logoUrl);
 
             const [, newBrand] = await Promise.all([
                 queries.brandRequests.updateBrandRequestStatus(id, {
@@ -246,9 +205,8 @@ export const brandRequestsRouter = createTRPCRouter({
                         ...existingBrandRequest,
                         bio: null,
                         slug: slugify(existingBrandRequest.name),
-                        rzpAccountId: existingBrandRequest.rzpAccountId!,
                     }),
-                data.status === "rejected" && utApi.deleteFiles(fileKeys),
+                data.status === "rejected" && utApi.deleteFiles([logoKey]),
             ]);
 
             if (newBrand) {
@@ -263,20 +221,10 @@ export const brandRequestsRouter = createTRPCRouter({
                 });
 
                 await Promise.all([
-                    db.insert(schemas.brandConfidentials).values({
-                        ...existingBrandRequest,
-                        id: newBrand.id,
-                    }),
                     queries.brandMembers.createBrandMember({
                         brandId: newBrand.id,
                         memberId: newBrand.ownerId,
                         isOwner: true,
-                    }),
-                    razorpay.accounts.edit(newBrand.rzpAccountId, {
-                        notes: {
-                            brandId: newBrand.id,
-                            ownerId: newBrand.ownerId,
-                        },
                     }),
                     db.insert(schemas.brandRoles).values({
                         brandId: newBrand.id,
@@ -291,34 +239,6 @@ export const brandRequestsRouter = createTRPCRouter({
             }
 
             return true;
-        }),
-    linkRzpAccount: protectedProcedure
-        .input(linkBrandRequestToRazorpaySchema)
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
-        .mutation(async ({ ctx, input }) => {
-            const { queries } = ctx;
-
-            const existingBrandRequest =
-                await queries.brandRequests.getBrandRequest(
-                    input.id,
-                    "pending"
-                );
-            if (!existingBrandRequest)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Brand request not found",
-                });
-
-            if (existingBrandRequest.rzpAccountId)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Razorpay Account ID is already linked",
-                });
-
-            const updatedBrandRequest =
-                await queries.brandRequests.linkBrandRequestToRazorpay(input);
-
-            return updatedBrandRequest;
         }),
     deleteRequest: protectedProcedure
         .input(
@@ -383,8 +303,129 @@ export const brandRequestsRouter = createTRPCRouter({
         }),
 });
 
+export const brandVerificationsRouter = createTRPCRouter({
+    getVerifications: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+                search: z.string().optional(),
+                status: brandRequestSchema.shape.status.optional(),
+            })
+        )
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.VIEW_BRANDS |
+                    BitFieldSitePermission.MANAGE_BRANDS,
+                "any"
+            )
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page, search, status } = input;
+
+            const data = await queries.brandConfidentials.getBrandConfidentials(
+                {
+                    limit,
+                    page,
+                    search,
+                    status,
+                }
+            );
+
+            return data;
+        }),
+    approveVerification: protectedProcedure
+        .input(linkBrandToRazorpaySchema)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingBrandConfidential =
+                await queries.brandConfidentials.getBrandConfidential(id);
+            if (!existingBrandConfidential)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand verification not found",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "approved")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brand verification is already approved",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "rejected")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brand verification is already rejected",
+                });
+
+            await queries.brands.linkBrandToRazorpay(input);
+
+            const updatedBrandConfidential =
+                await queries.brandConfidentials.updateBrandConfidentialStatus(
+                    id,
+                    { status: "approved" }
+                );
+
+            return updatedBrandConfidential;
+        }),
+    rejectVerification: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                rejectedReason: z.preprocess(
+                    convertEmptyStringToNull,
+                    z
+                        .string({
+                            invalid_type_error:
+                                "Rejection reason must be a string",
+                        })
+                        .min(
+                            1,
+                            "Rejection reason must be at least 1 characters long"
+                        )
+                        .nullable()
+                ),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, rejectedReason } = input;
+
+            const existingBrandConfidential =
+                await queries.brandConfidentials.getBrandConfidential(id);
+            if (!existingBrandConfidential)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand verification not found",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "rejected")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brand verification is already rejected",
+                });
+
+            const updatedBrandConfidential =
+                await queries.brandConfidentials.updateBrandConfidentialStatus(
+                    id,
+                    {
+                        status: "rejected",
+                        rejectedReason: rejectedReason ?? undefined,
+                    }
+                );
+
+            return updatedBrandConfidential;
+        }),
+});
+
 export const brandsRouter = createTRPCRouter({
     requests: brandRequestsRouter,
+    verifications: brandVerificationsRouter,
     getBrands: protectedProcedure
         .input(
             z.object({
