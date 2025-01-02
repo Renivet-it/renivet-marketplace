@@ -7,18 +7,12 @@ import {
     NoticeIcon,
     NoticeTitle,
 } from "@/components/ui/notice-general";
-import { trpc } from "@/lib/trpc/client";
-import { convertValueToLabel, handleClientError } from "@/lib/utils";
-import {
-    BrandRequest,
-    BrandRequestWithoutConfidentials,
-} from "@/lib/validations";
+import { convertValueToLabel } from "@/lib/utils";
+import { BrandRequest } from "@/lib/validations";
 import Player from "next-video/player";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
-import { RequestWithdrawModal, ViewConfidentialModal } from "../globals/modals";
-import { Icons } from "../icons";
+import { RequestWithdrawModal } from "../globals/modals";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button-general";
@@ -33,33 +27,19 @@ import {
 import { Separator } from "../ui/separator";
 
 interface PageProps extends GenericProps {
-    brandRequest: BrandRequestWithoutConfidentials;
+    brandRequest: BrandRequest;
 }
 
 export function ExistBrandRequestPage({ brandRequest }: PageProps) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-    const [isConfidentialDataModalOpen, setIsConfidentialDataModalOpen] =
-        useState(false);
-    const [confidentialData, setConfidentialData] =
-        useState<BrandRequest | null>(null);
 
-    const { mutate: getConfidentialData, isPending: isDataFetching } =
-        trpc.general.brands.requests.getRequestByOwnerId.useMutation({
-            onMutate: () => {
-                const toastId = toast.loading("Fetching confidential data...");
-                return { toastId };
-            },
-            onSuccess: (data, __, { toastId }) => {
-                toast.success("Confidential data fetched successfully", {
-                    id: toastId,
-                });
-                setConfidentialData(data as BrandRequest);
-                setIsConfidentialDataModalOpen(true);
-            },
-            onError: (err, _, ctx) => {
-                return handleClientError(err, ctx?.toastId);
-            },
-        });
+    const websiteUrlRaw = brandRequest.website;
+    const doesUrlIncludeHttp =
+        websiteUrlRaw?.includes("http://") ||
+        websiteUrlRaw?.includes("https://");
+    const websiteUrl = doesUrlIncludeHttp
+        ? websiteUrlRaw
+        : `http://${websiteUrlRaw}`;
 
     return (
         <>
@@ -157,45 +137,6 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                                 <Player src={brandRequest.demoUrl} />
                             </div>
                         )}
-
-                        <Separator />
-
-                        <Notice>
-                            <NoticeContent>
-                                <NoticeTitle className="gap-2">
-                                    <Icons.Briefcase className="size-4" />
-                                    <span>Business Details (Confidential)</span>
-                                </NoticeTitle>
-
-                                <p className="text-sm">
-                                    Click the button to view the confidential
-                                    business details.
-                                </p>
-                            </NoticeContent>
-
-                            <NoticeButton asChild>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={isDataFetching}
-                                    onClick={() => {
-                                        if (confidentialData)
-                                            setIsConfidentialDataModalOpen(
-                                                true
-                                            );
-                                        else
-                                            getConfidentialData({
-                                                ownerId: brandRequest.ownerId,
-                                                sendConfidentialData: true,
-                                            });
-                                    }}
-                                >
-                                    View Details
-                                </Button>
-                            </NoticeButton>
-                        </Notice>
-
-                        <Separator />
                     </CardContent>
 
                     <Separator />
@@ -208,9 +149,9 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                             {brandRequest.email}
                         </Link>
 
-                        {brandRequest.website ? (
+                        {websiteUrl ? (
                             <Link
-                                href={brandRequest.website}
+                                href={websiteUrl}
                                 className="hover:underline"
                                 target="_blank"
                             >
@@ -228,14 +169,6 @@ export function ExistBrandRequestPage({ brandRequest }: PageProps) {
                 isOpen={isWithdrawModalOpen}
                 setIsOpen={setIsWithdrawModalOpen}
             />
-
-            {confidentialData && (
-                <ViewConfidentialModal
-                    brandRequest={confidentialData}
-                    isOpen={isConfidentialDataModalOpen}
-                    setIsOpen={setIsConfidentialDataModalOpen}
-                />
-            )}
         </>
     );
 }

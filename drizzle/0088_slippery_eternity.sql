@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "brand_is_confidential_sent_for_verification_index" ON "brands" USING btree ("is_confidential_sent_for_verification");

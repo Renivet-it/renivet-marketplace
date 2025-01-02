@@ -74,9 +74,8 @@ export function RequestApproveModal({ request, isOpen, setIsOpen }: PageProps) {
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                         Approving this brand request will make it live on the
-                        platform. You must complete the KYC process on Razorpay
-                        before approving this request, else the brand will not
-                        be able to receive payments.
+                        platform. They will be able to access the dashboard and
+                        create their brand profile.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 

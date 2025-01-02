@@ -6,7 +6,6 @@ import { Editor, EditorRef } from "@/components/ui/editor";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -86,6 +85,10 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         resolver: zodResolver(createProductSchema),
         defaultValues: {
             name: product?.name ?? "",
+            basePrice: product?.basePrice
+                ? parseFloat(convertPaiseToRupees(product.basePrice))
+                : 0,
+            taxRate: product?.taxRate ?? 0,
             price: product?.price
                 ? parseFloat(convertPaiseToRupees(product.price))
                 : 0,
@@ -123,6 +126,17 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
         };
     }, [imagePreviews]);
+
+    useEffect(() => {
+        const basePrice = +form.watch("basePrice");
+        const taxRate = +form.watch("taxRate");
+
+        const percentage = (basePrice * taxRate) / 100;
+        const price = basePrice + percentage;
+
+        form.setValue("price", +price.toFixed(2));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.watch("basePrice"), form.watch("taxRate")]);
 
     const { fields, append, remove, replace } = useFieldArray({
         control: form.control,
@@ -309,6 +323,20 @@ export function ProductManageForm({ brandId, product }: PageProps) {
         });
     };
 
+    const calculateProperPrice = () => {
+        const basePrice = +form.watch("basePrice");
+        const taxRate = +form.watch("taxRate");
+        const price = +form.watch("price");
+
+        const percentage = (basePrice * taxRate) / 100;
+        const calculatedPrice = basePrice + percentage;
+
+        return {
+            isProper: price === calculatedPrice,
+            calculatedPrice: calculatedPrice,
+        };
+    };
+
     const { mutateAsync: createProductAsync } =
         trpc.brands.products.createProduct.useMutation();
     const { mutateAsync: updateProductAsync } =
@@ -320,38 +348,40 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: CreateProduct) => {
-            if (!imageFiles.length)
-                throw new Error("At least 1 image is required");
-            if (!certificateFile)
-                throw new Error("Sustainability certificate is required");
+            throw new Error("Product creation is disabled");
 
-            const [imageRes, docRes] = await Promise.all([
-                startImageUpload(imageFiles),
-                startDocUpload([certificateFile]),
-            ]);
+            // if (!imageFiles.length)
+            //     throw new Error("At least 1 image is required");
+            // if (!certificateFile)
+            //     throw new Error("Sustainability certificate is required");
 
-            if (!imageRes?.length) throw new Error("Failed to upload images");
-            if (!docRes?.length) throw new Error("Failed to upload document");
+            // const [imageRes, docRes] = await Promise.all([
+            //     startImageUpload(imageFiles),
+            //     startDocUpload([certificateFile]),
+            // ]);
 
-            const imageUrls = imageRes.map((file) => file.appUrl);
-            const docUrl = docRes[0].appUrl;
+            // if (!imageRes?.length) throw new Error("Failed to upload images");
+            // if (!docRes?.length) throw new Error("Failed to upload document");
 
-            values.imageUrls = imageUrls;
-            values.sustainabilityCertificateUrl = docUrl;
+            // const imageUrls = imageRes.map((file) => file.appUrl);
+            // const docUrl = docRes[0].appUrl;
 
-            if (values.imageUrls.length > 5)
-                throw new Error("Maximum 5 images allowed");
+            // values.imageUrls = imageUrls;
+            // values.sustainabilityCertificateUrl = docUrl;
 
-            return await createProductAsync(values);
+            // if (values.imageUrls.length > 5)
+            //     throw new Error("Maximum 5 images allowed");
+
+            // return await createProductAsync(values);
         },
         onSuccess: (data, __, { toastId }) => {
             toast.success(
                 "Product has been added, categorize it now and send for review",
                 { id: toastId }
             );
-            router.push(
-                `/dashboard/brands/${brandId}/products/p/${data.id}/categorize`
-            );
+            // router.push(
+            //     `/dashboard/brands/${brandId}/products/p/${data.id}/categorize`
+            // );
             setImagePreviews([]);
             setImageFiles([]);
         },
@@ -366,36 +396,38 @@ export function ProductManageForm({ brandId, product }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: UpdateProduct) => {
-            if (!product) throw new Error("Product not found");
-            if (product.isSentForReview)
-                throw new Error("Product is under review");
+            throw new Error("Product creation is disabled");
 
-            if (values.imageUrls.length + imageFiles.length > 5)
-                throw new Error("Maximum 5 images allowed");
+            // if (!product) throw new Error("Product not found");
+            // if (product.isSentForReview)
+            //     throw new Error("Product is under review");
 
-            const [imageRes, docRes] = await Promise.all([
-                imageFiles.length > 0
-                    ? startImageUpload(imageFiles)
-                    : undefined,
-                certificateFile ? startDocUpload([certificateFile]) : undefined,
-            ]);
+            // if (values.imageUrls.length + imageFiles.length > 5)
+            //     throw new Error("Maximum 5 images allowed");
 
-            if (imageRes && !imageRes.length)
-                throw new Error("Failed to upload images");
-            if (docRes && !docRes.length)
-                throw new Error("Failed to upload document");
+            // const [imageRes, docRes] = await Promise.all([
+            //     imageFiles.length > 0
+            //         ? startImageUpload(imageFiles)
+            //         : undefined,
+            //     certificateFile ? startDocUpload([certificateFile]) : undefined,
+            // ]);
 
-            const imageUrls = imageRes
-                ? imageRes.map((file) => file.appUrl)
-                : [];
-            const docUrl = docRes
-                ? docRes[0].appUrl
-                : values.sustainabilityCertificateUrl;
+            // if (imageRes && !imageRes.length)
+            //     throw new Error("Failed to upload images");
+            // if (docRes && !docRes.length)
+            //     throw new Error("Failed to upload document");
 
-            values.imageUrls = [...values.imageUrls, ...imageUrls];
-            values.sustainabilityCertificateUrl = docUrl;
+            // const imageUrls = imageRes
+            //     ? imageRes.map((file) => file.appUrl)
+            //     : [];
+            // const docUrl = docRes
+            //     ? docRes[0].appUrl
+            //     : values.sustainabilityCertificateUrl;
 
-            await updateProductAsync({ productId: product.id, values });
+            // values.imageUrls = [...values.imageUrls, ...imageUrls];
+            // values.sustainabilityCertificateUrl = docUrl;
+
+            // await updateProductAsync({ productId: product.id, values });
         },
         onSuccess: (_, __, { toastId }) => {
             toast.success("Product updated successfully", { id: toastId });
@@ -424,16 +456,28 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                         return;
                     }
 
+                    const { isProper, calculatedPrice } =
+                        calculateProperPrice();
+                    if (!isProper) {
+                        form.setValue("price", calculatedPrice);
+                        toast.error(
+                            "Price has been recalculated based on base price and tax rate. Click the button again to proceed."
+                        );
+                        return;
+                    }
+
                     return product
                         ? updateProduct({
                               ...values,
                               isPublished: product.isPublished,
                               isAvailable: product.isAvailable,
                               price: convertPriceToPaise(values.price),
+                              basePrice: convertPriceToPaise(values.basePrice),
                           })
                         : createProduct({
                               ...values,
                               price: convertPriceToPaise(values.price),
+                              basePrice: convertPriceToPaise(values.basePrice),
                           });
                 })}
             >
@@ -487,36 +531,94 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                     )}
                 />
 
-                <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                        <FormItem className="w-full">
-                            <FormLabel>Price</FormLabel>
+                <div className="flex flex-col gap-4 md:flex-row">
+                    <FormField
+                        control={form.control}
+                        name="basePrice"
+                        render={({ field }) => (
+                            <FormItem className="w-full">
+                                <FormLabel>Base Price</FormLabel>
 
-                            <FormControl>
-                                <PriceInput
-                                    placeholder="998.00"
-                                    currency="INR"
-                                    symbol="₹"
-                                    disabled={isCreating || isUpdating}
-                                    {...field}
-                                    onChange={(e) => {
-                                        const regex = /^[0-9]*\.?[0-9]{0,2}$/;
-                                        if (regex.test(e.target.value))
-                                            field.onChange(e);
-                                    }}
-                                />
-                            </FormControl>
+                                <FormControl>
+                                    <PriceInput
+                                        placeholder="998.00"
+                                        currency="INR"
+                                        symbol="₹"
+                                        disabled={isCreating || isUpdating}
+                                        {...field}
+                                        onChange={(e) => {
+                                            const regex =
+                                                /^[0-9]*\.?[0-9]{0,2}$/;
+                                            if (regex.test(e.target.value))
+                                                field.onChange(e);
+                                        }}
+                                    />
+                                </FormControl>
 
-                            <FormDescription>
-                                inclusive of all taxes
-                            </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                    <FormField
+                        control={form.control}
+                        name="taxRate"
+                        render={({ field }) => (
+                            <FormItem className="w-full">
+                                <FormLabel>Tax Rate (%)</FormLabel>
+
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        placeholder="18"
+                                        disabled={isCreating || isUpdating}
+                                        onChange={(e) => {
+                                            const regex =
+                                                /^[0-9]*\.?[0-9]{0,2}$/;
+                                            if (
+                                                regex.test(e.target.value) &&
+                                                Number(e.target.value) <= 100
+                                            )
+                                                if (regex.test(e.target.value))
+                                                    field.onChange(e);
+                                        }}
+                                    />
+                                </FormControl>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                            <FormItem className="w-full">
+                                <FormLabel>Price</FormLabel>
+
+                                <FormControl>
+                                    <PriceInput
+                                        {...field}
+                                        placeholder="998.00"
+                                        currency="INR"
+                                        symbol="₹"
+                                        disabled
+                                        readOnly
+                                        onChange={(e) => {
+                                            const regex =
+                                                /^[0-9]*\.?[0-9]{0,2}$/;
+                                            if (regex.test(e.target.value))
+                                                field.onChange(e);
+                                        }}
+                                    />
+                                </FormControl>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
 
                 <FormField
                     control={form.control}
@@ -542,12 +644,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                             alt={`Image ${index + 1}`}
                                                             width={1500}
                                                             height={1500}
-                                                            className={cn(
-                                                                "object-cover",
-                                                                product?.status ===
-                                                                    "approved" &&
-                                                                    "opacity-70"
-                                                            )}
+                                                            className="object-cover"
                                                         />
 
                                                         <Button
@@ -557,9 +654,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                             className="absolute right-1 top-1 size-6 rounded-full bg-foreground/50 hover:bg-foreground/70"
                                                             disabled={
                                                                 isCreating ||
-                                                                isUpdating ||
-                                                                product?.status ===
-                                                                    "approved"
+                                                                isUpdating
                                                             }
                                                             onClick={() =>
                                                                 removeImage(
@@ -578,19 +673,14 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                         className={cn(
                                                             "flex size-full cursor-pointer items-center justify-center rounded-md border border-dashed border-foreground/40",
                                                             isImagesDragActive &&
-                                                                "border-green-500 bg-green-500/10",
-                                                            product?.status ===
-                                                                "approved" &&
-                                                                "cursor-not-allowed"
+                                                                "border-green-500 bg-green-500/10"
                                                         )}
                                                     >
                                                         <input
                                                             {...getImagesInputProps()}
                                                             disabled={
                                                                 isCreating ||
-                                                                isUpdating ||
-                                                                product?.status ===
-                                                                    "approved"
+                                                                isUpdating
                                                             }
                                                         />
 
@@ -661,8 +751,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                 disabled={
                                                     isCreating ||
                                                     isUpdating ||
-                                                    !certificateFile ||
-                                                    !!product
+                                                    !certificateFile
                                                 }
                                             >
                                                 Remove Document
@@ -674,10 +763,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                                     docInputRef.current.click()
                                                 }
                                                 disabled={
-                                                    isCreating ||
-                                                    isUpdating ||
-                                                    product?.status ===
-                                                        "approved"
+                                                    isCreating || isUpdating
                                                 }
                                             >
                                                 Change Document
@@ -703,11 +789,7 @@ export function ProductManageForm({ brandId, product }: PageProps) {
                                 <FormControl>
                                     <input
                                         {...getDocInputProps()}
-                                        disabled={
-                                            isCreating ||
-                                            isUpdating ||
-                                            product?.status === "approved"
-                                        }
+                                        disabled={isCreating || isUpdating}
                                         ref={docInputRef}
                                     />
                                 </FormControl>

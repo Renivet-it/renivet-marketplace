@@ -111,7 +111,6 @@ export const ordersRouter = createTRPCRouter({
             const receiptId = generateReceiptId();
 
             const cachedAllBrands = await brandCache.getAll();
-
             const brandIds = input.items.map((item) => item.brandId);
 
             const existingBrands = cachedAllBrands.filter((brand) =>
@@ -122,6 +121,16 @@ export const ordersRouter = createTRPCRouter({
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Order contains invalid brand(s)",
+                });
+
+            const hasRazorpayAccount = existingBrands.every(
+                (brand) => brand.rzpAccountId !== null
+            );
+            if (!hasRazorpayAccount)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "One or more brands do not have a Razorpay account",
                 });
 
             try {
@@ -155,7 +164,7 @@ export const ordersRouter = createTRPCRouter({
                     shipping_fee: input.deliveryAmount,
                     receipt: receiptId,
                     transfers: existingBrands.map((brand) => ({
-                        account: brand.rzpAccountId,
+                        account: brand.rzpAccountId!,
                         amount: input.items
                             .filter((item) => item.brandId === brand.id)
                             .reduce(

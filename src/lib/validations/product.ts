@@ -32,6 +32,14 @@ export const productSchema = z.object({
             invalid_type_error: "Description must be a string",
         })
         .min(3, "Description must be at least 3 characters long"),
+    basePrice: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().min(0, "Amount must be positive")),
+    taxRate: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().min(0, "Amount must be positive")),
     price: z
         .union([z.string(), z.number()])
         .transform((val) => Number(val))
@@ -242,6 +250,8 @@ export const createProductSchema = productSchema
 export const updateProductSchema = createProductSchema
     .omit({
         brandId: true,
+        name: true,
+        description: true,
     })
     .extend({
         isAvailable: productSchema.shape.isAvailable,

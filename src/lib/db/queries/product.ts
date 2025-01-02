@@ -291,7 +291,6 @@ class ProductQuery {
     async updateProduct(
         productId: string,
         values: UpdateProduct & {
-            slug: string;
             sustainabilityCertificateUrl: string;
         }
     ) {

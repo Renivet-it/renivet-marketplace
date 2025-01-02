@@ -11,13 +11,13 @@ import {
 import { Button } from "@/components/ui/button-general";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { BrandRequestWithoutConfidentials } from "@/lib/validations";
+import { BrandRequest } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    brandRequest: BrandRequestWithoutConfidentials;
+    brandRequest: BrandRequest;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }

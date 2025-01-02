@@ -127,6 +127,7 @@ export function RequestRejectModal({ request, isOpen, setIsOpen }: PageProps) {
                                             minRows={3}
                                             placeholder="Enter a reason for rejecting this request"
                                             {...field}
+                                            disabled={isRequestRejecting}
                                             value={field.value || ""}
                                         />
                                     </FormControl>

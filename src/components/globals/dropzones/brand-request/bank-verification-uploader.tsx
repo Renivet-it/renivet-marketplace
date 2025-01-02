@@ -9,7 +9,7 @@ import {
     convertBytesToHumanReadable,
     getUploadThingFileKey,
 } from "@/lib/utils";
-import { CreateBrandRequest } from "@/lib/validations";
+import { CreateBrandConfidential } from "@/lib/validations";
 import { useDropzone } from "@uploadthing/react";
 import Link from "next/link";
 import { Dispatch, SetStateAction, useRef } from "react";
@@ -25,7 +25,7 @@ interface PageProps {
     file: File | null;
     setFile: Dispatch<SetStateAction<File | null>>;
     setPreview: Dispatch<SetStateAction<string | null>>;
-    form: UseFormReturn<CreateBrandRequest>;
+    form: UseFormReturn<CreateBrandConfidential>;
     isPending: boolean;
 }
 
@@ -123,7 +123,7 @@ export function BrandRequestBankVerificationUploaderDropzone({
             <div
                 {...getRootProps()}
                 className={cn(
-                    "relative cursor-pointer border-2 border-dashed border-input p-8 py-16 text-center",
+                    "relative cursor-pointer rounded-md border-2 border-dashed border-input p-8 py-16 text-center",
                     isDragActive && "border-green-500 bg-green-50",
                     isPending && "cursor-not-allowed opacity-50",
                     preview && "hidden"

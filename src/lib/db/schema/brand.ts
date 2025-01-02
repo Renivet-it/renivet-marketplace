@@ -17,7 +17,6 @@ import { users } from "./user";
 
 export const brandRequests = pgTable("brand_requests", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
-    rzpAccountId: text("rzp_account_id"),
     name: text("name").notNull(),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
@@ -30,26 +29,6 @@ export const brandRequests = pgTable("brand_requests", {
         }),
     logoUrl: text("logo_url").notNull(),
     demoUrl: text("demo_url"),
-    gstin: text("gstin").notNull(),
-    pan: text("pan").notNull(),
-    bankName: text("bank_name").notNull(),
-    bankAccountHolderName: text("bank_account_holder_name").notNull(),
-    bankAccountNumber: text("bank_account_number").notNull(),
-    bankIfscCode: text("bank_ifsc_code").notNull(),
-    bankAccountVerificationDocumentUrl: text(
-        "bank_account_verification_document_url"
-    ).notNull(),
-    authorizedSignatoryName: text("authorized_signatory_name").notNull(),
-    authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
-    authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
-    udyamRegistrationCertificateUrl: text("udyam_registration_certificate_url"),
-    iecCertificateUrl: text("iec_certificate_url"),
-    addressLine1: text("address_line_1").notNull(),
-    addressLine2: text("address_line_2").notNull(),
-    city: text("city").notNull(),
-    state: text("state").notNull(),
-    postalCode: text("postal_code").notNull(),
-    country: text("country").notNull(),
     status: text("status", {
         enum: ["pending", "approved", "rejected"],
     })
@@ -61,55 +40,98 @@ export const brandRequests = pgTable("brand_requests", {
     ...timestamps,
 });
 
-export const brands = pgTable("brands", {
-    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
-    rzpAccountId: text("rzp_account_id").notNull(),
-    name: text("name").notNull(),
-    slug: text("slug").notNull().unique(),
-    email: text("email").notNull().unique(),
-    phone: text("phone").notNull(),
-    website: text("website"),
-    logoUrl: text("logo_url").notNull(),
-    ownerId: text("owner_id")
-        .notNull()
-        .unique()
-        .references(() => users.id, {
-            onDelete: "cascade",
-        }),
-    bio: text("bio"),
-    ...timestamps,
-});
+export const brands = pgTable(
+    "brands",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        rzpAccountId: text("rzp_account_id"),
+        name: text("name").notNull(),
+        slug: text("slug").notNull().unique(),
+        email: text("email").notNull().unique(),
+        phone: text("phone").notNull(),
+        website: text("website"),
+        logoUrl: text("logo_url").notNull(),
+        ownerId: text("owner_id")
+            .notNull()
+            .unique()
+            .references(() => users.id, {
+                onDelete: "cascade",
+            }),
+        bio: text("bio"),
+        isConfidentialSentForVerification: boolean(
+            "is_confidential_sent_for_verification"
+        )
+            .notNull()
+            .default(false),
+        confidentialVerificationStatus: text(
+            "confidential_verification_status",
+            { enum: ["pending", "approved", "rejected"] }
+        )
+            .notNull()
+            .default("pending"),
+        confidentialVerificationRejectedReason: text(
+            "confidential_verification_rejected_reason"
+        ),
+        confidentialVerificationRejectedAt: timestamp(
+            "confidential_verification_rejected_at"
+        ),
+        ...timestamps,
+    },
+    (table) => ({
+        brandIsConfidentialVerificationStatusIdx: index(
+            "brand_is_confidential_verification_status_index"
+        ).on(table.confidentialVerificationStatus),
+        brandIsConfidentialSentForVerificationIdx: index(
+            "brand_is_confidential_sent_for_verification_index"
+        ).on(table.isConfidentialSentForVerification),
+    })
+);
 
-export const brandConfidentials = pgTable("brand_confidentials", {
-    id: uuid("id")
-        .primaryKey()
-        .notNull()
-        .unique()
-        .references(() => brands.id, {
-            onDelete: "cascade",
-        }),
-    gstin: text("gstin").notNull(),
-    pan: text("pan").notNull(),
-    bankName: text("bank_name").notNull(),
-    bankAccountHolderName: text("bank_account_holder_name").notNull(),
-    bankAccountNumber: text("bank_account_number").notNull(),
-    bankIfscCode: text("bank_ifsc_code").notNull(),
-    bankAccountVerificationDocumentUrl: text(
-        "bank_account_verification_document_url"
-    ),
-    authorizedSignatoryName: text("authorized_signatory_name").notNull(),
-    authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
-    authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
-    udyamRegistrationCertificateUrl: text("udyam_registration_certificate_url"),
-    iecCertificateUrl: text("iec_certificate_url"),
-    addressLine1: text("address_line1").notNull(),
-    addressLine2: text("address_line2").notNull(),
-    city: text("city").notNull(),
-    state: text("state").notNull(),
-    postalCode: text("postal_code").notNull(),
-    country: text("country").notNull(),
-    ...timestamps,
-});
+export const brandConfidentials = pgTable(
+    "brand_confidentials",
+    {
+        id: uuid("id")
+            .primaryKey()
+            .notNull()
+            .unique()
+            .references(() => brands.id, {
+                onDelete: "cascade",
+            }),
+        gstin: text("gstin").notNull(),
+        pan: text("pan").notNull(),
+        bankName: text("bank_name").notNull(),
+        bankAccountHolderName: text("bank_account_holder_name").notNull(),
+        bankAccountNumber: text("bank_account_number").notNull(),
+        bankIfscCode: text("bank_ifsc_code").notNull(),
+        bankAccountVerificationDocumentUrl: text(
+            "bank_account_verification_document_url"
+        ).notNull(),
+        authorizedSignatoryName: text("authorized_signatory_name").notNull(),
+        authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
+        authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
+        udyamRegistrationCertificateUrl: text(
+            "udyam_registration_certificate_url"
+        ),
+        iecCertificateUrl: text("iec_certificate_url"),
+        addressLine1: text("address_line1").notNull(),
+        addressLine2: text("address_line2").notNull(),
+        city: text("city").notNull(),
+        state: text("state").notNull(),
+        postalCode: text("postal_code").notNull(),
+        country: text("country").notNull(),
+        verificationStatus: text("verification_status", {
+            enum: ["pending", "approved", "rejected"],
+        })
+            .notNull()
+            .default("pending"),
+        ...timestamps,
+    },
+    (table) => ({
+        brandConfidentialVerificationStatusIdx: index(
+            "brand_confidential_verification_status_index"
+        ).on(table.verificationStatus),
+    })
+);
 
 export const brandInvites = pgTable(
     "brand_invites",
@@ -205,7 +227,21 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     bannedMembers: many(bannedBrandMembers),
     products: many(products),
     subscriptions: many(brandSubscriptions),
+    confidential: one(brandConfidentials, {
+        fields: [brands.id],
+        references: [brandConfidentials.id],
+    }),
 }));
+
+export const brandConfidentialRelations = relations(
+    brandConfidentials,
+    ({ one }) => ({
+        brand: one(brands, {
+            fields: [brandConfidentials.id],
+            references: [brands.id],
+        }),
+    })
+);
 
 export const brandInviteRelations = relations(brandInvites, ({ one }) => ({
     brand: one(brands, {

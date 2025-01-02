@@ -23,7 +23,13 @@ export const products = pgTable(
         name: text("name").notNull(),
         slug: text("slug").notNull().unique(),
         description: text("description").notNull(),
+        basePrice: integer("base_price").notNull().default(0),
+        taxRate: integer("tax_rate").notNull().default(0),
         price: integer("price").notNull(),
+        weight: integer("weight").notNull().default(0),
+        length: integer("length").notNull().default(0),
+        width: integer("width").notNull().default(0),
+        height: integer("height").notNull().default(0),
         brandId: uuid("brand_id")
             .notNull()
             .references(() => brands.id, {
