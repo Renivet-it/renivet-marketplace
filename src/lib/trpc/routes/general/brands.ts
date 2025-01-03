@@ -364,11 +364,13 @@ export const brandVerificationsRouter = createTRPCRouter({
 
             await queries.brands.linkBrandToRazorpay(input);
 
-            const updatedBrandConfidential =
-                await queries.brandConfidentials.updateBrandConfidentialStatus(
-                    id,
-                    { status: "approved" }
-                );
+            const updatedBrandConfidential = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidentialStatus(id, {
+                    status: "approved",
+                }),
+                brandCache.remove(existingBrandConfidential.brand.id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
 
             return updatedBrandConfidential;
         }),
@@ -410,14 +412,14 @@ export const brandVerificationsRouter = createTRPCRouter({
                     message: "Brand verification is already rejected",
                 });
 
-            const updatedBrandConfidential =
-                await queries.brandConfidentials.updateBrandConfidentialStatus(
-                    id,
-                    {
-                        status: "rejected",
-                        rejectedReason: rejectedReason ?? undefined,
-                    }
-                );
+            const updatedBrandConfidential = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidentialStatus(id, {
+                    status: "rejected",
+                    rejectedReason: rejectedReason ?? undefined,
+                }),
+                brandCache.remove(existingBrandConfidential.brand.id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
 
             return updatedBrandConfidential;
         }),

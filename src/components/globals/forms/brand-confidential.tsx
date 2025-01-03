@@ -22,6 +22,8 @@ import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { handleClientError } from "@/lib/utils";
 import {
+    BrandConfidential,
+    CachedBrand,
     CreateBrandConfidential,
     createBrandConfidentialSchema,
 } from "@/lib/validations";
@@ -39,27 +41,28 @@ import {
 } from "../dropzones";
 
 interface PageProps {
-    brandId: string;
+    brand: CachedBrand;
+    brandConfidential?: BrandConfidential;
 }
 
-export function BrandConfidentialForm({ brandId }: PageProps) {
+export function BrandConfidentialForm({ brand, brandConfidential }: PageProps) {
     const router = useRouter();
 
     const [bankVerificationPreview, setBankVerificationPreview] = useState<
         string | null
-    >(null);
+    >(brandConfidential?.bankAccountVerificationDocumentUrl ?? null);
     const [bankVerificationFile, setBankVerificationFile] =
         useState<File | null>(null);
 
     const [udyamCertificatePreview, setUdyamCertificatePreview] = useState<
         string | null
-    >(null);
+    >(brandConfidential?.udyamRegistrationCertificateUrl ?? null);
     const [udyamCertificateFile, setUdyamCertificateFile] =
         useState<File | null>(null);
 
     const [iecCertificatePreview, setIecCertificatePreview] = useState<
         string | null
-    >(null);
+    >(brandConfidential?.iecCertificateUrl ?? null);
     const [iecCertificateFile, setIecCertificateFile] = useState<File | null>(
         null
     );
@@ -69,24 +72,30 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
     const form = useForm<CreateBrandConfidential>({
         resolver: zodResolver(createBrandConfidentialSchema),
         defaultValues: {
-            id: brandId,
-            gstin: "",
-            pan: "",
-            bankName: "",
-            bankAccountHolderName: "",
-            bankAccountNumber: "",
-            bankIfscCode: "",
-            bankAccountVerificationDocumentUrl: "",
-            authorizedSignatoryName: "",
-            authorizedSignatoryEmail: "",
-            authorizedSignatoryPhone: "",
-            udyamRegistrationCertificateUrl: "",
-            iecCertificateUrl: "",
-            addressLine1: "",
-            addressLine2: "",
-            city: "",
-            state: "",
-            postalCode: "",
+            id: brand.id,
+            gstin: brandConfidential?.gstin ?? "",
+            pan: brandConfidential?.pan ?? "",
+            bankName: brandConfidential?.bankName ?? "",
+            bankAccountHolderName:
+                brandConfidential?.bankAccountHolderName ?? "",
+            bankAccountNumber: brandConfidential?.bankAccountNumber ?? "",
+            bankIfscCode: brandConfidential?.bankIfscCode ?? "",
+            bankAccountVerificationDocumentUrl:
+                brandConfidential?.bankAccountVerificationDocumentUrl ?? "",
+            authorizedSignatoryName:
+                brandConfidential?.authorizedSignatoryName ?? "",
+            authorizedSignatoryEmail:
+                brandConfidential?.authorizedSignatoryEmail ?? "",
+            authorizedSignatoryPhone:
+                brandConfidential?.authorizedSignatoryPhone ?? "",
+            udyamRegistrationCertificateUrl:
+                brandConfidential?.udyamRegistrationCertificateUrl ?? "",
+            iecCertificateUrl: brandConfidential?.iecCertificateUrl ?? "",
+            addressLine1: brandConfidential?.addressLine1 ?? "",
+            addressLine2: brandConfidential?.addressLine2 ?? "",
+            city: brandConfidential?.city ?? "",
+            state: brandConfidential?.state ?? "",
+            postalCode: brandConfidential?.postalCode ?? "",
             country: "IN",
         },
     });
@@ -97,6 +106,9 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
 
     const { mutateAsync: createConfAsync } =
         trpc.brands.confidentials.createConfidential.useMutation();
+
+    const { mutateAsync: updateConfAsync } =
+        trpc.brands.confidentials.updateConfidential.useMutation();
 
     const { mutate: sendRequest, isPending: isRequestSending } = useMutation({
         onMutate: () => {
@@ -142,13 +154,8 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                 { id: toastId }
             );
 
-            setBankVerificationPreview(null);
             setBankVerificationFile(null);
-
-            setUdyamCertificatePreview(null);
             setUdyamCertificateFile(null);
-
-            setIecCertificatePreview(null);
             setIecCertificateFile(null);
 
             form.reset(data);
@@ -159,11 +166,78 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
         },
     });
 
+    const { mutate: resendRequest, isPending: isRequestResending } =
+        useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Resending request...");
+                return { toastId };
+            },
+            mutationFn: async (values: CreateBrandConfidential) => {
+                if (!brandConfidential)
+                    throw new Error("Brand confidential data not found");
+
+                const [bankVerificationRes, udyamCertRes, iecCertRes] =
+                    await Promise.all([
+                        bankVerificationFile
+                            ? startDocUpload([bankVerificationFile])
+                            : null,
+                        udyamCertificateFile
+                            ? startDocUpload([udyamCertificateFile])
+                            : null,
+                        iecCertificateFile
+                            ? startDocUpload([iecCertificateFile])
+                            : null,
+                    ]);
+
+                if (bankVerificationRes && !bankVerificationRes?.length)
+                    throw new Error(
+                        "Failed to upload bank verification document"
+                    );
+                if (udyamCertificateFile && !udyamCertRes?.length)
+                    throw new Error("Failed to upload Udyam certificate");
+                if (iecCertificateFile && !iecCertRes?.length)
+                    throw new Error("Failed to upload IEC certificate");
+
+                const bankVerificationUrl = bankVerificationRes
+                    ? bankVerificationRes[0].appUrl
+                    : brandConfidential.bankAccountVerificationDocumentUrl;
+                const udyamCert = udyamCertRes ? udyamCertRes[0] : null;
+                const iecCert = iecCertRes ? iecCertRes[0] : null;
+
+                values.bankAccountVerificationDocumentUrl = bankVerificationUrl;
+                if (udyamCert)
+                    values.udyamRegistrationCertificateUrl = udyamCert.appUrl;
+                if (iecCert) values.iecCertificateUrl = iecCert.appUrl;
+
+                await updateConfAsync({ id: brand.id, values });
+            },
+            onSuccess: (_, data, { toastId }) => {
+                toast.success(
+                    "Request resent successfully, we'll get back to you soon",
+                    { id: toastId }
+                );
+
+                setBankVerificationFile(null);
+                setUdyamCertificateFile(null);
+                setIecCertificateFile(null);
+
+                form.reset(data);
+                router.refresh();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
     return (
         <Form {...form}>
             <form
                 className="space-y-6"
-                onSubmit={form.handleSubmit((values) => sendRequest(values))}
+                onSubmit={form.handleSubmit((values) =>
+                    brandConfidential?.verificationStatus === "rejected"
+                        ? resendRequest(values)
+                        : sendRequest(values)
+                )}
             >
                 <div className="space-y-4">
                     <h2 className="text-xl font-semibold">
@@ -183,7 +257,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <FormControl>
                                         <Input
                                             placeholder="Enter your brand's GST Identification Number"
-                                            // disabled={isRequestSending}
+                                            disabled={
+                                                isRequestSending ||
+                                                isRequestResending ||
+                                                (!!brandConfidential &&
+                                                    brand.confidentialVerificationStatus !==
+                                                        "rejected")
+                                            }
                                             {...field}
                                         />
                                     </FormControl>
@@ -203,7 +283,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <FormControl>
                                         <Input
                                             placeholder="Enter your brand's Permanent Account Number"
-                                            // disabled={isRequestSending}
+                                            disabled={
+                                                isRequestSending ||
+                                                isRequestResending ||
+                                                (!!brandConfidential &&
+                                                    brand.confidentialVerificationStatus !==
+                                                        "rejected")
+                                            }
                                             {...field}
                                         />
                                     </FormControl>
@@ -224,7 +310,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter your brand's bank name"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                             />
                                         </FormControl>
@@ -246,7 +338,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter bank account holder name (with proper casing)"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                             />
                                         </FormControl>
@@ -269,7 +367,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter bank account number"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                             />
                                         </FormControl>
@@ -289,7 +393,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter bank IFSC code"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                             />
                                         </FormControl>
@@ -313,7 +423,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <BrandRequestBankVerificationUploaderDropzone
                                         file={bankVerificationFile}
                                         form={form}
-                                        isPending={isRequestSending}
+                                        isPending={
+                                            isRequestSending ||
+                                            isRequestResending ||
+                                            (!!brandConfidential &&
+                                                brand.confidentialVerificationStatus !==
+                                                    "rejected")
+                                        }
                                         preview={bankVerificationPreview}
                                         setFile={setBankVerificationFile}
                                         setPreview={setBankVerificationPreview}
@@ -336,7 +452,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <FormControl>
                                         <Input
                                             placeholder="Enter authorized contact person name"
-                                            // disabled={isRequestSending}
+                                            disabled={
+                                                isRequestSending ||
+                                                isRequestResending ||
+                                                (!!brandConfidential &&
+                                                    brand.confidentialVerificationStatus !==
+                                                        "rejected")
+                                            }
                                             {...field}
                                         />
                                     </FormControl>
@@ -359,7 +481,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter authorized contact person email"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                             />
                                         </FormControl>
@@ -382,7 +510,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                             <Input
                                                 inputMode="tel"
                                                 placeholder="Enter authorized contact person phone number"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                                 onChange={(e) => {
                                                     const value =
@@ -422,7 +556,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <FormControl>
                                         <Input
                                             placeholder="Enter brand's registered street address"
-                                            // disabled={isRequestSending}
+                                            disabled={
+                                                isRequestSending ||
+                                                isRequestResending ||
+                                                (!!brandConfidential &&
+                                                    brand.confidentialVerificationStatus !==
+                                                        "rejected")
+                                            }
                                             {...field}
                                         />
                                     </FormControl>
@@ -442,7 +582,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <FormControl>
                                         <Input
                                             placeholder="Enter brand's registered street address"
-                                            // disabled={isRequestSending}
+                                            disabled={
+                                                isRequestSending ||
+                                                isRequestResending ||
+                                                (!!brandConfidential &&
+                                                    brand.confidentialVerificationStatus !==
+                                                        "rejected")
+                                            }
                                             {...field}
                                         />
                                     </FormControl>
@@ -463,7 +609,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter brand's registered city"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                             />
                                         </FormControl>
@@ -483,6 +635,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <Select
                                             onValueChange={field.onChange}
                                             defaultValue={field.value}
+                                            disabled={
+                                                isRequestSending ||
+                                                isRequestResending ||
+                                                (!!brandConfidential &&
+                                                    brand.confidentialVerificationStatus !==
+                                                        "rejected")
+                                            }
                                         >
                                             <SelectTrigger>
                                                 <FormControl>
@@ -519,7 +678,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter brand's registered postal code"
-                                                // disabled={isRequestSending}
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
                                                 {...field}
                                             />
                                         </FormControl>
@@ -573,7 +738,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <BrandRequestUdyamCertificateUploaderDropzone
                                         file={udyamCertificateFile}
                                         form={form}
-                                        isPending={isRequestSending}
+                                        isPending={
+                                            isRequestSending ||
+                                            isRequestResending ||
+                                            (!!brandConfidential &&
+                                                brand.confidentialVerificationStatus !==
+                                                    "rejected")
+                                        }
                                         preview={udyamCertificatePreview}
                                         setFile={setUdyamCertificateFile}
                                         setPreview={setUdyamCertificatePreview}
@@ -594,7 +765,13 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                                     <BrandRequestIECCertificateUploaderDropzone
                                         file={iecCertificateFile}
                                         form={form}
-                                        isPending={isRequestSending}
+                                        isPending={
+                                            isRequestSending ||
+                                            isRequestResending ||
+                                            (!!brandConfidential &&
+                                                brand.confidentialVerificationStatus !==
+                                                    "rejected")
+                                        }
                                         preview={iecCertificatePreview}
                                         setFile={setIecCertificateFile}
                                         setPreview={setIecCertificatePreview}
@@ -607,13 +784,31 @@ export function BrandConfidentialForm({ brandId }: PageProps) {
                     </div>
                 </div>
 
-                <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={isRequestSending || !form.formState.isDirty}
-                >
-                    Add & Send for Review
-                </Button>
+                {(!brand.isConfidentialSentForVerification &&
+                    !brandConfidential) ||
+                (!brand.isConfidentialSentForVerification &&
+                    brandConfidential?.verificationStatus === "rejected") ? (
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={
+                            isRequestSending ||
+                            isRequestResending ||
+                            (bankVerificationPreview ===
+                                brandConfidential?.bankAccountVerificationDocumentUrl &&
+                                udyamCertificatePreview ===
+                                    brandConfidential?.udyamRegistrationCertificateUrl &&
+                                iecCertificatePreview ===
+                                    brandConfidential?.iecCertificateUrl &&
+                                !form.formState.isDirty)
+                        }
+                    >
+                        {brandConfidential?.verificationStatus === "rejected"
+                            ? "Resend"
+                            : "Add & Send"}{" "}
+                        for Review
+                    </Button>
+                ) : null}
             </form>
         </Form>
     );

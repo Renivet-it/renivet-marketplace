@@ -3,6 +3,7 @@ import {
     brandConfidentialSchema,
     brandSchema,
     CreateBrandConfidential,
+    UpdateBrandConfidential,
 } from "@/lib/validations";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
@@ -101,6 +102,17 @@ class BrandConfidentialQuery {
         const data = await db
             .insert(brandConfidentials)
             .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBrandConfidential(id: string, values: UpdateBrandConfidential) {
+        const data = await db
+            .update(brandConfidentials)
+            .set(values)
+            .where(eq(brandConfidentials.id, id))
             .returning()
             .then((res) => res[0]);
 

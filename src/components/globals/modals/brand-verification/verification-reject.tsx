@@ -74,7 +74,7 @@ export function VerificationRejectModal({
         });
 
     const { mutate: rejectVerification, isPending: isRejecting } =
-        trpc.general.brands.requests.updateRequestStatus.useMutation({
+        trpc.general.brands.verifications.rejectVerification.useMutation({
             onMutate: () => {
                 const toastId = toast.loading(
                     "Rejecting brand verification request..."
@@ -115,10 +115,7 @@ export function VerificationRejectModal({
                         onSubmit={form.handleSubmit((values) =>
                             rejectVerification({
                                 id: data.id,
-                                data: {
-                                    status: "rejected",
-                                    rejectionReason: values.rejectionReason,
-                                },
+                                rejectedReason: values.rejectionReason,
                             })
                         )}
                     >

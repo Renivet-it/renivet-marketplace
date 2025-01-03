@@ -1,7 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button-general";
+import { Button } from "@/components/ui/button-dash";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormControl } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,7 @@ export function BrandRequestUdyamCertificateUploaderDropzone({
     form,
     isPending,
 }: PageProps) {
-    const [isSelected, setIsSelected] = useState(false);
+    const [isSelected, setIsSelected] = useState(!!preview);
 
     const inputRef = useRef<HTMLInputElement>(null!);
 
@@ -78,6 +78,7 @@ export function BrandRequestUdyamCertificateUploaderDropzone({
                     onCheckedChange={(checked) => setIsSelected(!!checked)}
                     id="udyam-certificate"
                     name="udyam-certificate"
+                    disabled={isPending}
                 />
 
                 <Label
@@ -147,7 +148,7 @@ export function BrandRequestUdyamCertificateUploaderDropzone({
                     <div
                         {...getRootProps()}
                         className={cn(
-                            "relative cursor-pointer border-2 border-dashed border-input p-8 py-16 text-center",
+                            "relative cursor-pointer rounded-md border-2 border-dashed border-input p-8 py-16 text-center",
                             isDragActive && "border-green-500 bg-green-50",
                             isPending && "cursor-not-allowed opacity-50",
                             preview && "hidden"

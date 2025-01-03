@@ -1,7 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button-general";
+import { Button } from "@/components/ui/button-dash";
 import { FormControl } from "@/components/ui/form";
 import { useUploadThing } from "@/lib/uploadthing";
 import {

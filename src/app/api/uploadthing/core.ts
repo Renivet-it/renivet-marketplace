@@ -255,7 +255,10 @@ export const uploadRouter = {
 
             const existingBrandConf =
                 await db.query.brandConfidentials.findFirst({
-                    where: eq(brandConfidentials.id, existingUser.brand.id),
+                    where: and(
+                        eq(brandConfidentials.id, existingUser.brand.id),
+                        ne(brandConfidentials.verificationStatus, "rejected")
+                    ),
                 });
             if (existingBrandConf)
                 throw new UploadThingError({
