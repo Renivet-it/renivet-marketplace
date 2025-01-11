@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
 import { brandSchema } from "./brand";
+import { cachedBrandMediaItemSchema } from "./brand-media-item";
 import {
     categorySchema,
     productTypeSchema,
     subCategorySchema,
 } from "./category";
 
-export const productSchema = z.object({
+export const productOptionValueSchema = z.object({
     id: z
         .string({
             required_error: "ID is required",
@@ -19,80 +20,291 @@ export const productSchema = z.object({
             required_error: "Name is required",
             invalid_type_error: "Name must be a string",
         })
-        .min(3, "Name must be at least 3 characters long"),
+        .min(1, "Name must be at least 1 characters long"),
+    position: z
+        .number({
+            required_error: "Position is required",
+            invalid_type_error: "Position must be a number",
+        })
+        .int("Position must be an integer")
+        .nonnegative("Position must be a non-negative number"),
+});
+
+export const productMediaSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    position: z
+        .number({
+            required_error: "Position is required",
+            invalid_type_error: "Position must be a number",
+        })
+        .int("Position must be an integer")
+        .nonnegative("Position must be a non-negative number"),
+});
+
+const enhancedProductMediaSchema = productMediaSchema.extend({
+    mediaItem: cachedBrandMediaItemSchema.nullable(),
+});
+
+export const productVerificationStatusSchema = z.enum([
+    "idle",
+    "pending",
+    "approved",
+    "rejected",
+]);
+
+export const productSchema = z.object({
+    // BASIC INFO
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    title: z
+        .string({
+            required_error: "Title is required",
+            invalid_type_error: "Title must be a string",
+        })
+        .min(3, "Title must be at least 3 characters long"),
     slug: z
         .string({
             required_error: "Slug is required",
             invalid_type_error: "Slug must be a string",
         })
         .min(3, "Slug must be at least 3 characters long"),
-    description: z
-        .string({
-            required_error: "Description is required",
-            invalid_type_error: "Description must be a string",
-        })
-        .min(3, "Description must be at least 3 characters long"),
-    basePrice: z
-        .union([z.string(), z.number()])
-        .transform((val) => Number(val))
-        .pipe(z.number().min(0, "Amount must be positive")),
-    taxRate: z
-        .union([z.string(), z.number()])
-        .transform((val) => Number(val))
-        .pipe(z.number().min(0, "Amount must be positive")),
-    price: z
-        .union([z.string(), z.number()])
-        .transform((val) => Number(val))
-        .pipe(z.number().min(0, "Amount must be positive")),
+    description: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Description must be a string",
+            })
+            .min(3, "Description must be at least 3 characters long")
+            .nullable()
+    ),
     brandId: z
         .string({
             required_error: "Brand ID is required",
             invalid_type_error: "Brand ID must be a string",
         })
         .uuid("Brand ID is invalid"),
-    imageUrls: z
-        .array(
-            z
-                .string({
-                    required_error: "Image URL is required",
-                    invalid_type_error: "Image URL must be a string",
-                })
-                .url("Image URL is invalid")
-        )
-        .min(1, "At least one image URL is required"),
-    sustainabilityCertificateUrl: z
-        .string({
-            required_error: "Sustainability certificate URL is required",
-            invalid_type_error:
-                "Sustainability certificate URL must be a string",
-        })
-        .url("Sustainability certificate URL is invalid"),
-    isSentForReview: z.boolean({
-        required_error: "Review status is required",
-        invalid_type_error: "Review status must be a boolean",
-    }),
     isAvailable: z.boolean({
         required_error: "Availability is required",
         invalid_type_error: "Availability must be a boolean",
+    }),
+    isActive: z.boolean({
+        required_error: "Active status is required",
+        invalid_type_error: "Active status must be a boolean",
     }),
     isPublished: z.boolean({
         required_error: "Published status is required",
         invalid_type_error: "Published status must be a boolean",
     }),
+    publishedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Published at is required",
+            invalid_type_error: "Published at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable(),
+    media: productMediaSchema.array().default([]),
+    sustainabilityCertificate: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error:
+                    "Sustainability certificate must be a string",
+            })
+            .nullable()
+    ),
+    productHasVariants: z.boolean({
+        required_error: "Product has variants status is required",
+        invalid_type_error: "Product has variants status must be a boolean",
+    }),
+
+    // CATEGORY
+    categoryId: z
+        .string({
+            required_error: "Category ID is required",
+            invalid_type_error: "Category ID must be a string",
+        })
+        .uuid("Category ID is invalid"),
+    subcategoryId: z
+        .string({
+            required_error: "Subcategory ID is required",
+            invalid_type_error: "Subcategory ID must be a string",
+        })
+        .uuid("Subcategory ID is invalid"),
+    productTypeId: z
+        .string({
+            required_error: "Product Type ID is required",
+            invalid_type_error: "Product Type ID must be a string",
+        })
+        .uuid("Product Type ID is invalid"),
+
+    // PRICING
+    price: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().nonnegative("Amount must be non-negative"))
+        .nullable(),
+    compareAtPrice: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().nonnegative("Amount must be non-negative"))
+        .nullable(),
+    costPerItem: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().nonnegative("Amount must be non-negative"))
+        .nullable(),
+
+    // INVENTORY
+    nativeSku: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Native SKU must be a string",
+            })
+            .min(3, "Native SKU must be at least 3 characters long")
+            .nullable()
+    ),
+    sku: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                required_error: "SKU is required",
+                invalid_type_error: "SKU must be a string",
+            })
+            .min(3, "SKU must be at least 3 characters long")
+            .nullable()
+    ),
+    barcode: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Barcode must be a string",
+            })
+            .min(3, "Barcode must be at least 3 characters long")
+            .nullable()
+    ),
+    quantity: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z
+                .number()
+                .int()
+                .nonnegative("Quantity must be a non-negative number")
+        )
+        .nullable(),
+
+    // SHIPPING
+    weight: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Weight must be a non-negative number")
+        )
+        .nullable(),
+    length: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Length must be a non-negative number")
+        )
+        .nullable(),
+    width: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Width must be a non-negative number")
+        )
+        .nullable(),
+    height: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Height must be a non-negative number")
+        )
+        .nullable(),
+    originCountry: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Origin country must be a string",
+            })
+            .min(1, "Origin country must be at least 1 characters long")
+            .nullable()
+    ),
+    hsCode: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "HS code must be a string",
+            })
+            .min(1, "HS code must be at least 1 characters long")
+            .nullable()
+    ),
+
+    // SEO
+    metaTitle: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Meta title must be a string",
+            })
+            .min(3, "Meta title must be at least 3 characters long")
+            .max(70, "Meta title must be at most 70 characters long")
+            .nullable()
+    ),
+    metaDescription: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Meta description must be a string",
+            })
+            .min(3, "Meta description must be at least 3 characters long")
+            .max(160, "Meta description must be at most 160 characters long")
+            .nullable()
+    ),
+    metaKeywords: z.array(
+        z
+            .string({
+                required_error: "Meta keyword is required",
+                invalid_type_error: "Meta keyword must be a string",
+            })
+            .min(1, "Meta keyword must be at least 1 characters long")
+    ),
+
+    // OTHER
+    verificationStatus: productVerificationStatusSchema,
     isDeleted: z.boolean({
         required_error: "Deleted status is required",
         invalid_type_error: "Deleted status must be a boolean",
     }),
-    status: z.enum(["idle", "pending", "approved", "rejected"], {
-        required_error: "Status is required",
-        invalid_type_error:
-            "Status must be one of 'idle', 'pending', 'approved', 'rejected'",
-    }),
+    deletedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Deleted at is required",
+            invalid_type_error: "Deleted at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable(),
+    rejectedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Rejected at is required",
+            invalid_type_error: "Rejected at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable(),
     rejectionReason: z.preprocess(
         convertEmptyStringToNull,
         z
             .string({
-                required_error: "Rejection reason is required",
                 invalid_type_error: "Rejection reason must be a string",
             })
             .nullable()
@@ -118,152 +330,7 @@ export const productSchema = z.object({
         .transform((v) => new Date(v)),
 });
 
-export const productVariantSchema = z.object({
-    sku: z
-        .string({
-            required_error: "SKU is required",
-            invalid_type_error: "SKU must be a string",
-        })
-        .min(3, "SKU must be at least 3 characters long"),
-    productId: z
-        .string({
-            required_error: "Product ID is required",
-            invalid_type_error: "Product ID must be a string",
-        })
-        .uuid("Product ID is invalid"),
-    size: z
-        .string({
-            required_error: "Size is required",
-            invalid_type_error: "Size must be a string",
-        })
-        .min(1, "Size must be at least 1 characters long"),
-    color: z.object({
-        name: z
-            .string({
-                required_error: "Color name is required",
-                invalid_type_error: "Color name must be a string",
-            })
-            .min(1, "Color name must be at least 1 characters long"),
-        hex: z
-            .string({
-                required_error: "Color hex is required",
-                invalid_type_error: "Color hex must be a string",
-            })
-            .length(7, "Color hex must be 7 characters long")
-            .regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color"),
-    }),
-    quantity: z
-        .number({
-            required_error: "Quantity is required",
-            invalid_type_error: "Quantity must be a number",
-        })
-        .int("Quantity must be an integer")
-        .min(0, "Quantity must be a positive number"),
-    isAvailable: z.boolean({
-        required_error: "Availability is required",
-        invalid_type_error: "Availability must be a boolean",
-    }),
-    isDeleted: z.boolean({
-        required_error: "Deleted status is required",
-        invalid_type_error: "Deleted status must be a boolean",
-    }),
-    createdAt: z
-        .union([z.string(), z.date()], {
-            required_error: "Created at is required",
-            invalid_type_error: "Created at must be a date",
-        })
-        .transform((v) => new Date(v)),
-    updatedAt: z
-        .union([z.string(), z.date()], {
-            required_error: "Updated at is required",
-            invalid_type_error: "Updated at must be a date",
-        })
-        .transform((v) => new Date(v)),
-});
-
-export const productWithBrandSchema = productSchema.extend({
-    brand: brandSchema,
-    variants: z.array(productVariantSchema),
-    categories: z.array(
-        z.object({
-            id: z
-                .string({
-                    required_error: "ID is required",
-                    invalid_type_error: "ID must be a string",
-                })
-                .uuid("ID is invalid"),
-            category: categorySchema.pick({
-                id: true,
-                name: true,
-            }),
-            subcategory: subCategorySchema.pick({
-                id: true,
-                name: true,
-                categoryId: true,
-            }),
-            productType: productTypeSchema.pick({
-                id: true,
-                name: true,
-                categoryId: true,
-                subCategoryId: true,
-            }),
-        })
-    ),
-});
-
-export const createProductSchema = productSchema
-    .omit({
-        id: true,
-        slug: true,
-        isAvailable: true,
-        status: true,
-        isDeleted: true,
-        isPublished: true,
-        isSentForReview: true,
-        rejectionReason: true,
-        lastReviewedAt: true,
-        createdAt: true,
-        updatedAt: true,
-    })
-    .extend({
-        sustainabilityCertificateUrl: z.preprocess(
-            convertEmptyStringToNull,
-            z
-                .string({
-                    invalid_type_error:
-                        "Sustainability certificate URL must be a string",
-                })
-                .nullable()
-        ),
-        variants: z
-            .array(
-                productVariantSchema.pick({
-                    sku: true,
-                    color: true,
-                    size: true,
-                    quantity: true,
-                })
-            )
-            .min(1, "At least one variant is required"),
-    });
-
-export const updateProductSchema = createProductSchema
-    .omit({
-        brandId: true,
-        name: true,
-        description: true,
-    })
-    .extend({
-        isAvailable: productSchema.shape.isAvailable,
-        isPublished: productSchema.shape.isPublished,
-    });
-
-export const rejectProductSchema = productSchema.pick({
-    id: true,
-    rejectionReason: true,
-});
-
-export const categorizeProductSchema = z.object({
+export const productOptionSchema = z.object({
     id: z
         .string({
             required_error: "ID is required",
@@ -276,24 +343,31 @@ export const categorizeProductSchema = z.object({
             invalid_type_error: "Product ID must be a string",
         })
         .uuid("Product ID is invalid"),
-    categoryId: z
+    name: z
         .string({
-            required_error: "Category ID is required",
-            invalid_type_error: "Category ID must be a string",
+            required_error: "Name is required",
+            invalid_type_error: "Name must be a string",
         })
-        .uuid("Category ID is invalid"),
-    subcategoryId: z
-        .string({
-            required_error: "Subcategory ID is required",
-            invalid_type_error: "Subcategory ID must be a string",
+        .min(1, "Name must be at least 1 characters long"),
+    values: z.array(productOptionValueSchema),
+    position: z
+        .number({
+            required_error: "Position is required",
+            invalid_type_error: "Position must be a number",
         })
-        .uuid("Subcategory ID is invalid"),
-    productTypeId: z
-        .string({
-            required_error: "Product Type ID is required",
-            invalid_type_error: "Product Type ID must be a string",
+        .int("Position must be an integer")
+        .nonnegative("Position must be a non-negative number"),
+    isDeleted: z.boolean({
+        required_error: "Deleted status is required",
+        invalid_type_error: "Deleted status must be a boolean",
+    }),
+    deletedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Deleted at is required",
+            invalid_type_error: "Deleted at must be a date",
         })
-        .uuid("Product Type ID is invalid"),
+        .transform((v) => new Date(v))
+        .nullable(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -308,41 +382,329 @@ export const categorizeProductSchema = z.object({
         .transform((v) => new Date(v)),
 });
 
-export const createCategorizeProductSchema = z
-    .object({
-        productId: categorizeProductSchema.shape.productId,
-        categories: z.array(
-            z.object({
-                id: z.string(),
-                categoryId: categorizeProductSchema.shape.categoryId,
-                subcategoryId: categorizeProductSchema.shape.subcategoryId,
-                productTypeId: categorizeProductSchema.shape.productTypeId,
+export const productVariantSchema = z.object({
+    // BASIC INFO
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    productId: z
+        .string({
+            required_error: "Product ID is required",
+            invalid_type_error: "Product ID must be a string",
+        })
+        .uuid("Product ID is invalid"),
+    image: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Image must be a string",
             })
+            .uuid("Image is invalid")
+            .nullable()
+    ),
+    combinations: z.record(z.string(), z.string()),
+
+    // PRICING
+    price: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().nonnegative("Amount must be non-negative")),
+    compareAtPrice: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().nonnegative("Amount must be non-negative"))
+        .nullable(),
+    costPerItem: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(z.number().nonnegative("Amount must be non-negative"))
+        .nullable(),
+
+    // INVENTORY
+    nativeSku: z
+        .string({
+            required_error: "Native SKU is required",
+            invalid_type_error: "Native SKU must be a string",
+        })
+        .min(3, "Native SKU must be at least 3 characters long"),
+    sku: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "SKU must be a string",
+            })
+            .min(3, "SKU must be at least 3 characters long")
+            .nullable()
+    ),
+    barcode: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Barcode must be a string",
+            })
+            .min(3, "Barcode must be at least 3 characters long")
+            .nullable()
+    ),
+    quantity: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z
+                .number()
+                .int()
+                .nonnegative("Quantity must be a non-negative number")
         ),
+
+    // SHIPPING
+    weight: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Weight must be a non-negative number")
+        ),
+    length: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Length must be a non-negative number")
+        ),
+    width: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Width must be a non-negative number")
+        ),
+    height: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z.number().int().nonnegative("Height must be a non-negative number")
+        ),
+    originCountry: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Origin country must be a string",
+            })
+            .min(1, "Origin country must be at least 1 characters long")
+            .nullable()
+    ),
+    hsCode: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "HS code must be a string",
+            })
+            .min(1, "HS code must be at least 1 characters long")
+            .nullable()
+    ),
+    isDeleted: z.boolean({
+        required_error: "Deleted status is required",
+        invalid_type_error: "Deleted status must be a boolean",
+    }),
+    deletedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Deleted at is required",
+            invalid_type_error: "Deleted at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable(),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
+export const enhancedProductVariantSchema = productVariantSchema.extend({
+    mediaItem: cachedBrandMediaItemSchema.nullable(),
+});
+
+export const productVariantGroupSchema = z.object({
+    key: z
+        .string({
+            required_error: "Key is required",
+            invalid_type_error: "Key must be a string",
+        })
+        .min(1, "Key must be at least 1 characters long"),
+    value: z
+        .string({
+            required_error: "Value is required",
+            invalid_type_error: "Value must be a string",
+        })
+        .min(1, "Value must be at least 1 characters long"),
+    variants: z.array(productVariantSchema),
+    totalQuantity: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z
+                .number()
+                .int()
+                .nonnegative("Total quantity must be a non-negative number")
+        ),
+});
+
+export const productWithBrandSchema = productSchema.extend({
+    brand: brandSchema,
+    options: z.array(productOptionSchema),
+    variants: z.array(enhancedProductVariantSchema),
+    media: z.array(enhancedProductMediaSchema),
+    sustainabilityCertificate: cachedBrandMediaItemSchema.nullish(),
+    category: categorySchema,
+    subcategory: subCategorySchema,
+    productType: productTypeSchema,
+});
+
+export const createProductSchema = productSchema
+    .omit({
+        id: true,
+        slug: true,
+        deletedAt: true,
+        isAvailable: true,
+        isActive: true,
+        isDeleted: true,
+        isPublished: true,
+        lastReviewedAt: true,
+        publishedAt: true,
+        rejectedAt: true,
+        rejectionReason: true,
+        verificationStatus: true,
+        createdAt: true,
+        updatedAt: true,
     })
-    .refine(
-        (v) => {
-            const seen = new Set();
-            return v.categories.every((category) => {
-                const key = `${category.categoryId}-${category.subcategoryId}-${category.productTypeId}`;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-        },
-        {
-            message: "Duplicate category combinations are not allowed",
-            path: ["categories"],
+    .extend({
+        options: z.array(productOptionSchema),
+        variants: z.array(productVariantSchema),
+    })
+    .superRefine((data, ctx) => {
+        if (!data.productHasVariants) {
+            // If product has no variants, validate required fields
+            if (
+                data.price === null ||
+                data.quantity === null ||
+                data.weight === null ||
+                data.length === null ||
+                data.width === null ||
+                data.height === null
+            ) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message:
+                        "Product without variants must have price, quantity, and dimensions",
+                    path: ["price"],
+                });
+                return false;
+            }
+
+            if (data.options.length > 0 || data.variants.length > 0) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message:
+                        "Product without variants cannot have options or variants",
+                    path: ["options"],
+                });
+                return false;
+            }
+
+            return true;
         }
-    );
+
+        if (data.options.length === 0 || data.variants.length === 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message:
+                    "Product with variants must have both options and variants defined",
+                path: ["productHasVariants"],
+            });
+            return false;
+        }
+
+        // Validate all options have values
+        const hasEmptyOptions = data.options.some(
+            (option) => option.values.length === 0
+        );
+        if (hasEmptyOptions) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "All options must have at least one value",
+                path: ["options"],
+            });
+            return false;
+        }
+
+        // Get all option IDs
+        const optionIds = data.options.map((opt) => opt.id);
+
+        // Check each variant has all required combinations
+        for (const variant of data.variants) {
+            const variantKeys = Object.keys(variant.combinations);
+
+            // Check if variant has all required options
+            if (variantKeys.length !== optionIds.length) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Each variant must specify all options",
+                    path: ["variants"],
+                });
+                return false;
+            }
+
+            // Check if variant only uses valid option IDs
+            for (const key of variantKeys) {
+                if (!optionIds.includes(key)) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: `Unknown option ID "${key}" in variant`,
+                        path: ["variants"],
+                    });
+                    return false;
+                }
+
+                // Check if the value is valid for this option
+                const option = data.options.find((opt) => opt.id === key);
+                const isValidValue = option?.values.some(
+                    (val) => val.id === variant.combinations[key]
+                );
+
+                if (!isValidValue) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: `Invalid value for option "${option?.name}"`,
+                        path: ["variants"],
+                    });
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    });
+
+export const updateProductSchema = createProductSchema;
+
+export const rejectProductSchema = productSchema.pick({
+    id: true,
+    rejectionReason: true,
+});
 
 export type Product = z.infer<typeof productSchema>;
+export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
+export type ProductMedia = z.infer<typeof productMediaSchema>;
+export type ProductOption = z.infer<typeof productOptionSchema>;
 export type ProductVariant = z.infer<typeof productVariantSchema>;
+export type ProductVariantGroup = z.infer<typeof productVariantGroupSchema>;
 export type ProductWithBrand = z.infer<typeof productWithBrandSchema>;
 export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;
 export type RejectProduct = z.infer<typeof rejectProductSchema>;
-export type CategorizeProduct = z.infer<typeof categorizeProductSchema>;
-export type CreateCategorizeProduct = z.infer<
-    typeof createCategorizeProductSchema
->;

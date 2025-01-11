@@ -20,15 +20,16 @@ export const productReviewsRouter = createTRPCRouter({
             const { queries } = ctx;
             const { productId } = input;
 
-            const existingProduct =
-                await queries.products.getProduct(productId);
+            const existingProduct = await queries.products.getProduct({
+                productId,
+            });
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
 
-            if (existingProduct.status !== "pending")
+            if (existingProduct.verificationStatus !== "pending")
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "Only pending products can be approved",
@@ -44,14 +45,16 @@ export const productReviewsRouter = createTRPCRouter({
             const { queries } = ctx;
             const { id, rejectionReason } = input;
 
-            const existingProduct = await queries.products.getProduct(id);
+            const existingProduct = await queries.products.getProduct({
+                productId: id,
+            });
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
 
-            if (existingProduct.status !== "pending")
+            if (existingProduct.verificationStatus !== "pending")
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "Only pending products can be rejected",

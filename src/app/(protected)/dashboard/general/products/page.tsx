@@ -15,7 +15,7 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
-        status?: Product["status"];
+        verificationStatus?: Product["verificationStatus"];
         search?: string;
     }>;
 }
@@ -43,21 +43,22 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
     const {
         page: pageRaw,
         limit: limitRaw,
-        status: statusRaw,
+        verificationStatus: verificationStatusRaw,
         search: searchRaw,
     } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
-    const status = statusRaw === undefined ? "pending" : statusRaw;
+    const verificationStatus =
+        verificationStatusRaw === undefined ? "pending" : verificationStatusRaw;
     const search = searchRaw?.length ? searchRaw : undefined;
 
     const data = await productQueries.getProducts({
         limit,
         page,
         search,
-        status,
+        verificationStatus,
     });
 
     return <ProductsReviewTable initialData={data} />;

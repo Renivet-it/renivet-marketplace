@@ -1,0 +1,1 @@
+ALTER TABLE "brand_media_items" ADD COLUMN "size" text NOT NULL;

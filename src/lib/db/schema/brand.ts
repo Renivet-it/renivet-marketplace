@@ -10,6 +10,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
+import { brandMediaItems } from "./brand-media-item";
 import { brandSubscriptions } from "./brand-subscription";
 import { products } from "./product";
 import { brandRoles, roles } from "./role";
@@ -58,17 +59,12 @@ export const brands = pgTable(
                 onDelete: "cascade",
             }),
         bio: text("bio"),
-        isConfidentialSentForVerification: boolean(
-            "is_confidential_sent_for_verification"
-        )
-            .notNull()
-            .default(false),
         confidentialVerificationStatus: text(
             "confidential_verification_status",
-            { enum: ["pending", "approved", "rejected"] }
+            { enum: ["idle", "pending", "approved", "rejected"] }
         )
             .notNull()
-            .default("pending"),
+            .default("idle"),
         confidentialVerificationRejectedReason: text(
             "confidential_verification_rejected_reason"
         ),
@@ -81,9 +77,6 @@ export const brands = pgTable(
         brandIsConfidentialVerificationStatusIdx: index(
             "brand_is_confidential_verification_status_index"
         ).on(table.confidentialVerificationStatus),
-        brandIsConfidentialSentForVerificationIdx: index(
-            "brand_is_confidential_sent_for_verification_index"
-        ).on(table.isConfidentialSentForVerification),
     })
 );
 
@@ -103,16 +96,14 @@ export const brandConfidentials = pgTable(
         bankAccountHolderName: text("bank_account_holder_name").notNull(),
         bankAccountNumber: text("bank_account_number").notNull(),
         bankIfscCode: text("bank_ifsc_code").notNull(),
-        bankAccountVerificationDocumentUrl: text(
-            "bank_account_verification_document_url"
+        bankAccountVerificationDocument: text(
+            "bank_account_verification_document"
         ).notNull(),
         authorizedSignatoryName: text("authorized_signatory_name").notNull(),
         authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
         authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
-        udyamRegistrationCertificateUrl: text(
-            "udyam_registration_certificate_url"
-        ),
-        iecCertificateUrl: text("iec_certificate_url"),
+        udyamRegistrationCertificate: text("udyam_registration_certificate"),
+        iecCertificate: text("iec_certificate"),
         addressLine1: text("address_line1").notNull(),
         addressLine2: text("address_line2").notNull(),
         city: text("city").notNull(),
@@ -223,6 +214,7 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     }),
     invites: many(brandInvites),
     members: many(brandMembers),
+    bucketItems: many(brandMediaItems),
     roles: many(brandRoles),
     bannedMembers: many(bannedBrandMembers),
     products: many(products),

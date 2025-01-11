@@ -3,6 +3,13 @@ import { DashShell } from "@/components/globals/layouts";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries } from "@/lib/db/queries";
+import {
+    brandCache,
+    categoryCache,
+    mediaCache,
+    productTypeCache,
+    subCategoryCache,
+} from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -20,7 +27,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { bId, pId } = await params;
 
-    const existingProduct = await productQueries.getProduct(pId);
+    const existingProduct = await productQueries.getProduct({ productId: pId });
     if (!existingProduct)
         return {
             title: "Product not found",
@@ -34,7 +41,7 @@ export async function generateMetadata({
         };
 
     return {
-        title: `Edit "${existingProduct.name}"`,
+        title: `Edit "${existingProduct.title}"`,
         description: existingProduct.description,
     };
 }
@@ -59,12 +66,36 @@ export default function Page({ params }: PageProps) {
 async function ProductEditFetch({ params }: PageProps) {
     const { bId, pId } = await params;
 
-    const existingProduct = await productQueries.getProduct(pId);
+    const [
+        existingProduct,
+        cachedBrand,
+        categories,
+        subCategories,
+        productTypes,
+        media,
+    ] = await Promise.all([
+        productQueries.getProduct({ productId: pId }),
+        brandCache.get(bId),
+        categoryCache.getAll(),
+        subCategoryCache.getAll(),
+        productTypeCache.getAll(),
+        mediaCache.getAll(bId),
+    ]);
+    if (!cachedBrand) notFound();
     if (!existingProduct) notFound();
-
     if (existingProduct.brand.id !== bId) notFound();
 
-    return <ProductManageForm brandId={bId} product={existingProduct} />;
+    return (
+        <ProductManageForm
+            brandId={bId}
+            brand={cachedBrand}
+            allCategories={categories}
+            allSubCategories={subCategories}
+            allProductTypes={productTypes}
+            allMedia={media.data}
+            product={existingProduct}
+        />
+    );
 }
 
 function ProductManageSkeleton() {

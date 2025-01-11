@@ -8,7 +8,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
-import { productVariants } from "./product";
+import { products, productVariants } from "./product";
 import { users } from "./user";
 
 export const carts = pgTable(
@@ -20,20 +20,30 @@ export const carts = pgTable(
             .references(() => users.id, {
                 onDelete: "cascade",
             }),
-        sku: text("sku")
+        productId: uuid("product_id")
             .notNull()
-            .references(() => productVariants.sku, {
+            .references(() => products.id, {
                 onDelete: "cascade",
             }),
+        variantId: uuid("variant_id").references(() => productVariants.id, {
+            onDelete: "cascade",
+        }),
         quantity: integer("quantity").notNull().default(1),
         status: boolean("status").notNull().default(true),
         ...timestamps,
     },
     (table) => ({
         cartUserIdIdx: index("cart_user_id_idx").on(table.userId),
-        cartUserIdSkuIdx: index("cart_user_id_sku_idx").on(
+        cartUserIdProductIdVariantIdIdx: index(
+            "cart_user_id_product_id_variant_id_idx"
+        ).on(table.userId, table.productId, table.variantId),
+        cartProductIdVariantIdIdx: index("cart_product_id_variant_id_idx").on(
+            table.productId,
+            table.variantId
+        ),
+        cartUserIdProductIdIdx: index("cart_user_id_product_id_idx").on(
             table.userId,
-            table.sku
+            table.productId
         ),
     })
 );
@@ -43,8 +53,12 @@ export const cartRelations = relations(carts, ({ one }) => ({
         fields: [carts.userId],
         references: [users.id],
     }),
-    item: one(productVariants, {
-        fields: [carts.sku],
-        references: [productVariants.sku],
+    product: one(products, {
+        fields: [carts.productId],
+        references: [products.id],
+    }),
+    variant: one(productVariants, {
+        fields: [carts.variantId],
+        references: [productVariants.id],
     }),
 }));

@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandConfidentialEditAdmin } from "@/components/globals/forms";
 import {
     VerificationApproveModal,
     VerificationRejectModal,
@@ -13,20 +14,32 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
 import { convertValueToLabel } from "@/lib/utils";
-import { Brand, BrandConfidential } from "@/lib/validations";
+import {
+    Brand,
+    BrandConfidential,
+    BrandConfidentialWithBrand,
+} from "@/lib/validations";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 interface PageProps {
-    data: BrandConfidential & { brand: Brand };
+    data: BrandConfidentialWithBrand;
 }
 
 export function BrandVerificationPage({ data }: PageProps) {
     const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
     const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const websiteUrlRaw = data.brand.website;
     const doesUrlIncludeHttp =
@@ -203,7 +216,8 @@ export function BrandVerificationPage({ data }: PageProps) {
 
                                 <Link
                                     href={
-                                        data.bankAccountVerificationDocumentUrl
+                                        data.bankAccountVerificationDocument!
+                                            .url
                                     }
                                     className="text-sm text-primary underline"
                                     target="_blank"
@@ -283,10 +297,11 @@ export function BrandVerificationPage({ data }: PageProps) {
                                     Udyam Registration Certificate
                                 </h5>
 
-                                {data.udyamRegistrationCertificateUrl ? (
+                                {data.udyamRegistrationCertificate?.url ? (
                                     <Link
                                         href={
-                                            data.udyamRegistrationCertificateUrl
+                                            data.udyamRegistrationCertificate
+                                                .url
                                         }
                                         className="text-sm text-primary underline"
                                         target="_blank"
@@ -303,9 +318,9 @@ export function BrandVerificationPage({ data }: PageProps) {
                                     IEC Certificate
                                 </h5>
 
-                                {data.iecCertificateUrl ? (
+                                {data.iecCertificate?.url ? (
                                     <Link
-                                        href={data.iecCertificateUrl}
+                                        href={data.iecCertificate.url}
                                         className="text-sm text-primary underline"
                                         target="_blank"
                                     >
@@ -331,6 +346,14 @@ export function BrandVerificationPage({ data }: PageProps) {
 
                         <Button
                             className="w-full"
+                            variant="secondary"
+                            onClick={() => setIsEditModalOpen(true)}
+                        >
+                            Edit
+                        </Button>
+
+                        <Button
+                            className="w-full"
                             onClick={() => setIsApproveModalOpen(true)}
                         >
                             Verify & Approve
@@ -350,6 +373,28 @@ export function BrandVerificationPage({ data }: PageProps) {
                 isOpen={isRejectModalOpen}
                 setIsOpen={setIsRejectModalOpen}
             />
+
+            <Sheet open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <SheetContent
+                    className="h-screen overflow-auto"
+                    style={{
+                        scrollbarWidth: "none",
+                    }}
+                >
+                    <SheetHeader className="hidden">
+                        <SheetTitle>Edit Brand Verification Request</SheetTitle>
+                        <SheetDescription>
+                            Edit the brand verification request before approving
+                        </SheetDescription>
+                    </SheetHeader>
+
+                    <BrandConfidentialEditAdmin
+                        data={data}
+                        isOpen={isEditModalOpen}
+                        setIsOpen={setIsEditModalOpen}
+                    />
+                </SheetContent>
+            </Sheet>
         </>
     );
 }

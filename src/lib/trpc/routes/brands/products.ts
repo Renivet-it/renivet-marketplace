@@ -1,21 +1,26 @@
-import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldBrandPermission } from "@/config/permissions";
-import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
+import {
+    categoryCache,
+    productTypeCache,
+    subCategoryCache,
+    userCartCache,
+    userWishlistCache,
+} from "@/lib/redis/methods";
 import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
-import { generateProductSlug, getUploadThingFileKey } from "@/lib/utils";
+import { generateProductSlug, generateSKU } from "@/lib/utils";
 import {
-    createCategorizeProductSchema,
     createProductSchema,
+    productSchema,
     updateProductSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 
 export const productsRouter = createTRPCRouter({
@@ -25,20 +30,20 @@ export const productsRouter = createTRPCRouter({
                 limit: z.number().min(1).max(50).default(10),
                 page: z.number().min(1).default(1),
                 search: z.string().optional(),
-                brandIds: z.array(z.string()).optional(),
-                colors: z.array(z.string()).optional(),
-                minPrice: z.number().optional(),
-                maxPrice: z.number().optional(),
-                isAvailable: z.boolean().optional(),
-                isPublished: z.boolean().optional(),
+                brandIds: z.array(productSchema.shape.brandId).optional(),
+                minPrice: productSchema.shape.price.optional(),
+                maxPrice: productSchema.shape.price.optional(),
+                categoryId: productSchema.shape.categoryId.optional(),
+                subcategoryId: productSchema.shape.subcategoryId.optional(),
+                productTypeId: productSchema.shape.productTypeId.optional(),
+                isActive: productSchema.shape.isActive.optional(),
+                isAvailable: productSchema.shape.isAvailable.optional(),
+                isPublished: productSchema.shape.isPublished.optional(),
+                isDeleted: productSchema.shape.isDeleted.optional(),
+                verificationStatus:
+                    productSchema.shape.verificationStatus.optional(),
                 sortBy: z.enum(["price", "createdAt"]).optional(),
                 sortOrder: z.enum(["asc", "desc"]).optional(),
-                categoryId: z.string().optional(),
-                subCategoryId: z.string().optional(),
-                productTypeId: z.string().optional(),
-                status: z
-                    .enum(["idle", "pending", "approved", "rejected"])
-                    .optional(),
             })
         )
         .query(async ({ input, ctx }) => {
@@ -50,18 +55,23 @@ export const productsRouter = createTRPCRouter({
     getProduct: publicProcedure
         .input(
             z.object({
-                productId: z.string(),
-                visibility: z.enum(["published", "draft"]).optional(),
+                productId: productSchema.shape.id,
+                isDeleted: productSchema.shape.isDeleted.optional(),
+                isAvailable: productSchema.shape.isAvailable.optional(),
+                isPublished: productSchema.shape.isPublished.optional(),
+                isActive: productSchema.shape.isActive.optional(),
+                verificationStatus:
+                    productSchema.shape.verificationStatus.optional(),
             })
         )
         .query(async ({ input, ctx }) => {
-            const { productId, visibility } = input;
+            const { productId, ...rest } = input;
             const { queries } = ctx;
 
-            const data = await queries.products.getProduct(
+            const data = await queries.products.getProduct({
                 productId,
-                visibility
-            );
+                ...rest,
+            });
             if (!data)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -76,13 +86,39 @@ export const productsRouter = createTRPCRouter({
             isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
         )
         .mutation(async ({ input, ctx }) => {
-            const { queries, user, db, schemas } = ctx;
+            const { queries, user } = ctx;
             const { brandId, ...product } = input;
 
-            if (!product.sustainabilityCertificateUrl)
+            const [existingCategory, existingSubCategory, existingProductType] =
+                await Promise.all([
+                    categoryCache.get(product.categoryId),
+                    subCategoryCache.get(product.subcategoryId),
+                    productTypeCache.get(product.productTypeId),
+                ]);
+
+            if (
+                !existingCategory ||
+                !existingSubCategory ||
+                !existingProductType
+            )
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "Sustainability certificate is required",
+                    message: "Invalid category, subcategory or product type",
+                });
+
+            const isSubcategoryInCategory =
+                existingSubCategory.categoryId === product.categoryId;
+            const isProductTypeInSubcategoryAndCategory =
+                existingProductType.subCategoryId === product.subcategoryId &&
+                existingProductType.categoryId === product.categoryId;
+
+            if (
+                !isSubcategoryInCategory ||
+                !isProductTypeInSubcategoryAndCategory
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Invalid category, subcategory or product type",
                 });
 
             if (brandId !== user.brand?.id)
@@ -91,39 +127,93 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const totalProducts = await queries.products.getProductCount(
-                brandId,
-                "active"
-            );
-            if (totalProducts >= 5)
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "You have reached the maximum number of products",
+            if (!product.productHasVariants) {
+                product.nativeSku = generateSKU({
+                    brand: user.brand,
+                    category: existingCategory.name,
+                    subcategory: existingSubCategory.name,
+                    productType: existingProductType.name,
                 });
+            } else {
+                if (!product.variants || product.variants.length === 0)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Product variants are required",
+                    });
 
-            const slug = generateProductSlug(product.name, user.brand.name);
+                for (const variant of product.variants) {
+                    const optionCombinations = Object.entries(
+                        variant.combinations
+                    ).map(([optionId, valueId]) => {
+                        const option = product.options.find(
+                            (opt) => opt.id === optionId
+                        );
+                        const value = option?.values.find(
+                            (val) => val.id === valueId
+                        );
+                        return {
+                            name: option?.name ?? "",
+                            value: value?.name ?? "",
+                        };
+                    });
+
+                    variant.nativeSku = generateSKU({
+                        brand: user.brand,
+                        category: existingCategory.name,
+                        subcategory: existingSubCategory.name,
+                        productType: existingProductType.name,
+                        options: optionCombinations,
+                    });
+                }
+            }
+
+            const slug = generateProductSlug(product.title, user.brand.name);
 
             const data = await queries.products.createProduct({
                 ...product,
-                sustainabilityCertificateUrl:
-                    product.sustainabilityCertificateUrl!,
                 slug,
                 brandId,
             });
 
-            await db.insert(schemas.productVariants).values(
-                input.variants.map((variant) => ({
-                    ...variant,
-                    productId: data.id,
-                }))
-            );
+            return data;
+        }),
+    bulkCreateProducts: protectedProcedure
+        .input(z.array(createProductSchema))
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { queries, user } = ctx;
 
+            const brandIds = input.map((product) => product.brandId);
+            if (new Set(brandIds).size !== 1)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "All products must belong to the same brand",
+                });
+
+            if (brandIds[0] !== user.brand?.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not a member of this brand",
+                });
+
+            const inputWithSlug = input.map((product) => {
+                const slug = generateProductSlug(
+                    product.title,
+                    user.brand!.name
+                );
+                return { ...product, slug };
+            });
+
+            const data =
+                await queries.products.bulkCreateProducts(inputWithSlug);
             return data;
         }),
     updateProduct: protectedProcedure
         .input(
             z.object({
-                productId: z.string(),
+                productId: productSchema.shape.id,
                 values: updateProductSchema,
             })
         )
@@ -132,167 +222,12 @@ export const productsRouter = createTRPCRouter({
         )
         .mutation(async ({ input, ctx }) => {
             const { productId, values } = input;
-            const { queries, user, db, schemas } = ctx;
-
-            if (!values.sustainabilityCertificateUrl)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Sustainability certificate is required",
-                });
-
-            const existingProduct =
-                await queries.products.getProduct(productId);
-            if (!existingProduct)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Product not found",
-                });
-
-            if (existingProduct.isPublished && !values.isPublished)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message:
-                        "Once a product is published, it cannot be unpublished",
-                });
-
-            if (values.isPublished && existingProduct.status !== "approved")
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Only approved products can be published",
-                });
-
-            if (existingProduct.brand.id !== user.brand?.id)
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "You are not a member of this brand",
-                });
-
-            const existingImages = existingProduct.imageUrls.map((url) => ({
-                key: getUploadThingFileKey(url),
-                url,
-            }));
-            const inputImages = values.imageUrls.map((url) => ({
-                key: getUploadThingFileKey(url),
-                url,
-            }));
-
-            const removedImages = existingImages.filter(
-                (img) => !inputImages.some((i) => i.key === img.key)
-            );
-
-            const existingDoc = {
-                key: getUploadThingFileKey(
-                    existingProduct.sustainabilityCertificateUrl
-                ),
-                url: existingProduct.sustainabilityCertificateUrl,
-            };
-            const inputDoc = {
-                key: getUploadThingFileKey(values.sustainabilityCertificateUrl),
-                url: values.sustainabilityCertificateUrl,
-            };
-
-            const filesToBeDeleted = [];
-
-            if (existingDoc.key !== inputDoc.key)
-                filesToBeDeleted.push(existingDoc.key);
-            if (removedImages.length > 0)
-                filesToBeDeleted.push(...removedImages.map((img) => img.key));
-
-            await utApi.deleteFiles(filesToBeDeleted);
-
-            const existingSkus = existingProduct.variants.map((v) => v.sku);
-            const inputSkus = values.variants.map((v) => v.sku);
-
-            const variantsToBeDeleted = existingSkus.filter(
-                (sku) => !inputSkus.includes(sku)
-            );
-            const variantsToBeAdded = values.variants.filter(
-                (v) => !existingSkus.includes(v.sku)
-            );
-
-            const variantsToBeUpdated = values.variants.filter((v) =>
-                existingSkus.includes(v.sku)
-            );
-
-            const filteredVariantsToBeUpdated = variantsToBeUpdated.filter(
-                (v) => {
-                    const existingVariant = existingProduct.variants.find(
-                        (ev) => ev.sku === v.sku
-                    );
-                    if (!existingVariant) return false;
-
-                    return (
-                        JSON.stringify({
-                            sku: v.sku,
-                            size: v.size,
-                            colorName: v.color.name,
-                            colorHex: v.color.hex,
-                            quantity: v.quantity,
-                        }) !==
-                        JSON.stringify({
-                            sku: existingVariant.sku,
-                            size: existingVariant.size,
-                            colorName: existingVariant.color.name,
-                            colorHex: existingVariant.color.hex,
-                            quantity: existingVariant.quantity,
-                        })
-                    );
-                }
-            );
-
-            const [data] = await Promise.all([
-                queries.products.updateProduct(productId, {
-                    ...values,
-                    sustainabilityCertificateUrl:
-                        values.sustainabilityCertificateUrl!,
-                }),
-                userWishlistCache.dropAll(),
-                userCartCache.dropAll(),
-                variantsToBeDeleted.length > 0 &&
-                    db
-                        .update(schemas.productVariants)
-                        .set({
-                            isDeleted: true,
-                            isAvailable: false,
-                        })
-                        .where(
-                            inArray(
-                                schemas.productVariants.sku,
-                                variantsToBeDeleted
-                            )
-                        ),
-                variantsToBeAdded.length > 0 &&
-                    db.insert(schemas.productVariants).values(
-                        variantsToBeAdded.map((variant) => ({
-                            ...variant,
-                            productId,
-                        }))
-                    ),
-            ]);
-
-            if (filteredVariantsToBeUpdated.length > 0)
-                await Promise.all(
-                    filteredVariantsToBeUpdated.map(({ sku, ...rest }) =>
-                        db
-                            .update(schemas.productVariants)
-                            .set(rest)
-                            .where(eq(schemas.productVariants.sku, sku))
-                    )
-                );
-
-            return data;
-        }),
-    categorizeProduct: protectedProcedure
-        .input(createCategorizeProductSchema)
-        .use(
-            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
-        )
-        .mutation(async ({ input, ctx }) => {
-            const { productId, categories } = input;
             const { queries, user } = ctx;
 
-            const existingProduct =
-                await queries.products.getProduct(productId);
+            const existingProduct = await queries.products.getProduct({
+                productId,
+                isDeleted: false,
+            });
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -305,64 +240,95 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            if (
-                existingProduct.status === "approved" ||
-                existingProduct.status === "pending"
-            )
+            const [existingCategory, existingSubCategory, existingProductType] =
+                await Promise.all([
+                    categoryCache.get(values.categoryId),
+                    subCategoryCache.get(values.subcategoryId),
+                    productTypeCache.get(values.productTypeId),
+                ]);
+
+            if (!existingCategory)
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message:
-                        "Product cannot be categorized after approval or if it is under review",
+                    message: "Invalid category",
                 });
 
-            const existingProductCategories = existingProduct.categories.map(
-                (x) => ({
-                    id: x.id,
-                    tag: `${x.category.id}-${x.subcategory.id}-${x.productType.id}`,
-                })
-            );
-            const inputCategories = categories.map(
-                (x) => `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
-            );
+            if (!existingSubCategory)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Invalid subcategory",
+                });
 
-            const addedCategories = categories.filter(
-                (x) =>
-                    !existingProductCategories.some(
-                        (y) =>
-                            y.tag ===
-                            `${x.categoryId}-${x.subcategoryId}-${x.productTypeId}`
-                    )
-            );
+            if (!existingProductType)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Invalid product type",
+                });
 
-            const removedCategories = existingProductCategories.filter(
-                (x) => !inputCategories.some((y) => y === x.tag)
-            );
+            if (values.productHasVariants) {
+                if (!values.variants || values.variants.length === 0)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Product variants are required",
+                    });
 
-            const data = await queries.products.categorizeProduct(
+                const existingVariants = existingProduct.variants;
+                const newlyAddedVariants = values.variants.filter(
+                    (variant) =>
+                        !existingVariants.some((v) => v.id === variant.id)
+                );
+
+                for (const variant of newlyAddedVariants) {
+                    // Convert combinations to option-value pairs
+                    const optionCombinations = Object.entries(
+                        variant.combinations
+                    ).map(([optionId, valueId]) => {
+                        const option = values.options.find(
+                            (opt) => opt.id === optionId
+                        );
+                        const value = option?.values.find(
+                            (val) => val.id === valueId
+                        );
+                        return {
+                            name: option?.name ?? "",
+                            value: value?.name ?? "",
+                        };
+                    });
+
+                    variant.nativeSku = generateSKU({
+                        brand: user.brand,
+                        category: existingCategory.name,
+                        subcategory: existingSubCategory.name,
+                        productType: existingProductType.name,
+                        options: optionCombinations,
+                    });
+                }
+            }
+
+            const data = await queries.products.updateProduct(
                 productId,
-                addedCategories,
-                removedCategories.map((x) => x.id)
+                values
             );
-
             return data;
         }),
-    updateVariantAvailability: protectedProcedure
+    updateProductAvailability: protectedProcedure
         .input(
             z.object({
-                productId: z.string(),
-                sku: z.string(),
-                isAvailable: z.boolean(),
+                productId: productSchema.shape.id,
+                isAvailable: productSchema.shape.isAvailable,
             })
         )
         .use(
             isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
         )
         .mutation(async ({ input, ctx }) => {
-            const { productId, sku, isAvailable } = input;
+            const { productId, isAvailable } = input;
             const { queries, user } = ctx;
 
-            const existingProduct =
-                await queries.products.getProduct(productId);
+            const existingProduct = await queries.products.getProduct({
+                productId,
+                isDeleted: false,
+            });
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -375,36 +341,118 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const existingVariant = existingProduct.variants.find(
-                (v) => v.sku === sku
+            const data = await queries.products.updateProductAvailability(
+                productId,
+                isAvailable
             );
-            if (!existingVariant)
+            return data;
+        }),
+    updateProductPublishStatus: protectedProcedure
+        .input(
+            z.object({
+                productId: productSchema.shape.id,
+                isPublished: productSchema.shape.isPublished,
+            })
+        )
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { productId, isPublished } = input;
+            const { queries, user } = ctx;
+
+            if (user.brand?.confidentialVerificationStatus !== "approved")
                 throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Variant not found",
+                    code: "FORBIDDEN",
+                    message:
+                        "You must complete the brand verification process to publish products",
                 });
 
-            const [data] = await Promise.all([
-                queries.products.updateVariantAvailability(sku, isAvailable),
-                userCartCache.dropAll(),
-            ]);
+            const existingProduct = await queries.products.getProduct({
+                productId,
+                isDeleted: false,
+            });
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (existingProduct.brand.id !== user.brand?.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not a member of this brand",
+                });
+
+            if (existingProduct.isPublished && !isPublished)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "You cannot unpublish a product that is already published, to unlist make the product inactive",
+                });
+
+            const data = await queries.products.updateProductPublishStatus(
+                productId,
+                isPublished
+            );
+            return data;
+        }),
+    updateProductActivationStatus: protectedProcedure
+        .input(
+            z.object({
+                productId: productSchema.shape.id,
+                isActive: productSchema.shape.isActive,
+            })
+        )
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { productId, isActive } = input;
+            const { queries, user } = ctx;
+
+            const existingProduct = await queries.products.getProduct({
+                productId,
+                isDeleted: false,
+            });
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (existingProduct.brand.id !== user.brand?.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not a member of this brand",
+                });
+
+            const data = await queries.products.updateProductActivationStatus(
+                productId,
+                isActive
+            );
             return data;
         }),
     sendProductForReview: protectedProcedure
-        .input(
-            z.object({
-                productId: z.string(),
-            })
-        )
+        .input(z.object({ productId: productSchema.shape.id }))
         .use(
             isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
         )
         .mutation(async ({ input, ctx }) => {
             const { productId } = input;
-            const { queries, user } = ctx;
+            const { queries, user, schemas, db } = ctx;
 
-            const existingProduct =
-                await queries.products.getProduct(productId);
+            const existingProduct = await db.query.products.findFirst({
+                with: { brand: true },
+                where: and(
+                    eq(schemas.products.id, productId),
+                    eq(schemas.products.isDeleted, false),
+                    or(
+                        eq(schemas.products.verificationStatus, "idle"),
+                        eq(schemas.products.verificationStatus, "rejected")
+                    )
+                ),
+            });
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -417,30 +465,11 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            if (existingProduct.status === "pending")
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product is already sent for review",
-                });
-
-            if (existingProduct.status === "approved")
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product is already approved",
-                });
-
-            if (existingProduct.categories.length === 0)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message:
-                        "Product must be categorized before sending for review",
-                });
-
             if (
-                existingProduct.status === "rejected" &&
+                existingProduct.verificationStatus === "rejected" &&
                 existingProduct.lastReviewedAt &&
                 new Date(existingProduct.lastReviewedAt).getTime() >
-                    Date.now() - 1000 * 60 * 60 * 24 * 7
+                    Date.now() - 1000 * 60 * 60 * 24 * 3
             )
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -448,7 +477,7 @@ export const productsRouter = createTRPCRouter({
                         new Date(existingProduct.lastReviewedAt),
                         "MMMM dd, yyyy"
                     )}. You still have to wait for ${
-                        7 -
+                        3 -
                         Math.floor(
                             (Date.now() -
                                 new Date(
@@ -463,20 +492,18 @@ export const productsRouter = createTRPCRouter({
             return data;
         }),
     deleteProduct: protectedProcedure
-        .input(
-            z.object({
-                productId: z.string(),
-            })
-        )
+        .input(z.object({ productId: productSchema.shape.id }))
         .use(
             isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
         )
         .mutation(async ({ input, ctx }) => {
             const { productId } = input;
-            const { queries, user, db, schemas } = ctx;
+            const { queries, user } = ctx;
 
-            const existingProduct =
-                await queries.products.getProduct(productId);
+            const existingProduct = await queries.products.getProduct({
+                productId,
+                isDeleted: false,
+            });
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -489,17 +516,8 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const variants = existingProduct.variants.map((v) => v.sku);
-
             const data = await Promise.all([
                 queries.products.softDeleteProduct(productId),
-                db
-                    .update(schemas.productVariants)
-                    .set({
-                        isDeleted: true,
-                        isAvailable: false,
-                    })
-                    .where(inArray(schemas.productVariants.sku, variants)),
                 userCartCache.dropAll(),
                 userWishlistCache.dropAll(),
             ]);

@@ -1,11 +1,21 @@
-import { ProductsTable } from "@/components/dashboard/brands/products";
+import {
+    ProductsAction,
+    ProductsTable,
+} from "@/components/dashboard/brands/products";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { productQueries } from "@/lib/db/queries";
+import {
+    brandCache,
+    categoryCache,
+    productTypeCache,
+    subCategoryCache,
+} from "@/lib/redis/methods";
 import { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -33,19 +43,33 @@ export default function Page(props: PageProps) {
                     </p>
                 </div>
 
-                <Suspense
-                    fallback={
-                        <Button
-                            disabled
-                            className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
-                        >
-                            <Icons.PlusCircle className="size-5" />
-                            Create New Product
-                        </Button>
-                    }
-                >
-                    <NewProductButton {...props} />
-                </Suspense>
+                <div className="flex flex-col items-center gap-2 md:flex-row">
+                    <Suspense
+                        fallback={
+                            <Button disabled className="h-8 text-xs">
+                                <Icons.PlusCircle />
+                                Add Product
+                            </Button>
+                        }
+                    >
+                        <NewProductButton {...props} />
+                    </Suspense>
+
+                    <Suspense
+                        fallback={
+                            <Button
+                                disabled
+                                variant="outline"
+                                className="size-8 p-0"
+                            >
+                                <span className="sr-only">Open menu</span>
+                                <Icons.MoreVertical />
+                            </Button>
+                        }
+                    >
+                        <ProductsActionFetch {...props} />
+                    </Suspense>
+                </div>
             </div>
 
             <Suspense fallback={<TableSkeleton />}>
@@ -78,21 +102,38 @@ async function ProductsFetch({ searchParams, params }: PageProps) {
     return <ProductsTable brandId={bId} initialData={data} />;
 }
 
+async function ProductsActionFetch({ params }: PageProps) {
+    const { bId } = await params;
+
+    const [brand, categories, subcategories, productTypes, products] =
+        await Promise.all([
+            brandCache.get(bId),
+            categoryCache.getAll(),
+            subCategoryCache.getAll(),
+            productTypeCache.getAll(),
+            productQueries.getAllProducts({ brandIds: [bId] }),
+        ]);
+    if (!brand) notFound();
+
+    return (
+        <ProductsAction
+            brand={brand}
+            categories={categories}
+            subcategories={subcategories}
+            productTypes={productTypes}
+            products={products}
+        />
+    );
+}
+
 async function NewProductButton({ params }: PageProps) {
     const { bId } = await params;
 
     return (
-        <Button
-            asChild
-            className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
-            disabled
-        >
-            <Link
-                // href={`/dashboard/brands/${bId}/products/new`}
-                href="#"
-            >
-                <Icons.PlusCircle className="size-5" />
-                Create New Product
+        <Button asChild className="h-8 text-xs">
+            <Link href={`/dashboard/brands/${bId}/products/new`}>
+                <Icons.PlusCircle />
+                Add Product
             </Link>
         </Button>
     );

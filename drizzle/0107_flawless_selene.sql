@@ -1,0 +1,1 @@
+ALTER TABLE "products" ALTER COLUMN "verification_status" SET DEFAULT 'idle';

@@ -1,9 +1,10 @@
+import { mediaCache } from "@/lib/redis/methods";
 import {
     BrandConfidential,
-    brandConfidentialSchema,
-    brandSchema,
+    brandConfidentialWithBrandSchema,
     CreateBrandConfidential,
     UpdateBrandConfidential,
+    UpdateBrandConfidentialByAdmin,
 } from "@/lib/validations";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
@@ -67,12 +68,36 @@ class BrandConfidentialQuery {
             },
         });
 
-        const parsed = brandConfidentialSchema
-            .extend({
-                brand: brandSchema,
-            })
+        const mediaIds = new Set<string>();
+        for (const item of data) {
+            if (item.bankAccountVerificationDocument)
+                mediaIds.add(item.bankAccountVerificationDocument);
+            if (item.udyamRegistrationCertificate)
+                mediaIds.add(item.udyamRegistrationCertificate);
+            if (item.iecCertificate) mediaIds.add(item.iecCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map((item) => ({
+            ...item,
+            bankAccountVerificationDocument: mediaMap.get(
+                item.bankAccountVerificationDocument
+            ),
+            udyamRegistrationCertificate: item.udyamRegistrationCertificate
+                ? mediaMap.get(item.udyamRegistrationCertificate)
+                : null,
+            iecCertificate: item.iecCertificate
+                ? mediaMap.get(item.iecCertificate)
+                : null,
+        }));
+
+        const parsed = brandConfidentialWithBrandSchema
             .array()
-            .parse(data);
+            .parse(enhancedData);
 
         return {
             data: parsed,
@@ -89,12 +114,32 @@ class BrandConfidentialQuery {
         });
         if (!data) return null;
 
-        const parsed = brandConfidentialSchema
-            .extend({
-                brand: brandSchema,
-            })
-            .parse(data);
+        const mediaIds = new Set<string>();
+        if (data.bankAccountVerificationDocument)
+            mediaIds.add(data.bankAccountVerificationDocument);
+        if (data.udyamRegistrationCertificate)
+            mediaIds.add(data.udyamRegistrationCertificate);
+        if (data.iecCertificate) mediaIds.add(data.iecCertificate);
 
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = {
+            ...data,
+            bankAccountVerificationDocument: mediaMap.get(
+                data.bankAccountVerificationDocument
+            ),
+            udyamRegistrationCertificate: data.udyamRegistrationCertificate
+                ? mediaMap.get(data.udyamRegistrationCertificate)
+                : null,
+            iecCertificate: data.iecCertificate
+                ? mediaMap.get(data.iecCertificate)
+                : null,
+        };
+
+        const parsed = brandConfidentialWithBrandSchema.parse(enhancedData);
         return parsed;
     }
 
@@ -109,6 +154,20 @@ class BrandConfidentialQuery {
     }
 
     async updateBrandConfidential(id: string, values: UpdateBrandConfidential) {
+        const data = await db
+            .update(brandConfidentials)
+            .set(values)
+            .where(eq(brandConfidentials.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBrandConfidentialByAdmin(
+        id: string,
+        values: UpdateBrandConfidentialByAdmin
+    ) {
         const data = await db
             .update(brandConfidentials)
             .set(values)
@@ -140,8 +199,6 @@ class BrandConfidentialQuery {
                 tx
                     .update(brands)
                     .set({
-                        isConfidentialSentForVerification:
-                            values.status === "pending",
                         confidentialVerificationStatus: values.status,
                         confidentialVerificationRejectedReason:
                             values.rejectedReason,

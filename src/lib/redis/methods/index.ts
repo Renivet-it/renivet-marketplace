@@ -5,6 +5,7 @@ export * from "./cart";
 export * from "./category";
 export * from "./legal";
 export * from "./marketing-strip";
+export * from "./media";
 export * from "./plan";
 export * from "./product-type";
 export * from "./role";

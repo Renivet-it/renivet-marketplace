@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
-import { productCategories, products } from "./product";
+import { products } from "./product";
 
 export const categories = pgTable("categories", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
@@ -45,7 +45,6 @@ export const productTypes = pgTable("product_types", {
 export const categoriesRelations = relations(categories, ({ many }) => ({
     subCategories: many(subCategories),
     productTypes: many(productTypes),
-    productCategories: many(productCategories),
 }));
 
 export const subCategoriesRelations = relations(
@@ -56,7 +55,6 @@ export const subCategoriesRelations = relations(
             references: [categories.id],
         }),
         productTypes: many(productTypes),
-        productCategories: many(productCategories),
     })
 );
 
@@ -72,6 +70,5 @@ export const productTypesRelations = relations(
             references: [categories.id],
         }),
         products: many(products),
-        productCategories: many(productCategories),
     })
 );

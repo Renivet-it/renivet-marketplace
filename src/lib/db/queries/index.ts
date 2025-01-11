@@ -4,6 +4,7 @@ export * from "./blog";
 export * from "./brand";
 export * from "./brand-confidential";
 export * from "./brand-invite";
+export * from "./brand-media-items";
 export * from "./brand-member";
 export * from "./brand-request";
 export * from "./brand-subscription";

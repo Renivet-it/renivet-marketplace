@@ -1,3 +1,4 @@
+import { mediaCache } from "@/lib/redis/methods";
 import {
     CreateOrder,
     OrderWithItemAndBrand,
@@ -23,31 +24,65 @@ class OrderQuery {
             with: {
                 items: {
                     with: {
-                        productVariant: {
-                            with: { product: { with: { brand: true } } },
+                        product: {
+                            with: {
+                                brand: true,
+                                variants: true,
+                                category: true,
+                                subcategory: true,
+                                productType: true,
+                                options: true,
+                            },
                         },
+                        variant: true,
                     },
                 },
             },
         });
 
+        const products = data.flatMap((d) => d.items.map((i) => i.product));
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        }));
+
+        const enhancedData = data.map((d) => ({
+            ...d,
+            items: d.items.map((i) => ({
+                ...i,
+                product: enhancedProducts.find((p) => p.id === i.productId),
+            })),
+        }));
+
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
-            .parse(
-                data.map((d) => ({
-                    ...d,
-                    items: d.items.map(
-                        ({
-                            productVariant: { product, ...restV },
-                            ...rest
-                        }) => ({
-                            ...rest,
-                            productVariant: restV,
-                            product,
-                        })
-                    ),
-                }))
-            );
+            .parse(enhancedData);
 
         return parsed;
     }
@@ -66,28 +101,65 @@ class OrderQuery {
             with: {
                 items: {
                     with: {
-                        productVariant: {
-                            with: { product: { with: { brand: true } } },
+                        product: {
+                            with: {
+                                brand: true,
+                                variants: true,
+                                category: true,
+                                subcategory: true,
+                                productType: true,
+                                options: true,
+                            },
                         },
+                        variant: true,
                     },
                 },
             },
         });
         if (!data) return null;
 
-        const parsed: OrderWithItemAndBrand = orderWithItemAndBrandSchema.parse(
-            {
-                ...data,
-                items: data.items.map(
-                    ({ productVariant: { product, ...restV }, ...rest }) => ({
-                        ...rest,
-                        productVariant: restV,
-                        product,
-                    })
-                ),
-            }
+        const products = data.items.map((i) => i.product);
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
         );
 
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        }));
+
+        const enhancedData = {
+            ...data,
+            items: data.items.map((i) => ({
+                ...i,
+                product: enhancedProducts.find((p) => p.id === i.productId),
+            })),
+        };
+
+        const parsed: OrderWithItemAndBrand =
+            orderWithItemAndBrandSchema.parse(enhancedData);
         return parsed;
     }
 
@@ -106,31 +178,65 @@ class OrderQuery {
             with: {
                 items: {
                     with: {
-                        productVariant: {
-                            with: { product: { with: { brand: true } } },
+                        product: {
+                            with: {
+                                brand: true,
+                                variants: true,
+                                category: true,
+                                subcategory: true,
+                                productType: true,
+                                options: true,
+                            },
                         },
+                        variant: true,
                     },
                 },
             },
         });
 
+        const products = data.flatMap((d) => d.items.map((i) => i.product));
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        }));
+
+        const enhancedData = data.map((d) => ({
+            ...d,
+            items: d.items.map((i) => ({
+                ...i,
+                product: enhancedProducts.find((p) => p.id === i.productId),
+            })),
+        }));
+
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
-            .parse(
-                data.map((d) => ({
-                    ...d,
-                    items: d.items.map(
-                        ({
-                            productVariant: { product, ...restV },
-                            ...rest
-                        }) => ({
-                            ...rest,
-                            productVariant: restV,
-                            product,
-                        })
-                    ),
-                }))
-            );
+            .parse(enhancedData);
 
         return parsed;
     }

@@ -10,13 +10,11 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input-general";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import {
     CachedCart,
     CreateCart,
@@ -25,7 +23,7 @@ import {
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryState } from "nuqs";
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { WishlistButton } from "../buttons";
@@ -45,56 +43,117 @@ export function ProductCartAddForm({
 }: PageProps) {
     const [isProductWishlisted, setIsProductWishlisted] =
         useState(isWishlisted);
+    const [selectedSku, setSelectedSku] = useQueryState("sku", {
+        defaultValue: product.variants?.[0]?.nativeSku,
+    });
 
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
 
-    const [size, setSize] = useQueryState("size");
-    const [color, setColor] = useQueryState("color");
-
-    const [sku, setSku] = useState<string | undefined>();
-
-    const form = useForm<CreateCart>({
-        resolver: zodResolver(createCartSchema),
-        defaultValues: {
-            userId: userId,
-            quantity: 1,
-            sku: sku || "",
-        },
-    });
-
-    const sizes = Array.from(
-        new Set(product.variants.map((v) => v.size).sort())
-    );
-
-    const colors = product.variants
-        .filter((v) => !v.isDeleted)
-        .filter((v) => v.size === size)
-        .map((v) => v.color)
-        .sort(
-            (a, b) => a.name.localeCompare(b.name) || a.hex.localeCompare(b.hex)
-        );
-
-    useEffect(() => {
-        const currentSku = product.variants.find(
-            (v) => v.color.hex === color && v.size === size
-        )?.sku;
-
-        setSku(currentSku);
-        form.setValue("sku", currentSku || "");
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [color, size]);
-
     const { data: userCart, refetch } =
-        trpc.general.users.cart.getCart.useQuery(
+        trpc.general.users.cart.getCartForUser.useQuery(
             { userId: userId! },
             { enabled: !!userId, initialData: initialCart }
         );
 
-    const isProductInCart = userCart?.some((item) => item.sku === sku);
+    const selectedVariant = useMemo(() => {
+        if (!product.productHasVariants || !selectedSku) return null;
+        return (
+            product.variants.find(
+                (variant) => variant.nativeSku === selectedSku
+            ) ?? null
+        );
+    }, [product.productHasVariants, product.variants, selectedSku]);
+
+    const isProductInCart = useMemo(() => {
+        if (!userCart) return false;
+
+        if (!product.productHasVariants) {
+            return userCart.some(
+                (item) => item.productId === product.id && !item.variantId
+            );
+        }
+
+        if (!selectedSku || !selectedVariant) return false;
+
+        return userCart.some(
+            (item) =>
+                item.productId === product.id &&
+                item.variantId === selectedVariant.id
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userCart, selectedSku, product.productHasVariants]);
+
+    const getAvailableVariantsForOption = useCallback(
+        (
+            optionId: string,
+            valueId: string,
+            currentSelections: Record<string, string>
+        ) => {
+            const testSelection = {
+                ...currentSelections,
+                [optionId]: valueId,
+            };
+
+            return product.variants.some((variant) => {
+                return Object.entries(testSelection).every(
+                    ([key, value]) => variant.combinations[key] === value
+                );
+            });
+        },
+        [product.variants]
+    );
+
+    const currentSelections = useMemo(() => {
+        if (!selectedVariant) return {};
+        return selectedVariant.combinations;
+    }, [selectedVariant]);
+
+    const form = useForm<CreateCart>({
+        resolver: zodResolver(createCartSchema),
+        defaultValues: {
+            productId: product.id,
+            variantId: selectedVariant?.id || null,
+            quantity: 1,
+            userId,
+        },
+    });
+
+    const handleOptionSelect = useCallback(
+        (optionId: string, valueId: string) => {
+            const newSelections = { ...currentSelections, [optionId]: valueId };
+
+            const matchingVariant = product.variants.find((variant) =>
+                Object.entries(newSelections).every(
+                    ([key, value]) => variant.combinations[key] === value
+                )
+            );
+
+            if (matchingVariant) setSelectedSku(matchingVariant.nativeSku);
+        },
+        [currentSelections, product.variants, setSelectedSku]
+    );
+
+    const productPrice = useMemo(() => {
+        if (!product.productHasVariants) return product.price ?? 0;
+        if (!selectedVariant) return 0;
+
+        return selectedVariant.price;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedSku]);
+
+    const productCompareAtPrice = useMemo(() => {
+        if (!product.productHasVariants) return product.compareAtPrice;
+        if (!selectedVariant) return null;
+
+        return productPrice > selectedVariant.price
+            ? null
+            : selectedVariant.compareAtPrice;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedSku, productPrice]);
 
     const { mutate: addToCart } =
-        trpc.general.users.cart.addProductInCart.useMutation({
+        trpc.general.users.cart.addProductToCart.useMutation({
             onMutate: () => {
                 toast.success(
                     isProductInCart
@@ -111,230 +170,228 @@ export function ProductCartAddForm({
         });
 
     return (
-        <Form {...form}>
-            <form
-                className="space-y-3 md:space-y-5"
-                onSubmit={form.handleSubmit((values) => {
-                    if (isUserFetching)
-                        return toast.error(
-                            DEFAULT_MESSAGES.ERRORS.USER_FETCHING
-                        );
-                    if (!userId || !user)
-                        return toast.error(
-                            DEFAULT_MESSAGES.ERRORS.USER_NOT_LOGGED_IN
-                        );
-                    if (user.roles.length > 0)
-                        return toast.error(
-                            DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER
-                        );
-
-                    if (!values.sku)
-                        return toast.error("Please select a size or color");
-
-                    if (!product.isAvailable)
-                        return toast.error(
-                            "This product is currently out of stock. You can still add it to your wishlist."
-                        );
-
-                    addToCart(values);
-                })}
-            >
-                <div className="space-y-4">
-                    <Label className="font-semibold uppercase">
-                        Select Size
-                    </Label>
-
-                    <RadioGroup
-                        onValueChange={(value) => {
-                            setSize(value);
-                            setColor(null);
-                        }}
-                        defaultValue={size!}
-                        className="flex flex-wrap gap-2"
-                        disabled={!product.isAvailable}
-                    >
-                        {sizes.map((s, i) => (
-                            <div key={i}>
-                                <RadioGroupItem
-                                    value={s}
-                                    id={s}
-                                    disabled={!product.isAvailable}
-                                    className="sr-only"
-                                />
-
-                                <Label htmlFor={s}>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div
-                                            title={s}
-                                            className={cn(
-                                                "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
-                                                s === size &&
-                                                    "bg-primary text-background",
-                                                s.length > 2 &&
-                                                    "size-auto px-3",
-                                                !product.isAvailable &&
-                                                    "cursor-not-allowed opacity-50"
-                                            )}
-                                        >
-                                            <span>{s}</span>
-                                        </div>
-                                    </div>
-                                </Label>
-                            </div>
-                        ))}
-                    </RadioGroup>
-                </div>
-
-                {size && (
-                    <>
-                        <Separator />
-
-                        {
-                            <div className="space-y-4">
-                                <Label className="font-semibold uppercase">
-                                    More Colors
-                                </Label>
-
-                                <RadioGroup
-                                    key={size}
-                                    onValueChange={(value) => setColor(value)}
-                                    defaultValue={color ?? undefined}
-                                    className="flex flex-wrap gap-2"
-                                    disabled={!product.isAvailable}
-                                >
-                                    {colors.map((c) => {
-                                        const variant = product.variants.find(
-                                            (v) =>
-                                                v.size === size &&
-                                                v.color.hex === c.hex
-                                        );
-
-                                        return (
-                                            <div key={c.name}>
-                                                <RadioGroupItem
-                                                    value={c.hex}
-                                                    id={c.name}
-                                                    className="sr-only"
-                                                    disabled={
-                                                        !product.isAvailable ||
-                                                        !variant?.isAvailable ||
-                                                        variant?.quantity === 0
-                                                    }
-                                                />
-
-                                                <Label htmlFor={c.name}>
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <div
-                                                            title={c.name}
-                                                            className={cn(
-                                                                "size-12 cursor-pointer rounded-full border border-foreground/10",
-                                                                c.hex ===
-                                                                    color &&
-                                                                    "outline outline-2 outline-offset-1",
-                                                                (!product.isAvailable ||
-                                                                    !variant?.isAvailable ||
-                                                                    variant?.quantity ===
-                                                                        0) &&
-                                                                    "cursor-not-allowed opacity-50"
-                                                            )}
-                                                            style={{
-                                                                backgroundColor:
-                                                                    c.hex,
-                                                            }}
-                                                        >
-                                                            <span className="sr-only">
-                                                                {c.name}
-                                                            </span>
-                                                        </div>
-
-                                                        <span
-                                                            className={cn(
-                                                                "text-sm",
-                                                                c.hex ===
-                                                                    color &&
-                                                                    "font-semibold",
-                                                                (!variant?.isAvailable ||
-                                                                    variant?.quantity ===
-                                                                        0) &&
-                                                                    "text-destructive line-through"
-                                                            )}
-                                                        >
-                                                            {c.name}
-                                                        </span>
-
-                                                        {!!variant?.quantity &&
-                                                            variant.quantity <
-                                                                3 && (
-                                                                <span className="text-xs text-destructive">
-                                                                    {
-                                                                        variant.quantity
-                                                                    }{" "}
-                                                                    left
-                                                                </span>
-                                                            )}
-                                                    </div>
-                                                </Label>
-                                            </div>
-                                        );
-                                    })}
-                                </RadioGroup>
-                            </div>
-                        }
-                    </>
-                )}
-
-                <FormField
-                    control={form.control}
-                    name="sku"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="hidden">SKU</FormLabel>
-
-                            <FormControl>
-                                <Input {...field} readOnly className="hidden" />
-                            </FormControl>
-
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <div className="flex flex-col gap-2 md:flex-row md:gap-4">
-                    <Button
-                        type="submit"
-                        size="lg"
-                        className="w-full font-semibold uppercase md:h-12 md:basis-2/3 md:text-base"
-                        disabled={!product.isAvailable}
-                    >
-                        <Icons.ShoppingCart />
-                        Add to Cart
-                    </Button>
-
-                    <WishlistButton
-                        type="button"
-                        variant="outline"
-                        size="lg"
-                        className={cn(
-                            "group w-full font-semibold uppercase md:h-12 md:basis-1/3 md:text-base"
+        <>
+            <div className="md:space-y-1">
+                <div className="flex items-end gap-2">
+                    <p className="text-2xl font-semibold md:text-3xl">
+                        {formatPriceTag(
+                            parseFloat(convertPaiseToRupees(productPrice)),
+                            true
                         )}
-                        userId={userId}
-                        productId={product.id}
-                        isProductWishlisted={isProductWishlisted}
-                        setIsProductWishlisted={setIsProductWishlisted}
-                        iconClassName={cn(
-                            isWishlisted &&
-                                "fill-primary stroke-primary group-hover:fill-background group-hover:stroke-background"
-                        )}
-                    />
-                </div>
-
-                {!product.isAvailable && (
-                    <p className="text-sm text-destructive">
-                        * This product is currently out of stock. You can still
-                        add it to your wishlist.
                     </p>
-                )}
-            </form>
-        </Form>
+
+                    {productCompareAtPrice && (
+                        <div className="flex items-center gap-2 text-xs font-semibold md:text-sm">
+                            <p className="text-red-800 line-through">
+                                {formatPriceTag(
+                                    parseFloat(
+                                        convertPaiseToRupees(
+                                            productCompareAtPrice
+                                        )
+                                    ),
+                                    true
+                                )}
+                            </p>
+
+                            <p className="text-accent/80">
+                                (
+                                {formatPriceTag(
+                                    parseFloat(
+                                        convertPaiseToRupees(
+                                            productCompareAtPrice - productPrice
+                                        )
+                                    )
+                                )}{" "}
+                                OFF)
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                <p className="text-xs font-semibold text-accent/80 md:text-sm">
+                    + 2% gateway fee at checkout
+                </p>
+            </div>
+
+            <Form {...form}>
+                <form
+                    onSubmit={form.handleSubmit((values) => {
+                        if (isUserFetching)
+                            return toast.error(
+                                DEFAULT_MESSAGES.ERRORS.USER_FETCHING
+                            );
+                        if (!userId || !user)
+                            return toast.error(
+                                DEFAULT_MESSAGES.ERRORS.USER_NOT_LOGGED_IN
+                            );
+                        if (user.roles.length > 0)
+                            return toast.error(
+                                DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER
+                            );
+
+                        if (
+                            !product.isAvailable ||
+                            !product.isActive ||
+                            !product.isPublished ||
+                            product.isDeleted ||
+                            product.verificationStatus !== "approved"
+                        )
+                            return toast.error(
+                                "Requested product is not available"
+                            );
+
+                        addToCart(values);
+                    })}
+                >
+                    <div className="space-y-6">
+                        {product.productHasVariants &&
+                            product.options.map((option) => (
+                                <FormField
+                                    key={option.id}
+                                    control={form.control}
+                                    name="variantId"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-3">
+                                            <FormLabel className="text-base font-semibold">
+                                                {option.name}
+                                            </FormLabel>
+
+                                            <FormControl>
+                                                <RadioGroup
+                                                    value={
+                                                        currentSelections[
+                                                            option.id
+                                                        ]
+                                                    }
+                                                    onValueChange={(value) => {
+                                                        handleOptionSelect(
+                                                            option.id,
+                                                            value
+                                                        );
+                                                        const variant =
+                                                            product.variants.find(
+                                                                (v) =>
+                                                                    Object.entries(
+                                                                        {
+                                                                            ...currentSelections,
+                                                                            [option.id]:
+                                                                                value,
+                                                                        }
+                                                                    ).every(
+                                                                        ([
+                                                                            k,
+                                                                            val,
+                                                                        ]) =>
+                                                                            v
+                                                                                .combinations[
+                                                                                k
+                                                                            ] ===
+                                                                            val
+                                                                    )
+                                                            );
+                                                        if (variant)
+                                                            field.onChange(
+                                                                variant.id
+                                                            );
+                                                    }}
+                                                    className="flex flex-wrap items-center gap-2"
+                                                >
+                                                    {option.values.map(
+                                                        (value) => {
+                                                            const isAvailable =
+                                                                getAvailableVariantsForOption(
+                                                                    option.id,
+                                                                    value.id,
+                                                                    currentSelections
+                                                                );
+
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        value.id
+                                                                    }
+                                                                >
+                                                                    <RadioGroupItem
+                                                                        value={
+                                                                            value.id
+                                                                        }
+                                                                        id={
+                                                                            value.id
+                                                                        }
+                                                                        className="peer sr-only"
+                                                                        disabled={
+                                                                            !isAvailable
+                                                                        }
+                                                                    />
+
+                                                                    <Label
+                                                                        htmlFor={
+                                                                            value.id
+                                                                        }
+                                                                        className={cn(
+                                                                            "flex cursor-pointer items-center justify-center rounded-full border p-2 px-6 text-sm font-medium peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground",
+                                                                            !isAvailable &&
+                                                                                "cursor-not-allowed opacity-50"
+                                                                        )}
+                                                                    >
+                                                                        {
+                                                                            value.name
+                                                                        }
+                                                                    </Label>
+                                                                </div>
+                                                            );
+                                                        }
+                                                    )}
+                                                </RadioGroup>
+                                            </FormControl>
+
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            ))}
+
+                        <div className="flex flex-col gap-2 md:flex-row md:gap-4">
+                            <Button
+                                type="submit"
+                                size="lg"
+                                className="w-full font-semibold uppercase md:h-12 md:basis-2/3 md:text-base"
+                                disabled={
+                                    !product.isAvailable ||
+                                    (!!selectedVariant &&
+                                        (selectedVariant.isDeleted ||
+                                            selectedVariant?.quantity === 0))
+                                }
+                            >
+                                <Icons.ShoppingCart />
+                                {!product.isAvailable ||
+                                (selectedVariant &&
+                                    (selectedVariant.isDeleted ||
+                                        selectedVariant?.quantity === 0))
+                                    ? "Out of Stock"
+                                    : "Add to Cart"}
+                            </Button>
+
+                            <WishlistButton
+                                type="button"
+                                variant="outline"
+                                size="lg"
+                                className={cn(
+                                    "group w-full font-semibold uppercase md:h-12 md:basis-1/3 md:text-base"
+                                )}
+                                userId={userId}
+                                productId={product.id}
+                                isProductWishlisted={isProductWishlisted}
+                                setIsProductWishlisted={setIsProductWishlisted}
+                                iconClassName={cn(
+                                    isWishlisted &&
+                                        "fill-primary stroke-primary group-hover:fill-background group-hover:stroke-background"
+                                )}
+                            />
+                        </div>
+                    </div>
+                </form>
+            </Form>
+        </>
     );
 }

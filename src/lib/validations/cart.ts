@@ -1,6 +1,11 @@
 import { z } from "zod";
+import { convertEmptyStringToNull } from "../utils";
 import { brandSchema } from "./brand";
-import { productVariantSchema, productWithBrandSchema } from "./product";
+import {
+    enhancedProductVariantSchema,
+    productVariantSchema,
+    productWithBrandSchema,
+} from "./product";
 
 export const cartSchema = z.object({
     id: z
@@ -15,12 +20,21 @@ export const cartSchema = z.object({
             invalid_type_error: "User ID must be a string",
         })
         .min(1, "User ID is required"),
-    sku: z
+    productId: z
         .string({
-            required_error: "SKU is required",
-            invalid_type_error: "SKU must be a string",
+            required_error: "Product ID is required",
+            invalid_type_error: "Product ID must be a string",
         })
-        .min(1, "SKU is required"),
+        .uuid("Product ID is invalid"),
+    variantId: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Variant ID must be a string",
+            })
+            .uuid("Variant ID is invalid")
+            .nullable()
+    ),
     quantity: z
         .number({
             required_error: "Quantity is required",
@@ -46,25 +60,18 @@ export const cartSchema = z.object({
         .transform((v) => new Date(v)),
 });
 
-export const createCartSchema = cartSchema
-    .pick({
-        userId: true,
-        sku: true,
-        quantity: true,
-    })
-    .extend({
-        sku: z
-            .string({
-                required_error: "Missing color or size",
-                invalid_type_error: "SKU must be a string",
-            })
-            .min(1, "Missing color or size"),
-    });
+export const createCartSchema = cartSchema.pick({
+    userId: true,
+    productId: true,
+    variantId: true,
+    quantity: true,
+});
 
 export const updateCartSchema = createCartSchema
     .omit({
         userId: true,
-        sku: true,
+        productId: true,
+        variantId: true,
     })
     .extend({
         status: z.boolean({
@@ -74,19 +81,33 @@ export const updateCartSchema = createCartSchema
     });
 
 export const cartWithProductSchema = cartSchema.extend({
-    product: productWithBrandSchema.omit({
-        categories: true,
-    }),
+    product: productWithBrandSchema,
 });
 
 export const cachedCartSchema = cartSchema.extend({
-    size: productVariantSchema.shape.size,
-    color: productVariantSchema.shape.color,
-    item: productWithBrandSchema
-        .omit({
-            categories: true,
-            description: true,
+    product: productWithBrandSchema
+        .pick({
+            brand: true,
+            brandId: true,
+            categoryId: true,
+            subcategoryId: true,
+            productTypeId: true,
+            compareAtPrice: true,
+            price: true,
+            title: true,
+            slug: true,
+            id: true,
+            media: true,
+            variants: true,
+            options: true,
+            sku: true,
+            nativeSku: true,
+            quantity: true,
+            isActive: true,
             isPublished: true,
+            isAvailable: true,
+            verificationStatus: true,
+            isDeleted: true,
         })
         .extend({
             brand: brandSchema.pick({
@@ -94,7 +115,31 @@ export const cachedCartSchema = cartSchema.extend({
                 ownerId: true,
                 name: true,
             }),
+            variants: enhancedProductVariantSchema
+                .pick({
+                    id: true,
+                    sku: true,
+                    nativeSku: true,
+                    price: true,
+                    compareAtPrice: true,
+                    quantity: true,
+                    image: true,
+                    mediaItem: true,
+                    productId: true,
+                    isDeleted: true,
+                    combinations: true,
+                })
+                .array(),
         }),
+    variant: productVariantSchema
+        .pick({
+            id: true,
+            sku: true,
+            nativeSku: true,
+            isDeleted: true,
+            quantity: true,
+        })
+        .nullable(),
 });
 
 export type Cart = z.infer<typeof cartSchema>;

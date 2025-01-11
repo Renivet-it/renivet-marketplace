@@ -17,9 +17,11 @@ import {
     slugify,
 } from "@/lib/utils";
 import {
+    brandConfidentialSchema,
     brandRequestSchema,
     createBrandRequestSchema,
     linkBrandToRazorpaySchema,
+    updateBrandConfidentialByAdminSchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -334,6 +336,49 @@ export const brandVerificationsRouter = createTRPCRouter({
             );
 
             return data;
+        }),
+    editDetails: protectedProcedure
+        .input(
+            z.object({
+                id: brandConfidentialSchema.shape.id,
+                values: updateBrandConfidentialByAdminSchema,
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            const existingBrandConfidential =
+                await queries.brandConfidentials.getBrandConfidential(id);
+            if (!existingBrandConfidential)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand verification not found",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "approved")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brand verification is already approved",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "rejected")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brand verification is already rejected",
+                });
+
+            const updatedBrandConfidential = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidentialByAdmin(
+                    id,
+                    values
+                ),
+                brandCache.remove(existingBrandConfidential.brand.id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
+
+            return updatedBrandConfidential;
         }),
     approveVerification: protectedProcedure
         .input(linkBrandToRazorpaySchema)

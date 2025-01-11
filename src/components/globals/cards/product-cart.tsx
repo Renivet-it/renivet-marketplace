@@ -44,7 +44,31 @@ export function ProductCartCard({
         useState(false);
     const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
 
-    const { refetch } = trpc.general.users.cart.getCart.useQuery({ userId });
+    const itemMedia =
+        item.variantId && item.product.variants.length > 0
+            ? !!item.product.variants.find(
+                  (variant) => variant.id === item.variantId
+              )
+                ? item.product.variants.find(
+                      (variant) => variant.id === item.variantId
+                  )!.mediaItem!
+                : item.product.media![0].mediaItem!
+            : item.product.media![0].mediaItem!;
+
+    const itemPrice =
+        item.variantId && item.product.variants.length > 0
+            ? !!item.product.variants.find(
+                  (variant) => variant.id === item.variantId
+              )
+                ? item.product.variants.find(
+                      (variant) => variant.id === item.variantId
+                  )!.price!
+                : item.product.price!
+            : item.product.price!;
+
+    const { refetch } = trpc.general.users.cart.getCartForUser.useQuery({
+        userId,
+    });
 
     const { mutate: updateProduct, isPending: isUpdating } =
         trpc.general.users.cart.updateStatusInCart.useMutation({
@@ -80,8 +104,8 @@ export function ProductCartCard({
             >
                 <div className="group relative aspect-[4/5] size-full max-w-36 shrink-0">
                     <Image
-                        src={item.item.imageUrls[0]}
-                        alt={item.item.name}
+                        src={itemMedia.url}
+                        alt={itemMedia.alt ?? item.product.title}
                         width={1000}
                         height={1000}
                         className={cn(
@@ -100,7 +124,8 @@ export function ProductCartCard({
                                 updateProduct({
                                     userId,
                                     status: value as boolean,
-                                    sku: item.sku,
+                                    productId: item.product.id,
+                                    variantId: item.variantId,
                                 })
                             }
                         />
@@ -111,17 +136,17 @@ export function ProductCartCard({
                     <div className="space-y-1">
                         <h2 className="text-lg font-semibold leading-tight md:text-2xl md:leading-normal">
                             <Link
-                                href={`/products/${item.item.slug}`}
+                                href={`/products/${item.product.slug}`}
                                 target="_blank"
                                 referrerPolicy="no-referrer"
                             >
-                                {item.item.name}
+                                {item.product.title}
                             </Link>
                         </h2>
 
                         <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground">
-                            <Link href={`/brands/${item.item.brand.id}`}>
-                                {item.item.brand.name}
+                            <Link href={`/brands/${item.product.brand.id}`}>
+                                {item.product.brand.name}
                             </Link>
                         </p>
                     </div>
@@ -154,21 +179,34 @@ export function ProductCartCard({
 
                     <div className="text-lg font-semibold md:text-xl">
                         {formatPriceTag(
-                            parseFloat(convertPaiseToRupees(item.item.price)),
+                            parseFloat(convertPaiseToRupees(itemPrice)),
                             true
                         )}
                     </div>
 
                     <div>
-                        <p className="text-sm">
-                            <span className="font-semibold">Size: </span>
-                            {item.size}
-                        </p>
+                        {item.variantId && (
+                            <>
+                                {item.product.options.map((option) => {
+                                    const selectedValue =
+                                        item.product.variants.find(
+                                            (v) => v.id === item.variantId
+                                        )?.combinations[option.id];
+                                    const optionValue = option.values.find(
+                                        (v) => v.id === selectedValue
+                                    );
 
-                        <p className="text-sm">
-                            <span className="font-semibold">Color: </span>
-                            {item.color.name}
-                        </p>
+                                    return (
+                                        <p key={option.id} className="text-sm">
+                                            <span className="font-semibold">
+                                                {option.name}:{" "}
+                                            </span>
+                                            {optionValue?.name}
+                                        </p>
+                                    );
+                                })}
+                            </>
+                        )}
 
                         <p className="text-sm">
                             <span className="font-semibold">Added on: </span>

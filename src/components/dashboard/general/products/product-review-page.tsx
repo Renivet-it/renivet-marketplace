@@ -10,14 +10,10 @@ import {
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog-dash";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import {
     Table,
@@ -45,6 +41,30 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
     const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
     const [isVariantsModalOpen, setIsVariantsModalOpen] = useState(false);
 
+    let productRootPrice: string;
+
+    if (!product.productHasVariants)
+        productRootPrice = formatPriceTag(
+            parseFloat(convertPaiseToRupees(product.price ?? 0)),
+            true
+        );
+    else {
+        const minPriceRaw = Math.min(...product.variants.map((x) => x.price));
+        const maxPriceRaw = Math.max(...product.variants.map((x) => x.price));
+
+        const minPrice = formatPriceTag(
+            parseFloat(convertPaiseToRupees(minPriceRaw)),
+            true
+        );
+        const maxPrice = formatPriceTag(
+            parseFloat(convertPaiseToRupees(maxPriceRaw)),
+            true
+        );
+
+        if (minPriceRaw === maxPriceRaw) productRootPrice = minPrice;
+        productRootPrice = `${minPrice} - ${maxPrice}`;
+    }
+
     return (
         <>
             <div
@@ -55,8 +75,8 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 {...props}
             >
                 <div>
-                    <h5 className="text-sm font-medium">Name</h5>
-                    <p className="text-sm">{product.name}</p>
+                    <h5 className="text-sm font-medium">Title</h5>
+                    <p className="text-sm">{product.title}</p>
                 </div>
 
                 <div>
@@ -71,92 +91,88 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
 
                 <div>
                     <h5 className="text-sm font-medium">Price</h5>
-                    <p className="text-sm">
-                        {formatPriceTag(
-                            parseFloat(convertPaiseToRupees(product.price)),
-                            true
-                        )}
-                    </p>
+                    <p className="text-sm">{productRootPrice}</p>
                 </div>
 
                 <div>
-                    <h5 className="text-sm font-medium">Categories</h5>
-                    {product.categories.length === 0 ? (
-                        <span className="text-sm">N/A</span>
-                    ) : (
-                        <Popover>
-                            <PopoverTrigger
-                                title="Click to view"
-                                className="text-sm underline"
-                            >
-                                View
-                            </PopoverTrigger>
+                    <h5 className="text-sm font-medium">Category</h5>
+                    <p className="text-sm">{product.category.name}</p>
+                </div>
 
-                            <PopoverContent className="w-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Count</TableHead>
-                                            <TableHead>Category</TableHead>
-                                            <TableHead>Subcategory</TableHead>
-                                            <TableHead className="text-right">
-                                                Product Type
-                                            </TableHead>
-                                        </TableRow>
-                                    </TableHeader>
+                <div>
+                    <h5 className="text-sm font-medium">Subcategory</h5>
+                    <p className="text-sm">{product.subcategory.name}</p>
+                </div>
 
-                                    <TableBody>
-                                        {product.categories.map((x, i) => (
-                                            <TableRow key={x.id}>
-                                                <TableCell>{i + 1}</TableCell>
-                                                <TableCell>
-                                                    {x.category.name}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {x.subcategory.name}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {x.productType.name}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </PopoverContent>
-                        </Popover>
-                    )}
+                <div>
+                    <h5 className="text-sm font-medium">Product Type</h5>
+                    <p className="text-sm">{product.productType.name}</p>
                 </div>
 
                 <div>
                     <h5 className="text-sm font-medium">Images</h5>
-                    <button
-                        className="text-sm text-primary underline"
-                        onClick={() => setIsImagesModalOpen(true)}
-                    >
-                        View
-                    </button>
+                    {product.media.map((m) => m.mediaItem?.url).filter(Boolean)
+                        .length > 0 ? (
+                        <button
+                            className="text-sm text-primary underline"
+                            onClick={() => setIsImagesModalOpen(true)}
+                        >
+                            View
+                        </button>
+                    ) : (
+                        <p className="text-sm">N/A</p>
+                    )}
                 </div>
 
                 <div>
                     <h5 className="text-sm font-medium">Variants</h5>
-                    <button
-                        className="text-sm text-primary underline"
-                        onClick={() => setIsVariantsModalOpen(true)}
-                    >
-                        View
-                    </button>
+                    {product.variants.length > 0 ? (
+                        <button
+                            className="text-sm text-primary underline"
+                            onClick={() => setIsVariantsModalOpen(true)}
+                        >
+                            View
+                        </button>
+                    ) : (
+                        <p className="text-sm">N/A</p>
+                    )}
                 </div>
 
                 <div>
                     <h5 className="text-sm font-medium">Certificate</h5>
-                    <Link
-                        href={product.sustainabilityCertificateUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary underline"
-                    >
-                        View
-                    </Link>
+                    {product.sustainabilityCertificate?.url ? (
+                        <Link
+                            href={product.sustainabilityCertificate.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary underline"
+                        >
+                            View
+                        </Link>
+                    ) : (
+                        <p className="text-sm">N/A</p>
+                    )}
+                </div>
+
+                <div>
+                    <h5 className="text-sm font-medium">Meta Title</h5>
+                    <p className="text-sm">{product.metaTitle ?? "N/A"}</p>
+                </div>
+
+                <div>
+                    <h5 className="text-sm font-medium">Meta Description</h5>
+                    <p className="text-sm">
+                        {product.metaDescription ?? "N/A"}
+                    </p>
+                </div>
+
+                <div>
+                    <h5 className="text-sm font-medium">Meta Keywords</h5>
+                    <p className="text-sm">
+                        {product.metaKeywords.length > 0
+                            ? product.metaKeywords.join(", ")
+                            : "N/A"}
+                    </p>
                 </div>
 
                 <div>
@@ -174,11 +190,13 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>
-                            Description of &ldquo;{product.name}&rdquo;
+                            Description of &ldquo;{product.title}&rdquo;
                         </DialogTitle>
                     </DialogHeader>
 
-                    <RichTextViewer content={product.description} />
+                    <RichTextViewer
+                        content={product.description ?? "<p></p>"}
+                    />
                 </DialogContent>
             </Dialog>
 
@@ -189,7 +207,7 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 <DialogContent className="p-0">
                     <DialogHeader className="sr-only">
                         <DialogTitle>
-                            Images of &ldquo;{product.name}&rdquo;
+                            Images of &ldquo;{product.title}&rdquo;
                         </DialogTitle>
                     </DialogHeader>
 
@@ -205,22 +223,29 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                         ]}
                     >
                         <CarouselContent>
-                            {product.imageUrls.map((url, index) => (
-                                <CarouselItem
-                                    key={index}
-                                    className="h-full p-0"
-                                >
-                                    <div className="relative size-full">
-                                        <Image
-                                            src={url}
-                                            alt={product.name}
-                                            width={2000}
-                                            height={2000}
-                                            className="size-full object-cover"
-                                        />
-                                    </div>
-                                </CarouselItem>
-                            ))}
+                            {product.media
+                                .map((m) => m.mediaItem)
+                                .filter(Boolean)
+                                .map((m, i) => {
+                                    if (!m) return null;
+
+                                    return (
+                                        <CarouselItem
+                                            key={i}
+                                            className="h-full p-0"
+                                        >
+                                            <div className="relative size-full">
+                                                <Image
+                                                    src={m.url}
+                                                    alt={m.alt || m.name}
+                                                    width={2000}
+                                                    height={2000}
+                                                    className="size-full object-cover"
+                                                />
+                                            </div>
+                                        </CarouselItem>
+                                    );
+                                })}
                         </CarouselContent>
 
                         <CarouselPrevious />
@@ -233,60 +258,86 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 open={isVariantsModalOpen}
                 onOpenChange={setIsVariantsModalOpen}
             >
-                <DialogContent>
+                <DialogContent className="max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>
-                            Variants of &ldquo;{product.name}&rdquo;
+                            Variants of &quot;{product.title}&quot;
                         </DialogTitle>
+                        <DialogDescription>
+                            {product.variants.length} variants
+                        </DialogDescription>
                     </DialogHeader>
 
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>SKU</TableHead>
-                                <TableHead>Size</TableHead>
-                                <TableHead>Color</TableHead>
-                                <TableHead>Availablity</TableHead>
-                                <TableHead className="text-right">
-                                    Quantity
-                                </TableHead>
+                                <TableHead>Variant</TableHead>
+                                <TableHead>Native SKU</TableHead>
+                                <TableHead>Custom SKU</TableHead>
+                                <TableHead>Price</TableHead>
+                                <TableHead>Stock</TableHead>
                             </TableRow>
                         </TableHeader>
 
                         <TableBody>
-                            {product.variants.map((x, i) => (
-                                <TableRow key={i}>
-                                    <TableCell>{x.sku}</TableCell>
-                                    <TableCell>{x.size}</TableCell>
-                                    <TableCell>
-                                        <div
-                                            key={i}
-                                            title={x.color.name}
-                                            className="size-5 rounded-full border border-foreground/20"
-                                            style={{
-                                                backgroundColor: x.color.hex,
-                                            }}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        {x.isAvailable ? "Yes" : "No"}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {x.quantity}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                            {product.variants.map((variant) => {
+                                const variantName = Object.entries(
+                                    variant.combinations
+                                )
+                                    .map(([optionId, valueId]) => {
+                                        const option = product.options.find(
+                                            (opt) => opt.id === optionId
+                                        );
+                                        const value = option?.values.find(
+                                            (val) => val.id === valueId
+                                        );
+                                        return value?.name;
+                                    })
+                                    .filter(Boolean)
+                                    .join(" / ");
+
+                                return (
+                                    <TableRow key={variant.id}>
+                                        <TableCell>{variantName}</TableCell>
+
+                                        <TableCell>
+                                            {variant.nativeSku}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            {variant.sku || "N/A"}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            {formatPriceTag(
+                                                parseFloat(
+                                                    convertPaiseToRupees(
+                                                        variant.price
+                                                    )
+                                                ),
+                                                true
+                                            )}
+                                        </TableCell>
+
+                                        <TableCell>
+                                            {variant.quantity}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
 
                         <TableFooter>
                             <TableRow>
                                 <TableCell colSpan={4}>Total</TableCell>
-                                <TableCell className="text-right">
+                                <TableCell>
                                     {product.variants.reduce(
-                                        (acc, x) => acc + x.quantity,
+                                        (acc, variant) =>
+                                            acc + variant.quantity,
                                         0
                                     )}
                                 </TableCell>
+                                <TableCell />
                             </TableRow>
                         </TableFooter>
                     </Table>

@@ -22,6 +22,7 @@ import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import {
     BrandConfidential,
+    BrandConfidentialWithBrand,
     RejectBrandRequest,
     rejectBrandRequestSchema,
 } from "@/lib/validations";
@@ -33,7 +34,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 interface PageProps {
-    data: BrandConfidential;
+    data: BrandConfidentialWithBrand;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }

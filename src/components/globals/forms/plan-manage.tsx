@@ -129,9 +129,8 @@ export function PlanManageForm() {
 
                             <FormControl>
                                 <PriceInput
-                                    placeholder="2000.00"
+                                    placeholder="200000"
                                     currency="INR"
-                                    symbol="₹"
                                     {...field}
                                     onChange={(e) => {
                                         const regex = /^[0-9]*\.?[0-9]{0,2}$/;

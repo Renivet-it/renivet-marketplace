@@ -1,4 +1,3 @@
-import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldBrandPermission } from "@/config/permissions";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import {
@@ -6,7 +5,6 @@ import {
     isTRPCAuth,
     protectedProcedure,
 } from "@/lib/trpc/trpc";
-import { getUploadThingFileKey } from "@/lib/utils";
 import {
     createBrandConfidentialSchema,
     updateBrandConfidentialSchema,
@@ -41,7 +39,7 @@ export const confidentialsRouter = createTRPCRouter({
                 queries.brandConfidentials.createBrandConfidential(input),
                 queries.brands.updateBrandConfidentialStatus({
                     id,
-                    isConfidentialSentForVerification: true,
+                    confidentialVerificationStatus: "pending",
                 }),
                 brandCache.remove(id),
                 userCache.remove(existingBrand.ownerId),
@@ -75,81 +73,6 @@ export const confidentialsRouter = createTRPCRouter({
                     message: "Confidential already verified",
                 });
 
-            const filesToBeDeleted = [];
-
-            const existingBankAccountVerificationDocumentUrl = {
-                key: getUploadThingFileKey(
-                    existingBrandConfidential.bankAccountVerificationDocumentUrl
-                ),
-                url: existingBrandConfidential.bankAccountVerificationDocumentUrl,
-            };
-            const inputBankAccountVerificationDocumentUrl = {
-                key: getUploadThingFileKey(
-                    values.bankAccountVerificationDocumentUrl
-                ),
-                url: values.bankAccountVerificationDocumentUrl,
-            };
-
-            if (
-                existingBankAccountVerificationDocumentUrl.key !==
-                inputBankAccountVerificationDocumentUrl.key
-            )
-                filesToBeDeleted.push(
-                    existingBankAccountVerificationDocumentUrl.key
-                );
-
-            const existingUdyamRegistrationCertificateUrl =
-                existingBrandConfidential.udyamRegistrationCertificateUrl
-                    ? {
-                          key: getUploadThingFileKey(
-                              existingBrandConfidential.udyamRegistrationCertificateUrl
-                          ),
-                          url: existingBrandConfidential.udyamRegistrationCertificateUrl,
-                      }
-                    : null;
-            const inputUdyamRegistrationCertificateUrl =
-                values.udyamRegistrationCertificateUrl
-                    ? {
-                          key: getUploadThingFileKey(
-                              values.udyamRegistrationCertificateUrl
-                          ),
-                          url: values.udyamRegistrationCertificateUrl,
-                      }
-                    : null;
-
-            if (
-                existingUdyamRegistrationCertificateUrl &&
-                inputUdyamRegistrationCertificateUrl &&
-                existingUdyamRegistrationCertificateUrl.key !==
-                    inputUdyamRegistrationCertificateUrl.key
-            )
-                filesToBeDeleted.push(
-                    existingUdyamRegistrationCertificateUrl.key
-                );
-
-            const existingIecCertificateUrl =
-                existingBrandConfidential.iecCertificateUrl
-                    ? {
-                          key: getUploadThingFileKey(
-                              existingBrandConfidential.iecCertificateUrl
-                          ),
-                          url: existingBrandConfidential.iecCertificateUrl,
-                      }
-                    : null;
-            const inputIecCertificateUrl = values.iecCertificateUrl
-                ? {
-                      key: getUploadThingFileKey(values.iecCertificateUrl),
-                      url: values.iecCertificateUrl,
-                  }
-                : null;
-
-            if (
-                existingIecCertificateUrl &&
-                inputIecCertificateUrl &&
-                existingIecCertificateUrl.key !== inputIecCertificateUrl.key
-            )
-                filesToBeDeleted.push(existingIecCertificateUrl.key);
-
             const [data] = await Promise.all([
                 queries.brandConfidentials.updateBrandConfidential(id, values),
                 queries.brandConfidentials.updateBrandConfidentialStatus(id, {
@@ -157,13 +80,10 @@ export const confidentialsRouter = createTRPCRouter({
                 }),
                 queries.brands.updateBrandConfidentialStatus({
                     id,
-                    isConfidentialSentForVerification: true,
                     confidentialVerificationStatus: "pending",
                     confidentialVerificationRejectedAt: null,
                     confidentialVerificationRejectedReason: null,
                 }),
-                filesToBeDeleted.length > 0 &&
-                    utApi.deleteFiles(filesToBeDeleted),
                 brandCache.remove(id),
                 userCache.remove(existingBrandConfidential.brand.ownerId),
             ]);

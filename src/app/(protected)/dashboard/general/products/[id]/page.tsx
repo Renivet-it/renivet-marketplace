@@ -31,7 +31,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { id } = await params;
 
-    const existingProduct = await productQueries.getProduct(id);
+    const existingProduct = await productQueries.getProduct({ productId: id });
     if (!existingProduct)
         return {
             title: "Product not found",
@@ -39,8 +39,8 @@ export async function generateMetadata({
         };
 
     return {
-        title: `Review "${existingProduct.name}"`,
-        description: `Review the product details for "${existingProduct.name}" by ${existingProduct.brand.name}`,
+        title: `Review "${existingProduct.title}"`,
+        description: `Review the product details for "${existingProduct.title}" by ${existingProduct.brand.name}`,
     };
 }
 
@@ -57,7 +57,7 @@ export default function Page({ params }: PageProps) {
 async function ProductReviewFetch({ params }: PageProps) {
     const { id } = await params;
 
-    const existingProduct = await productQueries.getProduct(id);
+    const existingProduct = await productQueries.getProduct({ productId: id });
     if (!existingProduct) notFound();
 
     const [existingBrand, existingOwner] = await Promise.all([
@@ -68,12 +68,20 @@ async function ProductReviewFetch({ params }: PageProps) {
     if (!existingBrand) notFound();
     if (!existingOwner) notFound();
 
+    const websiteUrlRaw = existingProduct.brand.website;
+    const doesUrlIncludeHttp =
+        websiteUrlRaw?.includes("http://") ||
+        websiteUrlRaw?.includes("https://");
+    const websiteUrl = doesUrlIncludeHttp
+        ? websiteUrlRaw
+        : `http://${websiteUrlRaw}`;
+
     return (
         <>
             <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
                     <h1 className="text-2xl font-bold">
-                        Review &ldquo;{existingProduct.name}&rdquo;
+                        Review &ldquo;{existingProduct.title}&rdquo;
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Product submitted by {existingProduct.brand.name} (
@@ -83,14 +91,14 @@ async function ProductReviewFetch({ params }: PageProps) {
 
                 <Badge
                     variant={
-                        existingProduct.status === "pending"
+                        existingProduct.verificationStatus === "pending"
                             ? "default"
-                            : existingProduct.status === "approved"
+                            : existingProduct.verificationStatus === "approved"
                               ? "secondary"
                               : "destructive"
                     }
                 >
-                    {convertValueToLabel(existingProduct.status)}
+                    {convertValueToLabel(existingProduct.verificationStatus)}
                 </Badge>
             </div>
 
@@ -130,9 +138,9 @@ async function ProductReviewFetch({ params }: PageProps) {
 
                             <div>
                                 <h5 className="text-sm font-medium">Website</h5>
-                                {existingProduct.brand.website ? (
+                                {websiteUrl ? (
                                     <Link
-                                        href={existingProduct.brand.website}
+                                        href={websiteUrl}
                                         className="break-words text-sm text-primary underline"
                                         target="_blank"
                                     >
@@ -167,6 +175,40 @@ async function ProductReviewFetch({ params }: PageProps) {
                                         </div>
                                     </PopoverContent>
                                 </Popover>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Verification Status
+                                </h5>
+                                <Badge
+                                    variant={
+                                        existingProduct.brand
+                                            .confidentialVerificationStatus ===
+                                        "approved"
+                                            ? "secondary"
+                                            : existingProduct.brand
+                                                    .confidentialVerificationStatus ===
+                                                "rejected"
+                                              ? "destructive"
+                                              : "default"
+                                    }
+                                >
+                                    {convertValueToLabel(
+                                        existingProduct.brand
+                                            .confidentialVerificationStatus
+                                    )}
+                                </Badge>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    RazorPay ID
+                                </h5>
+                                <p className="text-sm">
+                                    {existingProduct.brand.rzpAccountId ||
+                                        "N/A"}
+                                </p>
                             </div>
 
                             <div>
@@ -235,7 +277,7 @@ async function ProductReviewFetch({ params }: PageProps) {
                     </CardContent>
                 </Card>
 
-                {existingProduct.status === "pending" && (
+                {existingProduct.verificationStatus === "pending" && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Action</CardTitle>

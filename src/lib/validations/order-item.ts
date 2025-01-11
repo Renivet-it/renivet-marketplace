@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { convertEmptyStringToNull } from "../utils";
 
 export const orderItemSchema = z.object({
     id: z
@@ -13,12 +14,21 @@ export const orderItemSchema = z.object({
             invalid_type_error: "Order ID must be a string",
         })
         .min(1, "Order ID is invalid"),
-    sku: z
+    productId: z
         .string({
-            required_error: "SKU is required",
-            invalid_type_error: "SKU must be a string",
+            required_error: "Product ID is required",
+            invalid_type_error: "Product ID must be a string",
         })
-        .min(1, "SKU is invalid"),
+        .uuid("Product ID is invalid"),
+    variantId: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Variant ID must be a string",
+            })
+            .uuid("Variant ID is invalid")
+            .nullable()
+    ),
     quantity: z
         .number({
             required_error: "Quantity is required",

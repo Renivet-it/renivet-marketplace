@@ -78,17 +78,12 @@ export const brandSchema = z.object({
             })
             .nullable()
     ),
-    isConfidentialSentForVerification: z.boolean({
-        required_error: "Is confidential sent for verification is required",
-        invalid_type_error:
-            "Is confidential sent for verification must be a boolean",
-    }),
     confidentialVerificationStatus: z.enum(
-        ["pending", "approved", "rejected"],
+        ["idle", "pending", "approved", "rejected"],
         {
             required_error: "Status is required",
             invalid_type_error:
-                "Status must be one of: pending, approved, rejected",
+                "Status must be one of: idle, pending, approved, rejected",
         }
     ),
     confidentialVerificationRejectedReason: z.preprocess(
@@ -127,7 +122,6 @@ export const createBrandSchema = brandSchema.omit({
     id: true,
     rzpAccountId: true,
     slug: true,
-    isConfidentialSentForVerification: true,
     confidentialVerificationStatus: true,
     confidentialVerificationRejectedReason: true,
     confidentialVerificationRejectedAt: true,
@@ -138,7 +132,6 @@ export const createBrandSchema = brandSchema.omit({
 export const updateBrandConfidentialStatusSchema = brandSchema
     .pick({
         id: true,
-        isConfidentialSentForVerification: true,
         confidentialVerificationStatus: true,
         confidentialVerificationRejectedReason: true,
         confidentialVerificationRejectedAt: true,

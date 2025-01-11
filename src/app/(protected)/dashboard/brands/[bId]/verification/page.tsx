@@ -1,6 +1,5 @@
 import { BrandConfidentialForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
-import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import {
     Notice,
@@ -9,7 +8,7 @@ import {
     NoticeTitle,
 } from "@/components/ui/notice-dash";
 import { brandConfidentialQueries } from "@/lib/db/queries";
-import { brandCache } from "@/lib/redis/methods";
+import { brandCache, mediaCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -35,7 +34,7 @@ export default function Page(props: PageProps) {
                 </div>
             </div>
 
-            <Suspense fallback={<TableSkeleton />}>
+            <Suspense>
                 <VerificationFetch {...props} />
             </Suspense>
         </DashShell>
@@ -45,15 +44,18 @@ export default function Page(props: PageProps) {
 async function VerificationFetch({ params }: PageProps) {
     const { bId } = await params;
 
-    const [existingBrand, existingBrandConfidential] = await Promise.all([
-        brandCache.get(bId),
-        brandConfidentialQueries.getBrandConfidential(bId),
-    ]);
+    const [existingBrand, existingBrandConfidential, media] = await Promise.all(
+        [
+            brandCache.get(bId),
+            brandConfidentialQueries.getBrandConfidential(bId),
+            mediaCache.getAll(bId),
+        ]
+    );
     if (!existingBrand) notFound();
 
     return (
         <>
-            {existingBrand.isConfidentialSentForVerification && (
+            {existingBrand.confidentialVerificationStatus === "pending" && (
                 <Notice>
                     <NoticeContent>
                         <NoticeTitle>
@@ -111,6 +113,7 @@ async function VerificationFetch({ params }: PageProps) {
             <BrandConfidentialForm
                 brand={existingBrand}
                 brandConfidential={existingBrandConfidential ?? undefined}
+                allMedia={media.data}
             />
         </>
     );
