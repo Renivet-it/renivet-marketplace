@@ -30,6 +30,12 @@ export function WishlistedProductCard({
     const [isCrossHovered, setIsCrossHovered] = useState(false);
     const [isMoveToCartModalOpen, setIsMoveToCartModalOpen] = useState(false);
 
+    let productPrice = 0;
+
+    if (!item.product.productHasVariants)
+        productPrice = item.product.price || 0;
+    else productPrice = Math.min(...item.product.variants.map((x) => x.price));
+
     const { refetch } = trpc.general.users.wishlist.getWishlist.useQuery({
         userId: item.userId,
     });
@@ -53,7 +59,7 @@ export function WishlistedProductCard({
         <>
             <div
                 className={cn("", className)}
-                title={item.product.name}
+                title={item.product.title}
                 {...props}
                 onMouseEnter={() => setIsProductHovered(true)}
                 onMouseLeave={() => setIsProductHovered(false)}
@@ -69,8 +75,11 @@ export function WishlistedProductCard({
                 >
                     <div className="relative aspect-[3/4] overflow-hidden">
                         <Image
-                            src={item.product.imageUrls[0]}
-                            alt={item.product.name}
+                            src={item.product.media[0].mediaItem!.url}
+                            alt={
+                                item.product.media[0].mediaItem!.url ??
+                                item.product.title
+                            }
                             width={1000}
                             height={1000}
                             className="size-full object-cover"
@@ -96,7 +105,7 @@ export function WishlistedProductCard({
                         >
                             <Icons.X className="size-4" />
                             <span className="sr-only">
-                                Remove {item.product.name} from wishlist
+                                Remove {item.product.title} from wishlist
                             </span>
                         </button>
 
@@ -130,7 +139,7 @@ export function WishlistedProductCard({
                 <div className="space-y-1 py-2 md:p-2">
                     <div>
                         <p className="truncate text-sm font-semibold">
-                            {item.product.name}
+                            {item.product.title}
                         </p>
                         <p className="text-xs text-muted-foreground">
                             {item.product.brand.name}
@@ -139,9 +148,7 @@ export function WishlistedProductCard({
 
                     <p className="text-sm font-semibold">
                         {formatPriceTag(
-                            parseFloat(
-                                convertPaiseToRupees(item.product.price)
-                            ),
+                            parseFloat(convertPaiseToRupees(productPrice)),
                             true
                         )}
                     </p>

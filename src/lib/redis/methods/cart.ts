@@ -6,14 +6,14 @@ import { redis } from "..";
 class UserCartCache {
     async get(userId: string) {
         const [dbCartsCount, keys] = await Promise.all([
-            userCartQueries.getUserCartProductCount(userId),
+            userCartQueries.getCartProductCountForUser(userId),
             redis.keys(`cart:${userId}:*`),
         ]);
 
         if (keys.length !== dbCartsCount) {
             await this.drop(userId);
 
-            const dbCarts = await userCartQueries.getUserCart(userId);
+            const dbCarts = await userCartQueries.getCartForUser(userId);
             if (!dbCarts.length) return [];
 
             const cachedCarts = cachedCartSchema
@@ -51,16 +51,25 @@ class UserCartCache {
         );
     }
 
-    async getProduct({ userId, sku }: { userId: string; sku: string }) {
-        const keyArray = ["cart", userId, sku];
-        const key = keyArray.join(":");
+    async getProduct({
+        userId,
+        productId,
+        variantId,
+    }: {
+        userId: string;
+        productId: string;
+        variantId?: string;
+    }) {
+        const keyArray = ["cart", userId, productId, variantId];
+        const key = keyArray.filter(Boolean).join(":");
 
         const cachedCart = await redis.get(key);
 
         if (!cachedCart) {
             const dbCart = await userCartQueries.getProductInCart({
                 userId,
-                sku,
+                productId,
+                variantId,
             });
             if (!dbCart) return null;
 
@@ -74,7 +83,8 @@ class UserCartCache {
     }
 
     async add(cart: CachedCart) {
-        const key = `cart:${cart.userId}:${cart.sku}`;
+        const keyArray = ["cart", cart.userId, cart.productId, cart.variantId];
+        const key = keyArray.filter(Boolean).join(":");
 
         return await redis.set(
             key,
@@ -89,7 +99,14 @@ class UserCartCache {
 
         await Promise.all(
             carts.map((cart) => {
-                const key = `cart:${cart.userId}:${cart.sku}`;
+                const keyArray = [
+                    "cart",
+                    cart.userId,
+                    cart.productId,
+                    cart.variantId,
+                ];
+                const key = keyArray.filter(Boolean).join(":");
+
                 pipeline.set(key, JSON.stringify(cart), "EX", 60 * 60 * 24 * 7);
             })
         );
@@ -97,9 +114,17 @@ class UserCartCache {
         return pipeline.exec();
     }
 
-    async remove({ userId, sku }: { userId: string; sku: string }) {
-        const keyArray = ["cart", userId, sku];
-        const key = keyArray.join(":");
+    async remove({
+        userId,
+        productId,
+        variantId,
+    }: {
+        userId: string;
+        productId: string;
+        variantId?: string;
+    }) {
+        const keyArray = ["cart", userId, productId, variantId];
+        const key = keyArray.filter(Boolean).join(":");
 
         return await redis.del(key);
     }

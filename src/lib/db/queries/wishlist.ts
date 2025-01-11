@@ -1,3 +1,4 @@
+import { mediaCache } from "@/lib/redis/methods";
 import { cachedWishlistSchema, CreateWishlist } from "@/lib/validations";
 import { and, eq } from "drizzle-orm";
 import { db } from "..";
@@ -16,21 +17,54 @@ class UserWishlistQuery {
                     with: {
                         brand: true,
                         variants: true,
+                        category: true,
+                        subcategory: true,
+                        productType: true,
+                        options: true,
                     },
                 },
             },
             where: eq(wishlists.userId, userId),
         });
 
-        const parsed = cachedWishlistSchema.array().parse(
-            data.map((x) => ({
-                ...x,
-                product: {
-                    ...x.product,
-                    price: x.product.price.toString(),
-                },
-            }))
+        const products = data.map((d) => d.product);
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
         );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        }));
+
+        const enhancedData = data.map((d) => ({
+            ...d,
+            product: enhancedProducts.find((p) => p.id === d.productId),
+        }));
+
+        const parsed = cachedWishlistSchema.array().parse(enhancedData);
         return parsed;
     }
 
@@ -41,6 +75,10 @@ class UserWishlistQuery {
                     with: {
                         brand: true,
                         variants: true,
+                        category: true,
+                        subcategory: true,
+                        productType: true,
+                        options: true,
                     },
                 },
             },
@@ -50,18 +88,43 @@ class UserWishlistQuery {
             ),
         });
 
-        const parsed = cachedWishlistSchema.optional().parse(
-            data
-                ? {
-                      ...data,
-                      product: {
-                          ...data?.product,
-                          price: data?.product.price.toString(),
-                      },
-                  }
-                : undefined
+        const product = data?.product;
+        if (!product) return null;
+
+        const mediaIds = new Set<string>();
+        product.media.forEach((media) => mediaIds.add(media.id));
+        product.variants.forEach((variant) => {
+            if (variant.image) mediaIds.add(variant.image);
+        });
+        if (product.sustainabilityCertificate)
+            mediaIds.add(product.sustainabilityCertificate);
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
         );
 
+        const enhancedProduct = {
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        };
+
+        const enhancedData = {
+            ...data,
+            product: enhancedProduct,
+        };
+
+        const parsed = cachedWishlistSchema.optional().parse(enhancedData);
         return parsed;
     }
 

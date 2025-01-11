@@ -35,16 +35,16 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
         .addQueryParam("href", productUrl)
         .addQueryParam(
             "hashtag",
-            `#${product.name} #${product.brand.name} #${siteConfig.name}`
+            `#${product.title} #${product.brand.name} #${siteConfig.name}`
         )
         .build();
 
     const xShareUrl = new URLBuilder("https://www.x.com/intent/tweet")
-        .addQueryParam("text", `Check out this product : ${product.name}`)
+        .addQueryParam("text", `Check out this product : ${product.title}`)
         .addQueryParam("url", productUrl)
         .addQueryParam(
             "hashtags",
-            `${product.name},${product.brand.name},${siteConfig.name}`
+            `${product.title},${product.brand.name},${siteConfig.name}`
         )
         .build();
 
@@ -52,10 +52,10 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
         "https://www.pinterest.com/pin/create/button/"
     )
         .addQueryParam("url", productUrl)
-        .addQueryParam("media", product.imageUrls[0])
+        .addQueryParam("media", product.media?.[0].mediaItem!.url)
         .addQueryParam(
             "description",
-            product.description.replace(/<[^>]*>/gm, "")
+            product.description?.replace(/<[^>]*>/gm, "") ?? ""
         )
         .addQueryParam("method", "button")
         .build();
@@ -70,7 +70,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
                 <div className="flex justify-between gap-2 md:gap-5">
                     <ProductShareLink
                         icon="Mail"
-                        href={`mailto:?subject=${encodeURIComponent(`Check out this product : ${product.name}`)}&body=${encodeURIComponent(productUrl)}`}
+                        href={`mailto:?subject=${encodeURIComponent(`Check out this product : ${product.title}`)}&body=${encodeURIComponent(productUrl)}`}
                     />
 
                     <ProductShareLink

@@ -22,6 +22,7 @@ import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import {
     BrandConfidential,
+    BrandConfidentialWithBrand,
     RejectBrandRequest,
     rejectBrandRequestSchema,
 } from "@/lib/validations";
@@ -33,7 +34,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 interface PageProps {
-    data: BrandConfidential;
+    data: BrandConfidentialWithBrand;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
@@ -74,7 +75,7 @@ export function VerificationRejectModal({
         });
 
     const { mutate: rejectVerification, isPending: isRejecting } =
-        trpc.general.brands.requests.updateRequestStatus.useMutation({
+        trpc.general.brands.verifications.rejectVerification.useMutation({
             onMutate: () => {
                 const toastId = toast.loading(
                     "Rejecting brand verification request..."
@@ -115,10 +116,7 @@ export function VerificationRejectModal({
                         onSubmit={form.handleSubmit((values) =>
                             rejectVerification({
                                 id: data.id,
-                                data: {
-                                    status: "rejected",
-                                    rejectionReason: values.rejectionReason,
-                                },
+                                rejectedReason: values.rejectionReason,
                             })
                         )}
                     >

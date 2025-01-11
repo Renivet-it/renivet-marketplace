@@ -17,9 +17,11 @@ import {
     slugify,
 } from "@/lib/utils";
 import {
+    brandConfidentialSchema,
     brandRequestSchema,
     createBrandRequestSchema,
     linkBrandToRazorpaySchema,
+    updateBrandConfidentialByAdminSchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -335,6 +337,49 @@ export const brandVerificationsRouter = createTRPCRouter({
 
             return data;
         }),
+    editDetails: protectedProcedure
+        .input(
+            z.object({
+                id: brandConfidentialSchema.shape.id,
+                values: updateBrandConfidentialByAdminSchema,
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            const existingBrandConfidential =
+                await queries.brandConfidentials.getBrandConfidential(id);
+            if (!existingBrandConfidential)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand verification not found",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "approved")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brand verification is already approved",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "rejected")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Brand verification is already rejected",
+                });
+
+            const updatedBrandConfidential = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidentialByAdmin(
+                    id,
+                    values
+                ),
+                brandCache.remove(existingBrandConfidential.brand.id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
+
+            return updatedBrandConfidential;
+        }),
     approveVerification: protectedProcedure
         .input(linkBrandToRazorpaySchema)
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
@@ -364,11 +409,13 @@ export const brandVerificationsRouter = createTRPCRouter({
 
             await queries.brands.linkBrandToRazorpay(input);
 
-            const updatedBrandConfidential =
-                await queries.brandConfidentials.updateBrandConfidentialStatus(
-                    id,
-                    { status: "approved" }
-                );
+            const updatedBrandConfidential = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidentialStatus(id, {
+                    status: "approved",
+                }),
+                brandCache.remove(existingBrandConfidential.brand.id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
 
             return updatedBrandConfidential;
         }),
@@ -410,14 +457,14 @@ export const brandVerificationsRouter = createTRPCRouter({
                     message: "Brand verification is already rejected",
                 });
 
-            const updatedBrandConfidential =
-                await queries.brandConfidentials.updateBrandConfidentialStatus(
-                    id,
-                    {
-                        status: "rejected",
-                        rejectedReason: rejectedReason ?? undefined,
-                    }
-                );
+            const updatedBrandConfidential = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidentialStatus(id, {
+                    status: "rejected",
+                    rejectedReason: rejectedReason ?? undefined,
+                }),
+                brandCache.remove(existingBrandConfidential.brand.id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
 
             return updatedBrandConfidential;
         }),

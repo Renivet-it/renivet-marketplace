@@ -10,19 +10,22 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input-general";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
-import { cn, handleClientError } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatPriceTag,
+    handleClientError,
+} from "@/lib/utils";
 import {
     CachedWishlist,
     CreateCart,
     createCartSchema,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -32,44 +35,86 @@ interface PageProps {
 }
 
 export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
-    const [sku, setSku] = useState<string | undefined>();
-    const [size, setSize] = useState<string | undefined>();
-    const [color, setColor] = useState<string | undefined>();
+    const [selectedSku, setSelectedSku] = useState<string | undefined>(
+        product.variants?.[0]?.nativeSku
+    );
+
+    const selectedVariant = product.variants.find(
+        (variant) => variant.nativeSku === selectedSku
+    );
+
+    const getAvailableVariantsForOption = useCallback(
+        (
+            optionId: string,
+            valueId: string,
+            currentSelections: Record<string, string>
+        ) => {
+            const testSelection = {
+                ...currentSelections,
+                [optionId]: valueId,
+            };
+
+            return product.variants.some((variant) => {
+                return Object.entries(testSelection).every(
+                    ([key, value]) => variant.combinations[key] === value
+                );
+            });
+        },
+        [product.variants]
+    );
+
+    const currentSelections = useMemo(() => {
+        if (!selectedVariant) return {};
+        return selectedVariant.combinations;
+    }, [selectedVariant]);
 
     const form = useForm<CreateCart>({
         resolver: zodResolver(createCartSchema),
         defaultValues: {
-            userId: userId,
+            productId: product.id,
+            variantId: selectedVariant?.id || null,
             quantity: 1,
-            sku: sku || "",
+            userId,
         },
     });
 
-    const sizes = Array.from(
-        new Set(product.variants.map((v) => v.size).sort())
+    const handleOptionSelect = useCallback(
+        (optionId: string, valueId: string) => {
+            const newSelections = { ...currentSelections, [optionId]: valueId };
+
+            const matchingVariant = product.variants.find((variant) =>
+                Object.entries(newSelections).every(
+                    ([key, value]) => variant.combinations[key] === value
+                )
+            );
+
+            if (matchingVariant) setSelectedSku(matchingVariant.nativeSku);
+        },
+        [currentSelections, product.variants, setSelectedSku]
     );
 
-    const colors = product.variants
-        .filter((v) => !v.isDeleted)
-        .filter((v) => v.size === size)
-        .map((v) => v.color)
-        .sort(
-            (a, b) => a.name.localeCompare(b.name) || a.hex.localeCompare(b.hex)
-        );
+    const productPrice = useMemo(() => {
+        if (!product.productHasVariants) return product.price ?? 0;
+        if (!selectedVariant) return 0;
 
-    useEffect(() => {
-        const currentSku = product.variants.find(
-            (v) => v.color.hex === color && v.size === size
-        )?.sku;
-
-        setSku(currentSku);
-        form.setValue("sku", currentSku || "");
+        return selectedVariant.price;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [color, size]);
+    }, [selectedSku]);
 
-    const { refetch: refetchCart } = trpc.general.users.cart.getCart.useQuery({
-        userId,
-    });
+    const productCompareAtPrice = useMemo(() => {
+        if (!product.productHasVariants) return product.compareAtPrice;
+        if (!selectedVariant) return null;
+
+        return productPrice > selectedVariant.price
+            ? null
+            : selectedVariant.compareAtPrice;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedSku, productPrice]);
+
+    const { refetch: refetchCart } =
+        trpc.general.users.cart.getCartForUser.useQuery({
+            userId,
+        });
     const { refetch: refetchWishlist } =
         trpc.general.users.wishlist.getWishlist.useQuery({ userId });
 
@@ -95,192 +140,199 @@ export function ProductCartMoveForm({ item: { product }, userId }: PageProps) {
         });
 
     return (
-        <Form {...form}>
-            <form
-                className="space-y-3 md:space-y-5"
-                onSubmit={form.handleSubmit((values) => {
-                    if (!values.sku)
-                        return toast.error("Please select a size or color");
-                    if (!product.isAvailable)
-                        return toast.error(
-                            "This product is currently out of stock. You can still add it to your wishlist."
-                        );
+        <>
+            <div className="md:space-y-1">
+                <div className="flex items-end gap-2">
+                    <p className="text-2xl font-semibold md:text-3xl">
+                        {formatPriceTag(
+                            parseFloat(convertPaiseToRupees(productPrice)),
+                            true
+                        )}
+                    </p>
 
-                    moveToCart(values);
-                })}
-            >
-                <div className="space-y-4">
-                    <Label className="font-semibold uppercase">
-                        Select Size
-                    </Label>
+                    {productCompareAtPrice && (
+                        <div className="flex items-center gap-2 text-xs font-semibold md:text-sm">
+                            <p className="text-red-800 line-through">
+                                {formatPriceTag(
+                                    parseFloat(
+                                        convertPaiseToRupees(
+                                            productCompareAtPrice
+                                        )
+                                    ),
+                                    true
+                                )}
+                            </p>
 
-                    <RadioGroup
-                        onValueChange={(value) => {
-                            setSize(value);
-                            setColor(undefined);
-                        }}
-                        defaultValue={size!}
-                        className="flex flex-wrap gap-2"
-                        disabled={!product.isAvailable}
-                    >
-                        {sizes.map((s, i) => (
-                            <div key={i}>
-                                <RadioGroupItem
-                                    value={s}
-                                    id={s}
-                                    disabled={!product.isAvailable}
-                                    className="sr-only"
-                                />
-
-                                <Label htmlFor={s}>
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div
-                                            title={s}
-                                            className={cn(
-                                                "flex size-12 cursor-pointer items-center justify-center rounded-full border border-foreground/30 p-2 text-sm",
-                                                s === size &&
-                                                    "bg-primary text-background",
-                                                s.length > 2 &&
-                                                    "size-auto px-3",
-                                                !product.isAvailable &&
-                                                    "cursor-not-allowed opacity-50"
-                                            )}
-                                        >
-                                            <span>{s}</span>
-                                        </div>
-                                    </div>
-                                </Label>
-                            </div>
-                        ))}
-                    </RadioGroup>
+                            <p className="text-accent/80">
+                                (
+                                {formatPriceTag(
+                                    parseFloat(
+                                        convertPaiseToRupees(
+                                            productCompareAtPrice - productPrice
+                                        )
+                                    )
+                                )}{" "}
+                                OFF)
+                            </p>
+                        </div>
+                    )}
                 </div>
 
-                {size && (
-                    <>
-                        <Separator />
+                <p className="text-xs font-semibold text-accent/80 md:text-sm">
+                    + 2% gateway fee at checkout
+                </p>
+            </div>
 
-                        {
-                            <div className="space-y-4">
-                                <Label className="font-semibold uppercase">
-                                    More Colors
-                                </Label>
+            <Form {...form}>
+                <form
+                    className="space-y-3 md:space-y-5"
+                    onSubmit={form.handleSubmit((values) => {
+                        if (
+                            !product.isAvailable ||
+                            !product.isActive ||
+                            !product.isPublished ||
+                            product.isDeleted ||
+                            product.verificationStatus !== "approved"
+                        )
+                            return toast.error(
+                                "Requested product is not available"
+                            );
 
-                                <RadioGroup
-                                    key={size}
-                                    onValueChange={(value) => setColor(value)}
-                                    defaultValue={color}
-                                    className="flex flex-wrap gap-2"
-                                    disabled={!product.isAvailable}
-                                >
-                                    {colors.map((c) => {
-                                        const variant = product.variants.find(
-                                            (v) =>
-                                                v.size === size &&
-                                                v.color.hex === c.hex
-                                        );
+                        moveToCart(values);
+                    })}
+                >
+                    <div className="space-y-6">
+                        {product.productHasVariants &&
+                            product.options.map((option) => (
+                                <FormField
+                                    key={option.id}
+                                    control={form.control}
+                                    name="variantId"
+                                    render={({ field }) => (
+                                        <FormItem className="space-y-3">
+                                            <FormLabel className="text-base font-semibold">
+                                                {option.name}
+                                            </FormLabel>
 
-                                        return (
-                                            <div key={c.name}>
-                                                <RadioGroupItem
-                                                    value={c.hex}
-                                                    id={c.name}
-                                                    className="sr-only"
-                                                    disabled={
-                                                        !product.isAvailable ||
-                                                        !variant?.isAvailable ||
-                                                        variant?.quantity === 0
+                                            <FormControl>
+                                                <RadioGroup
+                                                    value={
+                                                        currentSelections[
+                                                            option.id
+                                                        ]
                                                     }
-                                                />
+                                                    onValueChange={(value) => {
+                                                        handleOptionSelect(
+                                                            option.id,
+                                                            value
+                                                        );
+                                                        const variant =
+                                                            product.variants.find(
+                                                                (v) =>
+                                                                    Object.entries(
+                                                                        {
+                                                                            ...currentSelections,
+                                                                            [option.id]:
+                                                                                value,
+                                                                        }
+                                                                    ).every(
+                                                                        ([
+                                                                            k,
+                                                                            val,
+                                                                        ]) =>
+                                                                            v
+                                                                                .combinations[
+                                                                                k
+                                                                            ] ===
+                                                                            val
+                                                                    )
+                                                            );
+                                                        if (variant)
+                                                            field.onChange(
+                                                                variant.id
+                                                            );
+                                                    }}
+                                                    className="flex flex-wrap items-center gap-2"
+                                                >
+                                                    {option.values.map(
+                                                        (value) => {
+                                                            const isAvailable =
+                                                                getAvailableVariantsForOption(
+                                                                    option.id,
+                                                                    value.id,
+                                                                    currentSelections
+                                                                );
 
-                                                <Label htmlFor={c.name}>
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <div
-                                                            title={c.name}
-                                                            className={cn(
-                                                                "size-12 cursor-pointer rounded-full border border-foreground/10",
-                                                                c.hex ===
-                                                                    color &&
-                                                                    "outline outline-2 outline-offset-1",
-                                                                (!product.isAvailable ||
-                                                                    !variant?.isAvailable ||
-                                                                    variant?.quantity ===
-                                                                        0) &&
-                                                                    "cursor-not-allowed opacity-50"
-                                                            )}
-                                                            style={{
-                                                                backgroundColor:
-                                                                    c.hex,
-                                                            }}
-                                                        >
-                                                            <span className="sr-only">
-                                                                {c.name}
-                                                            </span>
-                                                        </div>
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        value.id
+                                                                    }
+                                                                >
+                                                                    <RadioGroupItem
+                                                                        value={
+                                                                            value.id
+                                                                        }
+                                                                        id={
+                                                                            value.id
+                                                                        }
+                                                                        className="peer sr-only"
+                                                                        disabled={
+                                                                            !isAvailable
+                                                                        }
+                                                                    />
 
-                                                        <span
-                                                            className={cn(
-                                                                "text-sm",
-                                                                c.hex ===
-                                                                    color &&
-                                                                    "font-semibold",
-                                                                (!variant?.isAvailable ||
-                                                                    variant?.quantity ===
-                                                                        0) &&
-                                                                    "text-destructive line-through"
-                                                            )}
-                                                        >
-                                                            {c.name}
-                                                        </span>
+                                                                    <Label
+                                                                        htmlFor={
+                                                                            value.id
+                                                                        }
+                                                                        className={cn(
+                                                                            "flex cursor-pointer items-center justify-center rounded-full border p-2 px-6 text-sm font-medium peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground",
+                                                                            !isAvailable &&
+                                                                                "cursor-not-allowed opacity-50"
+                                                                        )}
+                                                                    >
+                                                                        {
+                                                                            value.name
+                                                                        }
+                                                                    </Label>
+                                                                </div>
+                                                            );
+                                                        }
+                                                    )}
+                                                </RadioGroup>
+                                            </FormControl>
 
-                                                        {!!variant?.quantity &&
-                                                            variant.quantity <
-                                                                3 && (
-                                                                <span className="text-xs text-destructive">
-                                                                    {
-                                                                        variant.quantity
-                                                                    }{" "}
-                                                                    left
-                                                                </span>
-                                                            )}
-                                                    </div>
-                                                </Label>
-                                            </div>
-                                        );
-                                    })}
-                                </RadioGroup>
-                            </div>
-                        }
-                    </>
-                )}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            ))}
+                    </div>
 
-                <FormField
-                    control={form.control}
-                    name="sku"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="hidden">SKU</FormLabel>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="reset" variant="ghost" size="sm">
+                                Cancel
+                            </Button>
+                        </DialogClose>
 
-                            <FormControl>
-                                <Input {...field} readOnly className="hidden" />
-                            </FormControl>
-
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="reset" variant="ghost" size="sm">
-                            Cancel
+                        <Button
+                            type="submit"
+                            size="sm"
+                            disabled={
+                                isMoving ||
+                                !product.isAvailable ||
+                                (selectedVariant &&
+                                    (selectedVariant.isDeleted ||
+                                        selectedVariant?.quantity === 0))
+                            }
+                        >
+                            Move to Cart
                         </Button>
-                    </DialogClose>
-
-                    <Button type="submit" size="sm" disabled={isMoving}>
-                        Move to Cart
-                    </Button>
-                </DialogFooter>
-            </form>
-        </Form>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </>
     );
 }

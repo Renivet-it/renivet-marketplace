@@ -1,69 +1,141 @@
+import { mediaCache } from "@/lib/redis/methods";
 import { cachedCartSchema, CreateCart, UpdateCart } from "@/lib/validations";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "..";
 import { carts } from "../schema";
 
 class UserCartQuery {
-    async getUserCartProductCount(userId: string) {
+    async getCartProductCountForUser(userId: string) {
         const data = await db.$count(carts, eq(carts.userId, userId));
         return +data || 0;
     }
 
-    async getUserCart(userId: string) {
+    async getCartForUser(userId: string) {
         const data = await db.query.carts.findMany({
             with: {
-                item: {
+                product: {
                     with: {
-                        product: {
-                            with: {
-                                brand: true,
-                                variants: true,
-                            },
-                        },
+                        brand: true,
+                        variants: true,
+                        category: true,
+                        subcategory: true,
+                        productType: true,
+                        options: true,
                     },
                 },
+                variant: true,
             },
             where: eq(carts.userId, userId),
         });
 
-        const parsed = cachedCartSchema.array().parse(
-            data.map((x) => ({
-                ...x,
-                size: x.item.size,
-                color: x.item.color,
-                item: x.item.product,
-            }))
+        const products = data.map((d) => d.product);
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
         );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        }));
+
+        const enhancedData = data.map((d) => ({
+            ...d,
+            product: enhancedProducts.find((p) => p.id === d.productId),
+        }));
+
+        const parsed = cachedCartSchema.array().parse(enhancedData);
         return parsed;
     }
 
-    async getProductInCart({ userId, sku }: { userId: string; sku: string }) {
+    async getProductInCart({
+        userId,
+        productId,
+        variantId,
+    }: {
+        userId: string;
+        productId: string;
+        variantId?: string;
+    }) {
         const data = await db.query.carts.findFirst({
             with: {
-                item: {
+                product: {
                     with: {
-                        product: {
-                            with: {
-                                brand: true,
-                                variants: true,
-                            },
-                        },
+                        brand: true,
+                        variants: true,
+                        category: true,
+                        subcategory: true,
+                        productType: true,
+                        options: true,
                     },
                 },
+                variant: true,
             },
-            where: and(eq(carts.userId, userId), eq(carts.sku, sku)),
+            where: and(
+                eq(carts.userId, userId),
+                eq(carts.productId, productId),
+                variantId ? eq(carts.variantId, variantId) : undefined
+            ),
         });
 
-        const parsed = cachedCartSchema.optional().parse(
-            data
-                ? {
-                      ...data,
-                      size: data.item.size,
-                      color: data.item.color,
-                      item: data.item.product,
-                  }
-                : undefined
+        const product = data?.product;
+        if (!product) return null;
+
+        const mediaIds = new Set<string>();
+        product.media.forEach((media) => mediaIds.add(media.id));
+        product.variants.forEach((variant) => {
+            if (variant.image) mediaIds.add(variant.image);
+        });
+        if (product.sustainabilityCertificate)
+            mediaIds.add(product.sustainabilityCertificate);
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
         );
+
+        const enhancedProduct = {
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        };
+
+        const enhancedData = {
+            ...data,
+            product: enhancedProduct,
+        };
+
+        const parsed = cachedCartSchema.optional().parse(enhancedData);
         return parsed;
     }
 
@@ -115,17 +187,17 @@ class UserCartQuery {
         return data;
     }
 
-    async deleteProductsFromCart(userId: string, skus: string[]) {
+    async deleteProductsFromCart(userId: string, ids: string[]) {
         const data = await db
             .delete(carts)
-            .where(and(inArray(carts.sku, skus), eq(carts.userId, userId)))
+            .where(and(inArray(carts.id, ids), eq(carts.userId, userId)))
             .returning()
             .then((res) => res[0]);
 
         return data;
     }
 
-    async dropUserCart(userId: string) {
+    async dropCartOfUser(userId: string) {
         const data = await db
             .delete(carts)
             .where(eq(carts.userId, userId))

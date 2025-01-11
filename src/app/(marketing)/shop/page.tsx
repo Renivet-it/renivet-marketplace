@@ -12,7 +12,7 @@ import {
     subCategoryCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
-import { cn, convertPriceToPaise } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
@@ -92,7 +92,6 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         limit: limitRaw,
         search: searchRaw,
         brandIds: brandIdsRaw,
-        colors: colorsRaw,
         minPrice: minPriceRaw,
         maxPrice: maxPriceRaw,
         categoryId: categoryIdRaw,
@@ -107,7 +106,6 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const search = !!searchRaw?.length ? searchRaw : undefined;
     const brandIds = !!brandIdsRaw?.length ? brandIdsRaw.split(",") : undefined;
-    const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const minPrice =
         minPriceRaw && !isNaN(parseInt(minPriceRaw))
             ? parseInt(minPriceRaw) < 0
@@ -136,15 +134,16 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             limit,
             search,
             isAvailable: true,
+            isActive: true,
             isPublished: true,
-            status: "approved",
+            isDeleted: false,
+            verificationStatus: "approved",
             brandIds,
-            colors,
-            minPrice: convertPriceToPaise(minPrice),
-            maxPrice: convertPriceToPaise(maxPrice),
-            categoryId,
-            subCategoryId,
-            productTypeId,
+            minPrice,
+            maxPrice,
+            categoryId: !!categoryId?.length ? categoryId : undefined,
+            subcategoryId: !!subCategoryId?.length ? subCategoryId : undefined,
+            productTypeId: !!productTypeId?.length ? productTypeId : undefined,
             sortBy,
             sortOrder,
         }),

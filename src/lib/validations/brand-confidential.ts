@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
 import { brandSchema } from "./brand";
+import { cachedBrandMediaItemSchema } from "./brand-media-item";
 
 export const brandConfidentialSchema = z.object({
     id: z
@@ -45,14 +46,13 @@ export const brandConfidentialSchema = z.object({
             invalid_type_error: "Bank IFSC Code must be a string",
         })
         .min(1, "Bank IFSC Code must be at least 1 characters long"),
-    bankAccountVerificationDocumentUrl: z
+    bankAccountVerificationDocument: z
         .string({
-            required_error:
-                "Bank Account Verification Document URL is required",
+            required_error: "Bank Account Verification Document is required",
             invalid_type_error:
-                "Bank Account Verification Document URL must be a string",
+                "Bank Account Verification Document must be a string",
         })
-        .url("Bank Account Verification Document URL is invalid"),
+        .uuid("ID is invalid"),
     authorizedSignatoryName: z
         .string({
             required_error: "Authorized Signatory Name is required",
@@ -74,23 +74,21 @@ export const brandConfidentialSchema = z.object({
             10,
             "Authorized Signatory Phone must be at least 10 characters long"
         ),
-    udyamRegistrationCertificateUrl: z.preprocess(
+    udyamRegistrationCertificate: z.preprocess(
         convertEmptyStringToNull,
         z
             .string({
                 invalid_type_error:
-                    "UDYAM Registration Certificate URL must be a string",
+                    "Udyam Registration Certificate URL must be a string",
             })
-            .url("UDYAM Registration Certificate URL is invalid")
             .nullable()
     ),
-    iecCertificateUrl: z.preprocess(
+    iecCertificate: z.preprocess(
         convertEmptyStringToNull,
         z
             .string({
                 invalid_type_error: "IEC Certificate URL must be a string",
             })
-            .url("IEC Certificate URL is invalid")
             .nullable()
     ),
     addressLine1: z
@@ -148,11 +146,29 @@ export const brandConfidentialSchema = z.object({
         .transform((v) => new Date(v)),
 });
 
+export const brandConfidentialWithBrandSchema = brandConfidentialSchema.extend({
+    bankAccountVerificationDocument: cachedBrandMediaItemSchema.nullish(),
+    udyamRegistrationCertificate: cachedBrandMediaItemSchema.nullish(),
+    iecCertificate: cachedBrandMediaItemSchema.nullish(),
+    brand: brandSchema,
+});
+
 export const createBrandConfidentialSchema = brandConfidentialSchema.omit({
     verificationStatus: true,
     createdAt: true,
     updatedAt: true,
 });
+
+export const updateBrandConfidentialByAdminSchema =
+    brandConfidentialSchema.omit({
+        id: true,
+        verificationStatus: true,
+        bankAccountVerificationDocument: true,
+        iecCertificate: true,
+        udyamRegistrationCertificate: true,
+        createdAt: true,
+        updatedAt: true,
+    });
 
 export const updateBrandConfidentialSchema = createBrandConfidentialSchema.omit(
     { id: true }
@@ -179,8 +195,14 @@ export const linkBrandToRazorpaySchema = brandConfidentialSchema
     });
 
 export type BrandConfidential = z.infer<typeof brandConfidentialSchema>;
+export type BrandConfidentialWithBrand = z.infer<
+    typeof brandConfidentialWithBrandSchema
+>;
 export type CreateBrandConfidential = z.infer<
     typeof createBrandConfidentialSchema
+>;
+export type UpdateBrandConfidentialByAdmin = z.infer<
+    typeof updateBrandConfidentialByAdminSchema
 >;
 export type UpdateBrandConfidential = z.infer<
     typeof updateBrandConfidentialSchema

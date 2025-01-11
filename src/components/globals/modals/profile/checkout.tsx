@@ -9,15 +9,14 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog-general";
 import { Button } from "@/components/ui/button-general";
-import { DEFAULT_MESSAGES } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import {
-    calculateTotalPrice,
+    convertPaiseToRupees,
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useMemo } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -29,21 +28,53 @@ interface PageProps {
 export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
 
-    const { data: userCart } = trpc.general.users.cart.getCart.useQuery({
+    const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery({
         userId,
     });
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
 
-    const itemsCount =
-        userCart
-            ?.filter((item) => item.status)
-            .reduce((acc, item) => acc + item.quantity, 0) || 0;
+    const availableCart = useMemo(
+        () =>
+            userCart?.filter(
+                (c) =>
+                    c.product.isPublished &&
+                    c.product.verificationStatus === "approved" &&
+                    !c.product.isDeleted &&
+                    c.product.isAvailable &&
+                    (!!c.product.quantity ? c.product.quantity > 0 : true) &&
+                    c.product.isActive &&
+                    (!c.variant ||
+                        (c.variant &&
+                            !c.variant.isDeleted &&
+                            c.variant.quantity > 0))
+            ) || [],
+        [userCart]
+    );
 
-    const priceList = calculateTotalPrice(
-        userCart
-            ?.filter((item) => item.status)
-            .map((item) => item.item.price * item.quantity) || []
+    const itemsCount = useMemo(
+        () =>
+            availableCart
+                .filter((item) => item.status)
+                .reduce((acc, item) => acc + item.quantity, 0) || 0,
+        [availableCart]
+    );
+
+    const totalPrice = useMemo(
+        () =>
+            availableCart
+                .filter((item) => item.status)
+                .reduce((acc, item) => {
+                    const itemPrice = item.variantId
+                        ? (item.product.variants.find(
+                              (v) => v.id === item.variantId
+                          )?.price ??
+                          item.product.price ??
+                          0)
+                        : (item.product.price ?? 0);
+                    return acc + itemPrice * item.quantity;
+                }, 0) || 0,
+        [availableCart]
     );
 
     const { mutate: createOrder, isPending: isOrderCreating } =
@@ -75,9 +106,12 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                         <span className="font-semibold">{itemsCount}</span>{" "}
                         items of total{" "}
                         <span className="font-semibold">
-                            {formatPriceTag(priceList.items, true)}
+                            {formatPriceTag(
+                                parseFloat(convertPaiseToRupees(totalPrice)),
+                                true
+                            )}
                         </span>{" "}
-                        (excluding delivery and tax) .
+                        (excluding gateway fee and optional delivery charges).
                         <br />
                         <br />
                         Proceeding will create an order and will redirect you to

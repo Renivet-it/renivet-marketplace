@@ -15,7 +15,14 @@ import { toast } from "sonner";
 import { ValidationError, WebhookVerificationError } from "svix";
 import { twMerge } from "tailwind-merge";
 import { ZodError } from "zod";
-import { Address, ResponseMessages, Role } from "./validations";
+import {
+    Address,
+    ProductOption,
+    ProductVariant,
+    ProductVariantGroup,
+    ResponseMessages,
+    Role,
+} from "./validations";
 
 export function wait(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -397,8 +404,18 @@ export function convertBytesToHumanReadable(bytes: number) {
     return `${parseFloat((bytes / Math.pow(1024, i)).toFixed(2))} ${sizes[i]}`;
 }
 
+export function convertFileTypeToHumanReadable(type: string) {
+    const [mainType, subType] = type.split("/");
+    if (mainType !== "application") return convertValueToLabel(mainType);
+    return convertValueToLabel(subType);
+}
+
 export function convertEmptyStringToNull(data: unknown) {
     return typeof data === "string" && data === "" ? null : data;
+}
+
+export function convertUndefinedToNull(data: unknown) {
+    return typeof data === "undefined" ? null : data;
 }
 
 export function generateBrandRoleSlug(roleName: string, brandId: string) {
@@ -465,6 +482,106 @@ export function convertMsToHumanReadable(ms: number) {
     }${seconds % 60}s`;
 }
 
-export function generateSKU() {
-    return (init({ length: 6 })() + "-" + init({ length: 4 })()).toUpperCase();
+export function generateSKU(
+    opts: {
+        prefix?: string;
+        separator?: string;
+        brand?: {
+            id: string;
+            name: string;
+        };
+        category?: string;
+        subcategory?: string;
+        productType?: string;
+        options?: {
+            name: string;
+            value: string;
+        }[];
+    } = {}
+) {
+    if (!opts.prefix) opts.prefix = "RN";
+    if (!opts.separator) opts.separator = "-";
+
+    const sku = [opts.prefix];
+
+    if (opts.brand) {
+        const brandCode = opts.brand.name.slice(0, 3) + opts.brand.id.slice(-4);
+        sku.push(brandCode);
+    }
+
+    if (opts.category) sku.push(opts.category.slice(0, 3));
+    if (opts.subcategory) sku.push(opts.subcategory.slice(0, 3));
+    if (opts.productType) sku.push(opts.productType.slice(0, 3));
+
+    if (opts.options) {
+        for (const option of opts.options) {
+            const optionName = option.name.slice(0, 1);
+            const optionValue = option.value;
+            sku.push(`${optionName}${optionValue}`);
+        }
+    }
+
+    const random = Math.random().toString(36).substring(7);
+    sku.push(random);
+
+    return sku.join(opts.separator).toUpperCase();
+}
+
+export function generateCombinations(
+    options: ProductOption[]
+): Record<string, string>[] {
+    if (options.length === 0) return [];
+
+    const combinations: Record<string, string>[] = [];
+    const optionArrays = options.map((option) =>
+        option.values.map((value) => ({
+            [option.id]: value.id,
+            optionName: option.name,
+            valueName: value.name,
+        }))
+    );
+
+    function combine(current: Record<string, string>, depth: number) {
+        if (depth === options.length) {
+            combinations.push(current);
+            return;
+        }
+
+        optionArrays[depth].forEach((option) => {
+            combine(
+                {
+                    ...current,
+                    [Object.keys(option)[0]]: option[Object.keys(option)[0]],
+                },
+                depth + 1
+            );
+        });
+    }
+
+    combine({}, 0);
+    return combinations;
+}
+
+export function groupVariants(
+    variants: ProductVariant[],
+    groupBy: string
+): ProductVariantGroup[] {
+    const groups = new Map<string, ProductVariantGroup>();
+
+    variants.forEach((variant) => {
+        const key = variant.combinations[groupBy];
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                value: key,
+                variants: [],
+                totalQuantity: 0,
+            });
+        }
+        const group = groups.get(key)!;
+        group.variants.push(variant);
+        group.totalQuantity += variant.quantity;
+    });
+
+    return Array.from(groups.values());
 }

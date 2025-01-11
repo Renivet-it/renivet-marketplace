@@ -28,7 +28,9 @@ export function RemoveProductFromCartModal({
     isOpen,
     setIsOpen,
 }: PageProps) {
-    const { refetch } = trpc.general.users.cart.getCart.useQuery({ userId });
+    const { refetch } = trpc.general.users.cart.getCartForUser.useQuery({
+        userId,
+    });
 
     const { mutate: removeProduct, isPending: isRemoving } =
         trpc.general.users.cart.removeProductInCart.useMutation({
@@ -77,7 +79,8 @@ export function RemoveProductFromCartModal({
                         onClick={() =>
                             removeProduct({
                                 userId,
-                                sku: item.sku,
+                                productId: item.productId,
+                                variantId: item.variantId,
                             })
                         }
                     >

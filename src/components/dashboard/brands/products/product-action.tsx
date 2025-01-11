@@ -1,9 +1,11 @@
 "use client";
 
 import {
+    ProductActivationModal,
     ProductAvailablityModal,
     ProductDeleteModal,
     ProductPublishModal,
+    ProductRejectionViewModal,
     ProductSendReviewModal,
 } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
@@ -27,16 +29,14 @@ interface PageProps {
 }
 
 export function ProductAction({ product }: PageProps) {
+    const [isRejectionViewModalOpen, setIsRejectionViewModalOpen] =
+        useState(false);
     const [isSendForReviewModalOpen, setIsSendForReviewModalOpen] =
         useState(false);
+    const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
     const [isAvailablityModalOpen, setIsAvailablityModalOpen] = useState(false);
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
-    const handleCopyId = (id: string) => {
-        navigator.clipboard.writeText(id);
-        return toast.success("ID copied to clipboard");
-    };
 
     return (
         <>
@@ -68,7 +68,10 @@ export function ProductAction({ product }: PageProps) {
                         )}
 
                         <DropdownMenuItem
-                            onClick={() => handleCopyId(product.id)}
+                            onClick={() => {
+                                navigator.clipboard.writeText(product.id);
+                                return toast.success("ID copied to clipboard");
+                            }}
                         >
                             <Icons.Copy className="size-4" />
                             <span>Copy ID</span>
@@ -77,25 +80,9 @@ export function ProductAction({ product }: PageProps) {
 
                     <DropdownMenuSeparator />
 
-                    {!product.isPublished &&
-                        (product.status === "idle" ||
-                            product.status === "rejected") && (
-                            <DropdownMenuItem
-                                asChild
-                                disabled={product.isPublished}
-                            >
-                                <Link
-                                    href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/categorize`}
-                                >
-                                    <Icons.Pencil className="size-4" />
-                                    <span>Categorize</span>
-                                </Link>
-                            </DropdownMenuItem>
-                        )}
-
                     <DropdownMenuGroup>
                         <DropdownMenuItem
-                            disabled={product.isSentForReview}
+                            disabled={product.verificationStatus === "pending"}
                             asChild
                         >
                             <Link
@@ -107,27 +94,44 @@ export function ProductAction({ product }: PageProps) {
                         </DropdownMenuItem>
 
                         {product.isPublished && (
-                            <DropdownMenuItem
-                                disabled={
-                                    product.isSentForReview ||
-                                    !product.isPublished
-                                }
-                                onClick={() => setIsAvailablityModalOpen(true)}
-                            >
-                                {product.isAvailable ? (
-                                    <Icons.X className="size-4" />
-                                ) : (
-                                    <Icons.Check className="size-4" />
-                                )}
-                                <span>
-                                    {product.isAvailable
-                                        ? "Mark as Unavailable"
-                                        : "Mark as Available"}
-                                </span>
-                            </DropdownMenuItem>
+                            <>
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        setIsAvailablityModalOpen(true)
+                                    }
+                                >
+                                    {product.isAvailable ? (
+                                        <Icons.X className="size-4" />
+                                    ) : (
+                                        <Icons.Check className="size-4" />
+                                    )}
+                                    <span>
+                                        {product.isAvailable
+                                            ? "Mark as Unavailable"
+                                            : "Mark as Available"}
+                                    </span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        setIsActivationModalOpen(true)
+                                    }
+                                >
+                                    {product.isActive ? (
+                                        <Icons.ChevronDown className="size-4" />
+                                    ) : (
+                                        <Icons.ChevronUp className="size-4" />
+                                    )}
+                                    <span>
+                                        {product.isActive
+                                            ? "Deactivate"
+                                            : "Activate"}
+                                    </span>
+                                </DropdownMenuItem>
+                            </>
                         )}
 
-                        {product.status === "idle" && (
+                        {product.verificationStatus === "idle" && (
                             <DropdownMenuItem
                                 onClick={() =>
                                     setIsSendForReviewModalOpen(true)
@@ -138,19 +142,30 @@ export function ProductAction({ product }: PageProps) {
                             </DropdownMenuItem>
                         )}
 
-                        {product.status === "rejected" && (
-                            <DropdownMenuItem
-                                onClick={() =>
-                                    setIsSendForReviewModalOpen(true)
-                                }
-                            >
-                                <Icons.Shield className="size-4" />
-                                <span>Resend for Review</span>
-                            </DropdownMenuItem>
+                        {product.verificationStatus === "rejected" && (
+                            <>
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        setIsSendForReviewModalOpen(true)
+                                    }
+                                >
+                                    <Icons.Shield className="size-4" />
+                                    <span>Resend for Review</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        setIsRejectionViewModalOpen(true)
+                                    }
+                                >
+                                    <Icons.AlertTriangle className="size-4" />
+                                    <span>View Reason</span>
+                                </DropdownMenuItem>
+                            </>
                         )}
 
                         {!product.isPublished &&
-                            product.status === "approved" && (
+                            product.verificationStatus === "approved" && (
                                 <DropdownMenuItem
                                     onClick={() => setIsPublishModalOpen(true)}
                                 >
@@ -171,10 +186,11 @@ export function ProductAction({ product }: PageProps) {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <ProductPublishModal
+            <ProductSendReviewModal
                 product={product}
-                isOpen={isPublishModalOpen}
-                setIsOpen={setIsPublishModalOpen}
+                isOpen={isSendForReviewModalOpen}
+                setIsOpen={setIsSendForReviewModalOpen}
+                isResend={product.verificationStatus === "rejected"}
             />
 
             <ProductAvailablityModal
@@ -183,17 +199,28 @@ export function ProductAction({ product }: PageProps) {
                 setIsOpen={setIsAvailablityModalOpen}
             />
 
+            <ProductActivationModal
+                product={product}
+                isOpen={isActivationModalOpen}
+                setIsOpen={setIsActivationModalOpen}
+            />
+
+            <ProductPublishModal
+                product={product}
+                isOpen={isPublishModalOpen}
+                setIsOpen={setIsPublishModalOpen}
+            />
+
+            <ProductRejectionViewModal
+                product={product}
+                isOpen={isRejectionViewModalOpen}
+                setIsOpen={setIsRejectionViewModalOpen}
+            />
+
             <ProductDeleteModal
                 product={product}
                 isOpen={isDeleteModalOpen}
                 setIsOpen={setIsDeleteModalOpen}
-            />
-
-            <ProductSendReviewModal
-                product={product}
-                isOpen={isSendForReviewModalOpen}
-                setIsOpen={setIsSendForReviewModalOpen}
-                isResend={product.status === "rejected"}
             />
         </>
     );

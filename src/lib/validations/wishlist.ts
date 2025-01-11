@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { brandSchema } from "./brand";
-import { productWithBrandSchema } from "./product";
+import {
+    enhancedProductVariantSchema,
+    productWithBrandSchema,
+} from "./product";
 
 export const wishlistSchema = z.object({
     id: z
@@ -44,17 +47,29 @@ export const createWishlistSchema = wishlistSchema.omit({
 export const updateWishlistSchema = createWishlistSchema;
 
 export const wishlistWithProductSchema = wishlistSchema.extend({
-    product: productWithBrandSchema.omit({
-        categories: true,
-    }),
+    product: productWithBrandSchema,
 });
 
 export const cachedWishlistSchema = wishlistSchema.extend({
     product: productWithBrandSchema
-        .omit({
-            categories: true,
-            description: true,
+        .pick({
+            id: true,
+            productHasVariants: true,
+            title: true,
+            price: true,
+            compareAtPrice: true,
+            variants: true,
+            options: true,
+            slug: true,
+            media: true,
+            sku: true,
+            nativeSku: true,
+            quantity: true,
+            isActive: true,
             isPublished: true,
+            isAvailable: true,
+            verificationStatus: true,
+            isDeleted: true,
         })
         .extend({
             brand: brandSchema.pick({
@@ -62,6 +77,21 @@ export const cachedWishlistSchema = wishlistSchema.extend({
                 ownerId: true,
                 name: true,
             }),
+            variants: enhancedProductVariantSchema
+                .pick({
+                    id: true,
+                    price: true,
+                    compareAtPrice: true,
+                    image: true,
+                    mediaItem: true,
+                    productId: true,
+                    isDeleted: true,
+                    combinations: true,
+                    quantity: true,
+                    sku: true,
+                    nativeSku: true,
+                })
+                .array(),
         }),
 });
 

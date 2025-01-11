@@ -163,16 +163,16 @@ export const ordersRouter = createTRPCRouter({
                     line_items_total: input.totalItems,
                     shipping_fee: input.deliveryAmount,
                     receipt: receiptId,
-                    transfers: existingBrands.map((brand) => ({
-                        account: brand.rzpAccountId!,
-                        amount: input.items
-                            .filter((item) => item.brandId === brand.id)
-                            .reduce(
-                                (acc, item) => acc + item.price * item.quantity,
-                                0
-                            ),
-                        currency: "INR",
-                    })),
+                    // transfers: existingBrands.map((brand) => ({
+                    //     account: brand.rzpAccountId!,
+                    //     amount: input.items
+                    //         .filter((item) => item.brandId === brand.id)
+                    //         .reduce(
+                    //             (acc, item) => acc + item.price * item.quantity,
+                    //             0
+                    //         ),
+                    //     currency: "INR",
+                    // })),
                 });
 
                 const newOrder = await queries.orders.createOrder({

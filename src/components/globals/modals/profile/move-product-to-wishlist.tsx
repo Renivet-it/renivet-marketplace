@@ -28,9 +28,10 @@ export function MoveProductToWishlistModal({
     isOpen,
     setIsOpen,
 }: PageProps) {
-    const { refetch: refetchCart } = trpc.general.users.cart.getCart.useQuery({
-        userId,
-    });
+    const { refetch: refetchCart } =
+        trpc.general.users.cart.getCartForUser.useQuery({
+            userId,
+        });
     const { refetch: refetchWishlist } =
         trpc.general.users.wishlist.getWishlist.useQuery({ userId });
 
@@ -79,9 +80,9 @@ export function MoveProductToWishlistModal({
                         disabled={isMoving}
                         onClick={() =>
                             moveProduct({
-                                productId: item.item.id,
-                                sku: item.sku,
                                 userId,
+                                productId: item.productId,
+                                variantId: item.variantId,
                             })
                         }
                     >

@@ -1,7 +1,7 @@
 "use client";
 
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPriceToPaise } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
 import Link from "next/link";
 import {
@@ -47,10 +47,6 @@ export function ShopProducts({
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [colors] = useQueryState(
-        "colors",
-        parseAsArrayOf(parseAsString, ",").withDefault([])
-    );
     const [minPrice] = useQueryState("minPrice", parseAsInteger.withDefault(0));
     const [maxPrice] = useQueryState(
         "maxPrice",
@@ -83,14 +79,15 @@ export function ShopProducts({
             search,
             isPublished: true,
             isAvailable: true,
-            status: "approved",
+            isActive: true,
+            isDeleted: false,
+            verificationStatus: "approved",
             brandIds,
-            colors,
-            minPrice: convertPriceToPaise(minPrice < 0 ? 0 : minPrice),
-            maxPrice: convertPriceToPaise(maxPrice > 10000 ? 10000 : maxPrice),
-            categoryId,
-            subCategoryId,
-            productTypeId,
+            minPrice: minPrice < 0 ? 0 : minPrice,
+            maxPrice: maxPrice > 10000 ? 10000 : maxPrice,
+            categoryId: !!categoryId.length ? categoryId : undefined,
+            subcategoryId: !!subCategoryId.length ? subCategoryId : undefined,
+            productTypeId: !!productTypeId.length ? productTypeId : undefined,
             sortBy,
             sortOrder,
         },

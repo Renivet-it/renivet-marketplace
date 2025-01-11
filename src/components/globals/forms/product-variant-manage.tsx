@@ -1,444 +1,715 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import {
-    AlertDialog,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog-dash";
 import { Button } from "@/components/ui/button-dash";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { PRESET_COLORS } from "@/config/const";
-import { trpc } from "@/lib/trpc/client";
-import { cn, handleClientError } from "@/lib/utils";
-import { CreateProduct, ProductWithBrand } from "@/lib/validations";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { HexColorPicker } from "react-colorful";
-import { FieldArrayWithId, UseFormReturn } from "react-hook-form";
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select-dash";
+import { Separator } from "@/components/ui/separator";
+import {
+    Table,
+    TableBody,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { generateCombinations, generateSKU, groupVariants } from "@/lib/utils";
+import {
+    BrandMediaItem,
+    CachedBrand,
+    CreateProduct,
+    ProductWithBrand,
+} from "@/lib/validations";
+import { parse, unparse } from "papaparse";
+import { useEffect, useRef, useState } from "react";
+import {
+    FieldArrayWithId,
+    UseFieldArrayAppend,
+    UseFieldArrayRemove,
+    UseFieldArrayReplace,
+    UseFormReturn,
+} from "react-hook-form";
 import { toast } from "sonner";
+import { ProductVariantGroupManageForm } from "./product-variant-group-manage";
 
 interface PageProps {
-    form: UseFormReturn<CreateProduct>;
-    field: FieldArrayWithId<CreateProduct, "variants", "id">;
-    remove: (index?: number | number[]) => void;
-    index: number;
-    isCreating: boolean;
-    isUpdating: boolean;
+    brandId: string;
     product?: ProductWithBrand;
+    brand: CachedBrand;
+    media: BrandMediaItem[];
+    form: UseFormReturn<CreateProduct>;
+    appendOption: UseFieldArrayAppend<CreateProduct, "options">;
+    removeOption: UseFieldArrayRemove;
+    replaceVariants: UseFieldArrayReplace<CreateProduct, "variants">;
+    optionFields: FieldArrayWithId<CreateProduct, "options", "id">[];
+    variantFields: FieldArrayWithId<CreateProduct, "variants", "id">[];
+    isPending: boolean;
 }
 
 export function ProductVariantManage({
-    form,
-    field,
-    index,
-    isCreating,
-    isUpdating,
+    brandId,
     product,
-    remove,
+    brand,
+    media,
+    form,
+    appendOption,
+    removeOption,
+    replaceVariants,
+    optionFields,
+    variantFields,
+    isPending,
 }: PageProps) {
-    const router = useRouter();
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+        new Set()
+    );
+    const [groupBy, setGroupBy] = useState<string>("");
+    const [selectedVariants, setSelectedVariants] = useState<Set<string>>(
+        new Set()
+    );
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const [activeColor, setActiveColor] = useState<string>("#ffffff");
-    const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-    const [isAvailableModalOpen, setIsAvailableModalOpen] = useState(false);
+    const options = form.watch("options");
+    const variants = form.watch("variants");
 
-    const variant = product?.variants.find(
-        (variant) => variant.sku === field.sku
+    useEffect(() => {
+        if (options.length > 0 && !groupBy) setGroupBy(options[0].id);
+    }, [options, groupBy]);
+
+    const addOption = () => {
+        appendOption({
+            id: crypto.randomUUID(),
+            productId: product?.id ?? crypto.randomUUID(),
+            name: "",
+            values: [],
+            position: options.length,
+            isDeleted: false,
+            deletedAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+    };
+
+    const addOptionValue = (optionIndex: number, value: string) => {
+        const newValues = [
+            ...options[optionIndex].values,
+            {
+                id: crypto.randomUUID(),
+                name: value,
+                position: options[optionIndex].values.length,
+            },
+        ];
+        form.setValue(`options.${optionIndex}.values`, newValues);
+    };
+
+    const removeOptionValue = (optionIndex: number, valueId: string) => {
+        const newValues = options[optionIndex].values.filter(
+            (v) => v.id !== valueId
+        );
+        form.setValue(`options.${optionIndex}.values`, newValues);
+    };
+
+    const generateVariants = () => {
+        const combinations = generateCombinations(options);
+        const newVariants = combinations.map((combo) => {
+            const existingVariant = variants.find((variant) =>
+                Object.entries(combo).every(
+                    ([key, value]) => variant.combinations[key] === value
+                )
+            );
+
+            if (existingVariant) {
+                return {
+                    ...existingVariant,
+                    combinations: {
+                        ...existingVariant.combinations,
+                        ...combo,
+                    },
+                };
+            }
+
+            return {
+                id: crypto.randomUUID(),
+                productId:
+                    product?.id || options[0]?.productId || crypto.randomUUID(),
+                combinations: combo,
+                price: 0,
+                compareAtPrice: null,
+                costPerItem: null,
+                quantity: 0,
+                nativeSku: generateSKU({ brand }),
+                sku: "",
+                barcode: null,
+                image: null,
+                weight: 0,
+                length: 0,
+                width: 0,
+                height: 0,
+                originCountry: null,
+                hsCode: null,
+                isDeleted: false,
+                deletedAt: null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
+        });
+
+        replaceVariants(newVariants);
+    };
+
+    const toggleAllVariants = (checked: boolean) => {
+        const newSelected = new Set<string>();
+        if (checked) {
+            variants.forEach((variant) => {
+                newSelected.add(variant.id);
+            });
+        }
+        setSelectedVariants(newSelected);
+    };
+
+    const handleExportVariants = () => {
+        if (selectedVariants.size === 0)
+            return toast.error("Please select at least one variant to export");
+
+        const selectedVariantsData = variants
+            .filter((variant) => selectedVariants.has(variant.id))
+            .map((variant) => {
+                const optionColumns = Object.entries(
+                    variant.combinations
+                ).reduce(
+                    (acc, [key, value]) => {
+                        const option = options.find((o) => o.id === key);
+                        const optionValue = option?.values.find(
+                            (v) => v.id === value
+                        );
+                        acc[`${option?.name} (DO NOT FILL)`] =
+                            optionValue?.name || "";
+                        return acc;
+                    },
+                    {} as Record<string, string>
+                );
+
+                return {
+                    ...optionColumns,
+                    "Price (in Paise)": variant.price,
+                    "Compare At Price (in Paise)": variant.compareAtPrice || "",
+                    "Cost Per Item (in Paise)": variant.costPerItem || "",
+                    SKU: variant.sku || "",
+                    Barcode: variant.barcode || "",
+                    Quantity: variant.quantity,
+                    "Weight (g)": variant.weight,
+                    "Length (cm)": variant.length,
+                    "Width (cm)": variant.width,
+                    "Height (cm)": variant.height,
+                    "Country Code (ISO)": variant.originCountry || "",
+                    "HS Code": variant.hsCode || "",
+                };
+            });
+
+        try {
+            const csv = unparse(selectedVariantsData, {
+                quotes: true,
+                header: true,
+            });
+
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `variants_${new Date().toISOString().split("T")[0]}_${Date.now()}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            toast.success(
+                `Successfully exported ${selectedVariants.size} variants`
+            );
+        } catch (error) {
+            toast.error("Failed to export variants");
+            console.error(error);
+        }
+    };
+
+    const handleImportVariants = () => {
+        fileInputRef.current?.click();
+    };
+
+    const totalStock = variants.reduce(
+        (acc, variant) => acc + variant.quantity,
+        0
     );
 
-    const { mutate: updateVariant, isPending: isVariantUpdating } =
-        trpc.brands.products.updateVariantAvailability.useMutation({
-            onMutate: () => {
-                const toastId = toast.loading(
-                    variant?.isAvailable
-                        ? "Marking variant as unavailable..."
-                        : "Marking variant as available..."
-                );
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-                return { toastId };
-            },
-            onSuccess: (_, __, { toastId }) => {
-                toast.success(
-                    variant?.isAvailable
-                        ? "Variant marked as unavailable"
-                        : "Variant marked as available",
-                    { id: toastId }
-                );
-                router.refresh();
-                setIsAvailableModalOpen(false);
-            },
-            onError: (err, _, ctx) => {
-                return handleClientError(err, ctx?.toastId);
-            },
-        });
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const csvData = event.target?.result as string;
+
+            parse(csvData, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    try {
+                        const updatedVariants = variants.map((variant) => {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const csvRow = results.data.find((row: any) => {
+                                return Object.entries(
+                                    variant.combinations
+                                ).every(([optionId, valueId]) => {
+                                    const option = options.find(
+                                        (opt) => opt.id === optionId
+                                    );
+                                    const value = option?.values.find(
+                                        (val) => val.id === valueId
+                                    );
+                                    const columnName = `${option?.name} (DO NOT FILL)`;
+                                    return row[columnName] === value?.name;
+                                });
+                            }) as Record<string, string>;
+
+                            if (!csvRow) return variant;
+
+                            return {
+                                ...variant,
+                                price: csvRow["Price (in Paise)"]
+                                    ? Number(csvRow["Price (in Paise)"])
+                                    : variant.price,
+                                compareAtPrice: csvRow[
+                                    "Compare At Price (in Paise)"
+                                ]
+                                    ? Number(
+                                          csvRow["Compare At Price (in Paise)"]
+                                      )
+                                    : variant.compareAtPrice,
+                                costPerItem: csvRow["Cost Per Item (in Paise)"]
+                                    ? Number(csvRow["Cost Per Item (in Paise)"])
+                                    : variant.costPerItem,
+                                sku: csvRow["SKU"] || variant.sku,
+                                barcode: csvRow["Barcode"] || variant.barcode,
+                                quantity: csvRow["Quantity"]
+                                    ? Number(csvRow["Quantity"])
+                                    : variant.quantity,
+                                weight: csvRow["Weight (g)"]
+                                    ? Number(csvRow["Weight (g)"])
+                                    : variant.weight,
+                                length: csvRow["Length (cm)"]
+                                    ? Number(csvRow["Length (cm)"])
+                                    : variant.length,
+                                width: csvRow["Width (cm)"]
+                                    ? Number(csvRow["Width (cm)"])
+                                    : variant.width,
+                                height: csvRow["Height (cm)"]
+                                    ? Number(csvRow["Height (cm)"])
+                                    : variant.height,
+                                originCountry:
+                                    csvRow["Country Code (ISO)"] ||
+                                    variant.originCountry,
+                                hsCode: csvRow["HS Code"] || variant.hsCode,
+                            };
+                        });
+
+                        replaceVariants(updatedVariants);
+                        toast.success("Variants imported successfully");
+                    } catch (error) {
+                        console.error(error);
+                        toast.error(
+                            "Failed to import variants. Please check the CSV format"
+                        );
+                    }
+                },
+                error: () => {
+                    toast.error("Failed to parse CSV file");
+                },
+            });
+        };
+
+        reader.readAsText(file);
+        e.target.value = "";
+    };
+
+    const variantGroups = groupVariants(variants, groupBy);
 
     return (
         <>
-            <TableRow key={field.id}>
-                <TableCell>
-                    <div className="flex items-center gap-2">
-                        <span
-                            title={
-                                variant?.isAvailable
-                                    ? "Available"
-                                    : "Unavailable"
-                            }
+            <Card>
+                <CardHeader className="p-4 md:p-6">
+                    <CardTitle className="text-lg font-medium">
+                        Variants
+                    </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
+                    {options.length === 0 ? (
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 rounded-md p-1 px-2 text-sm font-medium transition-all ease-in-out hover:bg-muted"
+                            onClick={addOption}
+                            disabled={isPending}
                         >
-                            {field.sku}
-                        </span>
-                        <div
-                            title={
-                                variant?.isAvailable
-                                    ? "Available"
-                                    : "Unavailable"
-                            }
-                            className={cn(
-                                "size-1.5 rounded-full",
-                                variant?.isAvailable
-                                    ? "bg-green-600"
-                                    : "bg-red-600"
-                            )}
-                        />
-                    </div>
-                </TableCell>
+                            <Icons.PlusCircle className="size-4" />
+                            Add options like size or color
+                        </button>
+                    ) : (
+                        <div className="space-y-4">
+                            {optionFields.map((field, index) => (
+                                <div
+                                    key={field.id}
+                                    className="space-y-4 rounded-lg border p-4"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <FormField
+                                            control={form.control}
+                                            name={`options.${index}.name`}
+                                            render={({ field }) => (
+                                                <FormItem className="w-full">
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            placeholder="Option name"
+                                                            className="h-9"
+                                                            onKeyDown={(e) => {
+                                                                if (
+                                                                    e.key ===
+                                                                    "Enter"
+                                                                )
+                                                                    e.preventDefault();
+                                                            }}
+                                                            disabled={isPending}
+                                                        />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
 
-                <TableCell>
-                    <FormField
-                        control={form.control}
-                        name={`variants.${index}.size`}
-                        render={({ field }) => (
-                            <FormItem className="flex-1">
-                                <FormLabel className="hidden">Size</FormLabel>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-9"
+                                            onClick={() => removeOption(index)}
+                                            disabled={isPending}
+                                        >
+                                            <span className="sr-only">
+                                                Remove option
+                                            </span>
+                                            <Icons.Trash2 className="size-4" />
+                                        </Button>
+                                    </div>
 
-                                <FormControl>
-                                    <Input
-                                        {...field}
-                                        disabled={
-                                            isCreating ||
-                                            isUpdating ||
-                                            isVariantUpdating
-                                        }
-                                    />
-                                </FormControl>
-
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </TableCell>
-
-                <TableCell>
-                    <FormField
-                        control={form.control}
-                        name={`variants.${index}.color`}
-                        render={({ field }) => (
-                            <FormItem className="flex-1">
-                                <FormLabel className="hidden">Color</FormLabel>
-
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !field.value &&
-                                                        "text-muted-foreground"
-                                                )}
-                                                disabled={
-                                                    isCreating ||
-                                                    isUpdating ||
-                                                    isVariantUpdating
-                                                }
-                                                onClick={() =>
-                                                    setActiveColor(
-                                                        field.value.hex
-                                                    )
-                                                }
-                                            >
+                                    <div className="space-y-2">
+                                        {options[index]?.values.map(
+                                            (value, valueIndex) => (
                                                 <div
-                                                    className="mr-2 size-4 rounded-full border"
-                                                    style={{
-                                                        backgroundColor:
-                                                            field.value.hex,
-                                                    }}
-                                                />
-                                                {field.value.name ||
-                                                    "Pick a color"}
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
+                                                    key={value.id}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <div className="flex size-9 items-center justify-center text-sm font-medium">
+                                                        {valueIndex + 1}.
+                                                    </div>
 
-                                    <PopoverContent
-                                        className="w-64 p-0"
-                                        align="start"
-                                    >
-                                        <div className="grid grid-cols-3 gap-2 p-2">
-                                            {PRESET_COLORS.map((color) => (
-                                                <Button
-                                                    key={color.hex}
-                                                    variant="outline"
-                                                    className="flex h-8 w-full items-center justify-center p-1"
-                                                    style={{
-                                                        backgroundColor:
-                                                            color.hex,
-                                                    }}
-                                                    onClick={() =>
-                                                        field.onChange({
-                                                            name: color.name,
-                                                            hex: color.hex,
-                                                        })
-                                                    }
-                                                    disabled={
-                                                        isCreating ||
-                                                        isUpdating ||
-                                                        isVariantUpdating
-                                                    }
-                                                />
-                                            ))}
-                                        </div>
+                                                    <FormField
+                                                        control={form.control}
+                                                        name={`options.${index}.values.${valueIndex}.name`}
+                                                        render={({ field }) => (
+                                                            <FormItem className="w-full">
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        className="h-9"
+                                                                        onKeyDown={(
+                                                                            e
+                                                                        ) => {
+                                                                            if (
+                                                                                e.key ===
+                                                                                "Enter"
+                                                                            )
+                                                                                e.preventDefault();
+                                                                        }}
+                                                                        disabled={
+                                                                            isPending
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                            </FormItem>
+                                                        )}
+                                                    />
 
-                                        <div className="space-y-2 border-t p-2">
-                                            <HexColorPicker
-                                                color={activeColor}
-                                                onChange={(color) => {
-                                                    setActiveColor(color);
-                                                    field.onChange({
-                                                        name: "Custom",
-                                                        hex: color,
-                                                    });
-                                                }}
-                                            />
-
-                                            <Input
-                                                placeholder="Color name"
-                                                value={field.value.name}
-                                                onChange={(e) =>
-                                                    field.onChange({
-                                                        ...field.value,
-                                                        name: e.target.value,
-                                                    })
-                                                }
-                                                disabled={
-                                                    isCreating ||
-                                                    isUpdating ||
-                                                    isVariantUpdating
-                                                }
-                                            />
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </TableCell>
-
-                <TableCell>
-                    <FormField
-                        control={form.control}
-                        name={`variants.${index}.quantity`}
-                        render={({ field }) => (
-                            <FormItem className="flex-1">
-                                <FormLabel className="hidden">
-                                    Quantity
-                                </FormLabel>
-
-                                <FormControl>
-                                    <Input
-                                        type="number"
-                                        {...field}
-                                        min={0}
-                                        className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                        onChange={(e) =>
-                                            field.onChange(
-                                                parseInt(e.target.value)
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        className="size-9"
+                                                        size="icon"
+                                                        onClick={() =>
+                                                            removeOptionValue(
+                                                                index,
+                                                                value.id
+                                                            )
+                                                        }
+                                                        disabled={isPending}
+                                                    >
+                                                        <Icons.Trash2 className="size-4" />
+                                                    </Button>
+                                                </div>
                                             )
-                                        }
-                                        disabled={
-                                            isCreating ||
-                                            isUpdating ||
-                                            isVariantUpdating
-                                        }
-                                    />
-                                </FormControl>
-
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </TableCell>
-
-                <TableCell>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="size-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <Icons.MoreHorizontal className="size-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-                            <DropdownMenuGroup>
-                                {product && (
-                                    <DropdownMenuItem
-                                        onClick={() =>
-                                            setIsAvailableModalOpen(true)
-                                        }
-                                    >
-                                        {product.variants.find(
-                                            (variant) =>
-                                                variant.sku === field.sku
-                                        )?.isAvailable ? (
-                                            <Icons.X />
-                                        ) : (
-                                            <Icons.Check />
                                         )}
 
-                                        <span>
-                                            {product.variants.find(
-                                                (variant) =>
-                                                    variant.sku === field.sku
-                                            )?.isAvailable
-                                                ? "Mark as Unavailable"
-                                                : "Mark as Available"}
-                                        </span>
-                                    </DropdownMenuItem>
-                                )}
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex size-9 items-center justify-center text-sm font-medium">
+                                                {options[index]?.values.length +
+                                                    1}
+                                                .
+                                            </div>
 
-                                <DropdownMenuItem
-                                    onClick={() => setIsRemoveModalOpen(true)}
+                                            <Input
+                                                placeholder="Add another value"
+                                                onKeyDown={(e) => {
+                                                    if (
+                                                        e.key === "Enter" &&
+                                                        e.currentTarget.value
+                                                    ) {
+                                                        e.preventDefault();
+                                                        addOptionValue(
+                                                            index,
+                                                            e.currentTarget
+                                                                .value
+                                                        );
+                                                        e.currentTarget.value =
+                                                            "";
+                                                    }
+                                                }}
+                                                className="h-9"
+                                                disabled={isPending}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="flex items-center justify-between gap-2">
+                                <Button
+                                    type="button"
+                                    onClick={addOption}
+                                    variant="outline"
+                                    className="h-9"
+                                    disabled={isPending}
                                 >
-                                    <Icons.Trash />
-                                    <span>Remove</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuGroup>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </TableCell>
-            </TableRow>
+                                    <Icons.Plus className="size-4" />
+                                    Add another option
+                                </Button>
 
-            <AlertDialog
-                open={isRemoveModalOpen}
-                onOpenChange={setIsRemoveModalOpen}
-            >
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            Are you sure you want to remove the variant &ldquo;
-                            {field.sku}&rdquo;?
-                        </AlertDialogTitle>
+                                <Button
+                                    type="button"
+                                    onClick={generateVariants}
+                                    className="h-9"
+                                    disabled={isPending}
+                                >
+                                    Done
+                                </Button>
+                            </div>
+                        </div>
+                    )}
 
-                        <AlertDialogDescription>
-                            Removing this variant will permanently delete it
-                            from the product. This action cannot be undone.
-                            Instead of removing, you can mark it as unavailable.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                    {variantFields.length > 0 && <Separator />}
 
-                    <AlertDialogFooter>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsRemoveModalOpen(false)}
-                        >
-                            Cancel
-                        </Button>
+                    {variantFields.length > 0 && (
+                        <div className="space-y-4">
+                            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                                <Select
+                                    value={groupBy}
+                                    onValueChange={setGroupBy}
+                                    disabled={isPending}
+                                >
+                                    <SelectTrigger className="h-8 md:w-[180px]">
+                                        <SelectValue placeholder="Group by..." />
+                                    </SelectTrigger>
 
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                                remove(index);
-                                setIsRemoveModalOpen(false);
-                            }}
-                        >
-                            Remove
-                        </Button>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                                    <SelectContent>
+                                        {options.map((option) => (
+                                            <SelectItem
+                                                key={option.id}
+                                                value={option.id}
+                                                className="py-1"
+                                            >
+                                                Group by {option.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
 
-            <AlertDialog
-                open={isAvailableModalOpen}
-                onOpenChange={setIsAvailableModalOpen}
-            >
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            Are you sure you want to mark the variant &ldquo;
-                            {field.sku}&rdquo; as &ldquo;
-                            {variant?.isAvailable ? "unavailable" : "available"}
-                            ?
-                        </AlertDialogTitle>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-8 w-full md:w-auto"
+                                        disabled={
+                                            selectedVariants.size === 0 ||
+                                            isPending
+                                        }
+                                        onClick={handleExportVariants}
+                                    >
+                                        <Icons.Upload />
+                                        Export ({selectedVariants.size})
+                                    </Button>
 
-                        <AlertDialogDescription>
-                            {variant?.isAvailable
-                                ? "Marking this variant as unavailable will hide it from the product page. Customers will not be able to purchase this variant."
-                                : "Marking this variant as available will make it visible on the product page. Customers will be able to purchase this variant."}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-8 w-full md:w-auto"
+                                        onClick={handleImportVariants}
+                                        disabled={isPending}
+                                    >
+                                        <Icons.Download />
+                                        Import
+                                    </Button>
+                                </div>
+                            </div>
 
-                    <AlertDialogFooter>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={isVariantUpdating}
-                            onClick={() => setIsAvailableModalOpen(false)}
-                        >
-                            Cancel
-                        </Button>
+                            <div className="flex justify-end">
+                                <button
+                                    type="button"
+                                    className="text-sm text-primary hover:underline"
+                                    onClick={() =>
+                                        setExpandedGroups((prevState) => {
+                                            if (
+                                                prevState.size ===
+                                                variantGroups.length
+                                            )
+                                                return new Set();
 
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            disabled={isVariantUpdating}
-                            onClick={() => {
-                                if (!product)
-                                    return toast.error("Product not found");
+                                            return new Set(
+                                                variantGroups.map(
+                                                    (group) => group.key
+                                                )
+                                            );
+                                        })
+                                    }
+                                >
+                                    {expandedGroups.size ===
+                                    variantGroups.length
+                                        ? "Collapse all"
+                                        : "Expand all"}
+                                </button>
+                            </div>
 
-                                updateVariant({
-                                    sku: field.sku,
-                                    isAvailable: !variant?.isAvailable,
-                                    productId: product.id,
-                                });
-                            }}
-                        >
-                            {variant?.isAvailable
-                                ? "Mark as Unavailable"
-                                : "Mark as Available"}
-                        </Button>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                            <Table className="border">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>
+                                            <Checkbox
+                                                checked={
+                                                    variants.length > 0 &&
+                                                    variants.every((variant) =>
+                                                        selectedVariants.has(
+                                                            variant.id
+                                                        )
+                                                    )
+                                                }
+                                                onCheckedChange={
+                                                    toggleAllVariants
+                                                }
+                                                disabled={isPending}
+                                            />
+                                        </TableHead>
+                                        <TableHead>Variant</TableHead>
+                                        <TableHead>Price</TableHead>
+                                        <TableHead>Available</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+
+                                <TableBody>
+                                    {variantGroups.map((group) => {
+                                        const currentOption = options.find(
+                                            (o) => o.id === groupBy
+                                        );
+
+                                        const currentValue =
+                                            currentOption?.values.find(
+                                                (v) => v.id === group.key
+                                            );
+                                        if (!currentValue) return null;
+
+                                        const variantMedia = (() => {
+                                            const imageIds = new Set(
+                                                group.variants
+                                                    .map(
+                                                        (v) =>
+                                                            variants.find(
+                                                                (vx) =>
+                                                                    vx.id ===
+                                                                    v.id
+                                                            )?.image
+                                                    )
+                                                    .filter(Boolean)
+                                            );
+
+                                            if (imageIds.size === 1) {
+                                                const imageId =
+                                                    Array.from(imageIds)[0];
+                                                return media.find(
+                                                    (m) => m.id === imageId
+                                                );
+                                            }
+
+                                            return null;
+                                        })();
+
+                                        return (
+                                            <ProductVariantGroupManageForm
+                                                key={group.key}
+                                                brandId={brandId}
+                                                media={media}
+                                                selectedMedia={
+                                                    variantMedia || null
+                                                }
+                                                currentValue={currentValue}
+                                                expandedGroups={expandedGroups}
+                                                form={form}
+                                                group={group}
+                                                groupBy={groupBy}
+                                                selectedVariants={
+                                                    selectedVariants
+                                                }
+                                                setExpandedGroups={
+                                                    setExpandedGroups
+                                                }
+                                                setSelectedVariants={
+                                                    setSelectedVariants
+                                                }
+                                                isPending={isPending}
+                                            />
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+
+                <CardFooter className="justify-center text-center">
+                    <p className="text-sm">Total stock: {totalStock}</p>
+                </CardFooter>
+            </Card>
+
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".csv"
+                onChange={handleFileUpload}
+            />
         </>
     );
 }

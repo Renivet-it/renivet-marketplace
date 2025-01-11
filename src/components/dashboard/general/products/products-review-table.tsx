@@ -5,6 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog-dash";
+import { DialogHeader } from "@/components/ui/dialog-general";
 import { Input } from "@/components/ui/input-dash";
 import {
     Select,
@@ -13,6 +21,21 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select-dash";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableFooter,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertPaiseToRupees,
@@ -43,8 +66,8 @@ export type TableProduct = ProductWithBrand & {
 
 const columns: ColumnDef<TableProduct>[] = [
     {
-        accessorKey: "name",
-        header: "Name",
+        accessorKey: "title",
+        header: "Title",
         enableHiding: false,
     },
     {
@@ -52,16 +75,48 @@ const columns: ColumnDef<TableProduct>[] = [
         header: "Brand",
     },
     {
+        accessorKey: "nativeSku",
+        header: "Native SKU",
+        cell: ({ row }) => {
+            const data = row.original;
+            return (
+                <span className="whitespace-nowrap">
+                    {data.nativeSku || "N/A"}
+                </span>
+            );
+        },
+    },
+    {
         accessorKey: "price",
         header: "Price",
         cell: ({ row }) => {
             const data = row.original;
+
+            if (!data.productHasVariants) {
+                const price = formatPriceTag(
+                    parseFloat(convertPaiseToRupees(data.price ?? 0)),
+                    true
+                );
+
+                return <span>{price}</span>;
+            }
+
+            const minPriceRaw = Math.min(...data.variants.map((x) => x.price));
+            const maxPriceRaw = Math.max(...data.variants.map((x) => x.price));
+
+            const minPrice = formatPriceTag(
+                parseFloat(convertPaiseToRupees(minPriceRaw)),
+                true
+            );
+            const maxPrice = formatPriceTag(
+                parseFloat(convertPaiseToRupees(maxPriceRaw)),
+                true
+            );
+
+            if (minPriceRaw === maxPriceRaw) return <span>{minPrice}</span>;
             return (
-                <span>
-                    {formatPriceTag(
-                        parseFloat(convertPaiseToRupees(data.price)),
-                        true
-                    )}
+                <span className="whitespace-nowrap">
+                    {minPrice} - {maxPrice}
                 </span>
             );
         },
@@ -71,21 +126,156 @@ const columns: ColumnDef<TableProduct>[] = [
         header: "Stock",
     },
     {
-        accessorKey: "status",
-        header: "Status",
+        accessorKey: "category",
+        header: "Category",
         cell: ({ row }) => {
             const data = row.original;
             return (
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger className="underline">
+                            View
+                        </TooltipTrigger>
+
+                        <TooltipContent>
+                            <p>
+                                {data.category.name} &gt;{" "}
+                                {data.subcategory.name} &gt;{" "}
+                                {data.productType.name}
+                            </p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            );
+        },
+    },
+    {
+        accessorKey: "variants",
+        header: "Variants",
+        cell: ({ row }) => {
+            const data = row.original;
+
+            return data.variants.length === 0 ? (
+                <span>N/A</span>
+            ) : (
+                <Dialog>
+                    <DialogTrigger className="underline">
+                        View ({data.variants.length})
+                    </DialogTrigger>
+
+                    <DialogContent className="max-w-4xl">
+                        <DialogHeader>
+                            <DialogTitle>
+                                Variants of &quot;{data.title}&quot;
+                            </DialogTitle>
+                            <DialogDescription>
+                                {data.variants.length} variants
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Variant</TableHead>
+                                    <TableHead>Native SKU</TableHead>
+                                    <TableHead>Custom SKU</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Stock</TableHead>
+                                </TableRow>
+                            </TableHeader>
+
+                            <TableBody>
+                                {data.variants.map((variant) => {
+                                    const variantName = Object.entries(
+                                        variant.combinations
+                                    )
+                                        .map(([optionId, valueId]) => {
+                                            const option = data.options.find(
+                                                (opt) => opt.id === optionId
+                                            );
+                                            const value = option?.values.find(
+                                                (val) => val.id === valueId
+                                            );
+                                            return value?.name;
+                                        })
+                                        .filter(Boolean)
+                                        .join(" / ");
+
+                                    return (
+                                        <TableRow key={variant.id}>
+                                            <TableCell>{variantName}</TableCell>
+
+                                            <TableCell>
+                                                {variant.nativeSku}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                {variant.sku || "N/A"}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                {formatPriceTag(
+                                                    parseFloat(
+                                                        convertPaiseToRupees(
+                                                            variant.price
+                                                        )
+                                                    ),
+                                                    true
+                                                )}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                {variant.quantity}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+
+                            <TableFooter>
+                                <TableRow>
+                                    <TableCell colSpan={4}>Total</TableCell>
+                                    <TableCell>
+                                        {data.variants.reduce(
+                                            (acc, variant) =>
+                                                acc + variant.quantity,
+                                            0
+                                        )}
+                                    </TableCell>
+                                    <TableCell />
+                                </TableRow>
+                            </TableFooter>
+                        </Table>
+                    </DialogContent>
+                </Dialog>
+            );
+        },
+    },
+    {
+        accessorKey: "isAvailable",
+        header: "Available",
+        cell: ({ row }) => {
+            const data = row.original;
+            return data.isAvailable ? "Yes" : "No";
+        },
+    },
+    {
+        accessorKey: "verificationStatus",
+        header: "Status",
+        cell: ({ row }) => {
+            const data = row.original;
+
+            return (
                 <Badge
                     variant={
-                        data.status === "approved"
+                        data.verificationStatus === "approved"
                             ? "secondary"
-                            : data.status === "rejected"
+                            : data.verificationStatus === "rejected"
                               ? "destructive"
                               : "default"
                     }
                 >
-                    {convertValueToLabel(data.status)}
+                    {convertValueToLabel(data.verificationStatus)}
                 </Badge>
             );
         },
@@ -127,8 +317,8 @@ export function ProductsReviewTable({ initialData }: PageProps) {
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
-    const [status, setStatus] = useQueryState(
-        "status",
+    const [verificationStatus, setVerificationStatus] = useQueryState(
+        "verificationStatus",
         parseAsStringLiteral([
             "idle",
             "pending",
@@ -147,7 +337,7 @@ export function ProductsReviewTable({ initialData }: PageProps) {
     const {
         data: { data: dataRaw, count },
     } = trpc.brands.products.getProducts.useQuery(
-        { limit, page, search, status },
+        { limit, page, search, verificationStatus },
         { initialData }
     );
 
@@ -190,15 +380,15 @@ export function ProductsReviewTable({ initialData }: PageProps) {
             <div className="flex items-center gap-2">
                 <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
                     <Input
-                        placeholder="Search by name..."
+                        placeholder="Search by title..."
                         value={
                             (table
-                                .getColumn("name")
+                                .getColumn("title")
                                 ?.getFilterValue() as string) ?? search
                         }
                         onChange={(event) => {
                             table
-                                .getColumn("name")
+                                .getColumn("title")
                                 ?.setFilterValue(event.target.value);
                             setSearch(event.target.value);
                         }}
@@ -207,12 +397,17 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                     <Select
                         value={
                             (table
-                                .getColumn("status")
-                                ?.getFilterValue() as string) ?? status
+                                .getColumn("verificationStatus")
+                                ?.getFilterValue() as string) ??
+                            verificationStatus
                         }
                         onValueChange={(value) => {
-                            table.getColumn("status")?.setFilterValue(value);
-                            setStatus(value as TableProduct["status"]);
+                            table
+                                .getColumn("verificationStatus")
+                                ?.setFilterValue(value);
+                            setVerificationStatus(
+                                value as TableProduct["verificationStatus"]
+                            );
                         }}
                     >
                         <SelectTrigger className="capitalize">

@@ -12,23 +12,34 @@ import {
 } from "@/components/ui/form";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { CachedCart, UpdateCart, updateCartSchema } from "@/lib/validations";
+import { CachedCart } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 
 interface PageProps {
     item: CachedCart;
     userId: string;
 }
 
+const formSchema = z.object({
+    quantity: z.number().min(1, "Quantity must be at least 1"),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
 export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
-    const form = useForm<UpdateCart>({
-        resolver: zodResolver(updateCartSchema),
-        defaultValues: item,
+    const form = useForm<FormData>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            quantity: item.quantity,
+        },
     });
 
-    const { refetch } = trpc.general.users.cart.getCart.useQuery({ userId });
+    const { refetch } = trpc.general.users.cart.getCartForUser.useQuery({
+        userId,
+    });
 
     const { mutate: updateProduct, isPending: isUpdating } =
         trpc.general.users.cart.updateProductQuantityInCart.useMutation({
@@ -40,7 +51,6 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                 toast.success("Cart updated", { id: toastId });
                 refetch();
                 form.reset({
-                    ...item,
                     quantity: form.watch("quantity"),
                 });
             },
@@ -49,12 +59,10 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
             },
         });
 
-    const variant = item.item.variants.find(
-        (v) =>
-            v.size === item.size &&
-            JSON.stringify(v.color) === JSON.stringify(item.color)
-    );
-    const maxQuantity = variant?.quantity || 0;
+    const maxQuantity = item.variantId
+        ? (item.product.variants.find((v) => v.id === item.variantId)
+              ?.quantity ?? 0)
+        : (item.product.quantity ?? 0);
 
     return (
         <Form {...form}>
@@ -63,7 +71,8 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                 onSubmit={form.handleSubmit((values) =>
                     updateProduct({
                         userId,
-                        sku: item.sku,
+                        productId: item.productId,
+                        variantId: item.variantId,
                         quantity: values.quantity,
                     })
                 )}
@@ -87,7 +96,10 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                                 variant="outline"
                                                 size="icon"
                                                 aria-label="Increment quantity"
-                                                disabled={isUpdating}
+                                                disabled={
+                                                    isUpdating ||
+                                                    field.value >= maxQuantity
+                                                }
                                                 onClick={() =>
                                                     field.onChange(
                                                         Math.min(
@@ -96,46 +108,12 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                                         )
                                                     )
                                                 }
-                                                onMouseDown={() => {
-                                                    const interval =
-                                                        setInterval(() => {
-                                                            field.onChange(
-                                                                (
-                                                                    prevValue: number
-                                                                ) =>
-                                                                    Math.min(
-                                                                        prevValue +
-                                                                            1,
-                                                                        maxQuantity
-                                                                    )
-                                                            );
-                                                        }, 200);
-
-                                                    const handleMouseUp =
-                                                        () => {
-                                                            clearInterval(
-                                                                interval
-                                                            );
-                                                            window.removeEventListener(
-                                                                "mouseup",
-                                                                handleMouseUp
-                                                            );
-                                                        };
-
-                                                    window.addEventListener(
-                                                        "mouseup",
-                                                        handleMouseUp
-                                                    );
-                                                }}
                                             >
                                                 <Icons.ChevronUp
                                                     size={16}
                                                     strokeWidth={2}
                                                     aria-hidden="true"
                                                 />
-                                                <span className="sr-only">
-                                                    Increment quantity
-                                                </span>
                                             </Button>
                                         </div>
 
@@ -150,7 +128,10 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                                 variant="outline"
                                                 size="icon"
                                                 aria-label="Decrement quantity"
-                                                disabled={isUpdating}
+                                                disabled={
+                                                    isUpdating ||
+                                                    field.value <= 1
+                                                }
                                                 onClick={() =>
                                                     field.onChange(
                                                         Math.max(
@@ -159,46 +140,12 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
                                                         )
                                                     )
                                                 }
-                                                onMouseDown={() => {
-                                                    const interval =
-                                                        setInterval(() => {
-                                                            field.onChange(
-                                                                (
-                                                                    prevValue: number
-                                                                ) =>
-                                                                    Math.max(
-                                                                        prevValue -
-                                                                            1,
-                                                                        1
-                                                                    )
-                                                            );
-                                                        }, 200);
-
-                                                    const handleMouseUp =
-                                                        () => {
-                                                            clearInterval(
-                                                                interval
-                                                            );
-                                                            window.removeEventListener(
-                                                                "mouseup",
-                                                                handleMouseUp
-                                                            );
-                                                        };
-
-                                                    window.addEventListener(
-                                                        "mouseup",
-                                                        handleMouseUp
-                                                    );
-                                                }}
                                             >
                                                 <Icons.ChevronDown
                                                     size={16}
                                                     strokeWidth={2}
                                                     aria-hidden="true"
                                                 />
-                                                <span className="sr-only">
-                                                    Decrement quantity
-                                                </span>
                                             </Button>
                                         </div>
                                     </div>

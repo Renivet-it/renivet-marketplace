@@ -25,6 +25,9 @@ export const wishlists = pgTable(
         wishlistUserIdProductIdIdx: uniqueIndex(
             "wishlist_user_id_product_id_idx"
         ).on(table.userId, table.productId),
+        wishlistProductIdIdx: index("wishlist_product_id_idx").on(
+            table.productId
+        ),
     })
 );
 

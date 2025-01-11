@@ -5,7 +5,7 @@ import { ProductShareModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { Separator } from "@/components/ui/separator";
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { CachedCart, ProductWithBrand } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
@@ -34,7 +34,7 @@ export function ProductContent({
                 <div className="space-y-3">
                     <div className="flex items-start justify-between gap-4">
                         <h2 className="text-2xl font-semibold md:text-4xl">
-                            {product.name}
+                            {product.title}
                         </h2>
 
                         <button
@@ -58,28 +58,16 @@ export function ProductContent({
 
                 <Separator />
 
-                <div className="md:space-y-1">
-                    <p className="text-2xl font-semibold md:text-3xl">
-                        {formatPriceTag(
-                            parseFloat(convertPaiseToRupees(product.price))
-                        )}
-                    </p>
-
-                    <p className="text-xs font-semibold text-accent/80 md:text-sm">
-                        + 2% gateway fee at checkout
-                    </p>
-                </div>
-
                 <ProductCartAddForm
                     product={product}
-                    userId={userId}
                     isWishlisted={isWishlisted}
                     initialCart={initialCart}
+                    userId={userId}
                 />
 
                 <Separator />
 
-                <RichTextViewer content={product.description} />
+                <RichTextViewer content={product.description ?? "<p></p>"} />
             </div>
 
             <ProductShareModal

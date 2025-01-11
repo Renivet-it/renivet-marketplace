@@ -22,11 +22,11 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { slug } = await params;
 
-    const existingProduct = await productQueries.getProductBySlug(
+    const existingProduct = await productQueries.getProductBySlug({
         slug,
-        "published",
-        "approved"
-    );
+        verificationStatus: "approved",
+        isPublished: true,
+    });
     if (!existingProduct)
         return {
             title: "Product not found",
@@ -34,8 +34,12 @@ export async function generateMetadata({
         };
 
     return {
-        title: `${existingProduct.name} by ${existingProduct.brand.name}`,
-        description: existingProduct.description,
+        title: !!existingProduct.metaTitle?.length
+            ? existingProduct.metaTitle
+            : `${existingProduct.title} by ${existingProduct.brand.name}`,
+        description: !!existingProduct.metaDescription?.length
+            ? existingProduct.metaDescription
+            : existingProduct.description,
         authors: [
             {
                 name: existingProduct.brand.name,
@@ -46,13 +50,20 @@ export async function generateMetadata({
             type: "website",
             locale: "en_US",
             url: getAbsoluteURL(`/products/${slug}`),
-            title: `${existingProduct.name} by ${existingProduct.brand.name}`,
-            description: existingProduct.description,
+            title: !!existingProduct.metaTitle?.length
+                ? existingProduct.metaTitle
+                : `${existingProduct.title} by ${existingProduct.brand.name}`,
+            description:
+                (!!existingProduct.metaDescription?.length
+                    ? existingProduct.metaDescription
+                    : existingProduct.description) ?? "",
             siteName: siteConfig.name,
             images: [
                 {
-                    url: existingProduct.imageUrls[0],
-                    alt: existingProduct.name,
+                    url: existingProduct.media?.[0].mediaItem?.url ?? "",
+                    alt:
+                        existingProduct.media?.[0].mediaItem?.alt ??
+                        existingProduct.title,
                     height: 1000,
                     width: 1000,
                 },
@@ -60,12 +71,19 @@ export async function generateMetadata({
         },
         twitter: {
             card: "summary_large_image",
-            title: `${existingProduct.name} by ${existingProduct.brand.name}`,
-            description: existingProduct.description,
+            title: !!existingProduct.metaTitle?.length
+                ? existingProduct.metaTitle
+                : `${existingProduct.title} by ${existingProduct.brand.name}`,
+            description:
+                (!!existingProduct.metaDescription?.length
+                    ? existingProduct.metaDescription
+                    : existingProduct.description) ?? "",
             images: [
                 {
-                    url: existingProduct.imageUrls[0],
-                    alt: existingProduct.name,
+                    url: existingProduct.media?.[0].mediaItem?.url ?? "",
+                    alt:
+                        existingProduct.media?.[0].mediaItem?.alt ??
+                        existingProduct.title,
                     height: 1000,
                     width: 1000,
                 },
@@ -89,7 +107,11 @@ async function ProductFetch({ params }: PageProps) {
     const { userId } = await auth();
 
     const [existingProduct, userWishlist, userCart] = await Promise.all([
-        productQueries.getProductBySlug(slug, "published", "approved"),
+        productQueries.getProductBySlug({
+            slug,
+            verificationStatus: "approved",
+            isPublished: true,
+        }),
         userId ? userWishlistCache.get(userId) : undefined,
         userId ? userCartCache.get(userId) : undefined,
     ]);

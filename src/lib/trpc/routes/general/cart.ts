@@ -1,12 +1,12 @@
 import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { createCartSchema } from "@/lib/validations";
+import { cartSchema, createCartSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 
 export const cartRouter = createTRPCRouter({
-    getCart: protectedProcedure
+    getCartForUser: protectedProcedure
         .input(
             z.object({
                 userId: z.string(),
@@ -33,7 +33,7 @@ export const cartRouter = createTRPCRouter({
 
             return existingCart;
         }),
-    addProductInCart: protectedProcedure
+    addProductToCart: protectedProcedure
         .input(createCartSchema)
         .use(({ ctx, input, next }) => {
             const { user } = ctx;
@@ -50,65 +50,121 @@ export const cartRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { queries, db, schemas } = ctx;
-            const { userId, sku, quantity } = input;
+            const { userId, productId, variantId, quantity } = input;
 
-            const existingVariant = await db.query.productVariants.findFirst({
-                where: and(
-                    eq(schemas.productVariants.sku, sku),
-                    gt(schemas.productVariants.quantity, 0),
-                    eq(schemas.productVariants.isAvailable, true),
-                    eq(schemas.productVariants.isDeleted, false)
-                ),
-                with: {
-                    product: true,
-                },
-            });
-            if (!existingVariant)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Product not found",
+            if (variantId) {
+                const existingVariant =
+                    await db.query.productVariants.findFirst({
+                        where: and(
+                            variantId
+                                ? eq(schemas.productVariants.id, variantId)
+                                : undefined,
+                            eq(schemas.productVariants.productId, productId),
+                            gte(schemas.productVariants.quantity, quantity),
+                            eq(schemas.productVariants.isDeleted, false)
+                        ),
+                        with: {
+                            product: true,
+                        },
+                    });
+                if (!existingVariant)
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: "Product not found",
+                    });
+
+                if (
+                    !existingVariant.product.isAvailable ||
+                    !existingVariant.product.isActive ||
+                    existingVariant.product.isDeleted ||
+                    existingVariant.product.verificationStatus !== "approved" ||
+                    !existingVariant.product.isPublished
+                )
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "This product is not available for purchase",
+                    });
+
+                const existingCart = await userCartCache.getProduct({
+                    userId,
+                    productId,
+                    variantId: variantId ?? undefined,
                 });
 
-            if (
-                !existingVariant.isAvailable ||
-                !existingVariant.product.isAvailable ||
-                existingVariant.isDeleted ||
-                existingVariant.product.isDeleted ||
-                existingVariant.quantity < quantity ||
-                existingVariant.product.status !== "approved" ||
-                !existingVariant.product.isPublished
-            )
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "This product is not available",
+                if (!existingCart)
+                    await queries.userCarts.addProductToCart(input);
+                else {
+                    await Promise.all([
+                        queries.userCarts.updateProductInCart(existingCart.id, {
+                            ...existingCart,
+                            quantity: existingCart.quantity + quantity,
+                        }),
+                        userCartCache.remove({
+                            userId,
+                            productId,
+                            variantId: variantId ?? undefined,
+                        }),
+                    ]);
+                }
+
+                return {
+                    type: existingCart ? ("update" as const) : ("add" as const),
+                };
+            } else {
+                const existingProduct = await queries.products.getProduct({
+                    productId,
+                    isAvailable: true,
+                    isActive: true,
+                    isDeleted: false,
+                    verificationStatus: "approved",
+                    isPublished: true,
+                });
+                if (!existingProduct)
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: "Product not found",
+                    });
+
+                if (existingProduct.quantity! <= quantity)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Not enough stock available",
+                    });
+
+                const existingCart = await userCartCache.getProduct({
+                    userId,
+                    productId,
+                    variantId: variantId ?? undefined,
                 });
 
-            const existingCart = await userCartCache.getProduct({
-                userId,
-                sku,
-            });
+                if (!existingCart)
+                    await queries.userCarts.addProductToCart(input);
+                else {
+                    await Promise.all([
+                        queries.userCarts.updateProductInCart(existingCart.id, {
+                            ...existingCart,
+                            quantity: existingCart.quantity + quantity,
+                        }),
+                        userCartCache.remove({
+                            userId,
+                            productId,
+                            variantId: variantId ?? undefined,
+                        }),
+                    ]);
+                }
 
-            if (!existingCart) await queries.userCarts.addProductToCart(input);
-            else {
-                await Promise.all([
-                    queries.userCarts.updateProductInCart(existingCart.id, {
-                        ...existingCart,
-                        quantity: existingCart.quantity + quantity,
-                    }),
-                    userCartCache.remove({ userId, sku }),
-                ]);
+                return {
+                    type: existingCart ? ("update" as const) : ("add" as const),
+                };
             }
-
-            return {
-                type: existingCart ? ("update" as const) : ("add" as const),
-            };
         }),
     updateProductQuantityInCart: protectedProcedure
         .input(
             z.object({
                 userId: z.string(),
-                sku: z.string(),
-                quantity: z.number().int().positive(),
+                productId: cartSchema.shape.productId,
+                variantId: cartSchema.shape.variantId,
+                quantity: cartSchema.shape.quantity,
             })
         )
         .use(({ ctx, input, next }) => {
@@ -126,16 +182,17 @@ export const cartRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { userId, sku, quantity } = input;
+            const { userId, productId, variantId, quantity } = input;
 
             const existingCart = await userCartCache.getProduct({
                 userId,
-                sku,
+                productId,
+                variantId: variantId ?? undefined,
             });
             if (!existingCart)
                 throw new TRPCError({
                     code: "NOT_FOUND",
-                    message: "This variant is not in your cart",
+                    message: "This product is not in your cart",
                 });
 
             if (quantity === existingCart.quantity)
@@ -144,26 +201,29 @@ export const cartRouter = createTRPCRouter({
                     message: "No changes were made to the cart",
                 });
 
-            const selectedVariant = existingCart.item.variants.find(
-                (variant) => variant.sku === sku
-            );
-            if (!selectedVariant)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "This variant is not in your cart",
-                });
-
             if (
-                !selectedVariant.isAvailable ||
-                !existingCart.item.isAvailable ||
-                selectedVariant.isDeleted ||
-                existingCart.item.isDeleted ||
-                selectedVariant.quantity < quantity ||
-                existingCart.item.status !== "approved"
+                !existingCart.product.isAvailable ||
+                !existingCart.product.isActive ||
+                existingCart.product.isDeleted ||
+                existingCart.product.verificationStatus !== "approved" ||
+                !existingCart.product.isPublished ||
+                existingCart.variant?.isDeleted
             )
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "This product is not available",
+                });
+
+            if (variantId && existingCart.variant) {
+                if (existingCart.variant.quantity <= quantity)
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Not enough stock available",
+                    });
+            } else if ((existingCart.product.quantity ?? 0) <= quantity)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Not enough stock available",
                 });
 
             const [data] = await Promise.all([
@@ -173,7 +233,8 @@ export const cartRouter = createTRPCRouter({
                 }),
                 userCartCache.remove({
                     userId,
-                    sku,
+                    productId,
+                    variantId: variantId ?? undefined,
                 }),
             ]);
             return data;
@@ -182,8 +243,9 @@ export const cartRouter = createTRPCRouter({
         .input(
             z.object({
                 userId: z.string(),
-                sku: z.string().optional(),
-                status: z.boolean(),
+                productId: cartSchema.shape.productId.optional(),
+                variantId: cartSchema.shape.variantId.optional(),
+                status: cartSchema.shape.status,
             })
         )
         .use(({ ctx, input, next }) => {
@@ -201,12 +263,13 @@ export const cartRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { userId, status, sku } = input;
+            const { userId, status, productId, variantId } = input;
 
-            if (sku) {
+            if (productId && (productId || variantId)) {
                 const existingCart = await userCartCache.getProduct({
                     userId,
-                    sku,
+                    productId,
+                    variantId: variantId ?? undefined,
                 });
                 if (!existingCart)
                     throw new TRPCError({
@@ -214,21 +277,13 @@ export const cartRouter = createTRPCRouter({
                         message: "This variant is not in your cart",
                     });
 
-                const existingVariant = existingCart.item.variants.find(
-                    (variant) => variant.sku === sku
-                );
-                if (!existingVariant)
-                    throw new TRPCError({
-                        code: "NOT_FOUND",
-                        message: "This variant is not in your cart",
-                    });
-
                 if (
-                    !existingVariant.isAvailable ||
-                    existingVariant.isDeleted ||
-                    !existingCart.item.isAvailable ||
-                    existingCart.item.isDeleted ||
-                    existingCart.item.status !== "approved"
+                    !existingCart.product.isAvailable ||
+                    !existingCart.product.isActive ||
+                    existingCart.product.isDeleted ||
+                    existingCart.product.verificationStatus !== "approved" ||
+                    !existingCart.product.isPublished ||
+                    existingCart.variant?.isDeleted
                 )
                     throw new TRPCError({
                         code: "BAD_REQUEST",
@@ -256,8 +311,8 @@ export const cartRouter = createTRPCRouter({
         .input(
             z.object({
                 userId: z.string(),
-                sku: z.string(),
-                productId: z.string(),
+                productId: cartSchema.shape.productId,
+                variantId: cartSchema.shape.variantId,
             })
         )
         .use(({ ctx, input, next }) => {
@@ -275,12 +330,13 @@ export const cartRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { userId, sku, productId } = input;
+            const { userId, variantId, productId } = input;
 
             const [existingCart, existingWishlist] = await Promise.all([
                 userCartCache.getProduct({
                     userId,
-                    sku,
+                    productId,
+                    variantId: variantId ?? undefined,
                 }),
                 userWishlistCache.getProduct(userId, productId),
             ]);
@@ -296,16 +352,12 @@ export const cartRouter = createTRPCRouter({
                         "This product is already in your wishlist, you can remove it from your cart instead",
                 });
 
-            const existingVariant = existingCart.item.variants.find(
-                (variant) => variant.sku === sku
-            );
-            if (!existingVariant)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "This variant is not in your cart",
-                });
-
-            if (existingCart.item.status !== "approved")
+            if (
+                existingCart.product.isDeleted ||
+                existingCart.product.verificationStatus !== "approved" ||
+                !existingCart.product.isPublished ||
+                existingCart.variant?.isDeleted
+            )
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "This product is not available",
@@ -316,7 +368,8 @@ export const cartRouter = createTRPCRouter({
                 queries.userCarts.deleteProductFromCart(existingCart.id),
                 userCartCache.remove({
                     userId,
-                    sku,
+                    productId,
+                    variantId: variantId ?? undefined,
                 }),
             ]);
             return data;
@@ -325,7 +378,8 @@ export const cartRouter = createTRPCRouter({
         .input(
             z.object({
                 userId: z.string(),
-                sku: z.string(),
+                productId: cartSchema.shape.productId,
+                variantId: cartSchema.shape.variantId,
             })
         )
         .use(({ ctx, input, next }) => {
@@ -343,11 +397,12 @@ export const cartRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { userId, sku } = input;
+            const { userId, productId, variantId } = input;
 
             const existingCart = await userCartCache.getProduct({
                 userId,
-                sku,
+                productId,
+                variantId: variantId ?? undefined,
             });
             if (!existingCart)
                 throw new TRPCError({
@@ -357,7 +412,11 @@ export const cartRouter = createTRPCRouter({
 
             const [data] = await Promise.all([
                 queries.userCarts.deleteProductFromCart(existingCart.id),
-                userCartCache.remove({ userId, sku }),
+                userCartCache.remove({
+                    userId,
+                    productId,
+                    variantId: variantId ?? undefined,
+                }),
             ]);
             return data;
         }),
@@ -365,7 +424,12 @@ export const cartRouter = createTRPCRouter({
         .input(
             z.object({
                 userId: z.string(),
-                skus: z.array(z.string()),
+                items: z.array(
+                    z.object({
+                        productId: cartSchema.shape.productId,
+                        variantId: cartSchema.shape.variantId,
+                    })
+                ),
             })
         )
         .use(({ ctx, input, next }) => {
@@ -383,7 +447,7 @@ export const cartRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { userId, skus } = input;
+            const { userId, items } = input;
 
             const existingCart = await userCartCache.get(userId);
             if (!existingCart)
@@ -393,7 +457,11 @@ export const cartRouter = createTRPCRouter({
                 });
 
             const existingVariants = existingCart.filter((cart) =>
-                skus.includes(cart.sku)
+                items.some(
+                    (item) =>
+                        cart.productId === item.productId &&
+                        cart.variantId === item.variantId
+                )
             );
             if (existingVariants.length === 0)
                 throw new TRPCError({
@@ -404,7 +472,7 @@ export const cartRouter = createTRPCRouter({
             const [data] = await Promise.all([
                 queries.userCarts.deleteProductsFromCart(
                     userId,
-                    existingVariants.map((cart) => cart.sku)
+                    existingVariants.map((cart) => cart.id)
                 ),
                 userCartCache.drop(userId),
             ]);

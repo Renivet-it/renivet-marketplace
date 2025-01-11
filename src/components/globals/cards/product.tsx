@@ -26,10 +26,15 @@ export function ProductCard({
     const [isProductHovered, setIsProductHovered] = useState(false);
     const [isWishlistHovered, setIsWishlistHovered] = useState(false);
 
+    let productPrice = 0;
+
+    if (!product.productHasVariants) productPrice = product.price || 0;
+    else productPrice = Math.min(...product.variants.map((x) => x.price));
+
     return (
         <div
             className={cn("", className)}
-            title={product.name}
+            title={product.title}
             {...props}
             onMouseEnter={() => setIsProductHovered(true)}
             onMouseLeave={() => setIsProductHovered(false)}
@@ -44,8 +49,8 @@ export function ProductCard({
             >
                 <div className="relative aspect-[3/4] overflow-hidden">
                     <Image
-                        src={product.imageUrls[0]}
-                        alt={product.name}
+                        src={product.media?.[0]?.mediaItem?.url || ""}
+                        alt={product.title}
                         width={1000}
                         height={1000}
                         className="size-full object-cover"
@@ -81,7 +86,7 @@ export function ProductCard({
                 <div>
                     <div className="flex items-center gap-1">
                         <p className="truncate text-sm font-semibold">
-                            {product.name}
+                            {product.title}
                         </p>
 
                         <div className="md:hidden">
@@ -103,6 +108,7 @@ export function ProductCard({
                             />
                         </div>
                     </div>
+
                     <p className="text-xs text-muted-foreground">
                         {product.brand.name}
                     </p>
@@ -110,7 +116,7 @@ export function ProductCard({
 
                 <p className="text-sm font-semibold">
                     {formatPriceTag(
-                        parseFloat(convertPaiseToRupees(product.price)),
+                        parseFloat(convertPaiseToRupees(productPrice)),
                         true
                     )}
                 </p>

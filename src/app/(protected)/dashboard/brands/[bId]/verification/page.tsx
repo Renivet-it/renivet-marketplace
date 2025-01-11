@@ -1,6 +1,5 @@
 import { BrandConfidentialForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
-import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import {
     Notice,
@@ -8,7 +7,8 @@ import {
     NoticeIcon,
     NoticeTitle,
 } from "@/components/ui/notice-dash";
-import { brandQueries } from "@/lib/db/queries";
+import { brandConfidentialQueries } from "@/lib/db/queries";
+import { brandCache, mediaCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -34,7 +34,7 @@ export default function Page(props: PageProps) {
                 </div>
             </div>
 
-            <Suspense fallback={<TableSkeleton />}>
+            <Suspense>
                 <VerificationFetch {...props} />
             </Suspense>
         </DashShell>
@@ -44,57 +44,77 @@ export default function Page(props: PageProps) {
 async function VerificationFetch({ params }: PageProps) {
     const { bId } = await params;
 
-    const existingBrand = await brandQueries.getBrand(bId);
+    const [existingBrand, existingBrandConfidential, media] = await Promise.all(
+        [
+            brandCache.get(bId),
+            brandConfidentialQueries.getBrandConfidential(bId),
+            mediaCache.getAll(bId),
+        ]
+    );
     if (!existingBrand) notFound();
 
-    if (existingBrand.isConfidentialSentForVerification)
-        return (
-            <Notice>
-                <NoticeContent>
-                    <NoticeTitle>
-                        <Icons.Clock className="size-4" />
-                        <span>Pending</span>
-                    </NoticeTitle>
+    return (
+        <>
+            {existingBrand.confidentialVerificationStatus === "pending" && (
+                <Notice>
+                    <NoticeContent>
+                        <NoticeTitle>
+                            <Icons.Clock className="size-4" />
+                            <span>Pending</span>
+                        </NoticeTitle>
 
-                    <p className="text-sm">
-                        The brand is under verification process. You will be
-                        notified once the verification is complete.
-                    </p>
-                </NoticeContent>
-            </Notice>
-        );
-    if (existingBrand.confidentialVerificationStatus === "approved")
-        return (
-            <Notice>
-                <NoticeContent>
-                    <NoticeTitle>
-                        <Icons.CircleCheck className="size-4" />
-                        <span>Congrats</span>
-                    </NoticeTitle>
+                        <p className="text-sm">
+                            The brand is under verification process. You will be
+                            notified once the verification is complete.
+                        </p>
+                    </NoticeContent>
+                </Notice>
+            )}
 
-                    <p className="text-sm">
-                        Your brand has been verified successfully. You can now
-                        start selling your products on our platform.
-                    </p>
-                </NoticeContent>
-            </Notice>
-        );
-    if (existingBrand.confidentialVerificationStatus === "rejected")
-        return (
-            <Notice>
-                <NoticeContent>
-                    <NoticeTitle>
-                        <NoticeIcon />
-                        <span>Warning</span>
-                    </NoticeTitle>
+            {existingBrand.confidentialVerificationStatus === "approved" && (
+                <Notice>
+                    <NoticeContent>
+                        <NoticeTitle>
+                            <Icons.CircleCheck className="size-4" />
+                            <span>Congrats</span>
+                        </NoticeTitle>
 
-                    <p className="text-sm">
-                        The brand verification request has been rejected. Please
-                        delete the brand and create a new request.
-                    </p>
-                </NoticeContent>
-            </Notice>
-        );
+                        <p className="text-sm">
+                            Your brand has been verified successfully. You can
+                            now start selling your products on our platform.
+                        </p>
+                    </NoticeContent>
+                </Notice>
+            )}
 
-    return <BrandConfidentialForm brandId={existingBrand.id} />;
+            {existingBrand.confidentialVerificationStatus === "rejected" && (
+                <Notice>
+                    <NoticeContent>
+                        <NoticeTitle>
+                            <NoticeIcon />
+                            <span>Warning</span>
+                        </NoticeTitle>
+
+                        <p className="text-sm">
+                            The brand verification request has been rejected.
+                            Read the reason below and update the details to
+                            proceed.
+                        </p>
+
+                        <p className="text-sm">
+                            <span className="font-semibold">Reason: </span>
+                            {existingBrand.confidentialVerificationRejectedReason ??
+                                "No reason provided"}
+                        </p>
+                    </NoticeContent>
+                </Notice>
+            )}
+
+            <BrandConfidentialForm
+                brand={existingBrand}
+                brandConfidential={existingBrandConfidential ?? undefined}
+                allMedia={media.data}
+            />
+        </>
+    );
 }

@@ -59,24 +59,22 @@ export function NavbarHome() {
             { enabled: user !== undefined && !isUserFetching }
         );
 
-    const { data: userCart } = trpc.general.users.cart.getCart.useQuery(
+    const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery(
         // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
         { userId: user?.id! },
         { enabled: user !== undefined && !isUserFetching }
     );
 
     const availableCart = userCart?.filter(
-        (item) =>
-            item.item.isAvailable &&
-            item.item.status &&
-            item.item.variants.find(
-                (v) =>
-                    v.quantity > 0 &&
-                    v.sku === item.sku &&
-                    v.isAvailable &&
-                    v.size === item.size &&
-                    JSON.stringify(v.color) === JSON.stringify(item.color)
-            )
+        (c) =>
+            c.product.isPublished &&
+            c.product.verificationStatus === "approved" &&
+            !c.product.isDeleted &&
+            c.product.isAvailable &&
+            (!!c.product.quantity ? c.product.quantity > 0 : true) &&
+            c.product.isActive &&
+            (!c.variant ||
+                (c.variant && !c.variant.isDeleted && c.variant.quantity > 0))
     );
 
     const userPermissions = useMemo(() => {

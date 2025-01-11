@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
@@ -28,8 +27,6 @@ export function ProductAvailablityModal({
     isOpen,
     setIsOpen,
 }: PageProps) {
-    const router = useRouter();
-
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search] = useQueryState("search", {
@@ -44,27 +41,22 @@ export function ProductAvailablityModal({
     });
 
     const { mutate: updateProduct, isPending: isUpdating } =
-        trpc.brands.products.updateProduct.useMutation({
-            onMutate: ({ values }) => {
+        trpc.brands.products.updateProductAvailability.useMutation({
+            onMutate: () => {
                 const toastId = toast.loading(
-                    !values.isAvailable
-                        ? "Marking product as unavailable..."
-                        : "Marking product as available..."
+                    "Updating product availability..."
                 );
                 return { toastId };
             },
-            onSuccess: (_, { values }, { toastId }) => {
+            onSuccess: (_, { isAvailable }, { toastId }) => {
                 toast.success(
-                    !values.isAvailable
+                    !isAvailable
                         ? "Product is now marked as unavailable"
                         : "Product is now marked as available",
-                    {
-                        id: toastId,
-                    }
+                    { id: toastId }
                 );
                 refetch();
                 setIsOpen(false);
-                router.refresh();
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -103,10 +95,7 @@ export function ProductAvailablityModal({
                         onClick={() =>
                             updateProduct({
                                 productId: product.id,
-                                values: {
-                                    ...product,
-                                    isAvailable: !product.isAvailable,
-                                },
+                                isAvailable: !product.isAvailable,
                             })
                         }
                     >

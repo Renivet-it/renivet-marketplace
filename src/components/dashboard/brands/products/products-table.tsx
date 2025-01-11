@@ -3,12 +3,15 @@
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
-import { Input } from "@/components/ui/input-dash";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog-dash";
+import { Input } from "@/components/ui/input-dash";
 import {
     Table,
     TableBody,
@@ -18,6 +21,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertPaiseToRupees,
@@ -43,73 +52,87 @@ import { ProductAction } from "./product-action";
 
 export type TableProduct = ProductWithBrand & {
     visibility: boolean;
+    stock: number;
 };
 
 const columns: ColumnDef<TableProduct>[] = [
     {
-        accessorKey: "name",
-        header: "Name",
+        accessorKey: "title",
+        header: "Title",
         enableHiding: false,
+    },
+    {
+        accessorKey: "nativeSku",
+        header: "Native SKU",
+        cell: ({ row }) => {
+            const data = row.original;
+            return (
+                <span className="whitespace-nowrap">
+                    {data.nativeSku || "N/A"}
+                </span>
+            );
+        },
     },
     {
         accessorKey: "price",
         header: "Price",
         cell: ({ row }) => {
             const data = row.original;
+
+            if (!data.productHasVariants) {
+                const price = formatPriceTag(
+                    parseFloat(convertPaiseToRupees(data.price ?? 0)),
+                    true
+                );
+
+                return <span>{price}</span>;
+            }
+
+            const minPriceRaw = Math.min(...data.variants.map((x) => x.price));
+            const maxPriceRaw = Math.max(...data.variants.map((x) => x.price));
+
+            const minPrice = formatPriceTag(
+                parseFloat(convertPaiseToRupees(minPriceRaw)),
+                true
+            );
+            const maxPrice = formatPriceTag(
+                parseFloat(convertPaiseToRupees(maxPriceRaw)),
+                true
+            );
+
+            if (minPriceRaw === maxPriceRaw) return <span>{minPrice}</span>;
             return (
-                <span>
-                    {formatPriceTag(
-                        parseFloat(convertPaiseToRupees(data.price)),
-                        true
-                    )}
+                <span className="whitespace-nowrap">
+                    {minPrice} - {maxPrice}
                 </span>
             );
         },
     },
     {
-        accessorKey: "categories",
-        header: "Categories",
+        accessorKey: "stock",
+        header: "Stock",
+    },
+    {
+        accessorKey: "category",
+        header: "Category",
         cell: ({ row }) => {
             const data = row.original;
+            return (
+                <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                        <TooltipTrigger className="underline">
+                            View
+                        </TooltipTrigger>
 
-            return data.categories.length === 0 ? (
-                <span>N/A</span>
-            ) : (
-                <Popover>
-                    <PopoverTrigger title="Click to view" className="underline">
-                        View
-                    </PopoverTrigger>
-
-                    <PopoverContent className="w-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Count</TableHead>
-                                    <TableHead>Category</TableHead>
-                                    <TableHead>Subcategory</TableHead>
-                                    <TableHead className="text-right">
-                                        Product Type
-                                    </TableHead>
-                                </TableRow>
-                            </TableHeader>
-
-                            <TableBody>
-                                {data.categories.map((x, i) => (
-                                    <TableRow key={x.id}>
-                                        <TableCell>{i + 1}</TableCell>
-                                        <TableCell>{x.category.name}</TableCell>
-                                        <TableCell>
-                                            {x.subcategory.name}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {x.productType.name}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </PopoverContent>
-                </Popover>
+                        <TooltipContent>
+                            <p>
+                                {data.category.name} &gt;{" "}
+                                {data.subcategory.name} &gt;{" "}
+                                {data.productType.name}
+                            </p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
             );
         },
     },
@@ -119,70 +142,99 @@ const columns: ColumnDef<TableProduct>[] = [
         cell: ({ row }) => {
             const data = row.original;
 
-            const toBeMapped = data.variants.filter((x) => !x.isDeleted);
-
-            return toBeMapped.length === 0 ? (
+            return data.variants.length === 0 ? (
                 <span>N/A</span>
             ) : (
-                <Popover>
-                    <PopoverTrigger title="Click to view" className="underline">
-                        View
-                    </PopoverTrigger>
+                <Dialog>
+                    <DialogTrigger className="underline">
+                        View ({data.variants.length})
+                    </DialogTrigger>
 
-                    <PopoverContent className="max-h-60 w-auto overflow-scroll">
+                    <DialogContent className="max-w-4xl">
+                        <DialogHeader>
+                            <DialogTitle>
+                                Variants of &quot;{data.title}&quot;
+                            </DialogTitle>
+                            <DialogDescription>
+                                {data.variants.length} variants
+                            </DialogDescription>
+                        </DialogHeader>
+
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Count</TableHead>
-                                    <TableHead>Size</TableHead>
-                                    <TableHead>Color</TableHead>
-                                    <TableHead>Availablity</TableHead>
-                                    <TableHead className="text-right">
-                                        Quantity
-                                    </TableHead>
+                                    <TableHead>Variant</TableHead>
+                                    <TableHead>Native SKU</TableHead>
+                                    <TableHead>Custom SKU</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Stock</TableHead>
                                 </TableRow>
                             </TableHeader>
 
                             <TableBody>
-                                {toBeMapped.map((x, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell>{i + 1}</TableCell>
-                                        <TableCell>{x.size}</TableCell>
-                                        <TableCell>
-                                            <div
-                                                key={i}
-                                                title={x.color.name}
-                                                className="size-5 rounded-full border border-foreground/20"
-                                                style={{
-                                                    backgroundColor:
-                                                        x.color.hex,
-                                                }}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            {x.isAvailable ? "Yes" : "No"}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {x.quantity}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {data.variants.map((variant) => {
+                                    const variantName = Object.entries(
+                                        variant.combinations
+                                    )
+                                        .map(([optionId, valueId]) => {
+                                            const option = data.options.find(
+                                                (opt) => opt.id === optionId
+                                            );
+                                            const value = option?.values.find(
+                                                (val) => val.id === valueId
+                                            );
+                                            return value?.name;
+                                        })
+                                        .filter(Boolean)
+                                        .join(" / ");
+
+                                    return (
+                                        <TableRow key={variant.id}>
+                                            <TableCell>{variantName}</TableCell>
+
+                                            <TableCell>
+                                                {variant.nativeSku}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                {variant.sku || "N/A"}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                {formatPriceTag(
+                                                    parseFloat(
+                                                        convertPaiseToRupees(
+                                                            variant.price
+                                                        )
+                                                    ),
+                                                    true
+                                                )}
+                                            </TableCell>
+
+                                            <TableCell>
+                                                {variant.quantity}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
 
                             <TableFooter>
                                 <TableRow>
                                     <TableCell colSpan={4}>Total</TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell>
                                         {data.variants.reduce(
-                                            (acc, x) => acc + x.quantity,
+                                            (acc, variant) =>
+                                                acc + variant.quantity,
                                             0
                                         )}
                                     </TableCell>
+                                    <TableCell />
                                 </TableRow>
                             </TableFooter>
                         </Table>
-                    </PopoverContent>
-                </Popover>
+                    </DialogContent>
+                </Dialog>
             );
         },
     },
@@ -195,6 +247,14 @@ const columns: ColumnDef<TableProduct>[] = [
         },
     },
     {
+        accessorKey: "isActive",
+        header: "Active",
+        cell: ({ row }) => {
+            const data = row.original;
+            return data.isActive ? "Yes" : "No";
+        },
+    },
+    {
         accessorKey: "visibility",
         header: "Visibility",
         cell: ({ row }) => {
@@ -203,7 +263,7 @@ const columns: ColumnDef<TableProduct>[] = [
         },
     },
     {
-        accessorKey: "status",
+        accessorKey: "verificationStatus",
         header: "Status",
         cell: ({ row }) => {
             const data = row.original;
@@ -211,14 +271,14 @@ const columns: ColumnDef<TableProduct>[] = [
             return (
                 <Badge
                     variant={
-                        data.status === "approved"
+                        data.verificationStatus === "approved"
                             ? "secondary"
-                            : data.status === "rejected"
+                            : data.verificationStatus === "rejected"
                               ? "destructive"
                               : "default"
                     }
                 >
-                    {convertValueToLabel(data.status)}
+                    {convertValueToLabel(data.verificationStatus)}
                 </Badge>
             );
         },
@@ -271,10 +331,17 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
 
     const data = useMemo(
         () =>
-            dataRaw.map((x) => ({
-                ...x,
-                visibility: x.isPublished,
-            })),
+            dataRaw.map((x) => {
+                const stock = x.productHasVariants
+                    ? x.variants.reduce((acc, curr) => acc + curr.quantity, 0)
+                    : (x.quantity ?? 0);
+
+                return {
+                    ...x,
+                    visibility: x.isPublished,
+                    stock,
+                };
+            }),
         [dataRaw]
     );
 
@@ -307,7 +374,7 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
                         placeholder="Search by name..."
                         value={
                             (table
-                                .getColumn("name")
+                                .getColumn("title")
                                 ?.getFilterValue() as string) ?? search
                         }
                         onChange={(event) => {

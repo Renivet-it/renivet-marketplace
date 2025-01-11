@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/select-dash";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel } from "@/lib/utils";
-import { Brand, BrandConfidential } from "@/lib/validations";
+import {
+    Brand,
+    BrandConfidential,
+    BrandConfidentialWithBrand,
+} from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -31,8 +35,6 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
-
-type BrandConfidentialWithBrand = BrandConfidential & { brand: Brand };
 
 export type TableBrandVerifications = BrandConfidentialWithBrand & {
     brandName: string;

@@ -50,20 +50,21 @@ export function CartPage({
     const [isUnavailableModalOpen, setIsUnavailableModalOpen] = useState(false);
 
     const { data: userCart, refetch } =
-        trpc.general.users.cart.getCart.useQuery({ userId }, { initialData });
+        trpc.general.users.cart.getCartForUser.useQuery(
+            { userId },
+            { initialData }
+        );
 
     const availableCart = userCart.filter(
-        (item) =>
-            item.item.isAvailable &&
-            item.item.status &&
-            item.item.variants.find(
-                (v) =>
-                    v.quantity > 0 &&
-                    v.sku === item.sku &&
-                    v.isAvailable &&
-                    v.size === item.size &&
-                    JSON.stringify(v.color) === JSON.stringify(item.color)
-            )
+        (c) =>
+            c.product.isPublished &&
+            c.product.verificationStatus === "approved" &&
+            !c.product.isDeleted &&
+            c.product.isAvailable &&
+            (!!c.product.quantity ? c.product.quantity > 0 : true) &&
+            c.product.isActive &&
+            (!c.variant ||
+                (c.variant && !c.variant.isDeleted && c.variant.quantity > 0))
     );
 
     const unavailableCart = userCart.filter(
@@ -72,7 +73,15 @@ export function CartPage({
 
     const totalPrice = availableCart
         .filter((item) => item.status)
-        .reduce((acc, item) => acc + item.item.price * item.quantity, 0);
+        .reduce((acc, item) => {
+            const itemPrice = item.variantId
+                ? (item.product.variants.find((v) => v.id === item.variantId)
+                      ?.price ??
+                  item.product.price ??
+                  0)
+                : (item.product.price ?? 0);
+            return acc + itemPrice * item.quantity;
+        }, 0);
 
     const itemCount = availableCart
         .filter((item) => item.status)

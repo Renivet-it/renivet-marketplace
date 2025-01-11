@@ -2,7 +2,13 @@ import { ProductManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { brandCache } from "@/lib/redis/methods";
+import {
+    brandCache,
+    categoryCache,
+    mediaCache,
+    productTypeCache,
+    subCategoryCache,
+} from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -13,19 +19,20 @@ interface PageProps {
 }
 
 export const metadata: Metadata = {
-    title: "Create New Product",
-    description: "Create a new product for the brand",
+    title: "Add New Product",
+    description: "Add a new product for the brand",
 };
 
 export default function Page({ params }: PageProps) {
     return (
         <DashShell>
             <div className="space-y-1">
-                <h1 className="text-2xl font-bold">Create New Product</h1>
+                <h1 className="text-2xl font-bold">Add New Product</h1>
                 <p className="text-sm text-muted-foreground">
-                    Create a new product for the brand
+                    Add a new product for the brand
                 </p>
             </div>
+
             <Suspense fallback={<ProductManageSkeleton />}>
                 <ProductManageFetch params={params} />
             </Suspense>
@@ -35,10 +42,28 @@ export default function Page({ params }: PageProps) {
 
 async function ProductManageFetch({ params }: PageProps) {
     const { bId } = await params;
-    const cachedBrand = await brandCache.get(bId);
+
+    const [cachedBrand, categories, subCategories, productTypes, media] =
+        await Promise.all([
+            brandCache.get(bId),
+            categoryCache.getAll(),
+            subCategoryCache.getAll(),
+            productTypeCache.getAll(),
+            mediaCache.getAll(bId),
+        ]);
+
     if (!cachedBrand) notFound();
 
-    return <ProductManageForm brandId={bId} />;
+    return (
+        <ProductManageForm
+            brandId={bId}
+            brand={cachedBrand}
+            allCategories={categories}
+            allSubCategories={subCategories}
+            allProductTypes={productTypes}
+            allMedia={media.data}
+        />
+    );
 }
 
 function ProductManageSkeleton() {

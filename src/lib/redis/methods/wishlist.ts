@@ -44,8 +44,9 @@ class UserWishlistCache {
         );
     }
 
-    async getProduct(userId: string, productId: string) {
-        const key = `wishlist:${userId}:${productId}`;
+    async getProduct(userId: string, productId: string, variantId?: string) {
+        const keyArray = ["wishlist", userId, productId, variantId];
+        const key = keyArray.join(":");
         const cachedWishlist = await redis.get(key);
 
         if (!cachedWishlist) {
@@ -65,8 +66,11 @@ class UserWishlistCache {
     }
 
     async add(wishlist: CachedWishlist) {
+        const keyArray = ["wishlist", wishlist.userId, wishlist.productId];
+        const key = keyArray.join(":");
+
         return await redis.set(
-            `wishlist:${wishlist.userId}:${wishlist.productId}`,
+            key,
             JSON.stringify(wishlist),
             "EX",
             60 * 60 * 24 * 7
@@ -78,8 +82,15 @@ class UserWishlistCache {
 
         await Promise.all(
             wishlists.map((wishlist) => {
+                const keyArray = [
+                    "wishlist",
+                    wishlist.userId,
+                    wishlist.productId,
+                ];
+                const key = keyArray.join(":");
+
                 pipeline.set(
-                    `wishlist:${wishlist.userId}:${wishlist.productId}`,
+                    key,
                     JSON.stringify(wishlist),
                     "EX",
                     60 * 60 * 24 * 7
@@ -90,8 +101,11 @@ class UserWishlistCache {
         return await pipeline.exec();
     }
 
-    async remove(userId: string, productId: string) {
-        return await redis.del(`wishlist:${userId}:${productId}`);
+    async remove(userId: string, productId: string, variantId?: string) {
+        const keyArray = ["wishlist", userId, productId, variantId];
+        const key = keyArray.join(":");
+
+        return await redis.del(key);
     }
 
     async drop(userId: string) {

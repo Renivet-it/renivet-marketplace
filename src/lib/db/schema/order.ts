@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
-import { productVariants } from "./product";
+import { products, productVariants } from "./product";
 import { refunds } from "./refund";
 import { users } from "./user";
 
@@ -84,15 +84,28 @@ export const orderItems = pgTable(
             .references(() => orders.id, {
                 onDelete: "cascade",
             }),
-        sku: text("sku")
+        productId: uuid("product_id")
             .notNull()
-            .references(() => productVariants.sku),
+            .references(() => products.id, {
+                onDelete: "cascade",
+            }),
+        variantId: uuid("variant_id").references(() => productVariants.id, {
+            onDelete: "cascade",
+        }),
         quantity: integer("quantity").notNull().default(1),
         ...timestamps,
     },
     (table) => ({
         orderItemOrderIdIdx: index("order_item_order_id_idx").on(table.orderId),
-        orderItemSkuIdx: index("order_item_sku_idx").on(table.sku),
+        orderItemProductIdIdx: index("order_item_product_id_idx").on(
+            table.productId
+        ),
+        orderItemVariantIdIdx: index("order_item_variant_id_idx").on(
+            table.variantId
+        ),
+        orderItemProductIdVariantIdIdx: index(
+            "order_item_product_id_variant_id_idx"
+        ).on(table.productId, table.variantId),
     })
 );
 
@@ -114,8 +127,12 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
         fields: [orderItems.orderId],
         references: [orders.id],
     }),
-    productVariant: one(productVariants, {
-        fields: [orderItems.sku],
-        references: [productVariants.sku],
+    product: one(products, {
+        fields: [orderItems.productId],
+        references: [products.id],
+    }),
+    variant: one(productVariants, {
+        fields: [orderItems.variantId],
+        references: [productVariants.id],
     }),
 }));

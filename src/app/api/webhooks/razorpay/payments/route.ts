@@ -31,75 +31,67 @@ export async function POST(req: NextRequest) {
         switch (payload.event) {
             case "payment.captured":
                 {
-                    const isStockAvailable = existingOrder.items.every(
-                        (item) => {
-                            const quantity = item.quantity;
-                            const stock = item.productVariant.quantity;
-
-                            return (
-                                stock >= quantity &&
-                                !item.product.isDeleted &&
-                                item.product.isAvailable &&
-                                item.productVariant.isAvailable &&
-                                !item.productVariant.isDeleted
-                            );
-                        }
-                    );
-                    if (!isStockAvailable) {
-                        await orderQueries.updateOrderStatus(existingOrder.id, {
-                            paymentId: payload.payload.payment.entity.id,
-                            paymentMethod:
-                                payload.payload.payment.entity.method,
-                            paymentStatus: "refund_pending",
-                            status: "cancelled",
-                        });
-
-                        const rzpRefund = await razorpay.payments.refund(
-                            payload.payload.payment.entity.id,
-                            {
-                                amount: payload.payload.payment.entity.amount,
-                            }
-                        );
-
-                        await refundQueries.createRefund({
-                            id: rzpRefund.id,
-                            userId: existingOrder.userId,
-                            orderId: existingOrder.id,
-                            paymentId: payload.payload.payment.entity.id,
-                            status: "pending",
-                            amount: convertPaiseToRupees(
-                                payload.payload.payment.entity.amount
-                            ),
-                        });
-
-                        throw new Error(
-                            "Insufficient stock for one or more items"
-                        );
-                    }
-
-                    const updateProductStockData = existingOrder.items.map(
-                        (item) => {
-                            const quantity = item.quantity;
-                            const stock = item.productVariant.quantity;
-                            const updatedQuantity = stock - quantity;
-
-                            return {
-                                sku: item.productVariant.sku,
-                                quantity: updatedQuantity,
-                            };
-                        }
-                    );
-
-                    await productQueries.updateProductStock(
-                        updateProductStockData
-                    );
-
-                    await orderQueries.updateOrderStatus(existingOrder.id, {
-                        paymentId: payload.payload.payment.entity.id,
-                        paymentMethod: payload.payload.payment.entity.method,
-                        paymentStatus: "paid",
-                        status: "processing",
-                    });
+                    // const isStockAvailable = existingOrder.items.every(
+                    //     (item) => {
+                    //         const quantity = item.quantity;
+                    //         const stock = item.productVariant.quantity;
+                    //         return (
+                    //             stock >= quantity &&
+                    //             !item.product.isDeleted &&
+                    //             item.product.isAvailable &&
+                    //             item.productVariant.isAvailable &&
+                    //             !item.productVariant.isDeleted
+                    //         );
+                    //     }
+                    // );
+                    // if (!isStockAvailable) {
+                    //     await orderQueries.updateOrderStatus(existingOrder.id, {
+                    //         paymentId: payload.payload.payment.entity.id,
+                    //         paymentMethod:
+                    //             payload.payload.payment.entity.method,
+                    //         paymentStatus: "refund_pending",
+                    //         status: "cancelled",
+                    //     });
+                    //     const rzpRefund = await razorpay.payments.refund(
+                    //         payload.payload.payment.entity.id,
+                    //         {
+                    //             amount: payload.payload.payment.entity.amount,
+                    //         }
+                    //     );
+                    //     await refundQueries.createRefund({
+                    //         id: rzpRefund.id,
+                    //         userId: existingOrder.userId,
+                    //         orderId: existingOrder.id,
+                    //         paymentId: payload.payload.payment.entity.id,
+                    //         status: "pending",
+                    //         amount: convertPaiseToRupees(
+                    //             payload.payload.payment.entity.amount
+                    //         ),
+                    //     });
+                    //     throw new Error(
+                    //         "Insufficient stock for one or more items"
+                    //     );
+                    // }
+                    // const updateProductStockData = existingOrder.items.map(
+                    //     (item) => {
+                    //         const quantity = item.quantity;
+                    //         const stock = item.productVariant.quantity;
+                    //         const updatedQuantity = stock - quantity;
+                    //         return {
+                    //             sku: item.productVariant.sku,
+                    //             quantity: updatedQuantity,
+                    //         };
+                    //     }
+                    // );
+                    // await productQueries.updateProductStock(
+                    //     updateProductStockData
+                    // );
+                    // await orderQueries.updateOrderStatus(existingOrder.id, {
+                    //     paymentId: payload.payload.payment.entity.id,
+                    //     paymentMethod: payload.payload.payment.entity.method,
+                    //     paymentStatus: "paid",
+                    //     status: "processing",
+                    // });
                 }
                 break;
 

@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
@@ -24,8 +23,6 @@ interface PageProps {
 }
 
 export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
-    const router = useRouter();
-
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search] = useQueryState("search", {
@@ -49,7 +46,6 @@ export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
                 toast.success("Product deleted successfully", { id: toastId });
                 refetch();
                 setIsOpen(false);
-                router.refresh();
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);

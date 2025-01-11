@@ -48,8 +48,9 @@ export function ProductActionPage({ product }: PageProps) {
 
             <TabsContent value="approve" className="space-y-4 pt-2">
                 <p className="text-sm font-semibold">
-                    Approving this product will make it available for customers
-                    to purchase. Are you sure you want to approve this product?
+                    Approving this product will give brand access to list it on
+                    the marketplace. Are you sure you want to approve this
+                    product?
                 </p>
 
                 <Button

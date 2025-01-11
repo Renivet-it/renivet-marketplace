@@ -1,7 +1,6 @@
 "use client";
 
-import { PRESET_COLORS } from "@/config/const";
-import { cn, formatPriceTag, slugify } from "@/lib/utils";
+import { cn, formatPriceTag } from "@/lib/utils";
 import {
     BrandMeta,
     CachedCategory,
@@ -140,10 +139,6 @@ function ShopFiltersSection({
 }: PageProps) {
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
-        parseAsArrayOf(parseAsString, ",").withDefault([])
-    );
-    const [colors, setColors] = useQueryState(
-        "colors",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
     const [minPrice, setMinPrice] = useQueryState(
@@ -319,45 +314,6 @@ function ShopFiltersSection({
                     Reset Category
                 </Button>
             )}
-
-            <Separator />
-
-            <div className="space-y-1">
-                <Label className="font-semibold uppercase">Colors</Label>
-
-                <MultipleSelectorGeneral
-                    commandProps={{
-                        label: "Colors",
-                    }}
-                    defaultOptions={PRESET_COLORS.map((color) => ({
-                        label: color.name,
-                        value: slugify(color.name),
-                        hex: color.hex,
-                    })).sort((a, b) => a.value.localeCompare(b.value))}
-                    placeholder="Select colors"
-                    emptyIndicator={
-                        <p className="text-center text-sm">No results found</p>
-                    }
-                    value={PRESET_COLORS.filter((color) =>
-                        colors.includes(color.hex)
-                    ).map((color) => ({
-                        label: color.name,
-                        value: slugify(color.name),
-                        hex: color.hex,
-                    }))}
-                    onChange={(options) =>
-                        setColors(
-                            options.map(
-                                (option) =>
-                                    PRESET_COLORS.find(
-                                        (color) =>
-                                            slugify(color.name) === option.value
-                                    )?.hex ?? ""
-                            )
-                        )
-                    }
-                />
-            </div>
 
             <Separator />
 
