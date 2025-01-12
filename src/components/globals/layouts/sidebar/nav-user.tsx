@@ -19,7 +19,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_AVATAR_URL } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
-import { hideEmail } from "@/lib/utils";
+import { handleClientError, hideEmail } from "@/lib/utils";
+import { useAuth } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
+import { useMutation } from "@tanstack/react-query";
 import {
     BadgeCheck,
     Bell,
@@ -28,11 +31,40 @@ import {
     LogOut,
     Sparkles,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export function NavUser() {
+    const router = useRouter();
     const { isMobile } = useSidebar();
 
-    const { data: user, isPending } = trpc.general.users.currentUser.useQuery();
+    const {
+        data: user,
+        isPending,
+        refetch,
+    } = trpc.general.users.currentUser.useQuery();
+    const { signOut } = useAuth();
+
+    const { mutate: handleLogout, isPending: isLoggingOut } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Logging out...");
+            return { toastId };
+        },
+        mutationFn: () => signOut(),
+        onSuccess: (_, __, { toastId }) => {
+            toast.success("See you soon!", { id: toastId });
+            refetch();
+            router.refresh();
+            router.push("/auth/signin");
+        },
+        onError: (err, _, ctx) => {
+            return isClerkAPIResponseError(err)
+                ? toast.error(err.errors.map((e) => e.message).join(", "), {
+                      id: ctx?.toastId,
+                  })
+                : handleClientError(err, ctx?.toastId);
+        },
+    });
 
     return (
         <SidebarMenu>
@@ -116,7 +148,7 @@ export function NavUser() {
                             <DropdownMenuSeparator />
 
                             <DropdownMenuGroup>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem disabled>
                                     <Sparkles />
                                     Upgrade to Pro
                                 </DropdownMenuItem>
@@ -125,17 +157,17 @@ export function NavUser() {
                             <DropdownMenuSeparator />
 
                             <DropdownMenuGroup>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem disabled>
                                     <BadgeCheck />
                                     Account
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem>
+                                <DropdownMenuItem disabled>
                                     <CreditCard />
                                     Billing
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem>
+                                <DropdownMenuItem disabled>
                                     <Bell />
                                     Notifications
                                 </DropdownMenuItem>
@@ -143,7 +175,10 @@ export function NavUser() {
 
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                                disabled={isLoggingOut}
+                                onClick={() => handleLogout()}
+                            >
                                 <LogOut />
                                 Log out
                             </DropdownMenuItem>
