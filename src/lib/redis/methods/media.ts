@@ -27,6 +27,7 @@ class MediaCache {
             await this.addBulk(dbMediaItems.data);
             return dbMediaItems;
         }
+        if (!keys.length) return { data: [], count: 0 };
 
         const cachedMediaItems = await redis.mget(...keys);
         const parsed = cachedBrandMediaItemSchema
