@@ -1,3 +1,4 @@
+import { env } from "@/../env";
 import { utApi } from "@/app/api/uploadthing/core";
 import {
     BitFieldBrandPermission,
@@ -6,6 +7,12 @@ import {
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
 import { brandCache, userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import {
+    BrandRequestStatusUpdate,
+    BrandRequestSubmitted,
+    BrandVerificationStatusUpdate,
+} from "@/lib/resend/emails";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -143,6 +150,16 @@ export const brandRequestsRouter = createTRPCRouter({
                     ownerId: user.id,
                 });
 
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: user.email,
+                subject: `Request Submitted - ${newBrandRequest.name}`,
+                react: BrandRequestSubmitted({
+                    user: user,
+                    brand: newBrandRequest,
+                }),
+            });
+
             posthog.capture({
                 distinctId: user.id,
                 event: POSTHOG_EVENTS.BRAND.REQUEST.CREATED,
@@ -223,7 +240,7 @@ export const brandRequestsRouter = createTRPCRouter({
                 data.status === "rejected" && utApi.deleteFiles([logoKey]),
             ]);
 
-            if (data.status === "rejected")
+            if (data.status === "rejected") {
                 posthog.capture({
                     distinctId: existingBrandRequest.ownerId,
                     event: POSTHOG_EVENTS.BRAND.REQUEST.REJECTED,
@@ -233,6 +250,21 @@ export const brandRequestsRouter = createTRPCRouter({
                         brandRequestEmail: existingBrandRequest.email,
                     },
                 });
+
+                await resend.emails.send({
+                    from: env.RESEND_EMAIL_FROM,
+                    to: existingBrandRequest.owner.email,
+                    subject: `Request Rejected - ${existingBrandRequest.name}`,
+                    react: BrandRequestStatusUpdate({
+                        user: existingBrandRequest.owner,
+                        brand: {
+                            status: "rejected",
+                            name: existingBrandRequest.name,
+                            rejectionReason: data.rejectionReason ?? undefined,
+                        },
+                    }),
+                });
+            }
 
             if (newBrand) {
                 const brandAdminRole = await queries.roles.createRole({
@@ -280,6 +312,20 @@ export const brandRequestsRouter = createTRPCRouter({
                     }),
                     userCache.remove(newBrand.ownerId),
                 ]);
+
+                await resend.emails.send({
+                    from: env.RESEND_EMAIL_FROM,
+                    to: existingBrandRequest.owner.email,
+                    subject: `Request Approved - ${newBrand.name}`,
+                    react: BrandRequestStatusUpdate({
+                        user: existingBrandRequest.owner,
+                        brand: {
+                            id: newBrand.id,
+                            name: newBrand.name,
+                            status: "approved",
+                        },
+                    }),
+                });
             }
 
             return true;
@@ -448,6 +494,15 @@ export const brandVerificationsRouter = createTRPCRouter({
                     message: "Brand verification not found",
                 });
 
+            const existingUser = await userCache.get(
+                existingBrandConfidential.brand.ownerId
+            );
+            if (!existingUser)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "User not found",
+                });
+
             if (existingBrandConfidential.verificationStatus === "approved")
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -469,6 +524,20 @@ export const brandVerificationsRouter = createTRPCRouter({
                 brandCache.remove(existingBrandConfidential.brand.id),
                 userCache.remove(existingBrandConfidential.brand.ownerId),
             ]);
+
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: existingUser.email,
+                subject: `Verification Approved - ${existingBrandConfidential.brand.name}`,
+                react: BrandVerificationStatusUpdate({
+                    user: existingUser,
+                    brand: {
+                        id: existingBrandConfidential.brand.id,
+                        name: existingBrandConfidential.brand.name,
+                        status: "approved",
+                    },
+                }),
+            });
 
             return updatedBrandConfidential;
         }),
@@ -504,6 +573,15 @@ export const brandVerificationsRouter = createTRPCRouter({
                     message: "Brand verification not found",
                 });
 
+            const existingUser = await userCache.get(
+                existingBrandConfidential.brand.ownerId
+            );
+            if (!existingUser)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "User not found",
+                });
+
             if (existingBrandConfidential.verificationStatus === "rejected")
                 throw new TRPCError({
                     code: "BAD_REQUEST",
@@ -518,6 +596,21 @@ export const brandVerificationsRouter = createTRPCRouter({
                 brandCache.remove(existingBrandConfidential.brand.id),
                 userCache.remove(existingBrandConfidential.brand.ownerId),
             ]);
+
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: existingUser.email,
+                subject: `Verification Failed - ${existingBrandConfidential.brand.name}`,
+                react: BrandVerificationStatusUpdate({
+                    user: existingUser,
+                    brand: {
+                        id: existingBrandConfidential.brand.id,
+                        name: existingBrandConfidential.brand.name,
+                        status: "rejected",
+                        rejectionReason: rejectedReason ?? undefined,
+                    },
+                }),
+            });
 
             return updatedBrandConfidential;
         }),
