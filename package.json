@@ -73,6 +73,8 @@
         "nuqs": "^2.3.0",
         "papaparse": "^5.5.1",
         "postgres": "^3.4.5",
+        "posthog-js": "^1.205.0",
+        "posthog-node": "^4.3.2",
         "razorpay": "^2.9.5",
         "react": "^19.0.0",
         "react-colorful": "^5.6.1",

@@ -1,3 +1,5 @@
+"use client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_AVATAR_URL, DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";

@@ -1,4 +1,6 @@
 import { BitFieldBrandPermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -202,6 +204,16 @@ export const membersRouter = createTRPCRouter({
                 userCache.remove(memberId),
                 brandCache.remove(brandId),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.BRAND.MEMBER.KICKED,
+                distinctId: brandId,
+                properties: {
+                    memberId,
+                },
+            });
+
+            return true;
         }),
     banMember: protectedProcedure
         .input(createdBannedBrandMemberSchema)
@@ -252,6 +264,15 @@ export const membersRouter = createTRPCRouter({
                 userCache.remove(memberId),
                 brandCache.remove(brandId),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.BRAND.MEMBER.BAN.ADDED,
+                distinctId: brandId,
+                properties: {
+                    memberId,
+                    reason,
+                },
+            });
 
             return true;
         }),

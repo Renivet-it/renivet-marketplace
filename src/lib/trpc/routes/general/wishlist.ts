@@ -1,4 +1,6 @@
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { createCartSchema, createWishlistSchema } from "@/lib/validations";
@@ -83,6 +85,16 @@ export const wishlistRouter = createTRPCRouter({
 
             const data =
                 await queries.userWishlists.addProductInWishlist(input);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.WISHLIST.ADDED,
+                distinctId: userId,
+                properties: {
+                    productId,
+                    sku: existingProduct.nativeSku,
+                },
+            });
+
             return data;
         }),
     moveProductToCart: protectedProcedure
@@ -176,6 +188,26 @@ export const wishlistRouter = createTRPCRouter({
                         }),
                     ]);
 
+                posthog.capture({
+                    event: POSTHOG_EVENTS.CART.ADDED,
+                    distinctId: userId,
+                    properties: {
+                        productId,
+                        variantId,
+                        sku: existingVariant.nativeSku,
+                        quantity,
+                    },
+                });
+
+                posthog.capture({
+                    event: POSTHOG_EVENTS.WISHLIST.REMOVED,
+                    distinctId: userId,
+                    properties: {
+                        productId,
+                        sku: existingVariant.nativeSku,
+                    },
+                });
+
                 return {
                     type: existingCart ? ("update" as const) : ("add" as const),
                 };
@@ -245,6 +277,25 @@ export const wishlistRouter = createTRPCRouter({
                         }),
                     ]);
 
+                posthog.capture({
+                    event: POSTHOG_EVENTS.CART.ADDED,
+                    distinctId: userId,
+                    properties: {
+                        productId,
+                        sku: existingProduct.nativeSku,
+                        quantity,
+                    },
+                });
+
+                posthog.capture({
+                    event: POSTHOG_EVENTS.WISHLIST.REMOVED,
+                    distinctId: userId,
+                    properties: {
+                        productId,
+                        sku: existingProduct.nativeSku,
+                    },
+                });
+
                 return {
                     type: existingCart ? ("update" as const) : ("add" as const),
                 };
@@ -286,6 +337,15 @@ export const wishlistRouter = createTRPCRouter({
                 ),
                 userWishlistCache.remove(userId, productId),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.WISHLIST.REMOVED,
+                distinctId: userId,
+                properties: {
+                    productId,
+                    sku: existingWishlist.product.nativeSku,
+                },
+            });
 
             return data;
         }),

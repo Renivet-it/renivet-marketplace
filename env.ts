@@ -67,6 +67,17 @@ export const env = createEnv({
                 required_error: "NEXT_PUBLIC_FACEBOOK_APP_ID is required",
             })
             .min(1, "NEXT_PUBLIC_FACEBOOK_APP_ID is required"),
+
+        NEXT_PUBLIC_POSTHOG_KEY: z
+            .string({
+                required_error: "NEXT_PUBLIC_POSTHOG_KEY is required",
+            })
+            .min(1, "NEXT_PUBLIC_POSTHOG_KEY is required"),
+        NEXT_PUBLIC_POSTHOG_HOST: z
+            .string({
+                required_error: "NEXT_PUBLIC_POSTHOG_HOST is required",
+            })
+            .min(1, "NEXT_PUBLIC_POSTHOG_HOST is required"),
     },
     runtimeEnv: {
         CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
@@ -86,6 +97,8 @@ export const env = createEnv({
             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
         NEXT_PUBLIC_RAZOR_PAY_KEY_ID: process.env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
         NEXT_PUBLIC_FACEBOOK_APP_ID: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
+        NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+        NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     },
     extends: [vercel()],
 });

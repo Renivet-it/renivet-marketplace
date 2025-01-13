@@ -1,6 +1,8 @@
 "use server";
 
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { brandInviteQueries, brandMemberQueries } from "@/lib/db/queries";
+import { posthog } from "@/lib/posthog/client";
 import { brandCache, userCache } from "@/lib/redis/methods";
 
 export async function acceptBrandInvite({
@@ -32,6 +34,23 @@ export async function acceptBrandInvite({
         userCache.remove(memberId),
         brandCache.remove(brandId),
     ]);
+
+    posthog.capture({
+        event: POSTHOG_EVENTS.BRAND.INVITE.ACCEPTED,
+        distinctId: brandId,
+        properties: {
+            memberId,
+            code,
+        },
+    });
+
+    posthog.capture({
+        event: POSTHOG_EVENTS.BRAND.MEMBER.JOINED,
+        distinctId: brandId,
+        properties: {
+            memberId,
+        },
+    });
 
     return true;
 }

@@ -1,6 +1,8 @@
 import { env } from "@/../env";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { posthog } from "@/lib/posthog/client";
 import { userCache } from "@/lib/redis/methods";
 import { CResponse, handleError } from "@/lib/utils";
 import {
@@ -40,6 +42,19 @@ export async function POST(req: NextRequest) {
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
 
+                    posthog.capture({
+                        distinctId: webhookUser.id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.CREATED,
+                        properties: {
+                            email: email.email_address,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            phone: phone?.phone_number ?? null,
+                        },
+                    });
+
                     await db.insert(users).values({
                         id: webhookUser.id,
                         firstName: webhookUser.first_name,
@@ -67,6 +82,20 @@ export async function POST(req: NextRequest) {
                     const phone = webhookUser.phone_numbers.find(
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
+
+                    posthog.capture({
+                        distinctId: webhookUser.id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.UPDATED,
+                        properties: {
+                            email: email.email_address,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            phone: phone?.phone_number ?? null,
+                        },
+                    });
+
                     await Promise.all([
                         db
                             .update(users)
@@ -91,6 +120,11 @@ export async function POST(req: NextRequest) {
             case "user.deleted":
                 {
                     const { id } = userDeleteWebhookSchema.parse(data);
+
+                    posthog.capture({
+                        distinctId: id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.DELETED,
+                    });
 
                     await Promise.all([
                         db.delete(users).where(eq(users.id, id)),

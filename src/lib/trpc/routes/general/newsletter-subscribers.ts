@@ -1,4 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -85,6 +87,14 @@ export const newsletterSubscriberRouter = createTRPCRouter({
             const newsletterSubscriber =
                 await queries.newsletterSubscribers.createSubscriber(input);
 
+            posthog.capture({
+                event: POSTHOG_EVENTS.NEWSLETTER.SUBSCRIBED,
+                distinctId: newsletterSubscriber.id,
+                properties: {
+                    email: newsletterSubscriber.email,
+                },
+            });
+
             return newsletterSubscriber;
         }),
     updateNewsletterSubscriber: publicProcedure
@@ -120,6 +130,16 @@ export const newsletterSubscriberRouter = createTRPCRouter({
                     isActive
                 );
 
+            posthog.capture({
+                event: isActive
+                    ? POSTHOG_EVENTS.NEWSLETTER.SUBSCRIBED
+                    : POSTHOG_EVENTS.NEWSLETTER.UNSUBSCRIBED,
+                distinctId: newsletterSubscriber.id,
+                properties: {
+                    email: newsletterSubscriber.email,
+                },
+            });
+
             return newsletterSubscriber;
         }),
     deleteNewsletterSubscriber: protectedProcedure
@@ -142,6 +162,15 @@ export const newsletterSubscriberRouter = createTRPCRouter({
                 });
 
             await queries.newsletterSubscribers.deleteSubscriber(id);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.NEWSLETTER.UNSUBSCRIBED,
+                distinctId: id,
+                properties: {
+                    email: existingNewsletterSubscriber.email,
+                },
+            });
+
             return true;
         }),
 });

@@ -1,3 +1,5 @@
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { cartSchema, createCartSchema } from "@/lib/validations";
@@ -107,6 +109,17 @@ export const cartRouter = createTRPCRouter({
                     ]);
                 }
 
+                posthog.capture({
+                    event: POSTHOG_EVENTS.CART.ADDED,
+                    distinctId: userId,
+                    properties: {
+                        productId,
+                        variantId,
+                        sku: existingVariant.nativeSku,
+                        quantity,
+                    },
+                });
+
                 return {
                     type: existingCart ? ("update" as const) : ("add" as const),
                 };
@@ -152,6 +165,17 @@ export const cartRouter = createTRPCRouter({
                         }),
                     ]);
                 }
+
+                posthog.capture({
+                    event: POSTHOG_EVENTS.CART.ADDED,
+                    distinctId: userId,
+                    properties: {
+                        productId,
+                        variantId,
+                        sku: existingProduct.nativeSku,
+                        quantity,
+                    },
+                });
 
                 return {
                     type: existingCart ? ("update" as const) : ("add" as const),
@@ -372,6 +396,28 @@ export const cartRouter = createTRPCRouter({
                     variantId: variantId ?? undefined,
                 }),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.WISHLIST.ADDED,
+                distinctId: userId,
+                properties: {
+                    productId,
+                    sku: existingCart.product.nativeSku,
+                },
+            });
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.CART.REMOVED,
+                distinctId: userId,
+                properties: {
+                    productId,
+                    variantId,
+                    sku: variantId
+                        ? existingCart.variant?.nativeSku
+                        : existingCart.product.nativeSku,
+                },
+            });
+
             return data;
         }),
     removeProductInCart: protectedProcedure
@@ -418,6 +464,19 @@ export const cartRouter = createTRPCRouter({
                     variantId: variantId ?? undefined,
                 }),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.CART.REMOVED,
+                distinctId: userId,
+                properties: {
+                    productId,
+                    variantId,
+                    sku: variantId
+                        ? existingCart.variant?.nativeSku
+                        : existingCart.product.nativeSku,
+                },
+            });
+
             return data;
         }),
     removeProductsInCart: protectedProcedure
@@ -476,6 +535,18 @@ export const cartRouter = createTRPCRouter({
                 ),
                 userCartCache.drop(userId),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.CART.BULK_REMOVED,
+                distinctId: userId,
+                properties: {
+                    items: existingVariants.map((cart) => ({
+                        productId: cart.productId,
+                        variantId: cart.variantId,
+                        sku: cart.variant?.nativeSku ?? cart.product.nativeSku,
+                    })),
+                },
+            });
 
             return data;
         }),

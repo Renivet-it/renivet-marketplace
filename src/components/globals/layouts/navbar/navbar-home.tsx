@@ -13,6 +13,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { siteConfig } from "@/config/site";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
@@ -22,19 +23,18 @@ import {
     handleClientError,
     hasPermission,
     hideEmail,
+    wait,
 } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export function NavbarHome() {
-    const router = useRouter();
-
     const [isMenuHidden, setIsMenuHidden] = useState(false);
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
@@ -95,17 +95,27 @@ export function NavbarHome() {
     );
 
     const { signOut } = useAuth();
+    const posthog = usePostHog();
 
     const { mutate: handleLogout, isPending: isLoggingOut } = useMutation({
         onMutate: () => {
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNOUT_INITIATED, {
+                userId: user?.id,
+            });
             const toastId = toast.loading("Logging out...");
             return { toastId };
         },
-        mutationFn: () => signOut(),
-        onSuccess: (_, __, { toastId }) => {
+        mutationFn: () =>
+            signOut({
+                redirectUrl: "/",
+            }),
+        onSuccess: async (_, __, { toastId }) => {
             toast.success("See you soon!", { id: toastId });
-            router.refresh();
-            router.push("/auth/signin");
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNED_OUT, {
+                userId: user?.id,
+            });
+            await wait(1000);
+            window.location.reload();
         },
         onError: (err, _, ctx) => {
             return isClerkAPIResponseError(err)

@@ -3,6 +3,8 @@ import {
     BitFieldBrandPermission,
     BitFieldSitePermission,
 } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -141,6 +143,16 @@ export const brandRequestsRouter = createTRPCRouter({
                     ownerId: user.id,
                 });
 
+            posthog.capture({
+                distinctId: user.id,
+                event: POSTHOG_EVENTS.BRAND.REQUEST.CREATED,
+                properties: {
+                    brandRequestId: newBrandRequest.id,
+                    brandRequestName: newBrandRequest.name,
+                    brandRequestEmail: newBrandRequest.email,
+                },
+            });
+
             return newBrandRequest;
         }),
     updateRequestStatus: protectedProcedure
@@ -211,6 +223,17 @@ export const brandRequestsRouter = createTRPCRouter({
                 data.status === "rejected" && utApi.deleteFiles([logoKey]),
             ]);
 
+            if (data.status === "rejected")
+                posthog.capture({
+                    distinctId: existingBrandRequest.ownerId,
+                    event: POSTHOG_EVENTS.BRAND.REQUEST.REJECTED,
+                    properties: {
+                        brandRequestId: existingBrandRequest.id,
+                        brandRequestName: existingBrandRequest.name,
+                        brandRequestEmail: existingBrandRequest.email,
+                    },
+                });
+
             if (newBrand) {
                 const brandAdminRole = await queries.roles.createRole({
                     brandPermissions:
@@ -220,6 +243,25 @@ export const brandRequestsRouter = createTRPCRouter({
                     position: 1,
                     sitePermissions: "0",
                     isSiteRole: false,
+                });
+
+                posthog.capture({
+                    distinctId: newBrand.ownerId,
+                    event: POSTHOG_EVENTS.BRAND.REQUEST.APPROVED,
+                    properties: {
+                        brandRequestId: newBrand.id,
+                        brandRequestName: newBrand.name,
+                        brandRequestEmail: newBrand.email,
+                    },
+                });
+
+                posthog.capture({
+                    distinctId: newBrand.ownerId,
+                    event: POSTHOG_EVENTS.BRAND.CREATED,
+                    properties: {
+                        brandId: newBrand.id,
+                        brandName: newBrand.name,
+                    },
                 });
 
                 await Promise.all([
@@ -301,6 +343,17 @@ export const brandRequestsRouter = createTRPCRouter({
             }
 
             await queries.brandRequests.deleteBrandRequest(input.id);
+
+            posthog.capture({
+                distinctId: existingBrandRequest.ownerId,
+                event: POSTHOG_EVENTS.BRAND.REQUEST.DELETED,
+                properties: {
+                    brandRequestId: existingBrandRequest.id,
+                    brandRequestName: existingBrandRequest.name,
+                    brandRequestEmail: existingBrandRequest.email,
+                },
+            });
+
             return true;
         }),
 });

@@ -13,12 +13,14 @@ import {
 import { PasswordInput } from "@/components/ui/password-input";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { cn, handleClientError } from "@/lib/utils";
 import { UpdatePassword, updatePasswordSchema } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { usePostHog } from "posthog-js/react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -33,6 +35,7 @@ export function UserPasswordUpdateForm() {
     });
 
     const { user: clerkUser, isLoaded: isClerkUserLoaded } = useUser();
+    const posthog = usePostHog();
 
     const { mutate: updatePassword, isPending: isPasswordUpdating } =
         useMutation({
@@ -52,6 +55,9 @@ export function UserPasswordUpdateForm() {
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Password updated successfully", { id: toastId });
+                posthog.capture(POSTHOG_EVENTS.USER.ACCOUNT.PASSWORD.UPDATED, {
+                    userId: clerkUser?.id,
+                });
                 form.reset();
                 clerkUser?.reload();
             },

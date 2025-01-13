@@ -1,4 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import { userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -74,6 +76,17 @@ export const userAddressesRouter = createTRPCRouter({
                 ]);
 
                 return address;
+            });
+
+            posthog.capture({
+                distinctId: user.id,
+                event: POSTHOG_EVENTS.USER.ADDRESS.ADDED,
+                properties: {
+                    addressId: newAddress.id,
+                    alias: newAddress.alias,
+                    type: newAddress.type,
+                    isPrimary: newAddress.isPrimary,
+                },
             });
 
             return newAddress;
@@ -167,6 +180,17 @@ export const userAddressesRouter = createTRPCRouter({
                 return address;
             });
 
+            posthog.capture({
+                distinctId: user.id,
+                event: POSTHOG_EVENTS.USER.ADDRESS.UPDATED,
+                properties: {
+                    addressId: updatedAddress.id,
+                    alias: updatedAddress.alias,
+                    type: updatedAddress.type,
+                    isPrimary: updatedAddress.isPrimary,
+                },
+            });
+
             return updatedAddress;
         }),
     deleteAddress: protectedProcedure
@@ -223,6 +247,14 @@ export const userAddressesRouter = createTRPCRouter({
                     ),
                 userCache.remove(user.id),
             ]);
+
+            posthog.capture({
+                distinctId: user.id,
+                event: POSTHOG_EVENTS.USER.ADDRESS.DELETED,
+                properties: {
+                    addressId: id,
+                },
+            });
 
             return true;
         }),

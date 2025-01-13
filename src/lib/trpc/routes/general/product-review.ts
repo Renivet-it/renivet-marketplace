@@ -1,4 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -17,7 +19,7 @@ export const productReviewsRouter = createTRPCRouter({
         )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
         .mutation(async ({ input, ctx }) => {
-            const { queries } = ctx;
+            const { queries, user } = ctx;
             const { productId } = input;
 
             const existingProduct = await queries.products.getProduct({
@@ -36,13 +38,23 @@ export const productReviewsRouter = createTRPCRouter({
                 });
 
             const data = await queries.products.approveProduct(productId);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.APRROVED,
+                distinctId: user.id,
+                properties: {
+                    productId,
+                    productName: existingProduct.title,
+                },
+            });
+
             return data;
         }),
     rejectProduct: protectedProcedure
         .input(rejectProductSchema)
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
         .mutation(async ({ input, ctx }) => {
-            const { queries } = ctx;
+            const { queries, user } = ctx;
             const { id, rejectionReason } = input;
 
             const existingProduct = await queries.products.getProduct({
@@ -64,6 +76,17 @@ export const productReviewsRouter = createTRPCRouter({
                 id,
                 rejectionReason
             );
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.REJECTED,
+                distinctId: user.id,
+                properties: {
+                    productId: id,
+                    productName: existingProduct.title,
+                    rejectionReason,
+                },
+            });
+
             return data;
         }),
 });
