@@ -1,4 +1,6 @@
 import { BitFieldBrandPermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import {
     categoryCache,
     productTypeCache,
@@ -175,6 +177,17 @@ export const productsRouter = createTRPCRouter({
                 brandId,
             });
 
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.CREATED,
+                distinctId: user.brand.id,
+                properties: {
+                    brandName: user.brand.name,
+                    brandOwnerId: user.id,
+                    productId: data.id,
+                    productTitle: data.title,
+                },
+            });
+
             return data;
         }),
     bulkCreateProducts: protectedProcedure
@@ -208,6 +221,18 @@ export const productsRouter = createTRPCRouter({
 
             const data =
                 await queries.products.bulkCreateProducts(inputWithSlug);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.BULK_CREATED,
+                distinctId: user.brand.id,
+                properties: {
+                    brandName: user.brand.name,
+                    brandOwnerId: user.id,
+                    productIds: data.map((product) => product.id),
+                    productTitles: data.map((product) => product.title),
+                },
+            });
+
             return data;
         }),
     updateProduct: protectedProcedure
@@ -279,7 +304,6 @@ export const productsRouter = createTRPCRouter({
                 );
 
                 for (const variant of newlyAddedVariants) {
-                    // Convert combinations to option-value pairs
                     const optionCombinations = Object.entries(
                         variant.combinations
                     ).map(([optionId, valueId]) => {
@@ -395,6 +419,18 @@ export const productsRouter = createTRPCRouter({
                 productId,
                 isPublished
             );
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.PUBLISHED,
+                distinctId: user.brand.id,
+                properties: {
+                    brandName: user.brand.name,
+                    brandOwnerId: user.id,
+                    productId: data.id,
+                    productTitle: data.title,
+                },
+            });
+
             return data;
         }),
     updateProductActivationStatus: protectedProcedure
@@ -489,6 +525,18 @@ export const productsRouter = createTRPCRouter({
                 });
 
             const data = await queries.products.sendProductForReview(productId);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.SENT_FOR_REVIEW,
+                distinctId: user.brand.id,
+                properties: {
+                    brandName: user.brand.name,
+                    brandOwnerId: user.id,
+                    productId: data.id,
+                    productTitle: data.title,
+                },
+            });
+
             return data;
         }),
     deleteProduct: protectedProcedure
@@ -516,11 +564,23 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
-            const data = await Promise.all([
+            const [data] = await Promise.all([
                 queries.products.softDeleteProduct(productId),
                 userCartCache.dropAll(),
                 userWishlistCache.dropAll(),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.DELETED,
+                distinctId: user.brand.id,
+                properties: {
+                    brandName: user.brand.name,
+                    brandOwnerId: user.id,
+                    productId: data.id,
+                    productTitle: data.title,
+                },
+            });
+
             return data;
         }),
 });

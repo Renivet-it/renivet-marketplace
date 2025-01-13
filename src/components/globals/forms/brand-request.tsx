@@ -74,53 +74,25 @@ export function BrandRequestForm() {
         },
         mutationFn: async (values: CreateBrandRequest) => {
             if (!logoFile) throw new Error("Logo is required");
-            // if (!bankVerificationFile)
-            //     throw new Error("Bank verification document is required");
 
-            const [
-                logoRes,
-                videoRes,
-                // bankVerificationRes,
-                // udyamCertRes,
-                // iecCertRes,
-            ] = await Promise.all([
+            const [logoRes, videoRes] = await Promise.all([
                 startLogoUpload([logoFile]),
                 demoVideoFile ? startDemoVideoUpload([demoVideoFile]) : null,
-                // startDocUpload([bankVerificationFile]),
-                // udyamCertificateFile
-                //     ? startDocUpload([udyamCertificateFile])
-                //     : null,
-                // iecCertificateFile
-                //     ? startDocUpload([iecCertificateFile])
-                //     : null,
             ]);
 
             if (!logoRes?.length) throw new Error("Failed to upload logo");
             if (demoVideoFile && !videoRes?.length)
                 throw new Error("Failed to upload demo video");
-            // if (!bankVerificationRes?.length)
-            //     throw new Error("Failed to upload bank verification document");
-            // if (udyamCertificateFile && !udyamCertRes?.length)
-            //     throw new Error("Failed to upload Udyam certificate");
-            // if (iecCertificateFile && !iecCertRes?.length)
-            //     throw new Error("Failed to upload IEC certificate");
 
             const logo = logoRes[0];
             const demoVideo = videoRes ? videoRes[0] : null;
-            // const bankVerification = bankVerificationRes[0];
-            // const udyamCert = udyamCertRes ? udyamCertRes[0] : null;
-            // const iecCert = iecCertRes ? iecCertRes[0] : null;
 
             values.logoUrl = logo.appUrl;
             if (demoVideo) values.demoUrl = demoVideo.appUrl;
-            // values.bankAccountVerificationDocumentUrl = bankVerification.appUrl;
-            // if (udyamCert)
-            //     values.udyamRegistrationCertificateUrl = udyamCert.appUrl;
-            // if (iecCert) values.iecCertificateUrl = iecCert.appUrl;
 
-            await createRequestAsync(values);
+            return await createRequestAsync(values);
         },
-        onSuccess: (_, data, { toastId }) => {
+        onSuccess: (res, data, { toastId }) => {
             toast.success(
                 "Request sent successfully, we'll get back to you soon",
                 { id: toastId }
@@ -131,15 +103,6 @@ export function BrandRequestForm() {
 
             setDemoVideoPreview(null);
             setDemoVideoFile(null);
-
-            // setBankVerificationPreview(null);
-            // setBankVerificationFile(null);
-
-            // setUdyamCertificatePreview(null);
-            // setUdyamCertificateFile(null);
-
-            // setIecCertificatePreview(null);
-            // setIecCertificateFile(null);
 
             form.reset(data);
             router.refresh();

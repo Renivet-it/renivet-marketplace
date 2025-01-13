@@ -1,5 +1,7 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import { blogCache, tagCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -153,6 +155,17 @@ export const blogsRouter = createTRPCRouter({
                 return blog;
             });
 
+            posthog.capture({
+                event: POSTHOG_EVENTS.BLOG.CREATED,
+                distinctId: user.id,
+                properties: {
+                    blogId: newBlog.id,
+                    title: newBlog.title,
+                    authorId: user.id,
+                    authorName: `${user.firstName} ${user.lastName}`,
+                },
+            });
+
             return newBlog;
         }),
     updateBlog: protectedProcedure
@@ -255,6 +268,17 @@ export const blogsRouter = createTRPCRouter({
                 ...data,
                 slug,
             });
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.BLOG.UPDATED,
+                distinctId: updatedBlog.authorId,
+                properties: {
+                    blogId: updatedBlog.id,
+                    title: updatedBlog.title,
+                    authorId: updatedBlog.authorId,
+                },
+            });
+
             return updatedBlog;
         }),
     changePublishStatus: protectedProcedure
@@ -335,6 +359,17 @@ export const blogsRouter = createTRPCRouter({
             }
 
             await queries.blogs.deleteBlog(id);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.BLOG.DELETED,
+                distinctId: existingBlog.authorId,
+                properties: {
+                    blogId: existingBlog.id,
+                    title: existingBlog.title,
+                    authorId: existingBlog.authorId,
+                },
+            });
+
             return true;
         }),
 });

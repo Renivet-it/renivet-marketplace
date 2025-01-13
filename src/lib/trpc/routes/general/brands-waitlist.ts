@@ -1,5 +1,7 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -74,6 +76,17 @@ export const brandsWaitlistRouter = createTRPCRouter({
             const brandsWaitlistEntry =
                 await queries.waitlists.createWaitlistBrand(input);
 
+            posthog.capture({
+                event: POSTHOG_EVENTS.BRAND.WAITLIST.ADDED,
+                distinctId: brandsWaitlistEntry.id,
+                properties: {
+                    brandName: brandsWaitlistEntry.brandName,
+                    brandEmail: brandsWaitlistEntry.brandEmail,
+                    brandPhone: brandsWaitlistEntry.brandPhone,
+                    registrant: brandsWaitlistEntry.name,
+                },
+            });
+
             return brandsWaitlistEntry;
         }),
     addBrandsWaitlistDemo: publicProcedure
@@ -102,6 +115,7 @@ export const brandsWaitlistRouter = createTRPCRouter({
             }
 
             await queries.waitlists.addBrandWaitlistDemo(id, data);
+
             return true;
         }),
     deleteBrandsWaitlistEntry: protectedProcedure
@@ -144,6 +158,18 @@ export const brandsWaitlistRouter = createTRPCRouter({
             }
 
             await queries.waitlists.deleteWaitlistBrand(id);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.BRAND.WAITLIST.REMOVED,
+                distinctId: id,
+                properties: {
+                    brandName: existingBrandsWaitlistEntry.brandName,
+                    brandEmail: existingBrandsWaitlistEntry.brandEmail,
+                    brandPhone: existingBrandsWaitlistEntry.brandPhone,
+                    registrant: existingBrandsWaitlistEntry.name,
+                },
+            });
+
             return true;
         }),
 });

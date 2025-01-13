@@ -1,4 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -6,6 +8,7 @@ import {
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { createTicketSchema } from "@/lib/validations";
+import { auth } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -67,8 +70,19 @@ export const ticketRouter = createTRPCRouter({
         .input(createTicketSchema)
         .mutation(async ({ input, ctx }) => {
             const { queries } = ctx;
+            const { userId } = await auth();
 
             const newTicket = await queries.tickets.createTicket(input);
+
+            posthog.capture({
+                distinctId: userId ?? "unknown",
+                event: POSTHOG_EVENTS.TICKET.CREATED,
+                properties: {
+                    ticketId: newTicket.id,
+                    ticketName: newTicket.name,
+                },
+            });
+
             return newTicket;
         }),
     deleteTicket: protectedProcedure
@@ -79,18 +93,27 @@ export const ticketRouter = createTRPCRouter({
         )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_FEEDBACK))
         .mutation(async ({ ctx, input }) => {
-            const { queries } = ctx;
+            const { queries, user } = ctx;
             const { id } = input;
 
             const existingTicket = await queries.tickets.getTicket(id);
-            if (!existingTicket) {
+            if (!existingTicket)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Ticket not found",
                 });
-            }
 
             await queries.tickets.deleteTicket(id);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.TICKET.DELETED,
+                distinctId: user.id,
+                properties: {
+                    ticketId: id,
+                    ticketName: existingTicket.name,
+                },
+            });
+
             return true;
         }),
 });

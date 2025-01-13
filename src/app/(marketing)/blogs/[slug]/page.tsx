@@ -3,10 +3,13 @@ import { GeneralShell } from "@/components/globals/layouts";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { siteConfig } from "@/config/site";
 import { blogQueries } from "@/lib/db/queries";
+import { posthog } from "@/lib/posthog/client";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import { blogWithAuthorAndTagSchema } from "@/lib/validations";
+import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -85,6 +88,8 @@ export default function Page({ params }: PageProps) {
 async function BlogFetch({ params }: PageProps) {
     const { slug } = await params;
 
+    const { userId } = await auth();
+
     const existingBlog = await blogQueries.getBlog({ slug });
     if (!existingBlog) notFound();
 
@@ -95,6 +100,15 @@ async function BlogFetch({ params }: PageProps) {
     });
 
     const parsed = blogWithAuthorAndTagSchema.parse(existingBlog);
+
+    posthog.capture({
+        event: POSTHOG_EVENTS.BLOG.VIEWED,
+        properties: {
+            blogId: parsed.id,
+            blogTitle: parsed.title,
+        },
+        distinctId: userId ?? "unknown",
+    });
 
     return (
         <div className="grid grid-cols-1 gap-y-10 md:gap-10 lg:grid-cols-3">

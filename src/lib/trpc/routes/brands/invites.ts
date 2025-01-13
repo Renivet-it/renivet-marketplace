@@ -1,4 +1,6 @@
 import { BitFieldBrandPermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { posthog } from "@/lib/posthog/client";
 import { brandCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -62,6 +64,16 @@ export const invitesRouter = createTRPCRouter({
                 brandCache.remove(brandId),
             ]);
 
+            posthog.capture({
+                event: POSTHOG_EVENTS.BRAND.INVITE.CREATED,
+                distinctId: brandId,
+                properties: {
+                    code: newInvite.id,
+                    maxUses: newInvite.maxUses,
+                    expiresAt: newInvite.expiresAt,
+                },
+            });
+
             return newInvite;
         }),
     deleteInvite: protectedProcedure
@@ -80,6 +92,14 @@ export const invitesRouter = createTRPCRouter({
                 queries.brandInvites.deleteBrandInvite(brandId, inviteId),
                 brandCache.remove(brandId),
             ]);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.BRAND.INVITE.DELETED,
+                distinctId: brandId,
+                properties: {
+                    code: deletedInvite.id,
+                },
+            });
 
             return deletedInvite;
         }),

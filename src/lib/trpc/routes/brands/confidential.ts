@@ -1,5 +1,8 @@
+import { env } from "@/../env";
 import { BitFieldBrandPermission } from "@/config/permissions";
 import { brandCache, userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { BrandVerificationtSubmitted } from "@/lib/resend/emails";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -17,7 +20,7 @@ export const confidentialsRouter = createTRPCRouter({
         .input(createBrandConfidentialSchema)
         .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
         .mutation(async ({ input, ctx }) => {
-            const { queries } = ctx;
+            const { queries, user } = ctx;
             const { id } = input;
 
             const existingBrand = await brandCache.get(id);
@@ -44,6 +47,20 @@ export const confidentialsRouter = createTRPCRouter({
                 brandCache.remove(id),
                 userCache.remove(existingBrand.ownerId),
             ]);
+
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: user.email,
+                subject: `Verification Failed - ${existingBrand.name}`,
+                react: BrandVerificationtSubmitted({
+                    user,
+                    brand: {
+                        id: existingBrand.id,
+                        status: "rejected",
+                        name: existingBrand.name,
+                    },
+                }),
+            });
 
             return data;
         }),

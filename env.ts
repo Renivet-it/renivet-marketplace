@@ -45,6 +45,10 @@ export const env = createEnv({
             .string({ required_error: "RAZOR_PAY_WEBHOOK_SECRET is required" })
             .min(1, "RAZOR_PAY_WEBHOOK_SECRET is required"),
 
+        RESEND_EMAIL_FROM: z
+            .string({ required_error: "RESEND_EMAIL_FROM is required" })
+            .min(1, "RESEND_EMAIL_FROM is required"),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -67,6 +71,17 @@ export const env = createEnv({
                 required_error: "NEXT_PUBLIC_FACEBOOK_APP_ID is required",
             })
             .min(1, "NEXT_PUBLIC_FACEBOOK_APP_ID is required"),
+
+        NEXT_PUBLIC_POSTHOG_KEY: z
+            .string({
+                required_error: "NEXT_PUBLIC_POSTHOG_KEY is required",
+            })
+            .min(1, "NEXT_PUBLIC_POSTHOG_KEY is required"),
+        NEXT_PUBLIC_POSTHOG_HOST: z
+            .string({
+                required_error: "NEXT_PUBLIC_POSTHOG_HOST is required",
+            })
+            .min(1, "NEXT_PUBLIC_POSTHOG_HOST is required"),
     },
     runtimeEnv: {
         CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
@@ -80,12 +95,15 @@ export const env = createEnv({
         RAZOR_PAY_KEY_ID: process.env.RAZOR_PAY_KEY_ID,
         RAZOR_PAY_SECRET_KEY: process.env.RAZOR_PAY_SECRET_KEY,
         RAZOR_PAY_WEBHOOK_SECRET: process.env.RAZOR_PAY_WEBHOOK_SECRET,
+        RESEND_EMAIL_FROM: process.env.RESEND_EMAIL_FROM,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
         NEXT_PUBLIC_RAZOR_PAY_KEY_ID: process.env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
         NEXT_PUBLIC_FACEBOOK_APP_ID: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID,
+        NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+        NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     },
     extends: [vercel()],
 });

@@ -18,8 +18,9 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_AVATAR_URL } from "@/config/const";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { trpc } from "@/lib/trpc/client";
-import { handleClientError, hideEmail } from "@/lib/utils";
+import { handleClientError, hideEmail, wait } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
@@ -31,31 +32,35 @@ import {
     LogOut,
     Sparkles,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { toast } from "sonner";
 
 export function NavUser() {
-    const router = useRouter();
     const { isMobile } = useSidebar();
 
-    const {
-        data: user,
-        isPending,
-        refetch,
-    } = trpc.general.users.currentUser.useQuery();
+    const { data: user, isPending } = trpc.general.users.currentUser.useQuery();
     const { signOut } = useAuth();
+    const posthog = usePostHog();
 
     const { mutate: handleLogout, isPending: isLoggingOut } = useMutation({
         onMutate: () => {
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNOUT_INITIATED, {
+                userId: user?.id,
+            });
             const toastId = toast.loading("Logging out...");
             return { toastId };
         },
-        mutationFn: () => signOut(),
-        onSuccess: (_, __, { toastId }) => {
+        mutationFn: () =>
+            signOut({
+                redirectUrl: "/",
+            }),
+        onSuccess: async (_, __, { toastId }) => {
             toast.success("See you soon!", { id: toastId });
-            refetch();
-            router.refresh();
-            router.push("/auth/signin");
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNED_OUT, {
+                userId: user?.id,
+            });
+            await wait(1000);
+            window.location.reload();
         },
         onError: (err, _, ctx) => {
             return isClerkAPIResponseError(err)

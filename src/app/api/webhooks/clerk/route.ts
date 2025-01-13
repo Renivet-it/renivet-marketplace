@@ -1,7 +1,11 @@
 import { env } from "@/../env";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { posthog } from "@/lib/posthog/client";
 import { userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { AccountCreated } from "@/lib/resend/emails";
 import { CResponse, handleError } from "@/lib/utils";
 import {
     clerkWebhookSchema,
@@ -40,19 +44,43 @@ export async function POST(req: NextRequest) {
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
 
-                    await db.insert(users).values({
-                        id: webhookUser.id,
-                        firstName: webhookUser.first_name,
-                        lastName: webhookUser.last_name,
-                        email: email.email_address,
-                        phone: phone?.phone_number ?? null,
-                        avatarUrl: webhookUser.image_url,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        createdAt: webhookUser.created_at,
-                        updatedAt: webhookUser.updated_at,
+                    posthog.capture({
+                        distinctId: webhookUser.id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.CREATED,
+                        properties: {
+                            email: email.email_address,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            phone: phone?.phone_number ?? null,
+                        },
+                    });
+
+                    const newUser = await db
+                        .insert(users)
+                        .values({
+                            id: webhookUser.id,
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            email: email.email_address,
+                            phone: phone?.phone_number ?? null,
+                            avatarUrl: webhookUser.image_url,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            isPhoneVerified:
+                                phone?.verification?.status === "verified",
+                            createdAt: webhookUser.created_at,
+                            updatedAt: webhookUser.updated_at,
+                        })
+                        .returning()
+                        .then((res) => res[0]);
+
+                    await resend.emails.send({
+                        from: env.RESEND_EMAIL_FROM,
+                        to: newUser.email,
+                        subject: "Account Created - Welcome to Renivet",
+                        react: AccountCreated({ user: newUser }),
                     });
                 }
                 break;
@@ -67,6 +95,20 @@ export async function POST(req: NextRequest) {
                     const phone = webhookUser.phone_numbers.find(
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
+
+                    posthog.capture({
+                        distinctId: webhookUser.id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.UPDATED,
+                        properties: {
+                            email: email.email_address,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            phone: phone?.phone_number ?? null,
+                        },
+                    });
+
                     await Promise.all([
                         db
                             .update(users)
@@ -91,6 +133,11 @@ export async function POST(req: NextRequest) {
             case "user.deleted":
                 {
                     const { id } = userDeleteWebhookSchema.parse(data);
+
+                    posthog.capture({
+                        distinctId: id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.DELETED,
+                    });
 
                     await Promise.all([
                         db.delete(users).where(eq(users.id, id)),
