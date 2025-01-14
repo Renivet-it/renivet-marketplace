@@ -21,7 +21,7 @@ export default function PriceInput({
             />
 
             <span className="inline-flex items-center rounded-e-lg border border-input bg-background px-3 text-sm text-muted-foreground">
-                {currency ?? "EUR"}
+                {currency ?? "INR"}
             </span>
         </div>
     );

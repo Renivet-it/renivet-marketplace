@@ -203,7 +203,6 @@ export function ProductVariantGroupManageForm({
 
                 <TableCell>
                     <PriceInput
-                        currency="PAISE"
                         className="h-9"
                         value={group.variants[0]?.price || 0}
                         disabled={
@@ -213,7 +212,10 @@ export function ProductVariantGroupManageForm({
                             ) || isPending
                         }
                         onChange={(e) => {
-                            const price = parseInt(e.target.value) || 0;
+                            const price = e.target.value
+                                .replace(/[^0-9.]/g, "")
+                                .replace(/\.(\d{2})\d+/, ".$1");
+
                             group.variants.forEach((variant) => {
                                 const index = variants.findIndex(
                                     (v) => v.id === variant.id
@@ -221,7 +223,7 @@ export function ProductVariantGroupManageForm({
                                 if (index !== -1)
                                     form.setValue(
                                         `variants.${index}.price`,
-                                        price,
+                                        price as unknown as number,
                                         {
                                             shouldDirty: true,
                                         }
@@ -508,13 +510,12 @@ function ExpandedGroupRow({
                                     <PriceInput
                                         {...field}
                                         className="h-9"
-                                        currency="PAISE"
+                                        value={field.value}
                                         onChange={(e) => {
-                                            const value =
-                                                e.target.value.replace(
-                                                    /[^0-9]/g,
-                                                    ""
-                                                );
+                                            const value = e.target.value
+                                                .replace(/[^0-9.]/g, "")
+                                                .replace(/\.(\d{2})\d+/, ".$1");
+
                                             field.onChange(value);
                                         }}
                                         disabled={isPending}
@@ -587,15 +588,20 @@ function ExpandedGroupRow({
                                                 <FormControl>
                                                     <PriceInput
                                                         {...field}
-                                                        currency="PAISE"
                                                         className="h-9"
-                                                        value={field.value ?? 0}
+                                                        value={field.value}
                                                         onChange={(e) => {
                                                             const value =
-                                                                e.target.value.replace(
-                                                                    /[^0-9]/g,
-                                                                    ""
-                                                                );
+                                                                e.target.value
+                                                                    .replace(
+                                                                        /[^0-9.]/g,
+                                                                        ""
+                                                                    )
+                                                                    .replace(
+                                                                        /\.(\d{2})\d+/,
+                                                                        ".$1"
+                                                                    );
+
                                                             field.onChange(
                                                                 value
                                                             );
@@ -650,15 +656,20 @@ function ExpandedGroupRow({
                                                 <FormControl>
                                                     <PriceInput
                                                         {...field}
-                                                        currency="PAISE"
                                                         className="h-9"
                                                         value={field.value ?? 0}
                                                         onChange={(e) => {
                                                             const value =
-                                                                e.target.value.replace(
-                                                                    /[^0-9]/g,
-                                                                    ""
-                                                                );
+                                                                e.target.value
+                                                                    .replace(
+                                                                        /[^0-9.]/g,
+                                                                        ""
+                                                                    )
+                                                                    .replace(
+                                                                        /\.(\d{2})\d+/,
+                                                                        ".$1"
+                                                                    );
+
                                                             field.onChange(
                                                                 value
                                                             );
@@ -688,15 +699,20 @@ function ExpandedGroupRow({
                                                 <FormControl>
                                                     <PriceInput
                                                         {...field}
-                                                        currency="PAISE"
                                                         className="h-9"
                                                         value={field.value ?? 0}
                                                         onChange={(e) => {
                                                             const value =
-                                                                e.target.value.replace(
-                                                                    /[^0-9]/g,
-                                                                    ""
-                                                                );
+                                                                e.target.value
+                                                                    .replace(
+                                                                        /[^0-9.]/g,
+                                                                        ""
+                                                                    )
+                                                                    .replace(
+                                                                        /\.(\d{2})\d+/,
+                                                                        ".$1"
+                                                                    );
+
                                                             field.onChange(
                                                                 value
                                                             );
@@ -714,7 +730,6 @@ function ExpandedGroupRow({
                                         <Label>Profit</Label>
 
                                         <PriceInput
-                                            currency="PAISE"
                                             className="h-9"
                                             value={profitOnItem}
                                             readOnly
