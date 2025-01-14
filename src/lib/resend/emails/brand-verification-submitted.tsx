@@ -4,8 +4,7 @@ import Layout from "./layout";
 
 interface Props {
     user: {
-        firstName: string;
-        lastName: string;
+        name: string;
     };
     brand: {
         id: string;
@@ -15,7 +14,7 @@ interface Props {
 }
 
 export default function BrandVerificationtSubmitted({
-    user = { firstName: "John", lastName: "Doe" },
+    user = { name: "John Doe" },
     brand = {
         id: "9a49e106-67d0-458c-a441-02bdcf46dd81",
         name: "Brand",
@@ -27,9 +26,7 @@ export default function BrandVerificationtSubmitted({
             heading="Brand Verification Request Submitted"
             preview="Your brand verification request has been submitted"
         >
-            <p>
-                Hi {user.firstName} {user.lastName},
-            </p>
+            <p>Hi {user.name},</p>
 
             <p>
                 Your brand verification request has been submitted. We will

@@ -68,13 +68,15 @@ async function BecomeASellerFetch() {
         userCache.get(userId),
     ]);
 
+    if (!existingUser) redirect("/auth/signin");
+
     if (existingUser?.roles.some((role) => role.isSiteRole)) {
         return (
             <Notice>
                 <NoticeContent>
                     <NoticeTitle>
                         <NoticeIcon />
-                        <span>Warning</span>
+                        <span>Notification</span>
                     </NoticeTitle>
 
                     <p className="text-sm">
@@ -95,7 +97,7 @@ async function BecomeASellerFetch() {
                 <NoticeContent>
                     <NoticeTitle>
                         <NoticeIcon />
-                        <span>Warning</span>
+                        <span>Notification</span>
                     </NoticeTitle>
 
                     <p className="text-sm">
@@ -119,7 +121,7 @@ async function BecomeASellerFetch() {
                 <NoticeContent>
                     <NoticeTitle>
                         <NoticeIcon />
-                        <span>Warning</span>
+                        <span>Notification</span>
                     </NoticeTitle>
 
                     <p className="text-sm">
@@ -146,5 +148,5 @@ async function BecomeASellerFetch() {
             </Notice>
         );
 
-    return <BrandRequestForm />;
+    return <BrandRequestForm user={existingUser} />;
 }

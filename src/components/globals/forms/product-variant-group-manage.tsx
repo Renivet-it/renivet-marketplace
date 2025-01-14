@@ -1053,11 +1053,11 @@ function ExpandedGroupRow({
                                                                     }
                                                                 >
                                                                     {
-                                                                        country.isoCode
+                                                                        country.name
                                                                     }{" "}
                                                                     -{" "}
                                                                     {
-                                                                        country.name
+                                                                        country.isoCode
                                                                     }
                                                                 </SelectItem>
                                                             )

@@ -1,3 +1,4 @@
+import { env } from "@/../env";
 import { BitFieldBrandPermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
@@ -8,6 +9,8 @@ import {
     userCartCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { ProductReviewSubmitted } from "@/lib/resend/emails";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -290,6 +293,16 @@ export const productsRouter = createTRPCRouter({
                     message: "Invalid product type",
                 });
 
+            if (
+                existingProduct.isActive &&
+                existingProduct.media.length === 0 &&
+                values.media.length === 0
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product must have at least one image",
+                });
+
             if (values.productHasVariants) {
                 if (!values.variants || values.variants.length === 0)
                     throw new TRPCError({
@@ -415,6 +428,12 @@ export const productsRouter = createTRPCRouter({
                         "You cannot unpublish a product that is already published, to unlist make the product inactive",
                 });
 
+            if (existingProduct.media.length === 0)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product must have at least one image",
+                });
+
             const data = await queries.products.updateProductPublishStatus(
                 productId,
                 isPublished
@@ -461,6 +480,16 @@ export const productsRouter = createTRPCRouter({
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
+                });
+
+            if (
+                !existingProduct.isActive &&
+                isActive &&
+                existingProduct.media.length === 0
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product must have at least one image",
                 });
 
             const data = await queries.products.updateProductActivationStatus(
@@ -524,7 +553,46 @@ export const productsRouter = createTRPCRouter({
                     } days before you can resend for review`,
                 });
 
+            if (existingProduct.media.length === 0)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product must have at least one image",
+                });
+
             const data = await queries.products.sendProductForReview(productId);
+
+            await resend.batch.send([
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: existingProduct.brand.email,
+                    subject: `Product Review Request Submitted - ${existingProduct.title}`,
+                    react: ProductReviewSubmitted({
+                        user: {
+                            name: existingProduct.brand.name,
+                        },
+                        brand: existingProduct.brand,
+                        product: {
+                            title: existingProduct.title,
+                        },
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: user.email,
+                    subject: `Product Review Request Submitted - ${existingProduct.title}`,
+                    react: ProductReviewSubmitted({
+                        user: {
+                            name: `${user.firstName} ${user.lastName}`,
+                        },
+                        brand: {
+                            id: existingProduct.brand.id,
+                        },
+                        product: {
+                            title: existingProduct.title,
+                        },
+                    }),
+                },
+            ]);
 
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.SENT_FOR_REVIEW,

@@ -4,8 +4,7 @@ import Layout from "./layout";
 
 interface Props {
     user: {
-        firstName: string;
-        lastName: string;
+        name: string;
     };
     brand:
         | {
@@ -21,7 +20,7 @@ interface Props {
 }
 
 export default function BrandRequestStatusUpdate({
-    user = { firstName: "John", lastName: "Doe" },
+    user = { name: "John Doe" },
     brand = {
         name: "Brand",
         status: "rejected",
@@ -47,9 +46,7 @@ export default function BrandRequestStatusUpdate({
                     : "Your brand request has been rejected"
             }
         >
-            <p>
-                Hi {user.firstName} {user.lastName},
-            </p>
+            <p>Hi {user.name},</p>
 
             {brand.status === "approved" ? (
                 <p>

@@ -32,7 +32,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
-import { cn, generateSKU, handleClientError } from "@/lib/utils";
+import { cn, generateSKU, handleClientError, sanitizeHtml } from "@/lib/utils";
 import {
     BrandMediaItem,
     CachedBrand,
@@ -48,6 +48,7 @@ import { Country } from "country-state-city";
 import { Tag, TagInput } from "emblor";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -73,6 +74,8 @@ export function ProductManageForm({
     allSubCategories,
     allMedia,
 }: PageProps) {
+    const router = useRouter();
+
     const mediaItems = product?.media
         ? product.media.map((m) => m.mediaItem!).filter(Boolean)
         : [];
@@ -238,6 +241,7 @@ export function ProductManageForm({
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Product saved successfully", { id: toastId });
                 form.reset(form.getValues());
+                router.push(`/brands/${brandId}/products`);
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -286,7 +290,7 @@ export function ProductManageForm({
                                 name="title"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Title</FormLabel>
+                                        <FormLabel>Title *</FormLabel>
 
                                         <FormControl>
                                             <Input
@@ -482,7 +486,7 @@ export function ProductManageForm({
                                     name="categoryId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Category</FormLabel>
+                                            <FormLabel>Category *</FormLabel>
 
                                             <Select
                                                 onValueChange={field.onChange}
@@ -526,7 +530,7 @@ export function ProductManageForm({
                                     name="subcategoryId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Subcategory</FormLabel>
+                                            <FormLabel>Subcategory *</FormLabel>
 
                                             <Select
                                                 onValueChange={field.onChange}
@@ -569,7 +573,9 @@ export function ProductManageForm({
                                     name="productTypeId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Product Type</FormLabel>
+                                            <FormLabel>
+                                                Product Type *
+                                            </FormLabel>
 
                                             <Select
                                                 onValueChange={field.onChange}
@@ -1316,6 +1322,28 @@ export function ProductManageForm({
                                     </FormItem>
                                 )}
                             />
+
+                            <Separator />
+
+                            <div className="space-y-2">
+                                <Label>Google Search Preview</Label>
+
+                                <div className="rounded-md border border-foreground/20 bg-background p-4">
+                                    <h3 className="text-lg font-medium">
+                                        {form.watch("metaTitle") ||
+                                            form.watch("title") ||
+                                            "Product Title"}
+                                    </h3>
+
+                                    <p className="text-sm text-muted-foreground">
+                                        {form.watch("metaDescription") ||
+                                            sanitizeHtml(
+                                                form.watch("description") || ""
+                                            ).slice(0, 160) ||
+                                            "Product description"}
+                                    </p>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
 
