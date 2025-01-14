@@ -4,6 +4,14 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command-dash";
 import { Editor, EditorRef } from "@/components/ui/editor";
 import {
     Form,
@@ -15,6 +23,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
 import { Label } from "@/components/ui/label";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import PriceInput from "@/components/ui/price-input";
 import {
     Select,
@@ -75,6 +88,8 @@ export function ProductManageForm({
     allMedia,
 }: PageProps) {
     const router = useRouter();
+
+    const [isCoOSelectOpen, setIsCoOSelectOpen] = useState(false);
 
     const mediaItems = product?.media
         ? product.media.map((m) => m.mediaItem!).filter(Boolean)
@@ -1141,40 +1156,121 @@ export function ProductManageForm({
                                                 </div>
 
                                                 <FormControl>
-                                                    <Select
-                                                        onValueChange={
-                                                            field.onChange
+                                                    <Popover
+                                                        open={isCoOSelectOpen}
+                                                        onOpenChange={
+                                                            setIsCoOSelectOpen
                                                         }
-                                                        defaultValue={
-                                                            field.value ?? ""
-                                                        }
-                                                        disabled={isPending}
                                                     >
-                                                        <FormControl>
-                                                            <SelectTrigger className="h-9">
-                                                                <SelectValue placeholder="Select a country" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
+                                                        <PopoverTrigger asChild>
+                                                            <Button
+                                                                variant="outline"
+                                                                role="combobox"
+                                                                className="h-9 w-full justify-between bg-background px-3 font-normal outline-offset-0 hover:bg-background hover:text-muted-foreground focus-visible:border-ring focus-visible:outline-[3px] focus-visible:outline-ring/20"
+                                                                onClick={() =>
+                                                                    setIsCoOSelectOpen(
+                                                                        true
+                                                                    )
+                                                                }
+                                                            >
+                                                                <span
+                                                                    className={cn(
+                                                                        "truncate",
+                                                                        field.value &&
+                                                                            "text-muted-foreground"
+                                                                    )}
+                                                                >
+                                                                    {field.value
+                                                                        ? field.value
+                                                                        : "Select country"}
+                                                                </span>
 
-                                                        <SelectContent>
-                                                            {countries.map(
-                                                                (country) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            country.isoCode
-                                                                        }
-                                                                        value={
-                                                                            country.isoCode
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            country.name
-                                                                        }
-                                                                    </SelectItem>
-                                                                )
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
+                                                                <Icons.ChevronDown
+                                                                    size={16}
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    className="shrink-0 text-muted-foreground/80"
+                                                                    aria-hidden="true"
+                                                                />
+                                                            </Button>
+                                                        </PopoverTrigger>
+
+                                                        <PopoverContent
+                                                            className="w-full min-w-[var(--radix-popper-anchor-width)] border-input p-0"
+                                                            align="start"
+                                                        >
+                                                            <Command>
+                                                                <CommandInput placeholder="Search by ISO code" />
+
+                                                                <CommandList>
+                                                                    <CommandEmpty>
+                                                                        No
+                                                                        countries
+                                                                        found.
+                                                                    </CommandEmpty>
+
+                                                                    <CommandGroup>
+                                                                        {[
+                                                                            ...countries.filter(
+                                                                                (
+                                                                                    country
+                                                                                ) =>
+                                                                                    country.isoCode ===
+                                                                                    "IN"
+                                                                            ),
+                                                                            ...countries.filter(
+                                                                                (
+                                                                                    country
+                                                                                ) =>
+                                                                                    country.isoCode !==
+                                                                                    "IN"
+                                                                            ),
+                                                                        ].map(
+                                                                            (
+                                                                                country
+                                                                            ) => (
+                                                                                <CommandItem
+                                                                                    key={
+                                                                                        country.isoCode
+                                                                                    }
+                                                                                    value={
+                                                                                        country.isoCode
+                                                                                    }
+                                                                                    onSelect={(
+                                                                                        currentValue
+                                                                                    ) => {
+                                                                                        field.onChange(
+                                                                                            currentValue
+                                                                                        );
+                                                                                        setIsCoOSelectOpen(
+                                                                                            false
+                                                                                        );
+                                                                                    }}
+                                                                                >
+                                                                                    {
+                                                                                        country.name
+                                                                                    }
+                                                                                    {field.value ===
+                                                                                        country.isoCode && (
+                                                                                        <Icons.Check
+                                                                                            size={
+                                                                                                16
+                                                                                            }
+                                                                                            strokeWidth={
+                                                                                                2
+                                                                                            }
+                                                                                            className="ml-auto"
+                                                                                        />
+                                                                                    )}
+                                                                                </CommandItem>
+                                                                            )
+                                                                        )}
+                                                                    </CommandGroup>
+                                                                </CommandList>
+                                                            </Command>
+                                                        </PopoverContent>
+                                                    </Popover>
                                                 </FormControl>
 
                                                 <FormMessage />
@@ -1264,13 +1360,22 @@ export function ProductManageForm({
                                         <FormLabel>Meta Description</FormLabel>
 
                                         <FormControl>
-                                            <Textarea
-                                                {...field}
-                                                placeholder="Enter product meta description"
-                                                minRows={5}
-                                                value={field.value ?? ""}
-                                                disabled={isPending}
-                                            />
+                                            <div className="relative">
+                                                <Textarea
+                                                    {...field}
+                                                    placeholder="Enter product meta description"
+                                                    minRows={5}
+                                                    maxLength={160}
+                                                    value={field.value ?? ""}
+                                                    disabled={isPending}
+                                                />
+
+                                                <div className="absolute bottom-1 right-1 flex items-center text-xs text-muted-foreground">
+                                                    {160 -
+                                                        (field.value ?? "")
+                                                            .length}
+                                                </div>
+                                            </div>
                                         </FormControl>
 
                                         <FormMessage />
@@ -1335,7 +1440,7 @@ export function ProductManageForm({
                                             "Product Title"}
                                     </h3>
 
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="break-all text-sm text-muted-foreground">
                                         {form.watch("metaDescription") ||
                                             sanitizeHtml(
                                                 form.watch("description") || ""
