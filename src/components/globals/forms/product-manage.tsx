@@ -45,7 +45,14 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
-import { cn, generateSKU, handleClientError, sanitizeHtml } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    convertPriceToPaise,
+    generateSKU,
+    handleClientError,
+    sanitizeHtml,
+} from "@/lib/utils";
 import {
     BrandMediaItem,
     CachedBrand,
@@ -139,9 +146,9 @@ export function ProductManageForm({
             productHasVariants: product?.productHasVariants ?? false,
 
             // PRICING
-            price: product?.price ?? 0,
-            compareAtPrice: product?.compareAtPrice ?? 0,
-            costPerItem: product?.costPerItem ?? 0,
+            price: +convertPaiseToRupees(product?.price ?? 0),
+            compareAtPrice: +convertPaiseToRupees(product?.compareAtPrice ?? 0),
+            costPerItem: +convertPaiseToRupees(product?.costPerItem ?? 0),
 
             // INVENTORY
             nativeSku: product?.nativeSku ?? generateSKU({ brand }),
@@ -159,7 +166,17 @@ export function ProductManageForm({
 
             // VARIANTS
             options: product?.options ?? [],
-            variants: product?.variants ?? [],
+            variants:
+                product?.variants.map((variant) => ({
+                    ...variant,
+                    price: +convertPaiseToRupees(variant.price),
+                    compareAtPrice: +convertPaiseToRupees(
+                        variant.compareAtPrice ?? 0
+                    ),
+                    costPerItem: +convertPaiseToRupees(
+                        variant.costPerItem ?? 0
+                    ),
+                })) ?? [],
 
             // SEO
             metaTitle: product?.metaTitle ?? "",
@@ -285,14 +302,39 @@ export function ProductManageForm({
             <Form {...form}>
                 <form
                     className="space-y-6"
-                    onSubmit={form.handleSubmit((values) =>
-                        product
+                    onSubmit={form.handleSubmit((values) => {
+                        values = {
+                            ...values,
+                            price: values.price
+                                ? convertPriceToPaise(values.price)
+                                : null,
+                            compareAtPrice: values.compareAtPrice
+                                ? convertPriceToPaise(values.compareAtPrice)
+                                : null,
+                            costPerItem: values.costPerItem
+                                ? convertPriceToPaise(values.costPerItem)
+                                : null,
+                            variants: values.variants.map((variant) => ({
+                                ...variant,
+                                price: convertPriceToPaise(variant.price),
+                                compareAtPrice: variant.compareAtPrice
+                                    ? convertPriceToPaise(
+                                          variant.compareAtPrice
+                                      )
+                                    : null,
+                                costPerItem: variant.costPerItem
+                                    ? convertPriceToPaise(variant.costPerItem)
+                                    : null,
+                            })),
+                        };
+
+                        return product
                             ? updateProduct({
                                   productId: product.id,
                                   values,
                               })
-                            : createProduct(values)
-                    )}
+                            : createProduct(values);
+                    })}
                 >
                     <Card>
                         <CardHeader className="hidden">
@@ -690,17 +732,22 @@ export function ProductManageForm({
                                                     <FormControl>
                                                         <PriceInput
                                                             {...field}
-                                                            currency="PAISE"
                                                             className="h-9"
                                                             value={
                                                                 field.value ?? 0
                                                             }
                                                             onChange={(e) => {
                                                                 const value =
-                                                                    e.target.value.replace(
-                                                                        /[^0-9]/g,
-                                                                        ""
-                                                                    );
+                                                                    e.target.value
+                                                                        .replace(
+                                                                            /[^0-9.]/g,
+                                                                            ""
+                                                                        )
+                                                                        .replace(
+                                                                            /\.(\d{2})\d+/,
+                                                                            ".$1"
+                                                                        );
+
                                                                 field.onChange(
                                                                     value
                                                                 );
@@ -761,17 +808,22 @@ export function ProductManageForm({
                                                     <FormControl>
                                                         <PriceInput
                                                             {...field}
-                                                            currency="PAISE"
                                                             className="h-9"
                                                             value={
                                                                 field.value ?? 0
                                                             }
                                                             onChange={(e) => {
                                                                 const value =
-                                                                    e.target.value.replace(
-                                                                        /[^0-9]/g,
-                                                                        ""
-                                                                    );
+                                                                    e.target.value
+                                                                        .replace(
+                                                                            /[^0-9.]/g,
+                                                                            ""
+                                                                        )
+                                                                        .replace(
+                                                                            /\.(\d{2})\d+/,
+                                                                            ".$1"
+                                                                        );
+
                                                                 field.onChange(
                                                                     value
                                                                 );
@@ -801,17 +853,22 @@ export function ProductManageForm({
                                                     <FormControl>
                                                         <PriceInput
                                                             {...field}
-                                                            currency="PAISE"
                                                             className="h-9"
                                                             value={
                                                                 field.value ?? 0
                                                             }
                                                             onChange={(e) => {
                                                                 const value =
-                                                                    e.target.value.replace(
-                                                                        /[^0-9]/g,
-                                                                        ""
-                                                                    );
+                                                                    e.target.value
+                                                                        .replace(
+                                                                            /[^0-9.]/g,
+                                                                            ""
+                                                                        )
+                                                                        .replace(
+                                                                            /\.(\d{2})\d+/,
+                                                                            ".$1"
+                                                                        );
+
                                                                 field.onChange(
                                                                     value
                                                                 );
@@ -829,9 +886,12 @@ export function ProductManageForm({
                                             <Label>Profit</Label>
 
                                             <PriceInput
-                                                currency="PAISE"
                                                 className="h-9"
-                                                value={profitOnItem}
+                                                value={
+                                                    profitOnItem > 0
+                                                        ? profitOnItem
+                                                        : 0
+                                                }
                                                 readOnly
                                                 disabled={isPending}
                                             />
