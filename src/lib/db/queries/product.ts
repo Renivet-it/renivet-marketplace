@@ -491,24 +491,28 @@ class ProductQuery {
                 .then((res) => res[0]);
 
             const [newOptions, newVariants] = await Promise.all([
-                tx
-                    .insert(productOptions)
-                    .values(
-                        values.options.map((option) => ({
-                            ...option,
-                            productId: newProduct.id,
-                        }))
-                    )
-                    .returning(),
-                tx
-                    .insert(productVariants)
-                    .values(
-                        values.variants.map((variant) => ({
-                            ...variant,
-                            productId: newProduct.id,
-                        }))
-                    )
-                    .returning(),
+                !!values.options.length
+                    ? tx
+                          .insert(productOptions)
+                          .values(
+                              values.options.map((option) => ({
+                                  ...option,
+                                  productId: newProduct.id,
+                              }))
+                          )
+                          .returning()
+                    : [],
+                !!values.variants.length
+                    ? tx
+                          .insert(productVariants)
+                          .values(
+                              values.variants.map((variant) => ({
+                                  ...variant,
+                                  productId: newProduct.id,
+                              }))
+                          )
+                          .returning()
+                    : [],
             ]);
 
             return {
@@ -547,16 +551,18 @@ class ProductQuery {
             );
 
             const [newOptions, newVariants] = await Promise.all([
-                tx
-                    .insert(productOptions)
-                    .values(productOptionsToInsert)
-                    .returning()
-                    .then((res) => res),
-                tx
-                    .insert(productVariants)
-                    .values(productVariantsToInsert)
-                    .returning()
-                    .then((res) => res),
+                !!productOptionsToInsert.length
+                    ? tx
+                          .insert(productOptions)
+                          .values(productOptionsToInsert)
+                          .returning()
+                    : [],
+                !!productVariantsToInsert.length
+                    ? tx
+                          .insert(productVariants)
+                          .values(productVariantsToInsert)
+                          .returning()
+                    : [],
             ]);
 
             return newProducts.map((product) => ({

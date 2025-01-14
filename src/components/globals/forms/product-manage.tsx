@@ -48,6 +48,7 @@ import { Country } from "country-state-city";
 import { Tag, TagInput } from "emblor";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -73,6 +74,8 @@ export function ProductManageForm({
     allSubCategories,
     allMedia,
 }: PageProps) {
+    const router = useRouter();
+
     const mediaItems = product?.media
         ? product.media.map((m) => m.mediaItem!).filter(Boolean)
         : [];
@@ -238,6 +241,7 @@ export function ProductManageForm({
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Product saved successfully", { id: toastId });
                 form.reset(form.getValues());
+                router.push(`/brands/${brandId}/products`);
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
