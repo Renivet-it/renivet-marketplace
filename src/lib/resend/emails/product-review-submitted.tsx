@@ -1,4 +1,4 @@
-import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
+import { getAbsoluteURL } from "@/lib/utils";
 import { Button } from "@react-email/components";
 import Layout from "./layout";
 
@@ -7,30 +7,36 @@ interface Props {
         name: string;
     };
     brand: {
-        name: string;
-        status: string;
+        id: string;
+    };
+    product: {
+        title: string;
     };
 }
 
-export default function BrandRequestSubmitted({
+export default function ProductReviewSubmitted({
     user = { name: "John Doe" },
-    brand = { name: "Brand", status: "pending" },
+    brand = { id: "9a49e106-67d0-458c-a441-02bdcf46dd81" },
+    product = { title: "R. M. Williams Boots" },
 }: Props) {
     return (
         <Layout
-            heading="Brand Request Submitted"
-            preview="Your brand request has been submitted"
+            heading="Product Review Request Submitted"
+            preview="Your product has been submitted for review"
         >
             <p>Hi {user.name},</p>
 
             <p>
-                Your brand request has been submitted. We will review your
-                request and get back to you as soon as possible.
+                Your product <strong>{product.title}</strong> has been submitted
+                for review. We will review your product and get back to you as
+                soon as possible.
             </p>
 
             <div className="mt-10">
                 <Button
-                    href={getAbsoluteURL("/become-a-seller")}
+                    href={getAbsoluteURL(
+                        `/dashboard/brands/${brand.id}/products`
+                    )}
                     className="bg-brand px-10 py-3 text-white"
                     style={{
                         marginLeft: "auto",
@@ -44,13 +50,13 @@ export default function BrandRequestSubmitted({
             </div>
 
             <p className="mb-0">
-                <strong>Brand: </strong>
-                {brand.name}
+                <strong>Product: </strong>
+                {product.title}
             </p>
 
             <p className="mt-0">
                 <strong>Status: </strong>
-                {convertValueToLabel(brand.status)}
+                Pending
             </p>
         </Layout>
     );

@@ -83,10 +83,61 @@ export default function Layout({ children, heading, preview }: Props) {
                                         marginRight: "auto",
                                     }}
                                 >
-                                    <div className="mx-1 size-10 rounded-full bg-gray-400"></div>
-                                    <div className="mx-1 size-10 rounded-full bg-gray-400"></div>
-                                    <div className="mx-1 size-10 rounded-full bg-gray-400"></div>
-                                    <div className="mx-1 size-10 rounded-full bg-gray-400"></div>
+                                    {siteConfig?.links?.Facebook && (
+                                        <Link
+                                            href={siteConfig.links.Facebook}
+                                            className="bg-brand mx-1 flex items-center justify-center rounded-full p-2 text-white"
+                                        >
+                                            <Img
+                                                src="https://img.icons8.com/?size=100&id=87311&format=png&color=FFFFFF"
+                                                alt="Facebook"
+                                                width={20}
+                                                height={20}
+                                            />
+                                        </Link>
+                                    )}
+
+                                    {siteConfig?.links?.Twitter && (
+                                        <Link
+                                            href={siteConfig.links.Twitter}
+                                            className="bg-brand mx-1 flex items-center justify-center rounded-full p-2 text-white"
+                                        >
+                                            <Img
+                                                src="https://img.icons8.com/?size=100&id=A4DsujzAX4rw&format=png&color=FFFFFF"
+                                                alt="X"
+                                                width={20}
+                                                height={20}
+                                            />
+                                        </Link>
+                                    )}
+
+                                    {siteConfig?.links?.Instagram && (
+                                        <Link
+                                            href={siteConfig.links.Instagram}
+                                            className="bg-brand mx-1 flex items-center justify-center rounded-full p-2 text-white"
+                                        >
+                                            <Img
+                                                src="https://img.icons8.com/?size=100&id=32292&format=png&color=FFFFFF"
+                                                alt="Instagram"
+                                                width={20}
+                                                height={20}
+                                            />
+                                        </Link>
+                                    )}
+
+                                    {siteConfig?.links?.Linkedin && (
+                                        <Link
+                                            href={siteConfig.links.Linkedin}
+                                            className="bg-brand mx-1 flex items-center justify-center rounded-full p-2 text-white"
+                                        >
+                                            <Img
+                                                src="https://img.icons8.com/?size=100&id=8808&format=png&color=FFFFFF"
+                                                alt="LinkedIn"
+                                                width={20}
+                                                height={20}
+                                            />
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
 

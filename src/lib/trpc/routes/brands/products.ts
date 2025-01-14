@@ -1,3 +1,4 @@
+import { env } from "@/../env";
 import { BitFieldBrandPermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
@@ -8,6 +9,8 @@ import {
     userCartCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { ProductReviewSubmitted } from "@/lib/resend/emails";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -557,6 +560,39 @@ export const productsRouter = createTRPCRouter({
                 });
 
             const data = await queries.products.sendProductForReview(productId);
+
+            await resend.batch.send([
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: existingProduct.brand.email,
+                    subject: `Product Review Request Submitted - ${existingProduct.title}`,
+                    react: ProductReviewSubmitted({
+                        user: {
+                            name: existingProduct.brand.name,
+                        },
+                        brand: existingProduct.brand,
+                        product: {
+                            title: existingProduct.title,
+                        },
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: user.email,
+                    subject: `Product Review Request Submitted - ${existingProduct.title}`,
+                    react: ProductReviewSubmitted({
+                        user: {
+                            name: `${user.firstName} ${user.lastName}`,
+                        },
+                        brand: {
+                            id: existingProduct.brand.id,
+                        },
+                        product: {
+                            title: existingProduct.title,
+                        },
+                    }),
+                },
+            ]);
 
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.SENT_FOR_REVIEW,

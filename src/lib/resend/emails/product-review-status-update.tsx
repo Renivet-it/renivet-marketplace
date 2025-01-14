@@ -6,78 +6,80 @@ interface Props {
     user: {
         name: string;
     };
-    brand:
+    brand: {
+        id: string;
+    };
+    product:
         | {
               id: string;
               status: "rejected";
-              name: string;
+              title: string;
               rejectionReason?: string;
           }
         | {
               id: string;
-              name: string;
+              title: string;
               status: "approved";
           };
 }
 
-export default function BrandVerificationStatusUpdate({
+export default function ProductReviewStatusUpdate({
     user = { name: "John Doe" },
     brand = {
         id: "9a49e106-67d0-458c-a441-02bdcf46dd81",
-        name: "Brand",
+    },
+    product = {
+        id: "9a49e106-67d0-458c-a441-02bdcf46dd81",
+        title: "R. M. Williams Boots",
         status: "rejected",
         rejectionReason:
-            "Please add a proper not-blurry logo, and also add a demo video. It is hard to verify your brand without these.",
+            "Please add at least one image of the product. It is hard to verify your product without this.",
     },
-    // brand = {
+    // product = {
     //     id: "9a49e106-67d0-458c-a441-02bdcf46dd81",
-    //     name: "Brand",
+    //     title: "R. M. Williams Boots",
     //     status: "approved",
     // },
 }: Props) {
     return (
         <Layout
             heading={
-                brand.status === "approved"
-                    ? "Brand Verified"
-                    : "Brand Verification Rejected"
+                product.status === "approved"
+                    ? "Product Approved"
+                    : "Product Rejected"
             }
             preview={
-                brand.status === "approved"
-                    ? "Your brand is now verified"
-                    : "Your brand verification request has been rejected"
+                product.status === "approved"
+                    ? "Your product is now verified"
+                    : "Your product has been rejected"
             }
         >
             <p>Hi {user.name},</p>
 
-            {brand.status === "approved" ? (
+            {product.status === "approved" ? (
                 <p>
-                    Your brand is now verified. You can now start selling your
-                    products in our marketplace. Good luck!
+                    Your product is now verified. You can publish it in our
+                    marketplace and start selling. Good luck!
                 </p>
             ) : (
                 <>
                     <p>
-                        Your brand verification request has been rejected.
-                        Please find the reason below:
+                        Your product has been rejected. Please make the
+                        necessary changes and resubmit it for verification.
                     </p>
 
                     <p>
                         <strong>Reason: </strong>
-                        {brand.rejectionReason ?? "No reason provided"}
+                        {product.rejectionReason ?? "No reason provided"}
                     </p>
                 </>
             )}
 
             <div className="mt-10">
                 <Button
-                    href={
-                        brand.status === "approved"
-                            ? getAbsoluteURL(`/dashboard/brands/${brand.id}`)
-                            : getAbsoluteURL(
-                                  `/dashboard/brands/${brand.id}/verification`
-                              )
-                    }
+                    href={getAbsoluteURL(
+                        `/dashboard/brands/${brand.id}/products`
+                    )}
                     className="bg-brand px-10 py-3 text-white"
                     style={{
                         marginLeft: "auto",
@@ -86,20 +88,20 @@ export default function BrandVerificationStatusUpdate({
                         width: "fit-content",
                     }}
                 >
-                    {brand.status === "approved"
-                        ? "Go to Dashboard"
-                        : "Resubmit Verification"}
+                    {product.status === "approved"
+                        ? "Publish Product"
+                        : "Resubmit Product"}
                 </Button>
             </div>
 
             <p className="mb-0">
-                <strong>Brand: </strong>
-                {brand.name}
+                <strong>Product: </strong>
+                {product.title}
             </p>
 
             <p className="mt-0">
                 <strong>Status: </strong>
-                {convertValueToLabel(brand.status)}
+                {convertValueToLabel(product.status)}
             </p>
         </Layout>
     );
