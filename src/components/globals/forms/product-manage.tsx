@@ -290,7 +290,7 @@ export function ProductManageForm({
                                 name="title"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Title</FormLabel>
+                                        <FormLabel>Title *</FormLabel>
 
                                         <FormControl>
                                             <Input
@@ -486,7 +486,7 @@ export function ProductManageForm({
                                     name="categoryId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Category</FormLabel>
+                                            <FormLabel>Category *</FormLabel>
 
                                             <Select
                                                 onValueChange={field.onChange}
@@ -530,7 +530,7 @@ export function ProductManageForm({
                                     name="subcategoryId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Subcategory</FormLabel>
+                                            <FormLabel>Subcategory *</FormLabel>
 
                                             <Select
                                                 onValueChange={field.onChange}
@@ -573,7 +573,9 @@ export function ProductManageForm({
                                     name="productTypeId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Product Type</FormLabel>
+                                            <FormLabel>
+                                                Product Type *
+                                            </FormLabel>
 
                                             <Select
                                                 onValueChange={field.onChange}
