@@ -16,6 +16,12 @@ import {
     SidebarMenuSubButton,
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn, hasPermission } from "@/lib/utils";
 import Link from "next/link";
 
@@ -73,12 +79,49 @@ export function NavBrand({
                                             <SidebarMenuSubItem
                                                 key={subItem.title}
                                             >
-                                                <SidebarMenuSubButton asChild>
+                                                <SidebarMenuSubButton
+                                                    asChild
+                                                    className="overflow-visible"
+                                                >
                                                     <Link
                                                         href={subItem.url}
                                                         prefetch
+                                                        onClick={(e) => {
+                                                            if (
+                                                                subItem.isDisabled
+                                                            )
+                                                                e.preventDefault();
+                                                        }}
+                                                        className={cn(
+                                                            subItem.isDisabled &&
+                                                                "cursor-not-allowed opacity-50"
+                                                        )}
                                                     >
-                                                        {subItem.title}
+                                                        <span>
+                                                            {subItem.title}
+                                                        </span>
+
+                                                        {subItem.description && (
+                                                            <TooltipProvider
+                                                                delayDuration={
+                                                                    0
+                                                                }
+                                                            >
+                                                                <Tooltip>
+                                                                    <TooltipTrigger>
+                                                                        <Icons.CircleHelp className="size-4" />
+                                                                    </TooltipTrigger>
+
+                                                                    <TooltipContent className="z-20 max-w-72">
+                                                                        <p>
+                                                                            {
+                                                                                subItem.description
+                                                                            }
+                                                                        </p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        )}
                                                     </Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>

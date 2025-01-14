@@ -1,5 +1,6 @@
 "use client";
 
+import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -13,10 +14,17 @@ import {
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea-general";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { handleClientError } from "@/lib/utils";
 import {
+    CachedUser,
     CreateBrandRequest,
     createBrandRequestSchema,
 } from "@/lib/validations";
@@ -32,7 +40,11 @@ import {
     BrandRequestLogoUploaderDropzone,
 } from "../dropzones";
 
-export function BrandRequestForm() {
+interface PageProps {
+    user: CachedUser;
+}
+
+export function BrandRequestForm({ user }: PageProps) {
     const router = useRouter();
 
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -47,7 +59,7 @@ export function BrandRequestForm() {
         resolver: zodResolver(createBrandRequestSchema),
         defaultValues: {
             name: "",
-            email: "",
+            email: user.email,
             phone: "",
             message: "",
             website: "",
@@ -146,19 +158,43 @@ export function BrandRequestForm() {
                             )}
                         />
 
-                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                        <div className="flex flex-col items-end gap-4 md:flex-row">
                             <FormField
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem className="w-full">
-                                        <FormLabel>Brand Email</FormLabel>
+                                        <div className="flex items-center gap-1">
+                                            <FormLabel>Brand Email</FormLabel>
+
+                                            <TooltipProvider delayDuration={0}>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <button>
+                                                            <Icons.CircleHelp className="size-4" />
+                                                        </button>
+                                                    </TooltipTrigger>
+
+                                                    <TooltipContent className="max-w-72">
+                                                        <p>
+                                                            This email will be
+                                                            used to contact you
+                                                            regarding your
+                                                            request, brand
+                                                            updates, and other
+                                                            important
+                                                            information.
+                                                        </p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </div>
 
                                         <FormControl>
                                             <Input
-                                                placeholder="Enter brand email"
-                                                disabled={isRequestSending}
                                                 {...field}
+                                                placeholder="Enter brand email"
+                                                disabled
                                             />
                                         </FormControl>
 

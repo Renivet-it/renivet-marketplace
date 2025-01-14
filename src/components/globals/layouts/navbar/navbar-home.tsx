@@ -204,16 +204,18 @@ export function NavbarHome() {
                         </Link>
 
                         <div className="hidden items-center gap-5 md:flex">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
-                                className="hidden lg:flex"
-                            >
-                                <Link href="/become-a-seller" prefetch>
-                                    Become a Seller
-                                </Link>
-                            </Button>
+                            {!!user.brand ? null : (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    asChild
+                                    className="hidden lg:flex"
+                                >
+                                    <Link href="/become-a-seller" prefetch>
+                                        Become a Seller
+                                    </Link>
+                                </Button>
+                            )}
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

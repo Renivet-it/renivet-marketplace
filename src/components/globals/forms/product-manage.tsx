@@ -32,7 +32,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
-import { cn, generateSKU, handleClientError } from "@/lib/utils";
+import { cn, generateSKU, handleClientError, sanitizeHtml } from "@/lib/utils";
 import {
     BrandMediaItem,
     CachedBrand,
@@ -1322,6 +1322,28 @@ export function ProductManageForm({
                                     </FormItem>
                                 )}
                             />
+
+                            <Separator />
+
+                            <div className="space-y-2">
+                                <Label>Google Search Preview</Label>
+
+                                <div className="rounded-md border border-foreground/20 bg-background p-4">
+                                    <h3 className="text-lg font-medium">
+                                        {form.watch("metaTitle") ||
+                                            form.watch("title") ||
+                                            "Product Title"}
+                                    </h3>
+
+                                    <p className="text-sm text-muted-foreground">
+                                        {form.watch("metaDescription") ||
+                                            sanitizeHtml(
+                                                form.watch("description") || ""
+                                            ).slice(0, 160) ||
+                                            "Product description"}
+                                    </p>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
 

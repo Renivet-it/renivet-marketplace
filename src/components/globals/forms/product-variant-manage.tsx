@@ -378,7 +378,7 @@ export function ProductVariantManage({
                                                     <FormControl>
                                                         <Input
                                                             {...field}
-                                                            placeholder="Option name"
+                                                            placeholder="'Size', 'Color', etc."
                                                             className="h-9"
                                                             onKeyDown={(e) => {
                                                                 if (
@@ -474,7 +474,7 @@ export function ProductVariantManage({
                                             </div>
 
                                             <Input
-                                                placeholder="Add another value"
+                                                placeholder="'Small', 'Red', etc."
                                                 onKeyDown={(e) => {
                                                     if (
                                                         e.key === "Enter" &&
