@@ -1,5 +1,6 @@
 import { ProductsReviewTable } from "@/components/dashboard/general/products";
 import { DashShell } from "@/components/globals/layouts";
+import { ProductSearchSkuModal } from "@/components/globals/modals";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { productQueries } from "@/lib/db/queries";
 import { Product } from "@/lib/validations";
@@ -30,6 +31,8 @@ export default function Page(props: PageProps) {
                         Manage products under review
                     </p>
                 </div>
+
+                <ProductSearchSkuModal />
             </div>
 
             <Suspense fallback={<TableSkeleton />}>

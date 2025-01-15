@@ -3,6 +3,7 @@ import {
     ProductsTable,
 } from "@/components/dashboard/brands/products";
 import { DashShell } from "@/components/globals/layouts";
+import { ProductSearchSkuModal } from "@/components/globals/modals";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
@@ -53,6 +54,21 @@ export default function Page(props: PageProps) {
                         }
                     >
                         <NewProductButton {...props} />
+                    </Suspense>
+
+                    <Suspense
+                        fallback={
+                            <Button
+                                disabled
+                                variant="outline"
+                                className="size-8 p-0"
+                            >
+                                <span className="sr-only">Search by SKU</span>
+                                <Icons.Search />
+                            </Button>
+                        }
+                    >
+                        <ProductSearchSkuFetch {...props} />
                     </Suspense>
 
                     <Suspense
@@ -124,6 +140,12 @@ async function ProductsActionFetch({ params }: PageProps) {
             products={products}
         />
     );
+}
+
+async function ProductSearchSkuFetch({ params }: PageProps) {
+    const { bId } = await params;
+
+    return <ProductSearchSkuModal brandId={bId} />;
 }
 
 async function NewProductButton({ params }: PageProps) {

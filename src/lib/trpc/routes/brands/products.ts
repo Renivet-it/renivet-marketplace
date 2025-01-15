@@ -146,6 +146,13 @@ export const productsRouter = createTRPCRouter({
                         message: "Product variants are required",
                     });
 
+                product.nativeSku = generateSKU({
+                    brand: user.brand,
+                    category: existingCategory.name,
+                    subcategory: existingSubCategory.name,
+                    productType: existingProductType.name,
+                });
+
                 for (const variant of product.variants) {
                     const optionCombinations = Object.entries(
                         variant.combinations

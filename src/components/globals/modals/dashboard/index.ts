@@ -11,6 +11,7 @@ export * from "./category-request-view";
 export * from "./invite-create";
 export * from "./marketing-strip-delete";
 export * from "./marketing-strip-status";
+export * from "./product-search-sku";
 export * from "./product-type-delete";
 export * from "./product-type-manage";
 export * from "./role-delete";

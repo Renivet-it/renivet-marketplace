@@ -402,6 +402,122 @@ class ProductQuery {
         return productWithBrandSchema.parse(enhancedData);
     }
 
+    async getProductBySku({
+        sku,
+        brandId,
+        isDeleted,
+        isAvailable,
+        isPublished,
+        isActive,
+        verificationStatus,
+    }: {
+        sku: string;
+        brandId?: string;
+        isDeleted?: boolean;
+        isAvailable?: boolean;
+        isPublished?: boolean;
+        isActive?: boolean;
+        verificationStatus?: Product["verificationStatus"];
+    }) {
+        const productData = await db.query.products.findFirst({
+            with: {
+                variants: true,
+                brand: true,
+            },
+            where: and(
+                eq(products.nativeSku, sku),
+                brandId ? eq(products.brandId, brandId) : undefined,
+                isDeleted !== undefined
+                    ? eq(products.isDeleted, isDeleted)
+                    : undefined,
+                isAvailable !== undefined
+                    ? eq(products.isAvailable, isAvailable)
+                    : undefined,
+                isPublished !== undefined
+                    ? eq(products.isPublished, isPublished)
+                    : undefined,
+                isActive !== undefined
+                    ? eq(products.isActive, isActive)
+                    : undefined,
+                verificationStatus !== undefined
+                    ? eq(products.verificationStatus, verificationStatus)
+                    : undefined
+            ),
+        });
+
+        if (productData) {
+            const image = productData.media[0]?.id
+                ? await mediaCache.get(productData.media[0]?.id)
+                : null;
+
+            return {
+                id: productData.id,
+                title: productData.title,
+                brand: productData.brand.name,
+                variants: productData.variants.length,
+                imageUrl: image?.url,
+                price: productData.price || 0,
+            };
+        } else {
+            const variantData = await db.query.productVariants.findFirst({
+                with: {
+                    product: {
+                        with: {
+                            brand: true,
+                            variants: true,
+                        },
+                    },
+                },
+                where: and(
+                    eq(productVariants.nativeSku, sku),
+                    isDeleted !== undefined
+                        ? eq(productVariants.isDeleted, isDeleted)
+                        : undefined
+                ),
+            });
+
+            if (!variantData) return null;
+            if (
+                brandId !== undefined &&
+                variantData.product.brandId !== brandId
+            )
+                return null;
+            if (
+                isAvailable !== undefined &&
+                variantData.product.isAvailable !== isAvailable
+            )
+                return null;
+            if (
+                isPublished !== undefined &&
+                variantData.product.isPublished !== isPublished
+            )
+                return null;
+            if (
+                isActive !== undefined &&
+                variantData.product.isActive !== isActive
+            )
+                return null;
+            if (
+                verificationStatus !== undefined &&
+                variantData.product.verificationStatus !== verificationStatus
+            )
+                return null;
+
+            const image = variantData.image
+                ? await mediaCache.get(variantData.image)
+                : null;
+
+            return {
+                id: variantData.productId,
+                title: variantData.product.title,
+                brand: variantData.product.brand.name,
+                variants: variantData.product.variants.length,
+                imageUrl: image?.url,
+                price: variantData.price || 0,
+            };
+        }
+    }
+
     async getProductBySlug({
         slug,
         isDeleted,
