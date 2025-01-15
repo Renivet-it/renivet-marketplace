@@ -10,6 +10,7 @@ export * from "./brand-request";
 export * from "./brand-subscription";
 export * from "./cart";
 export * from "./category";
+export * from "./category-request";
 export * from "./legal";
 export * from "./marketing-strip";
 export * from "./order";

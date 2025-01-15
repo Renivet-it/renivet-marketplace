@@ -72,7 +72,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { MediaSelectModal } from "../modals";
+import { MediaSelectModal, RequestCategoryModal } from "../modals";
 import { ProductVariantManage } from "./product-variant-manage";
 
 interface PageProps {
@@ -97,6 +97,8 @@ export function ProductManageForm({
     const router = useRouter();
 
     const [isCoOSelectOpen, setIsCoOSelectOpen] = useState(false);
+    const [isRequestCategoryModalOpen, setIsRequestCategoryModalOpen] =
+        useState(false);
 
     const mediaItems = product?.media
         ? product.media.map((m) => m.mediaItem!).filter(Boolean)
@@ -273,7 +275,7 @@ export function ProductManageForm({
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Product saved successfully", { id: toastId });
                 form.reset(form.getValues());
-                router.push(`/brands/${brandId}/products`);
+                router.push(`/dashboard/brands/${brandId}/products`);
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -673,6 +675,20 @@ export function ProductManageForm({
                                         </FormItem>
                                     )}
                                 />
+                            </div>
+
+                            <div className="flex justify-end text-sm">
+                                <Button
+                                    variant="link"
+                                    type="button"
+                                    size="sm"
+                                    className="h-8"
+                                    onClick={() =>
+                                        setIsRequestCategoryModalOpen(true)
+                                    }
+                                >
+                                    Request New Category
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -1568,6 +1584,12 @@ export function ProductManageForm({
                     });
                     setSelectedSusCertificate(item);
                 }}
+            />
+
+            <RequestCategoryModal
+                isOpen={isRequestCategoryModalOpen}
+                setIsOpen={setIsRequestCategoryModalOpen}
+                brandId={brandId}
             />
         </>
     );

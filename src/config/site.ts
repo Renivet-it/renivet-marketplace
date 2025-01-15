@@ -269,6 +269,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         icon: "Package",
         items: [
             {
+                title: "Category Requests",
+                url: "/dashboard/general/category-requests",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
+            {
                 title: "Categories",
                 url: "/dashboard/general/categories",
                 permissions:

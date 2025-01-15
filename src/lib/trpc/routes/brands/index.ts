@@ -1,4 +1,5 @@
 export * from "./bans";
+export * from "./category-requests";
 export * from "./confidential";
 export * from "./invites";
 export * from "./media";

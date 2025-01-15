@@ -561,38 +561,20 @@ export const productsRouter = createTRPCRouter({
 
             const data = await queries.products.sendProductForReview(productId);
 
-            await resend.batch.send([
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: existingProduct.brand.email,
-                    subject: `Product Review Request Submitted - ${existingProduct.title}`,
-                    react: ProductReviewSubmitted({
-                        user: {
-                            name: existingProduct.brand.name,
-                        },
-                        brand: existingProduct.brand,
-                        product: {
-                            title: existingProduct.title,
-                        },
-                    }),
-                },
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: user.email,
-                    subject: `Product Review Request Submitted - ${existingProduct.title}`,
-                    react: ProductReviewSubmitted({
-                        user: {
-                            name: `${user.firstName} ${user.lastName}`,
-                        },
-                        brand: {
-                            id: existingProduct.brand.id,
-                        },
-                        product: {
-                            title: existingProduct.title,
-                        },
-                    }),
-                },
-            ]);
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: existingProduct.brand.email,
+                subject: `Product Review Request Submitted - ${existingProduct.title}`,
+                react: ProductReviewSubmitted({
+                    user: {
+                        name: existingProduct.brand.name,
+                    },
+                    brand: existingProduct.brand,
+                    product: {
+                        title: existingProduct.title,
+                    },
+                }),
+            });
 
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.SENT_FOR_REVIEW,

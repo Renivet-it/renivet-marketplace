@@ -12,3 +12,4 @@ export * from "./product-delete";
 export * from "./product-publish";
 export * from "./product-rejection-view";
 export * from "./product-send-review";
+export * from "./request-category";

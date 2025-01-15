@@ -12,6 +12,7 @@ import {
 import { timestamps } from "../helper";
 import { brandMediaItems } from "./brand-media-item";
 import { brandSubscriptions } from "./brand-subscription";
+import { categoryRequests } from "./category";
 import { products } from "./product";
 import { brandRoles, roles } from "./role";
 import { users } from "./user";
@@ -232,6 +233,7 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
         fields: [brands.id],
         references: [brandConfidentials.id],
     }),
+    categoryRequests: many(categoryRequests),
 }));
 
 export const brandConfidentialRelations = relations(

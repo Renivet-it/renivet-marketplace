@@ -57,40 +57,22 @@ export const productReviewsRouter = createTRPCRouter({
 
             const data = await queries.products.approveProduct(productId);
 
-            await resend.batch.send([
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: existingBrand.email,
-                    subject: `Product Approved - ${existingProduct.title}`,
-                    react: ProductReviewStatusUpdate({
-                        user: {
-                            name: existingBrand.name,
-                        },
-                        brand: existingBrand,
-                        product: {
-                            id: productId,
-                            title: existingProduct.title,
-                            status: "approved",
-                        },
-                    }),
-                },
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: cachedOwner.email,
-                    subject: `Product Approved - ${existingProduct.title}`,
-                    react: ProductReviewStatusUpdate({
-                        user: {
-                            name: `${existingBrand.owner.firstName} ${existingBrand.owner.lastName}`,
-                        },
-                        brand: existingBrand,
-                        product: {
-                            id: productId,
-                            title: existingProduct.title,
-                            status: "approved",
-                        },
-                    }),
-                },
-            ]);
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: existingBrand.email,
+                subject: `Product Approved - ${existingProduct.title}`,
+                react: ProductReviewStatusUpdate({
+                    user: {
+                        name: existingBrand.name,
+                    },
+                    brand: existingBrand,
+                    product: {
+                        id: productId,
+                        title: existingProduct.title,
+                        status: "approved",
+                    },
+                }),
+            });
 
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.APRROVED,
@@ -144,42 +126,23 @@ export const productReviewsRouter = createTRPCRouter({
                 rejectionReason
             );
 
-            await resend.batch.send([
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: existingBrand.email,
-                    subject: `Product Rejected - ${existingProduct.title}`,
-                    react: ProductReviewStatusUpdate({
-                        user: {
-                            name: existingBrand.name,
-                        },
-                        brand: existingBrand,
-                        product: {
-                            id,
-                            title: existingProduct.title,
-                            status: "rejected",
-                            rejectionReason: rejectionReason ?? undefined,
-                        },
-                    }),
-                },
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: cachedOwner.email,
-                    subject: `Product Rejected - ${existingProduct.title}`,
-                    react: ProductReviewStatusUpdate({
-                        user: {
-                            name: `${existingBrand.owner.firstName} ${existingBrand.owner.lastName}`,
-                        },
-                        brand: existingBrand,
-                        product: {
-                            id,
-                            title: existingProduct.title,
-                            status: "rejected",
-                            rejectionReason: rejectionReason ?? undefined,
-                        },
-                    }),
-                },
-            ]);
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: existingBrand.email,
+                subject: `Product Rejected - ${existingProduct.title}`,
+                react: ProductReviewStatusUpdate({
+                    user: {
+                        name: existingBrand.name,
+                    },
+                    brand: existingBrand,
+                    product: {
+                        id,
+                        title: existingProduct.title,
+                        status: "rejected",
+                        rejectionReason: rejectionReason ?? undefined,
+                    },
+                }),
+            });
 
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.REJECTED,
