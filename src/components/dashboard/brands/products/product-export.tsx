@@ -2,6 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { convertPaiseToRupees } from "@/lib/utils";
 import { CachedBrand, ProductWithBrand } from "@/lib/validations";
 import { unparse } from "papaparse";
 import { toast } from "sonner";
@@ -46,11 +47,18 @@ export function ProductExportButton({ products, brand }: PageProps) {
                             "Native SKU": product.nativeSku || "",
                             SKU: product.sku || "",
                             Barcode: product.barcode || "",
-                            "Price (in Paise)": product.price || 0,
-                            "Compare At Price (in Paise)":
-                                product.compareAtPrice || "",
-                            "Cost Per Item (in Paise)":
-                                product.costPerItem || "",
+                            "Price (in Rupees)": convertPaiseToRupees(
+                                product.price || 0
+                            ),
+                            "Compare At Price (in Rupees)":
+                                product.compareAtPrice
+                                    ? convertPaiseToRupees(
+                                          product.compareAtPrice
+                                      )
+                                    : "",
+                            "Cost Per Item (in Rupees)": product.costPerItem
+                                ? convertPaiseToRupees(product.costPerItem)
+                                : "",
                             Quantity: product.quantity || 0,
                             "Weight (g)": product.weight || 0,
                             "Length (cm)": product.length || 0,
@@ -118,10 +126,15 @@ export function ProductExportButton({ products, brand }: PageProps) {
                         "Native SKU": variant.nativeSku,
                         SKU: variant.sku || "",
                         Barcode: variant.barcode || "",
-                        "Price (in Paise)": variant.price,
-                        "Compare At Price (in Paise)":
-                            variant.compareAtPrice || "",
-                        "Cost Per Item (in Paise)": variant.costPerItem || "",
+                        "Price (in Rupees)": convertPaiseToRupees(
+                            variant.price
+                        ),
+                        "Compare At Price (in Rupees)": variant.compareAtPrice
+                            ? convertPaiseToRupees(variant.compareAtPrice)
+                            : "",
+                        "Cost Per Item (in Rupees)": variant.costPerItem
+                            ? convertPaiseToRupees(variant.costPerItem)
+                            : "",
                         Quantity: variant.quantity,
                         "Weight (g)": variant.weight,
                         "Length (cm)": variant.length,
