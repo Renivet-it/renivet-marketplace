@@ -204,9 +204,10 @@ export function ProductVariantManage({
 
                 return {
                     ...optionColumns,
-                    "Price (in Paise)": variant.price,
-                    "Compare At Price (in Paise)": variant.compareAtPrice || "",
-                    "Cost Per Item (in Paise)": variant.costPerItem || "",
+                    "Price (in Rupees)": variant.price,
+                    "Compare At Price (in Rupees)":
+                        variant.compareAtPrice || "",
+                    "Cost Per Item (in Rupees)": variant.costPerItem || "",
                     SKU: variant.sku || "",
                     Barcode: variant.barcode || "",
                     Quantity: variant.quantity,
@@ -284,18 +285,20 @@ export function ProductVariantManage({
 
                             return {
                                 ...variant,
-                                price: csvRow["Price (in Paise)"]
-                                    ? Number(csvRow["Price (in Paise)"])
+                                price: csvRow["Price (in Rupees)"]
+                                    ? parseFloat(csvRow["Price (in Rupees)"])
                                     : variant.price,
                                 compareAtPrice: csvRow[
                                     "Compare At Price (in Paise)"
                                 ]
-                                    ? Number(
-                                          csvRow["Compare At Price (in Paise)"]
+                                    ? parseFloat(
+                                          csvRow["Compare At Price (in Rupees)"]
                                       )
                                     : variant.compareAtPrice,
                                 costPerItem: csvRow["Cost Per Item (in Paise)"]
-                                    ? Number(csvRow["Cost Per Item (in Paise)"])
+                                    ? parseFloat(
+                                          csvRow["Cost Per Item (in Paise)"]
+                                      )
                                     : variant.costPerItem,
                                 sku: csvRow["SKU"] || variant.sku,
                                 barcode: csvRow["Barcode"] || variant.barcode,
