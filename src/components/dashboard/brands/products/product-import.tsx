@@ -3,7 +3,13 @@
 import { Icons } from "@/components/icons";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc/client";
-import { generateSKU, handleClientError, slugify, wait } from "@/lib/utils";
+import {
+    convertPriceToPaise,
+    generateSKU,
+    handleClientError,
+    slugify,
+    wait,
+} from "@/lib/utils";
 import {
     CachedBrand,
     CachedCategory,
@@ -14,7 +20,7 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { parse } from "papaparse";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -42,9 +48,9 @@ interface ImportRow {
     "Option3 Value": string;
     SKU: string;
     Barcode: string;
-    "Price (in Paise)": string;
-    "Compare At Price (in Paise)": string;
-    "Cost Per Item (in Paise)": string;
+    "Price (in Rupees)": string;
+    "Compare At Price (in Rupees)": string;
+    "Cost Per Item (in Rupees)": string;
     Quantity: string;
     "Weight (g)": string;
     "Length (cm)": string;
@@ -61,7 +67,6 @@ export function ProductImportButton({
     productTypes,
 }: PageProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [products, setProducts] = useState<CreateProduct[]>([]);
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
@@ -84,7 +89,7 @@ export function ProductImportButton({
             const toastId = toast.loading("Importing products...");
             return { toastId };
         },
-        mutationFn: async () => {
+        mutationFn: async (products: CreateProduct[]) => {
             if (!products.length) throw new Error("No products to import");
             await importProuductsAsync(products);
         },
@@ -99,16 +104,14 @@ export function ProductImportButton({
         },
     });
 
-    const { mutate: processFile, isPending: isProcessing } = useMutation({
-        onMutate: () => {
-            const toastId = toast.loading("Processing file...");
-            return { toastId };
-        },
-        mutationFn: async (file: File) => {
-            parse<ImportRow>(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: async (results) => {
+    const processFile = (file: File) => {
+        parse<ImportRow>(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: async (results) => {
+                const toastId = toast.loading("Processing file...");
+
+                try {
                     const productGroups = new Map<string, ImportRow[]>();
 
                     results.data = results.data.filter((row) => {
@@ -193,15 +196,20 @@ export function ProductImportButton({
                         if (!hasVariants) {
                             product.sku = firstRow.SKU || "";
                             product.barcode = firstRow.Barcode || null;
-                            product.price =
-                                parseInt(firstRow["Price (in Paise)"]) || 0;
+                            product.price = convertPriceToPaise(
+                                parseFloat(firstRow["Price (in Rupees)"]) || 0
+                            );
                             product.compareAtPrice =
-                                parseInt(
-                                    firstRow["Compare At Price (in Paise)"]
+                                convertPriceToPaise(
+                                    parseFloat(
+                                        firstRow["Compare At Price (in Rupees)"]
+                                    ) || 0
                                 ) || null;
                             product.costPerItem =
-                                parseInt(
-                                    firstRow["Cost Per Item (in Paise)"]
+                                convertPriceToPaise(
+                                    parseFloat(
+                                        firstRow["Cost Per Item (in Rupees)"]
+                                    ) || 0
                                 ) || null;
                             product.quantity = parseInt(firstRow.Quantity) || 0;
                             product.weight =
@@ -305,14 +313,24 @@ export function ProductImportButton({
                                     sku: row.SKU,
                                     barcode: row.Barcode || null,
                                     price:
-                                        parseInt(row["Price (in Paise)"]) || 0,
+                                        convertPriceToPaise(
+                                            parseFloat(
+                                                row["Price (in Rupees)"]
+                                            ) || 0
+                                        ) || 0,
                                     compareAtPrice:
-                                        parseInt(
-                                            row["Compare At Price (in Paise)"]
+                                        convertPriceToPaise(
+                                            parseFloat(
+                                                row[
+                                                    "Compare At Price (in Rupees)"
+                                                ]
+                                            ) || 0
                                         ) || null,
                                     costPerItem:
-                                        parseInt(
-                                            row["Cost Per Item (in Paise)"]
+                                        convertPriceToPaise(
+                                            parseFloat(
+                                                row["Cost Per Item (in Rupees)"]
+                                            ) || 0
                                         ) || null,
                                     quantity: parseInt(row.Quantity) || 0,
                                     weight: parseInt(row["Weight (g)"]) || 0,
@@ -334,24 +352,17 @@ export function ProductImportButton({
                         products.push(product);
                     }
 
-                    setProducts(products);
-                },
-                error: (error) => {
-                    throw error;
-                },
-            });
-        },
-        onSuccess: async (_, __, { toastId }) => {
-            await wait(1000);
-            createBulkProducts();
-            return toast.success("File processed successfully", {
-                id: toastId,
-            });
-        },
-        onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
-        },
-    });
+                    toast.success("File processed successfully", {
+                        id: toastId,
+                    });
+                    await wait(1000);
+                    createBulkProducts(products);
+                } catch (error) {
+                    return handleClientError(error, toastId);
+                }
+            },
+        });
+    };
 
     const findCategory = (
         categoryName: string,
@@ -438,7 +449,7 @@ export function ProductImportButton({
             <DropdownMenuItem
                 onClick={() => fileInputRef.current?.click()}
                 className="relative"
-                disabled={isProcessing || isCreating}
+                disabled={isCreating}
             >
                 <Icons.Download />
                 Import Products
@@ -448,7 +459,7 @@ export function ProductImportButton({
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileUpload}
-                disabled={isProcessing || isCreating}
+                disabled={isCreating}
                 accept=".csv"
                 className="absolute inset-0 cursor-pointer opacity-0"
                 style={{ display: "block", width: "100%", height: "100%" }}
