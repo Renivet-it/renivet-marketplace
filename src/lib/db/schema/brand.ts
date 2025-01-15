@@ -110,6 +110,15 @@ export const brandConfidentials = pgTable(
         state: text("state").notNull(),
         postalCode: text("postal_code").notNull(),
         country: text("country").notNull(),
+        isSameAsWarehouseAddress: boolean("is_same_as_warehouse_address")
+            .notNull()
+            .default(true),
+        warehouseAddressLine1: text("warehouse_address_line1"),
+        warehouseAddressLine2: text("warehouse_address_line2"),
+        warehouseCity: text("warehouse_city"),
+        warehouseState: text("warehouse_state"),
+        warehousePostalCode: text("warehouse_postal_code"),
+        warehouseCountry: text("warehouse_country"),
         verificationStatus: text("verification_status", {
             enum: ["pending", "approved", "rejected"],
         })
