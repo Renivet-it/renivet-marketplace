@@ -5,6 +5,7 @@ import { addresses } from "./address";
 import { blogs } from "./blog";
 import { bannedBrandMembers, brandMembers, brands } from "./brand";
 import { carts } from "./cart";
+import { categoryRequests } from "./category";
 import { roles } from "./role";
 import { wishlists } from "./wishlist";
 
@@ -80,6 +81,7 @@ export const userRelations = relations(users, ({ one, many }) => ({
     bannedFromBrands: many(bannedBrandMembers),
     wishlists: many(wishlists),
     carts: many(carts),
+    categoryRequests: many(categoryRequests),
 }));
 
 export const userRoleRelations = relations(userRoles, ({ one }) => ({

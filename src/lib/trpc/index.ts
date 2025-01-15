@@ -1,5 +1,6 @@
 import {
     bansRouter as brandBansRouter,
+    categoryRequestsRouter as brandCategoryRequestsRouter,
     confidentialsRouter as brandConfidentialsRouter,
     invitesRouter as brandInvitesRouter,
     mediaRouter as brandMediaRouter,
@@ -48,6 +49,7 @@ export const appRouter = createTRPCRouter({
     }),
     brands: createTRPCRouter({
         bans: brandBansRouter,
+        categoryRequests: brandCategoryRequestsRouter,
         confidentials: brandConfidentialsRouter,
         invites: brandInvitesRouter,
         media: brandMediaRouter,

@@ -20,7 +20,7 @@ export const confidentialsRouter = createTRPCRouter({
         .input(createBrandConfidentialSchema)
         .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
         .mutation(async ({ input, ctx }) => {
-            const { queries, user } = ctx;
+            const { queries } = ctx;
             const { id } = input;
 
             const existingBrand = await brandCache.get(id);
@@ -48,38 +48,21 @@ export const confidentialsRouter = createTRPCRouter({
                 userCache.remove(existingBrand.ownerId),
             ]);
 
-            await resend.batch.send([
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: existingBrand.email,
-                    subject: `Verification Request - ${existingBrand.name}`,
-                    react: BrandVerificationtSubmitted({
-                        user: {
-                            name: existingBrand.name,
-                        },
-                        brand: {
-                            id: existingBrand.id,
-                            status: "pending",
-                            name: existingBrand.name,
-                        },
-                    }),
-                },
-                {
-                    from: env.RESEND_EMAIL_FROM,
-                    to: user.email,
-                    subject: `Verification Failed - ${existingBrand.name}`,
-                    react: BrandVerificationtSubmitted({
-                        user: {
-                            name: `${user.firstName} ${user.lastName}`,
-                        },
-                        brand: {
-                            id: existingBrand.id,
-                            status: "rejected",
-                            name: existingBrand.name,
-                        },
-                    }),
-                },
-            ]);
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: existingBrand.email,
+                subject: `Verification Request - ${existingBrand.name}`,
+                react: BrandVerificationtSubmitted({
+                    user: {
+                        name: existingBrand.name,
+                    },
+                    brand: {
+                        id: existingBrand.id,
+                        status: "pending",
+                        name: existingBrand.name,
+                    },
+                }),
+            });
 
             return data;
         }),

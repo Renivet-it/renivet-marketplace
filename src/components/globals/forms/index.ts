@@ -24,6 +24,7 @@ export * from "./product-manage";
 export * from "./product-reject";
 export * from "./product-type-manage";
 export * from "./refund-policy-manage";
+export * from "./request-category";
 export * from "./role-manage";
 export * from "./shipping-policy-manage";
 export * from "./signin";
