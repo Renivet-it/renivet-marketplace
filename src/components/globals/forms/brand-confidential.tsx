@@ -2,6 +2,7 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Form,
     FormControl,
@@ -105,6 +106,16 @@ export function BrandConfidentialForm({
             state: brandConfidential?.state ?? "",
             postalCode: brandConfidential?.postalCode ?? "",
             country: "IN",
+            isSameAsWarehouseAddress:
+                brandConfidential?.isSameAsWarehouseAddress ?? true,
+            warehouseAddressLine1:
+                brandConfidential?.warehouseAddressLine1 ?? "",
+            warehouseAddressLine2:
+                brandConfidential?.warehouseAddressLine2 ?? "",
+            warehouseCity: brandConfidential?.warehouseCity ?? "",
+            warehouseState: brandConfidential?.warehouseState ?? "",
+            warehousePostalCode: brandConfidential?.warehousePostalCode ?? "",
+            warehouseCountry: brandConfidential?.warehouseCountry ?? "IN",
         },
     });
 
@@ -126,6 +137,20 @@ export function BrandConfidentialForm({
                         data.udyamRegistrationCertificate as string | undefined,
                     iecCertificate: data.iecCertificate as string | undefined,
                     country: "IN",
+                    warehouseAddressLine1:
+                        (data.warehouseAddressLine1 as string | undefined) ??
+                        "",
+                    warehouseAddressLine2:
+                        (data.warehouseAddressLine2 as string | undefined) ??
+                        "",
+                    warehouseCity:
+                        (data.warehouseCity as string | undefined) ?? "",
+                    warehouseState:
+                        (data.warehouseState as string | undefined) ?? "",
+                    warehousePostalCode:
+                        (data.warehousePostalCode as string | undefined) ?? "",
+                    warehouseCountry:
+                        (data.warehouseCountry as string | undefined) ?? "IN",
                 });
                 router.refresh();
             },
@@ -159,14 +184,39 @@ export function BrandConfidentialForm({
             <Form {...form}>
                 <form
                     className="space-y-6"
-                    onSubmit={form.handleSubmit((values) =>
-                        brandConfidential?.verificationStatus === "rejected"
+                    onSubmit={form.handleSubmit((values) => {
+                        values = {
+                            ...values,
+                            warehouseAddressLine1:
+                                values.isSameAsWarehouseAddress
+                                    ? values.addressLine1
+                                    : values.warehouseAddressLine1,
+                            warehouseAddressLine2:
+                                values.isSameAsWarehouseAddress
+                                    ? values.addressLine2
+                                    : values.warehouseAddressLine2,
+                            warehouseCity: values.isSameAsWarehouseAddress
+                                ? values.city
+                                : values.warehouseCity,
+                            warehouseState: values.isSameAsWarehouseAddress
+                                ? values.state
+                                : values.warehouseState,
+                            warehousePostalCode: values.isSameAsWarehouseAddress
+                                ? values.postalCode
+                                : values.warehousePostalCode,
+                            warehouseCountry: values.isSameAsWarehouseAddress
+                                ? values.country
+                                : values.warehouseCountry,
+                        };
+
+                        return brandConfidential?.verificationStatus ===
+                            "rejected"
                             ? resendRequest({
                                   id: brandConfidential.id,
                                   values,
                               })
-                            : sendRequest(values)
-                    )}
+                            : sendRequest(values);
+                    })}
                 >
                     <div className="space-y-4">
                         <h2 className="text-xl font-semibold">
@@ -534,138 +584,215 @@ export function BrandConfidentialForm({
                         <Separator />
 
                         <div className="space-y-6">
-                            <FormField
-                                control={form.control}
-                                name="addressLine1"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Street 1</FormLabel>
+                            <div className="space-y-2">
+                                <h3 className="text-lg font-semibold">
+                                    Office Address
+                                </h3>
 
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Enter brand's registered street address"
-                                                disabled={
-                                                    isRequestSending ||
-                                                    isRequestResending ||
-                                                    (!!brandConfidential &&
-                                                        brand.confidentialVerificationStatus !==
-                                                            "rejected")
-                                                }
-                                                {...field}
-                                            />
-                                        </FormControl>
+                                <div className="space-y-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="addressLine1"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Address Line 1
+                                                </FormLabel>
 
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder="Enter brand's registered street address"
+                                                        disabled={
+                                                            isRequestSending ||
+                                                            isRequestResending ||
+                                                            (!!brandConfidential &&
+                                                                brand.confidentialVerificationStatus !==
+                                                                    "rejected")
+                                                        }
+                                                        {...field}
+                                                    />
+                                                </FormControl>
 
-                            <FormField
-                                control={form.control}
-                                name="addressLine2"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Street 2</FormLabel>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Enter brand's registered street address"
-                                                disabled={
-                                                    isRequestSending ||
-                                                    isRequestResending ||
-                                                    (!!brandConfidential &&
-                                                        brand.confidentialVerificationStatus !==
-                                                            "rejected")
-                                                }
-                                                {...field}
-                                            />
-                                        </FormControl>
+                                    <FormField
+                                        control={form.control}
+                                        name="addressLine2"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Address Line 2
+                                                </FormLabel>
 
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder="Enter brand's registered street address"
+                                                        disabled={
+                                                            isRequestSending ||
+                                                            isRequestResending ||
+                                                            (!!brandConfidential &&
+                                                                brand.confidentialVerificationStatus !==
+                                                                    "rejected")
+                                                        }
+                                                        {...field}
+                                                    />
+                                                </FormControl>
 
-                            <div className="flex flex-col items-center gap-4 md:flex-row">
-                                <FormField
-                                    control={form.control}
-                                    name="city"
-                                    render={({ field }) => (
-                                        <FormItem className="w-full">
-                                            <FormLabel>City</FormLabel>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
 
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter brand's registered city"
-                                                    disabled={
-                                                        isRequestSending ||
-                                                        isRequestResending ||
-                                                        (!!brandConfidential &&
-                                                            brand.confidentialVerificationStatus !==
-                                                                "rejected")
-                                                    }
-                                                    {...field}
-                                                />
-                                            </FormControl>
+                                    <div className="flex flex-col items-center gap-4 md:flex-row">
+                                        <FormField
+                                            control={form.control}
+                                            name="city"
+                                            render={({ field }) => (
+                                                <FormItem className="w-full">
+                                                    <FormLabel>City</FormLabel>
 
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="state"
-                                    render={({ field }) => (
-                                        <FormItem className="w-full">
-                                            <FormLabel>State</FormLabel>
-
-                                            <Select
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value}
-                                                disabled={
-                                                    isRequestSending ||
-                                                    isRequestResending ||
-                                                    (!!brandConfidential &&
-                                                        brand.confidentialVerificationStatus !==
-                                                            "rejected")
-                                                }
-                                            >
-                                                <SelectTrigger>
                                                     <FormControl>
-                                                        <SelectValue placeholder="Select brand's registered state" />
+                                                        <Input
+                                                            placeholder="Enter brand's registered city"
+                                                            disabled={
+                                                                isRequestSending ||
+                                                                isRequestResending ||
+                                                                (!!brandConfidential &&
+                                                                    brand.confidentialVerificationStatus !==
+                                                                        "rejected")
+                                                            }
+                                                            {...field}
+                                                        />
                                                     </FormControl>
-                                                </SelectTrigger>
 
-                                                <SelectContent>
-                                                    {states.map((state) => (
-                                                        <SelectItem
-                                                            key={state.isoCode}
-                                                            value={state.name}
-                                                        >
-                                                            {state.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
 
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                        <FormField
+                                            control={form.control}
+                                            name="state"
+                                            render={({ field }) => (
+                                                <FormItem className="w-full">
+                                                    <FormLabel>State</FormLabel>
+
+                                                    <Select
+                                                        onValueChange={
+                                                            field.onChange
+                                                        }
+                                                        defaultValue={
+                                                            field.value
+                                                        }
+                                                        disabled={
+                                                            isRequestSending ||
+                                                            isRequestResending ||
+                                                            (!!brandConfidential &&
+                                                                brand.confidentialVerificationStatus !==
+                                                                    "rejected")
+                                                        }
+                                                    >
+                                                        <SelectTrigger>
+                                                            <FormControl>
+                                                                <SelectValue placeholder="Select brand's registered state" />
+                                                            </FormControl>
+                                                        </SelectTrigger>
+
+                                                        <SelectContent>
+                                                            {states.map(
+                                                                (state) => (
+                                                                    <SelectItem
+                                                                        key={
+                                                                            state.isoCode
+                                                                        }
+                                                                        value={
+                                                                            state.name
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            state.name
+                                                                        }
+                                                                    </SelectItem>
+                                                                )
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-col items-center gap-4 md:flex-row">
+                                        <FormField
+                                            control={form.control}
+                                            name="postalCode"
+                                            render={({ field }) => (
+                                                <FormItem className="w-full">
+                                                    <FormLabel>
+                                                        Postal Code
+                                                    </FormLabel>
+
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Enter brand's registered postal code"
+                                                            disabled={
+                                                                isRequestSending ||
+                                                                isRequestResending ||
+                                                                (!!brandConfidential &&
+                                                                    brand.confidentialVerificationStatus !==
+                                                                        "rejected")
+                                                            }
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="country"
+                                            render={({ field }) => (
+                                                <FormItem className="w-full">
+                                                    <FormLabel>
+                                                        Country
+                                                    </FormLabel>
+
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Enter brand's registered country"
+                                                            disabled
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex flex-col items-center gap-4 md:flex-row">
-                                <FormField
-                                    control={form.control}
-                                    name="postalCode"
-                                    render={({ field }) => (
-                                        <FormItem className="w-full">
-                                            <FormLabel>Postal Code</FormLabel>
-
+                            <FormField
+                                control={form.control}
+                                name="isSameAsWarehouseAddress"
+                                render={({ field }) => (
+                                    <FormItem className="space-y-4">
+                                        <div className="flex items-center gap-2">
                                             <FormControl>
-                                                <Input
-                                                    placeholder="Enter brand's registered postal code"
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={
+                                                        field.onChange
+                                                    }
                                                     disabled={
                                                         isRequestSending ||
                                                         isRequestResending ||
@@ -673,35 +800,243 @@ export function BrandConfidentialForm({
                                                             brand.confidentialVerificationStatus !==
                                                                 "rejected")
                                                     }
-                                                    {...field}
                                                 />
                                             </FormControl>
 
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                            <FormLabel>
+                                                Warehouse Address is same as
+                                                Office Address
+                                            </FormLabel>
+                                        </div>
 
-                                <FormField
-                                    control={form.control}
-                                    name="country"
-                                    render={({ field }) => (
-                                        <FormItem className="w-full">
-                                            <FormLabel>Country</FormLabel>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter brand's registered country"
-                                                    disabled
-                                                    {...field}
-                                                />
-                                            </FormControl>
+                            {form.watch("isSameAsWarehouseAddress") ? null : (
+                                <div className="space-y-2">
+                                    <h3 className="text-lg font-semibold">
+                                        Warehouse Address
+                                    </h3>
 
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                                    <div className="space-y-6">
+                                        <FormField
+                                            control={form.control}
+                                            name="warehouseAddressLine1"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>
+                                                        Address Line 1
+                                                    </FormLabel>
+
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Enter brand's warehouse street address"
+                                                            disabled={
+                                                                isRequestSending ||
+                                                                isRequestResending ||
+                                                                (!!brandConfidential &&
+                                                                    brand.confidentialVerificationStatus !==
+                                                                        "rejected")
+                                                            }
+                                                            {...field}
+                                                            value={
+                                                                field.value ??
+                                                                ""
+                                                            }
+                                                        />
+                                                    </FormControl>
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name="warehouseAddressLine2"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>
+                                                        Address Line 2
+                                                    </FormLabel>
+
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="Enter brand's warehouse street address"
+                                                            disabled={
+                                                                isRequestSending ||
+                                                                isRequestResending ||
+                                                                (!!brandConfidential &&
+                                                                    brand.confidentialVerificationStatus !==
+                                                                        "rejected")
+                                                            }
+                                                            {...field}
+                                                            value={
+                                                                field.value ??
+                                                                ""
+                                                            }
+                                                        />
+                                                    </FormControl>
+
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                                            <FormField
+                                                control={form.control}
+                                                name="warehouseCity"
+                                                render={({ field }) => (
+                                                    <FormItem className="w-full">
+                                                        <FormLabel>
+                                                            City
+                                                        </FormLabel>
+
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder="Enter brand's warehouse city"
+                                                                disabled={
+                                                                    isRequestSending ||
+                                                                    isRequestResending ||
+                                                                    (!!brandConfidential &&
+                                                                        brand.confidentialVerificationStatus !==
+                                                                            "rejected")
+                                                                }
+                                                                {...field}
+                                                                value={
+                                                                    field.value ??
+                                                                    ""
+                                                                }
+                                                            />
+                                                        </FormControl>
+
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={form.control}
+                                                name="warehouseState"
+                                                render={({ field }) => (
+                                                    <FormItem className="w-full">
+                                                        <FormLabel>
+                                                            State
+                                                        </FormLabel>
+
+                                                        <Select
+                                                            onValueChange={
+                                                                field.onChange
+                                                            }
+                                                            defaultValue={
+                                                                field.value ??
+                                                                ""
+                                                            }
+                                                            disabled={
+                                                                isRequestSending ||
+                                                                isRequestResending ||
+                                                                (!!brandConfidential &&
+                                                                    brand.confidentialVerificationStatus !==
+                                                                        "rejected")
+                                                            }
+                                                        >
+                                                            <SelectTrigger>
+                                                                <FormControl>
+                                                                    <SelectValue placeholder="Select brand's warehouse state" />
+                                                                </FormControl>
+                                                            </SelectTrigger>
+
+                                                            <SelectContent>
+                                                                {states.map(
+                                                                    (state) => (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                state.isoCode
+                                                                            }
+                                                                            value={
+                                                                                state.name
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                state.name
+                                                                            }
+                                                                        </SelectItem>
+                                                                    )
+                                                                )}
+                                                            </SelectContent>
+                                                        </Select>
+
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className="flex flex-col items-center gap-4 md:flex-row">
+                                            <FormField
+                                                control={form.control}
+                                                name="warehousePostalCode"
+                                                render={({ field }) => (
+                                                    <FormItem className="w-full">
+                                                        <FormLabel>
+                                                            Postal Code
+                                                        </FormLabel>
+
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder="Enter brand's warehouse postal code"
+                                                                disabled={
+                                                                    isRequestSending ||
+                                                                    isRequestResending ||
+                                                                    (!!brandConfidential &&
+                                                                        brand.confidentialVerificationStatus !==
+                                                                            "rejected")
+                                                                }
+                                                                {...field}
+                                                                value={
+                                                                    field.value ??
+                                                                    ""
+                                                                }
+                                                            />
+                                                        </FormControl>
+
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={form.control}
+                                                name="warehouseCountry"
+                                                render={({ field }) => (
+                                                    <FormItem className="w-full">
+                                                        <FormLabel>
+                                                            Country
+                                                        </FormLabel>
+
+                                                        <FormControl>
+                                                            <Input
+                                                                placeholder="Enter brand's warehouse country"
+                                                                disabled
+                                                                {...field}
+                                                                value={
+                                                                    field.value ??
+                                                                    "IN"
+                                                                }
+                                                            />
+                                                        </FormControl>
+
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -713,7 +1048,6 @@ export function BrandConfidentialForm({
                         <Separator />
 
                         <div className="space-y-6">
-                            {/* Udyam and IEC */}
                             <FormField
                                 control={form.control}
                                 name="udyamRegistrationCertificate"

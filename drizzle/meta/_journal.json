@@ -799,6 +799,13 @@
       "when": 1736608475077,
       "tag": "0114_solid_warbird",
       "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1736919679792,
+      "tag": "0115_giant_richard_fisk",
+      "breakpoints": true
     }
   ]
 }

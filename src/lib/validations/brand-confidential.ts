@@ -127,6 +127,58 @@ export const brandConfidentialSchema = z.object({
         .refine((val) => val === "IN", {
             message: "Country must be 'IN'",
         }),
+    isSameAsWarehouseAddress: z.boolean({
+        required_error: "Is Same As Warehouse Address is required",
+        invalid_type_error: "Is Same As Warehouse Address must be a boolean",
+    }),
+    warehouseAddressLine1: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Address Line 1 must be a string",
+            })
+            .nullable()
+    ),
+    warehouseAddressLine2: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Address Line 2 must be a string",
+            })
+            .nullable()
+    ),
+    warehouseCity: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse City must be a string",
+            })
+            .nullable()
+    ),
+    warehouseState: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse State must be a string",
+            })
+            .nullable()
+    ),
+    warehousePostalCode: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Postal Code must be a string",
+            })
+            .nullable()
+    ),
+    warehouseCountry: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Country must be a string",
+            })
+            .nullable()
+    ),
     verificationStatus: z.enum(["pending", "approved", "rejected"], {
         required_error: "Verification status is required",
         invalid_type_error:
@@ -153,11 +205,28 @@ export const brandConfidentialWithBrandSchema = brandConfidentialSchema.extend({
     brand: brandSchema,
 });
 
-export const createBrandConfidentialSchema = brandConfidentialSchema.omit({
-    verificationStatus: true,
-    createdAt: true,
-    updatedAt: true,
-});
+export const createBrandConfidentialSchema = brandConfidentialSchema
+    .omit({
+        verificationStatus: true,
+        createdAt: true,
+        updatedAt: true,
+    })
+    .refine(
+        (val) =>
+            val.isSameAsWarehouseAddress
+                ? true
+                : val.warehouseAddressLine1 &&
+                  val.warehouseAddressLine2 &&
+                  val.warehouseCity &&
+                  val.warehouseState &&
+                  val.warehousePostalCode &&
+                  val.warehouseCountry,
+        {
+            message:
+                "Warehouse Address Line 1, Warehouse Address Line 2, Warehouse City, Warehouse State, Warehouse Postal Code, Warehouse Country are required",
+            path: ["isSameAsWarehouseAddress"],
+        }
+    );
 
 export const updateBrandConfidentialByAdminSchema =
     brandConfidentialSchema.omit({
@@ -170,9 +239,29 @@ export const updateBrandConfidentialByAdminSchema =
         updatedAt: true,
     });
 
-export const updateBrandConfidentialSchema = createBrandConfidentialSchema.omit(
-    { id: true }
-);
+export const updateBrandConfidentialSchema = brandConfidentialSchema
+    .omit({
+        id: true,
+        verificationStatus: true,
+        createdAt: true,
+        updatedAt: true,
+    })
+    .refine(
+        (val) =>
+            val.isSameAsWarehouseAddress
+                ? true
+                : val.warehouseAddressLine1 &&
+                  val.warehouseAddressLine2 &&
+                  val.warehouseCity &&
+                  val.warehouseState &&
+                  val.warehousePostalCode &&
+                  val.warehouseCountry,
+        {
+            message:
+                "Warehouse Address Line 1, Warehouse Address Line 2, Warehouse City, Warehouse State, Warehouse Postal Code, Warehouse Country are required",
+            path: ["isSameAsWarehouseAddress"],
+        }
+    );
 
 export const linkBrandToRazorpaySchema = brandConfidentialSchema
     .pick({

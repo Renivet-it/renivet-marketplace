@@ -22,11 +22,7 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet";
 import { convertValueToLabel } from "@/lib/utils";
-import {
-    Brand,
-    BrandConfidential,
-    BrandConfidentialWithBrand,
-} from "@/lib/validations";
+import { BrandConfidentialWithBrand } from "@/lib/validations";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
@@ -258,42 +254,6 @@ export function BrandVerificationPage({ data }: PageProps) {
 
                             <div>
                                 <h5 className="text-sm font-medium">
-                                    Address Line 1
-                                </h5>
-                                <p className="text-sm">{data.addressLine1}</p>
-                            </div>
-
-                            <div>
-                                <h5 className="text-sm font-medium">
-                                    Address Line 2
-                                </h5>
-                                <p className="text-sm">{data.addressLine2}</p>
-                            </div>
-
-                            <div>
-                                <h5 className="text-sm font-medium">City</h5>
-                                <p className="text-sm">{data.city}</p>
-                            </div>
-
-                            <div>
-                                <h5 className="text-sm font-medium">State</h5>
-                                <p className="text-sm">{data.state}</p>
-                            </div>
-
-                            <div>
-                                <h5 className="text-sm font-medium">
-                                    Postal Code
-                                </h5>
-                                <p className="text-sm">{data.postalCode}</p>
-                            </div>
-
-                            <div>
-                                <h5 className="text-sm font-medium">Country</h5>
-                                <p className="text-sm">{data.country}</p>
-                            </div>
-
-                            <div>
-                                <h5 className="text-sm font-medium">
                                     Udyam Registration Certificate
                                 </h5>
 
@@ -329,6 +289,114 @@ export function BrandVerificationPage({ data }: PageProps) {
                                 ) : (
                                     <p className="text-sm text-primary">N/A</p>
                                 )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Address Information</CardTitle>
+                    </CardHeader>
+
+                    <Separator />
+
+                    <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Office Address Line 1
+                                </h5>
+                                <p className="text-sm">{data.addressLine1}</p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Office Address Line 2
+                                </h5>
+                                <p className="text-sm">{data.addressLine2}</p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Office City
+                                </h5>
+                                <p className="text-sm">{data.city}</p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Office State
+                                </h5>
+                                <p className="text-sm">{data.state}</p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Office Postal Code
+                                </h5>
+                                <p className="text-sm">{data.postalCode}</p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Office Country
+                                </h5>
+                                <p className="text-sm">{data.country}</p>
+                            </div>
+                        </div>
+
+                        <Separator className="my-6" />
+
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Warehouse Address Line 1
+                                </h5>
+                                <p className="text-sm">
+                                    {data.warehouseAddressLine1}
+                                </p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Warehouse Address Line 2
+                                </h5>
+                                <p className="text-sm">
+                                    {data.warehouseAddressLine2}
+                                </p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Warehouse City
+                                </h5>
+                                <p className="text-sm">{data.warehouseCity}</p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Warehouse State
+                                </h5>
+                                <p className="text-sm">{data.warehouseState}</p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Warehouse Postal Code
+                                </h5>
+                                <p className="text-sm">
+                                    {data.warehousePostalCode}
+                                </p>
+                            </div>
+
+                            <div>
+                                <h5 className="text-sm font-medium">
+                                    Warehouse Country
+                                </h5>
+                                <p className="text-sm">
+                                    {data.warehouseCountry}
+                                </p>
                             </div>
                         </div>
                     </CardContent>
