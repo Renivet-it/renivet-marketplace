@@ -870,6 +870,54 @@ class ProductQuery {
         return data;
     }
 
+    async updateProductStock(
+        data: {
+            productId: string;
+            variantId?: string;
+            quantity: number;
+        }[]
+    ) {
+        const updatedData = await db.transaction(async (tx) => {
+            const updated = await Promise.all(
+                data.map(async (item) => {
+                    if (item.variantId) {
+                        const res = await tx
+                            .update(productVariants)
+                            .set({
+                                quantity: item.quantity,
+                                updatedAt: new Date(),
+                            })
+                            .where(
+                                and(
+                                    eq(
+                                        productVariants.productId,
+                                        item.productId
+                                    ),
+                                    eq(productVariants.id, item.variantId)
+                                )
+                            )
+                            .returning();
+                        return res[0];
+                    }
+
+                    const res = await tx
+                        .update(products)
+                        .set({
+                            quantity: item.quantity,
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(products.id, item.productId))
+                        .returning();
+                    return res[0];
+                })
+            );
+
+            return updated;
+        });
+
+        return updatedData;
+    }
+
     async sendProductForReview(productId: string) {
         const data = await db
             .update(products)

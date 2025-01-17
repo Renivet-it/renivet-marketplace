@@ -36,15 +36,10 @@ import { toast } from "sonner";
 
 interface PageProps {
     data: BrandConfidentialWithBrand;
-    isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function BrandConfidentialEditAdmin({
-    data,
-    isOpen,
-    setIsOpen,
-}: PageProps) {
+export function BrandConfidentialEditAdmin({ data, setIsOpen }: PageProps) {
     const router = useRouter();
 
     const form = useForm<UpdateBrandConfidentialByAdmin>({

@@ -111,7 +111,9 @@ export const ordersRouter = createTRPCRouter({
             const receiptId = generateReceiptId();
 
             const cachedAllBrands = await brandCache.getAll();
-            const brandIds = input.items.map((item) => item.brandId);
+            const brandIds = [
+                ...new Set(input.items.map((item) => item.brandId)),
+            ];
 
             const existingBrands = cachedAllBrands.filter((brand) =>
                 brandIds.includes(brand.id)
@@ -123,14 +125,18 @@ export const ordersRouter = createTRPCRouter({
                     message: "Order contains invalid brand(s)",
                 });
 
-            const hasRazorpayAccount = existingBrands.every(
-                (brand) => brand.rzpAccountId !== null
+            const brandsWithoutRzpAccount = existingBrands.filter(
+                (brand) => brand.rzpAccountId === null
             );
-            if (!hasRazorpayAccount)
+
+            if (brandsWithoutRzpAccount.length > 0)
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message:
-                        "One or more brands do not have a Razorpay account",
+                    message: `Product(s) from brand(s) ${brandsWithoutRzpAccount
+                        .map((brand) => `'${brand.name}'`)
+                        .join(
+                            ", "
+                        )} do not meet the requirements to accept payments, please remove them from the order`,
                 });
 
             try {
@@ -138,10 +144,10 @@ export const ordersRouter = createTRPCRouter({
                     amount: input.totalAmount,
                     currency: "INR",
                     customer_details: {
-                        name: user.firstName + " " + user.lastName,
+                        name: `${user.firstName} ${user.lastName}`,
                         email: user.email,
                         shipping_address: {
-                            contact: user.phone,
+                            contact: existingAddress.phone,
                             name: existingAddress.fullName,
                             line1: existingAddress.street,
                             city: existingAddress.city,
@@ -150,7 +156,7 @@ export const ordersRouter = createTRPCRouter({
                             country: "IN",
                         },
                         billing_address: {
-                            contact: user.phone,
+                            contact: existingAddress.phone,
                             name: existingAddress.fullName,
                             line1: existingAddress.street,
                             city: existingAddress.city,
@@ -163,16 +169,17 @@ export const ordersRouter = createTRPCRouter({
                     line_items_total: input.totalItems,
                     shipping_fee: input.deliveryAmount,
                     receipt: receiptId,
-                    // transfers: existingBrands.map((brand) => ({
-                    //     account: brand.rzpAccountId!,
-                    //     amount: input.items
-                    //         .filter((item) => item.brandId === brand.id)
-                    //         .reduce(
-                    //             (acc, item) => acc + item.price * item.quantity,
-                    //             0
-                    //         ),
-                    //     currency: "INR",
-                    // })),
+                    transfers: existingBrands.map((brand) => ({
+                        account: brand.rzpAccountId!,
+                        amount: input.items
+                            .filter((item) => item.brandId === brand.id)
+                            .reduce(
+                                (acc, item) =>
+                                    acc + (item.price ?? 0) * item.quantity,
+                                0
+                            ),
+                        currency: "INR",
+                    })),
                 });
 
                 const newOrder = await queries.orders.createOrder({
@@ -192,6 +199,7 @@ export const ordersRouter = createTRPCRouter({
                     queries.userCarts.dropActiveItemsFromCart(user.id),
                     userCartCache.drop(user.id),
                 ]);
+
                 return newOrder;
             } catch (err) {
                 console.error(err);

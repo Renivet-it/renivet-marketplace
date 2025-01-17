@@ -27,13 +27,9 @@ export const refundSchema = z.object({
         .min(1, "Payment ID is invalid"),
     status: z.enum(["pending", "processed", "failed"]),
     amount: z
-        .string({
-            required_error: "Amount is required",
-            invalid_type_error: "Amount must be a number",
-        })
-        .refine((v) => !isNaN(parseFloat(v)), {
-            message: "Amount must be a number",
-        }),
+        .union([z.number(), z.string()])
+        .transform((v) => Number(v))
+        .pipe(z.number().nonnegative("Amount must be a non-negative number")),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
