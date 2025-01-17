@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { numeric, pgTable, text } from "drizzle-orm/pg-core";
+import { integer, pgTable, text } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { orders } from "./order";
 import { users } from "./user";
@@ -22,7 +22,7 @@ export const refunds = pgTable("refunds", {
     })
         .notNull()
         .default("pending"),
-    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+    amount: integer("amount").notNull(),
     ...timestamps,
 });
 

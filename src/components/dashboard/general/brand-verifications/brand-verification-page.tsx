@@ -458,7 +458,6 @@ export function BrandVerificationPage({ data }: PageProps) {
 
                     <BrandConfidentialEditAdmin
                         data={data}
-                        isOpen={isEditModalOpen}
                         setIsOpen={setIsEditModalOpen}
                     />
                 </SheetContent>

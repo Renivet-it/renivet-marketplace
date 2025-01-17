@@ -15,11 +15,7 @@ import {
 } from "@/components/ui/select-dash";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel } from "@/lib/utils";
-import {
-    Brand,
-    BrandConfidential,
-    BrandConfidentialWithBrand,
-} from "@/lib/validations";
+import { BrandConfidentialWithBrand } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,

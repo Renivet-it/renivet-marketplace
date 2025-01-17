@@ -21,7 +21,6 @@ import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import {
-    BrandConfidential,
     BrandConfidentialWithBrand,
     RejectBrandRequest,
     rejectBrandRequestSchema,

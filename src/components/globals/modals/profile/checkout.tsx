@@ -9,8 +9,10 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog-general";
 import { Button } from "@/components/ui/button-general";
+import { DEFAULT_MESSAGES } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import {
+    calculateTotalPrice,
     convertPaiseToRupees,
     formatPriceTag,
     handleClientError,
@@ -77,6 +79,21 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
         [availableCart]
     );
 
+    const priceList = calculateTotalPrice(
+        availableCart
+            .filter((item) => item.status)
+            .map((item) => {
+                const itemPrice = item.variantId
+                    ? (item.product.variants.find(
+                          (v) => v.id === item.variantId
+                      )?.price ??
+                      item.product.price ??
+                      0)
+                    : (item.product.price ?? 0);
+                return itemPrice * item.quantity;
+            })
+    );
+
     const { mutate: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
             onMutate: () => {
@@ -110,17 +127,14 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                 parseFloat(convertPaiseToRupees(totalPrice)),
                                 true
                             )}
-                        </span>{" "}
-                        (excluding gateway fee and optional delivery charges).
-                        <br />
-                        <br />
-                        Proceeding will create an order and will redirect you to
-                        the payment page. This will also remove the items from
-                        your cart.
+                        </span>
+                        . Proceeding will create an order and will redirect you
+                        to the payment page. This will also remove the items
+                        from your cart.
                         <br />
                         <br />
                         You will have to complete the payment within{" "}
-                        <span className="font-semibold">15 minutes</span>{" "}
+                        <span className="font-semibold">15 minutes</span>,{" "}
                         otherwise the order will be cancelled.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -134,7 +148,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                         Cancel
                     </Button>
 
-                    {/* <Button
+                    <Button
                         size="sm"
                         disabled={isUserFetching || isOrderCreating}
                         onClick={() => {
@@ -149,29 +163,34 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                     (add) => add.isPrimary
                                 )!.id,
                                 deliveryAmount: priceList.devliery.toString(),
-                                taxAmount: priceList.platform.toString(),
+                                taxAmount: "0",
+                                totalAmount: priceList.total.toString(),
                                 discountAmount: "0",
                                 paymentMethod: null,
-                                totalAmount: priceList.total.toString(),
-                                totalItems:
-                                    userCart?.filter((item) => item.status)
-                                        .length || 0,
+                                totalItems: itemsCount,
                                 items:
                                     userCart
                                         ?.filter((item) => item.status)
                                         .map((item) => ({
-                                            price: item.product.price,
+                                            price: item.variantId
+                                                ? (item.product.variants.find(
+                                                      (v) =>
+                                                          v.id ===
+                                                          item.variantId
+                                                  )?.price ??
+                                                  item.product.price ??
+                                                  0)
+                                                : (item.product.price ?? 0),
                                             brandId: item.product.brandId,
                                             productId: item.product.id,
                                             quantity: item.quantity,
-                                            size: item.size,
-                                            color: item.color,
+                                            variantId: item.variantId,
                                         })) || [],
                             });
                         }}
                     >
                         Proceed to checkout
-                    </Button> */}
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

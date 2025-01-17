@@ -11,11 +11,7 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError, wait } from "@/lib/utils";
-import {
-    Brand,
-    BrandConfidential,
-    BrandConfidentialWithBrand,
-} from "@/lib/validations";
+import { BrandConfidentialWithBrand } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";

@@ -1,19 +1,9 @@
 import { CategoryRequestsTable } from "@/components/dashboard/category-requests";
-import { BrandsTable } from "@/components/dashboard/general/brands";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { Icons } from "@/components/icons";
-import { db } from "@/lib/db";
-import {
-    brandConfidentialQueries,
-    brandQueries,
-    categoryRequestQueries,
-} from "@/lib/db/queries";
-import { brandRequests } from "@/lib/db/schema";
+import { categoryRequestQueries } from "@/lib/db/queries";
 import { CategoryRequest } from "@/lib/validations";
-import { eq } from "drizzle-orm";
 import { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {

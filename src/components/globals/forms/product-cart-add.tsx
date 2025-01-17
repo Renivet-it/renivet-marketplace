@@ -209,7 +209,7 @@ export function ProductCartAddForm({
                 </div>
 
                 <p className="text-xs font-semibold text-accent/80 md:text-sm">
-                    + 2% gateway fee at checkout
+                    inclusive of all taxes
                 </p>
             </div>
 
