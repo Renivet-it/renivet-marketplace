@@ -237,6 +237,7 @@ export const brandRequestsRouter = createTRPCRouter({
                     queries.brands.createBrand({
                         ...existingBrandRequest,
                         bio: null,
+                        coverUrl: null,
                         slug: slugify(existingBrandRequest.name),
                     }),
                 data.status === "rejected" && utApi.deleteFiles([logoKey]),

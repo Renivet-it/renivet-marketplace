@@ -116,6 +116,7 @@ export function BrandConfidentialForm({
             warehouseState: brandConfidential?.warehouseState ?? "",
             warehousePostalCode: brandConfidential?.warehousePostalCode ?? "",
             warehouseCountry: brandConfidential?.warehouseCountry ?? "IN",
+            hasAcceptedTerms: false,
         },
     });
 
@@ -1220,6 +1221,41 @@ export function BrandConfidentialForm({
                             />
                         </div>
                     </div>
+
+                    <FormField
+                        control={form.control}
+                        name="hasAcceptedTerms"
+                        render={({ field }) => (
+                            <FormItem className="space-y-4">
+                                <div className="flex items-center gap-2">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            disabled={
+                                                isRequestSending ||
+                                                isRequestResending
+                                            }
+                                        />
+                                    </FormControl>
+
+                                    <FormLabel>
+                                        I agree to the{" "}
+                                        <Link
+                                            href="https://utfs.io/a/0hldi3nd8j/HtysHtJpctzNNQvAATfg0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                            target="_blank"
+                                            className="text-primary underline"
+                                        >
+                                            Seller Agreement
+                                        </Link>{" "}
+                                        of this platform.
+                                    </FormLabel>
+                                </div>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
                     {(brand.confidentialVerificationStatus === "idle" &&
                         !brandConfidential) ||
