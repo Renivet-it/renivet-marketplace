@@ -34,6 +34,7 @@ import LucideIcons, {
     FileText,
     Filter,
     Footprints,
+    Forward,
     Frame,
     GalleryVerticalEnd,
     Globe,
@@ -104,6 +105,7 @@ import LucideIcons, {
 export type Icon = LucideIcons.LucideIcon;
 
 export const Icons = {
+    Forward,
     MoreVertical,
     Upload,
     Image,

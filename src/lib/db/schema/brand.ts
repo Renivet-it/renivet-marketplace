@@ -53,6 +53,7 @@ export const brands = pgTable(
         phone: text("phone").notNull(),
         website: text("website"),
         logoUrl: text("logo_url").notNull(),
+        coverUrl: text("cover_url"),
         ownerId: text("owner_id")
             .notNull()
             .unique()
@@ -125,6 +126,9 @@ export const brandConfidentials = pgTable(
         })
             .notNull()
             .default("pending"),
+        hasAcceptedTerms: boolean("has_accepted_terms")
+            .notNull()
+            .default(false),
         ...timestamps,
     },
     (table) => ({
