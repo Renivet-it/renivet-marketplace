@@ -530,27 +530,33 @@ export function ProductVariantManage({
                     {variantFields.length > 0 && (
                         <div className="space-y-4">
                             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-                                <Select
-                                    value={groupBy}
-                                    onValueChange={setGroupBy}
-                                    disabled={isPending}
-                                >
-                                    <SelectTrigger className="h-8 md:w-[180px]">
-                                        <SelectValue placeholder="Group by..." />
-                                    </SelectTrigger>
+                                <div className="flex flex-col items-center gap-4 md:flex-row md:gap-2">
+                                    <Select
+                                        value={groupBy}
+                                        onValueChange={setGroupBy}
+                                        disabled={isPending}
+                                    >
+                                        <SelectTrigger className="h-8 md:w-[180px]">
+                                            <SelectValue placeholder="Group by..." />
+                                        </SelectTrigger>
 
-                                    <SelectContent>
-                                        {options.map((option) => (
-                                            <SelectItem
-                                                key={option.id}
-                                                value={option.id}
-                                                className="py-1"
-                                            >
-                                                Group by {option.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                        <SelectContent>
+                                            {options.map((option) => (
+                                                <SelectItem
+                                                    key={option.id}
+                                                    value={option.id}
+                                                    className="py-1"
+                                                >
+                                                    Group by {option.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <p className="text-sm text-muted-foreground">
+                                        Click on the variants to add details
+                                    </p>
+                                </div>
 
                                 <div className="flex items-center gap-2">
                                     <Button
