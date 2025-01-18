@@ -148,13 +148,15 @@ export function NavbarMob({ className, ...props }: GenericProps) {
         return getUserPermissions(user.roles);
     }, [user]);
 
-    const isAuthorized = useMemo(
+    const isSiteAuthorized = useMemo(
         () =>
             hasPermission(userPermissions.sitePermissions, [
                 BitFieldSitePermission.VIEW_PROTECTED_PAGES,
             ]),
         [userPermissions.sitePermissions]
     );
+
+    const isBrandAuthorized = useMemo(() => !!user?.brand, [user]);
 
     const { signOut } = useAuth();
 
@@ -240,7 +242,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 )}
 
                 <div className={cn("space-y-5", !user && "mt-5")}>
-                    {!isAuthorized && (
+                    {!isSiteAuthorized && !isBrandAuthorized && (
                         <>
                             <ul
                                 className={cn(
@@ -301,10 +303,12 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                 className={cn({
                                     hidden:
                                         (slugify(item.name) === "dashboard" &&
-                                            !isAuthorized) ||
+                                            !isSiteAuthorized &&
+                                            !isBrandAuthorized) ||
                                         (slugify(item.name) ===
                                             "join-as-a-brand" &&
-                                            isAuthorized) ||
+                                            isBrandAuthorized &&
+                                            !isSiteAuthorized) ||
                                         (!user &&
                                             [
                                                 "manage-account",
