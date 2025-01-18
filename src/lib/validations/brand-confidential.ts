@@ -184,6 +184,10 @@ export const brandConfidentialSchema = z.object({
         invalid_type_error:
             "Verification status must be either 'pending', 'approved' or 'rejected'",
     }),
+    hasAcceptedTerms: z.boolean({
+        required_error: "Has Accepted Terms is required",
+        invalid_type_error: "Has Accepted Terms must be a boolean",
+    }),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -210,6 +214,16 @@ export const createBrandConfidentialSchema = brandConfidentialSchema
         verificationStatus: true,
         createdAt: true,
         updatedAt: true,
+    })
+    .extend({
+        hasAcceptedTerms: z
+            .boolean({
+                required_error: "Has Accepted Terms is required",
+                invalid_type_error: "Has Accepted Terms must be a boolean",
+            })
+            .refine((value) => value === true, {
+                message: "You must accept the terms to proceed",
+            }),
     })
     .refine(
         (val) =>

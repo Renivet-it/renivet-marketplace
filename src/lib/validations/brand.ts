@@ -64,6 +64,15 @@ export const brandSchema = z.object({
             invalid_type_error: "Logo URL must be a string",
         })
         .url("Logo URL is invalid"),
+    coverUrl: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Cover URL must be a string",
+            })
+            .url("Cover URL is invalid")
+            .nullable()
+    ),
     ownerId: z
         .string({
             required_error: "Owner ID is required",
