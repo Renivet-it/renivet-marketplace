@@ -29,8 +29,19 @@ export default function BrandVerificationtSubmitted({
             <p>Hi {user.name},</p>
 
             <p>
-                Your brand verification request has been submitted. We will
-                review your request and get back to you as soon as possible.
+                Your brand verification request is now zooming through our
+                system! We&apos;re on it and will circle back with you as soon
+                as we&apos;ve dotted the i&apos;s and crossed the t&apos;s.
+            </p>
+
+            <p>
+                Hang tight - we&apos;ll update you in no time, and soon
+                you&apos;ll be all set to showcase your fabulous products on
+                Renivet!
+            </p>
+
+            <p>
+                Thanks for your patience as we make sure everything is tip-top.
             </p>
 
             <div className="mt-10">

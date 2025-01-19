@@ -21,9 +21,16 @@ export default function AccountCreated({
                 Hi {user.firstName} {user.lastName},
             </p>
 
+            <p>Buckle up! Your Renivet account is all set. 🚀</p>
+
             <p>
-                Your account has been created. You can now start using Renivet
-                and purchase your favorite products.
+                Get ready to explore, engage, and enjoy. We can&apos;t wait to
+                see the magic you&apos;ll create and discover here.
+            </p>
+
+            <p>
+                Thanks for joining us on this journey of sustainability and
+                style.
             </p>
 
             <div className="mt-10">

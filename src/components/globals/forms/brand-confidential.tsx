@@ -1245,7 +1245,7 @@ export function BrandConfidentialForm({
                                     <FormLabel>
                                         I agree to the{" "}
                                         <Link
-                                            href="https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNNQvAATfg0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                            href="https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNolvtEF0WvnGEidmOVIP6xXt4S7befYUykMJq"
                                             target="_blank"
                                             className="text-primary underline"
                                         >
