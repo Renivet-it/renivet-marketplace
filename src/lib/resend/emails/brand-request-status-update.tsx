@@ -21,17 +21,17 @@ interface Props {
 
 export default function BrandRequestStatusUpdate({
     user = { name: "John Doe" },
-    brand = {
-        name: "Brand",
-        status: "rejected",
-        rejectionReason:
-            "Please add a proper not-blurry logo, and also add a demo video. It is hard to verify your brand without these.",
-    },
     // brand = {
-    //     id: "9a49e106-67d0-458c-a441-02bdcf46dd81",
     //     name: "Brand",
-    //     status: "approved",
+    //     status: "rejected",
+    //     rejectionReason:
+    //         "Please add a proper not-blurry logo, and also add a demo video. It is hard to verify your brand without these.",
     // },
+    brand = {
+        id: "9a49e106-67d0-458c-a441-02bdcf46dd81",
+        name: "Brand",
+        status: "approved",
+    },
 }: Props) {
     return (
         <Layout
@@ -49,11 +49,25 @@ export default function BrandRequestStatusUpdate({
             <p>Hi {user.name},</p>
 
             {brand.status === "approved" ? (
-                <p>
-                    Your brand request has been approved. Please complete
-                    verification inside your dashboard and start selling your
-                    products.
-                </p>
+                <>
+                    <p>
+                        Guess what? Your brand request has been approved! 🌟
+                        Now, let&apos;s get you fully set up. Please complete
+                        your verification through your dashboard to kick off the
+                        product onboarding process.
+                    </p>
+
+                    <p>
+                        Once your verification is green-lighted, you&apos;re all
+                        set to dazzle our community with your products!
+                    </p>
+
+                    <p>
+                        We can&apos;t wait to see what you bring to the Renivet
+                        revolution. Let&apos;s make sustainability stylish
+                        together!
+                    </p>
+                </>
             ) : (
                 <>
                     <p>

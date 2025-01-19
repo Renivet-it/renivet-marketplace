@@ -51,7 +51,7 @@ export const confidentialsRouter = createTRPCRouter({
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: existingBrand.email,
-                subject: `Verification Request - ${existingBrand.name}`,
+                subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
                 react: BrandVerificationtSubmitted({
                     user: {
                         name: existingBrand.name,

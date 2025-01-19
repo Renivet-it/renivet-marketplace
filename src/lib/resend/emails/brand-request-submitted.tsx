@@ -24,9 +24,12 @@ export default function BrandRequestSubmitted({
             <p>Hi {user.name},</p>
 
             <p>
-                Your brand request has been submitted. We will review your
-                request and get back to you as soon as possible.
+                Your brand details have landed safely in our inbox! 🚀
+                We&apos;re now on a mission to review your submission and will
+                circle back with you faster than a spinning bobbin.
             </p>
+
+            <p>Thanks for adding your spark to our sustainable revolution!</p>
 
             <div className="mt-10">
                 <Button

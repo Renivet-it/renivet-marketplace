@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
                     await resend.emails.send({
                         from: env.RESEND_EMAIL_FROM,
                         to: newUser.email,
-                        subject: "Account Created - Welcome to Renivet",
+                        subject: "🎉 Welcome Aboard the Renivet Express! 🎉",
                         react: AccountCreated({ user: newUser }),
                     });
                 }
