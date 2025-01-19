@@ -153,7 +153,7 @@ export const brandRequestsRouter = createTRPCRouter({
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: newBrandRequest.email,
-                subject: `Submission Received – Thank You, ${newBrandRequest.name}!`,
+                subject: `Submission Received - Thank You, ${newBrandRequest.name}!`,
                 react: BrandRequestSubmitted({
                     user: {
                         name: newBrandRequest.name,
