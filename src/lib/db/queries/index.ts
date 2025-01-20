@@ -6,6 +6,8 @@ export * from "./brand-confidential";
 export * from "./brand-invite";
 export * from "./brand-media-items";
 export * from "./brand-member";
+export * from "./brand-page-section";
+export * from "./brand-page-section-product";
 export * from "./brand-request";
 export * from "./brand-subscription";
 export * from "./cart";

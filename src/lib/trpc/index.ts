@@ -1,10 +1,12 @@
 import {
     bansRouter as brandBansRouter,
+    brandsRouter as brandBrandsRouter,
     categoryRequestsRouter as brandCategoryRequestsRouter,
     confidentialsRouter as brandConfidentialsRouter,
     invitesRouter as brandInvitesRouter,
     mediaRouter as brandMediaRouter,
     membersRouter as brandMembersRouter,
+    pageSectionsRouter as brandPageSectionsRouter,
     productsRouter as brandProductsRouter,
     rolesRouter as brandRolesRouter,
 } from "./routes/brands";
@@ -49,11 +51,13 @@ export const appRouter = createTRPCRouter({
     }),
     brands: createTRPCRouter({
         bans: brandBansRouter,
+        brands: brandBrandsRouter,
         categoryRequests: brandCategoryRequestsRouter,
         confidentials: brandConfidentialsRouter,
         invites: brandInvitesRouter,
         media: brandMediaRouter,
         members: brandMembersRouter,
+        pageSections: brandPageSectionsRouter,
         products: brandProductsRouter,
         roles: brandRolesRouter,
     }),

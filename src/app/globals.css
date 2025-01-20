@@ -163,6 +163,14 @@ h3.tiptap-heading + h2.tiptap-heading {
     padding-left: 1rem;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 @layer base {
     * {
         @apply border-border;

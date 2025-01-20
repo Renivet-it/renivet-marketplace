@@ -34,7 +34,6 @@ declare global {
             title: string;
             url: string;
             permissions: number;
-            description?: string;
             isDisabled?: boolean;
         }[];
     };

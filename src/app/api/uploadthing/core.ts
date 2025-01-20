@@ -230,6 +230,88 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
+    brandLogoUploader: f({
+        "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
+        "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const existingUser = await userCache.get(auth.userId);
+            if (!existingUser)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const { brandPermissions } = getUserPermissions(existingUser.roles);
+            const isAuthorized = hasPermission(brandPermissions, [
+                BitFieldBrandPermission.MANAGE_PRODUCTS |
+                    BitFieldBrandPermission.MANAGE_BRANDING,
+            ]);
+            if (!isAuthorized)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            return {
+                uploaderId: metadata.userId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                url: file.url,
+            };
+        }),
+    brandCoverUploader: f({
+        "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
+        "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const existingUser = await userCache.get(auth.userId);
+            if (!existingUser)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const { brandPermissions } = getUserPermissions(existingUser.roles);
+            const isAuthorized = hasPermission(brandPermissions, [
+                BitFieldBrandPermission.MANAGE_PRODUCTS |
+                    BitFieldBrandPermission.MANAGE_BRANDING,
+            ]);
+            if (!isAuthorized)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            return {
+                uploaderId: metadata.userId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                url: file.url,
+            };
+        }),
     brandRequestDocUploader: f({
         "application/pdf": { maxFileSize: "4MB", maxFileCount: 1 },
     })
