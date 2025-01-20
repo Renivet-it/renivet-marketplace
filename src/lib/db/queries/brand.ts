@@ -1,9 +1,11 @@
 import { razorpay } from "@/lib/razorpay";
+import { mediaCache } from "@/lib/redis/methods";
 import {
     CachedBrand,
     cachedBrandSchema,
     CreateBrand,
     LinkBrandToRazorpay,
+    UpdateBrand,
     UpdateBrandConfidentialStatus,
 } from "@/lib/validations";
 import { desc, eq, ilike } from "drizzle-orm";
@@ -36,8 +38,47 @@ class BrandQuery {
                         member: true,
                     },
                 },
+                pageSections: {
+                    with: {
+                        sectionProducts: {
+                            with: {
+                                product: {
+                                    with: {
+                                        variants: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
         });
+
+        const products = data.flatMap((brand) =>
+            brand.pageSections.flatMap((section) =>
+                section.sectionProducts.map(({ product }) => product)
+            )
+        );
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            mediaIds.add(product.media[0].id);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: [
+                {
+                    ...product.media[0],
+                    mediaItem: mediaMap.get(product.media[0].id),
+                },
+            ],
+        }));
 
         const parsed: CachedBrand[] = cachedBrandSchema.array().parse(
             data.map(({ members, roles, bannedMembers, ...rest }) => ({
@@ -45,6 +86,15 @@ class BrandQuery {
                 members: members.map(({ member }) => member),
                 roles: roles.map(({ role }) => role),
                 bannedMembers: bannedMembers.map(({ member }) => member),
+                pageSections: rest.pageSections.map((section) => ({
+                    ...section,
+                    sectionProducts: section.sectionProducts.map((sp) => ({
+                        ...sp,
+                        product: enhancedProducts.find(
+                            (product) => product.id === sp.productId
+                        ),
+                    })),
+                })),
             }))
         );
 
@@ -80,6 +130,19 @@ class BrandQuery {
                     },
                 },
                 subscriptions: true,
+                pageSections: {
+                    with: {
+                        sectionProducts: {
+                            with: {
+                                product: {
+                                    with: {
+                                        variants: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
             where: !!search?.length
                 ? ilike(brands.name, `%${search}%`)
@@ -99,12 +162,47 @@ class BrandQuery {
             },
         });
 
+        const products = data.flatMap((brand) =>
+            brand.pageSections.flatMap((section) =>
+                section.sectionProducts.map(({ product }) => product)
+            )
+        );
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            mediaIds.add(product.media[0].id);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: [
+                {
+                    ...product.media[0],
+                    mediaItem: mediaMap.get(product.media[0].id),
+                },
+            ],
+        }));
+
         const parsed: CachedBrand[] = cachedBrandSchema.array().parse(
             data.map(({ members, roles, bannedMembers, ...rest }) => ({
                 ...rest,
                 members: members.map(({ member }) => member),
                 roles: roles.map(({ role }) => role),
                 bannedMembers: bannedMembers.map(({ member }) => member),
+                pageSections: rest.pageSections.map((section) => ({
+                    ...section,
+                    sectionProducts: section.sectionProducts.map((sp) => ({
+                        ...sp,
+                        product: enhancedProducts.find(
+                            (product) => product.id === sp.productId
+                        ),
+                    })),
+                })),
             }))
         );
 
@@ -136,15 +234,61 @@ class BrandQuery {
                     },
                 },
                 subscriptions: true,
+                pageSections: {
+                    with: {
+                        sectionProducts: {
+                            with: {
+                                product: {
+                                    with: {
+                                        variants: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
         });
         if (!data) return null;
+
+        const products = data.pageSections.flatMap((section) =>
+            section.sectionProducts.map(({ product }) => product)
+        );
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            mediaIds.add(product.media[0].id);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: [
+                {
+                    ...product.media[0],
+                    mediaItem: mediaMap.get(product.media[0].id),
+                },
+            ],
+        }));
 
         return cachedBrandSchema.parse({
             ...data,
             members: data.members.map(({ member }) => member),
             roles: data.roles.map(({ role }) => role),
             bannedMembers: data.bannedMembers.map(({ member }) => member),
+            pageSections: data.pageSections.map((section) => ({
+                ...section,
+                sectionProducts: section.sectionProducts.map((sp) => ({
+                    ...sp,
+                    product: enhancedProducts.find(
+                        (product) => product.id === sp.productId
+                    ),
+                })),
+            })),
         });
     }
 
@@ -223,6 +367,20 @@ class BrandQuery {
         const data = await db
             .insert(brands)
             .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBrand(id: string, values: UpdateBrand) {
+        const data = await db
+            .update(brands)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(brands.id, id))
             .returning()
             .then((res) => res[0]);
 

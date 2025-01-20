@@ -250,8 +250,8 @@ export const updateCategoryRequestStatusSchema = categoryRequestSchema.pick({
 
 export const categoryRequestWithBrandAndUserSchema =
     categoryRequestSchema.extend({
-        user: userSchema,
-        brand: brandSchema,
+        user: z.lazy(() => userSchema),
+        brand: z.lazy(() => brandSchema),
     });
 
 export const cachedCategorySchema = categorySchema.extend({

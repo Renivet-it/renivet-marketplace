@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brandMediaItems } from "./brand-media-item";
+import { brandPageSections } from "./brand-page";
 import { brandSubscriptions } from "./brand-subscription";
 import { categoryRequests } from "./category";
 import { products } from "./product";
@@ -238,6 +239,7 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
         references: [brandConfidentials.id],
     }),
     categoryRequests: many(categoryRequests),
+    pageSections: many(brandPageSections),
 }));
 
 export const brandConfidentialRelations = relations(

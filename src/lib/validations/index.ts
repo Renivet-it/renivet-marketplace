@@ -8,6 +8,7 @@ export * from "./brand-confidential";
 export * from "./brand-invite";
 export * from "./brand-media-item";
 export * from "./brand-member";
+export * from "./brand-page";
 export * from "./brand-request";
 export * from "./brand-subscription";
 export * from "./brand-waitlist";

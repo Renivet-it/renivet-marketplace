@@ -345,31 +345,26 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     title: "Invites",
                     url: `/dashboard/brands/${brandId}/invites`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                    description: "Invite users to your brand",
                 },
                 {
                     title: "Verification",
                     url: `/dashboard/brands/${brandId}/verification`,
                     permissions: BitFieldBrandPermission.ADMINISTRATOR,
-                    description: "Verify your brand",
                 },
                 {
                     title: "Roles",
                     url: `/dashboard/brands/${brandId}/roles`,
                     permissions: BitFieldBrandPermission.MANAGE_ROLES,
-                    description: "Create and manage roles",
                 },
                 {
                     title: "Members",
                     url: `/dashboard/brands/${brandId}/members`,
                     permissions: BitFieldBrandPermission.MANAGE_TEAM,
-                    description: "Manage your team members",
                 },
                 {
                     title: "Bans",
                     url: `/dashboard/brands/${brandId}/bans`,
                     permissions: BitFieldBrandPermission.MANAGE_TEAM,
-                    description: "Manage banned users",
                 },
                 {
                     title: "Media",
@@ -377,7 +372,6 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions:
                         BitFieldBrandPermission.MANAGE_BRANDING |
                         BitFieldBrandPermission.MANAGE_PRODUCTS,
-                    description: "Manage your media assets",
                 },
             ],
         },
@@ -390,13 +384,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     title: "Page",
                     url: `/dashboard/brands/${brandId}/page`,
                     permissions: BitFieldBrandPermission.MANAGE_BRANDING,
-                    isDisabled: true,
                 },
                 {
                     title: "Products",
                     url: `/dashboard/brands/${brandId}/products`,
                     permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                    description: "Manage your products",
                 },
                 {
                     title: "Orders",

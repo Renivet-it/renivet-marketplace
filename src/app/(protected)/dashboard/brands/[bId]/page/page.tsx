@@ -1,5 +1,6 @@
 import { PublicPage } from "@/components/dashboard/brands/page";
 import { DashShell } from "@/components/globals/layouts";
+import { productQueries } from "@/lib/db/queries";
 import { brandCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -16,7 +17,7 @@ interface PageProps {
 
 export default function Page(props: PageProps) {
     return (
-        <DashShell className="gap-4">
+        <DashShell className="max-w-7xl gap-4">
             <Suspense>
                 <PageFetch {...props} />
             </Suspense>
@@ -27,8 +28,18 @@ export default function Page(props: PageProps) {
 async function PageFetch({ params }: PageProps) {
     const { bId } = await params;
 
-    const brand = await brandCache.get(bId);
+    const [brand, products] = await Promise.all([
+        brandCache.get(bId),
+        productQueries.getAllProducts({
+            brandIds: [bId],
+            isActive: true,
+            isAvailable: true,
+            isDeleted: false,
+            isPublished: true,
+            verificationStatus: "approved",
+        }),
+    ]);
     if (!brand) notFound();
 
-    return <PublicPage brand={brand} />;
+    return <PublicPage initialBrand={brand} products={products} />;
 }

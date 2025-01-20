@@ -46,7 +46,7 @@ export const productMediaSchema = z.object({
         .nonnegative("Position must be a non-negative number"),
 });
 
-const enhancedProductMediaSchema = productMediaSchema.extend({
+export const enhancedProductMediaSchema = productMediaSchema.extend({
     mediaItem: cachedBrandMediaItemSchema.nullable(),
 });
 
@@ -556,7 +556,7 @@ export const productVariantGroupSchema = z.object({
 });
 
 export const productWithBrandSchema = productSchema.extend({
-    brand: brandSchema,
+    brand: z.lazy(() => brandSchema),
     options: z.array(productOptionSchema),
     variants: z.array(enhancedProductVariantSchema),
     media: z.array(enhancedProductMediaSchema),

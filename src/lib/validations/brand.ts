@@ -2,7 +2,16 @@ import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
 import { bannedBrandMemberSchema } from "./banned-brand-member";
 import { brandInviteSchema } from "./brand-invite";
+import {
+    brandPageSectionProductSchema,
+    brandPageSectionSchema,
+} from "./brand-page";
 import { brandSubscriptionSchema } from "./brand-subscription";
+import {
+    enhancedProductMediaSchema,
+    enhancedProductVariantSchema,
+    productSchema,
+} from "./product";
 import { roleSchema } from "./role";
 import { safeUserSchema } from "./user";
 
@@ -138,6 +147,13 @@ export const createBrandSchema = brandSchema.omit({
     updatedAt: true,
 });
 
+export const updateBrandSchema = brandSchema.pick({
+    bio: true,
+    coverUrl: true,
+    logoUrl: true,
+    website: true,
+});
+
 export const updateBrandConfidentialStatusSchema = brandSchema
     .pick({
         id: true,
@@ -174,6 +190,44 @@ export const cachedBrandSchema = z.lazy(() =>
         ),
         invites: brandInviteSchema.array(),
         bannedMembers: bannedBrandMemberSchema.array(),
+        pageSections: z.array(
+            brandPageSectionSchema
+                .omit({
+                    brandId: true,
+                    createdAt: true,
+                    updatedAt: true,
+                })
+                .extend({
+                    sectionProducts: z.array(
+                        brandPageSectionProductSchema
+                            .omit({
+                                brandPageSectionId: true,
+                                createdAt: true,
+                                updatedAt: true,
+                            })
+                            .extend({
+                                product: productSchema
+                                    .pick({
+                                        id: true,
+                                        title: true,
+                                        slug: true,
+                                        price: true,
+                                    })
+                                    .extend({
+                                        media: z.array(
+                                            enhancedProductMediaSchema
+                                        ),
+                                        variants: z.array(
+                                            enhancedProductVariantSchema.pick({
+                                                id: true,
+                                                price: true,
+                                            })
+                                        ),
+                                    }),
+                            })
+                    ),
+                })
+        ),
     })
 );
 
@@ -186,6 +240,7 @@ export const brandMetaSchema = brandSchema.pick({
 
 export type Brand = z.infer<typeof brandSchema>;
 export type CreateBrand = z.infer<typeof createBrandSchema>;
+export type UpdateBrand = z.infer<typeof updateBrandSchema>;
 export type UpdateBrandConfidentialStatus = z.infer<
     typeof updateBrandConfidentialStatusSchema
 >;
