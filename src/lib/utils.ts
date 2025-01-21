@@ -9,6 +9,7 @@ import {
 } from "@/config/permissions";
 import { init } from "@paralleldrive/cuid2";
 import { clsx, type ClassValue } from "clsx";
+import { format, subDays } from "date-fns";
 import { NextResponse } from "next/server";
 import { toast } from "sonner";
 import { ValidationError, WebhookVerificationError } from "svix";
@@ -582,4 +583,9 @@ export function isValidUUID(uuid: string) {
 
 export function sanitizeHtml(html: string) {
     return html.replace(/<[^>]*>?/gm, "");
+}
+
+export function getDate(sub = 0) {
+    const dateXDaysAgo = subDays(new Date(), sub);
+    return format(dateXDaysAgo, "dd/MM/yyyy");
 }

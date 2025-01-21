@@ -1,7 +1,13 @@
+import { BRAND_EVENTS } from "@/config/brand";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
-import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
+import {
+    analytics,
+    userCartCache,
+    userWishlistCache,
+} from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
+import { getAbsoluteURL } from "@/lib/utils";
 import { cartSchema, createCartSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { and, eq, gte } from "drizzle-orm";
@@ -120,6 +126,22 @@ export const cartRouter = createTRPCRouter({
                     },
                 });
 
+                await analytics.track({
+                    namespace: BRAND_EVENTS.CART.ADDED,
+                    brandId: existingVariant.product.brandId,
+                    event: {
+                        productId,
+                        variantId,
+                        userId,
+                        productName: existingVariant.product.title,
+                        url: getAbsoluteURL(
+                            `/products/${existingVariant.product.slug}`
+                        ),
+                        sku: existingVariant.nativeSku,
+                        quantity,
+                    },
+                });
+
                 return {
                     type: existingCart ? ("update" as const) : ("add" as const),
                 };
@@ -172,6 +194,22 @@ export const cartRouter = createTRPCRouter({
                     properties: {
                         productId,
                         variantId,
+                        sku: existingProduct.nativeSku,
+                        quantity,
+                    },
+                });
+
+                await analytics.track({
+                    namespace: BRAND_EVENTS.CART.ADDED,
+                    brandId: existingProduct.brandId,
+                    event: {
+                        productId,
+                        variantId,
+                        userId,
+                        productName: existingProduct.title,
+                        url: getAbsoluteURL(
+                            `/products/${existingProduct.slug}`
+                        ),
                         sku: existingProduct.nativeSku,
                         quantity,
                     },
@@ -417,6 +455,38 @@ export const cartRouter = createTRPCRouter({
                         : existingCart.product.nativeSku,
                 },
             });
+
+            await Promise.all([
+                analytics.track({
+                    namespace: BRAND_EVENTS.WISHLIST.ADDED,
+                    brandId: existingCart.product.brandId,
+                    event: {
+                        productId,
+                        userId,
+                        productName: existingCart.product.title,
+                        url: getAbsoluteURL(
+                            `/products/${existingCart.product.slug}`
+                        ),
+                        sku: existingCart.product.nativeSku,
+                    },
+                }),
+                analytics.track({
+                    namespace: BRAND_EVENTS.CART.REMOVED,
+                    brandId: existingCart.product.brandId,
+                    event: {
+                        productId,
+                        variantId,
+                        userId,
+                        productName: existingCart.product.title,
+                        url: getAbsoluteURL(
+                            `/products/${existingCart.product.slug}`
+                        ),
+                        sku: variantId
+                            ? existingCart.variant?.nativeSku
+                            : existingCart.product.nativeSku,
+                    },
+                }),
+            ]);
 
             return data;
         }),

@@ -2,9 +2,14 @@ import { GeneralShell } from "@/components/globals/layouts";
 import { ProductPage } from "@/components/products/product";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BRAND_EVENTS } from "@/config/brand";
 import { siteConfig } from "@/config/site";
 import { productQueries } from "@/lib/db/queries";
-import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
+import {
+    analytics,
+    userCartCache,
+    userWishlistCache,
+} from "@/lib/redis/methods";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
@@ -116,6 +121,17 @@ async function ProductFetch({ params }: PageProps) {
         userId ? userCartCache.get(userId) : undefined,
     ]);
     if (!existingProduct) notFound();
+
+    await analytics.track({
+        namespace: BRAND_EVENTS.PRODUCT.VIEWED,
+        brandId: existingProduct.brand.id,
+        event: {
+            userId: userId ?? "Unknown",
+            productId: existingProduct.id,
+            productName: existingProduct.title,
+            url: getAbsoluteURL(`/products/${slug}`),
+        },
+    });
 
     return (
         <ProductPage

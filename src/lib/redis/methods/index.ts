@@ -1,3 +1,4 @@
+export * from "./analytics";
 export * from "./banner";
 export * from "./blog";
 export * from "./brand";
@@ -8,6 +9,7 @@ export * from "./marketing-strip";
 export * from "./media";
 export * from "./plan";
 export * from "./product-type";
+export * from "./revenue";
 export * from "./role";
 export * from "./sub-category";
 export * from "./tag";
