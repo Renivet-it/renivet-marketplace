@@ -1,8 +1,15 @@
+import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { productQueries } from "@/lib/db/queries";
 import { posthog } from "@/lib/posthog/client";
-import { userCartCache, userWishlistCache } from "@/lib/redis/methods";
+import {
+    analytics,
+    userCartCache,
+    userWishlistCache,
+} from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
+import { getAbsoluteURL } from "@/lib/utils";
 import { createCartSchema, createWishlistSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { and, eq, gte } from "drizzle-orm";
@@ -91,6 +98,18 @@ export const wishlistRouter = createTRPCRouter({
                 distinctId: userId,
                 properties: {
                     productId,
+                    sku: existingProduct.nativeSku,
+                },
+            });
+
+            await analytics.track({
+                namespace: BRAND_EVENTS.WISHLIST.ADDED,
+                brandId: existingProduct.brandId,
+                event: {
+                    productId,
+                    productName: existingProduct.title,
+                    userId,
+                    url: getAbsoluteURL(`/products/${existingProduct.slug}`),
                     sku: existingProduct.nativeSku,
                 },
             });
@@ -208,6 +227,37 @@ export const wishlistRouter = createTRPCRouter({
                     },
                 });
 
+                await Promise.all([
+                    analytics.track({
+                        namespace: BRAND_EVENTS.CART.ADDED,
+                        brandId: existingVariant.product.brandId,
+                        event: {
+                            productId,
+                            variantId,
+                            userId,
+                            productName: existingVariant.product.title,
+                            url: getAbsoluteURL(
+                                `/products/${existingVariant.product.slug}`
+                            ),
+                            sku: existingVariant.nativeSku,
+                            quantity,
+                        },
+                    }),
+                    analytics.track({
+                        namespace: BRAND_EVENTS.WISHLIST.REMOVED,
+                        brandId: existingVariant.product.brandId,
+                        event: {
+                            productId,
+                            productName: existingVariant.product.title,
+                            userId,
+                            url: getAbsoluteURL(
+                                `/products/${existingVariant.product.slug}`
+                            ),
+                            sku: existingVariant.nativeSku,
+                        },
+                    }),
+                ]);
+
                 return {
                     type: existingCart ? ("update" as const) : ("add" as const),
                 };
@@ -296,6 +346,36 @@ export const wishlistRouter = createTRPCRouter({
                     },
                 });
 
+                await Promise.all([
+                    analytics.track({
+                        namespace: BRAND_EVENTS.CART.ADDED,
+                        brandId: existingProduct.brandId,
+                        event: {
+                            productId,
+                            productName: existingProduct.title,
+                            userId,
+                            url: getAbsoluteURL(
+                                `/products/${existingProduct.slug}`
+                            ),
+                            sku: existingProduct.nativeSku,
+                            quantity,
+                        },
+                    }),
+                    analytics.track({
+                        namespace: BRAND_EVENTS.WISHLIST.REMOVED,
+                        brandId: existingProduct.brandId,
+                        event: {
+                            productId,
+                            productName: existingProduct.title,
+                            userId,
+                            url: getAbsoluteURL(
+                                `/products/${existingProduct.slug}`
+                            ),
+                            sku: existingProduct.nativeSku,
+                        },
+                    }),
+                ]);
+
                 return {
                     type: existingCart ? ("update" as const) : ("add" as const),
                 };
@@ -321,14 +401,19 @@ export const wishlistRouter = createTRPCRouter({
             const { queries } = ctx;
             const { userId, productId } = input;
 
-            const existingWishlist = await userWishlistCache.getProduct(
-                userId,
-                productId
-            );
+            const [existingWishlist, existingProduct] = await Promise.all([
+                userWishlistCache.getProduct(userId, productId),
+                productQueries.getProduct({ productId }),
+            ]);
             if (!existingWishlist)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "This product is not in your wishlist",
+                });
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
                 });
 
             const [data] = await Promise.all([
@@ -343,6 +428,18 @@ export const wishlistRouter = createTRPCRouter({
                 distinctId: userId,
                 properties: {
                     productId,
+                    sku: existingWishlist.product.nativeSku,
+                },
+            });
+
+            await analytics.track({
+                namespace: BRAND_EVENTS.WISHLIST.REMOVED,
+                brandId: existingProduct.brandId,
+                event: {
+                    productId,
+                    productName: existingProduct.title,
+                    userId,
+                    url: getAbsoluteURL(`/products/${existingProduct.slug}`),
                     sku: existingWishlist.product.nativeSku,
                 },
             });

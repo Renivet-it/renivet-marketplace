@@ -1,8 +1,13 @@
+import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { razorpay } from "@/lib/razorpay";
-import { brandCache, userCartCache } from "@/lib/redis/methods";
+import { analytics, brandCache, userCartCache } from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { generateReceiptId } from "@/lib/utils";
+import {
+    convertPaiseToRupees,
+    formatPriceTag,
+    generateReceiptId,
+} from "@/lib/utils";
 import {
     createOrderItemSchema,
     createOrderSchema,
@@ -200,6 +205,48 @@ export const ordersRouter = createTRPCRouter({
                     userCartCache.drop(user.id),
                 ]);
 
+                const uniqueBrandIds = [
+                    ...new Set(input.items.map((item) => item.brandId)),
+                ];
+                await Promise.all(
+                    uniqueBrandIds.map(async (brandId) => {
+                        const brandItems = input.items.filter(
+                            (item) => item.brandId === brandId
+                        );
+
+                        const brandRevenue = brandItems.reduce(
+                            (acc, item) =>
+                                acc + (item.price ?? 0) * item.quantity,
+                            0
+                        );
+
+                        await analytics.track({
+                            namespace: BRAND_EVENTS.ORDER.CREATED,
+                            brandId,
+                            event: {
+                                orderId: newOrder.id,
+                                orderTotal: formatPriceTag(
+                                    +convertPaiseToRupees(newOrder.totalAmount),
+                                    true
+                                ),
+                                brandRevenue: formatPriceTag(
+                                    +convertPaiseToRupees(brandRevenue),
+                                    true
+                                ),
+                                orderItems: brandItems.map((item) => ({
+                                    productId: item.productId,
+                                    variantId: item.variantId,
+                                    quantity: item.quantity,
+                                    price: formatPriceTag(
+                                        +convertPaiseToRupees(item.price ?? 0),
+                                        true
+                                    ),
+                                })),
+                            },
+                        });
+                    })
+                );
+
                 return newOrder;
             } catch (err) {
                 console.error(err);
@@ -241,12 +288,75 @@ export const ordersRouter = createTRPCRouter({
                     message: "Order is already in this status",
                 });
 
-            return next();
+            return next({
+                ctx: {
+                    ...ctx,
+                    existingOrder,
+                },
+            });
         })
         .mutation(async ({ input, ctx }) => {
-            const { queries } = ctx;
+            const { queries, existingOrder } = ctx;
 
             await queries.orders.updateOrderStatus(input.orderId, input.values);
+
+            if (input.values.status === "cancelled") {
+                const uniqueBrandIds = [
+                    ...new Set(
+                        existingOrder.items.map((item) => item.product.brandId)
+                    ),
+                ];
+
+                await Promise.all(
+                    uniqueBrandIds.map(async (brandId) => {
+                        const brandItems = existingOrder.items.filter(
+                            (item) => item.product.brandId === brandId
+                        );
+
+                        const brandRevenue = brandItems.reduce(
+                            (acc, item) =>
+                                acc +
+                                (item.variant?.price ||
+                                    item.product.price ||
+                                    0) *
+                                    item.quantity,
+                            0
+                        );
+
+                        await analytics.track({
+                            namespace: BRAND_EVENTS.ORDER.CANCELLED,
+                            brandId,
+                            event: {
+                                orderId: existingOrder.id,
+                                orderTotal: formatPriceTag(
+                                    +convertPaiseToRupees(
+                                        existingOrder.totalAmount
+                                    ),
+                                    true
+                                ),
+                                brandRevenue: formatPriceTag(
+                                    +convertPaiseToRupees(brandRevenue),
+                                    true
+                                ),
+                                orderItems: brandItems.map((item) => ({
+                                    productId: item.product.id,
+                                    variantId: item.variantId,
+                                    quantity: item.quantity,
+                                    price: formatPriceTag(
+                                        +convertPaiseToRupees(
+                                            item.variant?.price ||
+                                                item.product.price ||
+                                                0
+                                        ),
+                                        true
+                                    ),
+                                })),
+                            },
+                        });
+                    })
+                );
+            }
+
             return true;
         }),
     bulkUpdateOrderStatus: protectedProcedure

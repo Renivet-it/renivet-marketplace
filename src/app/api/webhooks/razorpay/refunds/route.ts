@@ -1,7 +1,15 @@
 import crypto from "crypto";
 import { env } from "@/../env";
+import { BRAND_EVENTS } from "@/config/brand";
 import { orderQueries, refundQueries } from "@/lib/db/queries";
-import { AppError, CResponse, handleError } from "@/lib/utils";
+import { analytics, revenue } from "@/lib/redis/methods";
+import {
+    AppError,
+    convertPaiseToRupees,
+    CResponse,
+    formatPriceTag,
+    handleError,
+} from "@/lib/utils";
 import { razorPayRefundWebhookSchema } from "@/lib/validations";
 import { NextRequest } from "next/server";
 
@@ -38,6 +46,76 @@ export async function POST(req: NextRequest) {
                             payload.payload.refund.entity.status
                         ),
                     ]);
+
+                    const uniqueBrandIds = [
+                        ...new Set(
+                            existingOrder.items.map(
+                                (item) => item.product.brandId
+                            )
+                        ),
+                    ];
+
+                    await Promise.all(
+                        uniqueBrandIds.map((brandId) => {
+                            const brandItems = existingOrder.items.filter(
+                                (item) => item.product.brandId === brandId
+                            );
+
+                            const brandRevenue = brandItems.reduce(
+                                (total, item) => {
+                                    const itemPrice =
+                                        item.variant?.price ||
+                                        item.product.price ||
+                                        0;
+                                    return total + itemPrice * item.quantity;
+                                },
+                                0
+                            );
+
+                            analytics.track({
+                                namespace: BRAND_EVENTS.REFUND.COMPLETED,
+                                brandId,
+                                event: {
+                                    orderId: existingOrder.id,
+                                    refundId: payload.payload.refund.entity.id,
+                                    paymentId:
+                                        payload.payload.payment.entity.id,
+                                    amount: formatPriceTag(
+                                        +convertPaiseToRupees(
+                                            payload.payload.refund.entity.amount
+                                        ),
+                                        true
+                                    ),
+                                    brandRevenue: formatPriceTag(
+                                        +convertPaiseToRupees(brandRevenue),
+                                        true
+                                    ),
+                                    items: brandItems.map((item) => ({
+                                        productId: item.product.id,
+                                        quantity: item.quantity,
+                                        variantId: item.variant?.id,
+                                        price: formatPriceTag(
+                                            +convertPaiseToRupees(
+                                                item.variant?.price ||
+                                                    item.product.price ||
+                                                    0
+                                            ),
+                                            true
+                                        ),
+                                    })),
+                                },
+                            });
+
+                            revenue.track(brandId, {
+                                type: "refund",
+                                amount: payload.payload.refund.entity.amount,
+                                orderId: existingOrder.id,
+                                paymentId: payload.payload.payment.entity.id,
+                                refundId: payload.payload.refund.entity.id,
+                                success: true,
+                            });
+                        })
+                    );
                 }
                 break;
 
@@ -56,6 +134,76 @@ export async function POST(req: NextRequest) {
                             payload.payload.refund.entity.status
                         ),
                     ]);
+
+                    const uniqueBrandIds = [
+                        ...new Set(
+                            existingOrder.items.map(
+                                (item) => item.product.brandId
+                            )
+                        ),
+                    ];
+
+                    await Promise.all(
+                        uniqueBrandIds.map((brandId) => {
+                            const brandItems = existingOrder.items.filter(
+                                (item) => item.product.brandId === brandId
+                            );
+
+                            const brandRevenue = brandItems.reduce(
+                                (total, item) => {
+                                    const itemPrice =
+                                        item.variant?.price ||
+                                        item.product.price ||
+                                        0;
+                                    return total + itemPrice * item.quantity;
+                                },
+                                0
+                            );
+
+                            analytics.track({
+                                namespace: BRAND_EVENTS.REFUND.FAILED,
+                                brandId,
+                                event: {
+                                    orderId: existingOrder.id,
+                                    refundId: payload.payload.refund.entity.id,
+                                    paymentId:
+                                        payload.payload.payment.entity.id,
+                                    amount: formatPriceTag(
+                                        +convertPaiseToRupees(
+                                            payload.payload.refund.entity.amount
+                                        ),
+                                        true
+                                    ),
+                                    brandRevenue: formatPriceTag(
+                                        +convertPaiseToRupees(brandRevenue),
+                                        true
+                                    ),
+                                    items: brandItems.map((item) => ({
+                                        productId: item.product.id,
+                                        quantity: item.quantity,
+                                        variantId: item.variant?.id,
+                                        price: formatPriceTag(
+                                            +convertPaiseToRupees(
+                                                item.variant?.price ||
+                                                    item.product.price ||
+                                                    0
+                                            ),
+                                            true
+                                        ),
+                                    })),
+                                },
+                            });
+
+                            revenue.track(brandId, {
+                                type: "refund",
+                                amount: payload.payload.refund.entity.amount,
+                                orderId: existingOrder.id,
+                                paymentId: payload.payload.payment.entity.id,
+                                refundId: payload.payload.refund.entity.id,
+                                success: false,
+                            });
+                        })
+                    );
                 }
                 break;
         }

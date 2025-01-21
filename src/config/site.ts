@@ -143,41 +143,6 @@ export const siteConfig: SiteConfig = {
 
 export const generalSidebarConfig: GeneralSidebarConfig[] = [
     {
-        title: "Dashboard",
-        url: "#",
-        icon: "LayoutDashboard",
-        items: [
-            {
-                title: "Analytics",
-                url: "/dashboard/general/analytics",
-                permissions:
-                    BitFieldSitePermission.VIEW_ANALYTICS |
-                    BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-            {
-                title: "Reports",
-                url: "/dashboard/general/reports",
-                permissions:
-                    BitFieldSitePermission.VIEW_ANALYTICS |
-                    BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-            {
-                title: "Metrics",
-                url: "/dashboard/general/metrics",
-                permissions:
-                    BitFieldSitePermission.VIEW_ANALYTICS |
-                    BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-            {
-                title: "Logs",
-                url: "/dashboard/general/logs",
-                permissions:
-                    BitFieldSitePermission.VIEW_ANALYTICS |
-                    BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-        ],
-    },
-    {
         title: "Content",
         url: "#",
         icon: "BookOpen",
@@ -261,6 +226,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 url: "/dashboard/general/plans",
                 permissions: BitFieldSitePermission.MANAGE_SETTINGS,
             },
+            {
+                title: "Coupons",
+                url: "/dashboard/general/coupons",
+                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
         ],
     },
     {
@@ -314,25 +284,6 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     title: "Analytics",
                     url: `/dashboard/brands/${brandId}/analytics`,
                     permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
-                    isDisabled: true,
-                },
-                {
-                    title: "Reports",
-                    url: `/dashboard/brands/${brandId}/reports`,
-                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
-                    isDisabled: true,
-                },
-                {
-                    title: "Metrics",
-                    url: `/dashboard/brands/${brandId}/metrics`,
-                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
-                    isDisabled: true,
-                },
-                {
-                    title: "Logs",
-                    url: `/dashboard/brands/${brandId}/logs`,
-                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
-                    isDisabled: true,
                 },
             ],
         },
@@ -394,12 +345,6 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     title: "Orders",
                     url: `/dashboard/brands/${brandId}/orders`,
                     permissions: BitFieldBrandPermission.VIEW_ORDERS,
-                    isDisabled: true,
-                },
-                {
-                    title: "Coupons",
-                    url: `/dashboard/brands/${brandId}/coupons`,
-                    permissions: BitFieldBrandPermission.MANAGE_DISCOUNTS,
                     isDisabled: true,
                 },
             ],

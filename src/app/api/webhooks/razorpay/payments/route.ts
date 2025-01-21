@@ -1,8 +1,16 @@
 import crypto from "crypto";
 import { env } from "@/../env";
+import { BRAND_EVENTS } from "@/config/brand";
 import { orderQueries, productQueries, refundQueries } from "@/lib/db/queries";
 import { razorpay } from "@/lib/razorpay";
-import { AppError, CResponse, handleError } from "@/lib/utils";
+import { analytics, revenue } from "@/lib/redis/methods";
+import {
+    AppError,
+    convertPaiseToRupees,
+    CResponse,
+    formatPriceTag,
+    handleError,
+} from "@/lib/utils";
 import { razorpayPaymentWebhookSchema } from "@/lib/validations";
 import { NextRequest } from "next/server";
 
@@ -45,6 +53,15 @@ export async function POST(req: NextRequest) {
                             );
                         }
                     );
+
+                    const uniqueBrandIds = [
+                        ...new Set(
+                            existingOrder.items.map(
+                                (item) => item.product.brandId
+                            )
+                        ),
+                    ];
+
                     if (!isStockAvailable) {
                         await orderQueries.updateOrderStatus(existingOrder.id, {
                             paymentId: payload.payload.payment.entity.id,
@@ -53,12 +70,14 @@ export async function POST(req: NextRequest) {
                             paymentStatus: "refund_pending",
                             status: "cancelled",
                         });
+
                         const rzpRefund = await razorpay.payments.refund(
                             payload.payload.payment.entity.id,
                             {
                                 amount: payload.payload.payment.entity.amount,
                             }
                         );
+
                         await refundQueries.createRefund({
                             id: rzpRefund.id,
                             userId: existingOrder.userId,
@@ -67,10 +86,66 @@ export async function POST(req: NextRequest) {
                             status: "pending",
                             amount: payload.payload.payment.entity.amount,
                         });
+
+                        await Promise.all(
+                            uniqueBrandIds.map((brandId) => {
+                                const brandItems = existingOrder.items.filter(
+                                    (item) => item.product.brandId === brandId
+                                );
+
+                                const brandRevenue = brandItems.reduce(
+                                    (total, item) => {
+                                        const itemPrice =
+                                            item.variant?.price ||
+                                            item.product.price ||
+                                            0;
+                                        return (
+                                            total + itemPrice * item.quantity
+                                        );
+                                    },
+                                    0
+                                );
+
+                                return analytics.track({
+                                    namespace: BRAND_EVENTS.REFUND.CREATED,
+                                    brandId,
+                                    event: {
+                                        orderId: existingOrder.id,
+                                        paymentId:
+                                            payload.payload.payment.entity.id,
+                                        totalAmount: formatPriceTag(
+                                            payload.payload.payment.entity
+                                                .amount,
+                                            true
+                                        ),
+                                        brandRevenue: formatPriceTag(
+                                            +convertPaiseToRupees(brandRevenue),
+                                            true
+                                        ),
+                                        items: brandItems.map((item) => ({
+                                            productId: item.product.id,
+                                            quantity: item.quantity,
+                                            variantId: item.variant?.id,
+                                            price: formatPriceTag(
+                                                +convertPaiseToRupees(
+                                                    item.variant?.price ||
+                                                        item.product.price ||
+                                                        0
+                                                ),
+                                                true
+                                            ),
+                                        })),
+                                        reason: "Insufficient stock",
+                                    },
+                                });
+                            })
+                        );
+
                         throw new Error(
                             "Insufficient stock for one or more items"
                         );
                     }
+
                     const updateProductStockData = existingOrder.items.map(
                         (item) => {
                             const quantity = item.quantity;
@@ -86,15 +161,84 @@ export async function POST(req: NextRequest) {
                             };
                         }
                     );
+
                     await productQueries.updateProductStock(
                         updateProductStockData
                     );
+
                     await orderQueries.updateOrderStatus(existingOrder.id, {
                         paymentId: payload.payload.payment.entity.id,
                         paymentMethod: payload.payload.payment.entity.method,
                         paymentStatus: "paid",
                         status: "processing",
                     });
+
+                    await Promise.all(
+                        uniqueBrandIds.map((brandId) => {
+                            const brandItems = existingOrder.items.filter(
+                                (item) => item.product.brandId === brandId
+                            );
+
+                            const brandRevenue = brandItems.reduce(
+                                (total, item) => {
+                                    const itemPrice =
+                                        item.variant?.price ||
+                                        item.product.price ||
+                                        0;
+                                    return total + itemPrice * item.quantity;
+                                },
+                                0
+                            );
+
+                            return analytics.track({
+                                namespace: BRAND_EVENTS.PAYMENT.SUCCESS,
+                                brandId,
+                                event: {
+                                    orderId: existingOrder.id,
+                                    paymentId:
+                                        payload.payload.payment.entity.id,
+                                    totalAmount: formatPriceTag(
+                                        payload.payload.payment.entity.amount,
+                                        true
+                                    ),
+                                    brandRevenue: formatPriceTag(
+                                        +convertPaiseToRupees(brandRevenue),
+                                        true
+                                    ),
+                                    items: existingOrder.items
+                                        .filter(
+                                            (item) =>
+                                                item.product.brandId === brandId
+                                        )
+                                        .map((item) => ({
+                                            productId: item.product.id,
+                                            quantity: item.quantity,
+                                            variantId: item.variant?.id,
+                                            price: formatPriceTag(
+                                                +convertPaiseToRupees(
+                                                    item.variant?.price ||
+                                                        item.product.price ||
+                                                        0
+                                                ),
+                                                true
+                                            ),
+                                        })),
+                                },
+                            });
+                        })
+                    );
+
+                    await Promise.all(
+                        uniqueBrandIds.map((brandId) =>
+                            revenue.track(brandId, {
+                                type: "payment",
+                                amount: payload.payload.payment.entity.amount,
+                                orderId: existingOrder.id,
+                                paymentId: payload.payload.payment.entity.id,
+                                success: true,
+                            })
+                        )
+                    );
                 }
                 break;
 
@@ -105,6 +249,24 @@ export async function POST(req: NextRequest) {
                     paymentStatus: "failed",
                     status: "pending",
                 });
+
+                const uniqueBrandIds = [
+                    ...new Set(
+                        existingOrder.items.map((item) => item.product.brandId)
+                    ),
+                ];
+
+                await Promise.all(
+                    uniqueBrandIds.map((brandId) => {
+                        return revenue.track(brandId, {
+                            type: "payment",
+                            amount: payload.payload.payment.entity.amount,
+                            orderId: existingOrder.id,
+                            paymentId: payload.payload.payment.entity.id,
+                            success: false,
+                        });
+                    })
+                );
                 break;
         }
 

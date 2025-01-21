@@ -1,8 +1,10 @@
 import { env } from "@/../env";
+import { BRAND_EVENTS } from "@/config/brand";
 import { BitFieldBrandPermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
 import {
+    analytics,
     categoryCache,
     productTypeCache,
     subCategoryCache,
@@ -193,6 +195,15 @@ export const productsRouter = createTRPCRouter({
                 properties: {
                     brandName: user.brand.name,
                     brandOwnerId: user.id,
+                    productId: data.id,
+                    productTitle: data.title,
+                },
+            });
+
+            await analytics.track({
+                namespace: BRAND_EVENTS.PRODUCT.CREATED,
+                brandId: user.brand.id,
+                event: {
                     productId: data.id,
                     productTitle: data.title,
                 },

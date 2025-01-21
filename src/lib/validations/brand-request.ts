@@ -26,7 +26,10 @@ export const brandRequestSchema = z.object({
             required_error: "Phone is required",
             invalid_type_error: "Phone must be a string",
         })
-        .min(10, "Phone must be at least 10 characters long"),
+        .regex(
+            /^\+91[1-9]\d{9}$/,
+            "Phone must start with +91 followed by 10 digits, no leading zeros"
+        ),
     message: z.preprocess(
         convertEmptyStringToNull,
         z
