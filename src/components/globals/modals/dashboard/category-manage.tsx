@@ -26,10 +26,8 @@ export function CategoryManageModal({
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle asChild>
-                        <p className="text-xl font-semibold">
-                            {category ? "Edit" : "Create New"} Category
-                        </p>
+                    <DialogTitle>
+                        {category ? "Edit" : "Create New"} Category
                     </DialogTitle>
                     <DialogDescription>
                         {category

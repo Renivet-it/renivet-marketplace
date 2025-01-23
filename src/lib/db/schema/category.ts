@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
+import { coupons } from "./coupon";
 import { products } from "./product";
 import { users } from "./user";
 
@@ -70,6 +71,7 @@ export const categoryRequests = pgTable("category_requests", {
 export const categoriesRelations = relations(categories, ({ many }) => ({
     subCategories: many(subCategories),
     productTypes: many(productTypes),
+    coupons: many(coupons),
 }));
 
 export const subCategoriesRelations = relations(
@@ -80,6 +82,7 @@ export const subCategoriesRelations = relations(
             references: [categories.id],
         }),
         productTypes: many(productTypes),
+        coupons: many(coupons),
     })
 );
 
@@ -95,6 +98,7 @@ export const productTypesRelations = relations(
             references: [categories.id],
         }),
         products: many(products),
+        coupons: many(coupons),
     })
 );
 

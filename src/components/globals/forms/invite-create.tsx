@@ -90,6 +90,7 @@ export function InviteCreateForm({ brandId, setIsOpen }: PageProps) {
                                     type="number"
                                     inputMode="numeric"
                                     {...field}
+                                    disabled={isInviteCreating}
                                     onChange={(e) => {
                                         const value = parseInt(e.target.value);
                                         if (isNaN(value)) field.onChange(0);
