@@ -10,6 +10,7 @@ export * from "./brand-request";
 export * from "./brand-waitlist";
 export * from "./category-manage";
 export * from "./contact-us";
+export * from "./coupon-manage";
 export * from "./email-otp-verification";
 export * from "./email-otp-verification-init";
 export * from "./forgot-password-s1";

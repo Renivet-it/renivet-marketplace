@@ -15,6 +15,7 @@ export * from "./brand-waitlist";
 export * from "./cart";
 export * from "./category";
 export * from "./clerk-webhook";
+export * from "./coupon";
 export * from "./legal";
 export * from "./marketing-strip";
 export * from "./newsletter-subscriber";

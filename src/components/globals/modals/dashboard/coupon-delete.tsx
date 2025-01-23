@@ -11,18 +11,18 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { Banner } from "@/lib/validations";
+import { Coupon } from "@/lib/validations";
 import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    banner: Banner;
+    coupon: Coupon;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
+export function CouponDeleteModal({ coupon, isOpen, setIsOpen }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search] = useQueryState("search", {
@@ -33,30 +33,21 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
         parseAsBoolean.withDefault(true)
     );
 
-    const { refetch } = trpc.general.content.banners.getBanners.useQuery({
+    const { refetch } = trpc.general.coupons.getCoupons.useQuery({
         page,
         limit,
         search,
         isActive,
     });
 
-    const { mutate: updateBannerStatus, isPending: isUpdating } =
-        trpc.general.content.banners.changeStatus.useMutation({
-            onMutate: ({ isActive }) => {
-                const toastId = toast.loading(
-                    !isActive
-                        ? "Deactivating banner..."
-                        : "Activating banner..."
-                );
+    const { mutate: deleteCoupon, isPending: isDeleting } =
+        trpc.general.coupons.deleteCoupon.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Deleting coupon...");
                 return { toastId };
             },
-            onSuccess: (_, { isActive }, { toastId }) => {
-                toast.success(
-                    !isActive ? "Banner deactivated" : "Banner activated",
-                    {
-                        id: toastId,
-                    }
-                );
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Coupon deleted", { id: toastId });
                 setIsOpen(false);
                 refetch();
             },
@@ -70,14 +61,11 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you sure you want to{" "}
-                        {banner.isActive ? "deactivate" : "activate"} this
-                        banner?
+                        Are you sure you want to delete this coupon?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        {banner.isActive
-                            ? "Deactivating this banner will remove it from the home carousels."
-                            : "Activating this banner will add it to the home carousels."}
+                        Deleting this coupon will remove it from the system.
+                        This action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
@@ -85,7 +73,7 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
                     <Button
                         variant="ghost"
                         size="sm"
-                        disabled={isUpdating}
+                        disabled={isDeleting}
                         onClick={() => setIsOpen(false)}
                     >
                         Cancel
@@ -94,15 +82,14 @@ export function BannerStatusModal({ banner, isOpen, setIsOpen }: PageProps) {
                     <Button
                         variant="destructive"
                         size="sm"
-                        disabled={isUpdating}
+                        disabled={isDeleting}
                         onClick={() =>
-                            updateBannerStatus({
-                                id: banner.id,
-                                isActive: !banner.isActive,
+                            deleteCoupon({
+                                code: coupon.code,
                             })
                         }
                     >
-                        {banner.isActive ? "Deactivate" : "Activate"}
+                        Delete
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

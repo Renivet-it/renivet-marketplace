@@ -302,7 +302,12 @@ export function generateId(
         casing: "normal",
     }
 ) {
-    return init(opts)();
+    const id = init(opts)();
+    return opts.casing === "upper"
+        ? id.toUpperCase()
+        : opts.casing === "lower"
+          ? id.toLowerCase()
+          : id;
 }
 
 export function convertBitToString(bit: number): string {
