@@ -26,12 +26,6 @@ export const planSchema = z.object({
         })
         .int("Amount must be an integer")
         .positive("Amount must be positive"),
-    currency: z
-        .string({
-            required_error: "Currency is required",
-            invalid_type_error: "Currency must be a string",
-        })
-        .min(1, "Currency is invalid"),
     name: z
         .string({
             required_error: "Name is required",
@@ -51,10 +45,6 @@ export const planSchema = z.object({
         required_error: "Is Active is required",
         invalid_type_error: "Is Active must be a boolean",
     }),
-    isDeleted: z.boolean({
-        required_error: "Is Deleted is required",
-        invalid_type_error: "Is Deleted must be a boolean",
-    }),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -71,7 +61,6 @@ export const planSchema = z.object({
 
 export const createPlanSchema = planSchema
     .omit({
-        isDeleted: true,
         createdAt: true,
         updatedAt: true,
     })

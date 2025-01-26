@@ -28,29 +28,28 @@ import {
 } from "@/lib/utils";
 import { CreatePlan, createPlanSchema } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 export function PlanManageForm() {
+    const router = useRouter();
     const editorRef = useRef<EditorRef>(null!);
 
     const form = useForm<Omit<CreatePlan, "id">>({
         resolver: zodResolver(createPlanSchema.omit({ id: true })),
         defaultValues: {
+            name: "",
+            description: "",
             amount: 0,
             interval: 1,
-            currency: "INR",
-            description: "",
-            isActive: false,
-            name: "",
             period: "monthly",
+            isActive: false,
         },
     });
 
-    const { refetch } = trpc.general.plans.getPlans.useQuery({
-        isDeleted: false,
-    });
+    const { refetch } = trpc.general.plans.getPlans.useQuery({});
 
     const { mutate: createPlan, isPending: isCreating } =
         trpc.general.plans.createPlan.useMutation({
@@ -59,8 +58,9 @@ export function PlanManageForm() {
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
-                toast.success("Plan created successfully", { id: toastId });
                 refetch();
+                toast.success("Plan created successfully", { id: toastId });
+                router.push("/dashboard/general/plans");
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -133,9 +133,11 @@ export function PlanManageForm() {
                                     currency="INR"
                                     {...field}
                                     onChange={(e) => {
-                                        const regex = /^[0-9]*\.?[0-9]{0,2}$/;
-                                        if (regex.test(e.target.value))
-                                            field.onChange(e);
+                                        const value = parseInt(e.target.value);
+
+                                        field.onChange(
+                                            isNaN(value) ? 0 : value
+                                        );
                                     }}
                                     disabled={isCreating}
                                 />

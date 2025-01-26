@@ -1,4 +1,7 @@
-import { RazorpayResponse } from "@/lib/validations";
+import {
+    RazorpayPaymentResponse,
+    RazorpaySubscriptionResponse,
+} from "@/lib/validations";
 
 export type Permission = {
     name: string;
@@ -6,7 +9,7 @@ export type Permission = {
     bit: number;
 };
 
-export type RazorPayOptions = {
+export type RazorpayPaymentOptions = {
     key: string;
     amount: number;
     currency: string;
@@ -24,7 +27,26 @@ export type RazorPayOptions = {
     theme: {
         color: string;
     };
-    handler: (response: RazorpayResponse) => Promise<void>;
+    handler: (response: RazorpayPaymentResponse) => Promise<void>;
+    modal: {
+        ondismiss: () => void;
+    };
+};
+
+export type RazorpaySubscriptionOptions = {
+    key: string;
+    subscription_id: string;
+    name: string;
+    description: string;
+    prefill: {
+        name: string;
+        email: string;
+        contact: string;
+    };
+    theme: {
+        color: string;
+    };
+    handler: (response: RazorpaySubscriptionResponse) => void;
     modal: {
         ondismiss: () => void;
     };

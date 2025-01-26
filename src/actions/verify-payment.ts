@@ -3,14 +3,14 @@
 import crypto from "crypto";
 import { env } from "@/../env";
 import { orderQueries } from "@/lib/db/queries";
-import { RazorpayResponse } from "@/lib/validations";
+import { RazorpayPaymentResponse } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 
 export async function verifyPayment({
     razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
-}: RazorpayResponse) {
+}: RazorpayPaymentResponse) {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 

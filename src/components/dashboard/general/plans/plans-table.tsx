@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
@@ -24,8 +25,11 @@ import {
 import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
+import { PlanAction } from "./plan-action";
 
-export type TablePlan = Plan;
+export type TablePlan = Plan & {
+    status: string;
+};
 
 const columns: ColumnDef<TablePlan>[] = [
     {
@@ -56,11 +60,16 @@ const columns: ColumnDef<TablePlan>[] = [
         },
     },
     {
-        accessorKey: "isActive",
-        header: "Active",
+        accessorKey: "status",
+        header: "Status",
         cell: ({ row }) => {
             const data = row.original;
-            return <span>{data.isActive ? "Yes" : "No"}</span>;
+
+            return (
+                <Badge variant={data.isActive ? "default" : "destructive"}>
+                    {convertValueToLabel(data.status)}
+                </Badge>
+            );
         },
     },
     {
@@ -71,13 +80,13 @@ const columns: ColumnDef<TablePlan>[] = [
             return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
-    // {
-    //     id: "actions",
-    //     cell: ({ row }) => {
-    //         const data = row.original;
-    //         return <CategoryAction category={data} />;
-    //     },
-    // },
+    {
+        id: "actions",
+        cell: ({ row }) => {
+            const data = row.original;
+            return <PlanAction plan={data} />;
+        },
+    },
 ];
 
 interface PageProps {
@@ -100,15 +109,18 @@ export function PlansTable({ initialData }: PageProps) {
 
     const {
         data: { data: dataRaw, count },
-    } = trpc.general.plans.getPlans.useQuery(
-        { isDeleted: false },
-        { initialData }
-    );
+    } = trpc.general.plans.getPlans.useQuery({}, { initialData });
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const data = useMemo(
-        () => dataRaw.slice((page - 1) * limit, page * limit),
+        () =>
+            dataRaw
+                .map((plan) => ({
+                    ...plan,
+                    status: plan.isActive ? "active" : "inactive",
+                }))
+                .slice((page - 1) * limit, page * limit),
         [dataRaw, page, limit]
     );
 

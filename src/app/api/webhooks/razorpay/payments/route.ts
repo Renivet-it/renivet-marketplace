@@ -274,7 +274,6 @@ export async function POST(req: NextRequest) {
             message: "OK",
         });
     } catch (err) {
-        console.log(err);
         return handleError(err);
     }
 }

@@ -7,6 +7,7 @@ import {
     brandPageSectionSchema,
 } from "./brand-page";
 import { brandSubscriptionSchema } from "./brand-subscription";
+import { planSchema } from "./plan";
 import {
     enhancedProductMediaSchema,
     enhancedProductVariantSchema,
@@ -190,6 +191,18 @@ export const cachedBrandSchema = z.lazy(() =>
         ),
         invites: brandInviteSchema.array(),
         bannedMembers: bannedBrandMemberSchema.array(),
+        subscriptions: brandSubscriptionSchema
+            .omit({
+                createdAt: true,
+                updatedAt: true,
+            })
+            .extend({
+                plan: planSchema.omit({
+                    createdAt: true,
+                    updatedAt: true,
+                }),
+            })
+            .array(),
         pageSections: z.array(
             brandPageSectionSchema
                 .omit({

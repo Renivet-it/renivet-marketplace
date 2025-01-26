@@ -594,3 +594,15 @@ export function getDate(sub = 0) {
     const dateXDaysAgo = subDays(new Date(), sub);
     return format(dateXDaysAgo, "dd/MM/yyyy");
 }
+
+export function convertPlanPeriodToHumanReadable(
+    period: "daily" | "weekly" | "monthly" | "yearly"
+) {
+    return period === "daily"
+        ? "day"
+        : period === "weekly"
+          ? "week"
+          : period === "monthly"
+            ? "month"
+            : "year";
+}
