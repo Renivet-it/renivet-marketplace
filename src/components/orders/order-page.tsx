@@ -9,9 +9,9 @@ import {
     NoticeTitle,
 } from "@/components/ui/notice-general";
 import {
-    createRazorPayOptions,
+    createRazorpayPaymentOptions,
     initializeRazorpayPayment,
-} from "@/lib/razorpay/client";
+} from "@/lib/razorpay/payment";
 import { trpc } from "@/lib/trpc/client";
 import {
     calculateTotalPrice,
@@ -178,7 +178,7 @@ export function OrderPage({
 
                 setIsProcessing(true);
 
-                const options = createRazorPayOptions({
+                const options = createRazorpayPaymentOptions({
                     orderId,
                     deliveryAddress,
                     prices: priceList,

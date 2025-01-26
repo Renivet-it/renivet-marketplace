@@ -53,6 +53,12 @@ export const brandSubscriptionSchema = z.object({
         required_error: "Is Active is required",
         invalid_type_error: "Is Active must be a boolean",
     }),
+    renewedAt: z
+        .union([z.string(), z.date()], {
+            invalid_type_error: "Renewed At must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created At is required",
@@ -68,16 +74,16 @@ export const brandSubscriptionSchema = z.object({
 });
 
 export const createBrandSubscriptionSchema = brandSubscriptionSchema.omit({
+    isActive: true,
+    renewedAt: true,
     createdAt: true,
     updatedAt: true,
 });
 
-export const updateBrandSubscriptionStatusSchema = brandSubscriptionSchema.pick(
-    {
-        id: true,
-        isActive: true,
-    }
-);
+export const updateBrandSubscriptionSchema = brandSubscriptionSchema.pick({
+    isActive: true,
+    renewedAt: true,
+});
 
 export const cachedBrandSubscriptionSchema = brandSubscriptionSchema;
 
@@ -85,8 +91,8 @@ export type BrandSubscription = z.infer<typeof brandSubscriptionSchema>;
 export type CreateBrandSubscription = z.infer<
     typeof createBrandSubscriptionSchema
 >;
-export type UpdateBrandSubscriptionStatus = z.infer<
-    typeof updateBrandSubscriptionStatusSchema
+export type UpdateBrandSubscription = z.infer<
+    typeof updateBrandSubscriptionSchema
 >;
 export type CachedBrandSubscription = z.infer<
     typeof cachedBrandSubscriptionSchema

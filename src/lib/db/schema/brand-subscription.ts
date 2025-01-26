@@ -6,7 +6,6 @@ import {
     pgTable,
     text,
     timestamp,
-    uniqueIndex,
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
@@ -32,17 +31,18 @@ export const brandSubscriptions = pgTable(
         startAt: timestamp("start_at").notNull(),
         expireBy: timestamp("expire_by"),
         customerNotify: boolean("customer_notify").notNull().default(true),
-        isActive: boolean("is_active").notNull().default(true),
+        isActive: boolean("is_active").notNull().default(false),
+        renewedAt: timestamp("renewed_at"),
         ...timestamps,
     },
     (table) => ({
         brandSubcriptionIsActiveIdx: index(
             "brand_subscription_is_active_idx"
         ).on(table.isActive),
-        brandSubcriptionBrandIdIsActiveIdx: uniqueIndex(
+        brandSubcriptionBrandIdIsActiveIdx: index(
             "brand_subscription_brand_id_is_active_idx"
         ).on(table.brandId, table.isActive),
-        brandSubcriptionPlanIdIsActiveIdx: uniqueIndex(
+        brandSubcriptionPlanIdIsActiveIdx: index(
             "brand_subscription_plan_id_is_active_idx"
         ).on(table.planId, table.isActive),
     })

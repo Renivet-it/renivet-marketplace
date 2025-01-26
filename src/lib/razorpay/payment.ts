@@ -2,11 +2,11 @@ import { env } from "@/../env";
 import { verifyPayment } from "@/actions";
 import { siteConfig } from "@/config/site";
 import { CachedUser } from "@/lib/validations";
-import { RazorPayOptions } from "@/types";
+import { RazorpayPaymentOptions } from "@/types";
 import { Dispatch, SetStateAction } from "react";
 import { wait } from "../utils";
 
-export function createRazorPayOptions({
+export function createRazorpayPaymentOptions({
     orderId,
     deliveryAddress,
     prices,
@@ -38,7 +38,7 @@ export function createRazorPayOptions({
     >;
     refetch: () => void;
 }) {
-    const options: RazorPayOptions = {
+    const options: RazorpayPaymentOptions = {
         key: env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
         amount: prices.total,
         currency: "INR",
@@ -109,7 +109,7 @@ export function createRazorPayOptions({
     return options;
 }
 
-export const initializeRazorpayPayment = (options: RazorPayOptions) => {
+export const initializeRazorpayPayment = (options: RazorpayPaymentOptions) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rzp = new (window as any).Razorpay(options);
     rzp.open();

@@ -45,11 +45,9 @@ export default function Page() {
 async function PlansFetch() {
     const data = await planCache.getAll();
 
-    const filtered = data.filter((plan) => !plan.isDeleted);
-
     const parsed = {
-        data: filtered,
-        count: filtered.length,
+        data,
+        count: data.length,
     };
 
     return <PlansTable initialData={parsed} />;

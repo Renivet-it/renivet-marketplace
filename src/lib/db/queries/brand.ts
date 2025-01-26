@@ -51,6 +51,11 @@ class BrandQuery {
                         },
                     },
                 },
+                subscriptions: {
+                    with: {
+                        plan: true,
+                    },
+                },
             },
         });
 
@@ -129,7 +134,6 @@ class BrandQuery {
                         member: true,
                     },
                 },
-                subscriptions: true,
                 pageSections: {
                     with: {
                         sectionProducts: {
@@ -141,6 +145,11 @@ class BrandQuery {
                                 },
                             },
                         },
+                    },
+                },
+                subscriptions: {
+                    with: {
+                        plan: true,
                     },
                 },
             },
@@ -233,7 +242,6 @@ class BrandQuery {
                         member: true,
                     },
                 },
-                subscriptions: true,
                 pageSections: {
                     with: {
                         sectionProducts: {
@@ -245,6 +253,11 @@ class BrandQuery {
                                 },
                             },
                         },
+                    },
+                },
+                subscriptions: {
+                    with: {
+                        plan: true,
                     },
                 },
             },

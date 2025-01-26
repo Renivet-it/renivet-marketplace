@@ -7,6 +7,7 @@ import {
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
+import { sanitizeHtml } from "@/lib/utils";
 import { createPlanSchema, updatePlanStatusSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -15,7 +16,6 @@ export const plansRouter = createTRPCRouter({
     getPlans: protectedProcedure
         .input(
             z.object({
-                isDeleted: z.boolean().optional(),
                 isActive: z.boolean().optional(),
             })
         )
@@ -24,8 +24,6 @@ export const plansRouter = createTRPCRouter({
             const plans = await planCache.getAll();
 
             const filtered = plans.filter((plan) => {
-                if (input.isDeleted !== undefined)
-                    return plan.isDeleted === input.isDeleted;
                 if (input.isActive !== undefined)
                     return plan.isActive === input.isActive;
 
@@ -37,11 +35,10 @@ export const plansRouter = createTRPCRouter({
                 count: filtered.length,
             };
         }),
-    getActivePlan: publicProcedure.query(async () => {
+    getActivePlans: publicProcedure.query(async () => {
         const plans = await planCache.getAll();
-        const activePlan = plans.find((plan) => plan.isActive);
-
-        return activePlan;
+        const data = plans.filter((plan) => plan.isActive);
+        return data;
     }),
     getPlan: protectedProcedure
         .input(
@@ -73,8 +70,10 @@ export const plansRouter = createTRPCRouter({
                 item: {
                     amount: input.amount,
                     name: input.name,
-                    currency: input.currency,
-                    description: input.description ?? undefined,
+                    currency: "INR",
+                    description: input.description
+                        ? sanitizeHtml(input.description)
+                        : undefined,
                 },
                 period: input.period,
             });
@@ -93,43 +92,17 @@ export const plansRouter = createTRPCRouter({
             const { queries } = ctx;
             const { id, isActive } = input;
 
-            const existingActivePlan = await queries.plans.getActivePlan();
-            if (id === existingActivePlan?.id && !isActive)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Cannot deactivate the active plan",
-                });
-
-            const [plan] = await Promise.all([
-                queries.plans.updatePlanStatus({ id, isActive }),
-                queries.plans.deactiveOtherPlans(id),
-                planCache.drop(),
-            ]);
-            return plan;
-        }),
-    deletePlan: protectedProcedure
-        .input(
-            z.object({
-                id: z.string(),
-            })
-        )
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_SETTINGS))
-        .mutation(async ({ input, ctx }) => {
-            const { queries } = ctx;
-            const { id } = input;
-
-            const existingPlan = await planCache.get(id);
-            if (!existingPlan)
+            const existingActivePlan = await queries.plans.getPlan(id);
+            if (!existingActivePlan)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Plan not found",
                 });
 
-            await Promise.all([
-                queries.plans.deletePlan(id),
-                planCache.remove(id),
+            const [plan] = await Promise.all([
+                queries.plans.updatePlanStatus({ id, isActive }),
+                planCache.drop(),
             ]);
-
-            return true;
+            return plan;
         }),
 });

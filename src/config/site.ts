@@ -324,6 +324,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                         BitFieldBrandPermission.MANAGE_BRANDING |
                         BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
+                {
+                    title: "Memberships",
+                    url: `/dashboard/brands/${brandId}/memberships`,
+                    permissions: BitFieldBrandPermission.ADMINISTRATOR,
+                },
             ],
         },
         {
