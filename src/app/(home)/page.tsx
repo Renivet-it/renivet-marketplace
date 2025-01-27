@@ -1,4 +1,3 @@
-import { IntroModal } from "@/components/globals/modals";
 import {
     Arrivals,
     Blogs,
@@ -37,7 +36,6 @@ export default function Page() {
             <Suspense>
                 <BlogsFetch />
             </Suspense>
-            <IntroModal />
         </>
     );
 }
