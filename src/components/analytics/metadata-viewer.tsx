@@ -13,7 +13,6 @@ export function MetadataViewer({
 }: MetadataViewerProps) {
     if (data === null || data === undefined) return null;
 
-    // Handle primitive types
     if (typeof data !== "object") {
         return (
             <div className="flex items-center gap-2">
@@ -27,7 +26,6 @@ export function MetadataViewer({
         );
     }
 
-    // Handle arrays
     if (Array.isArray(data)) {
         return (
             <div>
@@ -49,7 +47,6 @@ export function MetadataViewer({
         );
     }
 
-    // Handle objects
     return (
         <div className={cn(depth > 0 && "pl-4")}>
             {parentKey && depth === 0 && (

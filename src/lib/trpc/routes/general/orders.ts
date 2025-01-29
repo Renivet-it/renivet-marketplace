@@ -260,6 +260,7 @@ export const ordersRouter = createTRPCRouter({
                                     productId: item.productId,
                                     variantId: item.variantId,
                                     quantity: item.quantity,
+                                    sku: item.sku,
                                     price: formatPriceTag(
                                         +convertPaiseToRupees(item.price ?? 0),
                                         true

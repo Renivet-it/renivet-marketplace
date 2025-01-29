@@ -326,8 +326,11 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                                 : (item.product.price ?? 0),
                                             brandId: item.product.brandId,
                                             productId: item.product.id,
-                                            quantity: item.quantity,
                                             variantId: item.variantId,
+                                            sku:
+                                                item.variant?.nativeSku ??
+                                                item.product.nativeSku,
+                                            quantity: item.quantity,
                                             categoryId: item.product.categoryId,
                                         })) || [],
                             });

@@ -263,13 +263,11 @@ const MultipleSelectorDash = React.forwardRef<
                         if (input.value === "" && selected.length > 0) {
                             const lastSelectOption =
                                 selected[selected.length - 1];
-                            // If last item is fixed, we should not remove it.
                             if (!lastSelectOption.fixed) {
                                 handleUnselect(selected[selected.length - 1]);
                             }
                         }
                     }
-                    // This is not a default behavior of the <input /> field
                     if (e.key === "Escape") {
                         input.blur();
                     }
@@ -397,12 +395,10 @@ const MultipleSelectorDash = React.forwardRef<
                 </CommandItem>
             );
 
-            // For normal creatable
             if (!onSearch && inputValue.length > 0) {
                 return Item;
             }
 
-            // For async search creatable. avoid showing creatable item before loading at first.
             if (onSearch && debouncedSearchTerm.length > 0 && !isLoading) {
                 return Item;
             }
@@ -413,7 +409,6 @@ const MultipleSelectorDash = React.forwardRef<
         const EmptyItem = React.useCallback(() => {
             if (!emptyIndicator) return undefined;
 
-            // For async search that showing emptyIndicator
             if (onSearch && !creatable && Object.keys(options).length === 0) {
                 return (
                     <CommandItem value="-" disabled>
@@ -443,7 +438,6 @@ const MultipleSelectorDash = React.forwardRef<
                         : -1;
                 };
             }
-            // Using default filter in `cmdk`. We don't have to provide it.
             return undefined;
         }, [creatable, commandProps?.filter]);
 
@@ -463,7 +457,7 @@ const MultipleSelectorDash = React.forwardRef<
                     commandProps?.shouldFilter !== undefined
                         ? commandProps.shouldFilter
                         : !onSearch
-                } // When onSearch is provided, we don't want to filter the options. You can still override it.
+                }
                 filter={commandFilter()}
             >
                 <div
