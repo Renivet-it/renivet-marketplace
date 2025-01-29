@@ -150,11 +150,6 @@ export function ProductOrderCard({ className, item, ...props }: PageProps) {
                         Buy Again
                     </Link>
                 </Button>
-
-                <Button size="sm" className="w-full">
-                    <Icons.Star />
-                    Rate Item
-                </Button>
             </div>
         </div>
     );

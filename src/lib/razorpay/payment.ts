@@ -22,7 +22,8 @@ export function createRazorpayPaymentOptions({
     deliveryAddress: CachedUser["addresses"][number];
     prices: {
         items: number;
-        devliery: number;
+        delivery: number;
+        discount: number;
         total: number;
     };
     user: {

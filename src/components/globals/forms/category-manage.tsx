@@ -12,6 +12,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
+import PriceInput from "@/components/ui/price-input";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import { CreateCategory, createCategorySchema } from "@/lib/validations";
@@ -31,6 +32,7 @@ export function CategoryManageForm({ category, setIsOpen }: PageProps) {
         defaultValues: {
             name: category?.name ?? "",
             description: category?.description ?? "",
+            commissionRate: category?.commissionRate ?? 0,
         },
     });
 
@@ -115,6 +117,42 @@ export function CategoryManageForm({ category, setIsOpen }: PageProps) {
                                     }
                                     {...field}
                                     value={field.value ?? ""}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="commissionRate"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Commission Rate</FormLabel>
+
+                            <FormControl>
+                                <PriceInput
+                                    {...field}
+                                    placeholder="Enter discount value"
+                                    currency="%"
+                                    value={field.value}
+                                    disabled={
+                                        isCategoryCreating || isCategoryUpdating
+                                    }
+                                    onChange={(e) => {
+                                        const value = parseInt(e.target.value);
+                                        const limitedValue =
+                                            value > 99 ? 99 : value;
+
+                                        field.onChange(
+                                            isNaN(limitedValue)
+                                                ? 0
+                                                : limitedValue
+                                        );
+                                    }}
+                                    maxLength={2}
                                 />
                             </FormControl>
 

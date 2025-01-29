@@ -1,24 +1,29 @@
 "use client";
 
-import {
-    AlertDialog,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog-general";
 import { Button } from "@/components/ui/button-general";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-general";
+import { Input } from "@/components/ui/input-general";
+import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import {
-    calculateTotalPrice,
+    calculateTotalPriceWithCoupon,
     convertPaiseToRupees,
+    convertValueToLabel,
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
+import { CouponWithCategory } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { Dispatch, SetStateAction, useMemo } from "react";
+import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -29,6 +34,13 @@ interface PageProps {
 
 export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
+
+    const [isHasCouponChecked, setIsHasCouponChecked] = useState(false);
+    const [couponCode, setCouponCode] = useState<string>("");
+    const [couponStatus, setCouponStatus] = useState<
+        "idle" | "valid" | "invalid"
+    >("idle");
+    const [coupon, setCoupon] = useState<CouponWithCategory | null>(null);
 
     const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery({
         userId,
@@ -79,8 +91,8 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
         [availableCart]
     );
 
-    const priceList = calculateTotalPrice(
-        availableCart
+    const priceList = useMemo(() => {
+        const items = availableCart
             .filter((item) => item.status)
             .map((item) => {
                 const itemPrice = item.variantId
@@ -90,9 +102,47 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                       item.product.price ??
                       0)
                     : (item.product.price ?? 0);
-                return itemPrice * item.quantity;
-            })
-    );
+                return {
+                    price: itemPrice,
+                    quantity: item.quantity,
+                    categoryId: item.product.categoryId,
+                    subCategoryId: item.product.subcategoryId,
+                    productTypeId: item.product.productTypeId,
+                };
+            });
+
+        return calculateTotalPriceWithCoupon(
+            items.map((item) => item.price * item.quantity),
+            coupon
+                ? {
+                      discountType: coupon.discountType,
+                      discountValue: coupon.discountValue,
+                      maxDiscountAmount: coupon.maxDiscountAmount,
+                      categoryId: coupon.categoryId,
+                      subCategoryId: coupon.subCategoryId,
+                      productTypeId: coupon.productTypeId,
+                  }
+                : null,
+            items
+        );
+    }, [availableCart, coupon]);
+
+    const { mutate: validateCoupon, isPending: isValidating } =
+        trpc.general.coupons.validateCoupon.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Validating coupon...");
+                return { toastId };
+            },
+            onSuccess: (data, _, { toastId }) => {
+                toast.success("Coupon applied successfully", { id: toastId });
+                setCouponStatus("valid");
+                setCoupon(data);
+            },
+            onError: (err, _, ctx) => {
+                setCouponStatus("invalid");
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
 
     const { mutate: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
@@ -112,37 +162,124 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
         });
 
     return (
-        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>
-                        Are you sure you want to proceed with the checkout?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        You are about to checkout{" "}
-                        <span className="font-semibold">{itemsCount}</span>{" "}
-                        items of total{" "}
-                        <span className="font-semibold">
-                            {formatPriceTag(
-                                parseFloat(convertPaiseToRupees(totalPrice)),
-                                true
-                            )}
-                        </span>
-                        . Proceeding will create an order and will redirect you
-                        to the payment page. This will also remove the items
-                        from your cart.
-                        <br />
-                        <br />
-                        You will have to complete the payment within{" "}
-                        <span className="font-semibold">15 minutes</span>,{" "}
-                        otherwise the order will be cancelled.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
+        <Dialog
+            open={isOpen}
+            onOpenChange={(open) => {
+                setIsOpen(open);
+                if (!open) {
+                    setCouponCode("");
+                    setCouponStatus("idle");
+                    setCoupon(null);
+                    setIsHasCouponChecked(false);
+                }
+            }}
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Order Summary</DialogTitle>
 
-                <AlertDialogFooter>
+                    <DialogDescription>
+                        You are about to place an order for {itemsCount} items
+                        with a total of{" "}
+                        {formatPriceTag(
+                            +convertPaiseToRupees(totalPrice),
+                            true
+                        )}
+                        . Please review your order before proceeding.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <ul className="space-y-1">
+                            {Object.entries(priceList)
+                                .filter(([key]) => key !== "total")
+                                .map(([key, value]) => (
+                                    <li
+                                        key={key}
+                                        className="flex justify-between text-sm"
+                                    >
+                                        <span>{convertValueToLabel(key)}:</span>
+                                        <span>
+                                            {formatPriceTag(
+                                                +convertPaiseToRupees(value),
+                                                true
+                                            )}
+                                        </span>
+                                    </li>
+                                ))}
+                        </ul>
+
+                        <Separator />
+
+                        <div className="flex justify-between font-semibold text-destructive">
+                            <span>Total:</span>
+                            <span>
+                                {formatPriceTag(
+                                    +convertPaiseToRupees(priceList.total),
+                                    true
+                                )}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                                id="coupon"
+                                checked={isHasCouponChecked}
+                                onCheckedChange={(checked) => {
+                                    setIsHasCouponChecked(!!checked);
+                                    if (!checked) {
+                                        setCouponCode("");
+                                        setCouponStatus("idle");
+                                        setCoupon(null);
+                                    }
+                                }}
+                                disabled={isValidating}
+                            />
+                            <label htmlFor="coupon">I have a coupon</label>
+                        </div>
+
+                        {isHasCouponChecked && (
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    className="h-9"
+                                    value={couponCode}
+                                    onChange={(e) => {
+                                        setCouponCode(e.target.value);
+                                        setCouponStatus("idle");
+                                        setCoupon(null);
+                                    }}
+                                    disabled={isValidating}
+                                />
+                                <Button
+                                    variant="accent"
+                                    size="sm"
+                                    disabled={
+                                        isValidating || couponStatus === "valid"
+                                    }
+                                    onClick={() =>
+                                        validateCoupon({
+                                            code: couponCode,
+                                            totalAmount: priceList.total,
+                                        })
+                                    }
+                                >
+                                    Apply
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <DialogFooter>
                     <Button
                         variant="ghost"
                         size="sm"
+                        disabled={
+                            isUserFetching || isOrderCreating || isValidating
+                        }
                         onClick={() => setIsOpen(false)}
                     >
                         Cancel
@@ -150,7 +287,12 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
 
                     <Button
                         size="sm"
-                        disabled={isUserFetching || isOrderCreating}
+                        disabled={
+                            isUserFetching ||
+                            isOrderCreating ||
+                            isValidating ||
+                            (isHasCouponChecked && couponStatus !== "valid")
+                        }
                         onClick={() => {
                             if (!user)
                                 return toast.error(
@@ -159,13 +301,14 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
 
                             createOrder({
                                 userId,
+                                coupon: coupon?.code,
                                 addressId: user.addresses.find(
                                     (add) => add.isPrimary
                                 )!.id,
-                                deliveryAmount: priceList.devliery.toString(),
+                                deliveryAmount: priceList.delivery.toString(),
                                 taxAmount: "0",
                                 totalAmount: priceList.total.toString(),
-                                discountAmount: "0",
+                                discountAmount: priceList.discount.toString(),
                                 paymentMethod: null,
                                 totalItems: itemsCount,
                                 items:
@@ -185,14 +328,15 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                             productId: item.product.id,
                                             quantity: item.quantity,
                                             variantId: item.variantId,
+                                            categoryId: item.product.categoryId,
                                         })) || [],
                             });
                         }}
                     >
                         Proceed to checkout
                     </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

@@ -14,11 +14,8 @@ import {
 } from "@/lib/razorpay/payment";
 import { trpc } from "@/lib/trpc/client";
 import {
-    calculateTotalPrice,
     cn,
-    convertMsToHumanReadable,
     convertPaiseToRupees,
-    convertValueToLabel,
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
@@ -27,7 +24,7 @@ import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { PaymentProcessingModal } from "../globals/modals";
 import { Icons } from "../icons";
@@ -74,52 +71,6 @@ export function OrderPage({
         { initialData }
     );
 
-    const [timeRemaining, setTimeRemaining] = useState<number>(
-        new Date(order.createdAt).getTime() + 900000 - Date.now()
-    );
-
-    const { mutate: updateOrder, isPending: isUpdating } =
-        trpc.general.orders.updateOrderStatus.useMutation({
-            onSuccess: () => {
-                refetch();
-            },
-        });
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setTimeRemaining(
-                new Date(order.createdAt).getTime() + 900000 - Date.now()
-            );
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [order.createdAt]);
-
-    useEffect(() => {
-        if (timeRemaining > 0) return;
-        if (
-            timeRemaining <= 0 &&
-            ["paid", "refund_pending", "refunded", "refund_failed"].includes(
-                order.paymentStatus
-            )
-        )
-            return;
-        if (isProcessing) return;
-        if (isUpdating) return;
-
-        updateOrder({
-            orderId: order.id,
-            userId: user.id,
-            values: {
-                status: "cancelled",
-                paymentMethod: null,
-                paymentId: null,
-                paymentStatus: "failed",
-            },
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timeRemaining, order.paymentStatus]);
-
     const availableItems =
         order.status === "pending"
             ? order.items.filter(
@@ -145,17 +96,20 @@ export function OrderPage({
         CachedUser["addresses"][number] | undefined
     >(user.addresses?.find((address) => address.isPrimary));
 
-    const priceList = calculateTotalPrice(
-        availableItems.map((item) => {
+    const priceList = {
+        items: availableItems.reduce((acc, item) => {
             const itemPrice = item.variantId
                 ? (item.product.variants.find((v) => v.id === item.variantId)
                       ?.price ??
                   item.product.price ??
                   0)
                 : (item.product.price ?? 0);
-            return itemPrice * item.quantity;
-        }) || []
-    );
+            return acc + itemPrice * item.quantity;
+        }, 0),
+        delivery: order.deliveryAmount,
+        discount: order.discountAmount,
+        total: order.totalAmount,
+    };
 
     const { mutate: initPayment, isPending: isPaymentInitializing } =
         useMutation({
@@ -454,22 +408,40 @@ export function OrderPage({
                         <h2 className="font-semibold">Order Summary</h2>
 
                         <ul className="space-y-1">
-                            {Object.entries(priceList)
-                                .filter(([key]) => key !== "total")
-                                .map(([key, value]) => (
-                                    <li
-                                        key={key}
-                                        className="flex justify-between text-xs"
-                                    >
-                                        <span>{convertValueToLabel(key)}:</span>
-                                        <span>
-                                            {formatPriceTag(
-                                                +convertPaiseToRupees(value),
-                                                true
-                                            )}
-                                        </span>
-                                    </li>
-                                ))}
+                            <li className="flex justify-between text-sm">
+                                <span>Items:</span>
+                                <span>
+                                    {formatPriceTag(
+                                        +convertPaiseToRupees(priceList.items),
+                                        true
+                                    )}
+                                </span>
+                            </li>
+                            {priceList.discount > 0 && (
+                                <li className="flex justify-between text-sm text-destructive">
+                                    <span>Discount:</span>
+                                    <span>
+                                        -
+                                        {formatPriceTag(
+                                            +convertPaiseToRupees(
+                                                priceList.discount
+                                            ),
+                                            true
+                                        )}
+                                    </span>
+                                </li>
+                            )}
+                            <li className="flex justify-between text-sm">
+                                <span>Delivery:</span>
+                                <span>
+                                    {formatPriceTag(
+                                        +convertPaiseToRupees(
+                                            priceList.delivery
+                                        ),
+                                        true
+                                    )}
+                                </span>
+                            </li>
                         </ul>
 
                         <Separator />
@@ -496,8 +468,7 @@ export function OrderPage({
                                     isPaymentInitializing ||
                                     order.paymentStatus === "paid" ||
                                     order.status !== "pending" ||
-                                    unavailableItems.length > 0 ||
-                                    isUpdating
+                                    unavailableItems.length > 0
                                 }
                                 variant={
                                     unavailableItems.length > 0
@@ -533,25 +504,6 @@ export function OrderPage({
                                                 ? "Refund Failed"
                                                 : "Order Cancelled"}
                             </Button>
-
-                            {![
-                                "paid",
-                                "refund_pending",
-                                "refunded",
-                                "refund_failed",
-                            ].includes(order.paymentStatus) &&
-                                timeRemaining > 0 &&
-                                order.status !== "cancelled" && (
-                                    <p className="text-xs text-destructive">
-                                        *{" "}
-                                        <span className="font-semibold">
-                                            {convertMsToHumanReadable(
-                                                timeRemaining
-                                            )}
-                                        </span>{" "}
-                                        until order is cancelled
-                                    </p>
-                                )}
 
                             <p className="text-xs text-destructive">
                                 * By placing an order, you agree to our{" "}

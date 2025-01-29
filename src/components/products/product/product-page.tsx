@@ -4,7 +4,15 @@ import {
     Carousel,
     CarouselContent,
     CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
 } from "@/components/ui/carousel";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-general";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -15,7 +23,7 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import { useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ProductContent } from "./product-content";
 
 interface PageProps extends GenericProps {
@@ -34,6 +42,7 @@ export function ProductPage({
     ...props
 }: PageProps) {
     const [selectedSku] = useQueryState("sku");
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
         { userId: userId! },
@@ -107,10 +116,11 @@ export function ProductPage({
                     {sortedImages?.map((image, i) => (
                         <div
                             className={cn(
-                                "aspect-square overflow-hidden",
+                                "aspect-square cursor-pointer overflow-hidden",
                                 i === 0 && "col-span-4 aspect-[4/3]"
                             )}
                             key={image.id}
+                            onClick={() => setIsImageModalOpen(true)}
                         >
                             <Image
                                 src={image.url}
@@ -168,6 +178,50 @@ export function ProductPage({
                     userId={userId}
                 />
             </div>
+
+            <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+                <DialogContent className="p-0">
+                    <DialogHeader className="hidden">
+                        <DialogTitle>Images of {product.title}</DialogTitle>
+                    </DialogHeader>
+
+                    <Carousel
+                        plugins={[
+                            Autoplay({
+                                delay: 5000,
+                            }),
+                        ]}
+                        opts={{
+                            loop: true,
+                            align: "start",
+                        }}
+                    >
+                        <CarouselContent className="m-0">
+                            {sortedImages?.map((image, i) => (
+                                <CarouselItem
+                                    key={image.id}
+                                    className="p-0 text-center"
+                                >
+                                    <div className="aspect-[3/4] size-full overflow-hidden">
+                                        <Image
+                                            src={image.url}
+                                            alt={
+                                                image.alt ||
+                                                `Product image ${i + 1}`
+                                            }
+                                            width={1000}
+                                            height={1000}
+                                            className="size-full object-cover"
+                                        />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <CarouselPrevious />
+                        <CarouselNext />
+                    </Carousel>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

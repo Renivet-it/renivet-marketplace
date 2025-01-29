@@ -189,6 +189,17 @@ class CouponQuery {
         return data;
     }
 
+    async updateCouponUses(code: string, uses: number) {
+        const data = await db
+            .update(coupons)
+            .set({ uses })
+            .where(eq(coupons.code, code))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
     async updateCouponStatus(code: string, isActive: boolean) {
         const data = await db
             .update(coupons)

@@ -32,6 +32,19 @@ export const categorySchema = z.object({
             .min(3, "Description must be at least 3 characters long")
             .nullable()
     ),
+    commissionRate: z
+        .union([z.string(), z.number()])
+        .transform((val) => Number(val))
+        .pipe(
+            z
+                .number({
+                    required_error: "Commission rate is required",
+                    invalid_type_error: "Commission rate must be a number",
+                })
+                .int("Commission rate must be an integer")
+                .nonnegative("Commission rate must be a positive number")
+        )
+        .default(0),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

@@ -48,6 +48,12 @@ export const env = createEnv({
         RESEND_EMAIL_FROM: z
             .string({ required_error: "RESEND_EMAIL_FROM is required" })
             .min(1, "RESEND_EMAIL_FROM is required"),
+        RENIVET_EMAIL_1: z
+            .string({ required_error: "RENIVET_EMAIL_1 is required" })
+            .min(1, "RENIVET_EMAIL_1 is required"),
+        RENIVET_EMAIL_2: z
+            .string({ required_error: "RENIVET_EMAIL_2 is required" })
+            .min(1, "RENIVET_EMAIL_2 is required"),
 
         NODE_ENV: z
             .enum(["development", "production", "test"])
@@ -96,6 +102,8 @@ export const env = createEnv({
         RAZOR_PAY_SECRET_KEY: process.env.RAZOR_PAY_SECRET_KEY,
         RAZOR_PAY_WEBHOOK_SECRET: process.env.RAZOR_PAY_WEBHOOK_SECRET,
         RESEND_EMAIL_FROM: process.env.RESEND_EMAIL_FROM,
+        RENIVET_EMAIL_1: process.env.RENIVET_EMAIL_1,
+        RENIVET_EMAIL_2: process.env.RENIVET_EMAIL_2,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

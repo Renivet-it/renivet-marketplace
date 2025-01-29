@@ -150,17 +150,41 @@ export const brandRequestsRouter = createTRPCRouter({
                     ownerId: user.id,
                 });
 
-            await resend.emails.send({
-                from: env.RESEND_EMAIL_FROM,
-                to: newBrandRequest.email,
-                subject: `Submission Received - Thank You, ${newBrandRequest.name}!`,
-                react: BrandRequestSubmitted({
-                    user: {
-                        name: newBrandRequest.name,
-                    },
-                    brand: newBrandRequest,
-                }),
-            });
+            await resend.batch.send([
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: newBrandRequest.email,
+                    subject: `Submission Received - Thank You, ${newBrandRequest.name}!`,
+                    react: BrandRequestSubmitted({
+                        user: {
+                            name: newBrandRequest.name,
+                        },
+                        brand: newBrandRequest,
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: env.RENIVET_EMAIL_1,
+                    subject: `Submission Received - Thank You, ${newBrandRequest.name}!`,
+                    react: BrandRequestSubmitted({
+                        user: {
+                            name: newBrandRequest.name,
+                        },
+                        brand: newBrandRequest,
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: env.RENIVET_EMAIL_2,
+                    subject: `Submission Received - Thank You, ${newBrandRequest.name}!`,
+                    react: BrandRequestSubmitted({
+                        user: {
+                            name: newBrandRequest.name,
+                        },
+                        brand: newBrandRequest,
+                    }),
+                },
+            ]);
 
             posthog.capture({
                 distinctId: user.id,

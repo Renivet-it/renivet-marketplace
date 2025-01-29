@@ -1,7 +1,13 @@
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { refundQueries } from "@/lib/db/queries";
 import { razorpay } from "@/lib/razorpay";
-import { analytics, brandCache, userCartCache } from "@/lib/redis/methods";
+import {
+    analytics,
+    brandCache,
+    categoryCache,
+    userCartCache,
+} from "@/lib/redis/methods";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import {
     convertPaiseToRupees,
@@ -9,6 +15,7 @@ import {
     generateReceiptId,
 } from "@/lib/utils";
 import {
+    categorySchema,
     createOrderItemSchema,
     createOrderSchema,
     productSchema,
@@ -79,8 +86,10 @@ export const ordersRouter = createTRPCRouter({
                         .extend({
                             brandId: z.string(),
                             price: productSchema.shape.price,
+                            categoryId: categorySchema.shape.id,
                         })
                 ),
+                coupon: z.string().optional(),
             })
         )
         .use(({ ctx, input, next }) => {
@@ -115,6 +124,7 @@ export const ordersRouter = createTRPCRouter({
 
             const receiptId = generateReceiptId();
 
+            const existingCategories = await categoryCache.getAll();
             const cachedAllBrands = await brandCache.getAll();
             const brandIds = [
                 ...new Set(input.items.map((item) => item.brandId)),
@@ -145,6 +155,29 @@ export const ordersRouter = createTRPCRouter({
                 });
 
             try {
+                const brandTransfers = existingBrands.map((brand) => {
+                    const brandItems = input.items.filter(
+                        (item) => item.brandId === brand.id
+                    );
+
+                    const transferAmount = brandItems.reduce((acc, item) => {
+                        const itemTotal = (item.price ?? 0) * item.quantity;
+                        const category = existingCategories.find(
+                            (cat) => cat.id === item.categoryId
+                        );
+                        const commissionRate = category?.commissionRate ?? 0;
+                        const commission = (itemTotal * commissionRate) / 100;
+
+                        return acc + (itemTotal - commission);
+                    }, 0);
+
+                    return {
+                        account: brand.rzpAccountId!,
+                        amount: Math.round(transferAmount),
+                        currency: "INR",
+                    };
+                });
+
                 const rpzOrder = await razorpay.orders.create({
                     amount: input.totalAmount,
                     currency: "INR",
@@ -174,17 +207,7 @@ export const ordersRouter = createTRPCRouter({
                     line_items_total: input.totalItems,
                     shipping_fee: input.deliveryAmount,
                     receipt: receiptId,
-                    transfers: existingBrands.map((brand) => ({
-                        account: brand.rzpAccountId!,
-                        amount: input.items
-                            .filter((item) => item.brandId === brand.id)
-                            .reduce(
-                                (acc, item) =>
-                                    acc + (item.price ?? 0) * item.quantity,
-                                0
-                            ),
-                        currency: "INR",
-                    })),
+                    transfers: brandTransfers,
                 });
 
                 const newOrder = await queries.orders.createOrder({
@@ -246,6 +269,18 @@ export const ordersRouter = createTRPCRouter({
                         });
                     })
                 );
+
+                if (input.coupon) {
+                    const existingCoupon = await queries.coupons.getCoupon({
+                        code: input.coupon,
+                        isActive: true,
+                    });
+                    if (existingCoupon)
+                        await queries.coupons.updateCouponUses(
+                            existingCoupon.code,
+                            existingCoupon.uses + 1
+                        );
+                }
 
                 return newOrder;
             } catch (err) {
@@ -411,6 +446,171 @@ export const ordersRouter = createTRPCRouter({
             await queries.orders.bulkUpdateOrderStatus(
                 existingOrders.map((order) => order.id),
                 input.values
+            );
+
+            return true;
+        }),
+    cancelOrder: protectedProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+                orderId: z.string(),
+            })
+        )
+        .use(async ({ ctx, input, next }) => {
+            const { user, queries } = ctx;
+
+            const existingOrder = await queries.orders.getOrderById(
+                input.orderId
+            );
+            if (!existingOrder)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order not found",
+                });
+
+            if (existingOrder.userId !== user.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not allowed to cancel this order",
+                });
+
+            return next({
+                ctx: {
+                    ...ctx,
+                    existingOrder,
+                },
+            });
+        })
+        .mutation(async ({ input, ctx }) => {
+            const { existingOrder, queries } = ctx;
+
+            if (
+                existingOrder.paymentStatus === "paid" &&
+                existingOrder.paymentId
+            ) {
+                try {
+                    const rzpRefund = await razorpay.payments.refund(
+                        existingOrder.paymentId,
+                        {
+                            amount: existingOrder.totalAmount,
+                            speed: "normal",
+                            reverse_all: 1,
+                            notes: {
+                                reason: "Order cancelled by customer",
+                                orderId: existingOrder.id,
+                            },
+                        }
+                    );
+
+                    await refundQueries.createRefund({
+                        id: rzpRefund.id,
+                        userId: existingOrder.userId,
+                        orderId: existingOrder.id,
+                        paymentId: existingOrder.paymentId,
+                        status: "pending",
+                        amount: existingOrder.totalAmount,
+                    });
+
+                    existingOrder.paymentStatus = "refund_pending";
+                } catch (error) {
+                    console.error("Refund error details:", error);
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: "Failed to process refund",
+                    });
+                }
+            }
+
+            await queries.orders.updateOrderStatus(input.orderId, {
+                ...existingOrder,
+                status: "cancelled",
+            });
+
+            const uniqueBrandIds = [
+                ...new Set(
+                    existingOrder.items.map((item) => item.product.brandId)
+                ),
+            ];
+
+            await Promise.all(
+                uniqueBrandIds.map(async (brandId) => {
+                    const brandItems = existingOrder.items.filter(
+                        (item) => item.product.brandId === brandId
+                    );
+
+                    const brandRevenue = brandItems.reduce(
+                        (acc, item) =>
+                            acc +
+                            (item.variant?.price || item.product.price || 0) *
+                                item.quantity,
+                        0
+                    );
+
+                    await analytics.track({
+                        namespace: BRAND_EVENTS.ORDER.CANCELLED,
+                        brandId,
+                        event: {
+                            orderId: existingOrder.id,
+                            orderTotal: formatPriceTag(
+                                +convertPaiseToRupees(
+                                    existingOrder.totalAmount
+                                ),
+                                true
+                            ),
+                            brandRevenue: formatPriceTag(
+                                +convertPaiseToRupees(brandRevenue),
+                                true
+                            ),
+                            orderItems: brandItems.map((item) => ({
+                                productId: item.product.id,
+                                variantId: item.variantId,
+                                quantity: item.quantity,
+                                price: formatPriceTag(
+                                    +convertPaiseToRupees(
+                                        item.variant?.price ||
+                                            item.product.price ||
+                                            0
+                                    ),
+                                    true
+                                ),
+                            })),
+                        },
+                    });
+
+                    await analytics.track({
+                        namespace: BRAND_EVENTS.REFUND.CREATED,
+                        brandId,
+                        event: {
+                            orderId: existingOrder.id,
+                            paymentId: existingOrder.paymentId || "N/A",
+                            totalAmount: formatPriceTag(
+                                +convertPaiseToRupees(
+                                    existingOrder.totalAmount
+                                ),
+                                true
+                            ),
+                            brandRevenue: formatPriceTag(
+                                +convertPaiseToRupees(brandRevenue),
+                                true
+                            ),
+                            items: brandItems.map((item) => ({
+                                productId: item.product.id,
+                                quantity: item.quantity,
+                                variantId: item.variant?.id,
+                                price: formatPriceTag(
+                                    +convertPaiseToRupees(
+                                        item.variant?.price ||
+                                            item.product.price ||
+                                            0
+                                    ),
+                                    true
+                                ),
+                            })),
+                            reason: "Order cancelled",
+                        },
+                    });
+                })
             );
 
             return true;

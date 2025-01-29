@@ -307,16 +307,6 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
-                                        >
-                                            <Icons.Ticket className="size-4" />
-                                            <span>Coupons</span>
-                                        </DropdownMenuItem>
-
-                                        <DropdownMenuItem
-                                            className={cn(
-                                                "rounded-none",
-                                                isAuthorized && "hidden"
-                                            )}
                                             asChild
                                         >
                                             <Link href="/profile/addresses">
