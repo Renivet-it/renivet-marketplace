@@ -156,7 +156,7 @@ export function ProductImportButton({
                             brandId: brand.id,
                             title,
                             description:
-                                firstRow["Product Description (HTML)"] || "", // Updated field name
+                                firstRow["Product Description (HTML)"] || "",
                             metaTitle: firstRow["Meta Title"] || "",
                             metaDescription: firstRow["Meta Description"] || "",
                             metaKeywords:
@@ -249,7 +249,7 @@ export function ProductImportButton({
                                 optionsMap.entries()
                             ).map(([name, values], index) => ({
                                 id: crypto.randomUUID(),
-                                productId: crypto.randomUUID(), // Temporary ID
+                                productId: crypto.randomUUID(),
                                 name,
                                 position: index,
                                 values: Array.from(values).map(
@@ -266,7 +266,6 @@ export function ProductImportButton({
                             }));
 
                             product.variants = rows.map((row) => {
-                                // Get combinations for this specific row
                                 const combinations = product.options!.reduce(
                                     (acc, option) => {
                                         const valueForThisOption =
@@ -285,7 +284,6 @@ export function ProductImportButton({
                                     {} as Record<string, string>
                                 );
 
-                                // Get option combinations for SKU generation
                                 const optionCombinations = product.options!.map(
                                     (option) => {
                                         const valueForThisOption =

@@ -589,7 +589,6 @@ export const createProductSchema = productSchema
     })
     .superRefine((data, ctx) => {
         if (!data.productHasVariants) {
-            // If product has no variants, validate required fields
             if (
                 data.price === null ||
                 data.quantity === null ||
@@ -630,7 +629,6 @@ export const createProductSchema = productSchema
             return false;
         }
 
-        // Validate all options have values
         const hasEmptyOptions = data.options.some(
             (option) => option.values.length === 0
         );
@@ -643,14 +641,11 @@ export const createProductSchema = productSchema
             return false;
         }
 
-        // Get all option IDs
         const optionIds = data.options.map((opt) => opt.id);
 
-        // Check each variant has all required combinations
         for (const variant of data.variants) {
             const variantKeys = Object.keys(variant.combinations);
 
-            // Check if variant has all required options
             if (variantKeys.length !== optionIds.length) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
@@ -660,7 +655,6 @@ export const createProductSchema = productSchema
                 return false;
             }
 
-            // Check if variant only uses valid option IDs
             for (const key of variantKeys) {
                 if (!optionIds.includes(key)) {
                     ctx.addIssue({
@@ -671,7 +665,6 @@ export const createProductSchema = productSchema
                     return false;
                 }
 
-                // Check if the value is valid for this option
                 const option = data.options.find((opt) => opt.id === key);
                 const isValidValue = option?.values.some(
                     (val) => val.id === variant.combinations[key]

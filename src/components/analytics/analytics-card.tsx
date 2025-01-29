@@ -58,7 +58,7 @@ export function AnalyticsCard({ title, data }: AnalyticsCardProps) {
                             parsed.orderId ||
                             id,
                         url: parsed.url || undefined,
-                        metadata: parsed, // Store all metadata
+                        metadata: parsed,
                         total: 0,
                         dailyData: {},
                     };
@@ -104,7 +104,7 @@ export function AnalyticsCard({ title, data }: AnalyticsCardProps) {
     };
 
     const commonChartProps = {
-        data: sortedData, // Use sortedData instead of data
+        data: sortedData,
         margin: { top: 20, right: 20, bottom: 40, left: 40 },
         children: (
             <>

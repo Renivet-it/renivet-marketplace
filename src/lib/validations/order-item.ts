@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
+import { productSchema } from "./product";
 
 export const orderItemSchema = z.object({
     id: z
@@ -28,6 +29,10 @@ export const orderItemSchema = z.object({
             })
             .uuid("Variant ID is invalid")
             .nullable()
+    ),
+    sku: z.preprocess(
+        convertEmptyStringToNull,
+        productSchema.shape.sku.nullable()
     ),
     quantity: z
         .number({

@@ -50,7 +50,7 @@ export function RevenueCard({ data }: RevenueCardProps) {
             <CardContent>
                 <ChartContainer className="aspect-[16/9]" config={chartConfig}>
                     <ComposedChart
-                        data={sortedData} // Use sortedData instead of data
+                        data={sortedData}
                         margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" opacity={0.2} />

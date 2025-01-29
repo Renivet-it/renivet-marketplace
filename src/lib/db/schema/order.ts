@@ -92,6 +92,7 @@ export const orderItems = pgTable(
         variantId: uuid("variant_id").references(() => productVariants.id, {
             onDelete: "cascade",
         }),
+        sku: text("sku"),
         quantity: integer("quantity").notNull().default(1),
         ...timestamps,
     },
