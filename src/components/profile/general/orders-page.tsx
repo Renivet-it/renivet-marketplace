@@ -3,8 +3,22 @@
 import { ProductOrderCard } from "@/components/globals/cards";
 import { UnavailableOrdersModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog-general";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
+import {
+    Card,
+    CardContent,
+    CardFooter,
+    CardHeader,
+} from "@/components/ui/card";
 import {
     EmptyPlaceholder,
     EmptyPlaceholderContent,
@@ -34,16 +48,17 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
 import {
-    calculateTotalPrice,
     cn,
     convertPaiseToRupees,
     convertValueToLabel,
     formatPriceTag,
+    handleClientError,
 } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 interface PageProps extends GenericProps {
     initialData: OrderWithItemAndBrand[];
@@ -181,7 +196,7 @@ export function OrdersPage({
                 {availableOrders.length === 0 ? (
                     <NoOrdersCard />
                 ) : (
-                    availableOrders.map((order, i) => {
+                    availableOrders.map((order) => {
                         const shippingAddress = user.addresses.find(
                             (address) => address.id === order.addressId
                         );
@@ -211,266 +226,15 @@ export function OrdersPage({
                                     .includes(item.id)
                         );
 
-                        const totalItemPrice = calculateTotalPrice(
-                            availableItems.map((item) => {
-                                const itemPrice = item.variantId
-                                    ? (item.product.variants.find(
-                                          (v) => v.id === item.variantId
-                                      )?.price ??
-                                      item.product.price ??
-                                      0)
-                                    : (item.product.price ?? 0);
-                                return itemPrice * item.quantity;
-                            }) || []
-                        );
-
                         return (
-                            <div key={order.id} className="space-y-5">
-                                <div className="border">
-                                    <div className="flex flex-col justify-between gap-2 bg-primary p-4 text-primary-foreground md:flex-row md:items-center md:gap-5 md:p-6">
-                                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-10">
-                                            <div className="space-y-1">
-                                                <p className="text-xs uppercase">
-                                                    Order Placed
-                                                </p>
-                                                <p className="text-sm">
-                                                    {format(
-                                                        new Date(
-                                                            order.createdAt
-                                                        ),
-                                                        "MMMM dd, yyyy"
-                                                    )}
-                                                </p>
-                                            </div>
-
-                                            <div className="space-y-1">
-                                                <p className="text-xs uppercase">
-                                                    Total
-                                                </p>
-                                                <p className="text-sm">
-                                                    {formatPriceTag(
-                                                        parseFloat(
-                                                            convertPaiseToRupees(
-                                                                totalItemPrice.total
-                                                            )
-                                                        ),
-                                                        true
-                                                    )}
-                                                </p>
-                                            </div>
-
-                                            <div className="space-y-1">
-                                                <p className="text-xs uppercase">
-                                                    Ship To
-                                                </p>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <button className="cursor-pointer text-sm hover:underline">
-                                                            {
-                                                                shippingAddress?.fullName
-                                                            }
-                                                        </button>
-                                                    </PopoverTrigger>
-
-                                                    <PopoverContent className="rounded-none">
-                                                        <p className="text-sm">
-                                                            {
-                                                                shippingAddress?.street
-                                                            }
-                                                        </p>
-
-                                                        <p className="text-sm">
-                                                            {
-                                                                shippingAddress?.city
-                                                            }
-                                                            ,{" "}
-                                                            {
-                                                                shippingAddress?.state
-                                                            }
-                                                        </p>
-
-                                                        <p className="text-sm">
-                                                            {
-                                                                shippingAddress?.phone
-                                                            }
-                                                        </p>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1 md:text-end">
-                                            <div className="flex items-center gap-px text-sm">
-                                                <p>Order #</p>
-                                                <p>{order.id}</p>
-                                            </div>
-
-                                            <button className="text-sm hover:underline">
-                                                <Link
-                                                    href={`/orders/${order.id}`}
-                                                >
-                                                    View Order Details
-                                                </Link>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-5 p-2 md:p-6">
-                                        <div className="space-y-2">
-                                            <div className="flex flex-col justify-between gap-2 bg-muted p-4 md:flex-row md:items-center md:p-4 md:px-6">
-                                                <div className="flex items-center gap-1">
-                                                    <p className="text-sm font-semibold">
-                                                        Order Status:
-                                                    </p>
-                                                    <Badge
-                                                        className="rounded-none"
-                                                        variant={
-                                                            unavailableItems.length >
-                                                            0
-                                                                ? "destructive"
-                                                                : order.status ===
-                                                                    "delivered"
-                                                                  ? "secondary"
-                                                                  : order.status ===
-                                                                      "cancelled"
-                                                                    ? "destructive"
-                                                                    : "default"
-                                                        }
-                                                    >
-                                                        {unavailableItems.length ===
-                                                        0
-                                                            ? convertValueToLabel(
-                                                                  order.status
-                                                              )
-                                                            : "Aborted"}
-                                                    </Badge>
-                                                </div>
-
-                                                <div className="flex items-center gap-1">
-                                                    <p className="text-sm font-semibold">
-                                                        Payment Status:
-                                                    </p>
-                                                    <Badge
-                                                        className="rounded-none"
-                                                        variant={
-                                                            unavailableItems.length >
-                                                            0
-                                                                ? "destructive"
-                                                                : order.paymentStatus ===
-                                                                        "paid" ||
-                                                                    order.paymentStatus ===
-                                                                        "refunded"
-                                                                  ? "secondary"
-                                                                  : order.paymentStatus ===
-                                                                          "pending" ||
-                                                                      order.paymentStatus ===
-                                                                          "refund_pending"
-                                                                    ? "default"
-                                                                    : "destructive"
-                                                        }
-                                                    >
-                                                        {unavailableItems.length ===
-                                                        0
-                                                            ? convertValueToLabel(
-                                                                  order.paymentStatus
-                                                              )
-                                                            : "Aborted"}
-                                                    </Badge>
-                                                </div>
-
-                                                <div className="flex items-center gap-1">
-                                                    <p className="text-sm font-semibold">
-                                                        Payment Method:
-                                                    </p>
-                                                    <p className="text-sm">
-                                                        {convertValueToLabel(
-                                                            order.paymentMethod ??
-                                                                "N/A"
-                                                        )}
-                                                    </p>
-                                                </div>
-
-                                                {unavailableItems.length >
-                                                    0 && (
-                                                    <div className="flex items-center gap-1">
-                                                        <p className="text-sm font-semibold">
-                                                            Unavailable Items:
-                                                        </p>
-                                                        <p className="text-sm">
-                                                            {
-                                                                unavailableItems.length
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {unavailableItems.length === 0 &&
-                                                order.status === "pending" &&
-                                                (order.paymentStatus ===
-                                                    "pending" ||
-                                                    order.paymentStatus ===
-                                                        "failed") && (
-                                                    <div className="flex flex-col justify-between gap-2 bg-destructive p-2 md:flex-row md:items-center md:p-1 md:px-6">
-                                                        <p className="text-sm text-destructive-foreground">
-                                                            * Order is pending.
-                                                            Please complete the
-                                                            payment to proceed.
-                                                        </p>
-
-                                                        <Button
-                                                            size="sm"
-                                                            variant="link"
-                                                            className="h-auto w-min self-end p-0 text-destructive-foreground md:h-9 md:w-auto md:self-auto md:px-3"
-                                                            asChild
-                                                        >
-                                                            <Link
-                                                                href={`/orders/${order.id}`}
-                                                            >
-                                                                Complete Payment
-                                                                <Icons.ArrowRight />
-                                                            </Link>
-                                                        </Button>
-                                                    </div>
-                                                )}
-
-                                            {order.status === "cancelled" &&
-                                                order.paymentStatus ===
-                                                    "paid" && (
-                                                    <p className="text-sm text-destructive">
-                                                        * Order has been
-                                                        cancelled. Please
-                                                        contact support for more
-                                                        information.
-                                                    </p>
-                                                )}
-
-                                            {order.status === "delivered" &&
-                                                order.paymentStatus ===
-                                                    "paid" && (
-                                                    <p className="text-sm text-accent">
-                                                        * Order has been
-                                                        delivered. Thank you for
-                                                        shopping with us.
-                                                    </p>
-                                                )}
-                                        </div>
-
-                                        <Separator />
-
-                                        <div className="space-y-2">
-                                            {availableItems.map((item) => (
-                                                <ProductOrderCard
-                                                    item={item}
-                                                    key={item.id}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {i !== orders.length - 1 && <Separator />}
-                            </div>
+                            <OrderCard
+                                order={order}
+                                unavailableItems={unavailableItems}
+                                availableItems={availableItems}
+                                shippingAddress={shippingAddress}
+                                selectedYear={selectedYear}
+                                key={order.id}
+                            />
                         );
                     })
                 )}
@@ -512,5 +276,219 @@ function NoOrdersCard() {
                 </Button>
             </EmptyPlaceholder>
         </div>
+    );
+}
+
+interface OrderCardProps {
+    order: OrderWithItemAndBrand;
+    unavailableItems: OrderWithItemAndBrand["items"];
+    availableItems: OrderWithItemAndBrand["items"];
+    shippingAddress?: CachedUser["addresses"][number];
+    selectedYear: number;
+}
+
+function OrderCard({
+    order,
+    unavailableItems,
+    availableItems,
+    shippingAddress,
+    selectedYear,
+}: OrderCardProps) {
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+
+    const { refetch } = trpc.general.orders.getOrdersByUserId.useQuery({
+        userId: order.userId,
+        year: selectedYear,
+    });
+
+    const { mutate: cancelOrder, isPending: isCancelling } =
+        trpc.general.orders.cancelOrder.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Cancelling order...");
+                return { toastId };
+            },
+            onSuccess: (_, __, { toastId }) => {
+                setIsCancelModalOpen(false);
+                toast.success("Order cancelled successfully", { id: toastId });
+                refetch();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    return (
+        <>
+            <Card className="rounded-none">
+                <CardHeader className="bg-primary p-4 text-primary-foreground md:p-6">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                            <p className="text-xs uppercase">Order Placed</p>
+                            <p className="text-sm">
+                                {format(
+                                    new Date(order.createdAt),
+                                    "MMMM dd, yyyy"
+                                )}
+                            </p>
+                        </div>
+
+                        <div className="space-y-1">
+                            <p className="text-xs uppercase">Total</p>
+                            <p className="text-sm">
+                                {formatPriceTag(
+                                    +convertPaiseToRupees(order.totalAmount),
+                                    true
+                                )}
+                            </p>
+                        </div>
+
+                        <div className="space-y-1">
+                            <p className="text-xs font-medium">ORDER #</p>
+                            <p className="text-sm">{order.id}</p>
+                        </div>
+                    </div>
+                </CardHeader>
+
+                <CardContent className="space-y-6 p-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex gap-4">
+                            <Badge variant="secondary" className="h-6">
+                                Order Status:{" "}
+                                {convertValueToLabel(order.status)}
+                            </Badge>
+
+                            <Badge variant="secondary" className="h-6">
+                                Payment Status:{" "}
+                                {convertValueToLabel(order.paymentStatus)}
+                            </Badge>
+                        </div>
+
+                        {(order.status === "pending" ||
+                            order.status === "processing") && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => setIsCancelModalOpen(true)}
+                            >
+                                Cancel Order
+                            </Button>
+                        )}
+                    </div>
+
+                    {unavailableItems.length === 0 &&
+                        order.status === "pending" &&
+                        (order.paymentStatus === "pending" ||
+                            order.paymentStatus === "failed") && (
+                            <div className="flex items-center gap-2 bg-muted/50 p-4 text-sm text-muted-foreground">
+                                <Icons.AlertCircle className="size-5" />
+
+                                <p>
+                                    Order is pending. Please complete the
+                                    payment to proceed.
+                                </p>
+
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="ml-auto"
+                                    asChild
+                                >
+                                    <Link href={`/orders/${order.id}`}>
+                                        Complete Payment
+                                        <Icons.ArrowRight className="size-4" />
+                                    </Link>
+                                </Button>
+                            </div>
+                        )}
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                        {availableItems.map((item) => (
+                            <ProductOrderCard item={item} key={item.id} />
+                        ))}
+                    </div>
+                </CardContent>
+
+                <CardFooter className="bg-muted/50 p-6">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Icons.Package className="size-5" />
+                        <p>
+                            Ship to:{" "}
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button className="cursor-pointer hover:underline">
+                                        {shippingAddress?.fullName}
+                                    </button>
+                                </PopoverTrigger>
+
+                                <PopoverContent className="rounded-none">
+                                    <p className="text-sm">
+                                        {shippingAddress?.street}
+                                    </p>
+
+                                    <p className="text-sm">
+                                        {shippingAddress?.city},{" "}
+                                        {shippingAddress?.state}
+                                    </p>
+
+                                    <p className="text-sm">
+                                        {shippingAddress?.phone}
+                                    </p>
+                                </PopoverContent>
+                            </Popover>
+                        </p>
+                    </div>
+
+                    <Button variant="link" className="ml-auto" asChild>
+                        <Link href={`/orders/${order.id}`}>
+                            View Order Details
+                        </Link>
+                    </Button>
+                </CardFooter>
+            </Card>
+
+            <AlertDialog
+                open={isCancelModalOpen}
+                onOpenChange={setIsCancelModalOpen}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Are you sure you want to cancel this order?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Cancelling this order will not be reversible. Refund
+                            will be initiated if payment has been made.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isCancelling}
+                            onClick={() => setIsCancelModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={isCancelling}
+                            onClick={() =>
+                                cancelOrder({
+                                    orderId: order.id,
+                                    userId: order.userId,
+                                })
+                            }
+                        >
+                            Cancel Order
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

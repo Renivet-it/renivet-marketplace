@@ -5,6 +5,7 @@ import {
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
+import { convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { createCouponSchema, updateCouponSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -47,6 +48,54 @@ export const couponRouter = createTRPCRouter({
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Coupon not found",
+                });
+
+            return data;
+        }),
+    validateCoupon: publicProcedure
+        .input(
+            z.object({
+                code: z.string(),
+                totalAmount: z.number().nonnegative(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            const data = await queries.coupons.getCoupon({
+                ...input,
+                isActive: true,
+            });
+            if (!data)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Coupon is invalid",
+                });
+            if (data.expiresAt && new Date(data.expiresAt) < new Date())
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Coupon has expired",
+                });
+            if (input.totalAmount < data.minOrderAmount)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `Coupon requires a minimum order amount of ${formatPriceTag(
+                        +convertPaiseToRupees(data.minOrderAmount)
+                    )}`,
+                });
+            if (data.maxUses !== 0 && data.uses >= data.maxUses)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Coupon has reached maximum usage limit",
+                });
+            if (
+                data.maxDiscountAmount &&
+                data.maxDiscountAmount > input.totalAmount
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Coupon cannot be applied as the discount exceeds the total amount",
                 });
 
             return data;

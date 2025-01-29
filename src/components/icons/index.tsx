@@ -1,4 +1,5 @@
 import {
+    AlertCircle,
     AlertTriangle,
     ArrowDown,
     ArrowRight,
@@ -110,6 +111,7 @@ import {
 export type Icon = LucideIcon;
 
 export const Icons = {
+    AlertCircle,
     PiggyBank,
     Info,
     ExternalLink,

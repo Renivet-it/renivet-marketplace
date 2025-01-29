@@ -48,21 +48,53 @@ export const confidentialsRouter = createTRPCRouter({
                 userCache.remove(existingBrand.ownerId),
             ]);
 
-            await resend.emails.send({
-                from: env.RESEND_EMAIL_FROM,
-                to: existingBrand.email,
-                subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
-                react: BrandVerificationtSubmitted({
-                    user: {
-                        name: existingBrand.name,
-                    },
-                    brand: {
-                        id: existingBrand.id,
-                        status: "pending",
-                        name: existingBrand.name,
-                    },
-                }),
-            });
+            await resend.batch.send([
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: existingBrand.email,
+                    subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
+                    react: BrandVerificationtSubmitted({
+                        user: {
+                            name: existingBrand.name,
+                        },
+                        brand: {
+                            id: existingBrand.id,
+                            status: "pending",
+                            name: existingBrand.name,
+                        },
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: env.RENIVET_EMAIL_1,
+                    subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
+                    react: BrandVerificationtSubmitted({
+                        user: {
+                            name: existingBrand.name,
+                        },
+                        brand: {
+                            id: existingBrand.id,
+                            status: "pending",
+                            name: existingBrand.name,
+                        },
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: env.RENIVET_EMAIL_2,
+                    subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
+                    react: BrandVerificationtSubmitted({
+                        user: {
+                            name: existingBrand.name,
+                        },
+                        brand: {
+                            id: existingBrand.id,
+                            status: "pending",
+                            name: existingBrand.name,
+                        },
+                    }),
+                },
+            ]);
 
             return data;
         }),

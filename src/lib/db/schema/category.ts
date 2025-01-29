@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { coupons } from "./coupon";
@@ -11,6 +11,7 @@ export const categories = pgTable("categories", {
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     description: text("description"),
+    commissionRate: integer("commission_rate").notNull().default(0),
     ...timestamps,
 });
 

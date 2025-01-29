@@ -3,6 +3,7 @@
 import crypto from "crypto";
 import { env } from "@/../env";
 import { orderQueries } from "@/lib/db/queries";
+import { wait } from "@/lib/utils";
 import { RazorpayPaymentResponse } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 
@@ -23,6 +24,8 @@ export async function verifyPayment({
 
     if (generated_signature !== razorpay_signature)
         throw new Error("Invalid signature");
+
+    await wait(5000);
 
     const existingOrder = await orderQueries.getOrderById(razorpay_order_id);
     if (!existingOrder) throw new Error("Order not found");

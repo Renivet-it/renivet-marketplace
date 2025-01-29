@@ -454,6 +454,66 @@ export function calculateTotalPrice(prices: number[]) {
     };
 }
 
+export function calculateTotalPriceWithCoupon(
+    prices: number[],
+    coupon?: {
+        discountType: "percentage" | "fixed";
+        discountValue: number;
+        maxDiscountAmount: number | null;
+        categoryId: string | null;
+        subCategoryId: string | null;
+        productTypeId: string | null;
+    } | null,
+    items?: {
+        categoryId: string;
+        subCategoryId: string;
+        productTypeId: string;
+        price: number;
+        quantity: number;
+    }[]
+) {
+    const rawTotal = prices.reduce((acc, price) => acc + price, 0);
+    let discount = 0;
+
+    if (coupon && items) {
+        const eligibleItems = items.filter(
+            (item) =>
+                (!coupon.categoryId || item.categoryId === coupon.categoryId) &&
+                (!coupon.subCategoryId ||
+                    item.subCategoryId === coupon.subCategoryId) &&
+                (!coupon.productTypeId ||
+                    item.productTypeId === coupon.productTypeId)
+        );
+
+        const eligibleTotal = eligibleItems.reduce(
+            (acc, item) => acc + item.price * item.quantity,
+            0
+        );
+
+        if (coupon.discountType === "percentage")
+            discount = (eligibleTotal * coupon.discountValue) / 100;
+        else discount = Math.min(coupon.discountValue, eligibleTotal);
+
+        if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
+            const value = Math.round(Math.random() * coupon.maxDiscountAmount);
+
+            if (coupon.discountType === "percentage")
+                discount = (eligibleTotal * value) / 100;
+            else discount = Math.min(value, eligibleTotal);
+        }
+    }
+
+    let total = rawTotal - discount;
+    if (total < FREE_DELIVERY_THRESHOLD) total += DELIVERY_CHARGE;
+
+    return {
+        items: parseFloat(rawTotal.toFixed(2)),
+        discount: parseFloat(discount.toFixed(2)),
+        delivery: total < FREE_DELIVERY_THRESHOLD ? DELIVERY_CHARGE : 0,
+        total: parseFloat(total.toFixed(2)),
+    };
+}
+
 export function generateReceiptId() {
     return `RNVT-RCPT-${generateId({ length: 8, casing: "upper" })}-${Date.now()}`;
 }

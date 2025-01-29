@@ -112,11 +112,6 @@ const boxMenu: SiteConfig["menu"] = [
         href: "/contact",
         icon: "Headset",
     },
-    {
-        name: "Coupons",
-        href: "/coupons",
-        icon: "Ticket",
-    },
 ];
 
 const IS_HIDDEN = true;
