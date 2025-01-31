@@ -317,10 +317,39 @@ function OrderCard({
             },
         });
 
+    type OrderShipment = NonNullable<
+        OrderWithItemAndBrand["shipments"]
+    >[number];
+
+    const itemsByBrand = availableItems.reduce(
+        (acc, item) => {
+            const brandId = item.product.brand.id;
+            if (!acc[brandId]) {
+                acc[brandId] = {
+                    brand: item.product.brand,
+                    items: [],
+                    shipment: order.shipments?.find(
+                        (s) => s.brandId === brandId
+                    ),
+                };
+            }
+            acc[brandId].items.push(item);
+            return acc;
+        },
+        {} as Record<
+            string,
+            {
+                brand: (typeof availableItems)[number]["product"]["brand"];
+                items: typeof availableItems;
+                shipment?: OrderShipment;
+            }
+        >
+    );
+
     return (
         <>
             <Card className="rounded-none">
-                <CardHeader className="bg-primary p-4 text-primary-foreground md:p-6">
+                <CardHeader className="bg-primary p-4 py-6 text-primary-foreground md:p-6">
                     <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
                             <p className="text-xs uppercase">Order Placed</p>
@@ -349,9 +378,9 @@ function OrderCard({
                     </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6 p-6">
+                <CardContent className="space-y-6 p-4 md:p-6">
                     <div className="flex items-center justify-between">
-                        <div className="flex gap-4">
+                        <div className="flex flex-col gap-2 md:flex-row md:gap-4">
                             <Badge variant="secondary" className="h-6">
                                 Order Status:{" "}
                                 {convertValueToLabel(order.status)}
@@ -403,21 +432,77 @@ function OrderCard({
 
                     <Separator />
 
-                    <div className="space-y-2">
-                        {availableItems.map((item) => (
-                            <ProductOrderCard item={item} key={item.id} />
-                        ))}
-                    </div>
+                    {/* Group products by brand */}
+                    {Object.entries(itemsByBrand).map(
+                        ([brandId, { brand, items, shipment }]) => (
+                            <div key={brandId} className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-semibold">
+                                        {brand.name}
+                                    </h3>
+                                    {shipment && (
+                                        <Badge variant="outline">
+                                            Shipment Status:{" "}
+                                            {convertValueToLabel(
+                                                shipment.status
+                                            )}
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    {items.map((item) => (
+                                        <ProductOrderCard
+                                            item={item}
+                                            key={item.id}
+                                            trackingInfo={
+                                                shipment && {
+                                                    trackingNumber:
+                                                        shipment.trackingNumber,
+                                                    awbNumber:
+                                                        shipment.awbNumber,
+                                                    estimatedDelivery:
+                                                        shipment.estimatedDeliveryDate,
+                                                }
+                                            }
+                                        />
+                                    ))}
+                                </div>
+
+                                {shipment && (
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Icons.Truck className="size-4" />
+                                        {shipment.awbNumber ? (
+                                            <button className="hover:underline">
+                                                <Link
+                                                    href={`https://shiprocket.co/tracking/${shipment.awbNumber}`}
+                                                    target="_blank"
+                                                >
+                                                    Track Shipment
+                                                </Link>
+                                            </button>
+                                        ) : (
+                                            <span>Preparing for shipment</span>
+                                        )}
+                                    </div>
+                                )}
+
+                                <Separator />
+                            </div>
+                        )
+                    )}
                 </CardContent>
 
-                <CardFooter className="bg-muted/50 p-6">
+                <CardFooter className="bg-muted/50 p-4 md:p-6">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                        <Icons.Package className="size-5" />
-                        <p>
-                            Ship to:{" "}
+                        <Icons.Package className="size-4 md:size-5" />
+                        <div>
+                            <span className="text-sm md:text-base">
+                                Ship to:{" "}
+                            </span>
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <button className="cursor-pointer hover:underline">
+                                    <button className="cursor-pointer text-sm hover:underline md:text-base">
                                         {shippingAddress?.fullName}
                                     </button>
                                 </PopoverTrigger>
@@ -437,14 +522,14 @@ function OrderCard({
                                     </p>
                                 </PopoverContent>
                             </Popover>
-                        </p>
+                        </div>
                     </div>
 
-                    <Button variant="link" className="ml-auto" asChild>
-                        <Link href={`/orders/${order.id}`}>
+                    <button className="ml-auto underline-offset-2 hover:underline">
+                        <Link href={`/orders/${order.id}`} className="text-sm">
                             View Order Details
                         </Link>
-                    </Button>
+                    </button>
                 </CardFooter>
             </Card>
 

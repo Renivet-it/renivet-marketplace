@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
+import { orderShipments } from "./order-shipment";
 import { products, productVariants } from "./product";
 import { refunds } from "./refund";
 import { users } from "./user";
@@ -121,6 +122,7 @@ export const orderRelations = relations(orders, ({ one, many }) => ({
         references: [users.id],
     }),
     refunds: many(refunds),
+    shipments: many(orderShipments),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({

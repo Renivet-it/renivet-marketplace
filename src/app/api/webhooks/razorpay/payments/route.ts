@@ -1,9 +1,14 @@
 import crypto from "crypto";
 import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
+import { db } from "@/lib/db";
 import { orderQueries, productQueries, refundQueries } from "@/lib/db/queries";
+import { orderShipments } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
-import { analytics, revenue } from "@/lib/redis/methods";
+import { analytics, revenue, userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { OrderPlaced } from "@/lib/resend/emails";
+import { shiprocket } from "@/lib/shiprocket";
 import {
     AppError,
     convertPaiseToRupees,
@@ -12,6 +17,7 @@ import {
     handleError,
 } from "@/lib/utils";
 import { razorpayPaymentWebhookSchema } from "@/lib/validations";
+import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -172,6 +178,100 @@ export async function POST(req: NextRequest) {
                         paymentStatus: "paid",
                         status: "processing",
                     });
+
+                    // Process Shiprocket orders for each brand
+                    const sr = await shiprocket();
+                    const shipments = existingOrder.shipments;
+
+                    for (const shipment of shipments) {
+                        try {
+                            // Generate AWB
+                            const awbResult = await sr.generateAWB({
+                                shipment_id: shipment.shiprocketShipmentId!,
+                            });
+                            if (!awbResult.status)
+                                throw new AppError(
+                                    `Failed to generate AWB for shipment ${shipment.id}`,
+                                    "BAD_REQUEST"
+                                );
+
+                            // Generate label
+                            const labelResult = await sr.generateLabel({
+                                shipment_id: shipment.shiprocketShipmentId!,
+                            });
+
+                            // Generate invoice
+                            const invoiceResult = await sr.generateInvoice({
+                                ids: [shipment.shiprocketOrderId!],
+                            });
+
+                            // Schedule pickup
+                            const pickupResult = await sr.shipmentPickup({
+                                shipment_id: shipment.shiprocketShipmentId!,
+                            });
+
+                            // Generate manifest
+                            const manifestResult = await sr.generateManifest({
+                                shipment_id: shipment.shiprocketShipmentId!,
+                            });
+
+                            // Update shipment details in database
+                            await db
+                                .update(orderShipments)
+                                .set({
+                                    awbNumber: awbResult.data?.data.awb_code,
+                                    status: "processing",
+                                    labelUrl: labelResult.data,
+                                    invoiceUrl: invoiceResult.data,
+                                    manifestUrl: manifestResult.data,
+                                    isPickupScheduled: true,
+                                    pickupTokenNumber:
+                                        pickupResult.data?.pickup_token_number,
+                                })
+                                .where(eq(orderShipments.id, shipment.id));
+                        } catch (error) {
+                            console.error(error);
+                            throw new AppError(
+                                `Error processing shipment ${shipment.id}`,
+                                "BAD_REQUEST"
+                            );
+                        }
+                    }
+
+                    // Send order confirmation email
+                    const existingUser = await userCache.get(
+                        existingOrder.userId
+                    );
+                    if (existingUser) {
+                        await resend.emails.send({
+                            from: "Renivet <no-reply@renivet.com>",
+                            to: existingUser.email,
+                            subject: "Order Placed Successfully",
+                            react: OrderPlaced({
+                                user: {
+                                    name: `${existingUser.firstName} ${existingUser.lastName}`,
+                                },
+                                order: {
+                                    id: existingOrder.id,
+                                    shipmentId:
+                                        existingOrder.shipments?.[0]?.id || "",
+                                    awb:
+                                        existingOrder.shipments?.[0]
+                                            ?.awbNumber || "",
+                                    amount: existingOrder.totalAmount,
+                                    items: existingOrder.items.map((item) => ({
+                                        title: item.product.title,
+                                        slug: item.product.slug,
+                                        quantity: item.quantity,
+                                        price:
+                                            item.variant?.price ||
+                                            item.product.price ||
+                                            0,
+                                    })),
+                                },
+                            }),
+                        });
+                    }
 
                     await Promise.all(
                         uniqueBrandIds.map((brandId) => {

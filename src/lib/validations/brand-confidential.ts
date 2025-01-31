@@ -96,7 +96,8 @@ export const brandConfidentialSchema = z.object({
             required_error: "Address Line 1 is required",
             invalid_type_error: "Address Line 1 must be a string",
         })
-        .min(1, "Address Line 1 must be at least 1 characters long"),
+        .min(10, "Address Line 1 must be at least 10 characters long")
+        .max(80, "Address Line 1 must be at most 80 characters long"),
     addressLine2: z.string({
         required_error: "Address Line 2 is required",
         invalid_type_error: "Address Line 2 must be a string",
@@ -137,6 +138,14 @@ export const brandConfidentialSchema = z.object({
             .string({
                 invalid_type_error: "Warehouse Address Line 1 must be a string",
             })
+            .min(
+                10,
+                "Warehouse Address Line 1 must be at least 10 characters long"
+            )
+            .max(
+                80,
+                "Warehouse Address Line 1 must be at most 80 characters long"
+            )
             .nullable()
     ),
     warehouseAddressLine2: z.preprocess(

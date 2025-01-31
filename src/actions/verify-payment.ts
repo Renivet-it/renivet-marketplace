@@ -32,19 +32,5 @@ export async function verifyPayment({
     if (existingOrder.userId !== userId)
         throw new Error("Order does not belong to user");
 
-    if (
-        existingOrder.paymentStatus === "refund_pending" &&
-        existingOrder.status === "cancelled"
-    )
-        throw new Error(
-            "Order cancelled due to insufficient stock, refund pending"
-        );
-
-    if (
-        existingOrder.paymentStatus === "failed" ||
-        existingOrder.paymentStatus === "pending"
-    )
-        throw new Error("Payment not completed or failed");
-
     return existingOrder;
 }

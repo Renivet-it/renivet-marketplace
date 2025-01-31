@@ -10,9 +10,19 @@ import Link from "next/link";
 
 interface PageProps extends GenericProps {
     item: OrderWithItemAndBrand["items"][number];
+    trackingInfo?: {
+        trackingNumber?: string | null;
+        awbNumber?: string | null;
+        estimatedDelivery?: Date | null;
+    };
 }
 
-export function ProductOrderCard({ className, item, ...props }: PageProps) {
+export function ProductOrderCard({
+    className,
+    item,
+    trackingInfo,
+    ...props
+}: PageProps) {
     const itemMedia =
         item.variantId && item.product.variants.length > 0
             ? !!item.product.variants.find(
@@ -151,6 +161,16 @@ export function ProductOrderCard({ className, item, ...props }: PageProps) {
                     </Link>
                 </Button>
             </div>
+
+            {trackingInfo && trackingInfo.estimatedDelivery && (
+                <div className="absolute right-4 top-4 text-xs text-muted-foreground">
+                    Expected delivery:{" "}
+                    {format(
+                        new Date(trackingInfo.estimatedDelivery),
+                        "MMM dd, yyyy"
+                    )}
+                </div>
+            )}
         </div>
     );
 }

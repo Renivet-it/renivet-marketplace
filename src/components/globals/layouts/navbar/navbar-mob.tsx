@@ -86,7 +86,7 @@ const profileMenu: SiteConfig["menu"] = [
     },
     {
         name: "Join as a Brand",
-        href: "/contact/brand",
+        href: "/become-a-seller",
         icon: "SquareTerminal",
     },
     {
@@ -108,13 +108,16 @@ const boxMenu: SiteConfig["menu"] = [
         icon: "Heart",
     },
     {
+        name: "Cart",
+        href: "/cart",
+        icon: "ShoppingCart",
+    },
+    {
         name: "Help Center",
         href: "/contact",
         icon: "Headset",
     },
 ];
-
-const IS_HIDDEN = true;
 
 export function NavbarMob({ className, ...props }: GenericProps) {
     const router = useRouter();
@@ -241,8 +244,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                         <>
                             <ul
                                 className={cn(
-                                    "grid grid-cols-2 items-center gap-4 px-4",
-                                    IS_HIDDEN && "hidden"
+                                    "grid grid-cols-2 items-center gap-4 px-4"
                                 )}
                                 ref={navListRef}
                             >

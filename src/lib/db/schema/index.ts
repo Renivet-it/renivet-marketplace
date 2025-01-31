@@ -13,6 +13,7 @@ export * from "./legal";
 export * from "./marketing-strip";
 export * from "./newsletter-subscriber";
 export * from "./order";
+export * from "./order-shipment";
 export * from "./plan";
 export * from "./product";
 export * from "./refund";

@@ -1,6 +1,6 @@
 "use client";
 
-import { updateOrderAddress } from "@/actions";
+import { getShiprocketBalance, updateOrderAddress } from "@/actions";
 import {
     Notice,
     NoticeButton,
@@ -16,6 +16,7 @@ import { trpc } from "@/lib/trpc/client";
 import {
     cn,
     convertPaiseToRupees,
+    convertValueToLabel,
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
@@ -28,6 +29,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PaymentProcessingModal } from "../globals/modals";
 import { Icons } from "../icons";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button-general";
 import {
     Dialog,
@@ -41,6 +43,16 @@ import {
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Separator } from "../ui/separator";
+
+// Add this type definition near the top of the file
+type ItemsByBrand = Record<
+    string,
+    {
+        brand: OrderWithItemAndBrand["items"][number]["product"]["brand"];
+        items: OrderWithItemAndBrand["items"];
+        shipment?: NonNullable<OrderWithItemAndBrand["shipments"]>[number];
+    }
+>;
 
 interface PageProps extends GenericProps {
     initialData: OrderWithItemAndBrand;
@@ -130,6 +142,12 @@ export function OrderPage({
                         addressId: deliveryAddress.id,
                     });
 
+                const hasBalance = await getShiprocketBalance();
+                if (!hasBalance)
+                    throw new Error(
+                        "Cannot proceed with payment, please try again later"
+                    );
+
                 setIsProcessing(true);
 
                 const options = createRazorpayPaymentOptions({
@@ -154,6 +172,20 @@ export function OrderPage({
                 return handleClientError(err, ctx?.toastId);
             },
         });
+
+    // Inside OrderPage component, add this before the return statement
+    const itemsByBrand = availableItems.reduce((acc, item) => {
+        const brandId = item.product.brand.id;
+        if (!acc[brandId]) {
+            acc[brandId] = {
+                brand: item.product.brand,
+                items: [],
+                shipment: order.shipments?.find((s) => s.brandId === brandId),
+            };
+        }
+        acc[brandId].items.push(item);
+        return acc;
+    }, {} as ItemsByBrand);
 
     return (
         <>
@@ -250,154 +282,228 @@ export function OrderPage({
                             </Notice>
                         )}
 
-                        {availableItems.map((item) => {
-                            const itemMedia =
-                                item.variantId &&
-                                item.product.variants.length > 0
-                                    ? !!item.product.variants.find(
-                                          (variant) =>
-                                              variant.id === item.variantId
-                                      )
-                                        ? item.product.variants.find(
-                                              (variant) =>
-                                                  variant.id === item.variantId
-                                          )!.mediaItem!
-                                        : item.product.media![0].mediaItem!
-                                    : item.product.media![0].mediaItem!;
-
-                            const itemPrice =
-                                item.variantId &&
-                                item.product.variants.length > 0
-                                    ? !!item.product.variants.find(
-                                          (variant) =>
-                                              variant.id === item.variantId
-                                      )
-                                        ? item.product.variants.find(
-                                              (variant) =>
-                                                  variant.id === item.variantId
-                                          )!.price!
-                                        : item.product.price!
-                                    : item.product.price!;
-
-                            return (
-                                <div
-                                    key={item.id}
-                                    className={cn(
-                                        "relative flex flex-col gap-3 border p-4 md:flex-row md:gap-5 md:p-6",
-                                        className
-                                    )}
-                                    {...props}
-                                >
-                                    <div className="group aspect-[4/5] size-full max-w-36 shrink-0">
-                                        <Image
-                                            src={itemMedia.url}
-                                            alt={
-                                                itemMedia.alt ??
-                                                item.product.title
-                                            }
-                                            width={1000}
-                                            height={1000}
-                                            className="size-full object-cover"
-                                        />
-                                    </div>
-
-                                    <div className="w-full space-y-2 md:space-y-4">
-                                        <div className="space-y-1">
-                                            <h2 className="text-lg font-semibold leading-tight md:text-2xl md:leading-normal">
-                                                <Link
-                                                    href={`/products/${item.product.slug}`}
-                                                    target="_blank"
-                                                    referrerPolicy="no-referrer"
-                                                >
-                                                    {item.product.title}
-                                                </Link>
-                                            </h2>
-
-                                            <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground">
-                                                <Link
-                                                    href={`/brands/${item.product.brand.id}`}
-                                                >
-                                                    {item.product.brand.name}
-                                                </Link>
-                                            </p>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">
-                                                <span>
-                                                    Qty: {item.quantity}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="text-lg font-semibold md:text-xl">
-                                            {formatPriceTag(
-                                                parseFloat(
-                                                    convertPaiseToRupees(
-                                                        itemPrice
-                                                    )
-                                                ),
-                                                true
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            {item.variantId && (
-                                                <>
-                                                    {item.product.options.map(
-                                                        (option) => {
-                                                            const selectedValue =
-                                                                item.product.variants.find(
-                                                                    (v) =>
-                                                                        v.id ===
-                                                                        item.variantId
-                                                                )?.combinations[
-                                                                    option.id
-                                                                ];
-                                                            const optionValue =
-                                                                option.values.find(
-                                                                    (v) =>
-                                                                        v.id ===
-                                                                        selectedValue
-                                                                );
-
-                                                            return (
-                                                                <p
-                                                                    key={
-                                                                        option.id
-                                                                    }
-                                                                    className="text-sm"
-                                                                >
-                                                                    <span className="font-semibold">
-                                                                        {
-                                                                            option.name
-                                                                        }
-                                                                        :{" "}
-                                                                    </span>
-                                                                    {
-                                                                        optionValue?.name
-                                                                    }
-                                                                </p>
-                                                            );
-                                                        }
-                                                    )}
-                                                </>
-                                            )}
-
-                                            <p className="text-sm">
-                                                <span className="font-semibold">
-                                                    Added on:{" "}
-                                                </span>
-                                                {format(
-                                                    new Date(item.createdAt),
-                                                    "MMM dd, yyyy"
+                        {/* Group products by brand */}
+                        {Object.entries(itemsByBrand).map(
+                            ([brandId, { brand, items, shipment }]) => (
+                                <div key={brandId} className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold">
+                                            {brand.name}
+                                        </h3>
+                                        {shipment && (
+                                            <Badge variant="outline">
+                                                Shipment Status:{" "}
+                                                {convertValueToLabel(
+                                                    shipment.status
                                                 )}
-                                            </p>
-                                        </div>
+                                            </Badge>
+                                        )}
                                     </div>
+
+                                    <div className="space-y-2">
+                                        {items.map((item) => {
+                                            const itemMedia =
+                                                item.variantId &&
+                                                item.product.variants.length > 0
+                                                    ? !!item.product.variants.find(
+                                                          (variant) =>
+                                                              variant.id ===
+                                                              item.variantId
+                                                      )
+                                                        ? item.product.variants.find(
+                                                              (variant) =>
+                                                                  variant.id ===
+                                                                  item.variantId
+                                                          )!.mediaItem!
+                                                        : item.product.media![0]
+                                                              .mediaItem!
+                                                    : item.product.media![0]
+                                                          .mediaItem!;
+
+                                            const itemPrice =
+                                                item.variantId &&
+                                                item.product.variants.length > 0
+                                                    ? !!item.product.variants.find(
+                                                          (variant) =>
+                                                              variant.id ===
+                                                              item.variantId
+                                                      )
+                                                        ? item.product.variants.find(
+                                                              (variant) =>
+                                                                  variant.id ===
+                                                                  item.variantId
+                                                          )!.price!
+                                                        : item.product.price!
+                                                    : item.product.price!;
+
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    className={cn(
+                                                        "relative flex flex-col gap-3 border p-4 md:flex-row md:gap-5 md:p-6"
+                                                    )}
+                                                >
+                                                    {/* Keep existing item display code */}
+                                                    <div className="group aspect-[4/5] size-full max-w-36 shrink-0">
+                                                        <Image
+                                                            src={itemMedia.url}
+                                                            alt={
+                                                                itemMedia.alt ??
+                                                                item.product
+                                                                    .title
+                                                            }
+                                                            width={1000}
+                                                            height={1000}
+                                                            className="size-full object-cover"
+                                                        />
+                                                    </div>
+
+                                                    <div className="w-full space-y-2 md:space-y-4">
+                                                        <div className="space-y-1">
+                                                            <h2 className="text-lg font-semibold leading-tight md:text-2xl md:leading-normal">
+                                                                <Link
+                                                                    href={`/products/${item.product.slug}`}
+                                                                    target="_blank"
+                                                                    referrerPolicy="no-referrer"
+                                                                >
+                                                                    {
+                                                                        item
+                                                                            .product
+                                                                            .title
+                                                                    }
+                                                                </Link>
+                                                            </h2>
+
+                                                            <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground">
+                                                                <Link
+                                                                    href={`/brands/${item.product.brand.id}`}
+                                                                >
+                                                                    {
+                                                                        item
+                                                                            .product
+                                                                            .brand
+                                                                            .name
+                                                                    }
+                                                                </Link>
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-1 bg-muted px-2 py-1 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                                                                <span>
+                                                                    Qty:{" "}
+                                                                    {
+                                                                        item.quantity
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-lg font-semibold md:text-xl">
+                                                            {formatPriceTag(
+                                                                parseFloat(
+                                                                    convertPaiseToRupees(
+                                                                        itemPrice
+                                                                    )
+                                                                ),
+                                                                true
+                                                            )}
+                                                        </div>
+
+                                                        <div>
+                                                            {item.variantId && (
+                                                                <>
+                                                                    {item.product.options.map(
+                                                                        (
+                                                                            option
+                                                                        ) => {
+                                                                            const selectedValue =
+                                                                                item.product.variants.find(
+                                                                                    (
+                                                                                        v
+                                                                                    ) =>
+                                                                                        v.id ===
+                                                                                        item.variantId
+                                                                                )
+                                                                                    ?.combinations[
+                                                                                    option
+                                                                                        .id
+                                                                                ];
+                                                                            const optionValue =
+                                                                                option.values.find(
+                                                                                    (
+                                                                                        v
+                                                                                    ) =>
+                                                                                        v.id ===
+                                                                                        selectedValue
+                                                                                );
+
+                                                                            return (
+                                                                                <p
+                                                                                    key={
+                                                                                        option.id
+                                                                                    }
+                                                                                    className="text-sm"
+                                                                                >
+                                                                                    <span className="font-semibold">
+                                                                                        {
+                                                                                            option.name
+                                                                                        }
+
+                                                                                        :{" "}
+                                                                                    </span>
+                                                                                    {
+                                                                                        optionValue?.name
+                                                                                    }
+                                                                                </p>
+                                                                            );
+                                                                        }
+                                                                    )}
+                                                                </>
+                                                            )}
+
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold">
+                                                                    Added on:{" "}
+                                                                </span>
+                                                                {format(
+                                                                    new Date(
+                                                                        item.createdAt
+                                                                    ),
+                                                                    "MMM dd, yyyy"
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {shipment && (
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Icons.Truck className="size-4" />
+                                            {shipment.awbNumber ? (
+                                                <button className="hover:underline">
+                                                    <Link
+                                                        href={`https://shiprocket.co/tracking/${shipment.awbNumber}`}
+                                                        target="_blank"
+                                                    >
+                                                        Track Shipment
+                                                    </Link>
+                                                </button>
+                                            ) : (
+                                                <span>
+                                                    Preparing for shipment
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <Separator />
                                 </div>
-                            );
-                        })}
+                            )
+                        )}
                     </div>
                 </div>
 
