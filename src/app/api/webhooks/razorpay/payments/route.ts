@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
                     );
                     if (existingUser) {
                         await resend.emails.send({
-                            from: "Renivet <no-reply@renivet.com>",
+                            from: env.RESEND_EMAIL_FROM,
                             to: existingUser.email,
                             subject: "Order Placed Successfully",
                             react: OrderPlaced({
