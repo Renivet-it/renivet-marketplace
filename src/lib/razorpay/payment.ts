@@ -74,9 +74,9 @@ export function createRazorpayPaymentOptions({
             try {
                 await verifyPayment(payload);
 
-                setProcessingModalTitle("Payment successful");
+                setProcessingModalTitle("Order Placed");
                 setProcessingModalDescription(
-                    "Your payment has been processed, and your order has been placed successfully. Redirecting..."
+                    "Your order has been placed, you will receive an email with the order details shortly with a payment confirmation. Redirecting..."
                 );
                 setProcessingModalState("success");
                 refetch();
@@ -86,9 +86,9 @@ export function createRazorpayPaymentOptions({
 
                 window.location.href = "/profile/orders";
             } catch (error) {
-                setProcessingModalTitle("Payment processing failed");
+                setProcessingModalTitle("Order processing failed");
                 setProcessingModalDescription(
-                    "Your payment could not be processed. Please try again later. Reason: " +
+                    "Your order could not be processed. Please try again later. Reason: " +
                         (error instanceof Error ? error.message : "Unknown") +
                         ". If you were charged, please contact support."
                 );

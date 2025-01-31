@@ -3,11 +3,13 @@ import { BitFieldBrandPermission } from "@/config/permissions";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { BrandVerificationtSubmitted } from "@/lib/resend/emails";
+import { shiprocket } from "@/lib/shiprocket";
 import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
 } from "@/lib/trpc/trpc";
+import { generatePickupLocationCode, getRawNumberFromPhone } from "@/lib/utils";
 import {
     createBrandConfidentialSchema,
     updateBrandConfidentialSchema,
@@ -37,6 +39,25 @@ export const confidentialsRouter = createTRPCRouter({
                     code: "CONFLICT",
                     message: "Confidential already exists",
                 });
+
+            const sr = await shiprocket();
+
+            const { status, message } = await sr.createPickUpLocation({
+                pickup_location: generatePickupLocationCode({
+                    brandId: existingBrand.id,
+                    brandName: existingBrand.name,
+                }),
+                name: input.authorizedSignatoryName,
+                email: input.authorizedSignatoryEmail,
+                phone: getRawNumberFromPhone(input.authorizedSignatoryPhone),
+                address: input.warehouseAddressLine1 ?? input.addressLine1,
+                address_2: input.warehouseAddressLine2 ?? input.addressLine2,
+                city: input.warehouseCity ?? input.city,
+                state: input.warehouseState ?? input.state,
+                pin_code: +(input.warehousePostalCode ?? input.postalCode),
+                country: "India",
+            });
+            if (!status) throw new TRPCError({ code: "BAD_REQUEST", message });
 
             const [data] = await Promise.all([
                 queries.brandConfidentials.createBrandConfidential(input),

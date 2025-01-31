@@ -8,6 +8,7 @@ import {
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { init } from "@paralleldrive/cuid2";
+import { AxiosError } from "axios";
 import { clsx, type ClassValue } from "clsx";
 import { format, subDays } from "date-fns";
 import { NextResponse } from "next/server";
@@ -50,9 +51,11 @@ export class AppError extends Error {
     }
 }
 
-export function sanitizeError(error: unknown) {
+export function sanitizeError(error: unknown): string {
     if (error instanceof AppError) return error.message;
-    if (error instanceof ZodError)
+    else if (error instanceof AxiosError)
+        return error.response?.data?.message ?? error.message;
+    else if (error instanceof ZodError)
         return error.issues.map((x) => x.message).join(", ");
     else if (error instanceof ValidationError) return error.msg;
     else if (error instanceof WebhookVerificationError) return error.message;
@@ -64,6 +67,11 @@ export function handleError(error: unknown) {
     if (error instanceof AppError)
         return CResponse({
             message: error.status,
+            longMessage: sanitizeError(error),
+        });
+    else if (error instanceof AxiosError)
+        return CResponse({
+            message: "INTERNAL_SERVER_ERROR",
             longMessage: sanitizeError(error),
         });
     else if (error instanceof ZodError)
@@ -665,4 +673,18 @@ export function convertPlanPeriodToHumanReadable(
           : period === "monthly"
             ? "month"
             : "year";
+}
+
+export function generatePickupLocationCode({
+    brandId,
+    brandName,
+}: {
+    brandName: string;
+    brandId: string;
+}) {
+    return `${slugify(brandName).slice(0, 6)}-${brandId.slice(-4)}`;
+}
+
+export function getRawNumberFromPhone(phone: string) {
+    return +phone.replace("+91", "").replace(/\D/g, "").slice(-10);
 }

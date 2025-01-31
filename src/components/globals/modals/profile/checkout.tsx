@@ -237,6 +237,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                     }
                                 }}
                                 disabled={isValidating}
+                                className="rounded-none"
                             />
                             <label htmlFor="coupon">I have a coupon</label>
                         </div>

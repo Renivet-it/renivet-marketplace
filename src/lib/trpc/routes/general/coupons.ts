@@ -71,7 +71,7 @@ export const couponRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Coupon is invalid",
                 });
-            if (data.expiresAt && new Date(data.expiresAt) < new Date())
+            if (data.expiresAt && new Date(data.expiresAt) <= new Date())
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "Coupon has expired",

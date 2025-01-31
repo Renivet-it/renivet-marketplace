@@ -104,6 +104,31 @@ export function ProductCartAddForm({
         [product.variants]
     );
 
+    const getVariantStockByOption = useCallback(
+        (
+            optionId: string,
+            valueId: string,
+            currentSelections: Record<string, string>
+        ) => {
+            const matchingVariants = product.variants.filter((variant) => {
+                const selections = {
+                    ...currentSelections,
+                    [optionId]: valueId,
+                };
+                return Object.entries(selections).every(
+                    ([key, value]) => variant.combinations[key] === value
+                );
+            });
+
+            const totalStock = matchingVariants.reduce(
+                (sum, variant) => sum + (variant.quantity || 0),
+                0
+            );
+            return totalStock;
+        },
+        [product.variants]
+    );
+
     const currentSelections = useMemo(() => {
         if (!selectedVariant) return {};
         return selectedVariant.combinations;
@@ -294,7 +319,7 @@ export function ProductCartAddForm({
                                                                 variant.id
                                                             );
                                                     }}
-                                                    className="flex flex-wrap items-center gap-2"
+                                                    className="flex flex-wrap gap-2"
                                                 >
                                                     {option.values.map(
                                                         (value) => {
@@ -304,12 +329,23 @@ export function ProductCartAddForm({
                                                                     value.id,
                                                                     currentSelections
                                                                 );
+                                                            const stockCount =
+                                                                getVariantStockByOption(
+                                                                    option.id,
+                                                                    value.id,
+                                                                    currentSelections
+                                                                );
+                                                            const lowStock =
+                                                                stockCount >
+                                                                    0 &&
+                                                                stockCount < 5;
 
                                                             return (
                                                                 <div
                                                                     key={
                                                                         value.id
                                                                     }
+                                                                    className="flex flex-col items-center gap-2"
                                                                 >
                                                                     <RadioGroupItem
                                                                         value={
@@ -320,7 +356,9 @@ export function ProductCartAddForm({
                                                                         }
                                                                         className="peer sr-only"
                                                                         disabled={
-                                                                            !isAvailable
+                                                                            !isAvailable ||
+                                                                            stockCount ===
+                                                                                0
                                                                         }
                                                                     />
 
@@ -330,14 +368,35 @@ export function ProductCartAddForm({
                                                                         }
                                                                         className={cn(
                                                                             "flex cursor-pointer items-center justify-center rounded-full border p-2 px-6 text-sm font-medium peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground",
-                                                                            !isAvailable &&
-                                                                                "cursor-not-allowed opacity-50"
+                                                                            (!isAvailable ||
+                                                                                stockCount ===
+                                                                                    0) &&
+                                                                                "cursor-not-allowed opacity-50",
+                                                                            "relative"
                                                                         )}
                                                                     >
                                                                         {
                                                                             value.name
                                                                         }
                                                                     </Label>
+
+                                                                    {lowStock && (
+                                                                        <span className="whitespace-nowrap text-center text-xs text-red-500">
+                                                                            Only{" "}
+                                                                            {
+                                                                                stockCount
+                                                                            }{" "}
+                                                                            left
+                                                                        </span>
+                                                                    )}
+                                                                    {stockCount ===
+                                                                        0 && (
+                                                                        <span className="text-center text-xs text-red-500">
+                                                                            Out
+                                                                            of
+                                                                            stock
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             );
                                                         }
@@ -360,14 +419,17 @@ export function ProductCartAddForm({
                                     !product.isAvailable ||
                                     (!!selectedVariant &&
                                         (selectedVariant.isDeleted ||
-                                            selectedVariant?.quantity === 0))
+                                            selectedVariant?.quantity === 0)) ||
+                                    (product.productHasVariants &&
+                                        !selectedVariant)
                                 }
                             >
                                 <Icons.ShoppingCart />
                                 {!product.isAvailable ||
                                 (selectedVariant &&
                                     (selectedVariant.isDeleted ||
-                                        selectedVariant?.quantity === 0))
+                                        selectedVariant?.quantity === 0)) ||
+                                (product.productHasVariants && !selectedVariant)
                                     ? "Out of Stock"
                                     : "Add to Cart"}
                             </Button>

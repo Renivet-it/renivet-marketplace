@@ -81,7 +81,11 @@ export const razorPayRefundWebhookSchema = z.object({
                 id: z.string(),
                 entity: z.string(),
                 amount: z.number().transform((val) => val / 100),
-                status: z.union([z.literal("captured"), z.literal("failed")]),
+                status: z.union([
+                    z.literal("refunded"),
+                    z.literal("captured"),
+                    z.literal("failed"),
+                ]),
                 order_id: z.string(),
                 method: z.string(),
                 email: z.string().email(),

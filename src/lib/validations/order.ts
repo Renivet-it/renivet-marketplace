@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { orderItemSchema } from "./order-item";
+import { orderShipmentSchema } from "./order-shipment";
 import { productVariantSchema, productWithBrandSchema } from "./product";
 
 export const orderSchema = z.object({
@@ -100,6 +101,7 @@ export const orderWithItemAndBrandSchema = orderSchema.extend({
             variant: productVariantSchema.nullable(),
         })
     ),
+    shipments: z.array(orderShipmentSchema),
 });
 
 export const createOrderSchema = orderSchema.omit({

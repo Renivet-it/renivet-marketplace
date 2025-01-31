@@ -55,6 +55,18 @@ export const env = createEnv({
             .string({ required_error: "RENIVET_EMAIL_2 is required" })
             .min(1, "RENIVET_EMAIL_2 is required"),
 
+        SHIPROCKET_LOGIN_EMAIL: z
+            .string({ required_error: "SHIPROCKET_LOGIN_EMAIL is required" })
+            .min(1, "SHIPROCKET_LOGIN_EMAIL is required"),
+        SHIPROCKET_LOGIN_PASSWORD: z
+            .string({ required_error: "SHIPROCKET_LOGIN_PASSWORD is required" })
+            .min(1, "SHIPROCKET_LOGIN_PASSWORD is required"),
+        SHIPROCKET_WEBHOOK_API_KEY: z
+            .string({
+                required_error: "SHIPROCKET_WEBHOOK_API_KEY is required",
+            })
+            .min(1, "SHIPROCKET_WEBHOOK_API_KEY is required"),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -104,6 +116,9 @@ export const env = createEnv({
         RESEND_EMAIL_FROM: process.env.RESEND_EMAIL_FROM,
         RENIVET_EMAIL_1: process.env.RENIVET_EMAIL_1,
         RENIVET_EMAIL_2: process.env.RENIVET_EMAIL_2,
+        SHIPROCKET_LOGIN_EMAIL: process.env.SHIPROCKET_LOGIN_EMAIL,
+        SHIPROCKET_LOGIN_PASSWORD: process.env.SHIPROCKET_LOGIN_PASSWORD,
+        SHIPROCKET_WEBHOOK_API_KEY: process.env.SHIPROCKET_WEBHOOK_API_KEY,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

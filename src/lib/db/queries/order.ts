@@ -22,6 +22,7 @@ class OrderQuery {
                     : undefined
             ),
             with: {
+                shipments: true,
                 items: {
                     with: {
                         product: {
@@ -99,6 +100,7 @@ class OrderQuery {
                     : undefined
             ),
             with: {
+                shipments: true,
                 items: {
                     with: {
                         product: {
@@ -176,6 +178,7 @@ class OrderQuery {
             ),
             orderBy: [desc(orders.createdAt)],
             with: {
+                shipments: true,
                 items: {
                     with: {
                         product: {

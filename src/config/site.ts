@@ -158,11 +158,6 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_CONTENT,
             },
             {
-                title: "About",
-                url: "/dashboard/general/about",
-                permissions: BitFieldSitePermission.MANAGE_CONTENT,
-            },
-            {
                 title: "Blogs",
                 url: "/dashboard/general/blogs",
                 permissions: BitFieldSitePermission.MANAGE_BLOGS,

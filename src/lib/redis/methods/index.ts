@@ -11,6 +11,7 @@ export * from "./plan";
 export * from "./product-type";
 export * from "./revenue";
 export * from "./role";
+export * from "./shiprocket";
 export * from "./sub-category";
 export * from "./tag";
 export * from "./user";
