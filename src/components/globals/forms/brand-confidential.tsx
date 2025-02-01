@@ -20,6 +20,12 @@ import {
     SelectValue,
 } from "@/components/ui/select-dash";
 import { Separator } from "@/components/ui/separator";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import {
@@ -116,7 +122,7 @@ export function BrandConfidentialForm({
             warehouseState: brandConfidential?.warehouseState ?? "",
             warehousePostalCode: brandConfidential?.warehousePostalCode ?? "",
             warehouseCountry: brandConfidential?.warehouseCountry ?? "IN",
-            hasAcceptedTerms: false,
+            hasAcceptedTerms: brandConfidential?.hasAcceptedTerms ?? false,
         },
     });
 
@@ -138,6 +144,8 @@ export function BrandConfidentialForm({
                         data.udyamRegistrationCertificate as string | undefined,
                     iecCertificate: data.iecCertificate as string | undefined,
                     country: "IN",
+                    addressLine2:
+                        (data.addressLine2 as string | undefined) ?? "",
                     warehouseAddressLine1:
                         (data.warehouseAddressLine1 as string | undefined) ??
                         "",
@@ -478,102 +486,6 @@ export function BrandConfidentialForm({
                                     </FormItem>
                                 )}
                             />
-
-                            <FormField
-                                control={form.control}
-                                name="authorizedSignatoryName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>
-                                            Authorized Contact Person Name
-                                        </FormLabel>
-
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Enter authorized contact person name"
-                                                disabled={
-                                                    isRequestSending ||
-                                                    isRequestResending ||
-                                                    (!!brandConfidential &&
-                                                        brand.confidentialVerificationStatus !==
-                                                            "rejected")
-                                                }
-                                                {...field}
-                                            />
-                                        </FormControl>
-
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <div className="flex flex-col items-center gap-4 md:flex-row">
-                                <FormField
-                                    control={form.control}
-                                    name="authorizedSignatoryEmail"
-                                    render={({ field }) => (
-                                        <FormItem className="w-full">
-                                            <FormLabel>
-                                                Authorized Contact Person Email
-                                            </FormLabel>
-
-                                            <FormControl>
-                                                <Input
-                                                    placeholder="Enter authorized contact person email"
-                                                    disabled={
-                                                        isRequestSending ||
-                                                        isRequestResending ||
-                                                        (!!brandConfidential &&
-                                                            brand.confidentialVerificationStatus !==
-                                                                "rejected")
-                                                    }
-                                                    {...field}
-                                                />
-                                            </FormControl>
-
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="authorizedSignatoryPhone"
-                                    render={({ field }) => (
-                                        <FormItem className="w-full">
-                                            <FormLabel>
-                                                Authorized Contact Person Phone
-                                            </FormLabel>
-
-                                            <FormControl>
-                                                <Input
-                                                    inputMode="tel"
-                                                    placeholder="Enter authorized contact person phone number"
-                                                    disabled={
-                                                        isRequestSending ||
-                                                        isRequestResending ||
-                                                        (!!brandConfidential &&
-                                                            brand.confidentialVerificationStatus !==
-                                                                "rejected")
-                                                    }
-                                                    {...field}
-                                                    onChange={(e) => {
-                                                        const value =
-                                                            e.target.value.replace(
-                                                                /[^0-9-+]/g,
-                                                                ""
-                                                            );
-
-                                                        field.onChange(value);
-                                                    }}
-                                                />
-                                            </FormControl>
-
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
                         </div>
                     </div>
 
@@ -639,6 +551,9 @@ export function BrandConfidentialForm({
                                                                     "rejected")
                                                         }
                                                         {...field}
+                                                        value={
+                                                            field.value ?? ""
+                                                        }
                                                     />
                                                 </FormControl>
 
@@ -780,6 +695,178 @@ export function BrandConfidentialForm({
                                         />
                                     </div>
                                 </div>
+                            </div>
+
+                            <FormField
+                                control={form.control}
+                                name="authorizedSignatoryName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <div className="flex items-center gap-1">
+                                            <FormLabel>
+                                                Authorized Contact Person Name
+                                            </FormLabel>
+
+                                            <TooltipProvider delayDuration={0}>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <button>
+                                                            <Icons.CircleHelp className="size-4" />
+                                                        </button>
+                                                    </TooltipTrigger>
+
+                                                    <TooltipContent className="max-w-72">
+                                                        <p>
+                                                            Should be the name
+                                                            of the person who
+                                                            will be present in
+                                                            the warehouse during
+                                                            the time of pickup.
+                                                        </p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </div>
+
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter authorized contact person name"
+                                                disabled={
+                                                    isRequestSending ||
+                                                    isRequestResending ||
+                                                    (!!brandConfidential &&
+                                                        brand.confidentialVerificationStatus !==
+                                                            "rejected")
+                                                }
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="flex flex-col items-center gap-4 md:flex-row">
+                                <FormField
+                                    control={form.control}
+                                    name="authorizedSignatoryEmail"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <div className="flex items-center gap-1">
+                                                <FormLabel>
+                                                    Authorized Contact Person
+                                                    Email
+                                                </FormLabel>
+
+                                                <TooltipProvider
+                                                    delayDuration={0}
+                                                >
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button>
+                                                                <Icons.CircleHelp className="size-4" />
+                                                            </button>
+                                                        </TooltipTrigger>
+
+                                                        <TooltipContent className="max-w-72">
+                                                            <p>
+                                                                Should be the
+                                                                email of the
+                                                                person who will
+                                                                be present in
+                                                                the warehouse
+                                                                during the time
+                                                                of pickup.
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
+
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Enter authorized contact person email"
+                                                    disabled={
+                                                        isRequestSending ||
+                                                        isRequestResending ||
+                                                        (!!brandConfidential &&
+                                                            brand.confidentialVerificationStatus !==
+                                                                "rejected")
+                                                    }
+                                                    {...field}
+                                                />
+                                            </FormControl>
+
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="authorizedSignatoryPhone"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <div className="flex items-center gap-1">
+                                                <FormLabel>
+                                                    Authorized Contact Person
+                                                    Phone
+                                                </FormLabel>
+
+                                                <TooltipProvider
+                                                    delayDuration={0}
+                                                >
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button>
+                                                                <Icons.CircleHelp className="size-4" />
+                                                            </button>
+                                                        </TooltipTrigger>
+
+                                                        <TooltipContent className="max-w-72">
+                                                            <p>
+                                                                Should be the
+                                                                phone of the
+                                                                person who will
+                                                                be present in
+                                                                the warehouse
+                                                                during the time
+                                                                of pickup.
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
+
+                                            <FormControl>
+                                                <Input
+                                                    inputMode="tel"
+                                                    placeholder="Enter authorized contact person phone number"
+                                                    disabled={
+                                                        isRequestSending ||
+                                                        isRequestResending ||
+                                                        (!!brandConfidential &&
+                                                            brand.confidentialVerificationStatus !==
+                                                                "rejected")
+                                                    }
+                                                    {...field}
+                                                    onChange={(e) => {
+                                                        const value =
+                                                            e.target.value.replace(
+                                                                /[^0-9-+]/g,
+                                                                ""
+                                                            );
+
+                                                        field.onChange(value);
+                                                    }}
+                                                />
+                                            </FormControl>
+
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
 
                             <FormField

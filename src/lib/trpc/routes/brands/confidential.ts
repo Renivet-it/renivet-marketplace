@@ -51,7 +51,10 @@ export const confidentialsRouter = createTRPCRouter({
                 email: input.authorizedSignatoryEmail,
                 phone: getRawNumberFromPhone(input.authorizedSignatoryPhone),
                 address: input.warehouseAddressLine1 ?? input.addressLine1,
-                address_2: input.warehouseAddressLine2 ?? input.addressLine2,
+                address_2:
+                    input.warehouseAddressLine2 ??
+                    input.addressLine2 ??
+                    undefined,
                 city: input.warehouseCity ?? input.city,
                 state: input.warehouseState ?? input.state,
                 pin_code: +(input.warehousePostalCode ?? input.postalCode),

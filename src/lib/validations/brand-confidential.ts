@@ -58,7 +58,13 @@ export const brandConfidentialSchema = z.object({
             required_error: "Authorized Signatory Name is required",
             invalid_type_error: "Authorized Signatory Name must be a string",
         })
-        .min(1, "Authorized Signatory Name must be at least 1 characters long"),
+        .min(5, "Authorized Signatory Name must be at least 5 characters long")
+        .refine(
+            (value) =>
+                value.includes(" ") &&
+                value.split(" ").every((part) => part.length >= 2),
+            "Authorized Signatory Name must contain first and last name, each at least 2 characters long"
+        ),
     authorizedSignatoryEmail: z
         .string({
             required_error: "Authorized Signatory Email is required",
@@ -98,10 +104,14 @@ export const brandConfidentialSchema = z.object({
         })
         .min(10, "Address Line 1 must be at least 10 characters long")
         .max(80, "Address Line 1 must be at most 80 characters long"),
-    addressLine2: z.string({
-        required_error: "Address Line 2 is required",
-        invalid_type_error: "Address Line 2 must be a string",
-    }),
+    addressLine2: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Address Line 2 must be a string",
+            })
+            .nullable()
+    ),
     city: z
         .string({
             required_error: "City is required",

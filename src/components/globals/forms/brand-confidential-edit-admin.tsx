@@ -348,6 +348,7 @@ export function BrandConfidentialEditAdmin({ data, setIsOpen }: PageProps) {
                                                 placeholder="Enter brand's registered street address"
                                                 {...field}
                                                 disabled={isUpdating}
+                                                value={field.value ?? ""}
                                             />
                                         </FormControl>
 

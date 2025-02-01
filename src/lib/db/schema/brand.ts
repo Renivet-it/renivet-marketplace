@@ -108,7 +108,7 @@ export const brandConfidentials = pgTable(
         udyamRegistrationCertificate: text("udyam_registration_certificate"),
         iecCertificate: text("iec_certificate"),
         addressLine1: text("address_line1").notNull(),
-        addressLine2: text("address_line2").notNull(),
+        addressLine2: text("address_line2"),
         city: text("city").notNull(),
         state: text("state").notNull(),
         postalCode: text("postal_code").notNull(),
