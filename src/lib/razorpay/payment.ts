@@ -74,9 +74,9 @@ export function createRazorpayPaymentOptions({
             try {
                 await verifyPayment(payload);
 
-                setProcessingModalTitle("Order Placed");
+                setProcessingModalTitle("Awaiting Confirmation");
                 setProcessingModalDescription(
-                    "Your order has been placed, you will receive an email with the order details shortly with a payment confirmation. Redirecting..."
+                    "You will receive an email with the order details shortly with a payment confirmation. Redirecting..."
                 );
                 setProcessingModalState("success");
                 refetch();
