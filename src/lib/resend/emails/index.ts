@@ -7,6 +7,7 @@ import BrandUnsubscribed from "./brand-unsubscribed";
 import BrandVerificationStatusUpdate from "./brand-verification-status-update";
 import BrandVerificationtSubmitted from "./brand-verification-submitted";
 import CategoryRequestStatusUpdate from "./category-request-status-update";
+import OrderDelivered from "./order-delivered";
 import OrderPlaceFailed from "./order-place-failed";
 import OrderPlaced from "./order-placed";
 import ProductReviewStatusUpdate from "./product-review-status-update";
@@ -22,6 +23,7 @@ export {
     BrandVerificationStatusUpdate,
     BrandVerificationtSubmitted,
     CategoryRequestStatusUpdate,
+    OrderDelivered,
     OrderPlaced,
     OrderPlaceFailed,
     ProductReviewStatusUpdate,
