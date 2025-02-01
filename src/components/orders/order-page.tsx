@@ -484,14 +484,33 @@ export function OrderPage({
                                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                             <Icons.Truck className="size-4" />
                                             {shipment.awbNumber ? (
-                                                <button className="hover:underline">
-                                                    <Link
-                                                        href={`https://shiprocket.co/tracking/${shipment.awbNumber}`}
-                                                        target="_blank"
-                                                    >
-                                                        Track Shipment
-                                                    </Link>
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button className="hover:underline">
+                                                        <Link
+                                                            href={`https://shiprocket.co/tracking/${shipment.awbNumber}`}
+                                                            target="_blank"
+                                                        >
+                                                            Track Shipment
+                                                        </Link>
+                                                    </button>
+                                                    {shipment.invoiceUrl && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <button className="hover:underline">
+                                                                <Link
+                                                                    href={
+                                                                        shipment.invoiceUrl
+                                                                    }
+                                                                    target="_blank"
+                                                                    download
+                                                                >
+                                                                    Download
+                                                                    Invoice
+                                                                </Link>
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span>
                                                     Preparing for shipment
