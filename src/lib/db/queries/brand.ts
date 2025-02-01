@@ -333,7 +333,7 @@ class BrandQuery {
                     addresses: {
                         registered: {
                             street1: values.addressLine1,
-                            street2: values.addressLine2,
+                            street2: values.addressLine2 ?? "",
                             city: values.city,
                             state: values.state,
                             postal_code: values.postalCode,
