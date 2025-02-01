@@ -2,6 +2,9 @@ import { env } from "@/../env";
 import { db } from "@/lib/db";
 import { orderQueries } from "@/lib/db/queries";
 import { orderShipments } from "@/lib/db/schema";
+import { userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { OrderDelivered } from "@/lib/resend/emails";
 import { AppError, CResponse, handleError } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -71,7 +74,16 @@ export async function POST(req: NextRequest) {
         const shipment = await db.query.orderShipments.findFirst({
             where: and(eq(orderShipments.awbNumber, parsed.awb.toString())),
             with: {
-                order: true,
+                order: {
+                    with: {
+                        items: {
+                            with: {
+                                product: true,
+                                variant: true,
+                            },
+                        },
+                    },
+                },
             },
         });
         if (!shipment) throw new AppError("Shipment not found", "NOT_FOUND");
@@ -100,6 +112,36 @@ export async function POST(req: NextRequest) {
                 paymentMethod: shipment.order.paymentMethod,
                 paymentStatus: shipment.order.paymentStatus,
             });
+
+            // Send delivery notification email
+            const user = await userCache.get(shipment.order.userId);
+            if (user) {
+                await resend.emails.send({
+                    from: env.RESEND_EMAIL_FROM,
+                    to: user.email,
+                    subject: "Your Order Has Been Delivered",
+                    react: OrderDelivered({
+                        user: {
+                            name: `${user.firstName} ${user.lastName}`,
+                        },
+                        order: {
+                            id: shipment.order.id,
+                            shipmentId: shipment.id,
+                            awb: shipment.awbNumber || "",
+                            amount: shipment.order.totalAmount,
+                            items: shipment.order.items.map((item) => ({
+                                title: item.product.title,
+                                slug: item.product.slug,
+                                quantity: item.quantity,
+                                price:
+                                    item.variant?.price ||
+                                    item.product.price ||
+                                    0,
+                            })),
+                        },
+                    }),
+                });
+            }
         } else if (
             newStatus === "in_transit" ||
             newStatus === "out_for_delivery"

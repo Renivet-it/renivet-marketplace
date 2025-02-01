@@ -14,8 +14,8 @@ interface Props {
     order: {
         id: string;
         shipmentId: string;
-        amount: number;
         awb: string;
+        amount: number;
         items: {
             title: string;
             slug: string;
@@ -25,10 +25,8 @@ interface Props {
     };
 }
 
-export default function OrderPlaced({
-    user = {
-        name: "John Doe",
-    },
+export default function OrderDelivered({
+    user = { name: "John Doe" },
     order = {
         id: "123",
         shipmentId: "456",
@@ -51,15 +49,13 @@ export default function OrderPlaced({
     },
 }: Props) {
     return (
-        <Layout preview="You have placed an order" heading="Order Placed">
+        <Layout
+            preview="Your order has been delivered"
+            heading="Order Delivered"
+        >
             <p>Hi {user.name},</p>
 
-            <p>
-                Your order for
-                {formatPriceTag(+convertPaiseToRupees(order.amount))} on{" "}
-                {siteConfig.name} has been placed successfully. Please find the
-                details of your order below.
-            </p>
+            <p>Great news! Your order has been delivered successfully.</p>
 
             <ul className="list-none pl-0">
                 <li className="mb-2">
@@ -118,7 +114,7 @@ export default function OrderPlaced({
                         width: "fit-content",
                     }}
                 >
-                    View Order
+                    View Order Details
                 </Button>
             </div>
 
@@ -131,12 +127,16 @@ export default function OrderPlaced({
             </p>
 
             <p className="my-0">
-                <strong>Total:</strong>{" "}
+                <strong>Total Amount:</strong>{" "}
                 {formatPriceTag(+convertPaiseToRupees(order.amount))}
             </p>
 
             <p className="my-0">
                 <strong>Tracking ID:</strong> {order.awb}
+            </p>
+
+            <p className="mt-6">
+                Thank you for shopping with {siteConfig.name}!
             </p>
         </Layout>
     );
