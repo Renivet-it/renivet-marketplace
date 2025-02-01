@@ -7,7 +7,7 @@ import { orderShipments } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
-import { OrderPlaced } from "@/lib/resend/emails";
+import { OrderPlaced, OrderPlaceFailed } from "@/lib/resend/emails";
 import { shiprocket } from "@/lib/shiprocket";
 import {
     AppError,
@@ -349,6 +349,25 @@ export async function POST(req: NextRequest) {
                     paymentStatus: "failed",
                     status: "pending",
                 });
+
+                // Send failed order email
+                const user = await userCache.get(existingOrder.userId);
+                if (user) {
+                    await resend.emails.send({
+                        from: env.RESEND_EMAIL_FROM,
+                        to: user.email,
+                        subject: "Order Payment Failed",
+                        react: OrderPlaceFailed({
+                            user: {
+                                name: `${user.firstName} ${user.lastName}`,
+                            },
+                            order: {
+                                id: existingOrder.id,
+                                amount: existingOrder.totalAmount,
+                            },
+                        }),
+                    });
+                }
 
                 const uniqueBrandIds = [
                     ...new Set(
