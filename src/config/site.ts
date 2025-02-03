@@ -170,6 +170,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         icon: "Settings2",
         items: [
             {
+                title: "Advertisements",
+                url: "/dashboard/general/advertisements",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
                 title: "Users",
                 url: "/dashboard/general/users",
                 permissions:

@@ -1,3 +1,6 @@
+export * from "./advertisement-delete";
+export * from "./advertisement-position";
+export * from "./advertisement-status";
 export * from "./banner-delete";
 export * from "./banner-status";
 export * from "./blog-delete";

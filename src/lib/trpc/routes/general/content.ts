@@ -3,18 +3,194 @@ import { BitFieldSitePermission } from "@/config/permissions";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
+    isTRPCAuth,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
 import { getUploadThingFileKey, hasPermission } from "@/lib/utils";
 import {
+    createAdvertisementSchema,
     createBannerSchema,
     createMarketingStripSchema,
+    updateAdvertisementSchema,
     updateBannerSchema,
     updateMarketingStripSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
+export const advertisementRouter = createTRPCRouter({
+    getAdvertisements: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+                isPublished: z.boolean().optional(),
+                search: z.string().optional(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_CONTENT))
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page, isPublished, search } = input;
+
+            const advertisements =
+                await queries.advertisements.getAdvertisements({
+                    limit,
+                    page,
+                    isPublished,
+                    search,
+                });
+
+            return advertisements;
+        }),
+    getAdvertisement: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_CONTENT))
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingAdvertisement =
+                await queries.advertisements.getAdvertisement(id);
+            if (!existingAdvertisement)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Advertisement not found",
+                });
+
+            return existingAdvertisement;
+        }),
+    createAdvertisement: protectedProcedure
+        .input(createAdvertisementSchema)
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_CONTENT))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newAdvertisement =
+                await queries.advertisements.createAdvertisement({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                });
+
+            return newAdvertisement;
+        }),
+    updateAdvertisement: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateAdvertisementSchema,
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_CONTENT))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingAdvertisement =
+                await queries.advertisements.getAdvertisement(id);
+            if (!existingAdvertisement)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Advertisement not found",
+                });
+
+            const updatedAdvertisement =
+                await queries.advertisements.updateAdvertisement(id, {
+                    ...values,
+                    imageUrl: values.imageUrl,
+                });
+
+            return updatedAdvertisement;
+        }),
+    changeAdvertisementStatus: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                isPublished: z.boolean(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_CONTENT))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, isPublished } = input;
+
+            const existingAdvertisement =
+                await queries.advertisements.getAdvertisement(id);
+            if (!existingAdvertisement)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Advertisement not found",
+                });
+
+            const updatedAdvertisement =
+                await queries.advertisements.updateAdvertisementStatus(
+                    id,
+                    isPublished
+                );
+
+            return updatedAdvertisement;
+        }),
+    deleteAdvertisement: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_CONTENT))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingAdvertisement =
+                await queries.advertisements.getAdvertisement(id);
+            if (!existingAdvertisement)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Advertisement not found",
+                });
+
+            const existingImageUrl = existingAdvertisement.imageUrl;
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.advertisements.deleteAdvertisement(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+    updatePositions: protectedProcedure
+        .input(
+            z.array(
+                z.object({
+                    id: z.string(),
+                    position: z.number(),
+                })
+            )
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_CONTENT))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            return queries.advertisements.updateAdvertisementPositions(input);
+        }),
+});
 
 export const bannerRouter = createTRPCRouter({
     getBanners: publicProcedure
@@ -462,6 +638,7 @@ export const marketingStripRouter = createTRPCRouter({
 });
 
 export const contentRouter = createTRPCRouter({
+    advertisements: advertisementRouter,
     banners: bannerRouter,
     marketingStrips: marketingStripRouter,
 });

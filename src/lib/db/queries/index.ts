@@ -1,3 +1,4 @@
+export * from "./advertisement";
 export * from "./banned-brand-member";
 export * from "./banner";
 export * from "./blog";

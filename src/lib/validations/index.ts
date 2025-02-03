@@ -1,4 +1,5 @@
 export * from "./address";
+export * from "./advertisement";
 export * from "./auth";
 export * from "./banned-brand-member";
 export * from "./banner";

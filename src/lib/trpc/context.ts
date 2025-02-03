@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import {
+    advertisementQueries,
     bannedBrandMemberQueries,
     bannerQueries,
     blogQueries,
@@ -56,6 +57,7 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
         user,
         schemas: schema,
         queries: {
+            advertisements: advertisementQueries,
             bannedBrandMembers: bannedBrandMemberQueries,
             banners: bannerQueries,
             blogs: blogQueries,

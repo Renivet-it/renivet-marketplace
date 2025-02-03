@@ -1,4 +1,5 @@
 import {
+    AdvertisementPage,
     Arrivals,
     Blogs,
     Expectations,
@@ -8,6 +9,7 @@ import {
     Popular,
     Theme,
 } from "@/components/home";
+import { advertisementQueries } from "@/lib/db/queries";
 import {
     bannerCache,
     blogCache,
@@ -24,6 +26,9 @@ export default function Page() {
                 }
             >
                 <BannersFetch />
+            </Suspense>
+            <Suspense>
+                <AdvertisementsFetch />
             </Suspense>
             <Suspense>
                 <MarketingStripFetch />
@@ -69,4 +74,14 @@ async function MarketingStripFetch() {
     );
 
     return <MarketingStrip marketingStrip={sorted} />;
+}
+
+async function AdvertisementsFetch() {
+    const advertisements = await advertisementQueries.getAllAdvertisements({
+        isPublished: true,
+        orderBy: "position",
+    });
+    if (!advertisements.length) return null;
+
+    return <AdvertisementPage advertisements={advertisements} />;
 }

@@ -1,4 +1,5 @@
 export * from "./address-manage";
+export * from "./advertisement-manage";
 export * from "./banner-manage";
 export * from "./blog-manage";
 export * from "./brand-confidential";
