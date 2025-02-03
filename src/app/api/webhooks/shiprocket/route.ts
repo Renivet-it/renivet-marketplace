@@ -1,8 +1,9 @@
 import { env } from "@/../env";
+import { BRAND_EVENTS } from "@/config/brand";
 import { db } from "@/lib/db";
 import { orderQueries } from "@/lib/db/queries";
 import { orderShipments } from "@/lib/db/schema";
-import { userCache } from "@/lib/redis/methods";
+import { analytics, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { OrderDelivered } from "@/lib/resend/emails";
 import { AppError, CResponse, handleError } from "@/lib/utils";
@@ -111,6 +112,21 @@ export async function POST(req: NextRequest) {
                 paymentId: shipment.order.paymentId,
                 paymentMethod: shipment.order.paymentMethod,
                 paymentStatus: shipment.order.paymentStatus,
+            });
+
+            await analytics.track({
+                namespace: BRAND_EVENTS.ORDER.DELIVERED,
+                brandId: shipment.brandId,
+                event: {
+                    orderId: shipment.order.id,
+                    orderTotal: shipment.order.totalAmount,
+                    orderItems: shipment.order.items.map((item) => ({
+                        productId: item.product.id,
+                        variantId: item.variant?.id,
+                        quantity: item.quantity,
+                        price: item.variant?.price || item.product.price || 0,
+                    })),
+                },
             });
 
             // Send delivery notification email

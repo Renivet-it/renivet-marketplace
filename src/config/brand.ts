@@ -1,6 +1,7 @@
 export const BRAND_EVENTS = {
     ORDER: {
         CREATED: "order_created",
+        DELIVERED: "order_delivered",
         CANCELLED: "order_cancelled",
     },
     PAYMENT: {
