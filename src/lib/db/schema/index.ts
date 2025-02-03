@@ -1,4 +1,5 @@
 export * from "./address";
+export * from "./advertisement";
 export * from "./blog";
 export * from "./brand";
 export * from "./brand-media-item";
