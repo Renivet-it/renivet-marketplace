@@ -1,5 +1,6 @@
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { BitFieldSitePermission } from "@/config/permissions";
 import { productQueries, refundQueries } from "@/lib/db/queries";
 import { razorpay } from "@/lib/razorpay";
 import {
@@ -9,7 +10,11 @@ import {
     userCartCache,
 } from "@/lib/redis/methods";
 import { shiprocket } from "@/lib/shiprocket";
-import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
+import {
+    createTRPCRouter,
+    isTRPCAuth,
+    protectedProcedure,
+} from "@/lib/trpc/trpc";
 import {
     convertPaiseToRupees,
     formatPriceTag,
@@ -30,6 +35,21 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const ordersRouter = createTRPCRouter({
+    getOrders: protectedProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+                search: z.string().optional(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            const data = await queries.orders.getOrders(input);
+            return data;
+        }),
     getOrdersByUserId: protectedProcedure
         .input(
             z.object({

@@ -269,6 +269,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 url: "/dashboard/general/products",
                 permissions: BitFieldSitePermission.MANAGE_BRANDS,
             },
+            {
+                title: "Orders",
+                url: "/dashboard/general/orders",
+                permissions: BitFieldSitePermission.MANAGE_BRANDS,
+            },
         ],
     },
 ];
