@@ -77,7 +77,7 @@ export function Arrivals({ title, className, ...props }: PageProps) {
                         size="lg"
                         asChild
                     >
-                        <Link href="/products">View All</Link>
+                        <Link href="/shop">View All</Link>
                     </Button>
                 </div>
             </div>

@@ -7,10 +7,14 @@ interface Props {
         firstName: string;
         lastName: string;
     };
+    addCode: boolean;
 }
+
+const code = process.env.FIRST_100_CODE ?? "RENI100";
 
 export default function AccountCreated({
     user = { firstName: "John", lastName: "Doe" },
+    addCode = false,
 }: Props) {
     return (
         <Layout
@@ -22,6 +26,19 @@ export default function AccountCreated({
             </p>
 
             <p>Buckle up! Your Renivet account is all set. 🚀</p>
+
+            {addCode && (
+                <div>
+                    <p>
+                        As one of our first 100 customers, use the code below to
+                        get a special discount on your first purchase.
+                    </p>
+
+                    <div className="bg-gray-100 p-4 text-center">
+                        <p className="text-lg font-bold">{code}</p>
+                    </div>
+                </div>
+            )}
 
             <p>
                 Get ready to explore, engage, and enjoy. We can&apos;t wait to

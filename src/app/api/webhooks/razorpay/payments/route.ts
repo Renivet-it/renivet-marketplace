@@ -7,7 +7,11 @@ import { orderShipments } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
-import { OrderPlaced, OrderPlaceFailed } from "@/lib/resend/emails";
+import {
+    OrderPlaced,
+    OrderPlaceFailed,
+    OrderRefundInitiated,
+} from "@/lib/resend/emails";
 import { shiprocket } from "@/lib/shiprocket";
 import {
     AppError,
@@ -92,6 +96,27 @@ export async function POST(req: NextRequest) {
                             status: "pending",
                             amount: payload.payload.payment.entity.amount,
                         });
+
+                        const existingUser = await userCache.get(
+                            existingOrder.userId
+                        );
+
+                        if (existingUser) {
+                            await resend.emails.send({
+                                from: env.RESEND_EMAIL_FROM,
+                                to: existingUser.email,
+                                subject: "Order Refund Initiated",
+                                react: OrderRefundInitiated({
+                                    user: {
+                                        name: `${existingUser.firstName} ${existingUser.lastName}`,
+                                    },
+                                    order: {
+                                        id: existingOrder.id,
+                                        amount: existingOrder.totalAmount,
+                                    },
+                                }),
+                            });
+                        }
 
                         await Promise.all(
                             uniqueBrandIds.map((brandId) => {

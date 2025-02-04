@@ -77,7 +77,7 @@ export function Popular({ title, className, ...props }: PageProps) {
                         size="lg"
                         asChild
                     >
-                        <Link href="/soon">View All</Link>
+                        <Link href="/shop">View All</Link>
                     </Button>
                 </div>
             </div>

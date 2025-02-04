@@ -2,7 +2,9 @@ import crypto from "crypto";
 import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
 import { orderQueries, refundQueries } from "@/lib/db/queries";
-import { analytics, revenue } from "@/lib/redis/methods";
+import { analytics, revenue, userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { OrderRefundFailed, OrderRefundProcessed } from "@/lib/resend/emails";
 import {
     AppError,
     convertPaiseToRupees,
@@ -116,6 +118,27 @@ export async function POST(req: NextRequest) {
                             });
                         })
                     );
+
+                    const existingUser = await userCache.get(
+                        existingOrder.userId
+                    );
+                    if (existingUser) {
+                        await resend.emails.send({
+                            from: env.RESEND_EMAIL_FROM,
+                            to: existingUser.email,
+                            subject: "Refund Processed Successfully",
+                            react: OrderRefundProcessed({
+                                user: {
+                                    name: `${existingUser.firstName} ${existingUser.lastName}`,
+                                },
+                                order: {
+                                    id: existingOrder.id,
+                                    amount: payload.payload.refund.entity
+                                        .amount,
+                                },
+                            }),
+                        });
+                    }
                 }
                 break;
 
@@ -204,6 +227,59 @@ export async function POST(req: NextRequest) {
                             });
                         })
                     );
+
+                    const existingUser = await userCache.get(
+                        existingOrder.userId
+                    );
+                    if (existingUser) {
+                        await resend.batch.send([
+                            {
+                                from: env.RESEND_EMAIL_FROM,
+                                to: existingUser.email,
+                                subject: "Refund Processing Failed",
+                                react: OrderRefundFailed({
+                                    user: {
+                                        name: `${existingUser.firstName} ${existingUser.lastName}`,
+                                    },
+                                    order: {
+                                        id: existingOrder.id,
+                                        amount: payload.payload.refund.entity
+                                            .amount,
+                                    },
+                                }),
+                            },
+                            {
+                                from: env.RESEND_EMAIL_FROM,
+                                to: env.RENIVET_EMAIL_1,
+                                subject: "Refund Processing Failed",
+                                react: OrderRefundFailed({
+                                    user: {
+                                        name: `${existingUser.firstName} ${existingUser.lastName}`,
+                                    },
+                                    order: {
+                                        id: existingOrder.id,
+                                        amount: payload.payload.refund.entity
+                                            .amount,
+                                    },
+                                }),
+                            },
+                            {
+                                from: env.RESEND_EMAIL_FROM,
+                                to: env.RENIVET_EMAIL_2,
+                                subject: "Refund Processing Failed",
+                                react: OrderRefundFailed({
+                                    user: {
+                                        name: `${existingUser.firstName} ${existingUser.lastName}`,
+                                    },
+                                    order: {
+                                        id: existingOrder.id,
+                                        amount: payload.payload.refund.entity
+                                            .amount,
+                                    },
+                                }),
+                            },
+                        ]);
+                    }
                 }
                 break;
         }
