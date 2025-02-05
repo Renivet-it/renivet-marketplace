@@ -204,19 +204,6 @@ export function NavbarHome() {
                         </Link>
 
                         <div className="hidden items-center gap-5 md:flex">
-                            {!!user.brand ? null : (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    asChild
-                                    className="hidden lg:flex"
-                                >
-                                    <Link href="/become-a-seller" prefetch>
-                                        Become a Seller
-                                    </Link>
-                                </Button>
-                            )}
-
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button>
@@ -368,22 +355,14 @@ export function NavbarHome() {
                     </div>
                 ) : (
                     <>
-                        <div className="hidden items-center gap-1 md:flex">
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link href="/become-a-seller">
-                                    Become a Seller
-                                </Link>
-                            </Button>
-
-                            <Button
-                                variant="ghost"
-                                className="border-accent text-accent"
-                                size="sm"
-                                asChild
-                            >
-                                <Link href="/auth/signin">Login/Signup</Link>
-                            </Button>
-                        </div>
+                        <Button
+                            variant="ghost"
+                            className="border-accent text-accent"
+                            size="sm"
+                            asChild
+                        >
+                            <Link href="/auth/signin">Login/Signup</Link>
+                        </Button>
 
                         <div className="flex items-center gap-1 md:hidden">
                             <Button

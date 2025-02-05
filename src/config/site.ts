@@ -86,8 +86,8 @@ export const siteConfig: SiteConfig = {
                         href: "/about#faqs",
                     },
                     {
-                        name: "Join Community",
-                        href: "/soon",
+                        name: "Become a Seller",
+                        href: "/become-a-seller",
                     },
                 ],
             },
