@@ -10,7 +10,7 @@ interface Props {
     addCode: boolean;
 }
 
-const code = process.env.FIRST_100_CODE ?? "RENI100";
+const code = process.env.FIRST_100_CODE;
 
 export default function AccountCreated({
     user = { firstName: "John", lastName: "Doe" },
@@ -27,7 +27,7 @@ export default function AccountCreated({
 
             <p>Buckle up! Your Renivet account is all set. 🚀</p>
 
-            {addCode && (
+            {addCode && !!code?.length && (
                 <div>
                     <p>
                         As one of our first 100 customers, use the code below to
