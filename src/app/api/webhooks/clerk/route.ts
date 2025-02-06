@@ -3,7 +3,7 @@ import { POSTHOG_EVENTS } from "@/config/posthog";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { posthog } from "@/lib/posthog/client";
-import { userCache } from "@/lib/redis/methods";
+import { first100Cache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { AccountCreated } from "@/lib/resend/emails";
 import { CResponse, handleError } from "@/lib/utils";
@@ -76,11 +76,19 @@ export async function POST(req: NextRequest) {
                         .returning()
                         .then((res) => res[0]);
 
+                    let addCode = false;
+
+                    const currentFirst100Cache = await first100Cache.get();
+                    if (currentFirst100Cache < 100) {
+                        await first100Cache.set();
+                        addCode = true;
+                    }
+
                     await resend.emails.send({
                         from: env.RESEND_EMAIL_FROM,
                         to: newUser.email,
                         subject: "🎉 Welcome Aboard the Renivet Express! 🎉",
-                        react: AccountCreated({ user: newUser }),
+                        react: AccountCreated({ user: newUser, addCode }),
                     });
                 }
                 break;

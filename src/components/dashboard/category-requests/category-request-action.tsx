@@ -54,6 +54,7 @@ export function CategoryRequestAction({ request }: PageProps) {
 
                     <DropdownMenuGroup>
                         <DropdownMenuItem
+                            disabled={request.status !== "pending"}
                             onClick={() => setIsApproveModalOpen(true)}
                         >
                             <Icons.CircleCheck className="size-4" />
@@ -61,6 +62,7 @@ export function CategoryRequestAction({ request }: PageProps) {
                         </DropdownMenuItem>
 
                         <DropdownMenuItem
+                            disabled={request.status !== "pending"}
                             onClick={() => setIsRejectModalOpen(true)}
                         >
                             <Icons.X className="size-4" />

@@ -86,8 +86,8 @@ export const siteConfig: SiteConfig = {
                         href: "/about#faqs",
                     },
                     {
-                        name: "Join Community",
-                        href: "/soon",
+                        name: "Become a Seller",
+                        href: "/become-a-seller",
                     },
                 ],
             },
@@ -267,6 +267,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             {
                 title: "Products",
                 url: "/dashboard/general/products",
+                permissions: BitFieldSitePermission.MANAGE_BRANDS,
+            },
+            {
+                title: "Orders",
+                url: "/dashboard/general/orders",
                 permissions: BitFieldSitePermission.MANAGE_BRANDS,
             },
         ],

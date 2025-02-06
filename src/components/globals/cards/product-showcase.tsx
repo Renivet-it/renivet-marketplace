@@ -21,7 +21,7 @@ export function ProductShowcaseCard({
 }: PageProps) {
     return (
         <div className={cn("space-y-4", className)} {...props}>
-            <Link href="/soon" className="space-y-4">
+            <Link href="/shop" className="space-y-4">
                 <div className="h-80 xl:h-[30rem]">
                     <Image
                         width={1000}
@@ -48,7 +48,7 @@ export function ProductShowcaseCard({
             </Link>
 
             <Button variant="accent" className="font-semibold" asChild>
-                <Link href="/soon">Add to Cart</Link>
+                <Link href="/shop">Add to Cart</Link>
             </Button>
         </div>
     );

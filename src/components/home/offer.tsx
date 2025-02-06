@@ -33,7 +33,7 @@ export function Offer({ className, ...props }: GenericProps) {
 
                     <Link
                         className="font-semibold uppercase underline underline-offset-2 md:text-lg"
-                        href="/soon"
+                        href="/shop"
                     >
                         {offerData.buttonText}
                     </Link>

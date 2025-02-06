@@ -46,7 +46,7 @@ export function MarketingStrip({
                                 key={index}
                                 className="text-center md:basis-1/2 lg:basis-1/4"
                             >
-                                <Link href="/soon" className="space-y-4">
+                                <Link href="/shop" className="space-y-4">
                                     <div className="aspect-[3/3.5]">
                                         <Image
                                             src={item.imageUrl}

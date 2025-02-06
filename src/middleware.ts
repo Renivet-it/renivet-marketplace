@@ -50,13 +50,13 @@ export default clerkMiddleware(async (auth, req) => {
                 if (existingUser.brand) {
                     return NextResponse.redirect(
                         new URL(
-                            `/dashboard/brands/${existingUser.brand.id}`,
+                            `/dashboard/brands/${existingUser.brand.id}/analytics`,
                             url
                         )
                     );
                 } else
                     return NextResponse.redirect(
-                        new URL("/dashboard/general", url)
+                        new URL("/dashboard/general/banners", url)
                     );
             }
 

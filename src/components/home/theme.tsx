@@ -61,7 +61,7 @@ export function Theme({ className, ...props }: GenericProps) {
 
                                 <Link
                                     className="text-sm font-semibold uppercase underline underline-offset-2"
-                                    href="/soon"
+                                    href="/about"
                                 >
                                     Learn More
                                 </Link>

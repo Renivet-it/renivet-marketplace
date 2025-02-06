@@ -5,11 +5,103 @@ import {
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
 } from "@/lib/validations";
-import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lte } from "drizzle-orm";
 import { db } from "..";
 import { orders } from "../schema";
 
 class OrderQuery {
+    async getOrders({
+        limit,
+        page,
+        search,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.orders.findMany({
+            where: !!search ? ilike(orders.id, `%${search}%`) : undefined,
+            with: {
+                shipments: true,
+                items: {
+                    with: {
+                        product: {
+                            with: {
+                                brand: true,
+                                variants: true,
+                                category: true,
+                                subcategory: true,
+                                productType: true,
+                                options: true,
+                            },
+                        },
+                        variant: true,
+                    },
+                },
+            },
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [desc(orders.createdAt)],
+            extras: {
+                count: db
+                    .$count(
+                        orders,
+                        !!search ? ilike(orders.id, `%${search}%`) : undefined
+                    )
+                    .as("order_count"),
+            },
+        });
+
+        const products = data.flatMap((d) => d.items.map((i) => i.product));
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        }));
+
+        const enhancedData = data.map((d) => ({
+            ...d,
+            items: d.items.map((i) => ({
+                ...i,
+                product: enhancedProducts.find((p) => p.id === i.productId),
+            })),
+        }));
+
+        const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
+            .array()
+            .parse(enhancedData);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
     async getOrdersByIds(orderIds: string[], year?: number) {
         const data = await db.query.orders.findMany({
             where: and(

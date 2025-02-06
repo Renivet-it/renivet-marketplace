@@ -4,6 +4,7 @@ export * from "./blog";
 export * from "./brand";
 export * from "./cart";
 export * from "./category";
+export * from "./first-100";
 export * from "./legal";
 export * from "./marketing-strip";
 export * from "./media";

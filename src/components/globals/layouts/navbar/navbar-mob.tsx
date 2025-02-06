@@ -49,12 +49,6 @@ const extraMenu: SiteConfig["menu"] = [
         icon: "BookOpen",
     },
     {
-        name: "Become a Seller",
-        description: "Join as a seller",
-        href: "/become-a-seller",
-        icon: "DollarSign",
-    },
-    {
         name: "Privacy Policy",
         description: "Read our privacy policy",
         href: "/privacy",
@@ -83,11 +77,6 @@ const profileMenu: SiteConfig["menu"] = [
         name: "Addresses",
         href: "/profile/addresses",
         icon: "Map",
-    },
-    {
-        name: "Join as a Brand",
-        href: "/become-a-seller",
-        icon: "SquareTerminal",
     },
     {
         name: "Login/Register",
