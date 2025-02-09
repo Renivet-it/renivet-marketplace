@@ -1,5 +1,5 @@
 import { GeneralShell } from "@/components/globals/layouts";
-import { ProductPage } from "@/components/products/product";
+import { ProductPage, ProductPassport } from "@/components/products/product";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BRAND_EVENTS } from "@/config/brand";
@@ -134,12 +134,18 @@ async function ProductFetch({ params }: PageProps) {
     });
 
     return (
-        <ProductPage
-            product={existingProduct}
-            initialWishlist={userWishlist}
-            initialCart={userCart}
-            userId={userId ?? undefined}
-        />
+        <>
+            <ProductPage
+                product={existingProduct}
+                initialWishlist={userWishlist}
+                initialCart={userCart}
+                userId={userId ?? undefined}
+            />
+
+            <Separator />
+
+            <ProductPassport product={existingProduct} />
+        </>
     );
 }
 

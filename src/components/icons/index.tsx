@@ -64,6 +64,7 @@ import {
     LogOut,
     Mail,
     Map,
+    MapPin,
     Menu,
     MoreHorizontal,
     MoreVertical,
@@ -111,6 +112,7 @@ import {
 export type Icon = LucideIcon;
 
 export const Icons = {
+    MapPin,
     AlertCircle,
     PiggyBank,
     Info,

@@ -93,6 +93,32 @@ export function ProductAction({ product }: PageProps) {
                             </Link>
                         </DropdownMenuItem>
 
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/values`}
+                            >
+                                <Icons.ShoppingCart className="size-4" />
+                                <span>
+                                    {product.values
+                                        ? "Edit Values"
+                                        : "Add Values"}
+                                </span>
+                            </Link>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem asChild>
+                            <Link
+                                href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/journey`}
+                            >
+                                <Icons.Globe className="size-4" />
+                                <span>
+                                    {product.journey
+                                        ? "Edit Journey"
+                                        : "Add Journey"}
+                                </span>
+                            </Link>
+                        </DropdownMenuItem>
+
                         {product.isPublished && (
                             <>
                                 <DropdownMenuItem
@@ -132,14 +158,16 @@ export function ProductAction({ product }: PageProps) {
                         )}
 
                         {product.verificationStatus === "idle" && (
-                            <DropdownMenuItem
-                                onClick={() =>
-                                    setIsSendForReviewModalOpen(true)
-                                }
-                            >
-                                <Icons.Shield className="size-4" />
-                                <span>Send for Review</span>
-                            </DropdownMenuItem>
+                            <>
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        setIsSendForReviewModalOpen(true)
+                                    }
+                                >
+                                    <Icons.Shield className="size-4" />
+                                    <span>Send for Review</span>
+                                </DropdownMenuItem>
+                            </>
                         )}
 
                         {product.verificationStatus === "rejected" && (
