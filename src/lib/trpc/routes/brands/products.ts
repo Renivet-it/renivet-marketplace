@@ -21,9 +21,15 @@ import {
 } from "@/lib/trpc/trpc";
 import { generateProductSlug, generateSKU } from "@/lib/utils";
 import {
+    createProductJourneySchema,
     createProductSchema,
+    createProductValueSchema,
+    productJourneySchema,
     productSchema,
+    productValueSchema,
+    updateProductJourneySchema,
     updateProductSchema,
+    updateProductValueSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
@@ -526,7 +532,7 @@ export const productsRouter = createTRPCRouter({
             const { queries, user, schemas, db } = ctx;
 
             const existingProduct = await db.query.products.findFirst({
-                with: { brand: true },
+                with: { brand: true, journey: true, values: true },
                 where: and(
                     eq(schemas.products.id, productId),
                     eq(schemas.products.isDeleted, false),
@@ -575,6 +581,24 @@ export const productsRouter = createTRPCRouter({
                 throw new TRPCError({
                     code: "BAD_REQUEST",
                     message: "Product must have at least one image",
+                });
+
+            if (
+                !existingProduct.journey ||
+                existingProduct.journey.data?.length === 0
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product must have at least one product journey",
+                });
+
+            if (
+                !existingProduct.values ||
+                existingProduct.values.data?.length === 0
+            )
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product must have at least one product value",
                 });
 
             const data = await queries.products.sendProductForReview(productId);
@@ -649,6 +673,113 @@ export const productsRouter = createTRPCRouter({
                 },
             });
 
+            return data;
+        }),
+    createProductJourney: protectedProcedure
+        .input(createProductJourneySchema)
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { queries } = ctx;
+
+            const existingProduct = await queries.products.getProduct({
+                productId: input.productId,
+                isDeleted: false,
+            });
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (existingProduct.journey)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product journey already exists",
+                });
+
+            const data = await queries.products.createProductJourney(input);
+            return data;
+        }),
+    updateProductJourney: protectedProcedure
+        .input(
+            z.object({
+                id: productJourneySchema.shape.id,
+                values: updateProductJourneySchema,
+            })
+        )
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { id, values } = input;
+            const { queries } = ctx;
+
+            const existingProductJourney =
+                await queries.products.getProductJourney(id);
+            if (!existingProductJourney)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product journey not found",
+                });
+
+            const data = await queries.products.updateProductJourney(
+                id,
+                values
+            );
+            return data;
+        }),
+    createProductValue: protectedProcedure
+        .input(createProductValueSchema)
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { queries } = ctx;
+
+            const existingProduct = await queries.products.getProduct({
+                productId: input.productId,
+                isDeleted: false,
+            });
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            if (existingProduct.values)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Product values already exist",
+                });
+
+            const data = await queries.products.createProductValue(input);
+            return data;
+        }),
+    updateProductValue: protectedProcedure
+        .input(
+            z.object({
+                id: productValueSchema.shape.id,
+                values: updateProductValueSchema,
+            })
+        )
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { id, values } = input;
+            const { queries } = ctx;
+
+            const existingProductValue =
+                await queries.products.getProductValue(id);
+            if (!existingProductValue)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product value not found",
+                });
+
+            const data = await queries.products.updateProductValue(id, values);
             return data;
         }),
 });

@@ -1,5 +1,13 @@
 "use client";
 
+import { Icons } from "@/components/icons";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import {
     Carousel,
     CarouselContent,
@@ -24,7 +32,12 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    convertValueToLabel,
+    formatPriceTag,
+} from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import { format } from "date-fns";
 import Autoplay from "embla-carousel-autoplay";
@@ -40,6 +53,8 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
     const [isDescriptionModalOpen, setIsDescriptionModalOpen] = useState(false);
     const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
     const [isVariantsModalOpen, setIsVariantsModalOpen] = useState(false);
+    const [isValuesModalOpen, setIsValuesModalOpen] = useState(false);
+    const [isJourneyModalOpen, setIsJourneyModalOpen] = useState(false);
 
     let productRootPrice: string;
 
@@ -173,6 +188,35 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                             ? product.metaKeywords.join(", ")
                             : "N/A"}
                     </p>
+                </div>
+
+                <div>
+                    <h5 className="text-sm font-medium">Product Values</h5>
+                    {product.values?.data && product.values.data.length > 0 ? (
+                        <button
+                            className="text-sm text-primary underline"
+                            onClick={() => setIsValuesModalOpen(true)}
+                        >
+                            View
+                        </button>
+                    ) : (
+                        <p className="text-sm">N/A</p>
+                    )}
+                </div>
+
+                <div>
+                    <h5 className="text-sm font-medium">Product Journey</h5>
+                    {product.journey?.data &&
+                    product.journey.data.length > 0 ? (
+                        <button
+                            className="text-sm text-primary underline"
+                            onClick={() => setIsJourneyModalOpen(true)}
+                        >
+                            View
+                        </button>
+                    ) : (
+                        <p className="text-sm">N/A</p>
+                    )}
                 </div>
 
                 <div>
@@ -341,6 +385,138 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                             </TableRow>
                         </TableFooter>
                     </Table>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isValuesModalOpen}
+                onOpenChange={setIsValuesModalOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Product Values</DialogTitle>
+                        <DialogDescription>
+                            Values and certifications for &quot;{product.title}
+                            &quot;
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {product.values?.data && product.values.data.length > 0 ? (
+                        <Accordion type="single" collapsible>
+                            {product.values.data.map((value) => (
+                                <AccordionItem
+                                    key={value.title}
+                                    value={value.title}
+                                >
+                                    <AccordionTrigger className="gap-4 text-lg">
+                                        <div className="flex items-center gap-2">
+                                            <Icons.Shield
+                                                className={cn(
+                                                    "size-4",
+                                                    value.status === "verified"
+                                                        ? "text-green-500"
+                                                        : "text-yellow-500"
+                                                )}
+                                            />
+                                            {value.title}
+                                            <Badge
+                                                variant={
+                                                    value.status === "verified"
+                                                        ? "secondary"
+                                                        : "destructive"
+                                                }
+                                            >
+                                                {convertValueToLabel(
+                                                    value.status
+                                                )}
+                                            </Badge>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="space-y-4">
+                                        <p className="text-muted-foreground">
+                                            {value.description}
+                                        </p>
+                                        <Link
+                                            href={value.docUrl}
+                                            target="_blank"
+                                            className="inline-flex items-center text-sm text-primary underline"
+                                        >
+                                            <Icons.FileText className="mr-2 size-4" />
+                                            View Certificate
+                                        </Link>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    ) : (
+                        <p className="text-muted-foreground">
+                            No product values available
+                        </p>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={isJourneyModalOpen}
+                onOpenChange={setIsJourneyModalOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Product Journey</DialogTitle>
+                        <DialogDescription>
+                            Supply chain journey for &quot;{product.title}&quot;
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {product.journey?.data &&
+                    product.journey.data.length > 0 ? (
+                        <div className="relative space-y-8 pl-8 before:absolute before:left-[11px] before:top-2 before:h-[calc(100%-40px)] before:w-0.5 before:bg-border">
+                            {product.journey.data.map((journey) => (
+                                <div key={journey.title} className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="absolute -left-0.5 size-6 rounded-full border bg-background" />
+                                        <h5 className="font-medium">
+                                            {journey.title}
+                                        </h5>
+                                    </div>
+
+                                    {journey.entries.length > 0 && (
+                                        <div className="space-y-3">
+                                            {journey.entries.map((entry) => (
+                                                <div
+                                                    key={entry.id}
+                                                    className="rounded-lg border p-3"
+                                                >
+                                                    <div className="mb-2 font-medium">
+                                                        {entry.name}
+                                                    </div>
+                                                    <div className="flex items-center gap-4 text-sm">
+                                                        <div className="flex items-center gap-1 text-muted-foreground">
+                                                            <Icons.MapPin className="size-3" />
+                                                            {entry.location}
+                                                        </div>
+
+                                                        <Link
+                                                            href={entry.docUrl}
+                                                            target="_blank"
+                                                            className="inline-flex items-center text-sm text-primary underline"
+                                                        >
+                                                            <Icons.FileText className="mr-1 size-3" />
+                                                            View Document
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground">
+                            No product journey available
+                        </p>
+                    )}
                 </DialogContent>
             </Dialog>
         </>

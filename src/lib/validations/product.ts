@@ -30,6 +30,74 @@ export const productOptionValueSchema = z.object({
         .nonnegative("Position must be a non-negative number"),
 });
 
+export const productJourneyDataSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    title: z
+        .string({
+            required_error: "Title is required",
+            invalid_type_error: "Title must be a string",
+        })
+        .min(1, "Title must be at least 1 characters long"),
+    entries: z.array(
+        z.object({
+            id: z
+                .string({
+                    required_error: "ID is required",
+                    invalid_type_error: "ID must be a string",
+                })
+                .uuid("ID is invalid"),
+            name: z
+                .string({
+                    required_error: "Name is required",
+                    invalid_type_error: "Name must be a string",
+                })
+                .min(1, "Name must be at least 1 characters long"),
+            location: z
+                .string({
+                    required_error: "Location is required",
+                    invalid_type_error: "Location must be a string",
+                })
+                .min(1, "Location must be at least 1 characters long"),
+            docUrl: z
+                .string({
+                    required_error: "Document URL is required",
+                    invalid_type_error: "Document URL must be a string",
+                })
+                .url("Document URL is invalid"),
+        })
+    ),
+});
+
+export const productValueDataSchema = z.object({
+    title: z
+        .string({
+            required_error: "Title is required",
+            invalid_type_error: "Title must be a string",
+        })
+        .min(1, "Title must be at least 1 characters long"),
+    description: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Description must be a string",
+            })
+            .min(3, "Description must be at least 3 characters long")
+            .nullable()
+    ),
+    status: z.enum(["verified", "self-declared"]),
+    docUrl: z
+        .string({
+            required_error: "Document URL is required",
+            invalid_type_error: "Document URL must be a string",
+        })
+        .url("Document URL is invalid"),
+});
+
 export const productMediaSchema = z.object({
     id: z
         .string({
@@ -530,6 +598,62 @@ export const enhancedProductVariantSchema = productVariantSchema.extend({
     mediaItem: cachedBrandMediaItemSchema.nullable(),
 });
 
+export const productJourneySchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    productId: z
+        .string({
+            required_error: "Product ID is required",
+            invalid_type_error: "Product ID must be a string",
+        })
+        .uuid("Product ID is invalid"),
+    data: productJourneyDataSchema.array(),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
+export const productValueSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    productId: z
+        .string({
+            required_error: "Product ID is required",
+            invalid_type_error: "Product ID must be a string",
+        })
+        .uuid("Product ID is invalid"),
+    data: productValueDataSchema.array(),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
 export const productVariantGroupSchema = z.object({
     key: z
         .string({
@@ -564,6 +688,8 @@ export const productWithBrandSchema = productSchema.extend({
     category: categorySchema,
     subcategory: subCategorySchema,
     productType: productTypeSchema,
+    journey: productJourneySchema.nullable(),
+    values: productValueSchema.nullable(),
 });
 
 export const createProductSchema = productSchema
@@ -684,6 +810,26 @@ export const createProductSchema = productSchema
         return true;
     });
 
+export const createProductJourneySchema = productJourneySchema.omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+});
+
+export const createProductValueSchema = productValueSchema.omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+});
+
+export const updateProductJourneySchema = createProductJourneySchema.omit({
+    productId: true,
+});
+
+export const updateProductValueSchema = createProductValueSchema.omit({
+    productId: true,
+});
+
 export const updateProductSchema = createProductSchema;
 
 export const rejectProductSchema = productSchema.pick({
@@ -693,6 +839,14 @@ export const rejectProductSchema = productSchema.pick({
 
 export type Product = z.infer<typeof productSchema>;
 export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
+export type ProductJourneyData = z.infer<typeof productJourneyDataSchema>;
+export type ProductValueData = z.infer<typeof productValueDataSchema>;
+export type ProductValue = z.infer<typeof productValueSchema>;
+export type ProductJourney = z.infer<typeof productJourneySchema>;
+export type CreateProductJourney = z.infer<typeof createProductJourneySchema>;
+export type CreateProductValue = z.infer<typeof createProductValueSchema>;
+export type UpdateProductJourney = z.infer<typeof updateProductJourneySchema>;
+export type UpdateProductValue = z.infer<typeof updateProductValueSchema>;
 export type ProductMedia = z.infer<typeof productMediaSchema>;
 export type ProductOption = z.infer<typeof productOptionSchema>;
 export type ProductVariant = z.infer<typeof productVariantSchema>;

@@ -1,4 +1,9 @@
-import { ProductMedia, ProductOptionValue } from "@/lib/validations";
+import {
+    ProductJourneyData,
+    ProductMedia,
+    ProductOptionValue,
+    ProductValueData,
+} from "@/lib/validations";
 import { relations, sql } from "drizzle-orm";
 import {
     boolean,
@@ -161,6 +166,40 @@ export const productVariants = pgTable(
     })
 );
 
+export const productsJourney = pgTable(
+    "products_journey",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        data: jsonb("data").$type<ProductJourneyData[]>(),
+        ...timestamps,
+    },
+    (table) => ({
+        productsJourneyProductIdIdx: index(
+            "products_journey_product_id_idx"
+        ).on(table.productId),
+    })
+);
+
+export const productValues = pgTable(
+    "product_values",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        data: jsonb("data").$type<ProductValueData[]>(),
+        ...timestamps,
+    },
+    (table) => ({
+        productValuesProductIdIdx: index("product_values_product_id_idx").on(
+            table.productId
+        ),
+    })
+);
+
 export const productsRelations = relations(products, ({ one, many }) => ({
     brand: one(brands, {
         fields: [products.brandId],
@@ -181,6 +220,14 @@ export const productsRelations = relations(products, ({ one, many }) => ({
         fields: [products.productTypeId],
         references: [productTypes.id],
     }),
+    journey: one(productsJourney, {
+        fields: [products.id],
+        references: [productsJourney.productId],
+    }),
+    values: one(productValues, {
+        fields: [products.id],
+        references: [productValues.productId],
+    }),
 }));
 
 export const productOptionsRelations = relations(productOptions, ({ one }) => ({
@@ -199,3 +246,20 @@ export const productVariantsRelations = relations(
         }),
     })
 );
+
+export const productsJourneyRelations = relations(
+    productsJourney,
+    ({ one }) => ({
+        product: one(products, {
+            fields: [productsJourney.productId],
+            references: [products.id],
+        }),
+    })
+);
+
+export const productValuesRelations = relations(productValues, ({ one }) => ({
+    product: one(products, {
+        fields: [productValues.productId],
+        references: [products.id],
+    }),
+}));

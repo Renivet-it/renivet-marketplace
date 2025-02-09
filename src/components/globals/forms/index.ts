@@ -25,6 +25,8 @@ export * from "./privacy-manage";
 export * from "./product-cart-add";
 export * from "./product-cart-move";
 export * from "./product-cart-quantity-change";
+export * from "./product-journey-manage";
+export * from "./product-values-manage";
 export * from "./product-manage";
 export * from "./product-reject";
 export * from "./product-type-manage";

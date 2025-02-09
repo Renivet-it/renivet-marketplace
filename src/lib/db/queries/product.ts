@@ -2,14 +2,24 @@ import { mediaCache } from "@/lib/redis/methods";
 import { convertPriceToPaise } from "@/lib/utils";
 import {
     CreateProduct,
+    CreateProductJourney,
+    CreateProductValue,
     Product,
     ProductWithBrand,
     productWithBrandSchema,
     UpdateProduct,
+    UpdateProductJourney,
+    UpdateProductValue,
 } from "@/lib/validations";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "..";
-import { productOptions, products, productVariants } from "../schema";
+import {
+    productOptions,
+    products,
+    productsJourney,
+    productValues,
+    productVariants,
+} from "../schema";
 
 class ProductQuery {
     async getProductCount({
@@ -108,6 +118,8 @@ class ProductQuery {
                 subcategory: true,
                 productType: true,
                 options: true,
+                journey: true,
+                values: true,
             },
             where: and(...filters),
         });
@@ -261,6 +273,8 @@ class ProductQuery {
                 subcategory: true,
                 productType: true,
                 options: true,
+                journey: true,
+                values: true,
             },
             where: and(...filters),
             limit,
@@ -349,6 +363,8 @@ class ProductQuery {
                 subcategory: true,
                 productType: true,
                 options: true,
+                journey: true,
+                values: true,
             },
             where: and(
                 eq(products.id, productId),
@@ -541,6 +557,8 @@ class ProductQuery {
                 subcategory: true,
                 productType: true,
                 options: true,
+                journey: true,
+                values: true,
             },
             where: and(
                 eq(products.slug, slug),
@@ -976,6 +994,64 @@ class ProductQuery {
                 updatedAt: new Date(),
             })
             .where(eq(products.id, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async getProductJourney(id: string) {
+        const data = await db.query.productsJourney.findFirst({
+            where: eq(productsJourney.id, id),
+        });
+
+        return data;
+    }
+
+    async createProductJourney(values: CreateProductJourney) {
+        const data = await db
+            .insert(productsJourney)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateProductJourney(id: string, values: UpdateProductJourney) {
+        const data = await db
+            .update(productsJourney)
+            .set(values)
+            .where(eq(productsJourney.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async getProductValue(id: string) {
+        const data = await db.query.productValues.findFirst({
+            where: eq(productValues.id, id),
+        });
+
+        return data;
+    }
+
+    async createProductValue(values: CreateProductValue) {
+        const data = await db
+            .insert(productValues)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateProductValue(id: string, values: UpdateProductValue) {
+        const data = await db
+            .update(productValues)
+            .set(values)
+            .where(eq(productValues.id, id))
             .returning()
             .then((res) => res[0]);
 
