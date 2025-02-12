@@ -65,104 +65,104 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const parsed = webhookResponse.parse(body);
 
-        // // Find shipment by AWB
-        // const shipment = await db.query.orderShipments.findFirst({
-        //     where: and(eq(orderShipments.awbNumber, parsed.awb.toString())),
-        //     with: {
-        //         order: {
-        //             with: {
-        //                 items: {
-        //                     with: {
-        //                         product: true,
-        //                         variant: true,
-        //                     },
-        //                 },
-        //             },
-        //         },
-        //     },
-        // });
-        // if (!shipment) throw new AppError("Shipment not found", "NOT_FOUND");
+        // Find shipment by AWB
+        const shipment = await db.query.orderShipments.findFirst({
+            where: and(eq(orderShipments.awbNumber, parsed.awb.toString())),
+            with: {
+                order: {
+                    with: {
+                        items: {
+                            with: {
+                                product: true,
+                                variant: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!shipment) throw new AppError("Shipment not found", "NOT_FOUND");
 
-        // // Map Shiprocket status to our status (case-insensitive)
-        // const newStatus =
-        //     shipmentStatusMap[
-        //         parsed.current_status.toLowerCase() as keyof typeof shipmentStatusMap
-        //     ] || "processing";
+        // Map Shiprocket status to our status (case-insensitive)
+        const newStatus =
+            shipmentStatusMap[
+                parsed.current_status.toLowerCase() as keyof typeof shipmentStatusMap
+            ] || "processing";
 
-        // // Update shipment status
-        // await db
-        //     .update(orderShipments)
-        //     .set({
-        //         status: newStatus,
-        //         estimatedDeliveryDate: parsed.etd ? new Date(parsed.etd) : null,
-        //         courierName: parsed.courier_name,
-        //     })
-        //     .where(eq(orderShipments.id, shipment.id));
+        // Update shipment status
+        await db
+            .update(orderShipments)
+            .set({
+                status: newStatus,
+                estimatedDeliveryDate: parsed.etd ? new Date(parsed.etd) : null,
+                courierName: parsed.courier_name,
+            })
+            .where(eq(orderShipments.id, shipment.id));
 
-        // // Update order status based on shipment status
-        // if (newStatus === "delivered") {
-        //     await orderQueries.updateOrderStatus(shipment.order.id, {
-        //         status: "delivered",
-        //         paymentId: shipment.order.paymentId,
-        //         paymentMethod: shipment.order.paymentMethod,
-        //         paymentStatus: shipment.order.paymentStatus,
-        //     });
+        // Update order status based on shipment status
+        if (newStatus === "delivered") {
+            await orderQueries.updateOrderStatus(shipment.order.id, {
+                status: "delivered",
+                paymentId: shipment.order.paymentId,
+                paymentMethod: shipment.order.paymentMethod,
+                paymentStatus: shipment.order.paymentStatus,
+            });
 
-        //     await analytics.track({
-        //         namespace: BRAND_EVENTS.ORDER.DELIVERED,
-        //         brandId: shipment.brandId,
-        //         event: {
-        //             orderId: shipment.order.id,
-        //             orderTotal: shipment.order.totalAmount,
-        //             orderItems: shipment.order.items.map((item) => ({
-        //                 productId: item.product.id,
-        //                 variantId: item.variant?.id,
-        //                 quantity: item.quantity,
-        //                 price: item.variant?.price || item.product.price || 0,
-        //             })),
-        //         },
-        //     });
+            await analytics.track({
+                namespace: BRAND_EVENTS.ORDER.DELIVERED,
+                brandId: shipment.brandId,
+                event: {
+                    orderId: shipment.order.id,
+                    orderTotal: shipment.order.totalAmount,
+                    orderItems: shipment.order.items.map((item) => ({
+                        productId: item.product.id,
+                        variantId: item.variant?.id,
+                        quantity: item.quantity,
+                        price: item.variant?.price || item.product.price || 0,
+                    })),
+                },
+            });
 
-        //     // Send delivery notification email
-        //     const user = await userCache.get(shipment.order.userId);
-        //     if (user) {
-        //         await resend.emails.send({
-        //             from: env.RESEND_EMAIL_FROM,
-        //             to: user.email,
-        //             subject: "Your Order Has Been Delivered",
-        //             react: OrderDelivered({
-        //                 user: {
-        //                     name: `${user.firstName} ${user.lastName}`,
-        //                 },
-        //                 order: {
-        //                     id: shipment.order.id,
-        //                     shipmentId: shipment.id,
-        //                     awb: shipment.awbNumber || "",
-        //                     amount: shipment.order.totalAmount,
-        //                     items: shipment.order.items.map((item) => ({
-        //                         title: item.product.title,
-        //                         slug: item.product.slug,
-        //                         quantity: item.quantity,
-        //                         price:
-        //                             item.variant?.price ||
-        //                             item.product.price ||
-        //                             0,
-        //                     })),
-        //                 },
-        //             }),
-        //         });
-        //     }
-        // } else if (
-        //     newStatus === "in_transit" ||
-        //     newStatus === "out_for_delivery"
-        // ) {
-        //     await orderQueries.updateOrderStatus(shipment.order.id, {
-        //         status: "shipped",
-        //         paymentId: shipment.order.paymentId,
-        //         paymentMethod: shipment.order.paymentMethod,
-        //         paymentStatus: shipment.order.paymentStatus,
-        //     });
-        // }
+            // Send delivery notification email
+            const user = await userCache.get(shipment.order.userId);
+            if (user) {
+                await resend.emails.send({
+                    from: env.RESEND_EMAIL_FROM,
+                    to: user.email,
+                    subject: "Your Order Has Been Delivered",
+                    react: OrderDelivered({
+                        user: {
+                            name: `${user.firstName} ${user.lastName}`,
+                        },
+                        order: {
+                            id: shipment.order.id,
+                            shipmentId: shipment.id,
+                            awb: shipment.awbNumber || "",
+                            amount: shipment.order.totalAmount,
+                            items: shipment.order.items.map((item) => ({
+                                title: item.product.title,
+                                slug: item.product.slug,
+                                quantity: item.quantity,
+                                price:
+                                    item.variant?.price ||
+                                    item.product.price ||
+                                    0,
+                            })),
+                        },
+                    }),
+                });
+            }
+        } else if (
+            newStatus === "in_transit" ||
+            newStatus === "out_for_delivery"
+        ) {
+            await orderQueries.updateOrderStatus(shipment.order.id, {
+                status: "shipped",
+                paymentId: shipment.order.paymentId,
+                paymentMethod: shipment.order.paymentMethod,
+                paymentStatus: shipment.order.paymentStatus,
+            });
+        }
 
         return CResponse({
             message: "OK",
