@@ -18,6 +18,7 @@ export * from "./invite-create";
 export * from "./marketing-strip-delete";
 export * from "./marketing-strip-status";
 export * from "./plan-status";
+export * from "./product-add-admin";
 export * from "./product-search-sku";
 export * from "./product-type-delete";
 export * from "./product-type-manage";

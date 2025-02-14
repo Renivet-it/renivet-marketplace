@@ -10,11 +10,62 @@ import {
     isTRPCAuth,
     protectedProcedure,
 } from "@/lib/trpc/trpc";
-import { rejectProductSchema } from "@/lib/validations";
+import { generateProductSlug } from "@/lib/utils";
+import { createProductSchema, rejectProductSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 export const productReviewsRouter = createTRPCRouter({
+    addBulkProducts: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string(),
+                products: z.array(createProductSchema),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ input, ctx }) => {
+            const { queries } = ctx;
+            const { products: inputProducts, brandId } = input;
+
+            const existingBrand = await brandCache.get(brandId);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            const brandIds = inputProducts.map((product) => product.brandId);
+            if (new Set(brandIds).size !== 1)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "All products must belong to the same brand",
+                });
+
+            const inputWithSlug = inputProducts.map((product) => {
+                const slug = generateProductSlug(
+                    product.title,
+                    existingBrand.name
+                );
+                return { ...product, slug };
+            });
+
+            const data =
+                await queries.products.bulkCreateProducts(inputWithSlug);
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.BULK_CREATED,
+                distinctId: existingBrand.id,
+                properties: {
+                    brandName: existingBrand.name,
+                    brandOwnerId: existingBrand.ownerId,
+                    productIds: data.map((product) => product.id),
+                    productTitles: data.map((product) => product.title),
+                },
+            });
+
+            return data;
+        }),
     approveProduct: protectedProcedure
         .input(
             z.object({

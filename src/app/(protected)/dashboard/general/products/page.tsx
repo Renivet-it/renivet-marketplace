@@ -1,8 +1,16 @@
 import { ProductsReviewTable } from "@/components/dashboard/general/products";
 import { DashShell } from "@/components/globals/layouts";
-import { ProductSearchSkuModal } from "@/components/globals/modals";
+import {
+    ProductAddAdminModal,
+    ProductSearchSkuModal,
+} from "@/components/globals/modals";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { productQueries } from "@/lib/db/queries";
+import {
+    categoryCache,
+    productTypeCache,
+    subCategoryCache,
+} from "@/lib/redis/methods";
 import { Product } from "@/lib/validations";
 import { Metadata } from "next";
 import { Suspense } from "react";
@@ -32,7 +40,12 @@ export default function Page(props: PageProps) {
                     </p>
                 </div>
 
-                <ProductSearchSkuModal />
+                <div className="flex items-center gap-2">
+                    <Suspense>
+                        <ProductAddAdminFetch />
+                    </Suspense>
+                    <ProductSearchSkuModal />
+                </div>
             </div>
 
             <Suspense fallback={<TableSkeleton />}>
@@ -65,4 +78,20 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
     });
 
     return <ProductsReviewTable initialData={data} />;
+}
+
+async function ProductAddAdminFetch() {
+    const [categories, subcategories, productTypes] = await Promise.all([
+        categoryCache.getAll(),
+        subCategoryCache.getAll(),
+        productTypeCache.getAll(),
+    ]);
+
+    return (
+        <ProductAddAdminModal
+            categories={categories}
+            subcategories={subcategories}
+            productTypes={productTypes}
+        />
+    );
 }
