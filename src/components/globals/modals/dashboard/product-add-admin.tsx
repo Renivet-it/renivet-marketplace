@@ -172,7 +172,8 @@ export function ProductAddAdminModal({
                             metaKeywords:
                                 firstRow["Meta Keywords"]
                                     ?.split(",")
-                                    .map((k) => k.trim()) || [],
+                                    .map((k) => k.trim())
+                                    .filter(Boolean) || [],
                             categoryId: category.id,
                             subcategoryId: subcategory.id,
                             productTypeId: productType.id,

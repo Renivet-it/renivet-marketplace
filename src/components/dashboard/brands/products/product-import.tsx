@@ -120,9 +120,9 @@ export function ProductImportButton({
 
                     results.data.forEach((row) => {
                         const title = row["Product Title"];
-                        if (!productGroups.has(title)) {
+                        if (!productGroups.has(title))
                             productGroups.set(title, []);
-                        }
+
                         productGroups.get(title)?.push(row);
                     });
 
@@ -162,7 +162,8 @@ export function ProductImportButton({
                             metaKeywords:
                                 firstRow["Meta Keywords"]
                                     ?.split(",")
-                                    .map((k) => k.trim()) || [],
+                                    .map((k) => k.trim())
+                                    .filter(Boolean) || [],
                             categoryId: category.id,
                             subcategoryId: subcategory.id,
                             productTypeId: productType.id,
