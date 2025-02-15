@@ -1,7 +1,16 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button-dash";
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-dash";
+import { Input } from "@/components/ui/input-dash";
+import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertPriceToPaise,
@@ -11,20 +20,17 @@ import {
     wait,
 } from "@/lib/utils";
 import {
-    CachedBrand,
     CachedCategory,
     CachedProductType,
     CachedSubCategory,
     CreateProduct,
 } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
-import { parseAsInteger, useQueryState } from "nuqs";
 import { parse } from "papaparse";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    brand: CachedBrand;
     categories: CachedCategory[];
     subcategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -60,29 +66,29 @@ interface ImportRow {
     "HS Code": string;
 }
 
-export function ProductImportButton({
-    brand,
+export function ProductAddAdminModal({
     categories,
     subcategories,
     productTypes,
 }: PageProps) {
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null!);
 
-    const [page] = useQueryState("page", parseAsInteger.withDefault(1));
-    const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
-    const [search] = useQueryState("search", {
-        defaultValue: "",
-    });
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const { refetch } = trpc.brands.products.getProducts.useQuery({
-        brandIds: [brand.id],
-        limit,
-        page,
-        search,
-    });
+    const [brandId, setBrandId] = useState<string | null>(null);
+    const [brandName, setBrandName] = useState<string | null>(null);
+    const [file, setFile] = useState<File | null>(null);
+
+    useEffect(() => {
+        if (isAddModalOpen) {
+            setBrandId(null);
+            setBrandName(null);
+            setFile(null);
+        }
+    }, [isAddModalOpen]);
 
     const { mutateAsync: importProuductsAsync } =
-        trpc.brands.products.bulkCreateProducts.useMutation();
+        trpc.general.productReviews.addBulkProducts.useMutation();
 
     const { mutate: createBulkProducts, isPending: isCreating } = useMutation({
         onMutate: () => {
@@ -91,10 +97,14 @@ export function ProductImportButton({
         },
         mutationFn: async (products: CreateProduct[]) => {
             if (!products.length) throw new Error("No products to import");
-            await importProuductsAsync(products);
+            await importProuductsAsync({
+                brandId: brandId!,
+                products,
+            });
         },
         onSuccess: (_, __, { toastId }) => {
-            refetch();
+            setIsAddModalOpen(false);
+            window.location.reload();
             return toast.success("Imported products successfully", {
                 id: toastId,
             });
@@ -120,9 +130,9 @@ export function ProductImportButton({
 
                     results.data.forEach((row) => {
                         const title = row["Product Title"];
-                        if (!productGroups.has(title))
+                        if (!productGroups.has(title)) {
                             productGroups.set(title, []);
-
+                        }
                         productGroups.get(title)?.push(row);
                     });
 
@@ -153,7 +163,7 @@ export function ProductImportButton({
                         );
 
                         const product: CreateProduct = {
-                            brandId: brand.id,
+                            brandId: brandId!,
                             title,
                             description:
                                 firstRow["Product Description (HTML)"] || "",
@@ -176,14 +186,15 @@ export function ProductImportButton({
                             hsCode: null,
                             length: 0,
                             media: [],
-                            nativeSku: !hasVariants
-                                ? generateSKU({
-                                      brand,
-                                      category: category.name,
-                                      subcategory: subcategory.name,
-                                      productType: productType.name,
-                                  })
-                                : null,
+                            nativeSku: generateSKU({
+                                brand: {
+                                    name: brandName!,
+                                    id: brandId!,
+                                },
+                                category: category.name,
+                                subcategory: subcategory.name,
+                                productType: productType.name,
+                            }),
                             options: [],
                             originCountry: null,
                             quantity: 0,
@@ -303,7 +314,10 @@ export function ProductImportButton({
                                     productId: crypto.randomUUID(),
                                     combinations,
                                     nativeSku: generateSKU({
-                                        brand,
+                                        brand: {
+                                            name: brandName!,
+                                            id: brandId!,
+                                        },
                                         category: category.name,
                                         subcategory: subcategory.name,
                                         productType: productType.name,
@@ -435,34 +449,103 @@ export function ProductImportButton({
         return productType;
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const handleFileUpload = () => {
+        if (!brandName || !brandId || !file)
+            return toast.error("All fields are required");
 
         processFile(file);
-        e.target.value = "";
     };
 
     return (
-        <div className="relative">
-            <DropdownMenuItem
-                onClick={() => fileInputRef.current?.click()}
-                className="relative"
-                disabled={isCreating}
+        <>
+            <Button
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setIsAddModalOpen(true)}
             >
-                <Icons.Download />
-                Import Products
-            </DropdownMenuItem>
+                <Icons.Plus />
+                Add Products
+            </Button>
 
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                disabled={isCreating}
-                accept=".csv"
-                className="absolute inset-0 cursor-pointer opacity-0"
-                style={{ display: "block", width: "100%", height: "100%" }}
-            />
-        </div>
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Products</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="brandId">Brand ID</Label>
+
+                            <Input
+                                id="brandId"
+                                value={brandId ?? ""}
+                                placeholder="Enter brand ID"
+                                className="h-9"
+                                onChange={(e) => setBrandId(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="brandName">Brand Name</Label>
+
+                            <Input
+                                id="brandName"
+                                value={brandName ?? ""}
+                                placeholder="Enter brand name (case-sensitive)"
+                                className="h-9"
+                                onChange={(e) => setBrandName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="products_file">File</Label>
+
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                id="products_file"
+                                className="hidden h-9"
+                                accept=".csv"
+                                onChange={(e) =>
+                                    setFile(e.target.files?.[0] ?? null)
+                                }
+                            />
+
+                            <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-input p-2">
+                                <Button
+                                    variant="outline"
+                                    className="h-8 text-xs"
+                                    onClick={() => fileInputRef.current.click()}
+                                >
+                                    <Icons.Upload />
+                                    {file ? "Change file" : "Upload file"}
+                                </Button>
+
+                                {file ? (
+                                    <span className="text-sm">{file.name}</span>
+                                ) : (
+                                    <span className="text-sm">
+                                        No file selected
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            className="h-9 w-full"
+                            disabled={
+                                !brandId || !brandName || !file || isCreating
+                            }
+                            onClick={handleFileUpload}
+                        >
+                            Process
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

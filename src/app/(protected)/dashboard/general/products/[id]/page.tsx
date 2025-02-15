@@ -277,7 +277,8 @@ async function ProductReviewFetch({ params }: PageProps) {
                     </CardContent>
                 </Card>
 
-                {existingProduct.verificationStatus === "pending" && (
+                {(existingProduct.verificationStatus === "pending" ||
+                    existingProduct.verificationStatus === "approved") && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Action</CardTitle>

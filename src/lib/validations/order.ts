@@ -97,7 +97,10 @@ export const orderSchema = z.object({
 export const orderWithItemAndBrandSchema = orderSchema.extend({
     items: z.array(
         orderItemSchema.extend({
-            product: productWithBrandSchema,
+            product: productWithBrandSchema.omit({
+                values: true,
+                journey: true,
+            }),
             variant: productVariantSchema.nullable(),
         })
     ),

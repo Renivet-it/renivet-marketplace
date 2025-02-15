@@ -27,6 +27,11 @@ export type TableBrand = CachedBrand & {
 
 const columns: ColumnDef<TableBrand>[] = [
     {
+        accessorKey: "id",
+        header: "ID",
+        enableHiding: false,
+    },
+    {
         accessorKey: "name",
         header: "Name",
         enableHiding: false,
