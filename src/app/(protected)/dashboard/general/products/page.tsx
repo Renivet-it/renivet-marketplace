@@ -1,4 +1,5 @@
 import { ProductsReviewTable } from "@/components/dashboard/general/products";
+import { ProductExportAdminButton } from "@/components/globals/buttons";
 import { DashShell } from "@/components/globals/layouts";
 import {
     ProductAddAdminModal,
@@ -45,6 +46,9 @@ export default function Page(props: PageProps) {
                         <ProductAddAdminFetch />
                     </Suspense>
                     <ProductSearchSkuModal />
+                    <Suspense>
+                        <ProductExportAdminFetch />
+                    </Suspense>
                 </div>
             </div>
 
@@ -94,4 +98,10 @@ async function ProductAddAdminFetch() {
             productTypes={productTypes}
         />
     );
+}
+
+async function ProductExportAdminFetch() {
+    const products = await productQueries.getAllProducts({});
+
+    return <ProductExportAdminButton products={products} />;
 }
