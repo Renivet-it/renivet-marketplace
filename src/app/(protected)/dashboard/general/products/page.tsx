@@ -8,6 +8,7 @@ import {
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { productQueries } from "@/lib/db/queries";
 import {
+    brandCache,
     categoryCache,
     productTypeCache,
     subCategoryCache,
@@ -85,14 +86,18 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
 }
 
 async function ProductAddAdminFetch() {
-    const [categories, subcategories, productTypes] = await Promise.all([
-        categoryCache.getAll(),
-        subCategoryCache.getAll(),
-        productTypeCache.getAll(),
-    ]);
+    const [brands, categories, subcategories, productTypes] = await Promise.all(
+        [
+            brandCache.getAll(),
+            categoryCache.getAll(),
+            subCategoryCache.getAll(),
+            productTypeCache.getAll(),
+        ]
+    );
 
     return (
         <ProductAddAdminModal
+            brands={brands}
             categories={categories}
             subcategories={subcategories}
             productTypes={productTypes}
