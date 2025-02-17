@@ -9,8 +9,14 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog-dash";
-import { Input } from "@/components/ui/input-dash";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select-dash";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertPriceToPaise,
@@ -20,6 +26,7 @@ import {
     wait,
 } from "@/lib/utils";
 import {
+    CachedBrand,
     CachedCategory,
     CachedProductType,
     CachedSubCategory,
@@ -31,6 +38,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
+    brands: CachedBrand[];
     categories: CachedCategory[];
     subcategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -67,6 +75,7 @@ interface ImportRow {
 }
 
 export function ProductAddAdminModal({
+    brands,
     categories,
     subcategories,
     productTypes,
@@ -475,27 +484,33 @@ export function ProductAddAdminModal({
 
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="brandId">Brand ID</Label>
+                            <Label htmlFor="brandId">Brand</Label>
 
-                            <Input
-                                id="brandId"
+                            <Select
                                 value={brandId ?? ""}
-                                placeholder="Enter brand ID"
-                                className="h-9"
-                                onChange={(e) => setBrandId(e.target.value)}
-                            />
-                        </div>
+                                onValueChange={(value) => {
+                                    setBrandId(value);
+                                    const brand = brands.find(
+                                        (b) => b.id === value
+                                    );
+                                    if (brand) setBrandName(brand.name);
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a brand" />
+                                </SelectTrigger>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="brandName">Brand Name</Label>
-
-                            <Input
-                                id="brandName"
-                                value={brandName ?? ""}
-                                placeholder="Enter brand name (case-sensitive)"
-                                className="h-9"
-                                onChange={(e) => setBrandName(e.target.value)}
-                            />
+                                <SelectContent>
+                                    {brands.map((brand) => (
+                                        <SelectItem
+                                            key={brand.id}
+                                            value={brand.id}
+                                        >
+                                            {brand.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="space-y-2">
