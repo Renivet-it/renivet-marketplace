@@ -1,4 +1,5 @@
 import {
+    ProductTypesDownload,
     ProductTypesPage,
     ProductTypesTable,
 } from "@/components/dashboard/general/product-types";
@@ -28,7 +29,12 @@ export default function Page() {
                     </p>
                 </div>
 
-                <ProductTypesPage />
+                <div className="flex items-center gap-2">
+                    <ProductTypesPage />
+                    <Suspense>
+                        <ProductTypesDownloadFetch />
+                    </Suspense>
+                </div>
             </div>
 
             <Suspense fallback={<TableSkeleton />}>
@@ -39,9 +45,11 @@ export default function Page() {
 }
 
 async function ProductTypesFetch() {
-    const categoryData = await categoryCache.getAll();
-    const subCategoryData = await subCategoryCache.getAll();
-    const data = await productTypeCache.getAll();
+    const [categoryData, subCategoryData, data] = await Promise.all([
+        categoryCache.getAll(),
+        subCategoryCache.getAll(),
+        productTypeCache.getAll(),
+    ]);
 
     const parsed = {
         data,
@@ -53,6 +61,22 @@ async function ProductTypesFetch() {
             initialData={parsed}
             categories={categoryData}
             subCategories={subCategoryData}
+        />
+    );
+}
+
+async function ProductTypesDownloadFetch() {
+    const [categories, subcategories, productTypes] = await Promise.all([
+        categoryCache.getAll(),
+        subCategoryCache.getAll(),
+        productTypeCache.getAll(),
+    ]);
+
+    return (
+        <ProductTypesDownload
+            categories={categories}
+            subcategories={subcategories}
+            productTypes={productTypes}
         />
     );
 }

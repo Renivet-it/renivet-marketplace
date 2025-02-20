@@ -1,4 +1,7 @@
-import { OrdersTable } from "@/components/dashboard/general/orders";
+import {
+    OrdersDownload,
+    OrdersTable,
+} from "@/components/dashboard/general/orders";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { orderQueries } from "@/lib/db/queries";
@@ -28,6 +31,10 @@ export default function Page(props: PageProps) {
                         View all the orders placed by the customers
                     </p>
                 </div>
+
+                <Suspense>
+                    <OrdersDownloadFetch />
+                </Suspense>
             </div>
 
             <Suspense fallback={<TableSkeleton />}>
@@ -56,4 +63,9 @@ async function OrdersFetch({ searchParams }: PageProps) {
     });
 
     return <OrdersTable initialData={data} />;
+}
+
+async function OrdersDownloadFetch() {
+    const data = await orderQueries.getAllOrders();
+    return <OrdersDownload orders={data} />;
 }

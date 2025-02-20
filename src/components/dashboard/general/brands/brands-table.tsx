@@ -23,6 +23,7 @@ import { useMemo, useState } from "react";
 export type TableBrand = CachedBrand & {
     ownerName: string;
     memberCount: number;
+    subscribedTo: string;
 };
 
 const columns: ColumnDef<TableBrand>[] = [
@@ -40,6 +41,10 @@ const columns: ColumnDef<TableBrand>[] = [
         accessorKey: "email",
         header: "Email",
         enableHiding: false,
+    },
+    {
+        accessorKey: "subscribedTo",
+        header: "Subscribed To",
     },
     {
         accessorKey: "ownerName",
@@ -89,11 +94,16 @@ export function BrandsTable({ initialData }: PageProps) {
 
     const data = useMemo(
         () =>
-            dataRaw.map((x) => ({
-                ...x,
-                ownerName: `${x.owner.firstName} ${x.owner.lastName}`,
-                memberCount: x.members.length,
-            })),
+            dataRaw.map((x) => {
+                const subscribedPlan = x.subscriptions.find((s) => s.isActive);
+
+                return {
+                    ...x,
+                    ownerName: `${x.owner.firstName} ${x.owner.lastName}`,
+                    memberCount: x.members.length,
+                    subscribedTo: subscribedPlan?.plan.name ?? "N/A",
+                };
+            }),
         [dataRaw]
     );
 
