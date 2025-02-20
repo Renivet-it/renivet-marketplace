@@ -1,10 +1,14 @@
-import { BrandsTable } from "@/components/dashboard/general/brands";
+import {
+    BrandsDownload,
+    BrandsTable,
+} from "@/components/dashboard/general/brands";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { db } from "@/lib/db";
 import { brandConfidentialQueries, brandQueries } from "@/lib/db/queries";
 import { brandRequests } from "@/lib/db/schema";
+import { brandCache } from "@/lib/redis/methods";
 import { eq } from "drizzle-orm";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -33,6 +37,10 @@ export default function Page({ searchParams }: PageProps) {
                         Manage the platform&apos;s brands
                     </p>
                 </div>
+
+                <Suspense>
+                    <BrandsDownloadFetch />
+                </Suspense>
             </div>
 
             <Suspense>
@@ -48,6 +56,11 @@ export default function Page({ searchParams }: PageProps) {
             </Suspense>
         </DashShell>
     );
+}
+
+async function BrandsDownloadFetch() {
+    const data = await brandCache.getAll();
+    return <BrandsDownload data={data} />;
 }
 
 async function BrandRequestsFetch() {
