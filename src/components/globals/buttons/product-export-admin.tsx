@@ -183,9 +183,10 @@ export function ProductExportAdminButton({ products }: PageProps) {
             className="size-8 p-0"
             onClick={handleExport}
             disabled={products.length === 0}
+            title="Export as CSV"
         >
             <span className="sr-only">Export as CSV</span>
-            <Icons.Download />
+            <Icons.Upload />
         </Button>
     );
 }

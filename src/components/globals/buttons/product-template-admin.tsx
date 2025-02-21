@@ -1,11 +1,11 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button-dash";
 import { unparse } from "papaparse";
 import { toast } from "sonner";
 
-export function ProductTemplateButton() {
+export function ProductTemplateDownloadAdminButton() {
     const handleDownloadTemplate = () => {
         try {
             const templateData = [
@@ -209,9 +209,15 @@ export function ProductTemplateButton() {
     };
 
     return (
-        <DropdownMenuItem onClick={handleDownloadTemplate}>
-            <Icons.FileText className="size-3" />
-            Download Template
-        </DropdownMenuItem>
+        <Button
+            size="icon"
+            variant="outline"
+            className="size-8 p-0"
+            onClick={handleDownloadTemplate}
+            title="Download Template"
+        >
+            <span className="sr-only">Download Template</span>
+            <Icons.Download />
+        </Button>
     );
 }
