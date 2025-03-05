@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -179,3 +180,120 @@ h3.tiptap-heading + h2.tiptap-heading {
         @apply bg-background text-foreground;
     }
 }
+
+.card-box-shadow {
+    @apply shadow-[0_1px_2px_0_rgba(0,0,0,0.25)] border border-solid border-[#d4d4d9];
+}
+
+.card__body-padding {
+    @apply pt-14 pb-10;
+}
+
+.card__body-heding {
+    @apply mx-10 px-6 pb-6 border-b-1 border-solid border-[#eaeaec];
+}
+
+.card__body-heding-typography {
+    @apply text-xl font-semibold text-[#282C3F];
+}
+
+.form__mobile-number-verified {
+    @apply text-xs my-0 text-[rgba(39,43,65,0.7)]
+}
+
+.form__mobile-number-verified-box-border {
+    @apply border border-solid border-[#d4d5d9] rounded-[2px];
+}
+
+.form__mobile-number-verifyicon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    margin: auto;
+    background-color: green;
+    border-radius: 100%;
+    width: 11px;
+    height: 11px;
+}
+
+.form__inputs-border {
+    @apply border border-solid border-[#d4d5d9] rounded-[2px];
+}
+
+.form__input-controls {
+    @apply text-[16px] p-3 text-[#282c3f] w-full;
+}
+
+.form__input-controls-mobile-number {
+    @apply text-[16px] pl-16 pt-3 pb-3 pr-3 text-[#282c3f] w-full;
+}
+
+.form__input-controls::placeholder {
+    @apply text-[12px];
+}
+
+.form__input-controls:disabled {
+    @apply bg-white text-black opacity-100;
+}
+
+.form__input-controls-mobile-number::placeholder {
+    @apply text-[12px];
+}
+
+.form__input-controls-mobile-number:focus::placeholder {
+    @apply text-transparent;
+}
+
+.form__input-controls-mobile-number:focus{
+    @apply outline-none border border-solid border-black rounded-[2px] caret-red-600;
+}
+
+.form__input-controls:focus{
+    @apply outline-none border border-solid border-black rounded-[2px] caret-red-600;
+}
+
+.form_input-controls-label {
+    @apply absolute top-[14px] left-3 text-[12px] text-[#94969f] pointer-events-none transition-all duration-200 ease-in-out;
+}
+
+.form__input-controls-label-fixed {
+    @apply absolute top-[16px] left-3 text-[12px] text-[#94969f] pointer-events-none transition-all duration-200 ease-in-out;
+}
+
+.peer:focus ~  .form_input-controls-label,
+.peer:not(:placeholder-shown) ~ .form_input-controls-label {
+    @apply top-[-14px] left-3 text-[12px] text-[#282c3f] bg-[#fff] px-[1px];
+}
+
+.peer:focus ~  .form__input-controls-label-fixed,
+.peer:not(:placeholder-shown) ~ .form__input-controls-label-fixed {
+    @apply top-[14px] left-[14px] text-black;
+}
+
+.tailwind-debugger {
+    @apply outline outline-1 outline-green-500;
+}
+
+.form__gender-tick-mark {
+    appearance: none;
+    border-right: 1px solid #dc2626;
+    border-bottom: 1px solid #dc2626;
+    height: 10px;
+    width: 5px;
+    rotate: 45deg;
+    opacity: 0;
+    margin-right: 10px;
+    padding-bottom: 13px;
+}
+
+.form__gender-tick-mark:checked {
+    opacity: 1;
+}
+
+
+.form__submit-button {
+    @apply bg-[#ff3f6c] text-white text-[14px] py-3 rounded-[2px] w-full border border-solid border-[#ff3f6c] font-semibold uppercase;
+}
+
+

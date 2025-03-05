@@ -1,0 +1,1 @@
+ssh -i aws/renivet-kp.pem -fN -L 15432:localhost:5432 -L 16379:localhost:6379 ubuntu@13.126.5.179
