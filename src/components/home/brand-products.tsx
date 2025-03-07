@@ -4,26 +4,28 @@ import {
     Carousel,
     CarouselContent,
     CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
 } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
-import { MarketingStrip as TypeMarketingStrip } from "@/lib/validations";
+import { HomeBrandProduct } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
 
 interface PageProps extends GenericProps {
-    marketingStrip: TypeMarketingStrip[];
+    brandProducts: HomeBrandProduct[];
 }
 
-export function MarketingStrip({
+export function BrandProducts({
     className,
-    marketingStrip,
+    brandProducts,
     ...props
 }: PageProps) {
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-5 pt-10 md:px-8 md:py-10 md:pt-20",
+                "flex w-full justify-center py-5 md:px-8 md:py-10",
                 className
             )}
             {...props}
@@ -32,7 +34,7 @@ export function MarketingStrip({
                 <Carousel
                     plugins={[
                         Autoplay({
-                            delay: 2000,
+                            delay: 5000,
                         }),
                     ]}
                     opts={{
@@ -40,30 +42,32 @@ export function MarketingStrip({
                         align: "start",
                     }}
                 >
-                    <CarouselContent className="flex flex-row gap-4">
-                        {marketingStrip.map((item, index) => (
+                    <CarouselContent className="-ml-2 md:-ml-4">
+                        {brandProducts.map((item, index) => (
                             <CarouselItem
                                 key={index}
-                                className="text-center md:basis-1/2 lg:basis-1/4"
+                                className="pl-2 md:basis-1/3 md:pl-4 lg:basis-1/6"
                             >
-                                <Link href="/shop" className="space-y-4">
-                                    <div className="aspect-[3/3.2]">
+                                <Link
+                                    href={item.url || "/shop"}
+                                    className="block"
+                                >
+                                    <div className="aspect-[4/5] overflow-hidden">
                                         <Image
                                             src={item.imageUrl}
-                                            alt={item.title}
-                                            width={1000}
-                                            height={1000}
+                                            alt={`Brand Product ${index + 1}`}
+                                            width={200}
+                                            height={200}
                                             className="size-full object-cover"
                                         />
                                     </div>
-
-                                    <h3 className="text-lg font-semibold uppercase">
-                                        {item.title}
-                                    </h3>
                                 </Link>
                             </CarouselItem>
                         ))}
                     </CarouselContent>
+
+                    <CarouselPrevious className="left-0 h-full rounded-none border-none bg-gradient-to-r from-background to-transparent hover:from-background hover:to-transparent" />
+                    <CarouselNext className="right-0 h-full rounded-none border-none bg-gradient-to-l from-background to-transparent" />
                 </Carousel>
             </div>
         </section>
