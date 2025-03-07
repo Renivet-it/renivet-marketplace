@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "product_status_idx" ON "products" USING btree ("status");

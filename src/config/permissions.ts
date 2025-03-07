@@ -1,6 +1,6 @@
 import { Permission } from "@/types";
 
-export const SitePermissions: Permission[] = [
+export const sitePermissions: Permission[] = [
     {
         name: "VIEW_PROTECTED_PAGES",
         description: "Access protected areas of the platform",
@@ -114,43 +114,61 @@ export enum BitFieldSitePermission {
 
 export const brandPermissions: Permission[] = [
     {
+        name: "VIEW_ANALYTICS",
+        description: "Access brand-specific analytics and reports",
+        bit: 1 << 17,
+    },
+    {
         name: "MANAGE_TEAM",
         description: "Invite or remove team members within the brand",
-        bit: 1 << 17,
+        bit: 1 << 18,
     },
     {
         name: "MANAGE_PRODUCTS",
         description: "Create, edit, or delete products under the brand",
-        bit: 1 << 18,
+        bit: 1 << 19,
     },
     {
         name: "MANAGE_DISCOUNTS",
         description: "Create, edit, or delete discounts for products",
-        bit: 1 << 19,
+        bit: 1 << 20,
+    },
+    {
+        name: "MANAGE_INVITES",
+        description: "Create, edit, or delete invites for team members",
+        bit: 1 << 21,
+    },
+    {
+        name: "MANAGE_ROLES",
+        description: "Create, edit, or delete roles and assign permissions",
+        bit: 1 << 22,
     },
     {
         name: "VIEW_ORDERS",
         description: "Access order information and analytics",
-        bit: 1 << 20,
+        bit: 1 << 23,
     },
     {
         name: "MANAGE_BRANDING",
         description: "Edit brand colors, logo, and other branding elements",
-        bit: 1 << 21,
+        bit: 1 << 24,
     },
     {
         name: "ADMINISTRATOR",
         description:
             "Access to all brand functions, including critical administrative tasks",
-        bit: 1 << 22,
+        bit: 1 << 25,
     },
 ];
 
 export enum BitFieldBrandPermission {
-    MANAGE_TEAM = 1 << 0,
-    MANAGE_PRODUCTS = 1 << 1,
-    MANAGE_DISCOUNTS = 1 << 2,
-    VIEW_ORDERS = 1 << 3,
-    MANAGE_BRANDING = 1 << 4,
-    ADMINISTRATOR = 1 << 5,
+    VIEW_ANALYTICS = 1 << 17,
+    MANAGE_TEAM = 1 << 18,
+    MANAGE_PRODUCTS = 1 << 19,
+    MANAGE_DISCOUNTS = 1 << 20,
+    MANAGE_INVITES = 1 << 21,
+    MANAGE_ROLES = 1 << 22,
+    VIEW_ORDERS = 1 << 23,
+    MANAGE_BRANDING = 1 << 24,
+    ADMINISTRATOR = 1 << 25,
 }

@@ -2,9 +2,22 @@ import { ClientProvider, ServerProvider } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { dmsans, rubik } from "./fonts";
 import "./globals.css";
-import { garamond, poppins } from "./fonts";
+import { env } from "@/../env";
+import { GoogleAnalytics } from "@next/third-parties/google";
+
+export const viewport: Viewport = {
+    themeColor: [
+        { media: "(prefers-color-scheme: light)", color: "white" },
+        { media: "(prefers-color-scheme: dark)", color: "black" },
+    ],
+    colorScheme: "light",
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+};
 
 export const metadata: Metadata = {
     title: {
@@ -15,25 +28,28 @@ export const metadata: Metadata = {
     keywords: siteConfig.keywords,
     authors: [
         {
-            name: siteConfig.name,
-            url: getAbsoluteURL(),
+            name: `${siteConfig.name} Team`,
+            url: getAbsoluteURL("/about#team"),
         },
     ],
+    publisher: `${siteConfig.name} Team`,
     formatDetection: {
+        email: false,
+        address: false,
         telephone: false,
     },
+    referrer: "origin-when-cross-origin",
+    category: siteConfig.category,
     appleWebApp: {
         capable: true,
-        statusBarStyle: "default",
+        statusBarStyle: "black-translucent",
         title: siteConfig.name,
     },
     creator: siteConfig.name,
     openGraph: {
-        type: "website",
-        locale: "en_US",
-        url: getAbsoluteURL(),
         title: siteConfig.name,
         description: siteConfig.description,
+        url: getAbsoluteURL(),
         siteName: siteConfig.name,
         images: [
             {
@@ -41,6 +57,8 @@ export const metadata: Metadata = {
                 alt: siteConfig.name,
             },
         ],
+        locale: "en_US",
+        type: "website",
     },
     twitter: {
         card: "summary_large_image",
@@ -50,26 +68,32 @@ export const metadata: Metadata = {
         creator: "@itsdrvgo",
     },
     icons: {
-        icon: "/favicon.ico",
-        shortcut: "/favicon-16x16.png",
+        icon: [
+            {
+                url: "/favicon.ico",
+                sizes: "32x32",
+                type: "image/x-icon",
+            },
+            {
+                url: "/favicon-96x96.png",
+                sizes: "96x96",
+                type: "image/png",
+            },
+        ],
         apple: "/apple-touch-icon.png",
     },
     manifest: "/site.webmanifest",
     metadataBase: new URL(getAbsoluteURL()),
 };
 
-export default function RootLayout({
-    children,
-}: Readonly<{
-    children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: LayoutProps) {
     return (
-        <ServerProvider>
-            <html
-                lang="en"
-                suppressHydrationWarning
-                className={cn(poppins.variable, garamond.variable)}
-            >
+        <html
+            lang="en"
+            suppressHydrationWarning
+            className={cn(dmsans.variable, rubik.variable)}
+        >
+            <ServerProvider>
                 <body
                     className={cn("min-h-screen overflow-x-hidden antialiased")}
                 >
@@ -78,7 +102,8 @@ export default function RootLayout({
                         <Toaster />
                     </ClientProvider>
                 </body>
-            </html>
-        </ServerProvider>
+            </ServerProvider>
+            <GoogleAnalytics gaId={env.GOOGLE_ANALYTICS_ID} />
+        </html>
     );
 }

@@ -1,9 +1,12 @@
+import { getAbsoluteURL } from "@/lib/utils";
+import { BitFieldBrandPermission, BitFieldSitePermission } from "./permissions";
+
 export const siteConfig: SiteConfig = {
     name: "Renivet",
     description:
-        "A marketplace for digital products, services, and more. Buy and sell items with ease.",
+        "A marketplace bridging conscious consumers and responsible brands, setting a new standard for transparency and circularity in fashion. Sustainability isn't an option - it's the standard!",
     longDescription:
-        "Renivet is a marketplace for digital products, services, and more. Buy and sell items with ease. We offer a wide range of categories, including software, graphics, music, and more.",
+        "Renivet is a marketplace bridging conscious consumers and responsible brands, setting a new standard for transparency and circularity in fashion. Renivet transforms shopping into a step toward a circular fashion economy. Sustainability isn't an option - it's the standard!",
     keywords: [
         "marketplace",
         "digital products",
@@ -14,48 +17,51 @@ export const siteConfig: SiteConfig = {
         "graphics",
         "music",
     ],
+    category: "Marketplace",
     developer: {
         name: "DRVGO",
         url: "https://itsdrvgo.me/",
     },
     og: {
-        url: "/og.webp",
+        url: getAbsoluteURL("/og.webp"),
         width: 1200,
         height: 630,
     },
     links: {
         Facebook: "#",
         Twitter: "#",
-        Instagram: "#",
-        Linkedin: "#",
+        Instagram: "https://www.instagram.com/renivet__",
+        Linkedin: "https://www.linkedin.com/company/renivet/",
         Youtube: "#",
     },
     contact: {
         officeHours: "Monday - Friday, 9:00 AM - 5:00 PM",
         email: "support@renivet.com",
-        phone: "+1 (234) 567-8901",
-        location: "1234 Main Street, New York, NY 10001",
     },
     menu: [
         {
-            name: "Home",
-            href: "/",
-            icon: "Home",
-        },
-        {
-            name: "Shop",
-            href: "/shop",
-            icon: "ShoppingBag",
-        },
-        {
             name: "About",
+            description: "Learn more about us",
             href: "/about",
             icon: "User",
         },
         {
+            name: "Shop",
+            description: "Browse our products",
+            href: "/shop",
+            icon: "ShoppingBag",
+        },
+        {
+            name: "Blogs",
+            description: "Read our latest articles",
+            href: "/blogs",
+            icon: "BookOpen",
+        },
+        {
             name: "Contact",
+            description: "Get in touch with us",
             href: "/contact",
-            icon: "Mail",
+            icon: "Headset",
         },
     ],
     footer: {
@@ -72,69 +78,290 @@ export const siteConfig: SiteConfig = {
                         href: "/about#team",
                     },
                     {
-                        name: "Awards",
-                        href: "/about#awards",
+                        name: "Contact Us",
+                        href: "/contact",
                     },
                     {
-                        name: "Testimonials",
-                        href: "/about#testimonials",
+                        name: "FAQs",
+                        href: "/about#faqs",
+                    },
+                    {
+                        name: "Become a Seller",
+                        href: "/become-a-seller",
+                    },
+                ],
+            },
+            {
+                name: "Socials",
+                items: [
+                    {
+                        name: "Facebook",
+                        href: "/soon",
+                    },
+                    {
+                        name: "Twitter",
+                        href: "/soon",
+                    },
+                    {
+                        name: "Instagram",
+                        href: "https://www.instagram.com/renivet__",
+                    },
+                    {
+                        name: "Linkedin",
+                        href: "https://www.linkedin.com/company/renivet/",
+                    },
+                    {
+                        name: "Youtube",
+                        href: "/soon",
+                    },
+                ],
+            },
+            {
+                name: "Legal",
+                items: [
+                    {
+                        name: "Terms and Conditions",
+                        href: "/terms",
                     },
                     {
                         name: "Privacy Policy",
                         href: "/privacy",
                     },
-                ],
-            },
-            {
-                name: "Services",
-                items: [
                     {
-                        name: "Web Design",
-                        href: "/services/web-design",
+                        name: "Shipping Policy",
+                        href: "/shipping-policy",
                     },
                     {
-                        name: "Web Development",
-                        href: "/services/web-development",
-                    },
-                    {
-                        name: "Mobile Design",
-                        href: "/services/mobile-design",
-                    },
-                    {
-                        name: "UI/UX Design",
-                        href: "/services/ui-ux-design",
-                    },
-                    {
-                        name: "Branding Design",
-                        href: "/services/branding-design",
-                    },
-                ],
-            },
-            {
-                name: "Portfolio",
-                items: [
-                    {
-                        name: "Corporate Websites",
-                        href: "/portfolio/corporate-websites",
-                    },
-                    {
-                        name: "E-Commerce",
-                        href: "/portfolio/e-commerce",
-                    },
-                    {
-                        name: "Mobile Apps",
-                        href: "/portfolio/mobile-apps",
-                    },
-                    {
-                        name: "Landing Pages",
-                        href: "/portfolio/landing-pages",
-                    },
-                    {
-                        name: "UI/UX Projects",
-                        href: "/portfolio/ui-ux-projects",
+                        name: "Refund Policy",
+                        href: "/refund-policy",
                     },
                 ],
             },
         ],
     },
 };
+
+export const generalSidebarConfig: GeneralSidebarConfig[] = [
+    {
+        title: "Content",
+        url: "#",
+        icon: "BookOpen",
+        items: [
+            {
+                title: "Banners",
+                url: "/dashboard/general/banners",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Marketing Strip",
+                url: "/dashboard/general/marketing-strip",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Blogs",
+                url: "/dashboard/general/blogs",
+                permissions: BitFieldSitePermission.MANAGE_BLOGS,
+            },
+        ],
+    },
+    {
+        title: "Management",
+        url: "#",
+        icon: "Settings2",
+        items: [
+            {
+                title: "Advertisements",
+                url: "/dashboard/general/advertisements",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Brand Products",
+                url: "/dashboard/general/brand-products",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Shop by Category",
+                url: "/dashboard/general/shop-by-category",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Users",
+                url: "/dashboard/general/users",
+                permissions:
+                    BitFieldSitePermission.VIEW_USERS |
+                    BitFieldSitePermission.MANAGE_USERS,
+            },
+            {
+                title: "Brands",
+                url: "/dashboard/general/brands",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_BRANDS,
+            },
+            {
+                title: "Roles",
+                url: "/dashboard/general/roles",
+                permissions:
+                    BitFieldSitePermission.MANAGE_ROLES |
+                    BitFieldSitePermission.VIEW_ROLES,
+            },
+            {
+                title: "Tags",
+                url: "/dashboard/general/tags",
+                permissions: BitFieldSitePermission.MANAGE_BLOG_TAGS,
+            },
+            {
+                title: "Tickets",
+                url: "/dashboard/general/tickets",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Subscribers",
+                url: "/dashboard/general/subscribers",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.VIEW_SETTINGS,
+            },
+            {
+                title: "Waitlist",
+                url: "/dashboard/general/brand-waitlist",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.VIEW_SETTINGS,
+            },
+            {
+                title: "Plans",
+                url: "/dashboard/general/plans",
+                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+            {
+                title: "Coupons",
+                url: "/dashboard/general/coupons",
+                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+        ],
+    },
+    {
+        title: "Products",
+        url: "#",
+        icon: "Package",
+        items: [
+            {
+                title: "Category Requests",
+                url: "/dashboard/general/category-requests",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
+            {
+                title: "Categories",
+                url: "/dashboard/general/categories",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.MANAGE_BRANDS,
+            },
+            {
+                title: "Sub Categories",
+                url: "/dashboard/general/sub-categories",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.MANAGE_BRANDS,
+            },
+            {
+                title: "Product Types",
+                url: "/dashboard/general/product-types",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.MANAGE_BRANDS,
+            },
+            {
+                title: "Products",
+                url: "/dashboard/general/products",
+                permissions: BitFieldSitePermission.MANAGE_BRANDS,
+            },
+            {
+                title: "Orders",
+                url: "/dashboard/general/orders",
+                permissions: BitFieldSitePermission.MANAGE_BRANDS,
+            },
+        ],
+    },
+];
+
+export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
+    return [
+        {
+            title: "Dashboard",
+            url: "#",
+            icon: "LayoutDashboard",
+            items: [
+                {
+                    title: "Analytics",
+                    url: `/dashboard/brands/${brandId}/analytics`,
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                },
+            ],
+        },
+        {
+            title: "Management",
+            url: "#",
+            icon: "Settings2",
+            items: [
+                {
+                    title: "Invites",
+                    url: `/dashboard/brands/${brandId}/invites`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Verification",
+                    url: `/dashboard/brands/${brandId}/verification`,
+                    permissions: BitFieldBrandPermission.ADMINISTRATOR,
+                },
+                {
+                    title: "Roles",
+                    url: `/dashboard/brands/${brandId}/roles`,
+                    permissions: BitFieldBrandPermission.MANAGE_ROLES,
+                },
+                {
+                    title: "Members",
+                    url: `/dashboard/brands/${brandId}/members`,
+                    permissions: BitFieldBrandPermission.MANAGE_TEAM,
+                },
+                {
+                    title: "Bans",
+                    url: `/dashboard/brands/${brandId}/bans`,
+                    permissions: BitFieldBrandPermission.MANAGE_TEAM,
+                },
+                {
+                    title: "Media",
+                    url: `/dashboard/brands/${brandId}/media`,
+                    permissions:
+                        BitFieldBrandPermission.MANAGE_BRANDING |
+                        BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Memberships",
+                    url: `/dashboard/brands/${brandId}/memberships`,
+                    permissions: BitFieldBrandPermission.ADMINISTRATOR,
+                },
+            ],
+        },
+        {
+            title: "Store",
+            url: "#",
+            icon: "Store",
+            items: [
+                {
+                    title: "Page",
+                    url: `/dashboard/brands/${brandId}/page`,
+                    permissions: BitFieldBrandPermission.MANAGE_BRANDING,
+                },
+                {
+                    title: "Products",
+                    url: `/dashboard/brands/${brandId}/products`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+            ],
+        },
+    ];
+}

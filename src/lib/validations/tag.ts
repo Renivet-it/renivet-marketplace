@@ -19,14 +19,55 @@ export const tagSchema = z.object({
             invalid_type_error: "Slug must be a string",
         })
         .min(3, "Slug must be at least 3 characters long"),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
-    }),
-    updatedAt: z.date({
-        required_error: "Updated at is required",
-        invalid_type_error: "Updated at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
+export const tagWithBlogTagsSchema = tagSchema.extend({
+    blogTags: z
+        .object({
+            id: z
+                .string({
+                    required_error: "ID is required",
+                    invalid_type_error: "ID must be a string",
+                })
+                .uuid("ID is invalid"),
+            blogId: z
+                .string({
+                    required_error: "Blog ID is required",
+                    invalid_type_error: "Blog ID must be a string",
+                })
+                .uuid("Blog ID is invalid"),
+            tagId: z
+                .string({
+                    required_error: "Tag ID is required",
+                    invalid_type_error: "Tag ID must be a string",
+                })
+                .uuid("Tag ID is invalid"),
+            createdAt: z
+                .union([z.string(), z.date()], {
+                    required_error: "Created at is required",
+                    invalid_type_error: "Created at must be a date",
+                })
+                .transform((v) => new Date(v)),
+            updatedAt: z
+                .union([z.string(), z.date()], {
+                    required_error: "Updated at is required",
+                    invalid_type_error: "Updated at must be a date",
+                })
+                .transform((v) => new Date(v)),
+        })
+        .array(),
 });
 
 export const createTagSchema = tagSchema.omit({
@@ -38,5 +79,15 @@ export const createTagSchema = tagSchema.omit({
 
 export const updateTagSchema = createTagSchema;
 
+export const cachedTagSchema = tagSchema.extend({
+    blogs: z.number({
+        required_error: "Blogs is required",
+        invalid_type_error: "Blogs must be a number",
+    }),
+});
+
 export type Tag = z.infer<typeof tagSchema>;
 export type CreateTag = z.infer<typeof createTagSchema>;
+export type UpdateTag = z.infer<typeof updateTagSchema>;
+export type TagWithBlogTags = z.infer<typeof tagWithBlogTagsSchema>;
+export type CachedTag = z.infer<typeof cachedTagSchema>;

@@ -1,0 +1,1 @@
+ALTER TABLE "brands_waitlist" ADD COLUMN "status" text DEFAULT 'pending' NOT NULL;

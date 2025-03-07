@@ -2,6 +2,12 @@ import { ContactDetails, ContactHeading } from "@/components/contact";
 import { ContactUsForm } from "@/components/globals/forms";
 import { GeneralShell } from "@/components/globals/layouts";
 import { MapIframe } from "@/components/ui/map-iframe";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Contact Us",
+    description: "Contact us for any queries or feedback.",
+};
 
 export default function Page() {
     return (

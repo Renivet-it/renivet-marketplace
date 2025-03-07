@@ -1,0 +1,1 @@
+ALTER TABLE "brand_confidentials" ALTER COLUMN "bank_account_verification_document_url" SET NOT NULL;

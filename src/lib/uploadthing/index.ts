@@ -1,11 +1,11 @@
-import { OurFileRouter } from "@/app/api/uploadthing/core";
+import { UploadRouter } from "@/app/api/uploadthing/core";
 import {
+    generateReactHelpers,
     generateUploadButton,
     generateUploadDropzone,
 } from "@uploadthing/react";
-import { UTApi } from "uploadthing/server";
 
-export const utapi = new UTApi();
-
-export const UploadButton = generateUploadButton<OurFileRouter>();
-export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+export const UploadButton = generateUploadButton<UploadRouter>();
+export const UploadDropzone = generateUploadDropzone<UploadRouter>();
+export const { useUploadThing, uploadFiles } =
+    generateReactHelpers<UploadRouter>();

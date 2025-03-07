@@ -1,48 +1,87 @@
 import { relations } from "drizzle-orm";
 import { boolean, index, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
+import { addresses } from "./address";
 import { blogs } from "./blog";
-import { profiles } from "./profile";
+import { bannedBrandMembers, brandMembers, brands } from "./brand";
+import { carts } from "./cart";
+import { categoryRequests } from "./category";
 import { roles } from "./role";
+import { wishlists } from "./wishlist";
 
 export const users = pgTable("users", {
-    id: text().primaryKey().notNull().unique(),
-    firstName: text().notNull(),
-    lastName: text().notNull(),
-    email: text().notNull().unique(),
-    avatarUrl: text(),
-    isVerified: boolean().notNull().default(false),
+    id: text("id").primaryKey().notNull().unique(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull().unique(),
+    phone: text("phone").unique(),
+    avatarUrl: text("avatar_url"),
+    isEmailVerified: boolean("is_email_verified").notNull().default(false),
+    isPhoneVerified: boolean("is_phone_verified").notNull().default(false),
     ...timestamps,
 });
 
 export const userRoles = pgTable(
     "user_roles",
     {
-        id: uuid().primaryKey().notNull().unique().defaultRandom(),
-        userId: text()
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        userId: text("user_id")
             .notNull()
             .references(() => users.id, {
                 onDelete: "cascade",
             }),
-        roleId: uuid()
+        roleId: uuid("role_id")
             .notNull()
             .references(() => roles.id, {
                 onDelete: "cascade",
             }),
         ...timestamps,
     },
-    (table) => {
-        return {
-            userIdIdx: index().on(table.userId),
-            roleIdIdx: index().on(table.roleId),
-        };
-    }
+    (table) => ({
+        userIdIdx: index("user_role_id_idx").on(table.userId),
+        roleIdIdx: index("role_id_idx").on(table.roleId),
+    })
+);
+
+export const userAddresses = pgTable(
+    "user_addresses",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, {
+                onDelete: "cascade",
+            }),
+        addressId: uuid("address_id")
+            .notNull()
+            .references(() => addresses.id, {
+                onDelete: "cascade",
+            }),
+        ...timestamps,
+    },
+    (table) => ({
+        userIdIdx: index("user_address_id_idx").on(table.userId),
+        addressIdIdx: index("address_id_idx").on(table.addressId),
+    })
 );
 
 export const userRelations = relations(users, ({ one, many }) => ({
-    profile: one(profiles),
     blogs: many(blogs),
     roles: many(userRoles),
+    addresses: many(addresses),
+    brandRequests: many(brands),
+    brand: one(brands, {
+        fields: [users.id],
+        references: [brands.ownerId],
+    }),
+    brandMember: one(brandMembers, {
+        fields: [users.id],
+        references: [brandMembers.memberId],
+    }),
+    bannedFromBrands: many(bannedBrandMembers),
+    wishlists: many(wishlists),
+    carts: many(carts),
+    categoryRequests: many(categoryRequests),
 }));
 
 export const userRoleRelations = relations(userRoles, ({ one }) => ({
@@ -53,5 +92,16 @@ export const userRoleRelations = relations(userRoles, ({ one }) => ({
     role: one(roles, {
         fields: [userRoles.roleId],
         references: [roles.id],
+    }),
+}));
+
+export const userAddressRelations = relations(userAddresses, ({ one }) => ({
+    user: one(users, {
+        fields: [userAddresses.userId],
+        references: [users.id],
+    }),
+    address: one(addresses, {
+        fields: [userAddresses.addressId],
+        references: [addresses.id],
     }),
 }));

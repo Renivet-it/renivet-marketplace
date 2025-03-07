@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import {
     Form,
     FormControl,
@@ -9,7 +9,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { useIntroModalStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
@@ -43,7 +43,7 @@ export function BrandWaitlistForm({ setCurrentTab }: PageProps) {
     });
 
     const { mutate: addBrandToWaitlist, isPending } =
-        trpc.brandsWaitlist.createBrandsWaitlistEntry.useMutation({
+        trpc.general.brandsWaitlist.createBrandsWaitlistEntry.useMutation({
             onMutate: () => {
                 const toastId = toast.loading(
                     "Adding your brand to the waitlist..."

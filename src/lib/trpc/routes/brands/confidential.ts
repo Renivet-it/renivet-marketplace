@@ -1,0 +1,168 @@
+import { env } from "@/../env";
+import { BitFieldBrandPermission } from "@/config/permissions";
+import { brandCache, userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { BrandVerificationtSubmitted } from "@/lib/resend/emails";
+import { shiprocket } from "@/lib/shiprocket";
+import {
+    createTRPCRouter,
+    isTRPCAuth,
+    protectedProcedure,
+} from "@/lib/trpc/trpc";
+import { generatePickupLocationCode, getRawNumberFromPhone } from "@/lib/utils";
+import {
+    createBrandConfidentialSchema,
+    updateBrandConfidentialSchema,
+} from "@/lib/validations";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+export const confidentialsRouter = createTRPCRouter({
+    createConfidential: protectedProcedure
+        .input(createBrandConfidentialSchema)
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input, ctx }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingBrand = await brandCache.get(id);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            const existingBrandConfidential =
+                await queries.brandConfidentials.getBrandConfidential(id);
+            if (existingBrandConfidential)
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "Confidential already exists",
+                });
+
+            const sr = await shiprocket();
+
+            const { status, message } = await sr.createPickUpLocation({
+                pickup_location: generatePickupLocationCode({
+                    brandId: existingBrand.id,
+                    brandName: existingBrand.name,
+                }),
+                name: input.authorizedSignatoryName,
+                email: input.authorizedSignatoryEmail,
+                phone: getRawNumberFromPhone(input.authorizedSignatoryPhone),
+                address: input.warehouseAddressLine1 ?? input.addressLine1,
+                address_2:
+                    input.warehouseAddressLine2 ??
+                    input.addressLine2 ??
+                    undefined,
+                city: input.warehouseCity ?? input.city,
+                state: input.warehouseState ?? input.state,
+                pin_code: +(input.warehousePostalCode ?? input.postalCode),
+                country: "India",
+            });
+            if (!status) throw new TRPCError({ code: "BAD_REQUEST", message });
+
+            const [data] = await Promise.all([
+                queries.brandConfidentials.createBrandConfidential(input),
+                queries.brands.updateBrandConfidentialStatus({
+                    id,
+                    confidentialVerificationStatus: "pending",
+                }),
+                brandCache.remove(id),
+                userCache.remove(existingBrand.ownerId),
+            ]);
+
+            await resend.batch.send([
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: existingBrand.email,
+                    subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
+                    react: BrandVerificationtSubmitted({
+                        user: {
+                            name: existingBrand.name,
+                        },
+                        brand: {
+                            id: existingBrand.id,
+                            status: "pending",
+                            name: existingBrand.name,
+                        },
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: env.RENIVET_EMAIL_1,
+                    subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
+                    react: BrandVerificationtSubmitted({
+                        user: {
+                            name: existingBrand.name,
+                        },
+                        brand: {
+                            id: existingBrand.id,
+                            status: "pending",
+                            name: existingBrand.name,
+                        },
+                    }),
+                },
+                {
+                    from: env.RESEND_EMAIL_FROM,
+                    to: env.RENIVET_EMAIL_2,
+                    subject: `🚀 Verification Liftoff Achieved, ${existingBrand.name}! 🚀`,
+                    react: BrandVerificationtSubmitted({
+                        user: {
+                            name: existingBrand.name,
+                        },
+                        brand: {
+                            id: existingBrand.id,
+                            status: "pending",
+                            name: existingBrand.name,
+                        },
+                    }),
+                },
+            ]);
+
+            return data;
+        }),
+    updateConfidential: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateBrandConfidentialSchema,
+            })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input, ctx }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            const existingBrandConfidential =
+                await queries.brandConfidentials.getBrandConfidential(id);
+            if (!existingBrandConfidential)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Confidential not found",
+                });
+
+            if (existingBrandConfidential.verificationStatus === "approved")
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Confidential already verified",
+                });
+
+            const [data] = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidential(id, values),
+                queries.brandConfidentials.updateBrandConfidentialStatus(id, {
+                    status: "pending",
+                }),
+                queries.brands.updateBrandConfidentialStatus({
+                    id,
+                    confidentialVerificationStatus: "pending",
+                    confidentialVerificationRejectedAt: null,
+                    confidentialVerificationRejectedReason: null,
+                }),
+                brandCache.remove(id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
+
+            return data;
+        }),
+});

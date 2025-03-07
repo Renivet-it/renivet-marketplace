@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
 import useEmblaCarousel, {
     type UseEmblaCarouselType,
@@ -152,18 +152,27 @@ Carousel.displayName = "Carousel";
 
 const CarouselContent = React.forwardRef<
     HTMLDivElement,
-    React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => {
+    React.HTMLAttributes<HTMLDivElement> & {
+        classNames?: {
+            wrapper?: string;
+            inner?: string;
+        };
+    }
+>(({ className, classNames, ...props }, ref) => {
     const { carouselRef, orientation } = useCarousel();
 
     return (
-        <div ref={carouselRef} className="overflow-hidden">
+        <div
+            ref={carouselRef}
+            className={cn("overflow-hidden", classNames?.wrapper)}
+        >
             <div
                 ref={ref}
                 className={cn(
                     "flex",
                     orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
-                    className
+                    className,
+                    classNames?.inner
                 )}
                 {...props}
             />

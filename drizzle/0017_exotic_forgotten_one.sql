@@ -1,0 +1,1 @@
+ALTER TABLE "brands_waitlist" DROP COLUMN IF EXISTS "status";

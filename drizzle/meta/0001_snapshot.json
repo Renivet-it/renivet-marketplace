@@ -1,9 +1,123 @@
 {
-  "id": "dc04e72b-0111-4d5f-81a1-98df4a65625b",
-  "prevId": "b63e6690-0fcf-4d19-8c63-4e9d380ffd95",
+  "id": "abca688a-6fd6-4a47-a0fc-3bd059bba32f",
+  "prevId": "21e233d0-b02c-406c-ac2a-1b1f95d80d2a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.addresses": {
+      "name": "addresses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "street": {
+          "name": "street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "zip": {
+          "name": "zip",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "is_primary_idx": {
+          "name": "is_primary_idx",
+          "columns": [
+            {
+              "expression": "is_primary",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "addresses_user_id_users_id_fk": {
+          "name": "addresses_user_id_users_id_fk",
+          "tableFrom": "addresses",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "addresses_id_unique": {
+          "name": "addresses_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        },
+        "addresses_user_id_unique": {
+          "name": "addresses_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
     "public.blog_tags": {
       "name": "blog_tags",
       "schema": "",
@@ -15,27 +129,27 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "blogId": {
-          "name": "blogId",
+        "blog_id": {
+          "name": "blog_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "tagId": {
-          "name": "tagId",
+        "tag_id": {
+          "name": "tag_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -43,11 +157,11 @@
         }
       },
       "indexes": {
-        "blog_tags_blogId_index": {
-          "name": "blog_tags_blogId_index",
+        "blog_id_idx": {
+          "name": "blog_id_idx",
           "columns": [
             {
-              "expression": "blogId",
+              "expression": "blog_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -58,11 +172,11 @@
           "method": "btree",
           "with": {}
         },
-        "blog_tags_tagId_index": {
-          "name": "blog_tags_tagId_index",
+        "tag_id_idx": {
+          "name": "tag_id_idx",
           "columns": [
             {
-              "expression": "tagId",
+              "expression": "tag_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -73,17 +187,17 @@
           "method": "btree",
           "with": {}
         },
-        "blog_tags_blogId_tagId_index": {
-          "name": "blog_tags_blogId_tagId_index",
+        "blog_tag_idx": {
+          "name": "blog_tag_idx",
           "columns": [
             {
-              "expression": "blogId",
+              "expression": "blog_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "tagId",
+              "expression": "tag_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -96,12 +210,12 @@
         }
       },
       "foreignKeys": {
-        "blog_tags_blogId_blogs_id_fk": {
-          "name": "blog_tags_blogId_blogs_id_fk",
+        "blog_tags_blog_id_blogs_id_fk": {
+          "name": "blog_tags_blog_id_blogs_id_fk",
           "tableFrom": "blog_tags",
           "tableTo": "blogs",
           "columnsFrom": [
-            "blogId"
+            "blog_id"
           ],
           "columnsTo": [
             "id"
@@ -109,12 +223,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "blog_tags_tagId_tags_id_fk": {
-          "name": "blog_tags_tagId_tags_id_fk",
+        "blog_tags_tag_id_tags_id_fk": {
+          "name": "blog_tags_tag_id_tags_id_fk",
           "tableFrom": "blog_tags",
           "tableTo": "tags",
           "columnsFrom": [
-            "tagId"
+            "tag_id"
           ],
           "columnsTo": [
             "id"
@@ -170,40 +284,40 @@
           "primaryKey": false,
           "notNull": true
         },
-        "thumbnailUrl": {
-          "name": "thumbnailUrl",
+        "thumbnail_url": {
+          "name": "thumbnail_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "authorId": {
-          "name": "authorId",
+        "author_id": {
+          "name": "author_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "isPublished": {
-          "name": "isPublished",
+        "is_published": {
+          "name": "is_published",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "publishedAt": {
-          "name": "publishedAt",
+        "published_at": {
+          "name": "published_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -212,12 +326,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "blogs_authorId_users_id_fk": {
-          "name": "blogs_authorId_users_id_fk",
+        "blogs_author_id_users_id_fk": {
+          "name": "blogs_author_id_users_id_fk",
           "tableFrom": "blogs",
           "tableTo": "users",
           "columnsFrom": [
-            "authorId"
+            "author_id"
           ],
           "columnsTo": [
             "id"
@@ -274,39 +388,39 @@
           "primaryKey": false,
           "notNull": false
         },
-        "brandName": {
-          "name": "brandName",
+        "brand_name": {
+          "name": "brand_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "brandEmail": {
-          "name": "brandEmail",
+        "brand_email": {
+          "name": "brand_email",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "brandPhone": {
-          "name": "brandPhone",
+        "brand_phone": {
+          "name": "brand_phone",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "brandWebsite": {
-          "name": "brandWebsite",
+        "brand_website": {
+          "name": "brand_website",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -324,11 +438,11 @@
             "id"
           ]
         },
-        "brands_waitlist_brandEmail_unique": {
-          "name": "brands_waitlist_brandEmail_unique",
+        "brands_waitlist_brand_email_unique": {
+          "name": "brands_waitlist_brand_email_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "brandEmail"
+            "brand_email"
           ]
         }
       },
@@ -351,14 +465,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "logoUrl": {
-          "name": "logoUrl",
+        "logo_url": {
+          "name": "logo_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "registeredBy": {
-          "name": "registeredBy",
+        "registered_by": {
+          "name": "registered_by",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -369,15 +483,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -386,12 +500,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "brands_registeredBy_users_id_fk": {
-          "name": "brands_registeredBy_users_id_fk",
+        "brands_registered_by_users_id_fk": {
+          "name": "brands_registered_by_users_id_fk",
           "tableFrom": "brands",
           "tableTo": "users",
           "columnsFrom": [
-            "registeredBy"
+            "registered_by"
           ],
           "columnsTo": [
             "id"
@@ -448,15 +562,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -495,8 +609,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "subCategoryId": {
-          "name": "subCategoryId",
+        "sub_category_id": {
+          "name": "sub_category_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -519,15 +633,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -536,12 +650,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "product_types_subCategoryId_sub_categories_id_fk": {
-          "name": "product_types_subCategoryId_sub_categories_id_fk",
+        "product_types_sub_category_id_sub_categories_id_fk": {
+          "name": "product_types_sub_category_id_sub_categories_id_fk",
           "tableFrom": "product_types",
           "tableTo": "sub_categories",
           "columnsFrom": [
-            "subCategoryId"
+            "sub_category_id"
           ],
           "columnsTo": [
             "id"
@@ -580,8 +694,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "categoryId": {
-          "name": "categoryId",
+        "category_id": {
+          "name": "category_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -604,15 +718,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -621,12 +735,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "sub_categories_categoryId_categories_id_fk": {
-          "name": "sub_categories_categoryId_categories_id_fk",
+        "sub_categories_category_id_categories_id_fk": {
+          "name": "sub_categories_category_id_categories_id_fk",
           "tableFrom": "sub_categories",
           "tableTo": "categories",
           "columnsFrom": [
-            "categoryId"
+            "category_id"
           ],
           "columnsTo": [
             "id"
@@ -695,15 +809,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -747,22 +861,22 @@
           "primaryKey": false,
           "notNull": true
         },
-        "isActive": {
-          "name": "isActive",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -801,46 +915,46 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "productId": {
-          "name": "productId",
+        "product_id": {
+          "name": "product_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "categoryId": {
-          "name": "categoryId",
+        "category_id": {
+          "name": "category_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "subcategoryId": {
-          "name": "subcategoryId",
+        "subcategory_id": {
+          "name": "subcategory_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "productTypeId": {
-          "name": "productTypeId",
+        "product_type_id": {
+          "name": "product_type_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "isPrimary": {
-          "name": "isPrimary",
+        "is_primary": {
+          "name": "is_primary",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -849,12 +963,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "product_categories_productId_products_id_fk": {
-          "name": "product_categories_productId_products_id_fk",
+        "product_categories_product_id_products_id_fk": {
+          "name": "product_categories_product_id_products_id_fk",
           "tableFrom": "product_categories",
           "tableTo": "products",
           "columnsFrom": [
-            "productId"
+            "product_id"
           ],
           "columnsTo": [
             "id"
@@ -862,12 +976,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "product_categories_categoryId_categories_id_fk": {
-          "name": "product_categories_categoryId_categories_id_fk",
+        "product_categories_category_id_categories_id_fk": {
+          "name": "product_categories_category_id_categories_id_fk",
           "tableFrom": "product_categories",
           "tableTo": "categories",
           "columnsFrom": [
-            "categoryId"
+            "category_id"
           ],
           "columnsTo": [
             "id"
@@ -875,12 +989,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "product_categories_subcategoryId_sub_categories_id_fk": {
-          "name": "product_categories_subcategoryId_sub_categories_id_fk",
+        "product_categories_subcategory_id_sub_categories_id_fk": {
+          "name": "product_categories_subcategory_id_sub_categories_id_fk",
           "tableFrom": "product_categories",
           "tableTo": "sub_categories",
           "columnsFrom": [
-            "subcategoryId"
+            "subcategory_id"
           ],
           "columnsTo": [
             "id"
@@ -888,12 +1002,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "product_categories_productTypeId_product_types_id_fk": {
-          "name": "product_categories_productTypeId_product_types_id_fk",
+        "product_categories_product_type_id_product_types_id_fk": {
+          "name": "product_categories_product_type_id_product_types_id_fk",
           "tableFrom": "product_categories",
           "tableTo": "product_types",
           "columnsFrom": [
-            "productTypeId"
+            "product_type_id"
           ],
           "columnsTo": [
             "id"
@@ -956,14 +1070,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "brandId": {
-          "name": "brandId",
+        "brand_id": {
+          "name": "brand_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "productTypeId": {
-          "name": "productTypeId",
+        "product_type_id": {
+          "name": "product_type_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -974,15 +1088,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -991,12 +1105,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "products_brandId_brands_id_fk": {
-          "name": "products_brandId_brands_id_fk",
+        "products_brand_id_brands_id_fk": {
+          "name": "products_brand_id_brands_id_fk",
           "tableFrom": "products",
           "tableTo": "brands",
           "columnsFrom": [
-            "brandId"
+            "brand_id"
           ],
           "columnsTo": [
             "id"
@@ -1004,12 +1118,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "products_productTypeId_product_types_id_fk": {
-          "name": "products_productTypeId_product_types_id_fk",
+        "products_product_type_id_product_types_id_fk": {
+          "name": "products_product_type_id_product_types_id_fk",
           "tableFrom": "products",
           "tableTo": "product_types",
           "columnsFrom": [
-            "productTypeId"
+            "product_type_id"
           ],
           "columnsTo": [
             "id"
@@ -1025,99 +1139,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "id"
-          ]
-        }
-      },
-      "checkConstraints": {}
-    },
-    "public.profiles": {
-      "name": "profiles",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "userId": {
-          "name": "userId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "phone": {
-          "name": "phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "address": {
-          "name": "address",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "isProfileCompleted": {
-          "name": "isProfileCompleted",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "profiles_userId_users_id_fk": {
-          "name": "profiles_userId_users_id_fk",
-          "tableFrom": "profiles",
-          "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "profiles_id_unique": {
-          "name": "profiles_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "id"
-          ]
-        },
-        "profiles_userId_unique": {
-          "name": "profiles_userId_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "userId"
-          ]
-        },
-        "profiles_phone_unique": {
-          "name": "profiles_phone_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "phone"
           ]
         }
       },
@@ -1146,27 +1167,27 @@
           "primaryKey": false,
           "notNull": true
         },
-        "sitePermissions": {
-          "name": "sitePermissions",
+        "site_permissions": {
+          "name": "site_permissions",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "brandPermissions": {
-          "name": "brandPermissions",
+        "brand_permissions": {
+          "name": "brand_permissions",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1217,15 +1238,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1253,8 +1274,8 @@
       },
       "checkConstraints": {}
     },
-    "public.user_roles": {
-      "name": "user_roles",
+    "public.user_addresses": {
+      "name": "user_addresses",
       "schema": "",
       "columns": {
         "id": {
@@ -1264,27 +1285,27 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "roleId": {
-          "name": "roleId",
+        "address_id": {
+          "name": "address_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1292,11 +1313,11 @@
         }
       },
       "indexes": {
-        "user_roles_userId_index": {
-          "name": "user_roles_userId_index",
+        "user_address_id_idx": {
+          "name": "user_address_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1307,11 +1328,11 @@
           "method": "btree",
           "with": {}
         },
-        "user_roles_roleId_index": {
-          "name": "user_roles_roleId_index",
+        "address_id_idx": {
+          "name": "address_id_idx",
           "columns": [
             {
-              "expression": "roleId",
+              "expression": "address_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1324,12 +1345,12 @@
         }
       },
       "foreignKeys": {
-        "user_roles_userId_users_id_fk": {
-          "name": "user_roles_userId_users_id_fk",
-          "tableFrom": "user_roles",
+        "user_addresses_user_id_users_id_fk": {
+          "name": "user_addresses_user_id_users_id_fk",
+          "tableFrom": "user_addresses",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -1337,12 +1358,122 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "user_roles_roleId_roles_id_fk": {
-          "name": "user_roles_roleId_roles_id_fk",
+        "user_addresses_address_id_addresses_id_fk": {
+          "name": "user_addresses_address_id_addresses_id_fk",
+          "tableFrom": "user_addresses",
+          "tableTo": "addresses",
+          "columnsFrom": [
+            "address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_addresses_id_unique": {
+          "name": "user_addresses_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
+    "public.user_roles": {
+      "name": "user_roles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_id": {
+          "name": "role_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "user_id_idx": {
+          "name": "user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "role_id_idx": {
+          "name": "role_id_idx",
+          "columns": [
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "user_roles_user_id_users_id_fk": {
+          "name": "user_roles_user_id_users_id_fk",
+          "tableFrom": "user_roles",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "user_roles_role_id_roles_id_fk": {
+          "name": "user_roles_role_id_roles_id_fk",
           "tableFrom": "user_roles",
           "tableTo": "roles",
           "columnsFrom": [
-            "roleId"
+            "role_id"
           ],
           "columnsTo": [
             "id"
@@ -1373,14 +1504,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "firstName": {
-          "name": "firstName",
+        "first_name": {
+          "name": "first_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "lastName": {
-          "name": "lastName",
+        "last_name": {
+          "name": "last_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -1391,28 +1522,41 @@
           "primaryKey": false,
           "notNull": true
         },
-        "avatarUrl": {
-          "name": "avatarUrl",
+        "phone": {
+          "name": "phone",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "isVerified": {
-          "name": "isVerified",
+        "avatar_url": {
+          "name": "avatar_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_email_verified": {
+          "name": "is_email_verified",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "is_phone_verified": {
+          "name": "is_phone_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1435,6 +1579,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "email"
+          ]
+        },
+        "users_phone_unique": {
+          "name": "users_phone_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "phone"
           ]
         }
       },

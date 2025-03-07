@@ -16,11 +16,11 @@ import {
     SidebarMenuSubButton,
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { ChevronRight } from "lucide-react";
+import { BitFieldSitePermission } from "@/config/permissions";
+import { cn, hasPermission } from "@/lib/utils";
+import Link from "next/link";
 
-export function NavMain({
-    items,
-}: {
+interface Props extends GenericProps {
     items: {
         title: string;
         url: string;
@@ -29,21 +29,46 @@ export function NavMain({
         items?: {
             title: string;
             url: string;
+            permissions?: number;
         }[];
     }[];
-}) {
+    userPermissions: {
+        sitePermissions: number;
+        brandPermissions: number;
+    };
+}
+
+export function NavMain({
+    className,
+    items,
+    userPermissions,
+    ...props
+}: Props) {
     return (
-        <SidebarGroup>
+        <SidebarGroup className={cn("", className)} {...props}>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
+
             <SidebarMenu>
                 {items.map((item) => {
                     const Icon = item.icon && Icons[item.icon];
+
+                    const filteredItems = item.items?.filter((subItem) =>
+                        hasPermission(
+                            userPermissions.sitePermissions,
+                            [
+                                subItem.permissions ||
+                                    BitFieldSitePermission.VIEW_PROTECTED_PAGES,
+                            ],
+                            "any"
+                        )
+                    );
+                    if (!filteredItems?.length) return null;
 
                     return (
                         <Collapsible
                             key={item.title}
                             asChild
-                            defaultOpen={item.isActive}
+                            defaultOpen
                             className="group/collapsible"
                         >
                             <SidebarMenuItem>
@@ -51,21 +76,23 @@ export function NavMain({
                                     <SidebarMenuButton tooltip={item.title}>
                                         {Icon && <Icon />}
                                         <span>{item.title}</span>
-                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                        <Icons.ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
+
                                 <CollapsibleContent>
                                     <SidebarMenuSub>
-                                        {item.items?.map((subItem) => (
+                                        {filteredItems?.map((subItem) => (
                                             <SidebarMenuSubItem
                                                 key={subItem.title}
                                             >
                                                 <SidebarMenuSubButton asChild>
-                                                    <a href={subItem.url}>
-                                                        <span>
-                                                            {subItem.title}
-                                                        </span>
-                                                    </a>
+                                                    <Link
+                                                        href={subItem.url}
+                                                        prefetch
+                                                    >
+                                                        {subItem.title}
+                                                    </Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
                                         ))}

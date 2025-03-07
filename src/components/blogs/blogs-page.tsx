@@ -1,173 +1,159 @@
 "use client";
 
-import { GeneralShell } from "@/components/globals/layouts";
-import { cn, convertValueToLabel } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
-import Image from "next/image";
+import {
+    EmptyPlaceholder,
+    EmptyPlaceholderContent,
+    EmptyPlaceholderDescription,
+    EmptyPlaceholderIcon,
+    EmptyPlaceholderTitle,
+} from "@/components/ui/empty-placeholder-general";
+import { trpc } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
+import { BlogWithAuthorAndTagCount, Tag } from "@/lib/validations";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { parseAsInteger, useQueryState } from "nuqs";
+import { RecentBlogCard } from "../globals/cards";
+import { Icons } from "../icons";
 import { SearchInput } from "../ui/search-input";
-import BlogListWithPagination from "./blogs-pagination";
+import { BlogsList } from "./blogs-list";
 
 interface PageProps extends GenericProps {
-    blogs: BlogWithAuthorAndTag[];
+    recentBlogs?: {
+        data: BlogWithAuthorAndTagCount[];
+        count: number;
+    };
+    initialData: {
+        data: BlogWithAuthorAndTagCount[];
+        count: number;
+    };
+    tags: Tag[];
 }
 
-const dummyBlogs = Array.from({ length: 50 }, (_, i) => ({
-    title: `Blog Post ${i + 1}`,
-    slug: `blog-post-${i + 1}`,
-    description: `This is the description for blog post ${i + 1}`,
-    thumbnailUrl: `https://picsum.photos/seed/${i + 1}/1920/1080`,
-    publishedAt: new Date(),
-    author: {
-        firstName: "John",
-        lastName: "Doe",
-        avatarUrl: null,
-    },
-}));
+export function BlogsPage({
+    className,
+    initialData,
+    recentBlogs,
+    tags,
+    ...props
+}: PageProps) {
+    const [page] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [tagId, setTagId] = useQueryState("tId");
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
 
-const tags = [
-    "gardening",
-    "plants",
-    "flowers",
-    "landscaping",
-    "garden design",
-    "garden maintenance",
-];
-
-export function BlogsPage({ className, ...props }: PageProps) {
-    const [blogs, setBlogs] = useState(dummyBlogs);
-    const [search, setSearch] = useState("");
-
-    useEffect(() => {
-        if (search.length > 0) {
-            const filteredBlogs = dummyBlogs.filter((blog) =>
-                blog.title.toLowerCase().includes(search.toLowerCase())
-            );
-            setBlogs(filteredBlogs);
-        } else {
-            setBlogs(dummyBlogs);
-        }
-    }, [search]);
+    const {
+        data: { data: blogs, count },
+    } = trpc.general.blogs.getBlogs.useQuery(
+        {
+            page,
+            limit,
+            tagId: tagId?.length ? tagId : undefined,
+            isPublished: true,
+            search,
+        },
+        { initialData }
+    );
 
     return (
-        <div className={cn("w-full space-y-10", className)} {...props}>
-            <section className="flex w-full flex-col items-center justify-between overflow-hidden bg-muted md:max-h-[calc(40vh)] md:flex-row">
-                <div className="size-full overflow-hidden">
-                    <Image
-                        src="https://picsum.photos/seed/700/1500/1000"
-                        alt="Blog1"
-                        width={1000}
-                        height={1000}
-                        className="size-full object-cover"
-                    />
-                </div>
+        <div
+            className={cn("flex flex-col gap-10 lg:flex-row", className)}
+            {...props}
+        >
+            <SearchInput
+                type="search"
+                placeholder="Search for a blog..."
+                className="h-12 text-base"
+                classNames={{
+                    wrapper: "md:hidden",
+                }}
+            />
 
-                <div className="flex w-full flex-col items-center gap-5 p-6 text-center md:gap-10 md:p-10">
-                    <h2 className="max-w-lg text-balance text-2xl font-semibold md:text-4xl">
-                        What&apos;s in a Garden set?
-                    </h2>
-
-                    <p className="max-w-lg text-balance text-sm text-muted-foreground md:text-base">
-                        Maecenas sem eros, rutrum vitae risus eget, vulputate
-                        aliquam nisi. dolor sit amet consectetur adipiscing eli
-                        mattis sit phasellus mollis sit aliquam sit
-                    </p>
-                </div>
-            </section>
-
-            <GeneralShell>
-                <div className="flex flex-col gap-10 lg:flex-row">
-                    <SearchInput
-                        type="search"
-                        placeholder="Search for blog..."
-                        className="h-12 text-base"
-                        classNames={{
-                            wrapper: "md:hidden",
+            <div className="w-full basis-2/3">
+                {!!blogs?.length ? (
+                    <BlogsList
+                        blogs={{
+                            data: blogs,
+                            count,
                         }}
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
                     />
+                ) : (
+                    <EmptyPlaceholder
+                        fullWidth
+                        className="border-none shadow-none"
+                    >
+                        <EmptyPlaceholderIcon>
+                            <Icons.AlertTriangle className="size-10" />
+                        </EmptyPlaceholderIcon>
 
-                    <div className="w-full basis-2/3">
-                        {blogs.length > 0 ? (
-                            <BlogListWithPagination blogs={blogs} />
-                        ) : (
-                            <p className="text-center text-2xl font-semibold">
+                        <EmptyPlaceholderContent>
+                            <EmptyPlaceholderTitle>
                                 No blogs found
-                            </p>
-                        )}
-                    </div>
+                            </EmptyPlaceholderTitle>
+                            <EmptyPlaceholderDescription>
+                                No blogs found with the specified criteria
+                            </EmptyPlaceholderDescription>
+                        </EmptyPlaceholderContent>
+                    </EmptyPlaceholder>
+                )}
+            </div>
 
-                    <div className="w-full basis-1/3 space-y-10">
-                        <SearchInput
-                            type="search"
-                            placeholder="Search for blog..."
-                            className="h-12 text-base"
-                            classNames={{
-                                wrapper: "hidden md:flex",
-                            }}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+            <div className="w-full basis-1/3 space-y-5 md:space-y-10">
+                <SearchInput
+                    type="search"
+                    placeholder="Search for a blog..."
+                    className="h-12 text-base"
+                    classNames={{
+                        wrapper: "hidden md:flex",
+                    }}
+                />
 
-                        <h2 className="text-3xl font-semibold uppercase">
-                            Related Blogs
-                        </h2>
+                <h2 className="text-xl font-semibold uppercase md:text-3xl">
+                    Recent Blogs
+                </h2>
 
-                        <div className="space-y-5">
-                            {dummyBlogs.slice(0, 3).map((blog, i) => (
-                                <div key={i}>
-                                    <Link
-                                        href="#"
-                                        className="flex items-center gap-5"
-                                    >
-                                        <div className="aspect-[3/2] size-full basis-1/4">
-                                            <Image
-                                                src={blog.thumbnailUrl}
-                                                alt={blog.title}
-                                                width={1000}
-                                                height={1000}
-                                                className="size-full object-cover"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <h3 className="text-xl font-semibold">
-                                                {blog.title}
-                                            </h3>
-                                            <p className="text-muted-foreground">
-                                                {blog.description.length > 50
-                                                    ? `${blog.description.slice(
-                                                          0,
-                                                          50
-                                                      )}...`
-                                                    : blog.description}
-                                            </p>
-                                        </div>
-                                    </Link>
-                                </div>
-                            ))}
-                        </div>
-
-                        <h2 className="text-3xl font-semibold uppercase">
-                            Tags
-                        </h2>
-
-                        <div className="flex flex-wrap gap-2">
-                            {tags.map((tag, i) => (
-                                <Link
-                                    key={i}
-                                    href="#"
-                                    className="border border-accent p-2 px-3 text-muted-foreground transition-all ease-in-out hover:bg-accent hover:text-accent-foreground"
-                                >
-                                    {convertValueToLabel(tag)}
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
+                <div className="space-y-5">
+                    {!!recentBlogs?.data.length ? (
+                        recentBlogs.data.map((blog, i) => (
+                            <RecentBlogCard
+                                blog={blog}
+                                key={i}
+                                prefetch
+                                href={`/blogs/${blog.slug}`}
+                                title={blog.title}
+                            />
+                        ))
+                    ) : (
+                        <p>No recent blogs found</p>
+                    )}
                 </div>
-            </GeneralShell>
+
+                <h2 className="text-xl font-semibold uppercase md:text-3xl">
+                    Tags
+                </h2>
+
+                <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                        <Link
+                            key={tag.id}
+                            href="#"
+                            className={cn(
+                                "border border-accent p-2 px-3 text-sm text-muted-foreground transition-all ease-in-out hover:bg-accent hover:text-accent-foreground md:text-base",
+                                tagId === tag.id &&
+                                    "bg-accent text-accent-foreground"
+                            )}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (tagId === tag.id) return setTagId(null);
+                                setTagId(tag.id);
+                            }}
+                        >
+                            {tag.name}
+                        </Link>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }

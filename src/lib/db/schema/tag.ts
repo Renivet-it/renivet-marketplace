@@ -4,9 +4,9 @@ import { timestamps } from "../helper";
 import { blogTags } from "./blog";
 
 export const tags = pgTable("tags", {
-    id: uuid().primaryKey().notNull().unique().defaultRandom(),
-    name: text().notNull(),
-    slug: text().notNull().unique(),
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull().unique(),
     ...timestamps,
 });
 

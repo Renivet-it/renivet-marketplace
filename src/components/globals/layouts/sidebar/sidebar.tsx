@@ -1,3 +1,5 @@
+"use client";
+
 import { Icons } from "@/components/icons";
 import {
     Sidebar as ShadSidebar,
@@ -6,10 +8,16 @@ import {
     SidebarHeader,
     SidebarRail,
 } from "@/components/ui/sidebar";
+import { BitFieldSitePermission } from "@/config/permissions";
+import { generalSidebarConfig, generateBrandSideNav } from "@/config/site";
+import { trpc } from "@/lib/trpc/client";
+import { cn, getUserPermissions, hasPermission } from "@/lib/utils";
+import { useMemo } from "react";
+import { GenericHeader } from "./generic-header";
+import { NavBrand } from "./nav-brand";
+import { NavLegal } from "./nav-legal";
 import { NavMain } from "./nav-main";
-import { NavProjects } from "./nav-projects";
 import { NavUser } from "./nav-user";
-import { TeamSwitcher } from "./team-switcher";
 
 interface Sidebar {
     user: {
@@ -17,25 +25,12 @@ interface Sidebar {
         email: string;
         avatar: string;
     };
-    teams: {
-        name: string;
-        logo: keyof typeof Icons;
-        plan: string;
-    }[];
-    navMain: {
-        title: string;
-        url: string;
-        icon: keyof typeof Icons;
-        isActive?: boolean;
-        items?: {
-            title: string;
-            url: string;
-        }[];
-    }[];
-    projects: {
+    navMain: GeneralSidebarConfig[];
+    legal: {
         name: string;
         url: string;
         icon: keyof typeof Icons;
+        permissions: number;
     }[];
 }
 
@@ -45,142 +40,98 @@ const data: Sidebar = {
         email: "m@example.com",
         avatar: "/avatars/shadcn.jpg",
     },
-    teams: [
+    navMain: generalSidebarConfig,
+    legal: [
         {
-            name: "Acme Inc",
-            logo: "GalleryVerticalEnd",
-            plan: "Enterprise",
+            name: "Terms of Services",
+            url: "/dashboard/general/terms",
+            icon: "ScrollText",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
         {
-            name: "Acme Corp.",
-            logo: "AudioWaveform",
-            plan: "Startup",
+            name: "Privacy Policy",
+            url: "/dashboard/general/privacy",
+            icon: "Scale",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
         {
-            name: "Evil Corp.",
-            logo: "Command",
-            plan: "Free",
-        },
-    ],
-    navMain: [
-        {
-            title: "Playground",
-            url: "#",
-            icon: "SquareTerminal",
-            isActive: true,
-            items: [
-                {
-                    title: "History",
-                    url: "#",
-                },
-                {
-                    title: "Starred",
-                    url: "#",
-                },
-                {
-                    title: "Settings",
-                    url: "#",
-                },
-            ],
+            name: "Shipping Policy",
+            url: "/dashboard/general/shipping-policy",
+            icon: "Truck",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
         {
-            title: "Models",
-            url: "#",
-            icon: "Bot",
-            items: [
-                {
-                    title: "Genesis",
-                    url: "#",
-                },
-                {
-                    title: "Explorer",
-                    url: "#",
-                },
-                {
-                    title: "Quantum",
-                    url: "#",
-                },
-            ],
-        },
-        {
-            title: "Documentation",
-            url: "#",
-            icon: "BookOpen",
-            items: [
-                {
-                    title: "Introduction",
-                    url: "#",
-                },
-                {
-                    title: "Get Started",
-                    url: "#",
-                },
-                {
-                    title: "Tutorials",
-                    url: "#",
-                },
-                {
-                    title: "Changelog",
-                    url: "#",
-                },
-            ],
-        },
-        {
-            title: "Settings",
-            url: "#",
-            icon: "Settings2",
-            items: [
-                {
-                    title: "General",
-                    url: "#",
-                },
-                {
-                    title: "Team",
-                    url: "#",
-                },
-                {
-                    title: "Billing",
-                    url: "#",
-                },
-                {
-                    title: "Limits",
-                    url: "#",
-                },
-            ],
-        },
-    ],
-    projects: [
-        {
-            name: "Design Engineering",
-            url: "#",
-            icon: "Frame",
-        },
-        {
-            name: "Sales & Marketing",
-            url: "#",
-            icon: "PieChart",
-        },
-        {
-            name: "Travel",
-            url: "#",
-            icon: "Map",
+            name: "Refund Policy",
+            url: "/dashboard/general/refund-policy",
+            icon: "RefreshCcw",
+            permissions: BitFieldSitePermission.MANAGE_SETTINGS,
         },
     ],
 };
 
 export function Sidebar() {
+    const { data: user } = trpc.general.users.currentUser.useQuery();
+
+    const userPermissions = useMemo(() => {
+        if (!user)
+            return {
+                sitePermissions: 0,
+                brandPermissions: 0,
+            };
+        return getUserPermissions(user.roles);
+    }, [user]);
+
+    const isGeneral = useMemo(
+        () =>
+            hasPermission(userPermissions.sitePermissions, [
+                BitFieldSitePermission.VIEW_PROTECTED_PAGES,
+            ]) && userPermissions.brandPermissions === 0,
+        [userPermissions.brandPermissions, userPermissions.sitePermissions]
+    );
+
+    const isBrand = useMemo(
+        () => userPermissions.brandPermissions > 0,
+        [userPermissions.brandPermissions]
+    );
+
     return (
         <ShadSidebar collapsible="icon">
             <SidebarHeader>
-                <TeamSwitcher teams={data.teams} />
+                <GenericHeader />
             </SidebarHeader>
-            <SidebarContent>
-                <NavMain items={data.navMain} />
-                <NavProjects projects={data.projects} />
+
+            <SidebarContent style={{ scrollbarWidth: "none" }}>
+                <NavMain
+                    items={data.navMain}
+                    userPermissions={userPermissions}
+                    className={cn({
+                        hidden: !isGeneral,
+                    })}
+                />
+
+                {user?.brand && (
+                    <NavBrand
+                        items={generateBrandSideNav(user.brand.id)}
+                        userPermissions={userPermissions}
+                        className={cn({
+                            hidden: !isBrand,
+                        })}
+                    />
+                )}
+
+                <NavLegal
+                    legal={data.legal}
+                    userPermissions={userPermissions}
+                    className={cn({
+                        hidden: !isGeneral,
+                    })}
+                />
             </SidebarContent>
+
             <SidebarFooter>
-                <NavUser user={data.user} />
+                <NavUser />
             </SidebarFooter>
+
             <SidebarRail />
         </ShadSidebar>
     );

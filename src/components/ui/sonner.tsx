@@ -1,12 +1,15 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { usePathname } from "next/navigation";
 import { Toaster as Sonner } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-    const { theme = "system" } = useTheme();
+    const { theme = "light" } = useTheme();
+    const pathname = usePathname();
 
     return (
         <Sonner
@@ -14,7 +17,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
             className="toaster group"
             toastOptions={{
                 classNames: {
-                    toast: "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+                    toast: cn(
+                        "toast group group-[.toaster]:border-border group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:shadow-lg",
+                        !pathname.startsWith("/dashboard") && "rounded-none"
+                    ),
                     description: "group-[.toast]:text-muted-foreground",
                     actionButton:
                         "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",

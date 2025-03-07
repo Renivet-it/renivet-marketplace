@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button-general";
 import {
     Form,
     FormControl,
@@ -9,7 +9,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input-general";
 import { useIntroModalStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -37,23 +37,28 @@ export function NewsLetterSubscribeForm({ setCurrentTab }: PageProps) {
     });
 
     const { mutate: createNewsletterSub, isPending } =
-        trpc.newsletterSubscribers.createNewsletterSubscriber.useMutation({
-            onMutate: () => {
-                const toastId = toast.loading(
-                    "Adding you to the newsletter..."
-                );
-                return { toastId };
-            },
-            onSuccess: (_, __, { toastId }) => {
-                setIsOpen(false);
-                return toast.success("You've been added to the newsletter!", {
-                    id: toastId,
-                });
-            },
-            onError: (err, _, ctx) => {
-                return toast.error(err.message, { id: ctx?.toastId });
-            },
-        });
+        trpc.general.newsletterSubscribers.createNewsletterSubscriber.useMutation(
+            {
+                onMutate: () => {
+                    const toastId = toast.loading(
+                        "Adding you to the newsletter..."
+                    );
+                    return { toastId };
+                },
+                onSuccess: (_, __, { toastId }) => {
+                    setIsOpen(false);
+                    return toast.success(
+                        "You've been added to the newsletter!",
+                        {
+                            id: toastId,
+                        }
+                    );
+                },
+                onError: (err, _, ctx) => {
+                    return toast.error(err.message, { id: ctx?.toastId });
+                },
+            }
+        );
 
     return (
         <Form {...form}>

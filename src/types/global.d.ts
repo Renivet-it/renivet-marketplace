@@ -13,10 +13,36 @@ declare global {
 
     type SvixHeaders = IncomingHttpHeaders & WebhookRequiredHeaders;
 
+    type GeneralSidebarConfig = {
+        title: string;
+        url: string;
+        icon: keyof typeof Icons;
+        isActive?: boolean;
+        items: {
+            title: string;
+            url: string;
+            permissions: number;
+        }[];
+    };
+
+    type BrandSidebarConfig = {
+        title: string;
+        url: string;
+        icon: keyof typeof Icons;
+        isActive?: boolean;
+        items: {
+            title: string;
+            url: string;
+            permissions: number;
+            isDisabled?: boolean;
+        }[];
+    };
+
     type SiteConfig = {
         name: string;
         description: string;
         longDescription?: string;
+        category: string;
         og: {
             url: string;
             width: number;
@@ -30,9 +56,11 @@ declare global {
         links?: Partial<Record<keyof typeof Icons, string>>;
         menu: {
             name: string;
+            description?: string;
             href: string;
             icon: keyof typeof Icons;
             isExternal?: boolean;
+            isDisabled?: boolean;
         }[];
         footer: {
             menu: {
@@ -47,8 +75,8 @@ declare global {
         contact: {
             officeHours: string;
             email: string;
-            phone: string;
-            location: string;
+            phone?: string;
+            location?: string;
         };
     };
 
