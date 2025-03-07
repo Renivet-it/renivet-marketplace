@@ -175,6 +175,16 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_CONTENT,
             },
             {
+                title: "Brand Products",
+                url: "/dashboard/general/brand-products",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Shop by Category",
+                url: "/dashboard/general/shop-by-category",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
                 title: "Users",
                 url: "/dashboard/general/users",
                 permissions:

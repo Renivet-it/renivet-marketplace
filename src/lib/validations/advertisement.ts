@@ -101,3 +101,135 @@ export type UpdateAdvertisement = z.infer<typeof updateAdvertisementSchema>;
 export type UpdateAdvertisementStatus = z.infer<
     typeof updateAdvertisementStatusSchema
 >;
+
+export const homeBrandProductSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    imageUrl: z
+        .string({
+            required_error: "Image URL is required",
+            invalid_type_error: "Image URL must be a string",
+        })
+        .url("Image URL is invalid"),
+    url: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                required_error: "URL is required",
+                invalid_type_error: "URL must be a string",
+            })
+            .url("URL is invalid")
+            .nullable()
+    ),
+    position: z
+        .number({
+            required_error: "Position is required",
+            invalid_type_error: "Position must be a number",
+        })
+        .int("Position must be an integer")
+        .nonnegative("Position must be a non-negative number"),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
+export const createHomeBrandProductSchema = homeBrandProductSchema
+    .omit({
+        id: true,
+        position: true,
+        createdAt: true,
+        updatedAt: true,
+    })
+    .extend({
+        imageUrl: z
+            .string({
+                required_error: "Image URL is required",
+                invalid_type_error: "Image URL must be a string",
+            })
+            .nullable(),
+    });
+
+export const updateHomeBrandProductSchema = createHomeBrandProductSchema;
+
+export type HomeBrandProduct = z.infer<typeof homeBrandProductSchema>;
+export type CreateHomeBrandProduct = z.infer<
+    typeof createHomeBrandProductSchema
+>;
+export type UpdateHomeBrandProduct = z.infer<
+    typeof updateHomeBrandProductSchema
+>;
+
+export const homeShopByCategorySchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    imageUrl: z
+        .string({
+            required_error: "Image URL is required",
+            invalid_type_error: "Image URL must be a string",
+        })
+        .url("Image URL is invalid"),
+    url: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                required_error: "URL is required",
+                invalid_type_error: "URL must be a string",
+            })
+            .url("URL is invalid")
+            .nullable()
+    ),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
+export const createHomeShopByCategorySchema = homeShopByCategorySchema
+    .omit({
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+    })
+    .extend({
+        imageUrl: z
+            .string({
+                required_error: "Image URL is required",
+                invalid_type_error: "Image URL must be a string",
+            })
+            .nullable(),
+    });
+
+export const updateHomeShopByCategorySchema = createHomeShopByCategorySchema;
+
+export type HomeShopByCategory = z.infer<typeof homeShopByCategorySchema>;
+export type CreateHomeShopByCategory = z.infer<
+    typeof createHomeShopByCategorySchema
+>;
+export type UpdateHomeShopByCategory = z.infer<
+    typeof updateHomeShopByCategorySchema
+>;

@@ -27,3 +27,32 @@ export const advertisements = pgTable(
         ),
     })
 );
+
+export const homeBrandProducts = pgTable(
+    "home_brand_products",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        imageUrl: text("image_url").notNull(),
+        url: text("url"),
+        position: integer("position").notNull().default(0),
+        ...timestamps,
+    },
+    (table) => ({
+        homeBrandProductPositionIdx: index(
+            "home_brand_product_position_idx"
+        ).on(table.position),
+    })
+);
+
+export const homeShopByCategories = pgTable("home_shop_by_categories", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    imageUrl: text("image_url").notNull(),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const homeShopByCategoryTitle = pgTable("home_shop_by_category_title", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull().default("Shop by Category"),
+    ...timestamps,
+});

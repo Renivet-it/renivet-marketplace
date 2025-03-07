@@ -11,9 +11,13 @@ import { getUploadThingFileKey, hasPermission } from "@/lib/utils";
 import {
     createAdvertisementSchema,
     createBannerSchema,
+    createHomeBrandProductSchema,
+    createHomeShopByCategorySchema,
     createMarketingStripSchema,
     updateAdvertisementSchema,
     updateBannerSchema,
+    updateHomeBrandProductSchema,
+    updateHomeShopByCategorySchema,
     updateMarketingStripSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -189,6 +193,439 @@ export const advertisementRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
             return queries.advertisements.updateAdvertisementPositions(input);
+        }),
+});
+
+export const homeBrandProductRouter = createTRPCRouter({
+    getHomeBrandProducts: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeBrandProducts =
+                await queries.homeBrandProducts.getHomeBrandProducts({
+                    limit,
+                    page,
+                });
+
+            return homeBrandProducts;
+        }),
+    getHomeBrandProduct: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeBrandProduct =
+                await queries.homeBrandProducts.getHomeBrandProduct(id);
+            if (!existingHomeBrandProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home brand product not found",
+                });
+
+            return existingHomeBrandProduct;
+        }),
+    createHomeBrandProduct: protectedProcedure
+        .input(createHomeBrandProductSchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeBrandProduct =
+                await queries.homeBrandProducts.createHomeBrandProduct({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                });
+
+            return newHomeBrandProduct;
+        }),
+    updateHomeBrandProduct: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeBrandProductSchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeBrandProduct =
+                await queries.homeBrandProducts.getHomeBrandProduct(id);
+            if (!existingHomeBrandProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home brand product not found",
+                });
+
+            const existingImageUrl = existingHomeBrandProduct.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeBrandProduct =
+                await queries.homeBrandProducts.updateHomeBrandProduct(id, {
+                    ...values,
+                    imageUrl: values.imageUrl,
+                });
+
+            return updatedHomeBrandProduct;
+        }),
+    deleteHomeBrandProduct: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeBrandProduct =
+                await queries.homeBrandProducts.getHomeBrandProduct(id);
+            if (!existingHomeBrandProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home brand product not found",
+                });
+
+            const existingImageUrl = existingHomeBrandProduct.imageUrl;
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.homeBrandProducts.deleteHomeBrandProduct(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+    updatePositions: protectedProcedure
+        .input(
+            z.array(
+                z.object({
+                    id: z.string(),
+                    position: z.number(),
+                })
+            )
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            return queries.homeBrandProducts.updateHomeBrandProductPositions(
+                input
+            );
+        }),
+});
+
+export const homeShopByCategoryRouter = createTRPCRouter({
+    getHomeShopByCategories: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.homeShopByCategories.getHomeShopByCategories({
+                    limit,
+                    page,
+                });
+
+            return homeShopByCategories;
+        }),
+    getHomeShopByCategory: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createHomeShopByCategory: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.homeShopByCategories.createHomeShopByCategory({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateHomeShopByCategory: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.homeShopByCategories.updateHomeShopByCategory(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteHomeShopByCategory: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.homeShopByCategories.deleteHomeShopByCategory(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const homeShopByCategoryTitleRouter = createTRPCRouter({
+    getHomeShopByCategoryTitle: publicProcedure.query(async ({ ctx }) => {
+        const { queries } = ctx;
+
+        const homeShopByCategoryTitle =
+            await queries.homeShopByCategoryTitle.getHomeShopByCategoryTitle();
+
+        return homeShopByCategoryTitle;
+    }),
+    updateHomeShopByCategoryTitle: protectedProcedure
+        .input(
+            z.object({
+                title: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            const existingHomeShopByCategoryTitle =
+                await queries.homeShopByCategoryTitle.getHomeShopByCategoryTitle();
+
+            if (!existingHomeShopByCategoryTitle) {
+                const newHomeShopByCategoryTitle =
+                    await queries.homeShopByCategoryTitle.createHomeShopByCategoryTitle(
+                        input.title
+                    );
+
+                return newHomeShopByCategoryTitle;
+            }
+
+            const updatedHomeShopByCategoryTitle =
+                await queries.homeShopByCategoryTitle.updateHomeShopByCategoryTitle(
+                    input.title
+                );
+
+            return updatedHomeShopByCategoryTitle;
         }),
 });
 
@@ -641,4 +1078,7 @@ export const contentRouter = createTRPCRouter({
     advertisements: advertisementRouter,
     banners: bannerRouter,
     marketingStrips: marketingStripRouter,
+    homeBrandProducts: homeBrandProductRouter,
+    homeShopByCategories: homeShopByCategoryRouter,
+    homeShopByCategoryTitle: homeShopByCategoryTitleRouter,
 });
