@@ -312,6 +312,13 @@ export function NavbarHome() {
                             href="/shop"
                             className="group inline-flex h-9 w-max items-center justify-center border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-colors hover:border-primary focus:border-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:border-primary/50 data-[state=open]:border-primary/50"
                         >
+                            Shop
+                        </Link>
+
+                        <Link
+                            href="/blogs"
+                            className="group inline-flex h-9 w-max items-center justify-center border-b-2 border-transparent px-4 py-2 text-sm font-medium transition-colors hover:border-primary focus:border-primary focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:border-primary/50 data-[state=open]:border-primary/50"
+                        >
                             Community
                         </Link>
                     </div>

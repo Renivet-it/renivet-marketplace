@@ -199,6 +199,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_BRANDS,
             },
             {
+                title: "Brands Info",
+                url: "/dashboard/general/brands/verifications",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_BRANDS,
+            },
+            {
                 title: "Roles",
                 url: "/dashboard/general/roles",
                 permissions:
