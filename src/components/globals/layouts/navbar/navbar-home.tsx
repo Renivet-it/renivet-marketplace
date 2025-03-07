@@ -494,7 +494,7 @@ export function NavbarHome() {
                         <>
                             <Button
                                 variant="ghost"
-                                className="hidden border-accent text-accent md:flex"
+                                className="hidden border-accent text-primary md:flex"
                                 size="sm"
                                 asChild
                             >

@@ -112,7 +112,7 @@ export function ProductPage({
                 className={cn("flex flex-col gap-5 lg:flex-row", className)}
                 {...props}
             >
-                <div className="hidden basis-3/5 grid-cols-1 gap-2 md:grid md:grid-cols-4">
+                <div className="hidden basis-3/6 grid-cols-1 gap-2 md:grid md:grid-cols-4">
                     {sortedImages?.map((image, i) => (
                         <div
                             className={cn(

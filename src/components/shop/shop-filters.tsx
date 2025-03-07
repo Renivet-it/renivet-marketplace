@@ -20,6 +20,8 @@ import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
 import { Label } from "../ui/label";
 import { MultipleSelectorGeneral } from "../ui/multi-select-general";
+import { ProductSearch } from "../ui/product-search";
+import { SearchInput } from "../ui/search-input";
 import {
     Select,
     SelectContent,
@@ -202,7 +204,16 @@ function ShopFiltersSection({
             <h4 className="text-lg">Filters</h4>
 
             <Separator />
-
+            {/* <SearchInput
+                type="search"
+                placeholder="Search for a product..."
+                className="text-s h-10"
+            /> */}
+            <ProductSearch
+                type="search"
+                placeholder="Search for a product..."
+            />
+            <Separator />
             <div className="space-y-[4px]">
                 <Label
                     className="font-semibold uppercase"
@@ -391,7 +402,7 @@ function ShopFiltersSection({
 
             <Separator />
 
-            <div className="space-y-1">
+            {/* <div className="space-y-1">
                 <Label
                     className="font-semibold uppercase"
                     htmlFor="sort_select"
@@ -415,7 +426,47 @@ function ShopFiltersSection({
                         ))}
                     </SelectContent>
                 </Select>
-            </div>
+            </div> */}
+        </div>
+    );
+}
+
+export function ShopSortBy() {
+    const handleSort = (value: string) => {
+        const [sortBy, sortOrder] = value.split(":");
+        setSortBy(sortBy as "price" | "createdAt");
+        setSortOrder(sortOrder as "asc" | "desc");
+    };
+    const [sortBy, setSortBy] = useQueryState(
+        "sortBy",
+        parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
+            "createdAt"
+        )
+    );
+    const [sortOrder, setSortOrder] = useQueryState(
+        "sortOrder",
+        parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
+    );
+    return (
+        <div className="w-52 space-y-1">
+            {/* <Label className="font-semibold uppercase" htmlFor="sort_select">
+                Sort By
+            </Label> */}
+
+            <Select value={`${sortBy}:${sortOrder}`} onValueChange={handleSort}>
+                <SelectTrigger className="w-100px" id="sort_select">
+                    <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+
+                <SelectContent>
+                    {sortByWithOrderTypes.map((x) => (
+                        <SelectItem key={x.value} value={x.value}>
+                            Sort By :{" "}
+                            <span className="font-semibold">{x.label}</span>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
     );
 }
