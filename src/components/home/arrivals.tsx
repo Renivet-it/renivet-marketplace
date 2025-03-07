@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ProductCard } from "../globals/cards";
+import { ProductShowcaseCard } from "../globals/cards";
 import { Skeleton } from "../ui/skeleton";
 
 const dummyProducts = [
@@ -61,7 +61,7 @@ export function Arrivals({ title, className, ...props }: PageProps) {
                         ))}
                     >
                         {dummyProducts.map((product) => (
-                            <ProductCard
+                            <ProductShowcaseCard
                                 key={product.id}
                                 product={product}
                                 className="flex flex-col"
@@ -77,7 +77,7 @@ export function Arrivals({ title, className, ...props }: PageProps) {
                         size="lg"
                         asChild
                     >
-                        <Link href="/products">View All</Link>
+                        <Link href="/shop">View All</Link>
                     </Button>
                 </div>
             </div>

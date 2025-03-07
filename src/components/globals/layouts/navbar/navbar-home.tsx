@@ -1,7 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { Renivet } from "@/components/svgs";
+import { RenivetFull } from "@/components/svgs";
 import { Button } from "@/components/ui/button-general";
 import {
     DropdownMenu,
@@ -12,24 +12,29 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { siteConfig } from "@/config/site";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
-import { cn, getUserPermissions, hasPermission, hideEmail } from "@/lib/utils";
+import {
+    cn,
+    getUserPermissions,
+    handleClientError,
+    hasPermission,
+    hideEmail,
+    wait,
+} from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
-import { motion, useMotionValueEvent, useScroll } from "framer-motion";
+import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export function NavbarHome() {
-    const router = useRouter();
-
     const [isMenuHidden, setIsMenuHidden] = useState(false);
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
@@ -44,7 +49,33 @@ export function NavbarHome() {
         else setIsMenuHidden(false);
     });
 
-    const { data: user } = trpc.users.currentUser.useQuery();
+    const { data: user, isPending: isUserFetching } =
+        trpc.general.users.currentUser.useQuery();
+
+    const { data: userWishlist } =
+        trpc.general.users.wishlist.getWishlist.useQuery(
+            // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+            { userId: user?.id! },
+            { enabled: user !== undefined && !isUserFetching }
+        );
+
+    const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+        { userId: user?.id! },
+        { enabled: user !== undefined && !isUserFetching }
+    );
+
+    const availableCart = userCart?.filter(
+        (c) =>
+            c.product.isPublished &&
+            c.product.verificationStatus === "approved" &&
+            !c.product.isDeleted &&
+            c.product.isAvailable &&
+            (!!c.product.quantity ? c.product.quantity > 0 : true) &&
+            c.product.isActive &&
+            (!c.variant ||
+                (c.variant && !c.variant.isDeleted && c.variant.quantity > 0))
+    );
 
     const userPermissions = useMemo(() => {
         if (!user)
@@ -59,31 +90,39 @@ export function NavbarHome() {
         () =>
             hasPermission(userPermissions.sitePermissions, [
                 BitFieldSitePermission.VIEW_PROTECTED_PAGES,
-            ]),
-        [userPermissions.sitePermissions]
+            ]) || !!user?.brand,
+        [userPermissions.sitePermissions, user?.brand]
     );
 
     const { signOut } = useAuth();
+    const posthog = usePostHog();
 
     const { mutate: handleLogout, isPending: isLoggingOut } = useMutation({
         onMutate: () => {
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNOUT_INITIATED, {
+                userId: user?.id,
+            });
             const toastId = toast.loading("Logging out...");
             return { toastId };
         },
-        mutationFn: () => signOut(),
-        onSuccess: (_, __, { toastId }) => {
+        mutationFn: () =>
+            signOut({
+                redirectUrl: "/",
+            }),
+        onSuccess: async (_, __, { toastId }) => {
             toast.success("See you soon!", { id: toastId });
-            router.refresh();
-            router.push("/auth/signin");
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNED_OUT, {
+                userId: user?.id,
+            });
+            await wait(1000);
+            window.location.reload();
         },
         onError: (err, _, ctx) => {
             return isClerkAPIResponseError(err)
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
-                      id: ctx?.toastId,
-                  });
+                : handleClientError(err, ctx?.toastId);
         },
     });
 
@@ -123,13 +162,9 @@ export function NavbarHome() {
                 <Link
                     href="/"
                     title="Home"
-                    className="flex items-center gap-1 text-2xl font-bold hover:opacity-100 active:opacity-100"
+                    className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
                 >
-                    <Renivet className="size-8" />
-
-                    <h4 className="text-xl font-bold uppercase md:text-2xl">
-                        {siteConfig.name}
-                    </h4>
+                    <RenivetFull width={120} height={36} />
                 </Link>
 
                 <ul className="hidden items-center gap-10 sm:flex">
@@ -142,6 +177,7 @@ export function NavbarHome() {
                                         item.isDisabled &&
                                             "cursor-not-allowed opacity-50"
                                     )}
+                                    prefetch
                                     href={item.href}
                                     target={
                                         item.isExternal ? "_blank" : "_self"
@@ -161,7 +197,8 @@ export function NavbarHome() {
                         <Link
                             aria-label="Mobile Cart Button"
                             className="sm:hidden"
-                            href="/cart"
+                            href="/profile/cart"
+                            prefetch
                         >
                             <Icons.ShoppingCart className="size-6" />
                         </Link>
@@ -198,9 +235,15 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Package className="mr-2 size-4" />
-                                            <span>Orders</span>
+                                            <Link
+                                                href="/profile/orders"
+                                                prefetch
+                                            >
+                                                <Icons.Package className="size-4" />
+                                                <span>Orders</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem
@@ -208,9 +251,15 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Heart className="mr-2 size-4" />
-                                            <span>Wishlist</span>
+                                            <Link
+                                                href="/profile/wishlist"
+                                                prefetch
+                                            >
+                                                <Icons.Heart className="size-4" />
+                                                <span>Wishlist</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem
@@ -220,15 +269,20 @@ export function NavbarHome() {
                                             )}
                                             asChild
                                         >
-                                            <Link href="/dashboard">
-                                                <Icons.LayoutDashboard className="mr-2 size-4" />
+                                            <Link href="/dashboard" prefetch>
+                                                <Icons.LayoutDashboard className="size-4" />
                                                 <span>Dashboard</span>
                                             </Link>
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuItem className="rounded-none">
-                                            <Icons.LifeBuoy className="mr-2 size-4" />
-                                            <span>Contact Us</span>
+                                        <DropdownMenuItem
+                                            className="rounded-none"
+                                            asChild
+                                        >
+                                            <Link href="/contact">
+                                                <Icons.LifeBuoy className="size-4" />
+                                                <span>Contact Us</span>
+                                            </Link>
                                         </DropdownMenuItem>
                                     </DropdownMenuGroup>
 
@@ -240,19 +294,12 @@ export function NavbarHome() {
                                                 "rounded-none",
                                                 isAuthorized && "hidden"
                                             )}
+                                            asChild
                                         >
-                                            <Icons.Ticket className="mr-2 size-4" />
-                                            <span>Coupons</span>
-                                        </DropdownMenuItem>
-
-                                        <DropdownMenuItem
-                                            className={cn(
-                                                "rounded-none",
-                                                isAuthorized && "hidden"
-                                            )}
-                                        >
-                                            <Icons.Home className="mr-2 size-4" />
-                                            <span>Addresses</span>
+                                            <Link href="/profile/addresses">
+                                                <Icons.Home className="size-4" />
+                                                <span>Addresses</span>
+                                            </Link>
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem
@@ -260,8 +307,8 @@ export function NavbarHome() {
                                             asChild
                                         >
                                             <Link href="/profile">
-                                                <Icons.User2 className="mr-2 size-4" />
-                                                <span>Edit Profile</span>
+                                                <Icons.User2 className="size-4" />
+                                                <span>Profile</span>
                                             </Link>
                                         </DropdownMenuItem>
                                     </DropdownMenuGroup>
@@ -273,37 +320,49 @@ export function NavbarHome() {
                                         disabled={isLoggingOut}
                                         onClick={() => handleLogout()}
                                     >
-                                        <Icons.LogOut className="mr-2 size-4" />
+                                        <Icons.LogOut className="size-4" />
                                         <span>Log out</span>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <Link href="/soon">
+                            <Link href="/profile/wishlist" className="relative">
+                                {userWishlist?.length
+                                    ? userWishlist.length > 0 && (
+                                          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                              {userWishlist.length}
+                                          </div>
+                                      )
+                                    : null}
+
                                 <Icons.Heart className="size-5" />
+                                <span className="sr-only">Wishlist</span>
                             </Link>
 
-                            <Link href="/soon">
+                            <Link href="/profile/cart" className="relative">
+                                {availableCart?.length
+                                    ? availableCart.length > 0 && (
+                                          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                              {availableCart.length}
+                                          </div>
+                                      )
+                                    : null}
+
                                 <Icons.ShoppingCart className="size-5" />
+                                <span className="sr-only">Cart</span>
                             </Link>
                         </div>
                     </div>
                 ) : (
                     <>
-                        <div className="hidden items-center gap-1 md:flex">
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link href="/soon"> Become a Seller</Link>
-                            </Button>
-
-                            <Button
-                                variant="ghost"
-                                className="border-accent text-accent"
-                                size="sm"
-                                asChild
-                            >
-                                <Link href="/auth/signin">Login/Signup</Link>
-                            </Button>
-                        </div>
+                        <Button
+                            variant="ghost"
+                            className="hidden border-accent text-accent md:flex"
+                            size="sm"
+                            asChild
+                        >
+                            <Link href="/auth/signin">Login/Signup</Link>
+                        </Button>
 
                         <div className="flex items-center gap-1 md:hidden">
                             <Button

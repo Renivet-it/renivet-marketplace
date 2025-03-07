@@ -1,20 +1,52 @@
 import { db } from "@/lib/db";
+import {
+    advertisementQueries,
+    bannedBrandMemberQueries,
+    bannerQueries,
+    blogQueries,
+    brandConfidentialQueries,
+    brandInviteQueries,
+    brandMediaItemQueries,
+    brandMemberQueries,
+    brandPageSection,
+    brandPageSectionProduct,
+    brandQueries,
+    brandRequestQueries,
+    brandSubscriptionQueries,
+    categoryQueries,
+    categoryRequestQueries,
+    couponQueries,
+    legalQueries,
+    marketingStripQueries,
+    orderQueries,
+    planQueries,
+    productQueries,
+    productTypeQueries,
+    roleQueries,
+    subCategoryQueries,
+    subscriberQueries,
+    tagQueries,
+    ticketQueries,
+    userCartQueries,
+    userQueries,
+    userWishlistQueries,
+    waitlistQueries,
+} from "@/lib/db/queries";
 import * as schema from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
-import { CachedUser, UserWithAddressesAndRoles } from "@/lib/validations";
+import { UserWithAddressesRolesAndBrand } from "@/lib/validations";
 import {
     SignedInAuthObject,
     SignedOutAuthObject,
 } from "@clerk/backend/internal";
 import { auth as clerkAuth } from "@clerk/nextjs/server";
 import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
-import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
 type ContextProps = {
     req: NextRequest | Request;
     auth: SignedInAuthObject | SignedOutAuthObject | null;
-    user: UserWithAddressesAndRoles | null;
+    user: UserWithAddressesRolesAndBrand | null;
 };
 
 export const createContextInner = ({ req, auth, user }: ContextProps) => {
@@ -24,6 +56,39 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
         auth,
         user,
         schemas: schema,
+        queries: {
+            advertisements: advertisementQueries,
+            bannedBrandMembers: bannedBrandMemberQueries,
+            banners: bannerQueries,
+            blogs: blogQueries,
+            brandConfidentials: brandConfidentialQueries,
+            brandInvites: brandInviteQueries,
+            brandMediaItems: brandMediaItemQueries,
+            brandMembers: brandMemberQueries,
+            brandPageSections: brandPageSection,
+            brandPageSectionProducts: brandPageSectionProduct,
+            brands: brandQueries,
+            brandRequests: brandRequestQueries,
+            brandSubscriptions: brandSubscriptionQueries,
+            categories: categoryQueries,
+            categoryRequests: categoryRequestQueries,
+            coupons: couponQueries,
+            legal: legalQueries,
+            marketingStrips: marketingStripQueries,
+            orders: orderQueries,
+            products: productQueries,
+            plans: planQueries,
+            productTypes: productTypeQueries,
+            roles: roleQueries,
+            subCategories: subCategoryQueries,
+            newsletterSubscribers: subscriberQueries,
+            tags: tagQueries,
+            tickets: ticketQueries,
+            userCarts: userCartQueries,
+            users: userQueries,
+            userWishlists: userWishlistQueries,
+            waitlists: waitlistQueries,
+        },
     };
 };
 
@@ -32,52 +97,13 @@ export const createContext = async ({
 }: FetchCreateContextFnOptions & {
     req: NextRequest | Request;
 }) => {
-    let user: UserWithAddressesAndRoles | null = null;
+    let user: UserWithAddressesRolesAndBrand | null = null;
 
     const auth = await clerkAuth();
 
     if (auth.userId) {
         const cachedUser = await userCache.get(auth.userId);
-
         if (cachedUser) user = cachedUser;
-        else {
-            const dbUser = await db.query.users.findFirst({
-                where: eq(schema.users.id, auth.userId),
-                with: {
-                    addresses: true,
-                    roles: {
-                        with: {
-                            role: true,
-                        },
-                    },
-                },
-            });
-
-            if (dbUser) {
-                user = {
-                    ...dbUser,
-                    addresses: dbUser.addresses,
-                    roles: dbUser.roles.map((r) => r.role),
-                };
-
-                const cachedUser: CachedUser = {
-                    id: user.id,
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    email: user.email,
-                    avatarUrl: user.avatarUrl,
-                    addresses: user.addresses,
-                    roles: user.roles,
-                    isEmailVerified: user.isEmailVerified,
-                    isPhoneVerified: user.isPhoneVerified,
-                    phone: user.phone,
-                    createdAt: user.createdAt,
-                    updatedAt: user.updatedAt,
-                };
-
-                await userCache.add(cachedUser);
-            }
-        }
     }
 
     return createContextInner({

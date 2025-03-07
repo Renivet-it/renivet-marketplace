@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input-general";
 import { PasswordInput } from "@/components/ui/password-input";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { handleClientError } from "@/lib/utils";
 import { SignUp, signUpSchema } from "@/lib/validations";
 import { useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -71,9 +72,7 @@ export function SignUpForm() {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(err.message, {
-                      id: ctx?.toastId,
-                  });
+                : handleClientError(err, ctx?.toastId);
         },
     });
 

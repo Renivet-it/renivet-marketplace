@@ -1,0 +1,1 @@
+ALTER TABLE "brand_media_items" ALTER COLUMN "size" TYPE integer USING size::integer;

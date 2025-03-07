@@ -1,24 +1,38 @@
-import { IntroModal } from "@/components/globals/modals";
 import {
+    AdvertisementPage,
     Arrivals,
     Blogs,
-    Collection,
     Expectations,
     Landing,
+    MarketingStrip,
     Offer,
     Popular,
     Theme,
 } from "@/components/home";
-import { db } from "@/lib/db";
-import { blogs } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { advertisementQueries } from "@/lib/db/queries";
+import {
+    bannerCache,
+    blogCache,
+    marketingStripCache,
+} from "@/lib/redis/methods";
 import { Suspense } from "react";
 
 export default function Page() {
     return (
         <>
-            <Landing />
-            <Collection />
+            <Suspense
+                fallback={
+                    <div className="h-[calc(100vh-20vh)] w-full bg-background" />
+                }
+            >
+                <BannersFetch />
+            </Suspense>
+            <Suspense>
+                <AdvertisementsFetch />
+            </Suspense>
+            <Suspense>
+                <MarketingStripFetch />
+            </Suspense>
             <Offer />
             <Expectations />
             <Popular title="Best Sellers" />
@@ -27,17 +41,47 @@ export default function Page() {
             <Suspense>
                 <BlogsFetch />
             </Suspense>
-            <IntroModal />
         </>
     );
 }
 
 async function BlogsFetch() {
-    const blog = await db.query.blogs.findFirst({
-        where: eq(blogs.isPublished, true),
-        orderBy: [desc(blogs.publishedAt)],
-    });
+    const blog = await blogCache.get();
     if (!blog) return null;
 
     return <Blogs blog={blog} />;
+}
+
+async function BannersFetch() {
+    const cachedBanners = await bannerCache.getAll();
+    if (!cachedBanners.length) return null;
+
+    const sorted = cachedBanners.sort(
+        (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return <Landing banners={sorted} />;
+}
+
+async function MarketingStripFetch() {
+    const cachedMarktingStrip = await marketingStripCache.getAll();
+    if (!cachedMarktingStrip.length) return null;
+
+    const sorted = cachedMarktingStrip.sort(
+        (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return <MarketingStrip marketingStrip={sorted} />;
+}
+
+async function AdvertisementsFetch() {
+    const advertisements = await advertisementQueries.getAllAdvertisements({
+        isPublished: true,
+        orderBy: "position",
+    });
+    if (!advertisements.length) return null;
+
+    return <AdvertisementPage advertisements={advertisements} />;
 }

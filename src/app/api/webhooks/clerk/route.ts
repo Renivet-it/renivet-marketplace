@@ -1,14 +1,16 @@
 import { env } from "@/../env";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { userCache } from "@/lib/redis/methods";
-import { AppError, CResponse, handleError } from "@/lib/utils";
+import { posthog } from "@/lib/posthog/client";
+import { first100Cache, userCache } from "@/lib/redis/methods";
+import { resend } from "@/lib/resend";
+import { AccountCreated } from "@/lib/resend/emails";
+import { CResponse, handleError } from "@/lib/utils";
 import {
-    CachedUser,
-    User,
+    clerkWebhookSchema,
     userDeleteWebhookSchema,
     userWebhookSchema,
-    webhookSchema,
 } from "@/lib/validations";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
 
         const wh = new Webhook(env.SVIX_SECRET);
 
-        const { type, data } = webhookSchema.parse(
+        const { type, data } = clerkWebhookSchema.parse(
             wh.verify(JSON.stringify(payload), headers)
         );
 
@@ -42,35 +44,52 @@ export async function POST(req: NextRequest) {
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
 
-                    const user: User = {
-                        id: webhookUser.id,
-                        firstName: webhookUser.first_name,
-                        lastName: webhookUser.last_name,
-                        email: email.email_address,
-                        phone: phone?.phone_number ?? null,
-                        avatarUrl: webhookUser.image_url,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        createdAt: webhookUser.created_at,
-                        updatedAt: webhookUser.updated_at,
-                    };
+                    posthog.capture({
+                        distinctId: webhookUser.id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.CREATED,
+                        properties: {
+                            email: email.email_address,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            phone: phone?.phone_number ?? null,
+                        },
+                    });
 
-                    const cachedUser: CachedUser = {
-                        ...user,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        addresses: [],
-                        roles: [],
-                    };
+                    const newUser = await db
+                        .insert(users)
+                        .values({
+                            id: webhookUser.id,
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            email: email.email_address,
+                            phone: phone?.phone_number ?? null,
+                            avatarUrl: webhookUser.image_url,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            isPhoneVerified:
+                                phone?.verification?.status === "verified",
+                            createdAt: webhookUser.created_at,
+                            updatedAt: webhookUser.updated_at,
+                        })
+                        .returning()
+                        .then((res) => res[0]);
 
-                    await Promise.all([
-                        db.insert(users).values(user),
-                        userCache.add(cachedUser),
-                    ]);
+                    let addCode = false;
+
+                    const currentFirst100Cache = await first100Cache.get();
+                    if (currentFirst100Cache < 100) {
+                        await first100Cache.set();
+                        addCode = true;
+                    }
+
+                    await resend.emails.send({
+                        from: env.RESEND_EMAIL_FROM,
+                        to: newUser.email,
+                        subject: "🎉 Welcome Aboard the Renivet Express! 🎉",
+                        react: AccountCreated({ user: newUser, addCode }),
+                    });
                 }
                 break;
 
@@ -85,50 +104,36 @@ export async function POST(req: NextRequest) {
                         (p) => p?.id === webhookUser.primary_phone_number_id
                     );
 
-                    const user: User = {
-                        id: webhookUser.id,
-                        firstName: webhookUser.first_name,
-                        lastName: webhookUser.last_name,
-                        email: email.email_address,
-                        phone: phone?.phone_number ?? null,
-                        avatarUrl: webhookUser.image_url,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        createdAt: webhookUser.created_at,
-                        updatedAt: webhookUser.updated_at,
-                    };
-
-                    const existingCachedUser = await userCache.get(user.id);
-                    if (!existingCachedUser)
-                        throw new AppError("User not found", "NOT_FOUND");
-
-                    const cachedUser: CachedUser = {
-                        ...user,
-                        isEmailVerified:
-                            email.verification?.status === "verified",
-                        isPhoneVerified:
-                            phone?.verification?.status === "verified",
-                        roles: existingCachedUser.roles,
-                        addresses: existingCachedUser.addresses,
-                    };
+                    posthog.capture({
+                        distinctId: webhookUser.id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.UPDATED,
+                        properties: {
+                            email: email.email_address,
+                            isEmailVerified:
+                                email.verification?.status === "verified",
+                            firstName: webhookUser.first_name,
+                            lastName: webhookUser.last_name,
+                            phone: phone?.phone_number ?? null,
+                        },
+                    });
 
                     await Promise.all([
                         db
                             .update(users)
                             .set({
-                                firstName: user.firstName,
-                                lastName: user.lastName,
-                                email: user.email,
-                                phone: user.phone,
-                                avatarUrl: user.avatarUrl,
-                                isEmailVerified: user.isEmailVerified,
-                                isPhoneVerified: user.isPhoneVerified,
-                                updatedAt: user.updatedAt,
+                                firstName: webhookUser.first_name,
+                                lastName: webhookUser.last_name,
+                                email: email.email_address,
+                                phone: phone?.phone_number ?? null,
+                                avatarUrl: webhookUser.image_url,
+                                isEmailVerified:
+                                    email.verification?.status === "verified",
+                                isPhoneVerified:
+                                    phone?.verification?.status === "verified",
+                                updatedAt: webhookUser.updated_at,
                             })
-                            .where(eq(users.id, user.id)),
-                        userCache.update(cachedUser),
+                            .where(eq(users.id, webhookUser.id)),
+                        userCache.remove(webhookUser.id),
                     ]);
                 }
                 break;
@@ -136,6 +141,11 @@ export async function POST(req: NextRequest) {
             case "user.deleted":
                 {
                     const { id } = userDeleteWebhookSchema.parse(data);
+
+                    posthog.capture({
+                        distinctId: id,
+                        event: POSTHOG_EVENTS.USER.ACCOUNT.DELETED,
+                    });
 
                     await Promise.all([
                         db.delete(users).where(eq(users.id, id)),

@@ -11,14 +11,14 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
+import { BlogWithAuthorAndTagCount } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    blog: BlogWithAuthorAndTag;
+    blog: BlogWithAuthorAndTagCount;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
@@ -28,13 +28,25 @@ export function BlogDeleteModal({ blog, isOpen, setIsOpen }: PageProps) {
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
+    const [isPublished] = useQueryState(
+        "isPublished",
+        parseAsBoolean.withDefault(true)
+    );
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({ page, limit });
+    const { refetch } = trpc.general.blogs.getBlogs.useQuery({
+        page,
+        limit,
+        search,
+        isPublished,
+    });
 
     const { mutate: deleteBlog, isPending: isDeleting } =
-        trpc.blogs.deleteBlog.useMutation({
+        trpc.general.blogs.deleteBlog.useMutation({
             onMutate: () => {
-                const toastId = toast.loading("Deleting blog");
+                const toastId = toast.loading("Deleting blog...");
                 return { toastId };
             },
             onSuccess: (_, __, { toastId }) => {
@@ -75,11 +87,7 @@ export function BlogDeleteModal({ blog, isOpen, setIsOpen }: PageProps) {
                         variant="destructive"
                         size="sm"
                         disabled={isDeleting}
-                        onClick={() =>
-                            deleteBlog({
-                                id: blog.id,
-                            })
-                        }
+                        onClick={() => deleteBlog({ id: blog.id })}
                     >
                         Delete
                     </Button>

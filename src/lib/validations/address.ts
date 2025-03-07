@@ -24,7 +24,13 @@ export const addressSchema = z.object({
             required_error: "Full name is required",
             invalid_type_error: "Full name must be a string",
         })
-        .min(1, "Full name is required"),
+        .min(5, "Full name is required")
+        .refine(
+            (value) =>
+                value.includes(" ") &&
+                value.split(" ").every((part) => part.length >= 2),
+            "Full name must contain first and last name, each at least 2 characters long"
+        ),
     street: z
         .string({
             required_error: "Street is required",
@@ -63,14 +69,18 @@ export const addressSchema = z.object({
         required_error: "Is primary is required",
         invalid_type_error: "Is primary must be a boolean",
     }),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
-    }),
-    updatedAt: z.date({
-        required_error: "Updated at is required",
-        invalid_type_error: "Updated at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
 });
 
 export const createAddressSchema = addressSchema.omit({

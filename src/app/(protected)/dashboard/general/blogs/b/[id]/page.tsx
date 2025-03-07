@@ -1,13 +1,11 @@
 import { BlogManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/db";
-import { blogs } from "@/lib/db/schema";
+import { blogQueries } from "@/lib/db/queries";
+import { tagCache } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
-import { blogWithAuthorAndTagSchema } from "@/lib/validations";
-import { auth } from "@clerk/nextjs/server";
-import { and, eq } from "drizzle-orm";
-import { notFound, redirect } from "next/navigation";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -16,11 +14,29 @@ interface PageProps {
     }>;
 }
 
+export async function generateMetadata({
+    params,
+}: PageProps): Promise<Metadata> {
+    const { id } = await params;
+
+    const existingBlog = await blogQueries.getBlog({ id });
+    if (!existingBlog)
+        return {
+            title: "Blog not found",
+            description: "The requested blog was not found",
+        };
+
+    return {
+        title: `Edit "${existingBlog.title}"`,
+        description: existingBlog.description,
+    };
+}
+
 export default function Page({ params }: PageProps) {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Edit Blog Post</div>
+                <h1 className="text-2xl font-bold">Edit Blog Post</h1>
                 <p className="text-sm text-muted-foreground">
                     Edit the blog post and update it on the platform
                 </p>
@@ -36,32 +52,13 @@ export default function Page({ params }: PageProps) {
 async function BlogEditFetch({ params }: PageProps) {
     const { id } = await params;
 
-    const { userId } = await auth();
-    if (!userId) redirect("/auth/signin");
-
     const [tags, existingBlog] = await Promise.all([
-        db.query.tags.findMany(),
-        db.query.blogs.findFirst({
-            where: and(eq(blogs.id, id)),
-            with: {
-                tags: {
-                    with: {
-                        tag: true,
-                    },
-                },
-            },
-        }),
+        tagCache.getAll(),
+        blogQueries.getBlog({ id }),
     ]);
-
     if (!existingBlog) notFound();
 
-    const parsed = blogWithAuthorAndTagSchema
-        .omit({
-            author: true,
-        })
-        .parse(existingBlog);
-
-    return <BlogManageForm blog={parsed} tags={tags} />;
+    return <BlogManageForm blog={existingBlog} tags={tags} />;
 }
 
 function BlogManageSkeleton() {

@@ -15,19 +15,20 @@ import { handleClientError } from "@/lib/utils";
 import {
     UpdateUserEmail,
     updateUserEmailSchema,
-    UserWithAddressesAndRoles,
+    UserWithAddressesRolesAndBrand,
 } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { EmailAddressResource } from "@clerk/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { UserEmailVerifyModal } from "../modals/profile";
+import { UserEmailVerifyModal } from "../modals";
 
 interface PageProps {
-    user: UserWithAddressesAndRoles;
+    user: UserWithAddressesRolesAndBrand;
 }
 
 export function UserEmailUpdateForm({ user }: PageProps) {
@@ -83,7 +84,11 @@ export function UserEmailUpdateForm({ user }: PageProps) {
             setIsVerifyModalOpen(true);
         },
         onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
+            return isClerkAPIResponseError(err)
+                ? toast.error(err.errors.map((e) => e.message).join(", "), {
+                      id: ctx?.toastId,
+                  })
+                : handleClientError(err, ctx?.toastId);
         },
     });
 

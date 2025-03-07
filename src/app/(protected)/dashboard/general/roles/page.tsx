@@ -1,8 +1,8 @@
-import { RolesTable } from "@/components/dashboard/roles";
+import { RolesPage } from "@/components/dashboard/general/roles";
 import { DashShell } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
-import { db } from "@/lib/db";
+import { Skeleton } from "@/components/ui/skeleton";
 import { roleCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import Link from "next/link";
@@ -18,7 +18,7 @@ export default function Page() {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">Roles</div>
+                    <h1 className="text-2xl font-bold">Roles</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage the platform&apos;s roles and permissions
                     </p>
@@ -35,7 +35,7 @@ export default function Page() {
                 </Button>
             </div>
 
-            <Suspense fallback={<>Loading...</>}>
+            <Suspense fallback={<RolesPageSkeleton />}>
                 <RolesFetch />
             </Suspense>
         </DashShell>
@@ -43,28 +43,20 @@ export default function Page() {
 }
 
 async function RolesFetch() {
-    let cachedRoles = await roleCache.getAll();
-    if (!cachedRoles.length) {
-        const roles = await db.query.roles.findMany({
-            with: {
-                userRoles: true,
-            },
-        });
+    const cachedRoles = await roleCache.getAll();
 
-        cachedRoles = roles.map((role) => ({
-            ...role,
-            users: role.userRoles.length,
-        }));
+    const data = cachedRoles
+        .filter((role) => role.isSiteRole)
+        .sort((a, b) => a.position - b.position);
+    return <RolesPage initialData={data} />;
+}
 
-        await roleCache.addBulk(cachedRoles.map((x) => x!));
-    }
-
+function RolesPageSkeleton() {
     return (
-        <RolesTable
-            initialRoles={cachedRoles.map((role) => ({
-                ...role,
-                roleCount: cachedRoles.length,
-            }))}
-        />
+        <ul className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-[4.5rem] w-full rounded-md" />
+            ))}
+        </ul>
     );
 }

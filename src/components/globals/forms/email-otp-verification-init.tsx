@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/input-otp";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { siteConfig } from "@/config/site";
+import { handleClientError } from "@/lib/utils";
 import { OTP, otpSchema } from "@/lib/validations";
 import { useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -65,7 +66,7 @@ export function EmailOTPVerificationInitForm() {
                     session: signUpAttempt.createdSessionId,
                 });
                 toast.success(
-                    `Hey, ${signUpAttempt.firstName}, Welcome to ${siteConfig.name}!`,
+                    `Hey ${signUpAttempt.firstName}, Welcome to ${siteConfig.name}!`,
                     { id: toastId }
                 );
                 router.push("/");
@@ -75,9 +76,7 @@ export function EmailOTPVerificationInitForm() {
                     ? toast.error(err.errors.map((e) => e.message).join(", "), {
                           id: ctx?.toastId,
                       })
-                    : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
-                          id: ctx?.toastId,
-                      });
+                    : handleClientError(err, ctx?.toastId);
             },
         });
 

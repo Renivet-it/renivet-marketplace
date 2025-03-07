@@ -3,13 +3,14 @@
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { DEFAULT_AVATAR_URL, DEFAULT_MESSAGES } from "@/config/const";
+import { DEFAULT_AVATAR_URL } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
 import {
     cn,
     getUserPermissions,
+    handleClientError,
     hasPermission,
     hideEmail,
     slugify,
@@ -78,11 +79,6 @@ const profileMenu: SiteConfig["menu"] = [
         icon: "Map",
     },
     {
-        name: "Join as a Brand",
-        href: "/contact/brand",
-        icon: "SquareTerminal",
-    },
-    {
         name: "Login/Register",
         href: "/auth/signin",
         icon: "LogIn",
@@ -101,14 +97,14 @@ const boxMenu: SiteConfig["menu"] = [
         icon: "Heart",
     },
     {
+        name: "Cart",
+        href: "/cart",
+        icon: "ShoppingCart",
+    },
+    {
         name: "Help Center",
         href: "/contact",
         icon: "Headset",
-    },
-    {
-        name: "Coupons",
-        href: "/coupons",
-        icon: "Ticket",
     },
 ];
 
@@ -128,7 +124,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
         else document.body.style.overflow = "auto";
     }, [isMenuOpen]);
 
-    const { data: user } = trpc.users.currentUser.useQuery();
+    const { data: user } = trpc.general.users.currentUser.useQuery();
 
     const userPermissions = useMemo(() => {
         if (!user)
@@ -139,13 +135,15 @@ export function NavbarMob({ className, ...props }: GenericProps) {
         return getUserPermissions(user.roles);
     }, [user]);
 
-    const isAuthorized = useMemo(
+    const isSiteAuthorized = useMemo(
         () =>
             hasPermission(userPermissions.sitePermissions, [
                 BitFieldSitePermission.VIEW_PROTECTED_PAGES,
             ]),
         [userPermissions.sitePermissions]
     );
+
+    const isBrandAuthorized = useMemo(() => !!user?.brand, [user]);
 
     const { signOut } = useAuth();
 
@@ -166,9 +164,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(DEFAULT_MESSAGES.ERRORS.GENERIC, {
-                      id: ctx?.toastId,
-                  });
+                : handleClientError(err, ctx?.toastId);
         },
     });
 
@@ -233,10 +229,12 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 )}
 
                 <div className={cn("space-y-5", !user && "mt-5")}>
-                    {/* {!isAuthorized && (
+                    {!isSiteAuthorized && !isBrandAuthorized && (
                         <>
                             <ul
-                                className="grid grid-cols-2 items-center gap-4 px-4"
+                                className={cn(
+                                    "grid grid-cols-2 items-center gap-4 px-4"
+                                )}
                                 ref={navListRef}
                             >
                                 {boxMenu.map((item, index) => {
@@ -276,9 +274,9 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                 })}
                             </ul>
 
-                            <Separator />
+                            <Separator className="hidden" />
                         </>
-                    )} */}
+                    )}
 
                     <ul
                         className="flex items-center gap-2 overflow-x-scroll px-4"
@@ -291,10 +289,12 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                 className={cn({
                                     hidden:
                                         (slugify(item.name) === "dashboard" &&
-                                            !isAuthorized) ||
+                                            !isSiteAuthorized &&
+                                            !isBrandAuthorized) ||
                                         (slugify(item.name) ===
                                             "join-as-a-brand" &&
-                                            isAuthorized) ||
+                                            isBrandAuthorized &&
+                                            !isSiteAuthorized) ||
                                         (!user &&
                                             [
                                                 "manage-account",

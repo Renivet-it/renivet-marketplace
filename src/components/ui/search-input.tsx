@@ -1,5 +1,9 @@
+"use client";
+
 import { cn } from "@/lib/utils";
+import { useQueryState } from "nuqs";
 import * as React from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icons } from "../icons";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
@@ -11,10 +15,61 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
 
 const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
     ({ className, disabled, type = "search", classNames, ...props }, ref) => {
+        const [search, setSearch] = useQueryState("search", {
+            defaultValue: "",
+        });
+        const [localSearch, setLocalSearch] = useState(search);
+        const debounceTimerRef = React.useRef<ReturnType<
+            typeof setTimeout
+        > | null>(null);
+
+        const updateSearch = useCallback(
+            (value: string) => {
+                if (value.length > 2) {
+                    setSearch(value);
+                } else {
+                    setSearch("");
+                }
+            },
+            [setSearch]
+        );
+
+        useEffect(() => {
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+            }
+
+            debounceTimerRef.current = setTimeout(() => {
+                updateSearch(localSearch);
+            }, 500);
+
+            return () => {
+                if (debounceTimerRef.current) {
+                    clearTimeout(debounceTimerRef.current);
+                }
+            };
+        }, [localSearch, updateSearch]);
+
+        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            setLocalSearch(e.target.value);
+        };
+
+        const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === "Enter") {
+                if (debounceTimerRef.current) {
+                    clearTimeout(debounceTimerRef.current);
+                }
+                updateSearch(localSearch);
+            }
+            if (e.key === "Backspace" && localSearch.length <= 1) {
+                setLocalSearch("");
+            }
+        };
+
         return (
             <div
                 className={cn(
-                    "flex items-center gap-1 border border-input bg-background",
+                    "flex w-full items-center gap-1 border border-input bg-background",
                     disabled && "cursor-not-allowed opacity-50",
                     classNames?.wrapper
                 )}
@@ -32,12 +87,15 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
                     )}
                     disabled={disabled}
                     ref={ref}
+                    value={localSearch}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     {...props}
                 />
             </div>
         );
     }
 );
-SearchInput.displayName = "SearchInput";
 
+SearchInput.displayName = "SearchInput";
 export { SearchInput };

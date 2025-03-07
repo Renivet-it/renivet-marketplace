@@ -21,7 +21,7 @@ interface Item {
     href: string;
 }
 
-const navItems: Item[] = [
+const personalNavItems: Item[] = [
     {
         icon: "User",
         name: "general",
@@ -37,6 +37,19 @@ const navItems: Item[] = [
         name: "addresses",
         href: "/addresses",
     },
+];
+
+const shoppingNavItems: Item[] = [
+    {
+        icon: "Heart",
+        name: "wishlist",
+        href: "/wishlist",
+    },
+    {
+        icon: "ShoppingCart",
+        name: "cart",
+        href: "/cart",
+    },
     {
         icon: "ShoppingBag",
         name: "orders",
@@ -50,47 +63,85 @@ export function ProfileNav({ className, ...props }: GenericProps) {
 
     return (
         <>
-            <Card
+            <div
                 className={cn(
-                    "hidden w-full rounded-none md:inline-block",
+                    "hidden w-full space-y-6 md:inline-block",
                     className
                 )}
                 {...props}
             >
-                <CardHeader>
-                    <CardTitle>Personal</CardTitle>
-                </CardHeader>
+                <Card className="rounded-none">
+                    <CardHeader>
+                        <CardTitle>Personal</CardTitle>
+                    </CardHeader>
 
-                <Separator />
+                    <Separator />
 
-                <CardContent className="p-0 py-2">
-                    <div className="flex flex-col">
-                        {navItems.map((item) => {
-                            const Icon = Icons[item.icon];
+                    <CardContent className="p-0 py-2">
+                        <div className="flex flex-col">
+                            {personalNavItems.map((item) => {
+                                const Icon = Icons[item.icon];
 
-                            return (
-                                <Button
-                                    key={item.name}
-                                    variant={
-                                        (activeSection === "profile" &&
-                                            item.name === "general") ||
-                                        activeSection === item.name
-                                            ? "accent"
-                                            : "ghost"
-                                    }
-                                    className="justify-start gap-2 rounded-none"
-                                    asChild
-                                >
-                                    <Link href={`/profile${item.href}`}>
-                                        <Icon className="size-4" />
-                                        {convertValueToLabel(item.name)}
-                                    </Link>
-                                </Button>
-                            );
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
+                                return (
+                                    <Button
+                                        key={item.name}
+                                        variant={
+                                            (activeSection === "profile" &&
+                                                item.name === "general") ||
+                                            activeSection === item.name
+                                                ? "accent"
+                                                : "ghost"
+                                        }
+                                        className="justify-start gap-2 rounded-none"
+                                        asChild
+                                    >
+                                        <Link href={`/profile${item.href}`}>
+                                            <Icon className="size-4" />
+                                            {convertValueToLabel(item.name)}
+                                        </Link>
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="rounded-none">
+                    <CardHeader>
+                        <CardTitle>Shopping</CardTitle>
+                    </CardHeader>
+
+                    <Separator />
+
+                    <CardContent className="p-0 py-2">
+                        <div className="flex flex-col">
+                            {shoppingNavItems.map((item) => {
+                                const Icon = Icons[item.icon];
+
+                                return (
+                                    <Button
+                                        key={item.name}
+                                        variant={
+                                            (activeSection === "profile" &&
+                                                item.name === "general") ||
+                                            activeSection === item.name
+                                                ? "accent"
+                                                : "ghost"
+                                        }
+                                        className="justify-start gap-2 rounded-none"
+                                        asChild
+                                    >
+                                        <Link href={`/profile${item.href}`}>
+                                            <Icon className="size-4" />
+                                            {convertValueToLabel(item.name)}
+                                        </Link>
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Sheet>
                 <SheetTrigger asChild className="md:hidden">
@@ -101,34 +152,88 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                 </SheetTrigger>
 
                 <SheetContent side="bottom" className="p-0 [&>button]:hidden">
-                    <SheetHeader className="p-4 text-start">
-                        <SheetTitle>Personal</SheetTitle>
+                    <SheetHeader className="sr-only p-0">
+                        <SheetTitle>Profile Navigation</SheetTitle>
                     </SheetHeader>
 
                     <div className="flex flex-col">
-                        {navItems.map((item) => {
-                            const Icon = Icons[item.icon];
+                        <div>
+                            <h2 className="p-4 text-lg font-semibold">
+                                Personal
+                            </h2>
 
-                            return (
-                                <Button
-                                    key={item.name}
-                                    variant={
-                                        (activeSection === "profile" &&
-                                            item.name === "general") ||
-                                        activeSection === item.name
-                                            ? "accent"
-                                            : "ghost"
-                                    }
-                                    className="justify-start gap-2 rounded-none"
-                                    asChild
-                                >
-                                    <Link href={`/profile${item.href}`}>
-                                        <Icon className="size-4" />
-                                        {convertValueToLabel(item.name)}
-                                    </Link>
-                                </Button>
-                            );
-                        })}
+                            <ul>
+                                {personalNavItems.map((item) => {
+                                    const Icon = Icons[item.icon];
+
+                                    return (
+                                        <li key={item.name}>
+                                            <Button
+                                                variant={
+                                                    (activeSection ===
+                                                        "profile" &&
+                                                        item.name ===
+                                                            "general") ||
+                                                    activeSection === item.name
+                                                        ? "accent"
+                                                        : "ghost"
+                                                }
+                                                className="w-full justify-start gap-2 rounded-none"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={`/profile${item.href}`}
+                                                >
+                                                    <Icon className="size-4" />
+                                                    {convertValueToLabel(
+                                                        item.name
+                                                    )}
+                                                </Link>
+                                            </Button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+
+                        <Separator className="mt-2" />
+
+                        <div>
+                            <h2 className="p-4 text-lg font-semibold">
+                                Shopping
+                            </h2>
+
+                            <ul>
+                                {shoppingNavItems.map((item) => {
+                                    const Icon = Icons[item.icon];
+
+                                    return (
+                                        <li key={item.name}>
+                                            <Button
+                                                variant={
+                                                    activeSection === item.name
+                                                        ? "accent"
+                                                        : "ghost"
+                                                }
+                                                className="w-full justify-start gap-2 rounded-none"
+                                                asChild
+                                            >
+                                                <Link
+                                                    href={`/profile${item.href}`}
+                                                >
+                                                    <Icon className="size-4" />
+                                                    {convertValueToLabel(
+                                                        item.name
+                                                    )}
+                                                </Link>
+                                            </Button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+
+                        <Separator className="mt-2" />
                     </div>
                 </SheetContent>
             </Sheet>

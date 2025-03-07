@@ -1,11 +1,9 @@
 import { BlogManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { db } from "@/lib/db";
+import { tagCache } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
-import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -17,7 +15,7 @@ export default function Page() {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Create New Blog</div>
+                <h1 className="text-2xl font-bold">Create New Blog</h1>
                 <p className="text-sm text-muted-foreground">
                     Create a new blog post and publish it to the platform
                 </p>
@@ -31,10 +29,7 @@ export default function Page() {
 }
 
 async function BlogCreateFetch() {
-    const { userId } = await auth();
-    if (!userId) redirect("/auth/signin");
-
-    const tags = await db.query.tags.findMany();
+    const tags = await tagCache.getAll();
     return <BlogManageForm tags={tags} />;
 }
 

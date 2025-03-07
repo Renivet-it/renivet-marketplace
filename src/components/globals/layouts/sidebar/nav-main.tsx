@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/sidebar";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { cn, hasPermission } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 interface Props extends GenericProps {
@@ -48,20 +47,21 @@ export function NavMain({
     return (
         <SidebarGroup className={cn("", className)} {...props}>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
+
             <SidebarMenu>
                 {items.map((item) => {
                     const Icon = item.icon && Icons[item.icon];
 
-                    const filteredItems = item.items?.filter((subItem) => {
-                        return hasPermission(
+                    const filteredItems = item.items?.filter((subItem) =>
+                        hasPermission(
                             userPermissions.sitePermissions,
                             [
                                 subItem.permissions ||
                                     BitFieldSitePermission.VIEW_PROTECTED_PAGES,
                             ],
                             "any"
-                        );
-                    });
+                        )
+                    );
                     if (!filteredItems?.length) return null;
 
                     return (
@@ -76,7 +76,7 @@ export function NavMain({
                                     <SidebarMenuButton tooltip={item.title}>
                                         {Icon && <Icon />}
                                         <span>{item.title}</span>
-                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                        <Icons.ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                                     </SidebarMenuButton>
                                 </CollapsibleTrigger>
 
@@ -87,10 +87,11 @@ export function NavMain({
                                                 key={subItem.title}
                                             >
                                                 <SidebarMenuSubButton asChild>
-                                                    <Link href={subItem.url}>
-                                                        <span>
-                                                            {subItem.title}
-                                                        </span>
+                                                    <Link
+                                                        href={subItem.url}
+                                                        prefetch
+                                                    >
+                                                        {subItem.title}
                                                     </Link>
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>

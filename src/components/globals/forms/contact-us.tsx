@@ -13,14 +13,14 @@ import {
 import { Input } from "@/components/ui/input-general";
 import { Textarea } from "@/components/ui/textarea-general";
 import { trpc } from "@/lib/trpc/client";
-import { CreateContactUs, createContactUsSchema } from "@/lib/validations";
+import { CreateTicket, createTicketSchema } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 export function ContactUsForm() {
-    const form = useForm<CreateContactUs>({
-        resolver: zodResolver(createContactUsSchema),
+    const form = useForm<CreateTicket>({
+        resolver: zodResolver(createTicketSchema),
         defaultValues: {
             name: "",
             email: "",
@@ -31,7 +31,7 @@ export function ContactUsForm() {
     });
 
     const { mutate: sendMessage, isPending } =
-        trpc.contactUs.createContactUs.useMutation({
+        trpc.general.tickets.createTicket.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Sending message...");
                 return { toastId };

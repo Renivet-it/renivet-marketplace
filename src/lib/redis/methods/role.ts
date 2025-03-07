@@ -1,5 +1,6 @@
+import { roleQueries } from "@/lib/db/queries";
 import { generateCacheKey, parseToJSON } from "@/lib/utils";
-import { CachedRole } from "@/lib/validations";
+import { CachedRole, cachedRoleSchema } from "@/lib/validations";
 import { redis } from "..";
 
 class RoleCache {
@@ -10,17 +11,56 @@ class RoleCache {
     }
 
     async getAll() {
-        const keys = await redis.keys(this.genKey("*"));
+        const [dbRolesCount, keys] = await Promise.all([
+            roleQueries.getCount(),
+            redis.keys(this.genKey("*")),
+        ]);
+
+        if (keys.length !== dbRolesCount) {
+            await this.drop();
+
+            const dbRoles = await roleQueries.getRoles();
+            if (!dbRoles.length) return [];
+
+            const cachedRoles = dbRoles.map((role) => ({
+                ...role,
+                users: role.userRoles.length,
+            }));
+
+            await this.addBulk(cachedRoles);
+            return cachedRoles;
+        }
         if (!keys.length) return [];
-        const roles = await redis.mget(...keys);
-        return roles
-            .map((role) => parseToJSON<CachedRole>(role))
-            .filter((role): role is CachedRole => role !== null);
+
+        const cachedRoles = await redis.mget(...keys);
+        return cachedRoleSchema
+            .array()
+            .parse(
+                cachedRoles
+                    .map((role) => parseToJSON<CachedRole>(role))
+                    .filter((role): role is CachedRole => role !== null)
+            );
     }
 
     async get(id: string) {
-        const role = await redis.get(this.genKey(id));
-        return parseToJSON<CachedRole>(role);
+        const cachedRoleRaw = await redis.get(this.genKey(id));
+        let cachedRole = cachedRoleSchema
+            .nullable()
+            .parse(parseToJSON<CachedRole>(cachedRoleRaw));
+
+        if (!cachedRole) {
+            const dbRole = await roleQueries.getRole(id);
+            if (!dbRole) return null;
+
+            cachedRole = {
+                ...dbRole,
+                users: dbRole.userRoles.length,
+            };
+
+            await this.add(cachedRole);
+        }
+
+        return cachedRole;
     }
 
     async add(role: CachedRole) {
@@ -56,6 +96,12 @@ class RoleCache {
 
     async remove(id: string) {
         return await redis.del(this.genKey(id));
+    }
+
+    async drop() {
+        const keys = await redis.keys(this.genKey("*"));
+        if (!keys.length) return 0;
+        return await redis.del(...keys);
     }
 }
 

@@ -1,22 +1,26 @@
+"use client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_AVATAR_URL, DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
 import { cn } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
+import { BlogWithAuthorAndTagCount } from "@/lib/validations";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
 
 interface PageProps extends GenericProps {
-    blog: BlogWithAuthorAndTag & {
-        blogCount: number;
-    };
+    blog: BlogWithAuthorAndTagCount;
 }
 
 export function BlogCard({ className, blog, ...props }: PageProps) {
     return (
         <div className={cn("", className)} {...props}>
-            <Link href={`/blogs/${blog.slug}`} className="flex flex-col gap-5">
+            <Link
+                prefetch
+                href={`/blogs/${blog.slug}`}
+                className="flex flex-col gap-5"
+            >
                 <div className="aspect-video size-full">
                     <Image
                         src={blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL}

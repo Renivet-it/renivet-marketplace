@@ -57,14 +57,18 @@ export const blogSchema = z.object({
             invalid_type_error: "Published at must be a date",
         })
         .nullable(),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
-    }),
-    updatedAt: z.date({
-        required_error: "Updated at is required",
-        invalid_type_error: "Updated at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
 });
 
 export const createBlogSchema = blogSchema
@@ -122,8 +126,7 @@ export const updateBlogSchema = blogSchema
                     .uuid("ID is invalid")
             )
             .min(1, "At least one tag is required"),
-    })
-    .partial();
+    });
 
 export const blogToTagsSchema = z.object({
     id: z
@@ -144,13 +147,15 @@ export const blogToTagsSchema = z.object({
             invalid_type_error: "Tag ID must be a string",
         })
         .uuid("ID is invalid"),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
 });
 
-export const blogWithAuthorAndTagSchema = blogSchema
+export const blogWithAuthorAndTagCountSchema = blogSchema
     .merge(
         z.object({
             author: safeUserSchema.omit({ createdAt: true, updatedAt: true }),
@@ -158,16 +163,46 @@ export const blogWithAuthorAndTagSchema = blogSchema
     )
     .merge(
         z.object({
-            tags: z.array(
-                z.object({
-                    tag: tagSchema.omit({ createdAt: true, updatedAt: true }),
-                })
-            ),
+            tags: z.number({
+                required_error: "Tags is required",
+                invalid_type_error: "Tags must be a number",
+            }),
         })
     );
+
+export const blogWithAuthorAndTagSchema =
+    blogWithAuthorAndTagCountSchema.extend({
+        tags: z.array(tagSchema),
+    });
+
+export const cachedBlogSchema = blogWithAuthorAndTagCountSchema.extend({
+    createdAt: z
+        .string({
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a string",
+        })
+        .transform((x) => new Date(x)),
+    publishedAt: z
+        .string({
+            required_error: "Published at is required",
+            invalid_type_error: "Published at must be a string",
+        })
+        .transform((x) => new Date(x))
+        .nullable(),
+    updatedAt: z
+        .string({
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a string",
+        })
+        .transform((x) => new Date(x)),
+});
 
 export type Blog = z.infer<typeof blogSchema>;
 export type CreateBlog = z.infer<typeof createBlogSchema>;
 export type UpdateBlog = z.infer<typeof updateBlogSchema>;
 export type BlogToTags = z.infer<typeof blogToTagsSchema>;
+export type BlogWithAuthorAndTagCount = z.infer<
+    typeof blogWithAuthorAndTagCountSchema
+>;
 export type BlogWithAuthorAndTag = z.infer<typeof blogWithAuthorAndTagSchema>;
+export type CachedBlog = z.infer<typeof cachedBlogSchema>;

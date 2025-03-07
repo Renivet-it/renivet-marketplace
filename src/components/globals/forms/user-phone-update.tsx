@@ -15,19 +15,20 @@ import { handleClientError } from "@/lib/utils";
 import {
     UpdateUserPhone,
     updateUserPhoneSchema,
-    UserWithAddressesAndRoles,
+    UserWithAddressesRolesAndBrand,
 } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { PhoneNumberResource } from "@clerk/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { UserPhoneVerifyModal } from "../modals/profile";
+import { UserPhoneVerifyModal } from "../modals";
 
 interface PageProps {
-    user: UserWithAddressesAndRoles;
+    user: UserWithAddressesRolesAndBrand;
 }
 
 export function UserPhoneUpdateForm({ user }: PageProps) {
@@ -54,6 +55,9 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: UpdateUserPhone) => {
+            if (values.phone)
+                throw new Error("Adding a phone number is currently disabled");
+
             if (!isClerkUserLoaded || !clerkUser)
                 throw new Error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);
             const res = await clerkUser.createPhoneNumber({
@@ -78,7 +82,11 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
             setIsVerifyModalOpen(true);
         },
         onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
+            return isClerkAPIResponseError(err)
+                ? toast.error(err.errors.map((e) => e.message).join(", "), {
+                      id: ctx?.toastId,
+                  })
+                : handleClientError(err, ctx?.toastId);
         },
     });
 
@@ -103,7 +111,8 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
                                             inputMode="tel"
                                             placeholder="+919874563210"
                                             disabled={
-                                                isPhoneVerificationSending
+                                                isPhoneVerificationSending ||
+                                                true
                                             }
                                             {...field}
                                             onChange={(e) => {
@@ -129,7 +138,10 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
                                     </div>
                                 </FormControl>
 
-                                <FormMessage />
+                                <FormMessage className="text-xs">
+                                    * Adding a phone number is currently
+                                    disabled
+                                </FormMessage>
                             </FormItem>
                         )}
                     />

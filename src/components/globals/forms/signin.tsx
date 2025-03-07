@@ -13,6 +13,8 @@ import {
 import { Input } from "@/components/ui/input-general";
 import { PasswordInput } from "@/components/ui/password-input";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { POSTHOG_EVENTS } from "@/config/posthog";
+import { handleClientError } from "@/lib/utils";
 import { SignIn, signInSchema } from "@/lib/validations";
 import { useSignIn } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -20,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -35,9 +38,11 @@ export function SignInForm() {
     });
 
     const { isLoaded, signIn, setActive } = useSignIn();
+    const posthog = usePostHog();
 
     const { mutate: handleSignIn, isPending: isSigninIn } = useMutation({
         onMutate: () => {
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNIN_INITIATED);
             const toastId = toast.loading("Logging you in...");
             return { toastId };
         },
@@ -63,6 +68,9 @@ export function SignInForm() {
             toast.success("Welcome back!", {
                 id: toastId,
             });
+            posthog.capture(POSTHOG_EVENTS.AUTH.SIGNED_IN, {
+                userId: signInAttempt.id,
+            });
             router.push("/");
         },
         onError: (err, _, ctx) => {
@@ -70,9 +78,7 @@ export function SignInForm() {
                 ? toast.error(err.errors.map((e) => e.message).join(", "), {
                       id: ctx?.toastId,
                   })
-                : toast.error(err.message, {
-                      id: ctx?.toastId,
-                  });
+                : handleClientError(err, ctx?.toastId);
         },
     });
 

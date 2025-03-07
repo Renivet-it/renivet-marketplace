@@ -42,30 +42,46 @@ export const brandWaitlistSchema = z.object({
             required_error: "Brand Phone is required",
             invalid_type_error: "Brand Phone must be a string",
         })
-        .min(10, "Brand Phone must be at least 10 characters long")
-        .nullable(),
+        .min(10, "Brand Phone must be at least 10 characters long"),
     brandWebsite: z
         .string({
             required_error: "Brand Website is required",
             invalid_type_error: "Brand Website must be a string",
         })
-        .url("Brand Website is invalid")
+        .url("Brand Website is invalid"),
+    demoUrl: z
+        .string({
+            invalid_type_error: "Demo URL must be a string",
+        })
+        .url("Demo URL is invalid")
         .nullable(),
-    createdAt: z.date({
-        required_error: "Created at is required",
-        invalid_type_error: "Created at must be a date",
-    }),
-    updatedAt: z.date({
-        required_error: "Updated at is required",
-        invalid_type_error: "Updated at must be a date",
-    }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
 });
 
 export const createBrandWaitlistSchema = brandWaitlistSchema.omit({
     id: true,
+    demoUrl: true,
     createdAt: true,
     updatedAt: true,
 });
 
+export const addBrandWaitlistDemoUrlSchema = brandWaitlistSchema.pick({
+    demoUrl: true,
+});
+
 export type BrandWaitlist = z.infer<typeof brandWaitlistSchema>;
 export type CreateBrandWaitlist = z.infer<typeof createBrandWaitlistSchema>;
+export type AddBrandWaitlistDemoUrl = z.infer<
+    typeof addBrandWaitlistDemoUrlSchema
+>;

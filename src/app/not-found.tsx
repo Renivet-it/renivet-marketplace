@@ -7,13 +7,6 @@ import {
 import { Icons } from "@/components/icons";
 import { SoonButtons } from "@/components/soon";
 import { Button } from "@/components/ui/button-general";
-import {
-    EmptyPlaceholder,
-    EmptyPlaceholderContent,
-    EmptyPlaceholderDescription,
-    EmptyPlaceholderIcon,
-    EmptyPlaceholderTitle,
-} from "@/components/ui/empty-placeholder-general";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -58,22 +51,29 @@ export default function NotFound() {
 
                         <div className="space-y-5 text-sm">
                             <p>
-                                Hi, we are <strong>Renivet</strong>, a
-                                marketplace for all your clothing needs. We are
-                                currently working on our website, and we will be
-                                back soon. Till then, feel free to join our
-                                waitlist, or if you are a seller, you can join
-                                our seller program.
+                                We&apos;re planting the seeds of a greener
+                                future. 🌲
                             </p>
 
                             <p>
-                                We are excited to see you soon! Thanks for your
-                                patience.
+                                Our sustainable marketplace is under
+                                construction, but we&apos;re working hard to
+                                bring you a shopping experience that&apos;s kind
+                                to the planet. 🌍
                             </p>
 
-                            <p className="text-end">
-                                From the team
-                                <br />@<strong>Renivet</strong>
+                            <p>
+                                Stay tuned for a harvest of eco-friendly
+                                products and ethical brands. 🌿
+                            </p>
+
+                            <p>
+                                <strong>Join Our Community</strong>
+                            </p>
+
+                            <p>
+                                Be the first to know when we launch and get
+                                sustainable living tips. Sign up now!
                             </p>
                         </div>
 

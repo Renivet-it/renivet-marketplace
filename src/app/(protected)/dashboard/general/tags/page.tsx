@@ -1,9 +1,7 @@
-import { TagsPage, TagsTable } from "@/components/dashboard/tags";
+import { TagsPage, TagsTable } from "@/components/dashboard/general/tags";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { db } from "@/lib/db";
-import { tags } from "@/lib/db/schema";
-import { desc } from "drizzle-orm";
+import { tagCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -17,7 +15,7 @@ export default function Page() {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">Tags</div>
+                    <h1 className="text-2xl font-bold">Tags</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage tags for your blog posts
                     </p>
@@ -34,15 +32,12 @@ export default function Page() {
 }
 
 async function TagsFetch() {
-    const data = await db.query.tags.findMany({
-        with: {
-            blogTags: true,
-        },
-        orderBy: [desc(tags.createdAt)],
-        extras: {
-            tagCount: db.$count(tags).as("tag_count"),
-        },
-    });
+    const data = await tagCache.getAll();
 
-    return <TagsTable initialTags={data} />;
+    const parsed = {
+        data,
+        count: data.length,
+    };
+
+    return <TagsTable initialData={parsed} />;
 }

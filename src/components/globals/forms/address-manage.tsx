@@ -28,7 +28,7 @@ import {
     Address,
     CreateAddress,
     createAddressSchema,
-    UserWithAddressesAndRoles,
+    UserWithAddressesRolesAndBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { State } from "country-state-city";
@@ -38,7 +38,7 @@ import { toast } from "sonner";
 
 interface PageProps {
     address?: Omit<Address, "createdAt" | "updatedAt">;
-    user: UserWithAddressesAndRoles;
+    user: UserWithAddressesRolesAndBrand;
     setFormOpen: Dispatch<SetStateAction<boolean>>;
     setSelectedAddress: Dispatch<
         SetStateAction<Omit<Address, "createdAt" | "updatedAt"> | undefined>
@@ -51,7 +51,7 @@ export function AddressManageForm({
     setFormOpen,
     setSelectedAddress,
 }: PageProps) {
-    const { refetch } = trpc.users.currentUser.useQuery();
+    const { refetch } = trpc.general.users.currentUser.useQuery();
 
     const states = useMemo(() => State.getStatesOfCountry("IN"), []);
 
@@ -87,7 +87,7 @@ export function AddressManageForm({
     }, [address, form]);
 
     const { mutate: addAddress, isPending: isAddressAdding } =
-        trpc.users.addAddress.useMutation({
+        trpc.general.users.addresses.addAddress.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Adding address...");
                 return { toastId };
@@ -104,7 +104,7 @@ export function AddressManageForm({
         });
 
     const { mutate: updateAddress, isPending: isAddressUpdating } =
-        trpc.users.updateAddress.useMutation({
+        trpc.general.users.addresses.updateAddress.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Updating address...");
                 return { toastId };

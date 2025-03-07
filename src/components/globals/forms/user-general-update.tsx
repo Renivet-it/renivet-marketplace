@@ -17,19 +17,23 @@ import { cn, handleClientError } from "@/lib/utils";
 import {
     UpdateUserGeneral,
     updateUserGeneralSchema,
-    UserWithAddressesAndRoles,
+    UserWithAddressesRolesAndBrand,
 } from "@/lib/validations";
 import { useUser } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 interface PageProps {
-    user: UserWithAddressesAndRoles;
+    user: UserWithAddressesRolesAndBrand;
 }
 
 export function UserGeneralUpdateForm({ user }: PageProps) {
+    const router = useRouter();
+
     const { user: clerkUser, isLoaded: isClerkUserLoaded } = useUser();
 
     const form = useForm<UpdateUserGeneral>({
@@ -58,9 +62,14 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
             toast.success("Changes saved successfully", { id: toastId });
             form.reset(data);
             clerkUser?.reload();
+            router.refresh();
         },
         onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
+            return isClerkAPIResponseError(err)
+                ? toast.error(err.errors.map((e) => e.message).join(", "), {
+                      id: ctx?.toastId,
+                  })
+                : handleClientError(err, ctx?.toastId);
         },
     });
 
@@ -69,7 +78,7 @@ export function UserGeneralUpdateForm({ user }: PageProps) {
             <form onSubmit={form.handleSubmit((values) => updateUser(values))}>
                 <Separator />
 
-                <CardContent className="space-y-6 pt-6">
+                <CardContent className="space-y-6 p-4 md:p-6">
                     <div className="grid gap-4 md:grid-cols-2 md:gap-6">
                         <FormField
                             control={form.control}

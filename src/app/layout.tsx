@@ -3,8 +3,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
-import { lora, poppins } from "./fonts";
+import { dmsans, rubik } from "./fonts";
 import "./globals.css";
+import { env } from "@/../env";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 export const viewport: Viewport = {
     themeColor: [
@@ -84,16 +86,12 @@ export const metadata: Metadata = {
     metadataBase: new URL(getAbsoluteURL()),
 };
 
-export default function RootLayout({
-    children,
-}: Readonly<{
-    children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: LayoutProps) {
     return (
         <html
             lang="en"
             suppressHydrationWarning
-            className={cn(poppins.variable, lora.variable)}
+            className={cn(dmsans.variable, rubik.variable)}
         >
             <ServerProvider>
                 <body
@@ -105,6 +103,7 @@ export default function RootLayout({
                     </ClientProvider>
                 </body>
             </ServerProvider>
+            <GoogleAnalytics gaId={env.GOOGLE_ANALYTICS_ID} />
         </html>
     );
 }

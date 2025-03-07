@@ -11,13 +11,13 @@ export default function Page() {
     return (
         <DashShell>
             <div className="space-y-1">
-                <div className="text-2xl font-semibold">Create New Role</div>
+                <h1 className="text-2xl font-bold">Create New Role</h1>
                 <p className="text-sm text-muted-foreground">
                     Create a new role and assign permissions to it
                 </p>
             </div>
 
-            <RoleManageForm />
+            <RoleManageForm type="site" />
         </DashShell>
     );
 }

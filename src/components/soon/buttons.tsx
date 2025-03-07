@@ -1,13 +1,9 @@
 "use client";
 
 import { useIntroModalStore } from "@/lib/store";
-import { useState } from "react";
-import { IntroModal } from "../globals/modals";
 import { Button } from "../ui/button-general";
 
 export function SoonButtons() {
-    const [currentTab, setCurrentTab] = useState<"community" | "brand">();
-
     const setIsOpen = useIntroModalStore((state) => state.setIsOpen);
 
     return (
@@ -17,7 +13,6 @@ export function SoonButtons() {
                 className="w-full rounded-md font-semibold"
                 onClick={() => {
                     setIsOpen(true);
-                    setCurrentTab("community");
                 }}
             >
                 Join Waitlist
@@ -27,13 +22,10 @@ export function SoonButtons() {
                 className="w-full rounded-md font-semibold"
                 onClick={() => {
                     setIsOpen(true);
-                    setCurrentTab("brand");
                 }}
             >
                 Join as a Brand
             </Button>
-
-            <IntroModal selectedTab={currentTab} />
         </div>
     );
 }

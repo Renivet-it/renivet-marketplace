@@ -107,6 +107,28 @@ const errorHandler = t.middleware(async ({ next }) => {
     }
 });
 
+export const isTRPCAuth = (
+    permission: number,
+    type?: "all" | "any",
+    permType?: "brand" | "site"
+) =>
+    isAuth.unstable_pipe(({ ctx, next }) => {
+        const { user } = ctx;
+
+        const isAuthorized = hasPermission(
+            permType === "brand" ? user.brandPermissions : user.sitePermissions,
+            [permission],
+            type
+        );
+        if (!isAuthorized)
+            throw new TRPCError({
+                code: "UNAUTHORIZED",
+                message: "You're not authorized",
+            });
+
+        return next({ ctx });
+    });
+
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure.use(errorHandler).use(ratelimiter);
 export const protectedProcedure = publicProcedure.use(isAuth);

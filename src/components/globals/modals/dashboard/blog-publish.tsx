@@ -11,14 +11,14 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
-import { BlogWithAuthorAndTag } from "@/lib/validations";
+import { BlogWithAuthorAndTagCount } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsBoolean, parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
-    blog: BlogWithAuthorAndTag;
+    blog: BlogWithAuthorAndTagCount;
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
@@ -28,14 +28,26 @@ export function BlogPublishModal({ blog, isOpen, setIsOpen }: PageProps) {
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [search] = useQueryState("search", {
+        defaultValue: "",
+    });
+    const [isPublished] = useQueryState(
+        "isPublished",
+        parseAsBoolean.withDefault(true)
+    );
 
-    const { refetch } = trpc.blogs.getBlogs.useQuery({ page, limit });
+    const { refetch } = trpc.general.blogs.getBlogs.useQuery({
+        page,
+        limit,
+        search,
+        isPublished,
+    });
 
     const { mutate: updatePublishStatus, isPending: isUpdating } =
-        trpc.blogs.changePublishStatus.useMutation({
+        trpc.general.blogs.changePublishStatus.useMutation({
             onMutate: ({ isPublished }) => {
                 const toastId = toast.loading(
-                    !isPublished ? "Unpublishing blog" : "Publishing blog"
+                    !isPublished ? "Unpublishing blog..." : "Publishing blog..."
                 );
                 return { toastId };
             },

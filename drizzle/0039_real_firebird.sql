@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "product_cat_sub_cat_type_idx" ON "product_categories" USING btree ("product_id","category_id","subcategory_id","product_type_id");

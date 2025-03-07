@@ -1,16 +1,12 @@
-import { BlogsTable } from "@/components/dashboard/blogs";
+import { BlogsTable } from "@/components/dashboard/general/blogs";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
-import { db } from "@/lib/db";
-import { blogs } from "@/lib/db/schema";
-import { blogWithAuthorAndTagSchema } from "@/lib/validations";
-import { desc } from "drizzle-orm";
+import { blogQueries } from "@/lib/db/queries";
 import { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { z } from "zod";
 
 export const metadata: Metadata = {
     title: "Blogs",
@@ -21,6 +17,8 @@ interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
+        search?: string;
+        isPublished?: string;
     }>;
 }
 
@@ -29,7 +27,7 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <div className="text-2xl font-semibold">Blogs</div>
+                    <h1 className="text-2xl font-bold">Blogs</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage the platform&apos;s blogs and articles
                     </p>
@@ -54,37 +52,28 @@ export default function Page({ searchParams }: PageProps) {
 }
 
 async function BlogsFetch({ searchParams }: PageProps) {
-    const { page: pageRaw, limit: limitRaw } = await searchParams;
+    const {
+        page: pageRaw,
+        limit: limitRaw,
+        search: searchRaw,
+        isPublished: isPublishedRaw,
+    } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const isPublished =
+        isPublishedRaw === undefined || isPublishedRaw === "true"
+            ? true
+            : false;
+    const search = searchRaw?.length ? searchRaw : undefined;
 
-    const data = await db.query.blogs.findMany({
-        with: {
-            author: true,
-            tags: {
-                with: {
-                    tag: true,
-                },
-            },
-        },
+    const data = await blogQueries.getBlogs({
         limit,
-        offset: (page - 1) * limit,
-        orderBy: [desc(blogs.createdAt)],
-        extras: {
-            blogCount: db.$count(blogs).as("blog_count"),
-        },
+        page,
+        search,
+        isPublished,
     });
 
-    const parsed = blogWithAuthorAndTagSchema
-        .merge(
-            z.object({
-                blogCount: z.string().transform((val) => parseInt(val)),
-            })
-        )
-        .array()
-        .parse(data);
-
-    return <BlogsTable initialBlogs={parsed} />;
+    return <BlogsTable initialData={data} />;
 }
