@@ -583,23 +583,23 @@ export const productsRouter = createTRPCRouter({
                     message: "Product must have at least one image",
                 });
 
-            if (
-                !existingProduct.journey ||
-                existingProduct.journey.data?.length === 0
-            )
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product must have at least one product journey",
-                });
+            // if (
+            //     !existingProduct.journey ||
+            //     existingProduct.journey.data?.length === 0
+            // )
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: "Product must have at least one product journey",
+            //     });
 
-            if (
-                !existingProduct.values ||
-                existingProduct.values.data?.length === 0
-            )
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product must have at least one product value",
-                });
+            // if (
+            //     !existingProduct.values ||
+            //     existingProduct.values.data?.length === 0
+            // )
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: "Product must have at least one product value",
+            //     });
 
             const data = await queries.products.sendProductForReview(productId);
 

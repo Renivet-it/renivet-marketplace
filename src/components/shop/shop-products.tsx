@@ -107,7 +107,7 @@ export function ShopProducts({
         <>
             <div
                 className={cn(
-                    "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5",
+                    "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4",
                     className
                 )}
                 {...props}

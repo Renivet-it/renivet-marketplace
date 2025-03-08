@@ -367,7 +367,7 @@ export function ProductCartAddForm({
                                                                             value.id
                                                                         }
                                                                         className={cn(
-                                                                            "flex cursor-pointer items-center justify-center rounded-full border p-2 px-6 text-sm font-medium peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground",
+                                                                            "flex cursor-pointer items-center justify-center rounded-full border px-5 py-3 text-sm font-medium peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-secondary peer-data-[state=checked]:text-primary-foreground",
                                                                             (!isAvailable ||
                                                                                 stockCount ===
                                                                                     0) &&
@@ -414,7 +414,7 @@ export function ProductCartAddForm({
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="w-full font-semibold uppercase md:h-12 md:basis-2/3 md:text-base"
+                                className="w-full rounded-sm bg-secondary font-semibold uppercase md:h-14 md:basis-2/4 md:text-base"
                                 disabled={
                                     !product.isAvailable ||
                                     (!!selectedVariant &&
@@ -439,7 +439,7 @@ export function ProductCartAddForm({
                                 variant="outline"
                                 size="lg"
                                 className={cn(
-                                    "group w-full font-semibold uppercase md:h-12 md:basis-1/3 md:text-base"
+                                    "group w-full rounded-sm font-semibold uppercase hover:bg-secondary md:h-14 md:basis-1/3 md:text-base"
                                 )}
                                 userId={userId}
                                 productId={product.id}

@@ -1,5 +1,5 @@
 import { GeneralShell } from "@/components/globals/layouts";
-import { ShopFilters, ShopProducts } from "@/components/shop";
+import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { Label } from "@/components/ui/label";
 import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
@@ -45,11 +45,14 @@ export default function Page({ searchParams }: PageProps) {
                 <div className="hidden w-px bg-border md:inline-block" />
 
                 <div className="w-full basis-5/6 space-y-5">
-                    <SearchInput
+                    {/* <SearchInput
                         type="search"
                         placeholder="Search for a product..."
                         className="h-12 text-base"
-                    />
+                    /> */}
+                    <div className="flex justify-end">
+                        <ShopSortBy />
+                    </div>
 
                     <Separator />
 

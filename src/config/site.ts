@@ -175,6 +175,16 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_CONTENT,
             },
             {
+                title: "Brand Products",
+                url: "/dashboard/general/brand-products",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Shop by Category",
+                url: "/dashboard/general/shop-by-category",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
                 title: "Users",
                 url: "/dashboard/general/users",
                 permissions:
@@ -184,6 +194,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             {
                 title: "Brands",
                 url: "/dashboard/general/brands",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_BRANDS,
+            },
+            {
+                title: "Brands Info",
+                url: "/dashboard/general/brands/verifications",
                 permissions:
                     BitFieldSitePermission.MANAGE_BRANDS |
                     BitFieldSitePermission.VIEW_BRANDS,

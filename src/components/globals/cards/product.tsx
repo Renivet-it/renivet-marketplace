@@ -66,7 +66,7 @@ export function ProductCard({
                     >
                         <WishlistButton
                             className={cn(
-                                "w-full hover:bg-background hover:text-foreground",
+                                "w-full bg-background hover:bg-background hover:text-foreground",
                                 isProductWishlisted &&
                                     "bg-background text-primary hover:bg-muted",
                                 !userId && "hidden"
