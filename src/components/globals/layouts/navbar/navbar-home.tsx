@@ -38,16 +38,12 @@ import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 export function NavbarHome() {
     const [isMenuHidden, setIsMenuHidden] = useState(false);
-
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
     const setIsMenuOpen = useNavbarStore((state) => state.setIsOpen);
@@ -126,14 +122,6 @@ export function NavbarHome() {
         subcategoryId: string,
         productTypeId: string
     ) => {
-        if (pathname === "/shop") {
-            return `/?${new URLSearchParams({
-                ...Object.fromEntries(searchParams.entries()),
-                categoryId,
-                subcategoryId,
-                productTypeId,
-            })}`;
-        }
         return `/shop?categoryId=${categoryId}&subcategoryId=${subcategoryId}&productTypeId=${productTypeId}`;
     };
 
