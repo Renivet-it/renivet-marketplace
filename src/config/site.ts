@@ -70,8 +70,12 @@ export const siteConfig: SiteConfig = {
                 name: "About Us",
                 items: [
                     {
-                        name: "Mission",
-                        href: "/about#mission",
+                        name: "Community",
+                        href: "/blogs",
+                    },
+                    {
+                        name: "Shop",
+                        href: "/shop",
                     },
                     {
                         name: "Our Team",
