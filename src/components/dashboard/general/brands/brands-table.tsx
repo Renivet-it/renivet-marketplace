@@ -54,6 +54,12 @@ const columns: ColumnDef<TableBrand>[] = [
         accessorKey: "memberCount",
         header: "Members",
     },
+
+    {
+        accessorKey: "phone",
+        header: "Phone Number",
+    },
+
     {
         accessorKey: "createdAt",
         header: "Created At",
