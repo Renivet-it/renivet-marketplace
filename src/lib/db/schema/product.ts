@@ -33,8 +33,8 @@ export const products = pgTable(
             .references(() => brands.id, { onDelete: "cascade" }),
         isAvailable: boolean("is_available").default(true).notNull(),
         isActive: boolean("is_active").default(true).notNull(),
-        isPublished: boolean("is_published").default(false).notNull(),
-        publishedAt: timestamp("published_at"),
+        isPublished: boolean("is_published").default(true).notNull(),
+        publishedAt: timestamp("published_at").defaultNow(),
         media: jsonb("media").$type<ProductMedia[]>().default([]).notNull(),
         sustainabilityCertificate: text("sustainability_certificate"),
         productHasVariants: boolean("product_has_variants")
@@ -81,7 +81,7 @@ export const products = pgTable(
             enum: ["idle", "pending", "approved", "rejected"],
         })
             .notNull()
-            .default("idle"),
+            .default("approved"),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         rejectedAt: timestamp("rejected_at"),
