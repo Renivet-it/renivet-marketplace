@@ -345,10 +345,9 @@ export function ProductsReviewTable({ initialData }: PageProps) {
         () =>
             dataRaw.map((x) => ({
                 ...x,
-                stock: x.variants.reduce(
-                    (acc, variant) => acc + variant.quantity,
-                    0
-                ),
+                stock: x.productHasVariants
+                    ? x.variants.reduce((acc, curr) => acc + curr.quantity, 0)
+                    : (x.quantity ?? 0),
                 brandName: x.brand.name,
             })),
         [dataRaw]

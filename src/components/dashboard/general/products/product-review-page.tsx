@@ -80,6 +80,10 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
         productRootPrice = `${minPrice} - ${maxPrice}`;
     }
 
+    const stock = product.productHasVariants
+        ? product.variants.reduce((acc, curr) => acc + curr.quantity, 0)
+        : (product.quantity ?? 0);
+
     return (
         <>
             <div
@@ -122,6 +126,11 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                 <div>
                     <h5 className="text-sm font-medium">Product Type</h5>
                     <p className="text-sm">{product.productType.name}</p>
+                </div>
+
+                <div>
+                    <h5 className="text-sm font-medium">Stock</h5>
+                    <p className="text-sm">{stock}</p>
                 </div>
 
                 <div>
