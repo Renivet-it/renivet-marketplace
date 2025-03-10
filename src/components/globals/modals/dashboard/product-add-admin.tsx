@@ -380,7 +380,10 @@ export function ProductAddAdminModal({
                     await wait(1000);
                     createBulkProducts(products);
                 } catch (error) {
-                    return handleClientError(error, toastId);
+                    console.error(error);
+                    return toast.error("Invalid content in file", {
+                        id: toastId,
+                    });
                 }
             },
         });

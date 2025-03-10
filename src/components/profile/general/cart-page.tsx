@@ -209,7 +209,7 @@ export function CartPage({
                     ))}
                 </div>
 
-                {!!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED && (
+                {process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED === "true" && (
                     <p className="text-xs text-destructive">
                         * Checkouts are currently disabled due to testing
                     </p>
@@ -219,10 +219,13 @@ export function CartPage({
                     className="w-full"
                     disabled={
                         totalPrice === 0 ||
-                        !!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED
+                        process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED === "true"
                     }
                     onClick={() => {
-                        if (!!process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED)
+                        if (
+                            process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED ===
+                            "true"
+                        )
                             return toast.error(
                                 "Checkouts are currently disabled due to testing"
                             );
