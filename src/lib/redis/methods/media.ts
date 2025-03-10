@@ -10,12 +10,29 @@ import { inArray } from "drizzle-orm";
 import { redis } from "..";
 
 class MediaCache {
+    private async getAllKeys(pattern: string): Promise<string[]> {
+        const keys: string[] = [];
+        let cursor = "0";
+        do {
+            const [nextCursor, scanKeys] = await redis.scan(
+                cursor,
+                "MATCH",
+                pattern,
+                "COUNT",
+                "1000"
+            );
+            cursor = nextCursor;
+            keys.push(...scanKeys);
+        } while (cursor !== "0");
+        return keys;
+    }
+
     async getAll(brandId?: string) {
-        const keyNames = brandId ? `media:*:${brandId}` : "media:*";
+        const keyPattern = brandId ? `media:*:${brandId}` : "media:*";
 
         const [dbMediaCount, keys] = await Promise.all([
             brandMediaItemQueries.getCount(brandId),
-            redis.keys(keyNames),
+            this.getAllKeys(keyPattern),
         ]);
         if (keys.length !== dbMediaCount) {
             await this.drop();
@@ -134,8 +151,8 @@ class MediaCache {
     }
 
     async drop(brandId?: string) {
-        const keyNames = brandId ? `media:*:${brandId}` : "media:*";
-        const keys = await redis.keys(keyNames);
+        const keyPattern = brandId ? `media:*:${brandId}` : "media:*";
+        const keys = await this.getAllKeys(keyPattern);
         if (!keys.length) return 0;
 
         return await redis.del(...keys);
