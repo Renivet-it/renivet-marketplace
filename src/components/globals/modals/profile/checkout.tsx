@@ -300,6 +300,11 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                     DEFAULT_MESSAGES.ERRORS.USER_FETCHING
                                 );
 
+                            if (user.addresses.length === 0)
+                                return toast.error(
+                                    "Please add an address to proceed"
+                                );
+
                             createOrder({
                                 userId,
                                 coupon: coupon?.code,
