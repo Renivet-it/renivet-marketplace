@@ -88,17 +88,17 @@ const profileMenu: SiteConfig["menu"] = [
 const boxMenu: SiteConfig["menu"] = [
     {
         name: "Orders",
-        href: "/orders",
+        href: "/profile/orders",
         icon: "Package",
     },
     {
         name: "Wishlist",
-        href: "/wishlist",
+        href: "/profile/wishlist",
         icon: "Heart",
     },
     {
         name: "Cart",
-        href: "/cart",
+        href: "/profile/cart",
         icon: "ShoppingCart",
     },
     {

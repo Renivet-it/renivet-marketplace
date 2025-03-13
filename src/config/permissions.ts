@@ -88,7 +88,8 @@ export const sitePermissions: Permission[] = [
         name: "ADMINISTRATOR",
         description:
             "Access to all platform functions, including critical administrative tasks",
-        bit: 1 << 16,
+        bit: 1 << 16, // 65536
+
     },
 ];
 
