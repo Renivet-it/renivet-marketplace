@@ -15,7 +15,6 @@ export function AdvertisementPage({ advertisements }: PageProps) {
     const mobileAd = advertisements[3];
 
     if (!desktopAd || !mobileAd) return null;
-    
 
     return (
         <div className="relative w-full">
@@ -29,7 +28,7 @@ export function AdvertisementPage({ advertisements }: PageProps) {
                             src={desktopAd.imageUrl}
                             alt={desktopAd.title}
                             fill
-                            className="object-contain hidden md:block"
+                            className="hidden object-contain md:block"
                             sizes="100vw"
                             priority
                         />
@@ -48,7 +47,7 @@ export function AdvertisementPage({ advertisements }: PageProps) {
                             src={desktopAd.imageUrl}
                             alt={desktopAd.title}
                             fill
-                            className="object-contain hidden md:block"
+                            className="hidden object-contain md:block"
                             sizes="100vw"
                             priority
                         />
