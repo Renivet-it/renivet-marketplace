@@ -4,7 +4,7 @@ import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { WishlistButton } from "../buttons";
 
 interface PageProps extends GenericProps {
@@ -25,6 +25,39 @@ export function ProductCard({
 
     const [isProductHovered, setIsProductHovered] = useState(false);
     const [isWishlistHovered, setIsWishlistHovered] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // Get valid media URLs from product
+    const mediaUrls =
+        product.media
+            ?.filter((media) => media.mediaItem?.url)
+            .map((media) => media.mediaItem?.url || "") || [];
+
+    // Reset image index when not hovering
+    useEffect(() => {
+        if (!isProductHovered) {
+            setCurrentImageIndex(0);
+        }
+    }, [isProductHovered]);
+
+    // Set up slideshow interval when hovering
+    useEffect(() => {
+        let slideshowInterval: number | undefined = undefined;
+
+        if (isProductHovered && mediaUrls.length > 1) {
+            slideshowInterval = window.setInterval(() => {
+                setCurrentImageIndex((prevIndex) =>
+                    prevIndex === mediaUrls.length - 1 ? 0 : prevIndex + 1
+                );
+            }, 1500); // Change image every 1.5 seconds
+        }
+
+        return () => {
+            if (slideshowInterval !== undefined) {
+                window.clearInterval(slideshowInterval);
+            }
+        };
+    }, [isProductHovered, mediaUrls.length]);
 
     let productPrice = 0;
 
@@ -48,13 +81,35 @@ export function ProductCard({
                 rel="noreferrer"
             >
                 <div className="relative aspect-[3/4] overflow-hidden">
-                    <Image
-                        src={product.media?.[0]?.mediaItem?.url || ""}
-                        alt={product.title}
-                        width={1000}
-                        height={1000}
-                        className="size-full object-cover"
-                    />
+                    {mediaUrls.length > 0 && (
+                        <Image
+                            src={mediaUrls[currentImageIndex]}
+                            alt={product.title}
+                            width={1000}
+                            height={1000}
+                            className={cn(
+                                "size-full object-cover transition-all duration-500 ease-in-out",
+                                isProductHovered ? "scale-105" : "scale-100"
+                            )}
+                        />
+                    )}
+
+                    {/* Image indicators for slideshow */}
+                    {mediaUrls.length > 1 && (
+                        <div className="absolute inset-x-0 bottom-10 z-10 flex justify-center gap-1.5">
+                            {mediaUrls.map((_, index) => (
+                                <div
+                                    key={index}
+                                    className={cn(
+                                        "h-1.5 rounded-full transition-all duration-300",
+                                        currentImageIndex === index
+                                            ? "w-3 bg-primary"
+                                            : "w-1.5 bg-background/70"
+                                    )}
+                                />
+                            ))}
+                        </div>
+                    )}
 
                     <div
                         className={cn(
