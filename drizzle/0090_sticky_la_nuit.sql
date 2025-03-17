@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS "brand_confidential_is_verified_index" ON "brand_confidentials" USING btree ("is_verified");

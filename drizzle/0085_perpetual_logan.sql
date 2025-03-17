@@ -1,1 +1,0 @@
-ALTER TABLE "brands" ADD COLUMN "has_added_confidential_details" boolean DEFAULT false NOT NULL;

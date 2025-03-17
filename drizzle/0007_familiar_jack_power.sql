@@ -1,1 +1,0 @@
-ALTER TABLE "addresses" ALTER COLUMN "alias" SET NOT NULL;

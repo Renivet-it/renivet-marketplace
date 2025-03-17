@@ -1,1 +1,0 @@
-ALTER TABLE "product_variants" ADD COLUMN "combinations" jsonb DEFAULT '{}'::jsonb NOT NULL;

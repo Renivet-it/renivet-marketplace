@@ -1,1 +1,0 @@
-ALTER TABLE "addresses" ADD COLUMN "type" text NOT NULL;

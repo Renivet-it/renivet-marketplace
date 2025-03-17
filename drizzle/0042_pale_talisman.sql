@@ -1,2 +1,0 @@
-DROP INDEX IF EXISTS "product_cat_sub_cat_type_idx";--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "cat_sub_cat_type_idx" ON "product_categories" USING btree ("category_id","subcategory_id","product_type_id");

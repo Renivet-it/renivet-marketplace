@@ -1,1 +1,0 @@
-ALTER TABLE "carts" ADD COLUMN "status" boolean DEFAULT true NOT NULL;

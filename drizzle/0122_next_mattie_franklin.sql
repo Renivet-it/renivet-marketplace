@@ -1,1 +1,0 @@
-ALTER TABLE "plans" DROP COLUMN IF EXISTS "currency";

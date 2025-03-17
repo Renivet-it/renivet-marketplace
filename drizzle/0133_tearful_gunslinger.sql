@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS "advertisement_position_idx" ON "advertisements" USING btree ("position");

@@ -7,7 +7,7 @@ import {
 } from "@/lib/validations";
 import { and, desc, eq, gte, ilike, inArray, lte } from "drizzle-orm";
 import { db } from "..";
-import { orders } from "../schema";
+import { orderItems, orders } from "../schema";
 
 class OrderQuery {
     async getAllOrders() {
@@ -455,6 +455,86 @@ class OrderQuery {
             .then((res) => res[0]);
 
         return data;
+    }
+
+    async getOrdersByBrand(brandId: string, year?: number) {
+        const data = await db.query.orders.findMany({
+            where: year
+                ? and(
+                      gte(orders.createdAt, new Date(year, 0, 1)),
+                      lte(orders.createdAt, new Date(year, 11, 31))
+                  )
+                : undefined,
+            with: {
+                shipments: true,
+                items: {
+                    where: eq(orderItems.brandId, brandId),
+                    with: {
+                        product: {
+                            with: {
+                                brand: true,
+                                variants: true,
+                                category: true,
+                                subcategory: true,
+                                productType: true,
+                                options: true,
+                            },
+                        },
+                        variant: true,
+                    },
+                },
+            },
+            orderBy: [desc(orders.createdAt)],
+        });
+
+        // Filter out orders that don't have any items for this brand
+        const filteredData = data.filter((order) => order.items.length > 0);
+
+        const products = filteredData.flatMap((d) => d.items.map((i) => i.product));
+
+        const mediaIds = new Set<string>();
+        for (const product of products) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedProducts = products.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+        }));
+
+        const enhancedData = filteredData.map((d) => ({
+            ...d,
+            items: d.items.map((i) => ({
+                ...i,
+                product: enhancedProducts.find((p) => p.id === i.productId),
+            })),
+        }));
+
+        const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
+            .array()
+            .parse(enhancedData);
+
+        return parsed;
     }
 }
 

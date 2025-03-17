@@ -1,1 +1,0 @@
-ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "slug" text;

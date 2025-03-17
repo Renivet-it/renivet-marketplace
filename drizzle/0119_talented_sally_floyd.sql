@@ -1,1 +1,0 @@
-ALTER TABLE "brand_confidentials" ADD COLUMN "has_accepted_terms" boolean DEFAULT false NOT NULL;

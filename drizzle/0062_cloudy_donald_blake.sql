@@ -1,1 +1,0 @@
-ALTER TABLE "products" ADD COLUMN "is_sent_for_review" boolean DEFAULT false NOT NULL;

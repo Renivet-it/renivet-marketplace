@@ -1,17 +1,4 @@
-import {
-    analyticsRouter as brandAnalyticsRouter,
-    bansRouter as brandBansRouter,
-    brandsRouter as brandBrandsRouter,
-    categoryRequestsRouter as brandCategoryRequestsRouter,
-    confidentialsRouter as brandConfidentialsRouter,
-    invitesRouter as brandInvitesRouter,
-    mediaRouter as brandMediaRouter,
-    membersRouter as brandMembersRouter,
-    pageSectionsRouter as brandPageSectionsRouter,
-    productsRouter as brandProductsRouter,
-    revenueRouter as brandRevenueRouter,
-    rolesRouter as brandRolesRouter,
-} from "./routes/brands";
+
 import {
     blogsRouter,
     brandsRouter,
@@ -53,20 +40,7 @@ export const appRouter = createTRPCRouter({
         tickets: ticketRouter,
         users: usersRouter,
     }),
-    brands: createTRPCRouter({
-        analytics: brandAnalyticsRouter,
-        bans: brandBansRouter,
-        brands: brandBrandsRouter,
-        categoryRequests: brandCategoryRequestsRouter,
-        confidentials: brandConfidentialsRouter,
-        invites: brandInvitesRouter,
-        media: brandMediaRouter,
-        members: brandMembersRouter,
-        pageSections: brandPageSectionsRouter,
-        products: brandProductsRouter,
-        revenue: brandRevenueRouter,
-        roles: brandRolesRouter,
-    }),
+
 });
 
 export type AppRouter = typeof appRouter;

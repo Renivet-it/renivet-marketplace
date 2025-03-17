@@ -1,1 +1,0 @@
-ALTER TABLE "brand_subscriptions" ALTER COLUMN "is_active" SET DEFAULT false;

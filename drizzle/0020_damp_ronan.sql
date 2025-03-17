@@ -1,1 +1,0 @@
-ALTER TABLE "brand_requests" DROP COLUMN IF EXISTS "logo_url";

@@ -1,1 +1,0 @@
-ALTER TABLE "brand_subscriptions" ADD COLUMN "renewed_at" timestamp;

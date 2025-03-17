@@ -1,1 +1,0 @@
-ALTER TABLE "contact_us" ALTER COLUMN "company" DROP NOT NULL;

@@ -1,1 +1,0 @@
-ALTER TABLE "brand_requests" ALTER COLUMN "message" DROP NOT NULL;

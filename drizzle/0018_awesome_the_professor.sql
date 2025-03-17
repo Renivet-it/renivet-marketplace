@@ -1,1 +1,0 @@
-ALTER TABLE "brands_waitlist" ADD COLUMN "demo_url" text;
