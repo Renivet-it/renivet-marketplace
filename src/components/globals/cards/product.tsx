@@ -27,11 +27,15 @@ export function ProductCard({
     const [isWishlistHovered, setIsWishlistHovered] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    // Get valid media URLs from product
+    // Get valid media URLs from product and remove duplicates
     const mediaUrls =
-        product.media
-            ?.filter((media) => media.mediaItem?.url)
-            .map((media) => media.mediaItem?.url || "") || [];
+        Array.from(
+            new Set(
+                product.media
+                    ?.filter((media) => media.mediaItem?.url)
+                    .map((media) => media.mediaItem?.url || "")
+            )
+        ) || [];
 
     // Reset image index when not hovering
     useEffect(() => {

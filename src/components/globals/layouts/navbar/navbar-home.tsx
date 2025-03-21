@@ -225,12 +225,17 @@ export function NavbarHome() {
                                                 </NavigationMenuTrigger>
 
                                                 <NavigationMenuContent>
-                                                    <div className="grid w-[800px] grid-cols-3 gap-3 p-4">
+                                                    <div className="grid w-[1200px] grid-cols-5 gap-3 p-4">
                                                         {subcategories.data
                                                             .filter(
                                                                 (sub) =>
                                                                     sub.categoryId ===
-                                                                    category.id
+                                                                        category.id &&
+                                                                    productTypes.data.some(
+                                                                        (pt) =>
+                                                                            pt.subCategoryId ===
+                                                                            sub.id
+                                                                    )
                                                             )
                                                             .map(
                                                                 (
@@ -242,11 +247,16 @@ export function NavbarHome() {
                                                                         }
                                                                         className="space-y-2"
                                                                     >
-                                                                        <h3 className="font-medium text-primary">
-                                                                            {
-                                                                                subcategory.name
-                                                                            }
-                                                                        </h3>
+                                                                        <Link
+                                                                            href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                                                            className="block hover:opacity-80"
+                                                                        >
+                                                                            <h3 className="font-medium text-primary">
+                                                                                {
+                                                                                    subcategory.name
+                                                                                }
+                                                                            </h3>
+                                                                        </Link>
 
                                                                         <ul className="space-y-1">
                                                                             {productTypes.data

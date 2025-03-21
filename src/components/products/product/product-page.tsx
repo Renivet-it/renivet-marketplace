@@ -56,23 +56,28 @@ export function ProductPage({
         (variant) => variant.nativeSku === selectedSku
     );
 
-    const images = product.media
-        ?.map((media) => ({
-            url: media?.mediaItem?.url,
-            alt: media?.mediaItem?.alt,
-            id: media.id,
-            position: media.position,
-        }))
-        .filter(
-            (
-                url
-            ): url is {
-                url: string;
-                alt: string;
-                id: string;
-                position: number;
-            } => !!url.url
-        );
+    const images = Array.from(
+        new Map(
+            product.media
+                ?.map((media) => ({
+                    url: media?.mediaItem?.url,
+                    alt: media?.mediaItem?.alt,
+                    id: media.id,
+                    position: media.position,
+                }))
+                .filter(
+                    (
+                        url
+                    ): url is {
+                        url: string;
+                        alt: string;
+                        id: string;
+                        position: number;
+                    } => !!url.url
+                )
+                .map((item) => [item.url, item])
+        ).values()
+    );
 
     const sortedImages = useMemo(() => {
         if (!selectedVariant?.image || !images?.length) return images;
