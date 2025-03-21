@@ -7,6 +7,7 @@ export * from "./confidential";
 export * from "./invites";
 export * from "./media";
 export * from "./members";
+export * from "./orders";
 export * from "./products";
 export * from "./revenue";
 export * from "./roles";

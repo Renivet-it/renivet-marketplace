@@ -65,9 +65,9 @@ export async function generateMetadata({
             siteName: siteConfig.name,
             images: [
                 {
-                    url: existingProduct.media?.[0].mediaItem?.url ?? "",
+                    url: existingProduct.media?.[0]?.mediaItem?.url ?? "",
                     alt:
-                        existingProduct.media?.[0].mediaItem?.alt ??
+                        existingProduct.media?.[0]?.mediaItem?.alt ??
                         existingProduct.title,
                     height: 1000,
                     width: 1000,
@@ -85,9 +85,9 @@ export async function generateMetadata({
                     : existingProduct.description) ?? "",
             images: [
                 {
-                    url: existingProduct.media?.[0].mediaItem?.url ?? "",
+                    url: existingProduct.media?.[0]?.mediaItem?.url ?? "",
                     alt:
-                        existingProduct.media?.[0].mediaItem?.alt ??
+                        existingProduct.media?.[0]?.mediaItem?.alt ??
                         existingProduct.title,
                     height: 1000,
                     width: 1000,

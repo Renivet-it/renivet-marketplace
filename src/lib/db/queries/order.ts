@@ -5,9 +5,9 @@ import {
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
 } from "@/lib/validations";
-import { and, desc, eq, gte, ilike, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orders } from "../schema";
+import { orderItems, orders, products } from "../schema";
 
 class OrderQuery {
     async getAllOrders() {
@@ -169,6 +169,33 @@ class OrderQuery {
             data: parsed,
             count: +data?.[0]?.count || 0,
         };
+    }
+
+    async getOrdersByBrandId(brandId: string) {
+        const filteredProducts = db
+            .select({ id: products.id })
+            .from(products)
+            .where(eq(products.brandId, brandId))
+            .as("filtered_products");
+
+        const filteredOrderItems = db
+            .select({ orderId: orderItems.orderId })
+            .from(orderItems)
+            .where(
+                sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
+            )
+            .as("filtered_order_items");
+
+        const ordersForBrand = db
+            .with(filteredProducts, filteredOrderItems)
+            .select()
+            .from(orders)
+            .where(
+                sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
+            );
+
+        const data = await ordersForBrand;
+        return data;
     }
 
     async getOrdersByIds(orderIds: string[], year?: number) {

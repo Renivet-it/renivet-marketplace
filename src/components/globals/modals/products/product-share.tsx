@@ -52,7 +52,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
         "https://www.pinterest.com/pin/create/button/"
     )
         .addQueryParam("url", productUrl)
-        .addQueryParam("media", product.media?.[0].mediaItem!.url)
+        .addQueryParam("media", product?.media?.[0]?.mediaItem!.url)
         .addQueryParam(
             "description",
             product.description?.replace(/<[^>]*>/gm, "") ?? ""
