@@ -11,37 +11,57 @@ interface PageProps {
 export function AdvertisementPage({ advertisements }: PageProps) {
     if (!advertisements.length) return null;
 
+    const desktopAd = advertisements[2];
+    const mobileAd = advertisements[3];
+
+    if (!desktopAd || !mobileAd) return null;
+
     return (
         <div className="relative w-full">
-            {advertisements.map((ad) => (
-                <div
-                    key={ad.id}
-                    className="relative size-full"
-                    style={{ height: `${ad.height}vh` }}
-                >
-                    {ad.url ? (
-                        <Link href={ad.url} target="_blank">
-                            <Image
-                                src={ad.imageUrl}
-                                alt={ad.title}
-                                fill
-                                className="object-cover"
-                                sizes="100vw"
-                                priority
-                            />
-                        </Link>
-                    ) : (
+            <div
+                className="relative size-full"
+                style={{ height: `${desktopAd.height}vh` }}
+            >
+                {desktopAd.url ? (
+                    <Link href={desktopAd.url} target="_blank">
                         <Image
-                            src={ad.imageUrl}
-                            alt={ad.title}
+                            src={desktopAd.imageUrl}
+                            alt={desktopAd.title}
                             fill
-                            className="object-cover"
+                            className="hidden object-contain md:block"
                             sizes="100vw"
                             priority
                         />
-                    )}
-                </div>
-            ))}
+                        <Image
+                            src={mobileAd.imageUrl}
+                            alt={mobileAd.title}
+                            fill
+                            className="object-cover md:hidden"
+                            sizes="100vw"
+                            priority
+                        />
+                    </Link>
+                ) : (
+                    <>
+                        <Image
+                            src={desktopAd.imageUrl}
+                            alt={desktopAd.title}
+                            fill
+                            className="hidden object-contain md:block"
+                            sizes="100vw"
+                            priority
+                        />
+                        <Image
+                            src={mobileAd.imageUrl}
+                            alt={mobileAd.title}
+                            fill
+                            className="object-cover md:hidden"
+                            sizes="100vw"
+                            priority
+                        />
+                    </>
+                )}
+            </div>
         </div>
     );
 }

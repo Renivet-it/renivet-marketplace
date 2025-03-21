@@ -22,6 +22,7 @@ import {
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { redirect, useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,6 +42,7 @@ export function ProductCartAddForm({
     initialCart,
     userId,
 }: PageProps) {
+    const router = useRouter();
     const [isProductWishlisted, setIsProductWishlisted] =
         useState(isWishlisted);
     const [selectedSku, setSelectedSku] = useQueryState("sku", {
@@ -140,7 +142,7 @@ export function ProductCartAddForm({
             productId: product.id,
             variantId: selectedVariant?.id || null,
             quantity: 1,
-            userId,
+            userId: userId ?? "unknown",
         },
     });
 
@@ -245,10 +247,7 @@ export function ProductCartAddForm({
                             return toast.error(
                                 DEFAULT_MESSAGES.ERRORS.USER_FETCHING
                             );
-                        if (!userId || !user)
-                            return toast.error(
-                                DEFAULT_MESSAGES.ERRORS.USER_NOT_LOGGED_IN
-                            );
+                        if (!userId || !user) redirect("/auth/signin");
                         if (user.roles.length > 0)
                             return toast.error(
                                 DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER
