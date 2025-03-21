@@ -168,7 +168,8 @@ export function BrandPageSectionProductManage({
                                                     <div className="aspect-square size-6 overflow-hidden rounded-full">
                                                         <Image
                                                             src={
-                                                                product.media[0]
+                                                                product
+                                                                    ?.media[0]
                                                                     .mediaItem!
                                                                     .url
                                                             }

@@ -75,9 +75,9 @@ export function WishlistedProductCard({
                 >
                     <div className="relative aspect-[3/4] overflow-hidden">
                         <Image
-                            src={item.product.media[0].mediaItem!.url}
+                            src={item.product?.media[0].mediaItem!.url}
                             alt={
-                                item.product.media[0].mediaItem!.url ??
+                                item.product?.media[0].mediaItem!.url ??
                                 item.product.title
                             }
                             width={1000}

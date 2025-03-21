@@ -58,8 +58,8 @@ export function ProductPage({
 
     const images = product.media
         ?.map((media) => ({
-            url: media.mediaItem?.url,
-            alt: media.mediaItem?.alt,
+            url: media?.mediaItem?.url,
+            alt: media?.mediaItem?.alt,
             id: media.id,
             position: media.position,
         }))
@@ -77,7 +77,7 @@ export function ProductPage({
     const sortedImages = useMemo(() => {
         if (!selectedVariant?.image || !images?.length) return images;
 
-        const variantMediaItem = selectedVariant.mediaItem;
+        const variantMediaItem = selectedVariant?.mediaItem;
         if (!variantMediaItem?.url) return images;
 
         const variantImageIndex = images.findIndex(

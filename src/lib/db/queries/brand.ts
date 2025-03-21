@@ -67,7 +67,7 @@ class BrandQuery {
 
         const mediaIds = new Set<string>();
         for (const product of products) {
-            mediaIds.add(product.media[0].id);
+            mediaIds.add(product?.media[0].id);
         }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
@@ -79,8 +79,8 @@ class BrandQuery {
             ...product,
             media: [
                 {
-                    ...product.media[0],
-                    mediaItem: mediaMap.get(product.media[0].id),
+                    ...product?.media[0],
+                    mediaItem: mediaMap.get(product?.media[0].id),
                 },
             ],
         }));
@@ -179,7 +179,7 @@ class BrandQuery {
 
         const mediaIds = new Set<string>();
         for (const product of products) {
-            mediaIds.add(product.media[0].id);
+            mediaIds.add(product?.media[0].id);
         }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
@@ -191,8 +191,8 @@ class BrandQuery {
             ...product,
             media: [
                 {
-                    ...product.media[0],
-                    mediaItem: mediaMap.get(product.media[0].id),
+                    ...product?.media[0],
+                    mediaItem: mediaMap.get(product?.media[0].id),
                 },
             ],
         }));
@@ -270,7 +270,7 @@ class BrandQuery {
 
         const mediaIds = new Set<string>();
         for (const product of products) {
-            mediaIds.add(product.media[0].id);
+            mediaIds.add(product?.media[0].id);
         }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
@@ -282,8 +282,8 @@ class BrandQuery {
             ...product,
             media: [
                 {
-                    ...product.media[0],
-                    mediaItem: mediaMap.get(product.media[0].id),
+                    ...product?.media[0],
+                    mediaItem: mediaMap.get(product?.media[0].id),
                 },
             ],
         }));

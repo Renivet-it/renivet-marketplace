@@ -367,7 +367,7 @@ function ProductCard({ product, brand, pageSection }: ProductCardProps) {
             <Link href={`/products/${product.slug}`} target="_blank">
                 <div className="relative aspect-square overflow-hidden rounded-t-lg">
                     <Image
-                        src={product.media[0].mediaItem!.url}
+                        src={product?.media[0].mediaItem!.url}
                         alt={product.title}
                         width={200}
                         height={200}
