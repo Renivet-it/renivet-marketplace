@@ -179,7 +179,7 @@ export function ProductCartAddForm({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedSku, productPrice]);
 
-    const { mutate: addToCart } =
+    const { mutate: addToCart, isPending } =
         trpc.general.users.cart.addProductToCart.useMutation({
             onMutate: () => {
                 toast.success(
@@ -420,7 +420,8 @@ export function ProductCartAddForm({
                                         (selectedVariant.isDeleted ||
                                             selectedVariant?.quantity === 0)) ||
                                     (product.productHasVariants &&
-                                        !selectedVariant)
+                                        !selectedVariant) ||
+                                    isPending
                                 }
                             >
                                 <Icons.ShoppingCart />

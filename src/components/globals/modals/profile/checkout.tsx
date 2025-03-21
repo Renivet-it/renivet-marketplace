@@ -255,6 +255,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                     disabled={isValidating}
                                 />
                                 <Button
+                                    type="button"
                                     variant="accent"
                                     size="sm"
                                     disabled={
