@@ -35,7 +35,7 @@ yarn-error.log*
 .env.local
 .env.development
 .env.test
-
+aws.sh
 # vercel
 .vercel
 
