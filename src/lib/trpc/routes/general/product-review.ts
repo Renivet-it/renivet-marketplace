@@ -14,7 +14,8 @@ import { generateProductSlug } from "@/lib/utils";
 import { createProductSchema, rejectProductSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
+import { eq } from "drizzle-orm";
+import { products, productVariants } from "@/lib/db/schema/product";
 export const productReviewsRouter = createTRPCRouter({
     addBulkProducts: protectedProcedure
         .input(
@@ -41,30 +42,194 @@ export const productReviewsRouter = createTRPCRouter({
                     code: "BAD_REQUEST",
                     message: "All products must belong to the same brand",
                 });
+        // //    // Extract SKUs from input
+        // const inputSKUs = inputProducts.map((product) => product.sku);
 
-            const inputWithSlug = inputProducts.map((product) => {
-                const slug = generateProductSlug(
-                    product.title,
-                    existingBrand.name
-                );
-                return { ...product, slug };
+        // // Fetch existing products with matching SKUs
+        // const existingProducts = await ctx.db.query.products.findMany({
+        //     where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
+        // });
+
+        // // Create a map of existing SKUs
+        // const existingSKUMap = new Map(existingProducts.map((p) => [p.sku, p.title]));
+
+        // // Check for duplicate SKUs and collect errors
+        // const errors: { row: number; sku: string; error: string; existingProduct: string }[] = [];
+        // inputProducts.forEach((product, index) => {
+        //     if (existingSKUMap.has(product.sku)) {
+        //         errors.push({
+        //             row: index + 2, // Excel row number
+        //             sku: product.sku ?? "Unknown SKU",
+        //             error: "Duplicate SKU found",
+        //             existingProduct: existingSKUMap.get(product.sku) ?? "Unknown Product",
+        //         });
+        //     }
+        // });
+
+        // // If errors exist, return them
+        // if (errors.length > 0) {
+        //     throw new TRPCError({ code: "BAD_REQUEST", message: "Duplicate SKUs found", cause: errors });
+        // }
+
+
+    //  //    // Extract SKUs from input
+    //  const inputSKUs = inputProducts.map((product) => product.sku);
+
+    //  // Fetch existing products with matching SKUs
+    //  const existingProducts = await ctx.db.query.products.findMany({
+    //      where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
+    //  });
+
+    // console.log(existingProducts, "existingProducts");
+
+           // Extract SKUs from input products
+           const inputSKUs = inputProducts.map((product) => product.sku);
+
+           // Fetch existing products with matching SKUs
+           const existingProducts = await ctx.db.query.products.findMany({
+               where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
+           });
+
+           // Create a map of existing SKUs for quick lookup
+           const existingSKUMap = new Map(existingProducts.map((p) => [p.sku, p.id]));
+
+           // Process updates & inserts separately
+           const updatePromises = [];
+           const newProducts = [];
+
+           for (const product of inputProducts) {
+               const existingProductId = existingSKUMap.get(product.sku);
+
+               if (existingProductId) {
+                   // If product exists, update it
+                   updatePromises.push(
+                       ctx.db.update(products)
+                           .set({
+                               title: product.title,
+                               description: product.description,
+                               price: product.price,
+                               quantity: product.quantity,
+                               metaTitle: product.metaTitle,
+                               metaDescription: product.metaDescription,
+                               metaKeywords: product.metaKeywords,
+                               hsCode: product.hsCode,
+                               categoryId: product.categoryId,
+                               subcategoryId: product.subcategoryId,
+                               productTypeId: product.productTypeId,
+                               productHasVariants: product.productHasVariants,
+                               width: product.width,
+                               height: product.height,
+                               length: product.length,
+                               weight: product.weight,
+                               brandId: product.brandId,
+                               updatedAt: new Date(),
+                           })
+                           .where(eq(products.id, existingProductId))
+                   );
+
+
+  // Handle product variants if provided
+  if (product.variants && product.variants.length > 0) {
+    const inputVariantSKUs = product.variants.map((variant) => variant.sku);
+
+    // Fetch existing variants with matching SKUs
+    const existingVariants = await ctx.db.query.productVariants.findMany({
+        where: (productVariants, { inArray }) => inArray(productVariants.sku, inputVariantSKUs as string[]),
+    });
+console.log(existingVariants, "existingVariants");
+    // Map existing variants by SKU
+    const existingVariantMap = new Map(existingVariants.map((v) => [v.sku, v.id]));
+
+console.log(existingVariantMap, "existingVariantMap");
+
+    for (const variant of product.variants) {
+        const existingVariantId = existingVariantMap.get(variant.sku);
+
+        if (existingVariantId) {
+            // Update existing variant
+            updatePromises.push(
+                ctx.db.update(productVariants)
+                    .set({
+                        price: variant.price,
+                        quantity: variant.quantity,
+                        weight: variant.weight,
+                        width: variant.width,
+                        height: variant.height,
+                        length: variant.length,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(productVariants.id, existingVariantId))
+            );
+        } else {
+            // Insert new variant
+            newProducts.push({
+                ...variant,
+                productId: existingProductId, // Link to the existing product
             });
+        }
+    }
+}
 
-            const data =
-                await queries.products.bulkCreateProducts(inputWithSlug);
 
+
+               } else {
+                   // If product doesn't exist, prepare for insertion
+                   const slug = generateProductSlug(product.title, existingBrand.name);
+                   newProducts.push({ ...product, slug });
+               }
+           }
+
+
+
+
+           // Execute all updates in parallel
+           await Promise.all(updatePromises);
+
+           // Insert new products (if any)
+        //    let newData = [];
+           let newData: any[] = [];
+           if (newProducts.length > 0) {
+               newData = await queries.products.bulkCreateProducts(newProducts as any);
+           }
+
+
+
+            // const inputWithSlug = inputProducts.map((product) => {
+            //     const slug = generateProductSlug(
+            //         product.title,
+            //         existingBrand.name
+            //     );
+            //     return { ...product, slug };
+            // });
+
+            // const data =
+            //     await queries.products.bulkCreateProducts(inputWithSlug);
+
+            // posthog.capture({
+            //     event: POSTHOG_EVENTS.PRODUCT.BULK_CREATED,
+            //     distinctId: existingBrand.id,
+            //     properties: {
+            //         brandName: existingBrand.name,
+            //         brandOwnerId: existingBrand.ownerId,
+            //         productIds: data.map((product) => product.id),
+            //         productTitles: data.map((product) => product.title),
+            //     },
+            // });
+
+            // return data;
+            // Track the event
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.BULK_CREATED,
                 distinctId: existingBrand.id,
                 properties: {
                     brandName: existingBrand.name,
                     brandOwnerId: existingBrand.ownerId,
-                    productIds: data.map((product) => product.id),
-                    productTitles: data.map((product) => product.title),
+                    productIds: newData.map((product) => product.id),
+                    productTitles: newData.map((product) => product.title),
                 },
             });
 
-            return data;
+            return newData;
         }),
     approveProduct: protectedProcedure
         .input(

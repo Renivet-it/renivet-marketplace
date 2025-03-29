@@ -60,6 +60,11 @@ const columns: ColumnDef<TableProduct>[] = [
         accessorKey: "title",
         header: "Title",
         enableHiding: false,
+        cell: ({ row }) => (
+            <div className="w-56 whitespace-normal break-words px-2 py-1">
+                {row.original.title}
+            </div>
+        ),
     },
     {
         accessorKey: "nativeSku",
