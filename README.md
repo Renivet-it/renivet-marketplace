@@ -278,3 +278,79 @@ The API is built with tRPC. Endpoints are available at:
 ```
 /src/lib/trpc/routes/[folder]/filename.ts
 ```
+
+***
+## 🛠️ Development Server Running Process
+
+### 📌 Prerequisites
+- [Node.js](https://nodejs.org/en/download/)
+- [Bun](https://bun.sh/docs/installation)
+- [pgAdmin](https://www.pgadmin.org/download/)
+- [Redis Insight](https://redis.io/insight/)
+- [VsCode](https://code.visualstudio.com/download)
+
+### 📌 Steps to run the development server
+
+> ### ⚡ Important Note
+> - Note: Before doing this setps please follow the "Setup AWS for local development" section in the README.md file.
+> - Make sure you run that script.
+
+1. **[pgAdmin](https://www.pgadmin.org/download/)**
+    - Open pgAdmin and create a new server.
+    - Enter the following details:
+    1. General:
+        - Name: `renivetDev`
+
+    ![step-1](readme/assets/pgadmin-setp-1.png)
+
+    2. Connection:
+        - Host name/address: `localhost`
+        - Port: `15432`
+        - Username: `itsdrvgo`
+        - Password: `itsdrvgo`
+
+    ![step-2](readme/assets/pgadmin-step-2.png)
+
+2. **[Redis Insight](https://redis.io/insight/)**
+    - Open Redis Insight and create a new connection.
+
+        ![redis-step-1](readme/assets/redis-insight-step-1.png)
+
+    - Enter the following details:
+        - Host: `localhost`
+        - Port: `16379`
+        - Password: `itsdrvgo`
+
+    ![redis-step-2](readme/assets/redis-insight-step-2.png)
+
+3. **[VsCode Port Forward](https://code.visualstudio.com/download)**
+    - Open VsCode and navigate to port section from the terminal.
+
+    ![vscode-step-1](readme/assets/vscode-step-1.png)
+
+    - click the forward port button.
+    - Enter the port number 3000 as our local development server is running on port 3000.
+
+    ![vscode-step-2](readme/assets/vscode-step-2.png)
+
+    - Right click on that created link make port visibility to public.
+
+    ![vscode-step-3](readme/assets/vscode-step-3.png)
+
+4. **[Clerk](https://clerk.com/)**
+    - Log in to clerk.com using github account.
+    - Copy the vscode port forward link from the terminal.
+    - Click on the add endpoint button.
+    - Paste the vscode port forward link in the URL field.
+    - add this '/api/webhooks/clerk' at the end of the URL.
+    - Subscribe to events; e.g. user.created, user.updated, user.deleted.
+    - Click on the create endpoint button.
+    > **Note**: You dont have access to the clerk dashboard then you have to contact the team and provide your vscode port forward link.
+
+5. Run the development server
+    - Open the terminal and run the following command:
+    ```bash
+    bun run dev
+    ```
+    - This will start the development server at `http://localhost:3000`.
+
