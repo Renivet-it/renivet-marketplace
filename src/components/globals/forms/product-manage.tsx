@@ -104,9 +104,13 @@ export function ProductManageForm({
         ? product.media.map((m) => m.mediaItem!).filter(Boolean)
         : [];
 
+    const uniqueMedia = Array.from(
+        new Map(mediaItems.map((m) => [m.id, m])).values()
+    );
+
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
     const [selectedMedia, setSelectedMedia] =
-        useState<BrandMediaItem[]>(mediaItems);
+        useState<BrandMediaItem[]>(uniqueMedia);
     const [isSusCertificateSelectorOpen, setIsSusCertificateSelectorOpen] =
         useState(false);
     const [selectedSusCertificate, setSelectedSusCertificate] =
@@ -1547,16 +1551,20 @@ export function ProductManageForm({
                 accept="image/*, video/*"
                 multiple
                 onSelectionComplete={(items) => {
+                    const uniqueMedia = Array.from(
+                        new Map(items.map((m) => [m.id, m])).values()
+                    );
+
                     form.setValue(
                         "media",
-                        items.map((item, i) => ({
+                        uniqueMedia.map((item, i) => ({
                             id: item.id,
                             position: i + 1,
                         })),
                         { shouldDirty: true }
                     );
 
-                    setSelectedMedia(items);
+                    setSelectedMedia(uniqueMedia);
                 }}
             />
 
