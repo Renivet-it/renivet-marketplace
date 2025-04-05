@@ -4,65 +4,20 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command-dash";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command-dash";
 import { Editor, EditorRef } from "@/components/ui/editor";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
 import { Label } from "@/components/ui/label";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import PriceInput from "@/components/ui/price-input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select-dash";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select-dash";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea-dash";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
-import {
-    cn,
-    convertPaiseToRupees,
-    convertPriceToPaise,
-    generateSKU,
-    handleClientError,
-    sanitizeHtml,
-} from "@/lib/utils";
-import {
-    BrandMediaItem,
-    CachedBrand,
-    CachedCategory,
-    CachedProductType,
-    CachedSubCategory,
-    CreateProduct,
-    createProductSchema,
-    ProductWithBrand,
-} from "@/lib/validations";
+import { cn, convertPaiseToRupees, convertPriceToPaise, generateSKU, handleClientError, sanitizeHtml } from "@/lib/utils";
+import { BrandMediaItem, CachedBrand, CachedCategory, CachedProductType, CachedSubCategory, CreateProduct, createProductSchema, ProductWithBrand } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Country } from "country-state-city";
 import { Tag, TagInput } from "emblor";
@@ -74,6 +29,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { MediaSelectModal, RequestCategoryModal } from "../modals";
 import { ProductVariantManage } from "./product-variant-manage";
+
 
 interface PageProps {
     brandId: string;
@@ -203,6 +159,11 @@ export function ProductManageForm({
     const { fields: variantFields, replace: replaceVariants } = useFieldArray({
         control: form.control,
         name: "variants",
+    });
+    const { control } = form;
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: "specifications",
     });
 
     const countries = useMemo(() => Country.getAllCountries(), []);
@@ -1402,6 +1363,237 @@ export function ProductManageForm({
                         />
                     )}
 
+                    <Card className="mx-2 md:mx-0">
+                        <CardHeader className="p-4 md:p-6">
+                            <CardTitle className="text-lg font-medium">
+                                Product Specification
+                            </CardTitle>
+                        </CardHeader>
+
+                        <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
+                            <div className="flex flex-col gap-6">
+                                {fields.map((field, index) => (
+                                    <div
+                                        key={field.id}
+                                        className="grid grid-cols-1 items-end gap-4 md:grid-cols-[1fr_1fr_auto] md:gap-6"
+                                    >
+                                        <FormField
+                                            control={form.control}
+                                            name={`specifications.${index}.label`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>
+                                                        Specification Label
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            placeholder="e.g., Material"
+                                                            className="h-9"
+                                                            disabled={isPending}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name={`specifications.${index}.value`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>
+                                                        Specification Value
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            placeholder="e.g., Cotton"
+                                                            className="h-9"
+                                                            disabled={isPending}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => remove(index)}
+                                            className="text-red-500 hover:bg-red-100 hover:text-red-700 focus:ring-red-200"
+                                            disabled={isPending}
+                                        >
+                                            <Icons.Trash2 className="size-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-fit"
+                                    onClick={() =>
+                                        append({
+                                            label: "",
+                                            value: "",
+                                        })
+                                    }
+                                    disabled={isPending}
+                                >
+                                    + Add Specification
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="mx-2 mt-6 md:mx-0">
+                    <CardHeader className="p-4 md:p-6">
+                        <CardTitle className="text-lg font-medium">Size & Fit</CardTitle>
+                    </CardHeader>
+
+                    <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+                        <FormField
+                        control={form.control}
+                          name="sizeAndFit"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                          <Textarea
+                                {...field}
+                                placeholder="e.g., Model is 6 and is wearing a size M."
+                                className="min-h-[120px]"
+                                disabled={isPending}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </CardContent>
+                    </Card>
+
+                    <Card className="mx-2 mt-6 md:mx-0">
+                        <CardHeader className="p-4 md:p-6">
+                            <CardTitle className="text-lg font-medium">
+                                Material & Care
+                            </CardTitle>
+                        </CardHeader>
+
+                        <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+                            <FormField
+                                control={form.control}
+                                name="materialAndCare"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                {...field}
+                                                placeholder="e.g., Made from 100% cotton. Machine wash cold, tumble dry low."
+                                                className="min-h-[120px]"
+                                                disabled={isPending}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
+                    </Card>
+                    <Card className="mx-2 mt-6 md:mx-0">
+            <CardHeader className="p-4 md:p-6">
+                <CardTitle className="text-lg font-medium">Return & Exchange Policy</CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
+                <div className="flex flex-col gap-4">
+
+                {/* Returnable Checkbox */}
+                <FormField
+                    control={form.control}
+                    name="isReturnable"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                        <FormControl>
+                        <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                        />
+                        </FormControl>
+                        <FormLabel className="text-base">Returnable</FormLabel>
+                    </FormItem>
+                    )}
+                />
+
+                {/* Return Description (Conditional) */}
+                {form.watch("isReturnable") && (
+                    <FormField
+                    control={form.control}
+                    name="returnDescription"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Return Description</FormLabel>
+                        <FormControl>
+                            <Textarea
+                            {...field}
+                            placeholder="e.g., Can be returned within 7 days of delivery."
+                            className="min-h-[100px]"
+                            disabled={isPending}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
+
+                {/* Exchangeable Checkbox */}
+                <FormField
+                    control={form.control}
+                    name="isExchangeable"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                        <FormControl>
+                        <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                        />
+                        </FormControl>
+                        <FormLabel className="text-base">Exchangeable</FormLabel>
+                    </FormItem>
+                    )}
+                />
+
+                {/* Exchange Description (Conditional) */}
+                {form.watch("isExchangeable") && (
+                    <FormField
+                    control={form.control}
+                    name="exchangeDescription"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Exchange Description</FormLabel>
+                        <FormControl>
+                            <Textarea
+                            {...field}
+                            placeholder="e.g., Exchange available within 14 days of purchase."
+                            className="min-h-[100px]"
+                            disabled={isPending}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                )}
+                </div>
+            </CardContent>
+            </Card>
                     <Card>
                         <CardHeader className="p-4 md:p-6">
                             <CardTitle className="text-lg font-medium">
