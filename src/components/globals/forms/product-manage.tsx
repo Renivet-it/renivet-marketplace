@@ -1552,10 +1552,9 @@ export function ProductManageForm({
                 multiple
                 onSelectionComplete={(items) => {
                     const uniqueMedia = Array.from(
-                        new Map(
-                            [...selectedMedia, ...items].map((m) => [m.id, m])
-                        ).values()
+                        new Map(items.map((m) => [m.id, m])).values()
                     );
+
                     form.setValue(
                         "media",
                         uniqueMedia.map((item, i) => ({
