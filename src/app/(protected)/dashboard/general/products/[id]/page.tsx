@@ -84,8 +84,7 @@ async function ProductReviewFetch({ params }: PageProps) {
                         Review &ldquo;{existingProduct.title}&rdquo;
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Product submitted by {existingProduct.brand.name} (
-                        {existingProduct.brand.id})
+                        Product submitted by {existingProduct.brand.name}
                     </p>
                 </div>
 
