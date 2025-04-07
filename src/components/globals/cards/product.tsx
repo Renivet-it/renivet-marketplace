@@ -27,6 +27,12 @@ export function ProductCard({
     const [isWishlistHovered, setIsWishlistHovered] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+    /**
+     * Helper function
+     */
+    function isEmptyArray(arr: Array<any>): boolean {
+        return arr.length === 0;
+    }
     // Get valid media URLs from product and remove duplicates
     const mediaUrls =
         Array.from(
@@ -85,6 +91,19 @@ export function ProductCard({
                 rel="noreferrer"
             >
                 <div className="relative aspect-[3/4] overflow-hidden">
+                    {/* Product default image */}
+                    {isEmptyArray(mediaUrls) && (
+                        <Image
+                            src='https://placehold.co/1000x1000.png'
+                            alt='default image'
+                            width={1000}
+                            height={1000}
+                            className={cn(
+                                "size-full object-cover transition-all duration-500 ease-in-out",
+                                isProductHovered ? "scale-105" : "scale-100"
+                            )}
+                        />
+                    )}
                     {mediaUrls.length > 0 && (
                         <Image
                             src={mediaUrls[currentImageIndex]}
