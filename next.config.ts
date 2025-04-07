@@ -34,6 +34,11 @@ const nextConfig: NextConfig = {
                 protocol: "https",
                 hostname: "placehold.co",
                 pathname: "**"
+            },
+            {
+                protocol: "https",
+                hostname: "4o4vm2cu6g.ufs.sh",
+                pathname: "**"
             }
         ],
     },
