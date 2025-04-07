@@ -76,6 +76,11 @@ export const products = pgTable(
         metaDescription: text("meta_description"),
         metaKeywords: text("meta_keywords").array().default([]),
 
+
+        //additional info
+        sizeAndFit: text("size_and_fit"),
+        materialAndCare: text("material_and_care"),
+
         // OTHER
         verificationStatus: text("verification_status", {
             enum: ["idle", "pending", "approved", "rejected"],
@@ -182,6 +187,26 @@ export const productsJourney = pgTable(
         ).on(table.productId),
     })
 );
+export const productSpecifications = pgTable("product_specifications", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }),
+    key: text("key"),
+    value: text("value"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    ...timestamps,
+  });
+  export const returnExchangePolicy = pgTable("return_exchange_policies", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }),
+
+    returnable: boolean("returnable").default(false),
+    returnDescription: text("return_description"), // optional return note
+
+    exchangeable: boolean("exchangeable").default(false),
+    exchangeDescription: text("exchange_description"), // optional exchange note
+
+    ...timestamps,
+  });
 
 export const productValues = pgTable(
     "product_values",
@@ -228,6 +253,11 @@ export const productsRelations = relations(products, ({ one, many }) => ({
         fields: [products.id],
         references: [productValues.productId],
     }),
+    returnExchangePolicy: one(returnExchangePolicy, { // Add the return/exchange policy relation
+        fields: [products.id],
+        references: [returnExchangePolicy.productId],
+    }),
+    specifications: many(productSpecifications),
 }));
 
 export const productOptionsRelations = relations(productOptions, ({ one }) => ({
@@ -260,6 +290,23 @@ export const productsJourneyRelations = relations(
 export const productValuesRelations = relations(productValues, ({ one }) => ({
     product: one(products, {
         fields: [productValues.productId],
+        references: [products.id],
+    }),
+}));
+
+
+
+  export const returnExchangePolicyRelations = relations(returnExchangePolicy, ({ one }) => ({
+    product: one(products, {
+        fields: [returnExchangePolicy.productId],
+        references: [products.id],
+    }),
+}));
+
+// Define the inverse relation for product_specifications
+export const productSpecificationsRelations = relations(productSpecifications, ({ one }) => ({
+    product: one(products, {
+        fields: [productSpecifications.productId],
         references: [products.id],
     }),
 }));

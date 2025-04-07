@@ -388,11 +388,18 @@ export const uploadRouter = {
                 BitFieldBrandPermission.MANAGE_PRODUCTS |
                     BitFieldBrandPermission.MANAGE_BRANDING,
             ]);
-            if (!isAuthorized)
+            const { sitePermissions } = getUserPermissions(existingUser.roles);
+
+            const isAdmin = hasPermission(sitePermissions, [
+                BitFieldSitePermission.ADMINISTRATOR,
+            ]);
+
+            if (!isAuthorized && !isAdmin)
                 throw new UploadThingError({
                     code: "FORBIDDEN",
                     message: "You're not authorized",
                 });
+
 
             return { userId: auth.userId };
         })

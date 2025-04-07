@@ -1,6 +1,8 @@
 import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
-import { BitFieldBrandPermission } from "@/config/permissions";
+import { BitFieldBrandPermission, BitFieldSitePermission } from "@/config/permissions";
+import { hasPermission } from "../../../utils";
+
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
 import {
@@ -416,7 +418,17 @@ console.log(existingVariantMap, "existingVariantMap");
                     message: "Product not found",
                 });
 
-            if (existingProduct.brand.id !== user.brand?.id)
+            // if (existingProduct.brand.id !== user.brand?.id)
+            //     throw new TRPCError({
+            //         code: "FORBIDDEN",
+            //         message: "You are not a member of this brand",
+            //     });
+            const isAdmin = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.ADMINISTRATOR]
+            );
+
+            if (!isAdmin && existingProduct.brand.id !== user.brand?.id)
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
@@ -487,7 +499,7 @@ console.log(existingVariantMap, "existingVariantMap");
                     });
 
                     variant.nativeSku = generateSKU({
-                        brand: user.brand,
+                        brand: user.brand ?? undefined,
                         category: existingCategory.name,
                         subcategory: existingSubCategory.name,
                         productType: existingProductType.name,

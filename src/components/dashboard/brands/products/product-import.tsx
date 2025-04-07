@@ -610,6 +610,8 @@ export function ProductImportButton({
                    hsCode: null,
                    length: 0,
                    media: [],
+                   sizeAndFit: "", // Add this
+                   materialAndCare: "", // Add this
                 //    nativeSku: !hasVariants
                 //     ? generateSKU({
                 //             brand,

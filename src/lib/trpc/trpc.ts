@@ -107,6 +107,27 @@ const errorHandler = t.middleware(async ({ next }) => {
     }
 });
 
+// export const isTRPCAuth = (
+//     permission: number,
+//     type?: "all" | "any",
+//     permType?: "brand" | "site"
+// ) =>
+//     isAuth.unstable_pipe(({ ctx, next }) => {
+//         const { user } = ctx;
+
+//         const isAuthorized = hasPermission(
+//             permType === "brand" ? user.brandPermissions : user.sitePermissions,
+//             [permission],
+//             type
+//         );
+//         if (!isAuthorized)
+//             throw new TRPCError({
+//                 code: "UNAUTHORIZED",
+//                 message: "You're not authorized",
+//             });
+
+//         return next({ ctx });
+//     });
 export const isTRPCAuth = (
     permission: number,
     type?: "all" | "any",
@@ -115,19 +136,30 @@ export const isTRPCAuth = (
     isAuth.unstable_pipe(({ ctx, next }) => {
         const { user } = ctx;
 
-        const isAuthorized = hasPermission(
-            permType === "brand" ? user.brandPermissions : user.sitePermissions,
+        const isAdmin = hasPermission(
+            user.sitePermissions,
+            [BitFieldSitePermission.ADMINISTRATOR]
+        );
+
+        const permissionsToCheck =
+            permType === "brand" ? user.brandPermissions : user.sitePermissions;
+
+        const hasRequiredPermission = hasPermission(
+            permissionsToCheck,
             [permission],
             type
         );
-        if (!isAuthorized)
+
+        if (!hasRequiredPermission && !isAdmin) {
             throw new TRPCError({
                 code: "UNAUTHORIZED",
                 message: "You're not authorized",
             });
+        }
 
         return next({ ctx });
     });
+
 
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure.use(errorHandler).use(ratelimiter);
