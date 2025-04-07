@@ -1,7 +1,7 @@
 import { GeneralShell } from "@/components/globals/layouts";
 import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { Label } from "@/components/ui/label";
-import { SearchInput } from "@/components/ui/search-input";
+// import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries } from "@/lib/db/queries";
