@@ -23,16 +23,9 @@ export function ProductOrderCard({
     trackingInfo,
     ...props
 }: PageProps) {
-    const itemMedia =
-        item.variantId && item.product.variants.length > 0
-            ? !!item.product.variants.find(
-                  (variant) => variant.id === item.variantId
-              )
-                ? item.product.variants.find(
-                      (variant) => variant.id === item.variantId
-                  )!.mediaItem!
-                : item.product.media![0].mediaItem!
-            : item.product.media![0].mediaItem!;
+    const itemMedia = item.product.media?.[0]?.mediaItem ?? null;
+    const imageUrl = itemMedia?.url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+    const imageAlt = itemMedia?.alt ?? item.product.title;
 
     const itemPrice =
         item.variantId && item.product.variants.length > 0
@@ -66,8 +59,8 @@ export function ProductOrderCard({
         >
             <div className="group relative aspect-[4/5] size-full max-w-36 shrink-0">
                 <Image
-                    src={itemMedia.url}
-                    alt={itemMedia.alt ?? item.product.title}
+                    src={imageUrl}
+                    alt={imageAlt}
                     width={1000}
                     height={1000}
                     className="size-full object-cover"
