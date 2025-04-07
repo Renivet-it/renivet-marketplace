@@ -21,7 +21,7 @@ import { Button } from "../ui/button-general";
 import { Label } from "../ui/label";
 import { MultipleSelectorGeneral } from "../ui/multi-select-general";
 import { ProductSearch } from "../ui/product-search";
-import { SearchInput } from "../ui/search-input";
+// import { SearchInput } from "../ui/search-input";
 import {
     Select,
     SelectContent,
@@ -160,12 +160,15 @@ function ShopFiltersSection({
     const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
         defaultValue: "",
     });
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [sortBy, setSortBy] = useQueryState(
         "sortBy",
         parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
             "createdAt"
         )
     );
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [sortOrder, setSortOrder] = useQueryState(
         "sortOrder",
         parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")

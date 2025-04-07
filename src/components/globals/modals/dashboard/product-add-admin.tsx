@@ -497,17 +497,17 @@ const processFile = async (file: File) => {
             if (row["Height (cm)"] !== "" && Number(row["Height (cm)"]) < 0) {
                 rowErrors["Height (cm)"] = "Height must be a non-negative number";
             }
-            if (!row["Option1 Name"]?.trim()) {
-                rowErrors["Option1 Name"] = "Option1 Name is required";
-            } else if (row["Option1 Name"].trim().length < 1) {
-                rowErrors["Option1 Name"] = "Option1 Name must be at least 1 characters long";
-            }
+            // if (!row["Option1 Name"]?.trim()) {
+            //     rowErrors["Option1 Name"] = "Option1 Name is required";
+            // } else if (row["Option1 Name"].trim().length < 1) {
+            //     rowErrors["Option1 Name"] = "Option1 Name must be at least 1 characters long";
+            // }
 
-            if (!row["Option1 Value"]?.trim()) {
-                rowErrors["Option1 Value"] = "Option1 Value is required";
-            } else if (row["Option1 Value"].trim().length < 1) {
-                rowErrors["Option1 Value"] = "Option1 Value must be at least 1 characters long";
-            }
+            // if (!row["Option1 Value"]?.trim()) {
+            //     rowErrors["Option1 Value"] = "Option1 Value is required";
+            // } else if (row["Option1 Value"].trim().length < 1) {
+            //     rowErrors["Option1 Value"] = "Option1 Value must be at least 1 characters long";
+            // }
 
 
             if (row["Price (in Rupees)"] === "" || Number(row["Price (in Rupees)"]) <= 0) {
@@ -701,7 +701,7 @@ const processFile = async (file: File) => {
                         position: index,
                         values: Array.from(values).map((value, vIndex) => ({
                             id: crypto.randomUUID(),
-                            name: value,
+                            name: String(value), // Force string
                             position: vIndex,
                         })),
                         isDeleted: false,
@@ -712,37 +712,71 @@ const processFile = async (file: File) => {
                 );
 
                 // Generate product variants
+                // product.variants = rows.map((row) => {
+                //     const combinations = product.options!.reduce(
+                //         (acc, option) => {
+                //             const valueForThisOption =
+                //                 row[
+                //                     `Option${option.position + 1} Value` as keyof ImportRow
+                //                 ];
+                //             const optionValue = option.values.find(
+                //                 (v) => v.name === valueForThisOption
+                //             );
+
+                //             if (optionValue) {
+                //                 acc[option.id] = optionValue.id;
+                //             }
+                //             return acc;
+                //         },
+                //         {} as Record<string, string>
+                //     );
+
+                //     const optionCombinations = product.options!.map(
+                //         (option) => {
+                //             const valueForThisOption =
+                //                 row[
+                //                     `Option${option.position + 1} Value` as keyof ImportRow
+                //                 ];
+                //             return {
+                //                 name: option.name,
+                //                 value: valueForThisOption || "",
+                //             };
+                //         }
+                //     );
                 product.variants = rows.map((row) => {
-                    const combinations = product.options!.reduce(
-                        (acc, option) => {
-                            const valueForThisOption =
-                                row[
-                                    `Option${option.position + 1} Value` as keyof ImportRow
-                                ];
-                            const optionValue = option.values.find(
-                                (v) => v.name === valueForThisOption
-                            );
+                    const combinations = product.options!.reduce((acc, option) => {
+                        const valueKey = Object.keys(row).find(
+                            (key) =>
+                                key.match(/^Option\d+\s+Value$/) &&
+                                String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
+                        );
 
-                            if (optionValue) {
-                                acc[option.id] = optionValue.id;
-                            }
-                            return acc;
-                        },
-                        {} as Record<string, string>
-                    );
-
-                    const optionCombinations = product.options!.map(
-                        (option) => {
-                            const valueForThisOption =
-                                row[
-                                    `Option${option.position + 1} Value` as keyof ImportRow
-                                ];
-                            return {
-                                name: option.name,
-                                value: valueForThisOption || "",
-                            };
+                        const valueForThisOption = valueKey
+                            ? String(row[valueKey as keyof ImportRow] ?? "").trim()
+                            : "";
+                                        const optionValue = option.values.find((v) => v.name === valueForThisOption);
+                        if (optionValue) {
+                            acc[option.id] = optionValue.id;
                         }
-                    );
+                        return acc;
+                    }, {} as Record<string, string>);
+
+                    const optionCombinations = product.options!.map((option) => {
+                        const valueKey = Object.keys(row).find(
+                            (key) =>
+                                key.match(/^Option\d+\s+Value$/) &&
+                                String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
+                        );
+                        const valueForThisOption = valueKey
+                            ? String(row[valueKey as keyof ImportRow] ?? "").trim()
+                            : "";
+
+                        return {
+                            name: String(option.name),
+                            value: valueForThisOption,
+                        };
+                    });
+
 
                     return {
                         id: crypto.randomUUID(),

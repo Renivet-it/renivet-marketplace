@@ -42,7 +42,7 @@ export function ProductCartAddForm({
     initialCart,
     userId,
 }: PageProps) {
-    const router = useRouter();
+    // const router = useRouter();
     const [isProductWishlisted, setIsProductWishlisted] =
         useState(isWishlisted);
     const [selectedSku, setSelectedSku] = useQueryState("sku", {
