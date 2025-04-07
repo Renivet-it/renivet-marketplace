@@ -94,7 +94,7 @@ export function ProductCard({
                     {/* Product default image */}
                     {isEmptyArray(mediaUrls) && (
                         <Image
-                            src='https://placehold.co/1000x1000.png'
+                            src='https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1'
                             alt='default image'
                             width={1000}
                             height={1000}
