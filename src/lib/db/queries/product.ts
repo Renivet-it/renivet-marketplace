@@ -1,3 +1,4 @@
+import { hasMedia, noMedia } from "@/lib/db/helperfilter";
 import { mediaCache } from "@/lib/redis/methods";
 import { convertPriceToPaise } from "@/lib/utils";
 import {
@@ -20,7 +21,6 @@ import {
     productValues,
     productVariants,
 } from "../schema";
-import {hasMedia, noMedia} from "@/lib/db/helperfilter";
 
 class ProductQuery {
     async getProductCount({
@@ -197,7 +197,7 @@ class ProductQuery {
         verificationStatus?: Product["verificationStatus"];
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
-        productImage?: Product["productImageFilter"]
+        productImage?: Product["productImageFilter"];
     }) {
         const searchQuery = !!search?.length
             ? sql`(
@@ -266,12 +266,13 @@ class ProductQuery {
             verificationStatus
                 ? eq(products.verificationStatus, verificationStatus)
                 : undefined,
-            productImage ? productImage === "with"
-            ? hasMedia(products, "media")
-            : productImage === "without"
-              ? noMedia(products, "media")
-              : undefined
-          : undefined,
+            productImage
+                ? productImage === "with"
+                    ? hasMedia(products, "media")
+                    : productImage === "without"
+                      ? noMedia(products, "media")
+                      : undefined
+                : undefined,
         ];
 
         const data = await db.query.products.findMany({

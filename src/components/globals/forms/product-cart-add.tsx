@@ -22,7 +22,7 @@ import {
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { redirect, useRouter } from "next/navigation";
+import { redirect } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
