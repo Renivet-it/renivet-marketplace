@@ -125,6 +125,10 @@ export const productVerificationStatusSchema = z.enum([
     "rejected",
 ]);
 
+export const productImageFilterSchema = z.enum(["with", "without", "all"], {
+    invalid_type_error: "Product image must be 'with', 'without', or 'all'",
+  }).optional();
+
 export const productSchema = z.object({
     // BASIC INFO
     id: z
@@ -351,6 +355,7 @@ export const productSchema = z.object({
 
     // OTHER
     verificationStatus: productVerificationStatusSchema,
+    productImageFilter: productImageFilterSchema,
     isDeleted: z.boolean({
         required_error: "Deleted status is required",
         invalid_type_error: "Deleted status must be a boolean",

@@ -57,6 +57,7 @@ export const productsRouter = createTRPCRouter({
                     productSchema.shape.verificationStatus.optional(),
                 sortBy: z.enum(["price", "createdAt"]).optional(),
                 sortOrder: z.enum(["asc", "desc"]).optional(),
+                productImage: productSchema.shape.productImageFilter,
             })
         )
         .query(async ({ input, ctx }) => {
