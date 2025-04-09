@@ -40,6 +40,13 @@ export function WishlistedProductCard({
         userId: item.userId,
     });
 
+    /**
+     * Helper function
+     */
+    function isEmptyArray(arr: Array<any>): boolean {
+        return arr.length === 0;
+    }
+
     const { mutate: removeFromWishlist, isPending: isRemoving } =
         trpc.general.users.wishlist.removeProductInWishlist.useMutation({
             onMutate: () => {
@@ -74,16 +81,29 @@ export function WishlistedProductCard({
                     rel="noreferrer"
                 >
                     <div className="relative aspect-[3/4] overflow-hidden">
-                        <Image
-                            src={item.product?.media[0].mediaItem!.url}
-                            alt={
-                                item.product?.media[0].mediaItem!.url ??
-                                item.product.title
-                            }
-                            width={1000}
-                            height={1000}
-                            className="size-full object-cover"
-                        />
+                        {/* Product default image */}
+                        {isEmptyArray(item.product?.media) && (
+                            <Image
+                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                alt="default image"
+                                width={1000}
+                                height={1000}
+                                className="size-full object-cover"
+                            />
+                        )}
+                          {/* Product when have image */}
+                        {item.product?.media.length > 0 && (
+                            <Image
+                                src={item.product?.media[0]?.mediaItem!.url}
+                                alt={
+                                    item.product?.media[0]?.mediaItem!.url ??
+                                    item.product.title
+                                }
+                                width={1000}
+                                height={1000}
+                                className="size-full object-cover"
+                            />
+                        )}
 
                         <button
                             className={cn(

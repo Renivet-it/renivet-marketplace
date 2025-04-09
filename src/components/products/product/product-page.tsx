@@ -110,7 +110,12 @@ export function ProductPage({
         selectedVariant?.mediaItem,
         product.title,
     ]);
-
+    /**
+     * Helper function
+     */
+    function isEmptyArray(arr: Array<any>): boolean {
+        return arr.length === 0;
+    }
     return (
         <>
             <div
@@ -118,24 +123,42 @@ export function ProductPage({
                 {...props}
             >
                 <div className="hidden h-min basis-3/6 grid-cols-1 gap-2 md:grid md:grid-cols-4">
-                    {sortedImages?.map((image, i) => (
+                    {isEmptyArray(sortedImages) && (
                         <div
                             className={cn(
-                                "aspect-square cursor-pointer overflow-hidden",
-                                i === 0 && "col-span-4 aspect-[3/3.5]"
+                                "cursor-pointer overflow-hidden",
+                                "col-span-4 aspect-[4/3]"
                             )}
-                            key={image.id}
                             onClick={() => setIsImageModalOpen(true)}
                         >
                             <Image
-                                src={image.url}
-                                alt={image.alt || `Product image ${i + 1}`}
+                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                alt="Default Product image"
                                 width={1000}
                                 height={1000}
                                 className="size-full object-cover"
                             />
                         </div>
-                    ))}
+                    )}
+                    {sortedImages.length > 0 &&
+                        sortedImages?.map((image, i) => (
+                            <div
+                                className={cn(
+                                    "aspect-square cursor-pointer overflow-hidden",
+                                    i === 0 && "col-span-4 aspect-[3/3.5]"
+                                )}
+                                key={image.id}
+                                onClick={() => setIsImageModalOpen(true)}
+                            >
+                                <Image
+                                    src={image.url}
+                                    alt={image.alt || `Product image ${i + 1}`}
+                                    width={1000}
+                                    height={1000}
+                                    className="size-full object-cover"
+                                />
+                            </div>
+                        ))}
                 </div>
 
                 <Carousel

@@ -30,6 +30,16 @@ const nextConfig: NextConfig = {
             {
                 hostname: "img.clerk.com",
             },
+            {
+                protocol: "https",
+                hostname: "placehold.co",
+                pathname: "**"
+            },
+            {
+                protocol: "https",
+                hostname: "4o4vm2cu6g.ufs.sh",
+                pathname: "**"
+            }
         ],
     },
     // reactStrictMode: false,
