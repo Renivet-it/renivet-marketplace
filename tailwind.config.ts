@@ -12,6 +12,8 @@ export default withUt({
     theme: {
         extend: {
             colors: {
+                "myntra-primary" : "#282c3f",
+                "myntra-label": "#7e818c",
                 background: "hsl(var(--background))",
                 foreground: "hsl(var(--foreground))",
                 card: {
@@ -100,6 +102,10 @@ export default withUt({
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
             },
+            fontSize:{
+                "12": "12px",
+                "16": "16px"
+            }
         },
     },
     plugins: [tAnimate],
