@@ -14,6 +14,7 @@ export default withUt({
             colors: {
                 "myntra-primary" : "#282c3f",
                 "myntra-label": "#7e818c",
+                "radical-red": "#ff3f6c",
                 background: "hsl(var(--background))",
                 foreground: "hsl(var(--foreground))",
                 card: {
@@ -104,6 +105,7 @@ export default withUt({
             },
             fontSize:{
                 "12": "12px",
+                "14": "14px",
                 "16": "16px"
             }
         },

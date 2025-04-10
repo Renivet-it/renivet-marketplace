@@ -67,9 +67,6 @@ export function ProductContent({
                 />
 
                 <Separator />
-
-                <RichTextViewer content={product.description ?? "<p></p>"} />
-                <Separator />
                 <ProductDetails product={product} />
             </div>
 
