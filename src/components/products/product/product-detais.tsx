@@ -1,3 +1,9 @@
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { cn, hasItems } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
@@ -9,6 +15,7 @@ interface PageProps extends GenericProps {
     product: ProductWithBrand;
 }
 export function ProductDetails({ className, product, ...props }: PageProps) {
+    console.log(product, "product");
     const [showAllSpecifications, setShowAllSpecifications] = useState(false);
     const visibleSpecifications = showAllSpecifications
         ? product.specifications
@@ -92,13 +99,69 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                     !showAllSpecifications && (
                         <div className="mt-4 text-left">
                             <button
-                                onClick={() => setShowAllSpecifications(!showAllSpecifications)}
-                                className="cursor-pointer text-14 font-bold capitalize text-radical-red"
+                                onClick={() =>
+                                    setShowAllSpecifications(
+                                        !showAllSpecifications
+                                    )
+                                }
+                                className="text-14 text-radical-red cursor-pointer font-bold capitalize"
                             >
-                                {showAllSpecifications ? "See Less" : "See More"}
+                                {showAllSpecifications
+                                    ? "See Less"
+                                    : "See More"}
                             </button>
                         </div>
                     )}
+            </div>
+
+            <div className="collapsible-return-option">
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="item-1">
+                        <AccordionTrigger className="text-13 py-5 uppercase hover:no-underline">
+                            Return and Exchange
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <span className="font-bold leading-[1px]">
+                                Return
+                            </span>
+                            <RichTextViewer
+                                content={
+                                    product.returnExchangePolicy?.returnDescription ??
+                                    "<p>This item is not returnable</p>"
+                                }
+                                customClasses={{
+                                    orderedList:
+                                        "text-16 leading-[1.4] text-myntra-primary text-opacity-90",
+                                    bulletList:
+                                        "text-16 leading-[1.4] text-myntra-primary text-opacity-90",
+                                    heading:
+                                        "text-16 leading-[1.4] text-myntra-primary text-opacity-90",
+                                }}
+                                editorClasses="pt-3"
+                            />
+                        </AccordionContent>
+                        <AccordionContent>
+                            <span className="font-bold leading-[1px]">
+                                Exchange
+                            </span>
+                            <RichTextViewer
+                                content={
+                                    product.returnExchangePolicy?.exchangeDescription ??
+                                    "<p>This item is not exchangeable</p>"
+                                }
+                                customClasses={{
+                                    orderedList:
+                                        "text-11 leading-[1px] font-[400] text-[#2F2F2F]",
+                                    bulletList:
+                                        "text-11 leading-[1px] font-[400] text-[#2F2F2F]",
+                                    heading:
+                                        "text-11 leading-[1px] font-[400] text-[#2F2F2F]",
+                                }}
+                                editorClasses="pt-3"
+                            />
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
             </div>
         </div>
     );

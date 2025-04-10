@@ -104,7 +104,9 @@ export default withUt({
                 "accordion-up": "accordion-up 0.2s ease-out",
             },
             fontSize:{
+                "11": "11px",
                 "12": "12px",
+                "13": "13px",
                 "14": "14px",
                 "16": "16px"
             }
