@@ -15,7 +15,6 @@ interface PageProps extends GenericProps {
     product: ProductWithBrand;
 }
 export function ProductDetails({ className, product, ...props }: PageProps) {
-    console.log(product, "product");
     const [showAllSpecifications, setShowAllSpecifications] = useState(false);
     const visibleSpecifications = showAllSpecifications
         ? product.specifications
@@ -104,7 +103,7 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                         !showAllSpecifications
                                     )
                                 }
-                                className="text-14 text-radical-red cursor-pointer font-bold capitalize"
+                                className="text-14 text-accent cursor-pointer font-bold capitalize"
                             >
                                 {showAllSpecifications
                                     ? "See Less"
