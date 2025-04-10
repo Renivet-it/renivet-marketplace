@@ -44,16 +44,78 @@ const extensions = [
     Underline,
 ];
 
-interface RichTextViewerProps {
-    content: string;
+export function getExtensions(
+    customClasses?: RichTextViewerProps["customClasses"]
+) {
+    return [
+        StarterKit.configure({
+            bulletList: {
+                HTMLAttributes: {
+                    class: customClasses?.bulletList ?? "list-disc text-base",
+                },
+            },
+            orderedList: {
+                HTMLAttributes: {
+                    class:
+                        customClasses?.orderedList ?? "list-decimal text-base",
+                },
+            },
+            code: {
+                HTMLAttributes: {
+                    class: customClasses?.code ?? "bg-accent rounded-md p-1",
+                },
+            },
+            horizontalRule: {
+                HTMLAttributes: {
+                    class: customClasses?.horizontalRule ?? "my-2",
+                },
+            },
+            codeBlock: {
+                HTMLAttributes: {
+                    class:
+                        customClasses?.codeBlock ??
+                        "bg-primary text-primary-foreground p-2 text-sm rounded-md",
+                },
+            },
+            heading: {
+                levels: [1, 2, 3, 4],
+                HTMLAttributes: {
+                    class: customClasses?.heading ?? "tiptap-heading",
+                },
+            },
+        }),
+        Link,
+        Underline,
+    ];
 }
 
-export function RichTextViewer({ content }: RichTextViewerProps) {
+interface RichTextViewerProps {
+    content: string;
+    customClasses?: {
+        bulletList?: string;
+        orderedList?: string;
+        codeBlock?: string;
+        heading?: string;
+        code?: string;
+        horizontalRule?: string;
+    };
+    editorClasses?: string;
+}
+
+export function RichTextViewer({
+    content,
+    customClasses,
+    editorClasses,
+}: RichTextViewerProps) {
     const editor = useEditor({
-        extensions: extensions as Extension[],
+        extensions: getExtensions(customClasses) as Extension[],
         editable: false,
         content,
     });
 
-    return <EditorContent editor={editor} />;
+    return (
+        <div className={editorClasses ?? ""}>
+            <EditorContent editor={editor} />
+        </div>
+    );
 }

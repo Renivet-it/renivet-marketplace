@@ -1,5 +1,5 @@
 import { utApi } from "@/app/api/uploadthing/core";
-import { BitFieldBrandPermission } from "@/config/permissions";
+import { BitFieldBrandPermission, BitFieldSitePermission } from "@/config/permissions";
 import { brandCache, mediaCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -12,6 +12,7 @@ import {
     updateBrandMediaItemSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
+import { hasPermission } from "../../../utils";
 import { z } from "zod";
 
 export const mediaRouter = createTRPCRouter({
@@ -21,11 +22,22 @@ export const mediaRouter = createTRPCRouter({
             const { user } = ctx;
             const { brandId } = input;
 
-            if (user.brand?.id !== brandId)
+            const isAdmin = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.ADMINISTRATOR]
+            );
+
+            if (!isAdmin && user.brand?.id !== brandId)
                 throw new TRPCError({
                     code: "UNAUTHORIZED",
-                    message: "User does not have access to this brand",
+                    message: "You are not a member of this brand",
                 });
+
+            // if (user.brand?.id !== brandId)
+            //     throw new TRPCError({
+            //         code: "UNAUTHORIZED",
+            //         message: "User does not have access to this brand",
+            //     });
 
             const existingBrand = await brandCache.get(brandId);
             if (!existingBrand)
@@ -55,8 +67,12 @@ export const mediaRouter = createTRPCRouter({
         .mutation(async ({ input, ctx }) => {
             const { queries, user } = ctx;
             const { id: brandId, values } = input;
+            const isAdmin = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.ADMINISTRATOR]
+            );
 
-            if (user.brand?.id !== brandId)
+            if (!isAdmin && user.brand?.id !== brandId)
                 throw new TRPCError({
                     code: "UNAUTHORIZED",
                     message: "User does not have access to this brand",

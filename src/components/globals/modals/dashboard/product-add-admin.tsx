@@ -647,6 +647,8 @@ const processFile = async (file: File) => {
                 variants: [],
                 weight: 0,
                 width: 0,
+                sizeAndFit: "", // Add this
+                materialAndCare: "", // Add this
             };
 
             if (!hasVariants) {

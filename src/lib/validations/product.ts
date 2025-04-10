@@ -143,6 +143,16 @@ export const productSchema = z.object({
             invalid_type_error: "Title must be a string",
         })
         .min(3, "Title must be at least 3 characters long"),
+        sizeAndFit: z
+        .string()
+        .min(3, "Size & Fit must be at least 3 characters long")
+        .or(z.literal("").transform(() => null))
+        .nullable(),
+        materialAndCare: z
+        .string()
+        .min(3, "Material & Care must be at least 3 characters long")
+        .or(z.literal("").transform(() => null))
+        .nullable(),
     slug: z
         .string({
             required_error: "Slug is required",
@@ -352,7 +362,18 @@ export const productSchema = z.object({
             })
             .min(1, "Meta keyword must be at least 1 characters long")
     ),
-
+    specifications: z
+  .array(
+    z.object({
+      key: z
+        .string()
+        .min(1, "Specification key is required"),
+      value: z
+        .string()
+        .min(1, "Specification value is required"),
+    })
+  )
+  .optional(),
     // OTHER
     verificationStatus: productVerificationStatusSchema,
     productImageFilter: productImageFilterSchema,
@@ -401,6 +422,10 @@ export const productSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
+        returnable: z.boolean().optional(),
+        returnDescription: z.string().nullable().optional(),
+        exchangeable: z.boolean().optional(),
+        exchangeDescription: z.string().nullable().optional(),
 });
 
 export const productOptionSchema = z.object({
@@ -453,6 +478,20 @@ export const productOptionSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
+});
+
+export const returnExchangePolicySchema = z.object({
+    id: z.string().uuid(),
+    productId: z.string().uuid(),
+
+    returnable: z.boolean(),
+    returnDescription: z.string().nullable().optional(),
+
+    exchangeable: z.boolean(),
+    exchangeDescription: z.string().nullable().optional(),
+
+    createdAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
+    updatedAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
 });
 
 export const productVariantSchema = z.object({
@@ -688,6 +727,7 @@ export const productWithBrandSchema = productSchema.extend({
     brand: z.lazy(() => brandSchema),
     options: z.array(productOptionSchema),
     variants: z.array(enhancedProductVariantSchema),
+    returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
     media: z.array(enhancedProductMediaSchema),
     sustainabilityCertificate: cachedBrandMediaItemSchema.nullish(),
     category: categorySchema,
@@ -717,6 +757,7 @@ export const createProductSchema = productSchema
     .extend({
         options: z.array(productOptionSchema),
         variants: z.array(productVariantSchema),
+        returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
     })
     .superRefine((data, ctx) => {
         if (!data.productHasVariants) {
@@ -860,3 +901,4 @@ export type ProductWithBrand = z.infer<typeof productWithBrandSchema>;
 export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;
 export type RejectProduct = z.infer<typeof rejectProductSchema>;
+export type ReturnExchangePolicy = z.infer<typeof returnExchangePolicySchema>;

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { CachedCart, ProductWithBrand } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
+import { ProductDetails } from "./product-detais";
 
 interface PageProps extends GenericProps {
     initialCart?: CachedCart[];
@@ -66,8 +67,7 @@ export function ProductContent({
                 />
 
                 <Separator />
-
-                <RichTextViewer content={product.description ?? "<p></p>"} />
+                <ProductDetails product={product} />
             </div>
 
             <ProductShareModal

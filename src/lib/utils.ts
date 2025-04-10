@@ -688,3 +688,7 @@ export function generatePickupLocationCode({
 export function getRawNumberFromPhone(phone: string) {
     return +phone.replace("+91", "").replace(/\D/g, "").slice(-10);
 }
+
+export function hasItems<T>(array?: T[]): array is T[] {
+    return Array.isArray(array) && array.length > 0;
+}
