@@ -130,11 +130,11 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                 }
                                 customClasses={{
                                     orderedList:
-                                        "text-16 leading-[1.4] text-myntra-primary text-opacity-90",
+                                        "text-11 leading-[1px] font-[400] text-[#2F2F2F]",
                                     bulletList:
-                                        "text-16 leading-[1.4] text-myntra-primary text-opacity-90",
+                                        "text-11 leading-[1px] font-[400] text-[#2F2F2F]",
                                     heading:
-                                        "text-16 leading-[1.4] text-myntra-primary text-opacity-90",
+                                        "text-11 leading-[1px] font-[400] text-[#2F2F2F]",
                                 }}
                                 editorClasses="pt-3"
                             />
