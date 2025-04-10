@@ -1,3 +1,4 @@
+import { hasMedia, noMedia } from "@/lib/db/helperfilter";
 import { mediaCache } from "@/lib/redis/methods";
 import { convertPriceToPaise } from "@/lib/utils";
 import {
@@ -178,6 +179,7 @@ class ProductQuery {
         verificationStatus,
         sortBy = "createdAt",
         sortOrder = "desc",
+        productImage,
     }: {
         limit: number;
         page: number;
@@ -195,6 +197,7 @@ class ProductQuery {
         verificationStatus?: Product["verificationStatus"];
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
+        productImage?: Product["productImageFilter"];
     }) {
         const searchQuery = !!search?.length
             ? sql`(
@@ -262,6 +265,13 @@ class ProductQuery {
                 : undefined,
             verificationStatus
                 ? eq(products.verificationStatus, verificationStatus)
+                : undefined,
+            productImage
+                ? productImage === "with"
+                    ? hasMedia(products, "media")
+                    : productImage === "without"
+                      ? noMedia(products, "media")
+                      : undefined
                 : undefined,
         ];
 

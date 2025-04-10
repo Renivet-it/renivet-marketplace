@@ -34,7 +34,6 @@ import {
     CreateProduct,
 } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
-import { parse } from "papaparse";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";

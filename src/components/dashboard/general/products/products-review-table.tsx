@@ -64,6 +64,8 @@ export type TableProduct = ProductWithBrand & {
     brandName: string;
 };
 
+type ImageFilter = "with" | "without" | "all";
+
 const columns: ColumnDef<TableProduct>[] = [
     {
         accessorKey: "title",
@@ -322,6 +324,15 @@ export function ProductsReviewTable({ initialData }: PageProps) {
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
+    const [productImage, setImageFilter] = useQueryState(
+        "productImage",
+        parseAsStringLiteral([
+            "with",
+            "without",
+            "all",
+        ] as const).withDefault("all")
+    );
+
     const [verificationStatus, setVerificationStatus] = useQueryState(
         "verificationStatus",
         parseAsStringLiteral([
@@ -342,7 +353,7 @@ export function ProductsReviewTable({ initialData }: PageProps) {
     const {
         data: { data: dataRaw, count },
     } = trpc.brands.products.getProducts.useQuery(
-        { limit, page, search, verificationStatus },
+        { limit, page, search, verificationStatus, productImage },
         { initialData }
     );
 
@@ -425,6 +436,18 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                                     </SelectItem>
                                 )
                             )}
+                        </SelectContent>
+                    </Select>
+                    <Select onValueChange={(value: ImageFilter) => setImageFilter(value)}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Filter by Image" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="with">With Image</SelectItem>
+                            <SelectItem value="without">
+                                Without Image
+                            </SelectItem>
+                            <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
