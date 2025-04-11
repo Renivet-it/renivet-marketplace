@@ -459,15 +459,15 @@ console.log(existingVariantMap, "existingVariantMap");
                     message: "Invalid product type",
                 });
 
-            if (
-                existingProduct.isActive &&
-                existingProduct.media.length === 0 &&
-                values.media.length === 0
-            )
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product must have at least one image",
-                });
+            // if (
+            //     existingProduct.isActive &&
+            //     existingProduct.media.length === 0 &&
+            //     values.media.length === 0
+            // )
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: "Product must have at least one image",
+            //     });
 
             if (values.productHasVariants) {
                 if (!values.variants || values.variants.length === 0)
@@ -594,11 +594,11 @@ console.log(existingVariantMap, "existingVariantMap");
                         "You cannot unpublish a product that is already published, to unlist make the product inactive",
                 });
 
-            if (existingProduct.media.length === 0)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product must have at least one image",
-                });
+            // if (existingProduct.media.length === 0)
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: "Product must have at least one image",
+            //     });
 
             const data = await queries.products.updateProductPublishStatus(
                 productId,
@@ -648,15 +648,15 @@ console.log(existingVariantMap, "existingVariantMap");
                     message: "You are not a member of this brand",
                 });
 
-            if (
-                !existingProduct.isActive &&
-                isActive &&
-                existingProduct.media.length === 0
-            )
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product must have at least one image",
-                });
+            // if (
+            //     !existingProduct.isActive &&
+            //     isActive &&
+            //     existingProduct.media.length === 0
+            // )
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: "Product must have at least one image",
+            //     });
 
             const data = await queries.products.updateProductActivationStatus(
                 productId,
@@ -719,11 +719,11 @@ console.log(existingVariantMap, "existingVariantMap");
                     } days before you can resend for review`,
                 });
 
-            if (existingProduct.media.length === 0)
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Product must have at least one image",
-                });
+            // if (existingProduct.media.length === 0)
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: "Product must have at least one image",
+            //     });
 
             // if (
             //     !existingProduct.journey ||
