@@ -101,9 +101,9 @@ export function BrandPage({ brand }: PageProps) {
                         {!!brand.bio?.length ? brand.bio : "No bio available"}
                     </p>
 
-                    <Separator />
+                    {/* <Separator /> */}
 
-                    <div className="space-y-1">
+                    {/* <div className="space-y-1">
                         <Link
                             href={`mailto:${brand.email}`}
                             className="flex items-center gap-2 text-sm"
@@ -129,7 +129,7 @@ export function BrandPage({ brand }: PageProps) {
                                 <span>{brand.website}</span>
                             </Link>
                         )}
-                    </div>
+                    </div> */}
                 </div>
 
                 <div className="space-y-4 md:col-span-4">
