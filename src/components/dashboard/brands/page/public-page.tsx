@@ -292,7 +292,7 @@ export function PublicPage({ initialBrand, products }: PageProps) {
                         {!!brand.bio?.length ? brand.bio : "No bio available"}
                     </p>
 
-                    <Separator />
+                    {/* <Separator />
 
                     <div className="space-y-1">
                         <Link
@@ -320,7 +320,7 @@ export function PublicPage({ initialBrand, products }: PageProps) {
                                 <span>{brand.website}</span>
                             </Link>
                         )}
-                    </div>
+                    </div> */}
                 </div>
 
                 <div className="space-y-4 md:col-span-4">
