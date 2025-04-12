@@ -9,12 +9,33 @@ class ProductTypeQuery {
         return +data || 0;
     }
 
+    // async getProductTypes() {
+    //     const data = await db.query.productTypes.findMany({
+    //         orderBy: [desc(productTypes.createdAt)],
+    //         with: {
+    //             products: true,
+    //         },
+    //     });
+
+    //     return data;
+    // }
     async getProductTypes() {
         const data = await db.query.productTypes.findMany({
             orderBy: [desc(productTypes.createdAt)],
+            with: {
+                products: {
+                    columns: {
+                        id: true, // just need one field to count
+                    },
+                },
+            },
         });
 
-        return data;
+        // Add productCount manually
+        return data.map((pt) => ({
+            ...pt,
+            productCount: pt.products.length,
+        }));
     }
 
     async getProductTypeBySubCategory(subCategoryId: string) {

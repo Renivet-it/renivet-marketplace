@@ -149,6 +149,7 @@ export const productTypeSchema = z.object({
             .min(3, "Description must be at least 3 characters long")
             .nullable()
     ),
+    productCount: z.number().optional(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
