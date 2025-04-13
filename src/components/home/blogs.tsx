@@ -68,7 +68,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
                         </Carousel>
                     </div>
 
-                    <div className="grid w-full grid-cols-2 gap-4 lg:grid-cols-6">
+                    {/* <div className="grid w-full grid-cols-2 gap-4 lg:grid-cols-6">
                         {blogs.slice(0, 6).map((blog) => (
                             <Link
                                 key={blog.id}
@@ -87,7 +87,61 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
                                 />
                             </Link>
                         ))}
-                    </div>
+                    </div> */}
+                    {/* <div className="mx-auto flex max-w-[1500px] flex-wrap justify-center gap-6 p-4">
+                    {blogs.slice(0, 6).map((blog) => (
+                        <Link
+                        key={blog.id}
+                        href={`/blogs/${blog.slug}`}
+                        className="group aspect-square w-[200px] overflow-hidden rounded-md"
+                        >
+                        <Image
+                            src={blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL}
+                            alt={blog.title}
+                            width={200}
+                            height={200}
+                            className="size-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        />
+                        </Link>
+                    ))}
+                    </div> */}
+                        {blogs.slice(0, 6).length === 6 ? (
+                        <div className="grid w-full grid-cols-2 gap-4 lg:grid-cols-6">
+                            {blogs.slice(0, 6).map((blog) => (
+                            <Link
+                                key={blog.id}
+                                href={`/blogs/${blog.slug}`}
+                                className="group aspect-square overflow-hidden rounded-md"
+                            >
+                                <Image
+                                src={blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL}
+                                alt={blog.title}
+                                width={400}
+                                height={225}
+                                className="size-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                />
+                            </Link>
+                            ))}
+                        </div>
+                        ) : (
+                        <div className="mx-auto flex flex-wrap justify-center gap-6 p-4">
+                            {blogs.slice(0, 6).map((blog) => (
+                            <Link
+                                key={blog.id}
+                                href={`/blogs/${blog.slug}`}
+                                className="group aspect-square w-[240px] overflow-hidden rounded-md"
+                            >
+                                <Image
+                                src={blog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL}
+                                alt={blog.title}
+                                width={400}
+                                height={225}
+                                className="size-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                />
+                            </Link>
+                            ))}
+                        </div>
+                        )}
                 </div>
             </div>
         </section>

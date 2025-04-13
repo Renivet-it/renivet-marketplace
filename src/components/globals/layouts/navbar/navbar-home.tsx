@@ -225,7 +225,7 @@ export function NavbarHome() {
                                                 </NavigationMenuTrigger>
 
                                                 <NavigationMenuContent>
-                                                    <div className="grid w-[1200px] grid-cols-5 gap-3 p-4">
+                                                    <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
                                                         {subcategories.data
                                                             .filter(
                                                                 (sub) =>
@@ -234,7 +234,7 @@ export function NavbarHome() {
                                                                     productTypes.data.some(
                                                                         (pt) =>
                                                                             pt.subCategoryId ===
-                                                                            sub.id
+                                                                            sub.id && (pt.productCount ?? 0) > 0
                                                                     )
                                                             )
                                                             .map(
@@ -265,7 +265,7 @@ export function NavbarHome() {
                                                                                         pt
                                                                                     ) =>
                                                                                         pt.subCategoryId ===
-                                                                                        subcategory.id
+                                                                                        subcategory.id && (pt.productCount ?? 0) > 0
                                                                                 )
                                                                                 .map(
                                                                                     (
