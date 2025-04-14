@@ -365,7 +365,7 @@ export function ProductsReviewTable({ initialData }: PageProps) {
             "pending",
             "approved",
             "rejected",
-        ] as const).withDefault("pending")
+        ] as const).withDefault("approved")
     );
 
     const [sorting, setSorting] = useState<SortingState>([]);
