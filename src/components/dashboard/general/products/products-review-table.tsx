@@ -290,6 +290,14 @@ const columns: ColumnDef<TableProduct>[] = [
         },
     },
     {
+        accessorKey: "visibility",
+        header: "Visibility",
+        cell: ({ row }) => {
+            const data = row.original;
+            return data.visibility ? "Public" : "Private";
+        },
+    },
+    {
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => {
@@ -319,14 +327,7 @@ const columns: ColumnDef<TableProduct>[] = [
     //         return <ProductAction product={data} />;
     //     },
     // },
-        {
-            accessorKey: "visibility",
-            header: "Visibility",
-            cell: ({ row }) => {
-                const data = row.original;
-                return data.visibility ? "Public" : "Private";
-            },
-        },
+
     {
         id: "actions",
         cell: ({ row }) => {
