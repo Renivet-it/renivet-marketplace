@@ -305,28 +305,6 @@ const columns: ColumnDef<TableProduct>[] = [
             return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
-    // {
-    //     id: "actions",
-    //     cell: ({ row }) => {
-    //         const data = row.original;
-    //         return (
-    //             <Button variant="ghost" className="size-8 p-0" asChild>
-    //                 <Link href={`/dashboard/general/products/${data.id}`}>
-    //                     <Icons.Eye className="size-4" />
-    //                     <span className="sr-only">Review Product</span>
-    //                 </Link>
-    //             </Button>
-    //         );
-    //     },
-    // },
-
-    // {
-    //     id: "actions",
-    //     cell: ({ row }) => {
-    //         const data = row.original;
-    //         return <ProductAction product={data} />;
-    //     },
-    // },
 
     {
         id: "actions",
