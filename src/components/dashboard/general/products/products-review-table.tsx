@@ -59,11 +59,11 @@ import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductAction } from "./product-admin-action";
-
+import { useQueryClient } from "@tanstack/react-query";
 export type TableProduct = ProductWithBrand & {
     stock: number;
     brandName: string;
-    visibility?: boolean; // Make this optional
+    visibility: boolean; // Make this optional
 };
 
 type ImageFilter = "with" | "without" | "all";
@@ -290,6 +290,14 @@ const columns: ColumnDef<TableProduct>[] = [
         },
     },
     {
+        accessorKey: "visibility",
+        header: "Visibility",
+        cell: ({ row }) => {
+            const data = row.original;
+            return data.visibility ? "Public" : "Private";
+        },
+    },
+    {
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => {
@@ -297,28 +305,7 @@ const columns: ColumnDef<TableProduct>[] = [
             return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
-    // {
-    //     id: "actions",
-    //     cell: ({ row }) => {
-    //         const data = row.original;
-    //         return (
-    //             <Button variant="ghost" className="size-8 p-0" asChild>
-    //                 <Link href={`/dashboard/general/products/${data.id}`}>
-    //                     <Icons.Eye className="size-4" />
-    //                     <span className="sr-only">Review Product</span>
-    //                 </Link>
-    //             </Button>
-    //         );
-    //     },
-    // },
 
-    // {
-    //     id: "actions",
-    //     cell: ({ row }) => {
-    //         const data = row.original;
-    //         return <ProductAction product={data} />;
-    //     },
-    // },
     {
         id: "actions",
         cell: ({ row }) => {
@@ -357,7 +344,7 @@ export function ProductsReviewTable({ initialData }: PageProps) {
             "pending",
             "approved",
             "rejected",
-        ] as const).withDefault("pending")
+        ] as const).withDefault("approved")
     );
 
     const [sorting, setSorting] = useState<SortingState>([]);
@@ -382,6 +369,8 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                     ? x.variants.reduce((acc, curr) => acc + curr.quantity, 0)
                     : (x.quantity ?? 0),
                 brandName: x.brand.name,
+                                    visibility: x.isPublished,
+
             })),
         [dataRaw]
     );

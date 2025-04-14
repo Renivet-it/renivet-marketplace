@@ -216,12 +216,12 @@ export function ProductAction({ product }: PageProps) {
 
                     <DropdownMenuSeparator />
 
-                    {/* <DropdownMenuItem
+                    <DropdownMenuItem
                         onClick={() => setIsDeleteModalOpen(true)}
                     >
                         <Icons.Trash className="size-4" />
                         <span>Delete</span>
-                    </DropdownMenuItem> */}
+                    </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
 

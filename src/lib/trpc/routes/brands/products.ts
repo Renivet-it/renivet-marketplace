@@ -786,17 +786,28 @@ console.log(existingVariantMap, "existingVariantMap");
                 productId,
                 isDeleted: false,
             });
+            console.log(existingProduct, "existingProduct");
             if (!existingProduct)
                 throw new TRPCError({
                     code: "NOT_FOUND",
                     message: "Product not found",
                 });
 
-            if (existingProduct.brand.id !== user.brand?.id)
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "You are not a member of this brand",
-                });
+            // if (existingProduct.brand.id !== user.brand?.id)
+            //     throw new TRPCError({
+            //         code: "FORBIDDEN",
+            //         message: "You are not a member of this brand",
+            //     });
+                const isAdmin = hasPermission(
+                    user.sitePermissions,
+                    [BitFieldSitePermission.ADMINISTRATOR]
+                );
+
+                if (!isAdmin && existingProduct.brand.id !== user.brand?.id)
+                    throw new TRPCError({
+                        code: "FORBIDDEN",
+                        message: "You are not a member of this brand",
+                    });
 
             const [data] = await Promise.all([
                 queries.products.softDeleteProduct(productId),
@@ -806,9 +817,9 @@ console.log(existingVariantMap, "existingVariantMap");
 
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.DELETED,
-                distinctId: user.brand.id,
+                distinctId: user.brand?.id ?? user.id,
                 properties: {
-                    brandName: user.brand.name,
+                    brandName: user.brand?.name ?? "Admin",
                     brandOwnerId: user.id,
                     productId: data.id,
                     productTitle: data.title,
