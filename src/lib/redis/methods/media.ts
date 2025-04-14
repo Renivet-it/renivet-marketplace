@@ -69,43 +69,38 @@ class MediaCache {
     }
 
     async getByIds(ids: string[]) {
+        if (ids.length === 0) return { data: [], count: 0 };
+
         const keys = ids.map((id) => `media:${id}:*`);
-        if (keys.length === 0) return { data: [], count: 0 };
-
-        const [dbMediaCount, cachedMediaItems] = await Promise.all([
-            db.$count(brandMediaItems, inArray(brandMediaItems.id, ids)),
-            redis.mget(...keys),
-        ]);
-
-        const parsed = cachedBrandMediaItemSchema
-            .array()
-            .parse(
-                cachedMediaItems
-                    .map((media) => parseToJSON<CachedBrandMediaItem>(media))
-                    .filter(
-                        (media): media is CachedBrandMediaItem => media !== null
-                    )
-            )
-            .sort(
-                (a, b) =>
-                    new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime()
-            );
-
-        if (parsed.length !== dbMediaCount) {
-            await this.drop();
-
-            const dbMediaItems =
-                await brandMediaItemQueries.getBrandMediaItemsByIds(ids);
-            if (dbMediaItems.count === 0) return { data: [], count: 0 };
-
-            await this.addBulk(dbMediaItems.data);
-            return dbMediaItems;
+        const cachedMediaItems = await redis.mget(...keys);
+        const mediaItems: CachedBrandMediaItem[] = [];
+        const missingIds: string[] = [];
+        // Parse Redis results
+        for (let i = 0; i < cachedMediaItems.length; i++) {
+            const cached = parseToJSON<CachedBrandMediaItem>(cachedMediaItems[i]);
+            if (cached) {
+                mediaItems.push(cached);
+            } else {
+                missingIds.push(ids[i]);
+            }
         }
-
+        // Fetch missing media from DB only
+        if (missingIds.length > 0) {
+            const dbMediaItems = await brandMediaItemQueries.getBrandMediaItemsByIds(missingIds);
+            if (dbMediaItems.count > 0) {
+                mediaItems.push(...dbMediaItems.data);
+                // Add missing items back to Redis cache
+                await this.addBulk(dbMediaItems.data);
+            }
+        }
+        // Sort by createdAt (same as before)
+        mediaItems.sort(
+            (a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
         return {
-            data: parsed,
-            count: parsed.length,
+            data: mediaItems,
+            count: mediaItems.length,
         };
     }
 
