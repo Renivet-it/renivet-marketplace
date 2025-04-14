@@ -59,11 +59,11 @@ import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductAction } from "./product-admin-action";
-
+import { useQueryClient } from "@tanstack/react-query";
 export type TableProduct = ProductWithBrand & {
     stock: number;
     brandName: string;
-    visibility?: boolean; // Make this optional
+    visibility: boolean; // Make this optional
 };
 
 type ImageFilter = "with" | "without" | "all";
@@ -319,6 +319,14 @@ const columns: ColumnDef<TableProduct>[] = [
     //         return <ProductAction product={data} />;
     //     },
     // },
+        {
+            accessorKey: "visibility",
+            header: "Visibility",
+            cell: ({ row }) => {
+                const data = row.original;
+                return data.visibility ? "Public" : "Private";
+            },
+        },
     {
         id: "actions",
         cell: ({ row }) => {
@@ -382,6 +390,8 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                     ? x.variants.reduce((acc, curr) => acc + curr.quantity, 0)
                     : (x.quantity ?? 0),
                 brandName: x.brand.name,
+                                    visibility: x.isPublished,
+
             })),
         [dataRaw]
     );

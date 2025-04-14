@@ -15,7 +15,7 @@ import { handleClientError } from "@/lib/utils";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
-
+import { useQueryClient } from "@tanstack/react-query";
 interface PageProps {
     product: TableProduct;
     isOpen: boolean;
@@ -35,7 +35,7 @@ export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
         page,
         search,
     });
-
+    const queryClient = useQueryClient();
     const { mutate: deleteProduct, isPending: isDeleting } =
         trpc.brands.products.deleteProduct.useMutation({
             onMutate: () => {
@@ -44,7 +44,10 @@ export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Product deleted successfully", { id: toastId });
-                refetch();
+                // refetch();
+                queryClient.invalidateQueries({
+                    queryKey: [["brands", "products", "getProducts"]],
+                });
                 setIsOpen(false);
             },
             onError: (err, _, ctx) => {
