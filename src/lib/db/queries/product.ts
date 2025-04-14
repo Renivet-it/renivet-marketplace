@@ -329,7 +329,6 @@ class ProductQuery {
             if (product.sustainabilityCertificate)
                 mediaIds.add(product.sustainabilityCertificate);
         }
-
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
         const mediaMap = new Map(
             mediaItems.data.map((item) => [item.id, item])
