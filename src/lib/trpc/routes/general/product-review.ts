@@ -128,25 +128,57 @@ export const productReviewsRouter = createTRPCRouter({
                    );
 
 
-  // Handle product variants if provided
-  if (product.variants && product.variants.length > 0) {
-    const inputVariantSKUs = product.variants.map((variant) => variant.sku);
+//   // Handle product variants if provided
+//   if (product.variants && product.variants.length > 0) {
+//     const inputVariantSKUs = product.variants.map((variant) => variant.sku);
 
-    // Fetch existing variants with matching SKUs
+//     // Fetch existing variants with matching SKUs
+//     const existingVariants = await ctx.db.query.productVariants.findMany({
+//         where: (productVariants, { inArray }) => inArray(productVariants.sku, inputVariantSKUs as string[]),
+//     });
+// console.log(existingVariants, "existingVariants");
+//     // Map existing variants by SKU
+//     const existingVariantMap = new Map(existingVariants.map((v) => [v.sku, v.id]));
+
+// console.log(existingVariantMap, "existingVariantMap");
+
+//     for (const variant of product.variants) {
+//         const existingVariantId = existingVariantMap.get(variant.sku);
+
+//         if (existingVariantId) {
+//             // Update existing variant
+//             updatePromises.push(
+//                 ctx.db.update(productVariants)
+//                     .set({
+//                         price: variant.price,
+//                         quantity: variant.quantity,
+//                         weight: variant.weight,
+//                         width: variant.width,
+//                         height: variant.height,
+//                         length: variant.length,
+//                         updatedAt: new Date(),
+//                     })
+//                     .where(eq(productVariants.id, existingVariantId))
+//             );
+//         } else {
+//             // Insert new variant
+//             newProducts.push({
+//                 ...variant,
+//                 productId: existingProductId, // Link to the existing product
+//             });
+//         }
+//     }
+// }
+if (product.variants && product.variants.length > 0) {
+    const inputVariantSKUs = product.variants.map((variant) => variant.sku);
     const existingVariants = await ctx.db.query.productVariants.findMany({
         where: (productVariants, { inArray }) => inArray(productVariants.sku, inputVariantSKUs as string[]),
     });
-console.log(existingVariants, "existingVariants");
-    // Map existing variants by SKU
     const existingVariantMap = new Map(existingVariants.map((v) => [v.sku, v.id]));
-
-console.log(existingVariantMap, "existingVariantMap");
 
     for (const variant of product.variants) {
         const existingVariantId = existingVariantMap.get(variant.sku);
-
         if (existingVariantId) {
-            // Update existing variant
             updatePromises.push(
                 ctx.db.update(productVariants)
                     .set({
@@ -161,11 +193,28 @@ console.log(existingVariantMap, "existingVariantMap");
                     .where(eq(productVariants.id, existingVariantId))
             );
         } else {
-            // Insert new variant
-            newProducts.push({
-                ...variant,
-                productId: existingProductId, // Link to the existing product
-            });
+            updatePromises.push(
+                ctx.db.insert(productVariants).values({
+                    id: variant.id || crypto.randomUUID(),
+                    productId: existingProductId,
+                    sku: variant.sku,
+                    price: variant.price,
+                    quantity: variant.quantity,
+                    weight: variant.weight,
+                    width: variant.width,
+                    height: variant.height,
+                    length: variant.length,
+                    combinations: variant.combinations,
+                    nativeSku: variant.nativeSku,
+                    barcode: variant.barcode,
+                    hsCode: variant.hsCode,
+                    originCountry: variant.originCountry,
+                    image: variant.image,
+                    isDeleted: false,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                })
+            );
         }
     }
 }

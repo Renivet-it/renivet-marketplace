@@ -744,39 +744,68 @@ const processFile = async (file: File) => {
                 //             };
                 //         }
                 //     );
-                product.variants = rows.map((row) => {
-                    const combinations = product.options!.reduce((acc, option) => {
-                        const valueKey = Object.keys(row).find(
-                            (key) =>
-                                key.match(/^Option\d+\s+Value$/) &&
-                                String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
-                        );
+                // product.variants = rows.map((row) => {
+                //     const combinations = product.options!.reduce((acc, option) => {
+                //         const valueKey = Object.keys(row).find(
+                //             (key) =>
+                //                 key.match(/^Option\d+\s+Value$/) &&
+                //                 String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
+                //         );
 
-                        const valueForThisOption = valueKey
-                            ? String(row[valueKey as keyof ImportRow] ?? "").trim()
-                            : "";
-                                        const optionValue = option.values.find((v) => v.name === valueForThisOption);
-                        if (optionValue) {
-                            acc[option.id] = optionValue.id;
+                //         const valueForThisOption = valueKey
+                //             ? String(row[valueKey as keyof ImportRow] ?? "").trim()
+                //             : "";
+                //                         const optionValue = option.values.find((v) => v.name === valueForThisOption);
+                //         if (optionValue) {
+                //             acc[option.id] = optionValue.id;
+                //         }
+                //         return acc;
+                //     }, {} as Record<string, string>);
+
+                //     const optionCombinations = product.options!.map((option) => {
+                //         const valueKey = Object.keys(row).find(
+                //             (key) =>
+                //                 key.match(/^Option\d+\s+Value$/) &&
+                //                 String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
+                //         );
+                //         const valueForThisOption = valueKey
+                //             ? String(row[valueKey as keyof ImportRow] ?? "").trim()
+                //             : "";
+
+                //         return {
+                //             name: String(option.name),
+                //             value: valueForThisOption,
+                //         };
+                //     });
+                product.variants = rows.map((row, rowIndex) => {
+                    const combinations: Record<string, string> = {};
+                    const rowErrors: Record<string, string> = {};
+                    const rowNumber = rowIndex + 2;
+
+                    product.options!.forEach((option, index) => {
+                        const optionValueKey = `Option${index + 1} Value`;
+                        const valueForThisOption = String(row[optionValueKey as keyof ImportRow] ?? "").trim();
+
+                        if (!valueForThisOption) {
+                            rowErrors[optionValueKey] = `Value for option "${option.name}" is required`;
+                            return;
                         }
-                        return acc;
-                    }, {} as Record<string, string>);
 
-                    const optionCombinations = product.options!.map((option) => {
-                        const valueKey = Object.keys(row).find(
-                            (key) =>
-                                key.match(/^Option\d+\s+Value$/) &&
-                                String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
-                        );
-                        const valueForThisOption = valueKey
-                            ? String(row[valueKey as keyof ImportRow] ?? "").trim()
-                            : "";
-
-                        return {
-                            name: String(option.name),
-                            value: valueForThisOption,
-                        };
+                const optionValue = option.values.find((v) => v.name === valueForThisOption);
+                        if (!optionValue) {
+                            rowErrors[optionValueKey] = `Invalid value "${valueForThisOption}" for option "${option.name}"`;
+                            return;
+                        }
+                                        combinations[option.id] = optionValue.id;
                     });
+
+                    if (Object.keys(rowErrors).length > 0) {
+                        errors.push({ row: rowNumber, errors: rowErrors });
+                    }
+                    const optionCombinations = product.options!.map((option) => ({
+                        name: option.name,
+                        value: option.values.find((v) => v.id === combinations[option.id])?.name || "",
+                    }));
 
 
                     return {
