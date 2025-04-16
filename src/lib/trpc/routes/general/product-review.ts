@@ -15,7 +15,7 @@ import { createProductSchema, rejectProductSchema } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { products, productVariants } from "@/lib/db/schema/product";
+import { products, productVariants, returnExchangePolicy, productSpecifications } from "@/lib/db/schema/product";
 export const productReviewsRouter = createTRPCRouter({
     addBulkProducts: protectedProcedure
         .input(
@@ -42,60 +42,60 @@ export const productReviewsRouter = createTRPCRouter({
                     code: "BAD_REQUEST",
                     message: "All products must belong to the same brand",
                 });
-        // //    // Extract SKUs from input
-        // const inputSKUs = inputProducts.map((product) => product.sku);
 
-        // // Fetch existing products with matching SKUs
-        // const existingProducts = await ctx.db.query.products.findMany({
-        //     where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
-        // });
-
-        // // Create a map of existing SKUs
-        // const existingSKUMap = new Map(existingProducts.map((p) => [p.sku, p.title]));
-
-        // // Check for duplicate SKUs and collect errors
-        // const errors: { row: number; sku: string; error: string; existingProduct: string }[] = [];
-        // inputProducts.forEach((product, index) => {
-        //     if (existingSKUMap.has(product.sku)) {
-        //         errors.push({
-        //             row: index + 2, // Excel row number
-        //             sku: product.sku ?? "Unknown SKU",
-        //             error: "Duplicate SKU found",
-        //             existingProduct: existingSKUMap.get(product.sku) ?? "Unknown Product",
-        //         });
-        //     }
-        // });
-
-        // // If errors exist, return them
-        // if (errors.length > 0) {
-        //     throw new TRPCError({ code: "BAD_REQUEST", message: "Duplicate SKUs found", cause: errors });
-        // }
-
-
-    //  //    // Extract SKUs from input
-    //  const inputSKUs = inputProducts.map((product) => product.sku);
-
-    //  // Fetch existing products with matching SKUs
-    //  const existingProducts = await ctx.db.query.products.findMany({
-    //      where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
-    //  });
-
-    // console.log(existingProducts, "existingProducts");
 
            // Extract SKUs from input products
            const inputSKUs = inputProducts.map((product) => product.sku);
 
            // Fetch existing products with matching SKUs
-           const existingProducts = await ctx.db.query.products.findMany({
-               where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
-           });
+        //    const existingProducts = await ctx.db.query.products.findMany({
+        //        where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
+        //    });
 
+        // Fetch existing products with matching SKUs and brandId
+            const existingProducts = await ctx.db.query.products.findMany({
+                where: (products, { and, inArray, eq }) =>
+                    and(
+                        inArray(products.sku, inputSKUs as string[]),
+                        eq(products.brandId, brandId)
+                    ),
+            });
            // Create a map of existing SKUs for quick lookup
            const existingSKUMap = new Map(existingProducts.map((p) => [p.sku, p.id]));
+            // Fetch existing return exchange policies for existing products
+            const existingReturnPolicies = await ctx.db.query.returnExchangePolicy.findMany({
+                where: (returnExchangePolicy, { inArray }) =>
+                    inArray(
+                        returnExchangePolicy.productId,
+                        Array.from(existingSKUMap.values())
+                    ),
+            });
+
+            // Create a map of existing return policies by productId
+            const existingReturnPolicyMap = new Map(
+                existingReturnPolicies.map((rp) => [rp.productId, rp])
+            );
+                     // Fetch existing specifications for existing products
+                     const existingSpecifications = await ctx.db.query.productSpecifications.findMany({
+                        where: (productSpecifications, { inArray }) =>
+                            inArray(
+                                productSpecifications.productId,
+                                Array.from(existingSKUMap.values())
+                            ),
+                    });
+
+                    // Create a map of existing specifications by productId
+                    const existingSpecificationsMap = new Map<string | null, typeof existingSpecifications>();
+                    existingSpecifications.forEach((spec) => {
+                        if (!existingSpecificationsMap.has(spec.productId)) {
+                            existingSpecificationsMap.set(spec.productId, []);
+                        }
+                        existingSpecificationsMap.get(spec.productId)!.push(spec);
+                    });
 
            // Process updates & inserts separately
            const updatePromises = [];
-           const newProducts = [];
+           const newProducts: any[] = [];
 
            for (const product of inputProducts) {
                const existingProductId = existingSKUMap.get(product.sku);
@@ -122,53 +122,63 @@ export const productReviewsRouter = createTRPCRouter({
                                length: product.length,
                                weight: product.weight,
                                brandId: product.brandId,
+                               materialAndCare: product.materialAndCare,
+                               sizeAndFit: product.sizeAndFit,
                                updatedAt: new Date(),
                            })
                            .where(eq(products.id, existingProductId))
                    );
+                    // Update or insert return exchange policy
+                    const existingPolicy = existingReturnPolicyMap.get(existingProductId);
+                    if (existingPolicy) {
+                        // Update existing return exchange policy
+                        updatePromises.push(
+                            ctx.db.update(returnExchangePolicy)
+                                .set({
+                                    returnable: product.returnable,
+                                    exchangeable: product.exchangeable,
+                                    returnDescription: product.returnDescription,
+                                    exchangeDescription: product.exchangeDescription,
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(returnExchangePolicy.productId, existingProductId))
+                        );
+                    } else {
+                        // Insert new return exchange policy
+                        updatePromises.push(
+                            ctx.db.insert(returnExchangePolicy).values({
+                                id: crypto.randomUUID(),
+                                productId: existingProductId,
+                                returnable: product.returnable,
+                                exchangeable: product.exchangeable,
+                                returnDescription: product.returnDescription,
+                                exchangeDescription: product.exchangeDescription,
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                            })
+                        );
+                    }
+                // Update specifications: delete existing and insert new
+                updatePromises.push(
+                    ctx.db.delete(productSpecifications)
+                        .where(eq(productSpecifications.productId, existingProductId))
+                );
+                if (product.specifications && product.specifications.length > 0) {
+                    updatePromises.push(
+                        ctx.db.insert(productSpecifications).values(
+                            product.specifications.map((spec) => ({
+                                id: crypto.randomUUID(),
+                                productId: existingProductId,
+                                key: spec.key,
+                                value: spec.value,
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                            }))
+                        )
+                    );
+                }
 
 
-//   // Handle product variants if provided
-//   if (product.variants && product.variants.length > 0) {
-//     const inputVariantSKUs = product.variants.map((variant) => variant.sku);
-
-//     // Fetch existing variants with matching SKUs
-//     const existingVariants = await ctx.db.query.productVariants.findMany({
-//         where: (productVariants, { inArray }) => inArray(productVariants.sku, inputVariantSKUs as string[]),
-//     });
-// console.log(existingVariants, "existingVariants");
-//     // Map existing variants by SKU
-//     const existingVariantMap = new Map(existingVariants.map((v) => [v.sku, v.id]));
-
-// console.log(existingVariantMap, "existingVariantMap");
-
-//     for (const variant of product.variants) {
-//         const existingVariantId = existingVariantMap.get(variant.sku);
-
-//         if (existingVariantId) {
-//             // Update existing variant
-//             updatePromises.push(
-//                 ctx.db.update(productVariants)
-//                     .set({
-//                         price: variant.price,
-//                         quantity: variant.quantity,
-//                         weight: variant.weight,
-//                         width: variant.width,
-//                         height: variant.height,
-//                         length: variant.length,
-//                         updatedAt: new Date(),
-//                     })
-//                     .where(eq(productVariants.id, existingVariantId))
-//             );
-//         } else {
-//             // Insert new variant
-//             newProducts.push({
-//                 ...variant,
-//                 productId: existingProductId, // Link to the existing product
-//             });
-//         }
-//     }
-// }
 if (product.variants && product.variants.length > 0) {
     const inputVariantSKUs = product.variants.map((variant) => variant.sku);
     const existingVariants = await ctx.db.query.productVariants.findMany({
@@ -222,9 +232,19 @@ if (product.variants && product.variants.length > 0) {
 
 
                } else {
-                   // If product doesn't exist, prepare for insertion
-                   const slug = generateProductSlug(product.title, existingBrand.name);
-                   newProducts.push({ ...product, slug });
+
+                const slug = generateProductSlug(product.title, existingBrand.name);
+                newProducts.push({
+                    ...product,
+                    slug,
+                    returnExchangePolicy: {
+                        returnable: product.returnable,
+                        exchangeable: product.exchangeable,
+                        returnDescription: product.returnDescription,
+                        exchangeDescription: product.exchangeDescription,
+                    },
+                    specifications: product.specifications || [],
+                });
                }
            }
 
@@ -235,37 +255,60 @@ if (product.variants && product.variants.length > 0) {
            await Promise.all(updatePromises);
 
            // Insert new products (if any)
-        //    let newData = [];
            let newData: any[] = [];
-           if (newProducts.length > 0) {
-               newData = await queries.products.bulkCreateProducts(newProducts as any);
-           }
+
+        if (newProducts.length > 0) {
+            // Insert new products
+            newData = await queries.products.bulkCreateProducts(
+                newProducts.map((p) => ({
+                    ...p,
+                    // Exclude returnExchangePolicy and specifications from product insertion
+                    returnable: undefined,
+                    exchangeable: undefined,
+                    returnDescription: undefined,
+                    exchangeDescription: undefined,
+                    specifications: undefined,
+                }))
+            );
+
+            // Insert return exchange policies for new products
+            const returnPolicyInserts = newData.map((product) => {
+                const inputProduct = newProducts.find((p) => p.sku === product.sku);
+                return {
+                    id: crypto.randomUUID(),
+                    productId: product.id,
+                    returnable: inputProduct?.returnable ?? false,
+                    exchangeable: inputProduct?.exchangeable ?? false,
+                    returnDescription: inputProduct?.returnDescription ?? null,
+                    exchangeDescription: inputProduct?.exchangeDescription ?? null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                };
+            });
+
+            if (returnPolicyInserts.length > 0) {
+                await ctx.db.insert(returnExchangePolicy).values(returnPolicyInserts);
+            }
+
+            // Insert specifications for new products
+            const specificationInserts = newData.flatMap((product) => {
+                const inputProduct = newProducts.find((p) => p.sku === product.sku);
+                return (inputProduct?.specifications ?? []).map((spec: any) => ({
+                    id: crypto.randomUUID(),
+                    productId: product.id,
+                    key: spec.key,
+                    value: spec.value,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                }));
+            });
+
+            if (specificationInserts.length > 0) {
+                await ctx.db.insert(productSpecifications).values(specificationInserts);
+            }
+        }
 
 
-
-            // const inputWithSlug = inputProducts.map((product) => {
-            //     const slug = generateProductSlug(
-            //         product.title,
-            //         existingBrand.name
-            //     );
-            //     return { ...product, slug };
-            // });
-
-            // const data =
-            //     await queries.products.bulkCreateProducts(inputWithSlug);
-
-            // posthog.capture({
-            //     event: POSTHOG_EVENTS.PRODUCT.BULK_CREATED,
-            //     distinctId: existingBrand.id,
-            //     properties: {
-            //         brandName: existingBrand.name,
-            //         brandOwnerId: existingBrand.ownerId,
-            //         productIds: data.map((product) => product.id),
-            //         productTitles: data.map((product) => product.title),
-            //     },
-            // });
-
-            // return data;
             // Track the event
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.BULK_CREATED,

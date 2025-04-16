@@ -73,6 +73,13 @@ interface ImportRow {
     "Height (cm)": string;
     "Country Code (ISO)": string;
     "HS Code": string;
+    "Size and Fit": string,
+    "Material and Care": string,
+    "Return (TRUE/FALSE)": string,
+    "Return Policy Description(IF yes)": string,
+    "Replace (TRUE/FALSE)": string,
+    "Replace Policy Description(IF yes)": string,
+    [key: `Specification${number} Label` | `Specification${number} Value`]: string | undefined;
 }
 
 export function ProductImportButton({
@@ -586,6 +593,21 @@ export function ProductImportButton({
                    subcategories,
                    productTypes
                );
+               const specifications = [];
+               const specKeys = Object.keys(firstRow).filter((key) =>
+                   /^Specification\d+ Label$/.test(key)
+               );
+               for (const labelKey of specKeys) {
+                   const valueKey = labelKey.replace("Label", "Value");
+                   // const label = firstRow[labelKey]?.trim();
+                   // const value = firstRow[valueKey]?.trim();
+                   const label = (firstRow[labelKey as keyof ImportRow] as string)?.trim();
+                   const value = (firstRow[valueKey as keyof ImportRow] as string)?.trim();
+
+                   if (label && value) {
+                       specifications.push({ key: label, value });
+                   }
+               }
 
                const product: CreateProduct = {
                    brandId: brand.id,
@@ -610,8 +632,8 @@ export function ProductImportButton({
                    hsCode: null,
                    length: 0,
                    media: [],
-                   sizeAndFit: "", // Add this
-                   materialAndCare: "", // Add this
+                //    sizeAndFit: "", // Add this
+                //    materialAndCare: "", // Add this
                 //    nativeSku: !hasVariants
                 //     ? generateSKU({
                 //             brand,
@@ -637,6 +659,13 @@ export function ProductImportButton({
                    variants: [],
                    weight: 0,
                    width: 0,
+                   sizeAndFit: firstRow["Size and Fit"]?.trim() || "",
+                   materialAndCare: firstRow["Material and Care"]?.trim() || "",
+                   returnable: String(firstRow["Return (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                   exchangeable: String(firstRow["Replace (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                   returnDescription: firstRow["Return Policy Description(IF yes)"]?.trim() || "",
+                   exchangeDescription: firstRow["Replace Policy Description(IF yes)"]?.trim() || "",
+                   specifications,
                };
 
                if (!hasVariants) {
@@ -763,6 +792,19 @@ export function ProductImportButton({
                         name: option.name,
                         value: option.values.find((v) => v.id === combinations[option.id])?.name || "",
                     }));
+                                        // Build specifications array for the variant
+                    const variantSpecifications = [];
+                    const variantSpecKeys = Object.keys(row).filter((key) =>
+                        /^Specification\d+ Label$/.test(key)
+                    );
+                    for (const labelKey of variantSpecKeys) {
+                        const valueKey = labelKey.replace("Label", "Value");
+                        const label = (row as any)[labelKey]?.trim();
+                        const value = (row as any)[valueKey]?.trim();
+                        if (label && value) {
+                            variantSpecifications.push({ key: label, value });
+                        }
+                    }
 
 
                        return {
@@ -802,6 +844,13 @@ export function ProductImportButton({
                            originCountry: row["Country Code (ISO)"] || null,
                            barcode: String(row.Barcode || "").trim(),
                            hsCode: String(row["HS Code"] || "").trim(),
+                           sizeAndFit:String(row["Size and Fit"])?.trim() || "",
+                           materialAndCare:String(row["Material and Care"])?.trim() || "",
+                           returnable: String(row["Return (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                           exchangeable: String(row["Replace (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                           returnDescription: String(row["Return Policy Description(IF yes)"] || "").trim() || "",
+                           exchangeDescription: String(row["Replace Policy Description(IF yes)"] || "").trim() || "",
+                           specifications: variantSpecifications,
                            image: null,
                            isDeleted: false,
                            deletedAt: null,
