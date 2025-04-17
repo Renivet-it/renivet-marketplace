@@ -81,6 +81,13 @@ interface ImportRow {
     "Height (cm)": string;
     "Country Code (ISO)": string;
     "HS Code": string;
+    "Size and Fit": string,
+    "Material and Care": string,
+    "Return (TRUE/FALSE)": string,
+    "Return Policy Description(IF yes)": string,
+    "Replace (TRUE/FALSE)": string,
+    "Replace Policy Description(IF yes)": string,
+    [key: `Specification${number} Label` | `Specification${number} Value`]: string | undefined;
 }
 
 export function ProductAddAdminModal({
@@ -496,17 +503,6 @@ const processFile = async (file: File) => {
             if (row["Height (cm)"] !== "" && Number(row["Height (cm)"]) < 0) {
                 rowErrors["Height (cm)"] = "Height must be a non-negative number";
             }
-            // if (!row["Option1 Name"]?.trim()) {
-            //     rowErrors["Option1 Name"] = "Option1 Name is required";
-            // } else if (row["Option1 Name"].trim().length < 1) {
-            //     rowErrors["Option1 Name"] = "Option1 Name must be at least 1 characters long";
-            // }
-
-            // if (!row["Option1 Value"]?.trim()) {
-            //     rowErrors["Option1 Value"] = "Option1 Value is required";
-            // } else if (row["Option1 Value"].trim().length < 1) {
-            //     rowErrors["Option1 Value"] = "Option1 Value must be at least 1 characters long";
-            // }
 
 
             if (row["Price (in Rupees)"] === "" || Number(row["Price (in Rupees)"]) <= 0) {
@@ -606,7 +602,36 @@ const processFile = async (file: File) => {
                 subcategories,
                 productTypes
             );
+            // const specifications = [];
+            // if (firstRow["Specification1 Label"]?.trim() && firstRow["Specification1 Value"]?.trim()) {
+            //     specifications.push({
+            //         key: firstRow["Specification1 Label"].trim(),
+            //         value: firstRow["Specification1 Value"].trim(),
+            //     });
+            // }
+            // // Add more specification pairs if present (e.g., Specification2 Label, etc.)
+            // for (let i = 2; i <= 10; i++) { // Assuming up to 10 pairs max
+            //     const label = firstRow[`Specification${i} Label` as keyof ImportRow]?.trim();
+            //     const value = firstRow[`Specification${i} Value` as keyof ImportRow]?.trim();
+            //     if (label && value) {
+            //         specifications.push({ key: label, value });
+            //     }
+            // }
+            const specifications = [];
+            const specKeys = Object.keys(firstRow).filter((key) =>
+                /^Specification\d+ Label$/.test(key)
+            );
+            for (const labelKey of specKeys) {
+                const valueKey = labelKey.replace("Label", "Value");
+                // const label = firstRow[labelKey]?.trim();
+                // const value = firstRow[valueKey]?.trim();
+                const label = (firstRow[labelKey as keyof ImportRow] as string)?.trim();
+                const value = (firstRow[valueKey as keyof ImportRow] as string)?.trim();
 
+                if (label && value) {
+                    specifications.push({ key: label, value });
+                }
+            }
             const product: CreateProduct = {
                 brandId: brandId!,
                 title,
@@ -647,14 +672,18 @@ const processFile = async (file: File) => {
                 variants: [],
                 weight: 0,
                 width: 0,
-                sizeAndFit: "", // Add this
-                materialAndCare: "", // Add this
+                sizeAndFit: firstRow["Size and Fit"]?.trim() || "",
+                materialAndCare: firstRow["Material and Care"]?.trim() || "",
+                returnable: String(firstRow["Return (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                exchangeable: String(firstRow["Replace (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                returnDescription: firstRow["Return Policy Description(IF yes)"]?.trim() || "",
+                exchangeDescription: firstRow["Replace Policy Description(IF yes)"]?.trim() || "",
+                specifications,
             };
 
             if (!hasVariants) {
                 // **Simple Product Handling (No Variants)**
                 product.sku = firstRow.SKU || "";
-                // product.barcode = firstRow.Barcode || null;
                 product.barcode = String(firstRow.Barcode || "").trim();
                 product.hsCode = String(firstRow["HS Code"] || "").trim();
                 product.price = convertPriceToPaise(
@@ -674,7 +703,6 @@ const processFile = async (file: File) => {
                 product.width = parseInt(firstRow["Width (cm)"]) || 0;
                 product.height = parseInt(firstRow["Height (cm)"]) || 0;
                 product.originCountry = firstRow["Country Code (ISO)"] || null;
-                // product.hsCode = firstRow["HS Code"] || null;
             } else {
                 // **Variant Product Handling**
                 const optionsMap = new Map<string, Set<string>>();
@@ -712,71 +740,7 @@ const processFile = async (file: File) => {
                     })
                 );
 
-                // Generate product variants
-                // product.variants = rows.map((row) => {
-                //     const combinations = product.options!.reduce(
-                //         (acc, option) => {
-                //             const valueForThisOption =
-                //                 row[
-                //                     `Option${option.position + 1} Value` as keyof ImportRow
-                //                 ];
-                //             const optionValue = option.values.find(
-                //                 (v) => v.name === valueForThisOption
-                //             );
 
-                //             if (optionValue) {
-                //                 acc[option.id] = optionValue.id;
-                //             }
-                //             return acc;
-                //         },
-                //         {} as Record<string, string>
-                //     );
-
-                //     const optionCombinations = product.options!.map(
-                //         (option) => {
-                //             const valueForThisOption =
-                //                 row[
-                //                     `Option${option.position + 1} Value` as keyof ImportRow
-                //                 ];
-                //             return {
-                //                 name: option.name,
-                //                 value: valueForThisOption || "",
-                //             };
-                //         }
-                //     );
-                // product.variants = rows.map((row) => {
-                //     const combinations = product.options!.reduce((acc, option) => {
-                //         const valueKey = Object.keys(row).find(
-                //             (key) =>
-                //                 key.match(/^Option\d+\s+Value$/) &&
-                //                 String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
-                //         );
-
-                //         const valueForThisOption = valueKey
-                //             ? String(row[valueKey as keyof ImportRow] ?? "").trim()
-                //             : "";
-                //                         const optionValue = option.values.find((v) => v.name === valueForThisOption);
-                //         if (optionValue) {
-                //             acc[option.id] = optionValue.id;
-                //         }
-                //         return acc;
-                //     }, {} as Record<string, string>);
-
-                //     const optionCombinations = product.options!.map((option) => {
-                //         const valueKey = Object.keys(row).find(
-                //             (key) =>
-                //                 key.match(/^Option\d+\s+Value$/) &&
-                //                 String(row[key as keyof ImportRow] ?? "").trim() === option.values.find((v) => v.name)?.name
-                //         );
-                //         const valueForThisOption = valueKey
-                //             ? String(row[valueKey as keyof ImportRow] ?? "").trim()
-                //             : "";
-
-                //         return {
-                //             name: String(option.name),
-                //             value: valueForThisOption,
-                //         };
-                //     });
                 product.variants = rows.map((row, rowIndex) => {
                     const combinations: Record<string, string> = {};
                     const rowErrors: Record<string, string> = {};
@@ -806,7 +770,19 @@ const processFile = async (file: File) => {
                         name: option.name,
                         value: option.values.find((v) => v.id === combinations[option.id])?.name || "",
                     }));
-
+                    // Build specifications array for the variant
+                    const variantSpecifications = [];
+                    const variantSpecKeys = Object.keys(row).filter((key) =>
+                        /^Specification\d+ Label$/.test(key)
+                    );
+                    for (const labelKey of variantSpecKeys) {
+                        const valueKey = labelKey.replace("Label", "Value");
+                        const label = (row as any)[labelKey]?.trim();
+                        const value = (row as any)[valueKey]?.trim();
+                        if (label && value) {
+                            variantSpecifications.push({ key: label, value });
+                        }
+                    }
 
                     return {
                         id: crypto.randomUUID(),
@@ -845,7 +821,14 @@ const processFile = async (file: File) => {
                         originCountry: row["Country Code (ISO)"] || null,
                         barcode: String(row.Barcode || "").trim(),
                         hsCode: String(row["HS Code"] || "").trim(),
+                        sizeAndFit:String(row["Size and Fit"])?.trim() || "",
+                        materialAndCare:String(row["Material and Care"])?.trim() || "",
+                        returnable: String(row["Return (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                        exchangeable: String(row["Replace (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
+                        returnDescription: String(row["Return Policy Description(IF yes)"] || "").trim() || "",
+                        exchangeDescription: String(row["Replace Policy Description(IF yes)"] || "").trim() || "",
                         image: null,
+                        specifications: variantSpecifications,
                         isDeleted: false,
                         deletedAt: null,
                         createdAt: new Date(),

@@ -37,7 +37,7 @@ import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
-import { products, productVariants } from "@/lib/db/schema/product";
+import { products, productVariants, returnExchangePolicy, productSpecifications } from "@/lib/db/schema/product";
 export const productsRouter = createTRPCRouter({
     getProducts: publicProcedure
         .input(
@@ -269,15 +269,46 @@ export const productsRouter = createTRPCRouter({
 
            // Fetch existing products with matching SKUs
            const existingProducts = await ctx.db.query.products.findMany({
-               where: (products, { inArray }) => inArray(products.sku, inputSKUs as string[]),
-           });
-
+            where: (products, { and, inArray, eq }) =>
+                and(
+                    inArray(products.sku, inputSKUs as string[]),
+                    eq(products.brandId, brandIds[0])
+                ),
+        });
            // Create a map of existing SKUs for quick lookup
            const existingSKUMap = new Map(existingProducts.map((p) => [p.sku, p.id]));
+ const existingReturnPolicies = await ctx.db.query.returnExchangePolicy.findMany({
+                where: (returnExchangePolicy, { inArray }) =>
+                    inArray(
+                        returnExchangePolicy.productId,
+                        Array.from(existingSKUMap.values())
+                    ),
+            });
 
+            // Create a map of existing return policies by productId
+            const existingReturnPolicyMap = new Map(
+                existingReturnPolicies.map((rp) => [rp.productId, rp])
+            );
+                     // Fetch existing specifications for existing products
+                     const existingSpecifications = await ctx.db.query.productSpecifications.findMany({
+                        where: (productSpecifications, { inArray }) =>
+                            inArray(
+                                productSpecifications.productId,
+                                Array.from(existingSKUMap.values())
+                            ),
+                    });
+
+                    // Create a map of existing specifications by productId
+                    const existingSpecificationsMap = new Map<string | null, typeof existingSpecifications>();
+                    existingSpecifications.forEach((spec) => {
+                        if (!existingSpecificationsMap.has(spec.productId)) {
+                            existingSpecificationsMap.set(spec.productId, []);
+                        }
+                        existingSpecificationsMap.get(spec.productId)!.push(spec);
+                    });
            // Process updates & inserts separately
            const updatePromises = [];
-           const newProducts = [];
+           const newProducts: any[] = [];
 
            for (const product of input) {
                const existingProductId = existingSKUMap.get(product.sku);
@@ -309,26 +340,109 @@ export const productsRouter = createTRPCRouter({
                            .where(eq(products.id, existingProductId))
                    );
 
+    // Update or insert return exchange policy
+                    const existingPolicy = existingReturnPolicyMap.get(existingProductId);
+                    if (existingPolicy) {
+                        // Update existing return exchange policy
+                        updatePromises.push(
+                            ctx.db.update(returnExchangePolicy)
+                                .set({
+                                    returnable: product.returnable,
+                                    exchangeable: product.exchangeable,
+                                    returnDescription: product.returnDescription,
+                                    exchangeDescription: product.exchangeDescription,
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(returnExchangePolicy.productId, existingProductId))
+                        );
+                    } else {
+                        // Insert new return exchange policy
+                        updatePromises.push(
+                            ctx.db.insert(returnExchangePolicy).values({
+                                id: crypto.randomUUID(),
+                                productId: existingProductId,
+                                returnable: product.returnable,
+                                exchangeable: product.exchangeable,
+                                returnDescription: product.returnDescription,
+                                exchangeDescription: product.exchangeDescription,
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                            })
+                        );
+                    }
+                // Update specifications: delete existing and insert new
+                updatePromises.push(
+                    ctx.db.delete(productSpecifications)
+                        .where(eq(productSpecifications.productId, existingProductId))
+                );
+                if (product.specifications && product.specifications.length > 0) {
+                    updatePromises.push(
+                        ctx.db.insert(productSpecifications).values(
+                            product.specifications.map((spec) => ({
+                                id: crypto.randomUUID(),
+                                productId: existingProductId,
+                                key: spec.key,
+                                value: spec.value,
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                            }))
+                        )
+                    );
+                }
+
 
   // Handle product variants if provided
-  if (product.variants && product.variants.length > 0) {
-    const inputVariantSKUs = product.variants.map((variant) => variant.sku);
+//   if (product.variants && product.variants.length > 0) {
+//     const inputVariantSKUs = product.variants.map((variant) => variant.sku);
 
-    // Fetch existing variants with matching SKUs
+//     // Fetch existing variants with matching SKUs
+//     const existingVariants = await ctx.db.query.productVariants.findMany({
+//         where: (productVariants, { inArray }) => inArray(productVariants.sku, inputVariantSKUs as string[]),
+//     });
+// console.log(existingVariants, "existingVariants");
+//     // Map existing variants by SKU
+//     const existingVariantMap = new Map(existingVariants.map((v) => [v.sku, v.id]));
+
+// console.log(existingVariantMap, "existingVariantMap");
+
+//     for (const variant of product.variants) {
+//         const existingVariantId = existingVariantMap.get(variant.sku);
+
+//         if (existingVariantId) {
+//             // Update existing variant
+//             updatePromises.push(
+//                 ctx.db.update(productVariants)
+//                     .set({
+//                         price: variant.price,
+//                         quantity: variant.quantity,
+//                         weight: variant.weight,
+//                         width: variant.width,
+//                         height: variant.height,
+//                         length: variant.length,
+//                         updatedAt: new Date(),
+//                     })
+//                     .where(eq(productVariants.id, existingVariantId))
+//             );
+//         } else {
+//             // Insert new variant
+//             newProducts.push({
+//                 ...variant,
+//                 productId: existingProductId, // Link to the existing product
+//             });
+//         }
+//     }
+// }
+
+if (product.variants && product.variants.length > 0) {
+    const inputVariantSKUs = product.variants.map((variant) => variant.sku);
     const existingVariants = await ctx.db.query.productVariants.findMany({
         where: (productVariants, { inArray }) => inArray(productVariants.sku, inputVariantSKUs as string[]),
     });
-console.log(existingVariants, "existingVariants");
-    // Map existing variants by SKU
     const existingVariantMap = new Map(existingVariants.map((v) => [v.sku, v.id]));
-
-console.log(existingVariantMap, "existingVariantMap");
 
     for (const variant of product.variants) {
         const existingVariantId = existingVariantMap.get(variant.sku);
-
         if (existingVariantId) {
-            // Update existing variant
             updatePromises.push(
                 ctx.db.update(productVariants)
                     .set({
@@ -343,11 +457,28 @@ console.log(existingVariantMap, "existingVariantMap");
                     .where(eq(productVariants.id, existingVariantId))
             );
         } else {
-            // Insert new variant
-            newProducts.push({
-                ...variant,
-                productId: existingProductId, // Link to the existing product
-            });
+            updatePromises.push(
+                ctx.db.insert(productVariants).values({
+                    id: variant.id || crypto.randomUUID(),
+                    productId: existingProductId,
+                    sku: variant.sku,
+                    price: variant.price,
+                    quantity: variant.quantity,
+                    weight: variant.weight,
+                    width: variant.width,
+                    height: variant.height,
+                    length: variant.length,
+                    combinations: variant.combinations,
+                    nativeSku: variant.nativeSku,
+                    barcode: variant.barcode,
+                    hsCode: variant.hsCode,
+                    originCountry: variant.originCountry,
+                    image: variant.image,
+                    isDeleted: false,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                })
+            );
         }
     }
 }
@@ -355,13 +486,18 @@ console.log(existingVariantMap, "existingVariantMap");
 
 
                } else {
-                   // If product doesn't exist, prepare for insertion
-                //    const slug = generateProductSlug(product.title, existingBrand.name);
-                   const slug = generateProductSlug(
-                            product.title,
-                            user.brand!.name
-                        );
-                   newProducts.push({ ...product, slug });
+                const slug = generateProductSlug(product.title, user.brand!.name);
+                newProducts.push({
+                    ...product,
+                    slug,
+                    returnExchangePolicy: {
+                        returnable: product.returnable,
+                        exchangeable: product.exchangeable,
+                        returnDescription: product.returnDescription,
+                        exchangeDescription: product.exchangeDescription,
+                    },
+                    specifications: product.specifications || [],
+                });
                }
            }
 
@@ -371,11 +507,66 @@ console.log(existingVariantMap, "existingVariantMap");
            // Execute all updates in parallel
            await Promise.all(updatePromises);
 
+        //    // Insert new products (if any)
+        //    let newData: any[] = [];
+        //    if (newProducts.length > 0) {
+        //        newData = await queries.products.bulkCreateProducts(newProducts as any);
+        //    }
            // Insert new products (if any)
            let newData: any[] = [];
-           if (newProducts.length > 0) {
-               newData = await queries.products.bulkCreateProducts(newProducts as any);
-           }
+
+        if (newProducts.length > 0) {
+            // Insert new products
+            newData = await queries.products.bulkCreateProducts(
+                newProducts.map((p) => ({
+                    ...p,
+                    // Exclude returnExchangePolicy and specifications from product insertion
+                    returnable: undefined,
+                    exchangeable: undefined,
+                    returnDescription: undefined,
+                    exchangeDescription: undefined,
+                    specifications: undefined,
+                }))
+            );
+
+            // Insert return exchange policies for new products
+            const returnPolicyInserts = newData.map((product) => {
+                const inputProduct = newProducts.find((p) => p.sku === product.sku);
+                return {
+                    id: crypto.randomUUID(),
+                    productId: product.id,
+                    returnable: inputProduct?.returnable ?? false,
+                    exchangeable: inputProduct?.exchangeable ?? false,
+                    returnDescription: inputProduct?.returnDescription ?? null,
+                    exchangeDescription: inputProduct?.exchangeDescription ?? null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                };
+            });
+
+            if (returnPolicyInserts.length > 0) {
+                await ctx.db.insert(returnExchangePolicy).values(returnPolicyInserts);
+            }
+
+            // Insert specifications for new products
+            const specificationInserts = newData.flatMap((product) => {
+                const inputProduct = newProducts.find((p) => p.sku === product.sku);
+                return (inputProduct?.specifications ?? []).map((spec: any) => ({
+                    id: crypto.randomUUID(),
+                    productId: product.id,
+                    key: spec.key,
+                    value: spec.value,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                }));
+            });
+
+            if (specificationInserts.length > 0) {
+                await ctx.db.insert(productSpecifications).values(specificationInserts);
+            }
+        }
+
+
 
 
 
