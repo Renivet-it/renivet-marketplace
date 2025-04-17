@@ -1,5 +1,6 @@
 "use client";
 
+import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
@@ -43,6 +44,7 @@ import {
     formatPriceTag,
 } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -59,8 +61,6 @@ import Link from "next/link";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductAction } from "./product-admin-action";
-import { useQueryClient } from "@tanstack/react-query";
-import { TableSkeleton } from "@/components/globals/skeletons";
 
 export type TableProduct = ProductWithBrand & {
     stock: number;
@@ -312,7 +312,11 @@ const columns: ColumnDef<TableProduct>[] = [
         id: "actions",
         cell: ({ row }) => {
             const data = row.original;
-            return <ProductAction product={{ ...data, visibility: data.visibility ?? true }} />;
+            return (
+                <ProductAction
+                    product={{ ...data, visibility: data.visibility ?? true }}
+                />
+            );
         },
     },
 ];
@@ -332,11 +336,9 @@ export function ProductsReviewTable({ initialData }: PageProps) {
     });
     const [productImage, setImageFilter] = useQueryState(
         "productImage",
-        parseAsStringLiteral([
-            "with",
-            "without",
-            "all",
-        ] as const).withDefault("all")
+        parseAsStringLiteral(["with", "without", "all"] as const).withDefault(
+            "all"
+        )
     );
 
     const [verificationStatus, setVerificationStatus] = useQueryState(
@@ -372,8 +374,7 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                     ? x.variants.reduce((acc, curr) => acc + curr.quantity, 0)
                     : (x.quantity ?? 0),
                 brandName: x.brand.name,
-                                    visibility: x.isPublished,
-
+                visibility: x.isPublished,
             })),
         [dataRaw]
     );
@@ -400,78 +401,89 @@ export function ProductsReviewTable({ initialData }: PageProps) {
     });
     return (
         <div className="space-y-4">
-            {isFetching ? (<TableSkeleton />) : (
+            {isFetching ? (
+                <TableSkeleton />
+            ) : (
                 <>
-                 <div className="flex items-center gap-2">
-                 <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
-                     <Input
-                         placeholder="Search by title..."
-                         value={
-                             (table
-                                 .getColumn("title")
-                                 ?.getFilterValue() as string) ?? search
-                         }
-                         onChange={(event) => {
-                             table
-                                 .getColumn("title")
-                                 ?.setFilterValue(event.target.value);
-                             setSearch(event.target.value);
-                         }}
-                     />
- 
-                     <Select
-                         value={
-                             (table
-                                 .getColumn("verificationStatus")
-                                 ?.getFilterValue() as string) ??
-                             verificationStatus
-                         }
-                         onValueChange={(value) => {
-                             table
-                                 .getColumn("verificationStatus")
-                                 ?.setFilterValue(value);
-                             setVerificationStatus(
-                                 value as TableProduct["verificationStatus"]
-                             );
-                         }}
-                     >
-                         <SelectTrigger className="capitalize">
-                             <SelectValue placeholder="Search by status" />
-                         </SelectTrigger>
-                         <SelectContent>
-                             {["idle", "pending", "approved", "rejected"].map(
-                                 (x) => (
-                                     <SelectItem key={x} value={x}>
-                                         {convertValueToLabel(x)}
-                                     </SelectItem>
-                                 )
-                             )}
-                         </SelectContent>
-                     </Select>
-                     <Select onValueChange={(value: ImageFilter) => setImageFilter(value)}>
-                         <SelectTrigger>
-                             <SelectValue placeholder="Filter by Image" />
-                         </SelectTrigger>
-                         <SelectContent>
-                             <SelectItem value="with">With Image</SelectItem>
-                             <SelectItem value="without">
-                                 Without Image
-                             </SelectItem>
-                             <SelectItem value="all">All</SelectItem>
-                         </SelectContent>
-                     </Select>
-                 </div>
- 
-                 <DataTableViewOptions table={table} />
-             </div>
- 
-             <DataTable
-                 columns={columns as ColumnDef<any>[]}
-                 table={table}
-                 pages={pages}
-                 count={count}
-             />
-             </>
+                    <div className="flex items-center gap-2">
+                        <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
+                            <Input
+                                placeholder="Search by title..."
+                                value={
+                                    (table
+                                        .getColumn("title")
+                                        ?.getFilterValue() as string) ?? search
+                                }
+                                onChange={(event) => {
+                                    table
+                                        .getColumn("title")
+                                        ?.setFilterValue(event.target.value);
+                                    setSearch(event.target.value);
+                                }}
+                            />
+
+                            <Select
+                                value={
+                                    (table
+                                        .getColumn("verificationStatus")
+                                        ?.getFilterValue() as string) ??
+                                    verificationStatus
+                                }
+                                onValueChange={(value) => {
+                                    table
+                                        .getColumn("verificationStatus")
+                                        ?.setFilterValue(value);
+                                    setVerificationStatus(
+                                        value as TableProduct["verificationStatus"]
+                                    );
+                                }}
+                            >
+                                <SelectTrigger className="capitalize">
+                                    <SelectValue placeholder="Search by status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[
+                                        "idle",
+                                        "pending",
+                                        "approved",
+                                        "rejected",
+                                    ].map((x) => (
+                                        <SelectItem key={x} value={x}>
+                                            {convertValueToLabel(x)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                onValueChange={(value: ImageFilter) =>
+                                    setImageFilter(value)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter by Image" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="with">
+                                        With Image
+                                    </SelectItem>
+                                    <SelectItem value="without">
+                                        Without Image
+                                    </SelectItem>
+                                    <SelectItem value="all">All</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <DataTableViewOptions table={table} />
+                    </div>
+
+                    <DataTable
+                        columns={columns as ColumnDef<any>[]}
+                        table={table}
+                        pages={pages}
+                        count={count}
+                    />
+                </>
             )}
         </div>
     );
