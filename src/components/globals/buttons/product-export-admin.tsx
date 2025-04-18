@@ -3,7 +3,7 @@
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { convertPaiseToRupees } from "@/lib/utils";
-import { ProductWithBrand } from "@/lib/validations";
+import { ProductWithBrand, } from "@/lib/validations";
 import { unparse } from "papaparse";
 import { toast } from "sonner";
 
@@ -14,9 +14,21 @@ interface PageProps {
 export function ProductExportAdminButton({ products }: PageProps) {
     const handleExport = () => {
         if (products.length === 0) return toast.error("No products to export");
-
+        // Debug: Log products with return/exchange fields
+        console.log("Products with return/exchange fields:", products);
+        const maxSpecifications = Math.max(
+            ...products.map((product) => product.specifications?.length || 0),
+            1 // Ensure at least one specification column
+          );
+          console.log("Maximum number of specifications:", maxSpecifications);
         try {
             const productsData = products.flatMap((product) => {
+                const specificationData: Record<string, string> = {};
+                for (let i = 0; i < maxSpecifications; i++) {
+                const spec = product.specifications?.[i];
+                specificationData[`Specification${i + 1} Key`] = spec?.key || "";
+                specificationData[`Specification${i + 1} Value`] = spec?.value || "";
+                }
                 if (!product.productHasVariants) {
                     return [
                         {
@@ -67,10 +79,34 @@ export function ProductExportAdminButton({ products }: PageProps) {
                             "Height (cm)": product.height || 0,
                             "Country Code (ISO)": product.originCountry || "",
                             "HS Code": product.hsCode || "",
+                            "Media": product.media ? JSON.stringify(product.media) : "",
+                            "Returnable": product
+                    ? product.returnable
+                        ? "true"
+                        : "false"
+                    : "",
+                "Return Description": product
+                    ? product.returnDescription || ""
+                    : "",
+                Exchangeable: product
+                    ? product.exchangeable
+                        ? "true"
+                        : "false"
+                    : "",
+                "Exchange Description": product
+                    ? product.exchangeDescription || ""
+                    : "",
+                    ...specificationData, // Include specification data
                         },
                     ];
                 }
-
+            // Dynamic specification columns
+            // const specificationData: Record<string, string> = {};
+            // for (let i = 0; i < maxSpecifications; i++) {
+            // const spec = product.specifications?.[i];
+            // specificationData[`Specification${i + 1} Label`] = spec?.value || "";
+            // specificationData[`Specification${i + 1} Key`] = spec?.key || "";
+            // }
                 return product.variants.map((variant, index) => {
                     const optionValues: Record<string, string> = {};
                     Object.entries(variant.combinations).forEach(
@@ -89,7 +125,6 @@ export function ProductExportAdminButton({ products }: PageProps) {
                             }
                         }
                     );
-
                     return {
                         "Product ID": product.id,
                         "Product Title": product.title,
@@ -145,6 +180,24 @@ export function ProductExportAdminButton({ products }: PageProps) {
                         "Height (cm)": variant.height,
                         "Country Code (ISO)": variant.originCountry || "",
                         "HS Code": variant.hsCode || "",
+                        "Media": product.media ? JSON.stringify(product.media) : "",
+                        "Returnable": product
+                    ? product.returnable
+                        ? "true"
+                        : "false"
+                    : "",
+                "Return Description": product
+                    ? product.returnDescription || ""
+                    : "",
+                Exchangeable: product
+                    ? product.exchangeable
+                        ? "true"
+                        : "false"
+                    : "",
+                "Exchange Description": product
+                    ? product.exchangeDescription || ""
+                    : "",
+                    ...specificationData,
                     };
                 });
             });

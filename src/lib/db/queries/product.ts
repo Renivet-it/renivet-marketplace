@@ -124,6 +124,13 @@ class ProductQuery {
                 options: true,
                 journey: true,
                 values: true,
+                returnExchangePolicy: true,
+                specifications: {
+                    columns: {
+                        key: true,
+                        value: true,
+                    },
+                },
             },
             where: and(...filters),
         });
@@ -155,6 +162,14 @@ class ProductQuery {
             variants: product.variants.map((variant) => ({
                 ...variant,
                 mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+            returnable: product.returnExchangePolicy?.returnable ?? false,
+            returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+            exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+            exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+            specifications: product.specifications.map((spec) => ({
+                key: spec.key,
+                value: spec.value,
             })),
         }));
 
