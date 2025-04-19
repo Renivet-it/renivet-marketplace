@@ -127,11 +127,11 @@ export const ordersRouter = createTRPCRouter({
                     message:
                         "You are not allowed to create an order for another user",
                 });
-            if (user.brand !== null)
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
-                });
+            // if (user.brand !== null)
+            //     throw new TRPCError({
+            //         code: "FORBIDDEN",
+            //         message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
+            //     });
 
             return next();
         })
