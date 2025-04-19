@@ -11,6 +11,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import ShippingAddress from "./component/shipping-address";
 
 export const metadata: Metadata = {
     title: "Shopping Cart",
@@ -26,7 +27,7 @@ export default function Page() {
                     <CardDescription>View and manage your cart</CardDescription>
                 </CardHeader>
             </Card>
-
+           <ShippingAddress></ShippingAddress>
             <Suspense fallback={<CartSkeleton />}>
                 <CartFetch />
             </Suspense>
