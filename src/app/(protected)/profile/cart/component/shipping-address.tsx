@@ -25,11 +25,13 @@ import { cn } from "@/lib/utils";
 import { Loader2, Phone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./address-add-form";
+import { useCartStore } from "@/lib/store/cart-store";
 
 export default function ShippingAddress({ className, ...props }: GenericProps) {
     const { data: user, isLoading } = trpc.general.users.currentUser.useQuery();
     const addresses = useMemo(() => user?.addresses ?? [], [user?.addresses]);
     const [formOpen, setFormOpen] = useState(false);
+    const setSelectedShippingAddress = useCartStore((state) => state.setSelectedShippingAddress);
 
     const primaryAddress = addresses.find((addr) => addr.isPrimary);
     const [selectedAddressId, setSelectedAddressId] = useState("");
@@ -43,6 +45,12 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
     const selectedAddress = addresses.find(
         (addr) => addr.id === selectedAddressId
     );
+
+    useEffect(() => {
+        if (selectedAddress) {
+            setSelectedShippingAddress(selectedAddress);
+        }
+    }, [selectedAddress, setSelectedShippingAddress]);
 
     return (
         <>
@@ -214,6 +222,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                 onSuccess={() => {
                                                     setFormOpen(false);
                                                 }}
+                                                onCancel={() => setFormOpen(false)}
                                             />
                                         )}
                                     </DialogContent>
