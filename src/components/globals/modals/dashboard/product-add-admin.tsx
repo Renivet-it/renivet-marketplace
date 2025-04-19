@@ -622,11 +622,14 @@ const processFile = async (file: File) => {
                 /^Specification\d+ Label$/.test(key)
             );
             for (const labelKey of specKeys) {
+                // const valueKey = labelKey.replace("Label", "Value");
+                // // const label = firstRow[labelKey]?.trim();
+                // // const value = firstRow[valueKey]?.trim();
+                // const label = (firstRow[labelKey as keyof ImportRow] as string)?.trim();
+                // const value = (firstRow[valueKey as keyof ImportRow] as string)?.trim();
                 const valueKey = labelKey.replace("Label", "Value");
-                // const label = firstRow[labelKey]?.trim();
-                // const value = firstRow[valueKey]?.trim();
-                const label = (firstRow[labelKey as keyof ImportRow] as string)?.trim();
-                const value = (firstRow[valueKey as keyof ImportRow] as string)?.trim();
+                const label = String(firstRow[labelKey as keyof ImportRow] ?? "").trim();
+                 const value = String(firstRow[valueKey as keyof ImportRow] ?? "").trim();
 
                 if (label && value) {
                     specifications.push({ key: label, value });
@@ -707,11 +710,25 @@ const processFile = async (file: File) => {
                 // **Variant Product Handling**
                 const optionsMap = new Map<string, Set<string>>();
 
+                // for (const row of rows) {
+                //     for (let i = 1; i <= 3; i++) {
+                //         const name = row[`Option${i} Name` as keyof ImportRow];
+                //         const value = row[`Option${i} Value` as keyof ImportRow];
+
+                //         if (name && value) {
+                //             if (!optionsMap.has(name)) {
+                //                 optionsMap.set(name, new Set());
+                //             }
+                //             optionsMap.get(name)?.add(value);
+                //         }
+                //     }
+                // }
                 for (const row of rows) {
                     for (let i = 1; i <= 3; i++) {
-                        const name = row[`Option${i} Name` as keyof ImportRow];
-                        const value = row[`Option${i} Value` as keyof ImportRow];
+                        const name = String(row[`Option${i} Name` as keyof ImportRow] ?? "").trim();
+                        const value = String(row[`Option${i} Value` as keyof ImportRow] ?? "").trim();
 
+                        // Only add to optionsMap if both name and value are non-empty
                         if (name && value) {
                             if (!optionsMap.has(name)) {
                                 optionsMap.set(name, new Set());
@@ -776,9 +793,12 @@ const processFile = async (file: File) => {
                         /^Specification\d+ Label$/.test(key)
                     );
                     for (const labelKey of variantSpecKeys) {
+                        // const valueKey = labelKey.replace("Label", "Value");
+                        // const label = (row as any)[labelKey]?.trim();
+                        // const value = (row as any)[valueKey]?.trim();
                         const valueKey = labelKey.replace("Label", "Value");
-                        const label = (row as any)[labelKey]?.trim();
-                        const value = (row as any)[valueKey]?.trim();
+                    const label = String(row[labelKey as keyof ImportRow] ?? "").trim();
+                    const value = String(row[valueKey as keyof ImportRow] ?? "").trim();
                         if (label && value) {
                             variantSpecifications.push({ key: label, value });
                         }
