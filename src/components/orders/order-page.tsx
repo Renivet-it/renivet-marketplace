@@ -1,6 +1,7 @@
 "use client";
 
 import { getShiprocketBalance, updateOrderAddress } from "@/actions";
+import AddAddressForm from "@/app/(protected)/profile/cart/component/address-add-form";
 import {
     Notice,
     NoticeButton,
@@ -23,9 +24,10 @@ import {
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PaymentProcessingModal } from "../globals/modals";
 import { Icons } from "../icons";
@@ -39,6 +41,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from "../ui/dialog-general";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -78,6 +81,9 @@ export function OrderPage({
     const [isAddressChangeModalOpen, setIsAddressChangeModalOpen] =
         useState(false);
 
+    const [localLoading, setLocalLoading] = useState(true);
+    const [formOpen, setFormOpen] = useState(false);
+
     const { data: order, refetch } = trpc.general.orders.getOrder.useQuery(
         { id: initialData.id },
         { initialData }
@@ -106,7 +112,14 @@ export function OrderPage({
 
     const [deliveryAddress, setDeliveryAddress] = useState<
         CachedUser["addresses"][number] | undefined
-    >(user.addresses?.find((address) => address.isPrimary));
+    >(undefined);
+
+    useEffect(() => {
+        if (order?.address) {
+            setDeliveryAddress(order.address);
+            setLocalLoading(false);
+        }
+    }, [order?.address]);
 
     const priceList = {
         items: availableItems.reduce((acc, item) => {
@@ -205,7 +218,12 @@ export function OrderPage({
                         <div className="font-semibold">Delivery Address</div>
 
                         <div className="md:col-span-3">
-                            {deliveryAddress ? (
+                            {localLoading ? (
+                                <div className="flex h-24 items-center justify-center text-muted-foreground">
+                                    <Loader2 className="mr-2 animate-spin" />
+                                    Loading addresses...
+                                </div>
+                            ) : deliveryAddress ? (
                                 <div className="space-y-1">
                                     <div className="font-semibold">
                                         {deliveryAddress.fullName}
@@ -231,7 +249,7 @@ export function OrderPage({
                             )}
                         </div>
 
-                        <div className="flex items-start justify-end">
+                        <div className="flex flex-col items-start justify-end space-y-3">
                             <button
                                 className="text-xs text-primary hover:underline md:text-sm"
                                 onClick={() => {
@@ -247,6 +265,30 @@ export function OrderPage({
                             >
                                 Change
                             </button>
+                            <Dialog open={formOpen} onOpenChange={setFormOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        Add New Address
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            Add New Address
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    {user?.id && (
+                                        <AddAddressForm
+                                            user={user}
+                                            onSuccess={() => {
+                                                setFormOpen(false);
+                                            }}
+                                            onCancel={() => setFormOpen(false)}
+                                        />
+                                    )}
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     </div>
 
@@ -701,17 +743,6 @@ export function OrderPage({
                                 ))}
                         </RadioGroup>
                     </div>
-
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button className="w-full" asChild>
-                                <Link href="/profile/addresses" target="_blank">
-                                    Add New Address
-                                    <Icons.ArrowRight />
-                                </Link>
-                            </Button>
-                        </DialogClose>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

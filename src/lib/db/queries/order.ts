@@ -288,6 +288,7 @@ class OrderQuery {
                     : undefined
             ),
             with: {
+                address: true,
                 shipments: true,
                 items: {
                     with: {
