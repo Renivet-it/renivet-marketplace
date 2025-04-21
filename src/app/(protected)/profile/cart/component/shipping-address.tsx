@@ -237,7 +237,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                             Add New Address
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent>
+                                    <DialogContent className="sm:max-w-[800px]">
                                         <DialogHeader>
                                             <DialogTitle>
                                                 Add New Address
