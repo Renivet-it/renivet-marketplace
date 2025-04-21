@@ -20,18 +20,20 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog-dash";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { Loader2, Phone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./address-add-form";
-import { useCartStore } from "@/lib/store/cart-store";
 
 export default function ShippingAddress({ className, ...props }: GenericProps) {
     const { data: user, isLoading } = trpc.general.users.currentUser.useQuery();
     const addresses = useMemo(() => user?.addresses ?? [], [user?.addresses]);
     const [formOpen, setFormOpen] = useState(false);
-    const setSelectedShippingAddress = useCartStore((state) => state.setSelectedShippingAddress);
+    const setSelectedShippingAddress = useCartStore(
+        (state) => state.setSelectedShippingAddress
+    );
 
     const primaryAddress = addresses.find((addr) => addr.isPrimary);
     const [selectedAddressId, setSelectedAddressId] = useState("");
@@ -70,10 +72,36 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                             Loading addresses...
                         </div>
                     ) : addresses.length === 0 || !selectedAddress ? (
-                        <div className="text-sm text-muted-foreground">
-                            You have no saved addresses. Please add one to
-                            proceed with checkout.
-                        </div>
+                        <>
+                            <div className="mb-4 text-sm text-muted-foreground">
+                                You have no saved addresses. Please add one to
+                                proceed with checkout.
+                            </div>
+                            <Dialog open={formOpen} onOpenChange={setFormOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                        Add New Address
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[800px]">
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            Add New Address
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    {user?.id && (
+                                        <AddAddressForm
+                                            user={user}
+                                            onSuccess={() => {
+                                                setFormOpen(false);
+                                            }}
+                                            onCancel={() => setFormOpen(false)}
+                                        />
+                                    )}
+                                </DialogContent>
+                            </Dialog>
+                        </>
                     ) : (
                         <>
                             <div className="flex items-start space-x-4 rounded-md border p-4">
@@ -222,7 +250,9 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                 onSuccess={() => {
                                                     setFormOpen(false);
                                                 }}
-                                                onCancel={() => setFormOpen(false)}
+                                                onCancel={() =>
+                                                    setFormOpen(false)
+                                                }
                                             />
                                         )}
                                     </DialogContent>
