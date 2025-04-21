@@ -76,7 +76,7 @@ export function ProductJourneyManageForm({ brandId, product }: PageProps) {
                     id: toastId,
                 });
                 router.refresh();
-                router.push(`/dashboard/brands/${brandId}/products`);
+                // router.push(`/dashboard/brands/${brandId}/products`);
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
