@@ -104,9 +104,9 @@ export function ProductAction({ product }: PageProps) {
                             </Link>
                         </DropdownMenuItem>
 
-                        {/* <DropdownMenuItem asChild>
+                        <DropdownMenuItem asChild>
                             <Link
-                                href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/values`}
+                                href={`/dashboard/general/products/preview-form/${product.id}/values`}
                             >
                                 <Icons.ShoppingCart className="size-4" />
                                 <span>
@@ -119,7 +119,7 @@ export function ProductAction({ product }: PageProps) {
 
                         <DropdownMenuItem asChild>
                             <Link
-                                href={`/dashboard/brands/${product.brandId}/products/p/${product.id}/journey`}
+                                href={`/dashboard/general/products/preview-form/${product.id}/journey`}
                             >
                                 <Icons.Globe className="size-4" />
                                 <span>
@@ -128,7 +128,7 @@ export function ProductAction({ product }: PageProps) {
                                         : "Add Journey"}
                                 </span>
                             </Link>
-                        </DropdownMenuItem> */}
+                        </DropdownMenuItem>
 
                         {product.isPublished && (
                             <>

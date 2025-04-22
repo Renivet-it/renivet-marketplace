@@ -997,7 +997,7 @@ export function ProductImportButton({
                 ref={fileInputRef}
                 onChange={handleFileUpload}
                 disabled={isCreating}
-                accept=".csv"
+                accept=".csv,.xlxs"
                 className="absolute inset-0 cursor-pointer opacity-0"
                 style={{ display: "block", width: "100%", height: "100%" }}
             />

@@ -1019,7 +1019,7 @@ const processFile = async (file: File) => {
                                 type="file"
                                 id="products_file"
                                 className="hidden h-9"
-                                accept=".csv"
+                                accept=".csv,.xlsx"
                                 onChange={(e) =>
                                     setFile(e.target.files?.[0] ?? null)
                                 }
