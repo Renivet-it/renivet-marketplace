@@ -52,6 +52,8 @@ export const orderSchema = z.object({
         "delivered",
         "cancelled",
     ]),
+    shiprocketOrderId: z.number().nullable().optional(), // Changed from string to number
+    shiprocketShipmentId: z.number().nullable().optional(), // Added new field
     addressId: z
         .string({
             required_error: "Address ID is required",

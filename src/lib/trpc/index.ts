@@ -32,6 +32,7 @@ import {
     ticketRouter,
     usersRouter,
 } from "./routes/general";
+import { addressesRouter } from "./routes/general/address";
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({
@@ -53,6 +54,7 @@ export const appRouter = createTRPCRouter({
         tags: tagsRouter,
         tickets: ticketRouter,
         users: usersRouter,
+        addresses: addressesRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,

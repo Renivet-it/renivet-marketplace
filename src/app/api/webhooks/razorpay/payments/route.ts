@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
 
                             // Generate label
                             const labelResult = await sr.generateLabel({
-                                shipment_id: shipment.shiprocketShipmentId!,
+                                shipment_id: [shipment.shiprocketShipmentId!],
                             });
 
                             // Generate invoice
@@ -237,7 +237,8 @@ export async function POST(req: NextRequest) {
 
                             // Generate manifest
                             const manifestResult = await sr.generateManifest({
-                                shipment_id: shipment.shiprocketShipmentId!,
+                                shipment_id: [shipment.shiprocketShipmentId!],
+
                             });
 
                             // Update shipment details in database
