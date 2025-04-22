@@ -1,5 +1,7 @@
 import { env } from "@/../env";
+import { Body } from "@react-email/components";
 import axios, { AxiosInstance } from "axios";
+import { orderQueries } from "../db/queries";
 import { shipRocketCache } from "../redis/methods";
 import { AppError, sanitizeError } from "../utils";
 import {
@@ -12,6 +14,11 @@ import {
     PickupLocation,
     PrintManifest,
 } from "./validations/request";
+import {
+    GetCourierServiceabilityParams,
+    getCouriersParams,
+    PostShipmentPickupBody,
+} from "./validations/request/couriers";
 import {
     AWBResponse,
     GenerateManifestResponse,
@@ -174,6 +181,20 @@ class ShipRocket {
 
     async generateAWB(values: AWB) {
         try {
+            const resultSet = await orderQueries.getShipmentDetailsByShipmentId(
+                values.shipment_id
+            );
+            const isAwbGeneratedTrue = resultSet.some(
+                (shipment) => shipment.isAwbGenerated === true
+            );
+
+            if (isAwbGeneratedTrue) {
+                return {
+                    status: true,
+                    message: "AWB alredy generated",
+                    data: resultSet,
+                };
+            }
             const res = await this.axiosInstance.post<AWBResponse>(
                 "/courier/assign/awb",
                 values
@@ -187,7 +208,18 @@ class ShipRocket {
             const { awb_assign_status, response } = res.data;
             if (!awb_assign_status)
                 throw new AppError("Unable to generate AWB", "CONFLICT");
-
+            await orderQueries.updateAwbGenerationStatus(
+                values.shipment_id,
+                awb_assign_status === 1
+            );
+            await orderQueries.createAwbNumber(
+                values.shipment_id,
+                response.data.awb_code
+            );
+            await orderQueries.saveAwbShiprocketResponse(
+                values.shipment_id,
+                res.data
+            );
             return {
                 status: true,
                 message: "AWB generated",
@@ -367,6 +399,149 @@ class ShipRocket {
                 status: true,
                 message: "Order deleted successfully!",
                 data: null,
+            };
+        } catch (err) {
+            return {
+                status: false,
+                message: sanitizeError(err),
+                data: null,
+            };
+        }
+    }
+
+    async getCouriers(params?: getCouriersParams) {
+        try {
+            const res = await this.axiosInstance.get(
+                "/courier/courierListWithCounts",
+                {
+                    params,
+                }
+            );
+            if (res.status !== 200)
+                throw new AppError(
+                    "Unable to get couriers",
+                    "INTERNAL_SERVER_ERROR"
+                );
+
+            return {
+                status: true,
+                message: "Get couriers successfully!",
+                data: res.data,
+            };
+        } catch (err) {
+            return {
+                status: false,
+                message: sanitizeError(err),
+                data: null,
+            };
+        }
+    }
+
+    async getCouriersForDeliveryLocation(
+        params: GetCourierServiceabilityParams
+    ) {
+        try {
+            const res = await this.axiosInstance.get(
+                "/courier/serviceability",
+                {
+                    params,
+                }
+            );
+            if (res.status !== 200)
+                throw new AppError(
+                    "Unable to get serviceability couriers",
+                    "INTERNAL_SERVER_ERROR"
+                );
+
+            return {
+                status: true,
+                message: "Get couriers successfully!",
+                data: res.data,
+            };
+        } catch (err) {
+            return {
+                status: false,
+                message: sanitizeError(err),
+                data: null,
+            };
+        }
+    }
+
+    async requestShipment(shipmentData: PostShipmentPickupBody) {
+        try {
+            const resultSet = await orderQueries.getShipmentDetailsByShipmentId(
+                shipmentData.shipment_id
+            );
+            const isAwbGeneratedFalse = resultSet.some(
+                (shipment) => shipment.isAwbGenerated === false
+            );
+            const isShipmentGenerated = resultSet.some(
+                (shipment) => shipment.isPickupScheduled === true
+            );
+
+            if (isShipmentGenerated) {
+                return {
+                    status: true,
+                    message: "Pickup already scheduled",
+                    data: resultSet,
+                };
+            }
+
+            if (isAwbGeneratedFalse) {
+                throw new AppError(
+                    "AWB generation is pending for some shipments, cannot proceed.",
+                    "BAD_REQUEST"
+                );
+            }
+
+            const formatedShipmentData: {
+                shipment_id: number[];
+                pickup_date: Date[] | undefined;
+                status?: string | undefined;
+            } = {
+                shipment_id: [shipmentData.shipment_id],
+                pickup_date: shipmentData?.pickup_date
+                    ? [shipmentData.pickup_date]
+                    : undefined,
+                status: shipmentData?.status ? shipmentData.status : undefined,
+            };
+
+            const res = await this.axiosInstance.post(
+                "/courier/generate/pickup",
+                formatedShipmentData
+            );
+            if (res.status !== 200)
+                throw new AppError(
+                    "Unable to get serviceability couriers",
+                    "INTERNAL_SERVER_ERROR"
+                );
+
+            if (res.data?.Status === true) {
+                await orderQueries.updatePickUpStatus(
+                    shipmentData.shipment_id,
+                    res.data?.Status === true
+                );
+            } else if (res.data?.pickup_status === 1) {
+                await orderQueries.updatePickUpStatus(
+                    shipmentData.shipment_id,
+                    res.data.pickup_status === 1
+                );
+                await orderQueries.createPickupDetails(
+                    shipmentData.shipment_id,
+                    res.data.response.pickup_token_number,
+                    res.data.response.pickup_scheduled_date
+                );
+            }
+
+            await orderQueries.savePickupShiprocketResponse(
+                shipmentData.shipment_id,
+                res.data
+            );
+
+            return {
+                status: true,
+                message: "pickup couriers set successfully!",
+                data: res.data,
             };
         } catch (err) {
             return {

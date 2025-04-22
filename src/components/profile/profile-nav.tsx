@@ -45,11 +45,11 @@ const shoppingNavItems: Item[] = [
         name: "wishlist",
         href: "/wishlist",
     },
-    {
-        icon: "ShoppingCart",
-        name: "cart",
-        href: "/cart",
-    },
+    // {
+    //     icon: "ShoppingCart",
+    //     name: "cart",
+    //     href: "/mycart",
+    // },
     {
         icon: "ShoppingBag",
         name: "orders",

@@ -225,8 +225,136 @@ export const brandConfidentialWithBrandSchema = brandConfidentialSchema.extend({
     bankAccountVerificationDocument: cachedBrandMediaItemSchema.nullish(),
     udyamRegistrationCertificate: cachedBrandMediaItemSchema.nullish(),
     iecCertificate: cachedBrandMediaItemSchema.nullish(),
-    brand: brandSchema,
+    // brand: brandSchema,
+    brand: z.lazy(() => brandSchema),
 });
+
+export const addressWithSafeSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+    addressLine1: z
+        .string({
+            required_error: "Address Line 1 is required",
+            invalid_type_error: "Address Line 1 must be a string",
+        })
+        .min(10, "Address Line 1 must be at least 10 characters long")
+        .max(80, "Address Line 1 must be at most 80 characters long"),
+    addressLine2: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Address Line 2 must be a string",
+            })
+            .nullable()
+    ),
+    city: z
+        .string({
+            required_error: "City is required",
+            invalid_type_error: "City must be a string",
+        })
+        .min(1, "City must be at least 1 characters long"),
+    state: z
+        .string({
+            required_error: "State is required",
+            invalid_type_error: "State must be a string",
+        })
+        .min(1, "State must be at least 1 characters long"),
+    postalCode: z
+        .string({
+            required_error: "Postal Code is required",
+            invalid_type_error: "Postal Code must be a string",
+        })
+        .min(1, "Postal Code must be at least 1 characters long"),
+    country: z
+        .string({
+            required_error: "Country is required",
+            invalid_type_error: "Country must be a string",
+        })
+        .refine((val) => val === "IN", {
+            message: "Country must be 'IN'",
+        }),
+    isSameAsWarehouseAddress: z.boolean({
+        required_error: "Is Same As Warehouse Address is required",
+        invalid_type_error: "Is Same As Warehouse Address must be a boolean",
+    }),
+    warehouseAddressLine1: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Address Line 1 must be a string",
+            })
+            .min(
+                10,
+                "Warehouse Address Line 1 must be at least 10 characters long"
+            )
+            .max(
+                80,
+                "Warehouse Address Line 1 must be at most 80 characters long"
+            )
+            .nullable()
+    ),
+    warehouseAddressLine2: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Address Line 2 must be a string",
+            })
+            .nullable()
+    ),
+    warehouseCity: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse City must be a string",
+            })
+            .nullable()
+    ),
+    warehouseState: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse State must be a string",
+            })
+            .nullable()
+    ),
+    warehousePostalCode: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Postal Code must be a string",
+            })
+            .nullable()
+    ),
+    warehouseCountry: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Warehouse Country must be a string",
+            })
+            .nullable()
+    ),
+});
+
+export const brandDetailsAddressWithSafeSchema = addressWithSafeSchema.extend({
+    brand: z.lazy(() =>
+        brandSchema.omit({
+            createdAt: true,
+            updatedAt: true,
+            confidentialVerificationStatus: true,
+            confidentialVerificationRejectedReason: true,
+            confidentialVerificationRejectedAt: true,
+            rzpAccountId: true,
+            ownerId: true,
+            phone: true,
+            bio: true,
+        })
+    ),
+});
+
 
 export const createBrandConfidentialSchema = brandConfidentialSchema
     .omit({
@@ -296,6 +424,26 @@ export const updateBrandConfidentialSchema = brandConfidentialSchema
         }
     );
 
+// export const linkBrandToRazorpaySchema = brandConfidentialSchema
+//     .pick({
+//         authorizedSignatoryName: true,
+//         addressLine1: true,
+//         addressLine2: true,
+//         city: true,
+//         state: true,
+//         postalCode: true,
+//         country: true,
+//         pan: true,
+//         gstin: true,
+//     })
+//     .extend({
+//         id: brandSchema.shape.id,
+//         name: brandSchema.shape.name,
+//         email: brandSchema.shape.email,
+//         phone: brandSchema.shape.phone,
+//         ownerId: brandSchema.shape.ownerId,
+//     });
+
 export const linkBrandToRazorpaySchema = brandConfidentialSchema
     .pick({
         authorizedSignatoryName: true,
@@ -309,11 +457,35 @@ export const linkBrandToRazorpaySchema = brandConfidentialSchema
         gstin: true,
     })
     .extend({
-        id: brandSchema.shape.id,
-        name: brandSchema.shape.name,
-        email: brandSchema.shape.email,
-        phone: brandSchema.shape.phone,
-        ownerId: brandSchema.shape.ownerId,
+        id: z
+            .string({
+                required_error: "ID is required",
+                invalid_type_error: "ID must be a string",
+            })
+            .uuid("ID is invalid"),
+        name: z
+            .string({
+                required_error: "Name is required",
+                invalid_type_error: "Name must be a string",
+            }),
+        email: z
+            .string({
+                required_error: "Email is required",
+                invalid_type_error: "Email must be a string",
+            })
+            .email("Email is invalid"),
+        phone: z
+            .string({
+                required_error: "Phone is required",
+                invalid_type_error: "Phone must be a string",
+            })
+            .min(10, "Phone must be at least 10 characters long"),
+        ownerId: z
+            .string({
+                required_error: "Owner ID is required",
+                invalid_type_error: "Owner ID must be a string",
+            })
+            .uuid("Owner ID is invalid"),
     });
 
 export type BrandConfidential = z.infer<typeof brandConfidentialSchema>;
@@ -330,3 +502,4 @@ export type UpdateBrandConfidential = z.infer<
     typeof updateBrandConfidentialSchema
 >;
 export type LinkBrandToRazorpay = z.infer<typeof linkBrandToRazorpaySchema>;
+export type BrandAddressWithSafe = z.infer<typeof brandDetailsAddressWithSafeSchema>;

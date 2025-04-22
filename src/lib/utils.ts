@@ -692,3 +692,34 @@ export function getRawNumberFromPhone(phone: string) {
 export function hasItems<T>(array?: T[]): array is T[] {
     return Array.isArray(array) && array.length > 0;
 }
+
+function generateRandomString(length: number): string {
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+}
+
+// Function to generate a readable and unique order_id
+export function generateOrderId(brandName: string): string {
+    // Get a short prefix from the brand name (first 3 letters, uppercase)
+    const brandPrefix = brandName.slice(0, 3).toUpperCase();
+
+    // Get a compact timestamp (last 6 digits of current timestamp in milliseconds)
+    const timestamp = Date.now().toString().slice(-6);
+
+    // Generate a 4-character random string for uniqueness
+    const randomString = generateRandomString(4);
+
+// Combine into the format: ORD-{brandPrefix}-{timestamp}-{randomString}
+    const orderId = `ORD-${brandPrefix}-${timestamp}-${randomString}`;
+
+    // Ensure the length is under 50 characters (it will be, but adding a check for safety)
+    if (orderId.length > 50) {
+        throw new Error(`Generated order_id exceeds 50 characters: ${orderId}`);
+    }
+
+    return orderId;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { getShiprocketBalance, updateOrderAddress } from "@/actions";
+import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 import AddAddressForm from "@/app/(protected)/profile/cart/component/address-add-form";
 import {
     Notice,
@@ -155,14 +156,14 @@ export function OrderPage({
                         addressId: deliveryAddress.id,
                     });
 
-                const hasBalance = await getShiprocketBalance();
+                const hasBalance = await getShiprocketBalance(10);
                 if (!hasBalance)
                     throw new Error(
                         "Cannot proceed with payment, please try again later"
                     );
 
                 setIsProcessing(true);
-
+// @ts-ignore
                 const options = createRazorpayPaymentOptions({
                     orderId,
                     deliveryAddress,
@@ -178,9 +179,46 @@ export function OrderPage({
 
                 initializeRazorpayPayment(options);
             },
-            onSuccess: (_, __, { toastId }) => {
-                toast.success("Payment initialized", { id: toastId });
-            },
+            // onSuccess: (_, __, { toastId }) => {
+            //     toast.success("Payment initialized", { id: toastId });
+            //     try {
+            //         // ✅ Call WhatsApp message API
+            //         await sendWhatsAppNotification({
+            //           phone: user.phone, // Make sure this is full intl format like '91XXXXXXXXXX'
+            //           template: "order_confirmation", // use your real template name
+            //           parameters: [user.name, order.id], // customize as per your template placeholders
+            //         });
+
+            //         toast.success("WhatsApp message sent");
+            //       } catch (err) {
+            //         toast.error("WhatsApp message failed");
+            //         console.error(err);
+            //       }
+            // },
+
+            onSuccess: async (_data, _variables, context) => {
+                toast.success("Payment initialized!", { id: context?.toastId });
+                // if (order) {
+                //   try {
+                //     // Format phone number to E.164 (e.g., +919876543210)
+                //     const formattedPhone = order?.address?.phone.startsWith("+")
+                //       ? order?.address?.phone
+                //       : `+91${order?.address?.phone}`; // Adjust country code as needed
+
+                //     // Send WhatsApp message using Twilio
+                //     await sendWhatsAppNotification({
+                //       phone: formattedPhone,
+                //       template: "order_confirmation",
+                //       parameters: [user.firstName, order.id],
+                //     });
+
+                //     toast.success("WhatsApp message sent");
+                //   } catch (err) {
+                //     toast.error("WhatsApp message failed");
+                //     console.error(err);
+                //   }
+                // }
+              },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
             },

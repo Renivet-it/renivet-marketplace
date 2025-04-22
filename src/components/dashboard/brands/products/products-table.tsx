@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/dialog-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select-dash";
+import {
     Table,
     TableBody,
     TableCell,
@@ -46,7 +53,7 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { parseAsInteger, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductAction } from "./product-action";
 
@@ -54,6 +61,8 @@ export type TableProduct = ProductWithBrand & {
     visibility: boolean;
     stock: number;
 };
+type ImageFilter = "with" | "without" | "all";
+type VisiblityFilter = "private" | "public" | "all";
 
 const columns: ColumnDef<TableProduct>[] = [
     {
@@ -319,7 +328,18 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
-
+    const [productImage, setImageFilter] = useQueryState(
+        "productImage",
+        parseAsStringLiteral(["with", "without", "all"] as const).withDefault(
+            "all"
+        )
+    );
+     const [productVisiblity, setVisiblityFilter] = useQueryState(
+            "productVisiblity",
+            parseAsStringLiteral(["private", "public", "all"] as const).withDefault(
+                "public"
+            )
+        );
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
@@ -330,7 +350,7 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
     const {
         data: { data: dataRaw, count },
     } = trpc.brands.products.getProducts.useQuery(
-        { brandIds: [brandId], limit, page, search },
+        { brandIds: [brandId], limit, page, productImage, productVisiblity, search },
         { initialData }
     );
 
@@ -374,7 +394,7 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
-                <div className="w-full md:w-auto">
+                {/* <div className="w-full md:w-auto"> */}
                     <Input
                         placeholder="Search by name..."
                         value={
@@ -382,16 +402,47 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
                                 .getColumn("title")
                                 ?.getFilterValue() as string) ?? search
                         }
-                        onChange={(event) => {
+                        onChange={(event:any) => {
                             table
                                 .getColumn("name")
                                 ?.setFilterValue(event.target.value);
                             setSearch(event.target.value);
                         }}
                     />
-                </div>
-
-                <DataTableViewOptions table={table} />
+                {/* </div> */}
+                <Select
+                        onValueChange={(value: ImageFilter) =>
+                            setImageFilter(value)
+                        }
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Filter by Image" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="with">With Image</SelectItem>
+                            <SelectItem value="without">
+                                Without Image
+                            </SelectItem>
+                            <SelectItem value="all">All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        onValueChange={(value: VisiblityFilter) =>
+                            setVisiblityFilter(value)
+                        }
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Filter by Visiblity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="public">Public</SelectItem>
+                            <SelectItem value="private">
+                               Private
+                            </SelectItem>
+                            <SelectItem value="all">All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <DataTableViewOptions table={table} />
             </div>
 
             <DataTable

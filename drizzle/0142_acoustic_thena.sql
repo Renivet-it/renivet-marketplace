@@ -1,0 +1,1 @@
+ALTER TABLE "order_shipments" ADD COLUMN "is_awb_generated" boolean DEFAULT false;

@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea-dash";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees, convertPriceToPaise, generateSKU, handleClientError, sanitizeHtml } from "@/lib/utils";
-import { BrandMediaItem, CachedBrand, CachedCategory, CachedProductType, CachedSubCategory, CreateProduct, createProductSchema, ProductWithBrand } from "@/lib/validations";
+import { BrandMediaItem, CachedBrand, CachedCategory, CachedProductType, CachedSubCategory, CreateProduct, createProductSchema, ProductWithBrand, UpdateProductMediaInput } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Country } from "country-state-city";
 import { Tag, TagInput } from "emblor";
@@ -184,6 +184,7 @@ export function ProductManageForm({
     });
 
 
+
     const countries = useMemo(() => Country.getAllCountries(), []);
 
     const profitOnItem = useMemo(() => {
@@ -248,7 +249,6 @@ export function ProductManageForm({
         },
         [productTypes]
     );
-
     const { mutate: createProduct, isPending: isCreating } =
         trpc.brands.products.createProduct.useMutation({
             onMutate: () => {
@@ -264,6 +264,20 @@ export function ProductManageForm({
                 return handleClientError(err, ctx?.toastId);
             },
         });
+        const { mutate: updateProductMedia, isPending: isUpdatingMedia } =
+        trpc.brands.products.updateProductMedia.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Updating product media...");
+                return { toastId };
+            },
+            onSuccess: (_, __, ctx) => {
+                toast.success("Product media updated successfully", { id: ctx.toastId });
+                window.location.reload();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
 
     const { mutate: updateProduct, isPending: isUpdating } =
         trpc.brands.products.updateProduct.useMutation({
@@ -271,10 +285,22 @@ export function ProductManageForm({
                 const toastId = toast.loading("Updating product...");
                 return { toastId };
             },
-            onSuccess: (_, __, { toastId }) => {
+            // onSuccess: (_, __, { toastId }) => {
+            //     toast.success("Product updated successfully", { id: toastId });
+            //     form.reset(form.getValues());
+            //     // router.refresh();
+            //     window.location.reload();
+            // },
+            onSuccess: (data, { productId }, { toastId }) => {
+                if (!data || data.id !== productId) {
+                  console.error("Invalid response:", data);
+                  toast.error("Update failed: Invalid product data", { id: toastId });
+                  return;
+                }
                 toast.success("Product updated successfully", { id: toastId });
                 form.reset(form.getValues());
-            },
+                window.location.reload();
+              },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
             },
@@ -1763,16 +1789,27 @@ export function ProductManageForm({
                         new Map(items.map((m) => [m.id, m])).values()
                     );
 
+                    // Console log the selected media with id and position
+                    const mediaWithPosition = uniqueMedia.map((item, i) => ({
+                        id: item.id,
+                        position: i + 1,
+                    }));
+                    console.log("Selected Media:", mediaWithPosition);
+
                     form.setValue(
                         "media",
-                        uniqueMedia.map((item, i) => ({
-                            id: item.id,
-                            position: i + 1,
-                        })),
+                        mediaWithPosition,
                         { shouldDirty: true }
                     );
 
                     setSelectedMedia(uniqueMedia);
+                    // Call tRPC mutation to update product media
+                    if (product?.id) {
+                        updateProductMedia({
+                            productId: product.id, // Use string directly
+                            media: mediaWithPosition,
+                        });
+                    }
                 }}
             />
 

@@ -52,6 +52,8 @@ export const orderSchema = z.object({
         "delivered",
         "cancelled",
     ]),
+    shiprocketOrderId: z.number().nullable().optional(), // Changed from string to number
+    shiprocketShipmentId: z.number().nullable().optional(), // Added new field
     addressId: z
         .string({
             required_error: "Address ID is required",
@@ -93,6 +95,11 @@ export const orderSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
+            // Optional fields
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        razorpayOrderId: z.string().optional(),
+
 });
 
 export const orderWithItemAndBrandSchema = orderSchema.extend({

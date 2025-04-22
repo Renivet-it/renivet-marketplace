@@ -55,7 +55,7 @@ export function CartPage({
             { initialData }
         );
 
-    const availableCart = userCart.filter(
+    const availableCart = userCart?.filter(
         (c) =>
             c.product.isPublished &&
             c.product.verificationStatus === "approved" &&
@@ -67,12 +67,12 @@ export function CartPage({
                 (c.variant && !c.variant.isDeleted && c.variant.quantity > 0))
     );
 
-    const unavailableCart = userCart.filter(
+    const unavailableCart = userCart?.filter(
         (item) => !availableCart.map((i) => i.id).includes(item.id)
     );
 
     const totalPrice = availableCart
-        .filter((item) => item.status)
+    ?.filter((item) => item.status)
         .reduce((acc, item) => {
             const itemPrice = item.variantId
                 ? (item.product.variants.find((v) => v.id === item.variantId)
@@ -84,7 +84,7 @@ export function CartPage({
         }, 0);
 
     const itemCount = availableCart
-        .filter((item) => item.status)
+    ?.filter((item) => item.status)
         .reduce((acc, item) => acc + item.quantity, 0);
 
     const getProgress = () => {
@@ -92,7 +92,7 @@ export function CartPage({
         return progress > 100 ? 100 : progress;
     };
 
-    const isAllSelected = availableCart.every((item) => item.status);
+    const isAllSelected = availableCart?.every((item) => item.status);
 
     const { mutate: updateSelection, isPending: isUpdating } =
         trpc.general.users.cart.updateStatusInCart.useMutation({
@@ -118,12 +118,12 @@ export function CartPage({
             },
         });
 
-    if (userCart.length === 0) return <NoCartCard />;
+    if (userCart?.length === 0) return <NoCartCard />;
 
     return (
         <>
             <div className={cn("space-y-5", className)} {...props}>
-                {unavailableCart.length > 0 && (
+                {unavailableCart?.length > 0 && (
                     <Notice>
                         <NoticeContent>
                             <NoticeTitle>
@@ -132,7 +132,7 @@ export function CartPage({
                             </NoticeTitle>
 
                             <p className="text-sm">
-                                {unavailableCart.length} item(s) in your cart
+                                {unavailableCart?.length} item(s) in your cart
                                 are no longer available.
                             </p>
                         </NoticeContent>
@@ -200,7 +200,7 @@ export function CartPage({
                 </div>
 
                 <div className="space-y-2">
-                    {availableCart.map((item) => (
+                    {availableCart?.map((item) => (
                         <ProductCartCard
                             item={item}
                             key={item.id}

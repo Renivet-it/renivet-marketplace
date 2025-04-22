@@ -35,7 +35,7 @@ async function CheckoutFetch({ params }: PageProps) {
         userCache.get(userId),
     ]);
     if (!currentUser) redirect("/auth/signin");
-    if (!data) redirect("/profile/cart");
+    if (!data) redirect("/mycart");
 
     return <OrderPage initialData={data} user={currentUser} />;
 }

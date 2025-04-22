@@ -7,6 +7,7 @@ import {
     productTypeSchema,
     subCategorySchema,
 } from "./category";
+import { brandConfidentialSchema } from "./brand-confidential";
 
 export const productOptionValueSchema = z.object({
     id: z
@@ -127,6 +128,9 @@ export const productVerificationStatusSchema = z.enum([
 
 export const productImageFilterSchema = z.enum(["with", "without", "all"], {
     invalid_type_error: "Product image must be 'with', 'without', or 'all'",
+  }).optional();
+  export const productVisiblityFilterSchema = z.enum(["public", "private", "all"], {
+    invalid_type_error: "Product visiblity must be 'public', 'private', or 'all'",
   }).optional();
 
 export const productSchema = z.object({
@@ -351,7 +355,7 @@ export const productSchema = z.object({
                 invalid_type_error: "Meta description must be a string",
             })
             .min(3, "Meta description must be at least 3 characters long")
-            .max(160, "Meta description must be at most 160 characters long")
+            .max(260, "Meta description must be at most 160 characters long")
             .nullable()
     ),
     metaKeywords: z.array(
@@ -377,6 +381,7 @@ export const productSchema = z.object({
     // OTHER
     verificationStatus: productVerificationStatusSchema,
     productImageFilter: productImageFilterSchema,
+    productVisiblityFilter: productVisiblityFilterSchema,
     isDeleted: z.boolean({
         required_error: "Deleted status is required",
         invalid_type_error: "Deleted status must be a boolean",
@@ -426,6 +431,8 @@ export const productSchema = z.object({
         returnDescription: z.string().nullable().optional(),
         exchangeable: z.boolean().optional(),
         exchangeDescription: z.string().nullable().optional(),
+        isFeaturedWomen: z.boolean().optional().default(false),
+        isFeaturedMen: z.boolean().optional().default(false),
 });
 
 export const productOptionSchema = z.object({
@@ -724,7 +731,10 @@ export const productVariantGroupSchema = z.object({
 });
 
 export const productWithBrandSchema = productSchema.extend({
-    brand: z.lazy(() => brandSchema),
+    // brand: z.lazy(() => brandSchema),
+        brand: z.lazy(() => brandSchema.extend({
+        confidential: brandConfidentialSchema.optional() // ← Add this line
+    })),
     options: z.array(productOptionSchema),
     variants: z.array(enhancedProductVariantSchema),
     returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
@@ -735,6 +745,8 @@ export const productWithBrandSchema = productSchema.extend({
     productType: productTypeSchema,
     journey: productJourneySchema.nullable(),
     values: productValueSchema.nullable(),
+        confidentialData: brandConfidentialSchema.optional() // ← Add this line
+
 });
 
 export const createProductSchema = productSchema
@@ -751,6 +763,8 @@ export const createProductSchema = productSchema
         rejectedAt: true,
         rejectionReason: true,
         verificationStatus: true,
+        isFeaturedMen: true,
+        isFeaturedWomen: true,
         createdAt: true,
         updatedAt: true,
     })
@@ -758,6 +772,7 @@ export const createProductSchema = productSchema
         options: z.array(productOptionSchema),
         variants: z.array(productVariantSchema),
         returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
+        media: z.array(productMediaSchema).optional(),
     })
     .superRefine((data, ctx) => {
         if (!data.productHasVariants) {
@@ -883,6 +898,16 @@ export const rejectProductSchema = productSchema.pick({
     rejectionReason: true,
 });
 
+export const updateProductMediaInputSchema = z.object({
+    productId: z.string(),
+    media: z.array(
+      z.object({
+        id: z.string(), // Assuming media.id is a string; adjust if it's a number
+        position: z.number(),
+      })
+    ),
+  });
+
 export type Product = z.infer<typeof productSchema>;
 export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
 export type ProductJourneyData = z.infer<typeof productJourneyDataSchema>;
@@ -902,3 +927,4 @@ export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;
 export type RejectProduct = z.infer<typeof rejectProductSchema>;
 export type ReturnExchangePolicy = z.infer<typeof returnExchangePolicySchema>;
+export type UpdateProductMediaInput = z.infer<typeof updateProductMediaInputSchema>;

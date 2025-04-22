@@ -30,7 +30,28 @@ export function BrandProducts({
             )}
             {...props}
         >
-            <div className="w-full max-w-5xl xl:max-w-[100rem]">
+            <div className="container md:hidden">
+                <div className="flex justify-center gap-2">
+                    <h2
+                        className={cn(
+                            "text-xl sm:text-3xl",
+                            "text-center",
+                            "capitalize",
+                            "pb-4"
+                        )}
+                    >
+                        top-rated brand products
+                    </h2>
+                </div>
+                <div className="scrollbar-hide flex flex-col gap-4 overflow-x-auto px-1">
+                    <div className="flex gap-4">
+                        {brandProducts.map((item, index) => (
+                            <BrandCard key={index} product={item} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <div className="hidden w-full max-w-5xl md:block xl:max-w-[100rem]">
                 <Carousel
                     plugins={[
                         Autoplay({
@@ -52,12 +73,13 @@ export function BrandProducts({
                                     href={item.url || "/shop"}
                                     className="block"
                                 >
-                                    <div className="aspect-[4/5] overflow-hidden">
+                                    <div className="aspect-[3/4] overflow-hidden">
                                         <Image
                                             src={item.imageUrl}
                                             alt={`Brand Product ${index + 1}`}
-                                            width={200}
-                                            height={200}
+                                            width={300}
+                                            height={400}
+                                            quality={90}
                                             className="size-full object-cover"
                                         />
                                     </div>
@@ -71,5 +93,25 @@ export function BrandProducts({
                 </Carousel>
             </div>
         </section>
+    );
+}
+
+function BrandCard({ product }: { product: HomeBrandProduct }) {
+    return (
+        <Link
+            href={product.url || "/shop"}
+            className="relative w-[200px] flex-shrink-0 md:w-auto"
+        >
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[8px] shadow-sm">
+                <Image
+                    src={product.imageUrl}
+                    alt={"product.title"}
+                    width={300}
+                    height={400}
+                    quality={90}
+                    className="object-cover transition-transform duration-300 hover:scale-105"
+                />
+            </div>
+        </Link>
     );
 }

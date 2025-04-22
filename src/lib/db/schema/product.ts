@@ -14,6 +14,7 @@ import {
     text,
     timestamp,
     uuid,
+    vector
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
@@ -92,18 +93,51 @@ export const products = pgTable(
         rejectedAt: timestamp("rejected_at"),
         rejectionReason: text("rejection_reason"),
         lastReviewedAt: timestamp("last_reviewed_at"),
+        isFeaturedMen: boolean("is_featured_men").default(false), // optional now
+isFeaturedWomen: boolean("is_featured_women").default(false),
+        embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
     (table) => ({
         productSkuIdx: index("product_sku_idx").on(table.sku),
-        productFtsIdx: index("product_fts_idx").using(
-            "gin",
-            sql`(
-            setweight(to_tsvector('english', ${table.title}), 'A') ||
-            setweight(to_tsvector('english', ${table.description}), 'B')
-        )`
-        ),
+        // productFtsIdx: index("product_fts_idx").using(
+        //     "gin",
+        //     sql`(
+        //     setweight(to_tsvector('english', ${table.title}), 'A') ||
+        //     setweight(to_tsvector('english', ${table.description}), 'B')
+        // )`
+        // ),
+            productEmbeddingIdx: index("product_embedding_idx").using(
+        "ivfflat",
+        sql`${table.embeddings} vector_cosine_ops`
+    )
     })
+);
+
+export const womenPageFeaturedProducts = pgTable(
+    "women_page_featured_products",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
+
+export const menPageFeaturedProducts = pgTable(
+    "men_page_featured_products",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
 );
 
 export const productOptions = pgTable(
@@ -276,6 +310,20 @@ export const productVariantsRelations = relations(
         }),
     })
 );
+
+export const womenPageFeaturedProductsRelations = relations(womenPageFeaturedProducts, ({ one }) => ({
+  product: one(products, {
+    fields: [womenPageFeaturedProducts.productId],
+    references: [products.id],
+  }),
+}));
+
+export const menPageFeaturedProductsRelations= relations(menPageFeaturedProducts, ({ one }) => ({
+  product: one(products, {
+    fields: [menPageFeaturedProducts.productId],
+    references: [products.id],
+  }),
+}));
 
 export const productsJourneyRelations = relations(
     productsJourney,

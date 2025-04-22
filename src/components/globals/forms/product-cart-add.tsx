@@ -28,6 +28,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { WishlistButton } from "../buttons";
+import { Spinner } from "@/components/ui/spinner";
 
 interface PageProps {
     initialCart?: CachedCart[];
@@ -48,7 +49,7 @@ export function ProductCartAddForm({
     const [selectedSku, setSelectedSku] = useQueryState("sku", {
         defaultValue: product.variants?.[0]?.nativeSku,
     });
-
+    const [isAddedToCart, setIsAddedToCart] = useState(false);
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
 
@@ -181,14 +182,27 @@ export function ProductCartAddForm({
 
     const { mutate: addToCart, isPending } =
         trpc.general.users.cart.addProductToCart.useMutation({
+            // onMutate: () => {
+            //     toast.success(
+            //         isProductInCart
+            //             ? "Increased quantity in cart"
+            //             : "Added to cart"
+            //     );
+            // },
             onMutate: () => {
                 toast.success(
-                    isProductInCart
-                        ? "Increased quantity in cart"
-                        : "Added to cart"
+                  isProductInCart ? "Increased quantity in Cart" : "Added to Cart!",
+                  {
+                    position: "top-right",
+                    duration: 3000,
+                    className:
+                      "bg-green-100 text-green-800 border border-green-300 rounded-md shadow-lg flex items-center gap-2",
+                    icon: <Icons.CheckCircle className="size-5" />,
+                  }
                 );
-            },
+              },
             onSuccess: () => {
+                setIsAddedToCart(true);
                 refetch();
             },
             onError: (err) => {
@@ -423,15 +437,35 @@ export function ProductCartAddForm({
                                         !selectedVariant) ||
                                     isPending
                                 }
+                              onClick={(e) => {
+                                      if (isAddedToCart) {
+                                          e.preventDefault(); // Prevent form submission
+                                          redirect("/mycart");
+                                      }
+                                      // Default form submission handles addToCart
+                                  }}
                             >
-                                <Icons.ShoppingCart />
-                                {!product.isAvailable ||
-                                (selectedVariant &&
-                                    (selectedVariant.isDeleted ||
-                                        selectedVariant?.quantity === 0)) ||
-                                (product.productHasVariants && !selectedVariant)
-                                    ? "Out of Stock"
-                                    : "Add to Cart"}
+                                                {isPending ? (
+                                            <>
+                                            <Icons.Loader2 className="mr-2 size-5 animate-spin" />
+                                            Adding to Cart
+                                            </>
+                                        ) : isAddedToCart ? (
+                                            <>
+                                            Go to Cart
+                                            <Icons.ArrowRight className="ml-2 size-5" />
+                                            </>
+                                        ) : (
+                                            <>
+                                            <Icons.ShoppingCart className="mr-2 size-5" />
+                                            {!product.isAvailable ||
+                                            (selectedVariant &&
+                                                (selectedVariant.isDeleted || selectedVariant?.quantity === 0)) ||
+                                            (product.productHasVariants && !selectedVariant)
+                                                ? "Out of Stock"
+                                                : "Add to Cart"}
+                                            </>
+                                        )}
                             </Button>
 
                             <WishlistButton

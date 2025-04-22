@@ -98,7 +98,7 @@ const boxMenu: SiteConfig["menu"] = [
     },
     {
         name: "Cart",
-        href: "/profile/cart",
+        href: "/mycart",
         icon: "ShoppingCart",
     },
     {

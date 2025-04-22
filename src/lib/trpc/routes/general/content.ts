@@ -312,6 +312,7 @@ export const homeBrandProductRouter = createTRPCRouter({
 
             const existingImageUrl = existingHomeBrandProduct.imageUrl;
             if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
                 const existingKey = getUploadThingFileKey(existingImageUrl);
                 await utApi.deleteFiles([existingKey]);
             }
@@ -515,6 +516,7 @@ export const homeShopByCategoryRouter = createTRPCRouter({
 
             const existingImageUrl = existingHomeShopByCategory.imageUrl;
             if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
                 const existingKey = getUploadThingFileKey(existingImageUrl);
                 await utApi.deleteFiles([existingKey]);
             }
@@ -575,6 +577,4572 @@ export const homeShopByCategoryRouter = createTRPCRouter({
         }),
 });
 
+export const womenhomeBannerRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getAllHomeShopByCategories({
+                    limit,
+                    page,
+                });
+
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createHomeShopByCategory({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.homeShopByCategories.updateHomeShopByCategory(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.homeShopByCategories.deleteHomeShopByCategory(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenElavateLooksSectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getAllelavateLooks({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllelavateLook(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createAllelavateLooks({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.homeShopByCategories.updateHomeShopByCategory(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.homeShopByCategories.deleteHomeShopByCategory(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenStyleDirectoryRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getAllstyleDirectory({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getstyledirectory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createAllstyleDirectory({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getstyledirectory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                //@ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateAllstyleDirectory(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.homeShopByCategories.deleteHomeShopByCategory(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenNewCollectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getNewCollections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createNewCollectionDirectory({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                //@ts-ignore
+
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateNewCollectionDirectory(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.homeShopByCategories.getHomeShopByCategory(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletNewCollectionDirectory(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenDiscountOfferRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getNewOfferSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getNewOfferSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createNewOfferSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateNewOfferSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletNewOfferSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenMoodBoardRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getWomenMoodBoards({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenMoodBoard(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createWomenMoodBoard({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenMoodBoard(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateWomenMoodBoard(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenMoodBoard(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletWomenMoodBoard(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenTopCollectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getWomenStyleSubstanceSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenStyleSubstanceSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createWomenStyleSubstanceSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenStyleSubstanceSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateWomenStyleSubstanceSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenStyleSubstanceSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletWomenMoodBoard(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+
+
+export const womenBrandSeasonalSaleRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getWomenSummerSaleSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenSummerSaleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createWomenSummerSaleSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenSummerSaleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateWomenSummerSaleSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenSummerSaleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletWomenSummerSaleSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenFindYourStyleRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getWomenFindYourStyleSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenFindYourStyleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createWomenFindYourStyleSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenFindYourStyleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateWomenFindYourStyleSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenFindYourStyleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletWomenFindYourStyleSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenSuggestedLooksSectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getSuggestedLookSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getSuggestedLookSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createSuggestedLookSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getSuggestedLookSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateSuggestedLookSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getSuggestedLookSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletSuggestedLookSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+
+export const womenBrandStoryTellingRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getwomenBranStoryTellingSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getwomenBranStoryTellingSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createwomenBranStoryTellingSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getwomenBranStoryTellingSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updatewomenBranStoryTellingSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getwomenBranStoryTellingSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletwomenBranStoryTellingSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+
+export const womenSkinCareSectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getwomenBrandSkinCareSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getwomenBrandSkinCareSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createwomenBrandSkinCareSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getwomenBrandSkinCareSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updatewomenBrandSkinCareSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getwomenBrandSkinCareSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletwomenBranStoryTellingSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenOutfitVarientRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getAlloutfitVarients({
+                    limit,
+                    page,
+                });
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getoutfitVarient(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createAlloutfitVarients({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getoutfitVarient(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateAlloutfitVarients(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getoutfitVarient(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteoutfitVarients(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const womenExpoloreCategorySectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getAllexploreCategories({
+                    limit,
+                    page,
+                });
+
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenExploreCategorySection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createAllexploreCategories({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+// @ts-ignore
+                await queries.womenhomebanner.updateAllexploreCategories(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateAllexploreCategories(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+
+// @ts-ignore
+                await queries.womenhomebanner.createAllexploreCategories(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.homeShopByCategories.deleteHomeShopByCategory(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+// men section
+
+
+export const menhomeBannerRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getMenHomeBannerSections({
+                    limit,
+                    page,
+                });
+
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenHomeBannerSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createMenHomeBannerSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenHomeBannerSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateMenHomeBannerSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenHomeBannerSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteMenHomeBannerSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menDiscountOfferRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getDiscountOfferSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllDiscountOfferSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createDiscountOfferSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllDiscountOfferSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateDiscountOfferSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllDiscountOfferSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteDiscountOfferSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menElavateLooksSectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getMenelevateLooksections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllelavateLook(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createMenelevateLooksection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllelavateLook(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateMenelevateLooksection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.deleteAllelavateLooks(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                //@ts-ignore
+                queries.homeShopByCategories.deleteMenelevateLooksection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menStyleDirectoryRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getStyleDirectorySections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllStyleDirectorySection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createStyleDirectorySection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllStyleDirectorySection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateStyleDirectorySection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllStyleDirectorySection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteStyleDirectorySection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menOutfitVarientRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getMenOutFitVarientSections({
+                    limit,
+                    page,
+                });
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenOutFitVarientSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createMenOutFitVarientSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenOutFitVarientSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateMenOutFitVarientSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenOutFitVarientSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteMenOutFitVarientSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menExpoloreCategorySectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getMenExploreCategorySections({
+                    limit,
+                    page,
+                });
+
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenExploreCategorySection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createMenExploreCategorySection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenExploreCategorySection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateMenExploreCategorySection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenExploreCategorySection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteMenExploreCategorySection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menSuggestedLooksSectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getSuggestedLooksForYous({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllSuggestedLooksForYou(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createSuggestedLooksForYou({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllSuggestedLooksForYou(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateSuggestedLooksForYou(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllSuggestedLooksForYou(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteSuggestedLooksForYou(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menBrandSeasonalSaleRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getWomenSummerSaleSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenSummerSaleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createWomenSummerSaleSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenSummerSaleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateWomenSummerSaleSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getWomenSummerSaleSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deletWomenSummerSaleSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+export const menTopCollectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getTopCollectionSections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllTopCollectionSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createTopCollectionSection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllTopCollectionSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateTopCollectionSection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllTopCollectionSection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteTopCollectionSection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+export const menNewCollectionRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getMenNewCollections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createMenNewCollection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateMenNewCollection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteMenNewCollection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+
+
+export const menTopcollectionBannerRouter = createTRPCRouter({
+    getwomenHomeBanners: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().default(10),
+                page: z.number().int().positive().default(1),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { limit, page } = input;
+
+            const homeShopByCategories =
+                await queries.womenhomebanner.getMenTopcollections({
+                    limit,
+                    page,
+                });
+console.log("homeShopByCategories", homeShopByCategories);
+            return homeShopByCategories;
+        }),
+    getwomenHomeBanner: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenTopcollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            return existingHomeShopByCategory;
+        }),
+    createWomenBanner: protectedProcedure
+        .input(createHomeShopByCategorySchema)
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+
+            if (!input.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const newHomeShopByCategory =
+                await queries.womenhomebanner.createMenTopcollection({
+                    ...input,
+                    imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
+                });
+
+            return newHomeShopByCategory;
+        }),
+    updateWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateHomeShopByCategorySchema,
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            if (!values.imageUrl)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Image URL is required",
+                });
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenTopcollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+
+            if (existingImageUrl !== values.imageUrl) {
+                // @ts-ignore
+                const existingKey = getUploadThingFileKey(existingImageUrl);
+                await utApi.deleteFiles([existingKey]);
+            }
+
+            const updatedHomeShopByCategory =
+                await queries.womenhomebanner.updateMenTopcollection(
+                    id,
+                    {
+                        ...values,
+                        imageUrl: values.imageUrl,
+                    }
+                );
+
+            return updatedHomeShopByCategory;
+        }),
+    deleteWomenBanner: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+            })
+        )
+        .use(({ ctx, next }) => {
+            const { user } = ctx;
+
+            const isAuthorized = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.MANAGE_CONTENT,
+            ]);
+            if (!isAuthorized) {
+                throw new TRPCError({
+                    code: "UNAUTHORIZED",
+                    message: "You're not authorized",
+                });
+            }
+
+            return next({ ctx });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingHomeShopByCategory =
+                await queries.womenhomebanner.getAllMenNewCollection(id);
+            if (!existingHomeShopByCategory)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Home shop by category not found",
+                });
+
+            const existingImageUrl = existingHomeShopByCategory.imageUrl;
+                //@ts-ignore
+            const existingKey = getUploadThingFileKey(existingImageUrl);
+
+            await Promise.all([
+                queries.womenhomebanner.deleteMenTopcollection(id),
+                utApi.deleteFiles([existingKey]),
+            ]);
+
+            return true;
+        }),
+});
+
+
+
+
+
 export const homeShopByCategoryTitleRouter = createTRPCRouter({
     getHomeShopByCategoryTitle: publicProcedure.query(async ({ ctx }) => {
         const { queries } = ctx;
@@ -628,6 +5196,7 @@ export const homeShopByCategoryTitleRouter = createTRPCRouter({
             return updatedHomeShopByCategoryTitle;
         }),
 });
+
 
 export const bannerRouter = createTRPCRouter({
     getBanners: publicProcedure
@@ -1080,5 +5649,29 @@ export const contentRouter = createTRPCRouter({
     marketingStrips: marketingStripRouter,
     homeBrandProducts: homeBrandProductRouter,
     homeShopByCategories: homeShopByCategoryRouter,
+    womenhomeBannerRouter: womenhomeBannerRouter,
+    womenExpoloreCategorySectionRouter: womenExpoloreCategorySectionRouter,
+    womenElavateLooksSectionRouter: womenElavateLooksSectionRouter,
+    womenOutfitVarientRouter: womenOutfitVarientRouter,
     homeShopByCategoryTitle: homeShopByCategoryTitleRouter,
+    womenStyleDirectoryRouter: womenStyleDirectoryRouter,
+    womenNewCollectionRouter: womenNewCollectionRouter,
+    womenDiscountOfferRouter: womenDiscountOfferRouter,
+    womenMoodBoardRouter: womenMoodBoardRouter,
+    womenTopCollectionRouter:womenTopCollectionRouter,
+    womenBrandSeasonalSaleRouter: womenBrandSeasonalSaleRouter,
+    womenFindYourStyleRouter: womenFindYourStyleRouter,
+    womenSuggestedLooksSectionRouter: womenSuggestedLooksSectionRouter,
+    womenBrandStoryTellingRouter: womenBrandStoryTellingRouter,
+    womenSkinCareSectionRouter: womenSkinCareSectionRouter,
+    menhomeBannerRouter: menhomeBannerRouter,
+    menExpoloreCategorySectionRouter: menExpoloreCategorySectionRouter,
+    menElavateLooksSectionRouter: menElavateLooksSectionRouter,
+    menOutfitVarientRouter: menOutfitVarientRouter,
+    menTopCollectionRouter:menTopCollectionRouter,
+    menNewCollectionRouter:menNewCollectionRouter,
+    menDiscountOfferRouter:menDiscountOfferRouter,
+    menSuggestedLooksSectionRouter: menSuggestedLooksSectionRouter,
+    menStyleDirectoryRouter:menStyleDirectoryRouter,
+    menTopcollectionBannerRouter: menTopcollectionBannerRouter,
 });
