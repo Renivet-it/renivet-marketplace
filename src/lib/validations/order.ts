@@ -2,6 +2,7 @@ import { z } from "zod";
 import { orderItemSchema } from "./order-item";
 import { orderShipmentSchema } from "./order-shipment";
 import { productVariantSchema, productWithBrandSchema } from "./product";
+import { addressSchema } from "./address";
 
 export const orderSchema = z.object({
     id: z
@@ -105,6 +106,7 @@ export const orderWithItemAndBrandSchema = orderSchema.extend({
         })
     ),
     shipments: z.array(orderShipmentSchema),
+    address: addressSchema
 });
 
 export const createOrderSchema = orderSchema.omit({

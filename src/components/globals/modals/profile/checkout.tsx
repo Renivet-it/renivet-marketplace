@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import {
     calculateTotalPriceWithCoupon,
@@ -34,6 +35,7 @@ interface PageProps {
 
 export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
+    const { selectedShippingAddress } = useCartStore();
 
     const [isHasCouponChecked, setIsHasCouponChecked] = useState(false);
     const [couponCode, setCouponCode] = useState<string>("");
@@ -306,12 +308,16 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                     "Please add an address to proceed"
                                 );
 
+                            if (!selectedShippingAddress) {
+                                return toast.error(
+                                    "Please select a shipping address."
+                                );
+                            }
+
                             createOrder({
                                 userId,
                                 coupon: coupon?.code,
-                                addressId: user.addresses.find(
-                                    (add) => add.isPrimary
-                                )!.id,
+                               addressId: selectedShippingAddress.id,
                                 deliveryAmount: priceList.delivery.toString(),
                                 taxAmount: "0",
                                 totalAmount: priceList.total.toString(),

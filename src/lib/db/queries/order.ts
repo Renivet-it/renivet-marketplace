@@ -13,6 +13,7 @@ class OrderQuery {
     async getAllOrders() {
         const data = await db.query.orders.findMany({
             with: {
+                address: true,
                 shipments: true,
                 items: {
                     with: {
@@ -91,6 +92,7 @@ class OrderQuery {
         const data = await db.query.orders.findMany({
             where: !!search ? ilike(orders.id, `%${search}%`) : undefined,
             with: {
+                address: true,
                 shipments: true,
                 items: {
                     with: {
@@ -210,6 +212,7 @@ class OrderQuery {
                     : undefined
             ),
             with: {
+                address: true,
                 shipments: true,
                 items: {
                     with: {
@@ -288,6 +291,7 @@ class OrderQuery {
                     : undefined
             ),
             with: {
+                address: true,
                 shipments: true,
                 items: {
                     with: {
@@ -366,6 +370,7 @@ class OrderQuery {
             ),
             orderBy: [desc(orders.createdAt)],
             with: {
+                address: true,
                 shipments: true,
                 items: {
                     with: {
