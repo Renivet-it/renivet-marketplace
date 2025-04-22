@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
+import { OrderAction } from "./order-action";
 
 export type TableOrder = Order;
 
@@ -81,6 +82,13 @@ const columns: ColumnDef<TableOrder>[] = [
             return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
+     {
+            id: "actions",
+            cell: ({ row }) => {
+                const data = row.original;
+                return <OrderAction order={data} />;
+            },
+     },
 ];
 
 interface PageProps {
