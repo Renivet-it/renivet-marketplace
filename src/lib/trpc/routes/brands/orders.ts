@@ -22,4 +22,18 @@ export const ordersRouter = createTRPCRouter({
             const data = await queries.orders.getOrdersByBrandId(input.brandId);
             return data;
         }),
+    getOrderShipmentDetailsByShipmentId: protectedProcedure
+        .input(
+            z.object({
+                shipmentId: z.number(),
+            })
+        )
+        .query(async ({ input, ctx }) => {
+            const { queries } = ctx;
+
+            const data = await queries.orders.getShipmentDetailsByShipmentId(
+                input.shipmentId
+            );
+            return data;
+        }),
 });

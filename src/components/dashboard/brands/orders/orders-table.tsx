@@ -30,7 +30,7 @@ import { OrderAction } from "./order-action";
 
 export type TableOrder = Order;
 
-const columns: ColumnDef<TableOrder>[] = [
+const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
     {
         accessorKey: "id",
         header: "Order ID",
@@ -86,7 +86,7 @@ const columns: ColumnDef<TableOrder>[] = [
             id: "actions",
             cell: ({ row }) => {
                 const data = row.original;
-                return <OrderAction order={data} />;
+                return <OrderAction order={data} onAction={onAction}/>;
             },
      },
 ];
@@ -107,7 +107,7 @@ export function OrdersTable({ initialData, brandId }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: dataRaw } = trpc.brands.orders.getOrdersByBrandId.useQuery(
+    const { data: dataRaw, refetch: refetchOrderData } = trpc.brands.orders.getOrdersByBrandId.useQuery(
         { brandId },
         { initialData }
     );
@@ -122,7 +122,7 @@ export function OrdersTable({ initialData, brandId }: PageProps) {
 
     const table = useReactTable({
         data,
-        columns,
+        columns: columns(refetchOrderData),
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
@@ -162,7 +162,7 @@ export function OrdersTable({ initialData, brandId }: PageProps) {
             </div>
 
             <DataTable
-                columns={columns}
+                columns={columns(refetchOrderData)}
                 table={table}
                 pages={pages}
                 count={count}

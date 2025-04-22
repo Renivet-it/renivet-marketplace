@@ -1,13 +1,14 @@
 import { mediaCache } from "@/lib/redis/methods";
 import {
     CreateOrder,
+    Order,
     OrderWithItemAndBrand,
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
 } from "@/lib/validations";
 import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orderItems, orders, products, orderShipments } from "../schema";
+import { orderItems, orders, orderShipments, products } from "../schema";
 
 class OrderQuery {
     async getAllOrders() {
@@ -213,12 +214,12 @@ class OrderQuery {
                 sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
             )
             .as("filtered_order_items");
-    const ordersForBrand = db
+        const ordersForBrand = db
             .with(filteredProducts, filteredOrderItems)
             .select({
                 order: orders, // Select all order fields
-                shiprocketOrderId: orderShipments.shiprocketOrderId, // Select only shiprocketOrderId
-                shiprocketShipmentId: orderShipments.shiprocketShipmentId,
+                shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
             })
             .from(orders)
             .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId)) // Join with orderShipments
@@ -231,8 +232,8 @@ class OrderQuery {
         // Map the data to a cleaner format if needed
         const formattedData = data.map((item) => ({
             ...item.order,
-            shiprocketOrderId: item.shiprocketOrderId || null, // Handle cases where shiprocketOrderId is null
-            shiprocketShipmentId: item.shiprocketShipmentId || null, // Handle cases where shiprocketOrderId is null
+            shiprocketOrderId: item?.shiprocketOrderId || null,
+            shiprocketShipmentId: item?.shiprocketShipmentId || null,
         }));
 
         return formattedData;
@@ -525,6 +526,81 @@ class OrderQuery {
             .then((res) => res[0]);
 
         return data;
+    }
+
+    async orderShipmentDetailsByOrderId(orderId: string) {
+        const data = await db.query.orderShipments.findFirst({
+            where: eq(orderShipments.orderId, orderId),
+        });
+        return data;
+    }
+
+    async updateAwbGenerationStatus(shipmentId: number, status: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isAwbGenerated: status,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async createAwbNumber(shipmentId: number, awbCode: string) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                awbNumber: awbCode,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async getShipmentDetailsByShipmentId(shipmentId: number) {
+        const result = await db.query.orderShipments.findMany({
+            where: eq(orderShipments.shiprocketShipmentId, shipmentId),
+        });
+        return result;
+    }
+
+    async updatePickUpStatus(shipmentId: number, status: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isPickupScheduled: status,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async savePickupShiprocketResponse(shipmentId: number, shipmentDetails: Record<string, any>) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                pickUpDetailsShipRocketJson: shipmentDetails,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async saveAwbShiprocketResponse(shipmentId: number, awbDetails: Record<string, any>) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                awbDetailsShipRocketJson: awbDetails,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async createPickupDetails(shipmentId: number, pickupToken: any, pickupDate: any){
+        const result = await db
+            .update(orderShipments)
+            .set({
+                pickupTokenNumber: pickupToken,
+                pickupScheduledDate: pickupDate
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
     }
 }
 

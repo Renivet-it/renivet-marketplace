@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { brandSchema } from "./brand";
 import { orderSchema } from "./order";
+import { is } from "drizzle-orm";
 
 export const orderShipmentSchema = z.object({
     id: z.string().uuid(),
@@ -71,6 +72,7 @@ export const orderShipmentSchema = z.object({
         .transform((v) => new Date(v))
         .nullable(),
     pickupTokenNumber: z.string().nullable(),
+    isAwbGenerated: z.boolean().default(false),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

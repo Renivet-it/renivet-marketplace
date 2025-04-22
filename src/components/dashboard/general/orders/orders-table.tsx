@@ -25,11 +25,12 @@ import {
 import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
+import { OrderAction } from "./order-action";
 import { OrderSingle } from "./order-single";
 
 export type TableOrder = OrderWithItemAndBrand;
 
-const columns: ColumnDef<TableOrder>[] = [
+const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
     {
         accessorKey: "id",
         header: "Order ID",
@@ -74,6 +75,13 @@ const columns: ColumnDef<TableOrder>[] = [
             return format(new Date(data.createdAt), "MMM dd, yyyy");
         },
     },
+    {
+        id: "actions",
+        cell: ({ row }) => {
+            const data = row.original;
+            return <OrderAction order={data} onAction={onAction}/>;
+        },
+    },
 ];
 interface PageProps {
     initialData: {
@@ -98,6 +106,7 @@ export function OrdersTable({ initialData }: PageProps) {
 
     const {
         data: { data: dataRaw, count },
+        refetch: refetchOrderData,
     } = trpc.general.orders.getOrders.useQuery(
         { page, limit, search },
         { initialData }
@@ -109,7 +118,7 @@ export function OrdersTable({ initialData }: PageProps) {
 
     const table = useReactTable({
         data,
-        columns,
+        columns: columns(refetchOrderData),
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
@@ -149,7 +158,7 @@ export function OrdersTable({ initialData }: PageProps) {
             </div>
 
             <DataTable
-                columns={columns}
+                columns={columns(refetchOrderData)}
                 table={table}
                 pages={pages}
                 count={count}

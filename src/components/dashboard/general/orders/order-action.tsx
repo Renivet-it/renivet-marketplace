@@ -35,8 +35,8 @@ interface PageProps {
 
 export function OrderAction({ order, onAction }: PageProps) {
     const { data: orderShipmentDetails } =
-        trpc.brands.orders.getOrderShipmentDetailsByShipmentId.useQuery({
-            shipmentId: order.shiprocketShipmentId!,
+        trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery({
+            shipmentId: order.shipments[0].shiprocketShipmentId!,
         });
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
@@ -61,32 +61,32 @@ export function OrderAction({ order, onAction }: PageProps) {
     const handleDownload = async (type: "invoice" | "label" | "manifest") => {
         try {
             if (type === "invoice") {
-                const response = await generateInvoice(order.shiprocketOrderId);
+                const response = await generateInvoice(order.shipments[0].shiprocketOrderId);
                 const link = document.createElement("a");
                 link.href = response.invoiceUrl;
-                link.download = `invoice_${order.shiprocketOrderId}.pdf`;
+                link.download = `invoice_${order.shipments[0].shiprocketOrderId}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 toast.success("Invoice download started");
             } else if (type === "label") {
                 const response = await generateLabel(
-                    order.shiprocketShipmentId
+                    order.shipments[0].shiprocketShipmentId
                 );
                 const link = document.createElement("a");
                 link.href = response.labelUrl;
-                link.download = `label_${order.shiprocketShipmentId}.pdf`;
+                link.download = `label_${order.shipments[0].shiprocketShipmentId}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 toast.success("Label download started");
             } else if (type === "manifest") {
                 const response = await generateManifest(
-                    order.shiprocketShipmentId
+                    order.shipments[0].shiprocketShipmentId
                 );
                 const link = document.createElement("a");
                 link.href = response.manifestUrl;
-                link.download = `manifest_${order.shiprocketShipmentId}.pdf`;
+                link.download = `manifest_${order.shipments[0].shiprocketShipmentId}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -259,9 +259,9 @@ export function OrderAction({ order, onAction }: PageProps) {
             <OrderShipment
                 isSheetOpen={isSheetOpen}
                 setIsSheetOpen={setIsSheetOpen}
+                onShipmentSuccessRefetchOrder={onAction}
                 side="bottom"
                 order={order}
-                onShipmentSuccessRefetchOrder={onAction}
             ></OrderShipment>
         </>
     );
