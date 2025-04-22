@@ -324,6 +324,8 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                 discountAmount: priceList.discount.toString(),
                                 paymentMethod: null,
                                 totalItems: itemsCount,
+                                shiprocketOrderId: null,
+                                shiprocketShipmentId: null,
                                 items:
                                     userCart
                                         ?.filter((item) => item.status)

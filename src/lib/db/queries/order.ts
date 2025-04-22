@@ -7,7 +7,7 @@ import {
 } from "@/lib/validations";
 import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orderItems, orders, products } from "../schema";
+import { orderItems, orders, products, orderShipments } from "../schema";
 
 class OrderQuery {
     async getAllOrders() {
@@ -173,6 +173,32 @@ class OrderQuery {
         };
     }
 
+    // async getOrdersByBrandId(brandId: string) {
+    //     const filteredProducts = db
+    //         .select({ id: products.id })
+    //         .from(products)
+    //         .where(eq(products.brandId, brandId))
+    //         .as("filtered_products");
+
+    //     const filteredOrderItems = db
+    //         .select({ orderId: orderItems.orderId })
+    //         .from(orderItems)
+    //         .where(
+    //             sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
+    //         )
+    //         .as("filtered_order_items");
+
+    //     const ordersForBrand = db
+    //         .with(filteredProducts, filteredOrderItems)
+    //         .select()
+    //         .from(orders)
+    //         .where(
+    //             sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
+    //         );
+
+    //     const data = await ordersForBrand;
+    //     return data;
+    // }
     async getOrdersByBrandId(brandId: string) {
         const filteredProducts = db
             .select({ id: products.id })
@@ -187,17 +213,29 @@ class OrderQuery {
                 sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
             )
             .as("filtered_order_items");
-
-        const ordersForBrand = db
+    const ordersForBrand = db
             .with(filteredProducts, filteredOrderItems)
-            .select()
+            .select({
+                order: orders, // Select all order fields
+                shiprocketOrderId: orderShipments.shiprocketOrderId, // Select only shiprocketOrderId
+                shiprocketShipmentId: orderShipments.shiprocketShipmentId,
+            })
             .from(orders)
+            .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId)) // Join with orderShipments
             .where(
                 sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
             );
 
         const data = await ordersForBrand;
-        return data;
+
+        // Map the data to a cleaner format if needed
+        const formattedData = data.map((item) => ({
+            ...item.order,
+            shiprocketOrderId: item.shiprocketOrderId || null, // Handle cases where shiprocketOrderId is null
+            shiprocketShipmentId: item.shiprocketShipmentId || null, // Handle cases where shiprocketOrderId is null
+        }));
+
+        return formattedData;
     }
 
     async getOrdersByIds(orderIds: string[], year?: number) {
