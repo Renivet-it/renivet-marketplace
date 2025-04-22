@@ -431,6 +431,8 @@ export const productSchema = z.object({
         returnDescription: z.string().nullable().optional(),
         exchangeable: z.boolean().optional(),
         exchangeDescription: z.string().nullable().optional(),
+        isFeaturedWomen: z.boolean().optional().default(false),
+        isFeaturedMen: z.boolean().optional().default(false),
 });
 
 export const productOptionSchema = z.object({
@@ -763,6 +765,8 @@ export const createProductSchema = productSchema
         rejectedAt: true,
         rejectionReason: true,
         verificationStatus: true,
+        isFeaturedMen: true,
+        isFeaturedWomen: true,
         createdAt: true,
         updatedAt: true,
     })

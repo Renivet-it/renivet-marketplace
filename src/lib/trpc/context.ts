@@ -18,6 +18,7 @@ import {
     couponQueries,
     homeBrandProductQueries,
     homeShopByCategoryQueries,
+    homeShopByNewCategoryQueries,
     homeShopByCategoryTitleQueries,
     legalQueries,
     marketingStripQueries,
@@ -34,7 +35,8 @@ import {
     userQueries,
     userWishlistQueries,
     waitlistQueries,
-    addressQueries
+    addressQueries,
+    WomenHomeSectionQueries
 } from "@/lib/db/queries";
 import * as schema from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
@@ -79,6 +81,8 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
             coupons: couponQueries,
             homeBrandProducts: homeBrandProductQueries,
             homeShopByCategories: homeShopByCategoryQueries,
+            womenhomebanner: WomenHomeSectionQueries,
+            homeShopByNewCategories: homeShopByNewCategoryQueries,
             homeShopByCategoryTitle: homeShopByCategoryTitleQueries,
             legal: legalQueries,
             marketingStrips: marketingStripQueries,

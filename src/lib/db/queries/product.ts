@@ -25,6 +25,8 @@ import {
     productValues,
     productVariants,
     returnExchangePolicy,
+    womenPageFeaturedProducts,
+    menPageFeaturedProducts
 } from "../schema";
 import { categoryQueries } from "./category";
 import { productTypeQueries } from "./product-type";
@@ -36,7 +38,19 @@ import { getEmbedding } from "@/lib/python/sematic-search";
 const token = process.env.HF_TOKEN;
 
 const hf = new InferenceClient(token);
+interface CreateWomenPageFeaturedProduct {
+    productId: string;
+}
 
+interface CreateMenPageFeaturedProduct {
+    productId: string;
+}
+
+
+interface UpdateWomenPageFeaturedProduct {
+    isDeleted?: boolean;
+    deletedAt?: Date | null;
+}
 // async function getEmbedding(text: string): Promise<number[]> {
 //     const response = await hf.featureExtraction({
 //         model: "sentence-transformers/all-MiniLM-L6-v2",
@@ -445,7 +459,6 @@ async getProducts({
     const parsed: ProductWithBrand[] = productWithBrandSchema
         .array()
         .parse(enhancedData);
-
     return {
         data: parsed,
         count: +data?.[0]?.count || 0,
@@ -1703,6 +1716,60 @@ console.log("Input values:", values);
         return data;
     }
 
+        async createWomenPageFeaturedProduct(values: CreateWomenPageFeaturedProduct) {
+            const data = await db
+                .insert(womenPageFeaturedProducts)
+                .values({
+                    productId: values.productId,
+                    isDeleted: false,
+                    deletedAt: null,
+                })
+                .returning()
+                .then((res) => res[0]);
+
+            return data;
+        }
+
+        async removeWomenPageFeaturedProduct(productId: string) {
+        const data = await db
+            .update(womenPageFeaturedProducts)
+            .set({ isDeleted: true, deletedAt: new Date() })
+            .where(eq(womenPageFeaturedProducts.productId, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+            async createMenPageFeaturedProduct(values: CreateMenPageFeaturedProduct) {
+            const data = await db
+                .insert(menPageFeaturedProducts)
+                .values({
+                    productId: values.productId,
+                    isDeleted: false,
+                    deletedAt: null,
+                })
+                .returning()
+                .then((res) => res[0]);
+
+            return data;
+        }
+
+        async removeMenPageFeaturedProduct(productId: string) {
+        const data = await db
+            .update(menPageFeaturedProducts)
+            .set({ isDeleted: true, deletedAt: new Date() })
+            .where(eq(menPageFeaturedProducts.productId, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
     async getProductValue(id: string) {
         const data = await db.query.productValues.findFirst({
             where: eq(productValues.id, id),
@@ -1720,6 +1787,124 @@ console.log("Input values:", values);
 
         return data;
     }
+
+ async getWomenPageFeaturedProducts() {
+  const data = await db.query.womenPageFeaturedProducts.findMany({
+    where: eq(womenPageFeaturedProducts.isDeleted, false),
+    with: {
+      product: {
+        with: {
+          brand: true,
+          variants: true,
+          returnExchangePolicy: true,
+          specifications: true
+        }
+      }
+    },
+  });
+
+  const mediaIds = new Set<string>();
+  for (const { product } of data) {
+    product.media.forEach((media) => mediaIds.add(media.id));
+    product.variants.forEach((variant) => {
+      if (variant.image) mediaIds.add(variant.image);
+    });
+    if (product.sustainabilityCertificate)
+      mediaIds.add(product.sustainabilityCertificate);
+  }
+
+  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+
+  const enhancedData = data.map(({ product, ...rest }) => ({
+    ...rest,
+    product: {
+      ...product,
+      media: product.media.map((media) => ({
+        ...media,
+        mediaItem: mediaMap.get(media.id),
+        url: mediaMap.get(media.id)?.url ?? null,
+      })),
+      sustainabilityCertificate: product.sustainabilityCertificate
+        ? mediaMap.get(product.sustainabilityCertificate)
+        : null,
+      variants: product.variants.map((variant) => ({
+        ...variant,
+        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+      })),
+      returnable: product.returnExchangePolicy?.returnable ?? false,
+      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+      specifications: product.specifications.map((spec) => ({
+        key: spec.key,
+        value: spec.value,
+      })),
+    },
+  }));
+
+  return enhancedData;
+}
+
+async getMenPageFeaturedProducts() {
+  const data = await db.query.menPageFeaturedProducts.findMany({
+    where: eq(menPageFeaturedProducts.isDeleted, false),
+    with: {
+      product: {
+        with: {
+          brand: true,
+          variants: true,
+          returnExchangePolicy: true,
+          specifications: true
+        }
+      }
+    },
+  });
+
+  const mediaIds = new Set<string>();
+  for (const { product } of data) {
+    product.media.forEach((media) => mediaIds.add(media.id));
+    product.variants.forEach((variant) => {
+      if (variant.image) mediaIds.add(variant.image);
+    });
+    if (product.sustainabilityCertificate)
+      mediaIds.add(product.sustainabilityCertificate);
+  }
+
+  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+
+  const enhancedData = data.map(({ product, ...rest }) => ({
+    ...rest,
+    product: {
+      ...product,
+      media: product.media.map((media) => ({
+        ...media,
+        mediaItem: mediaMap.get(media.id),
+        url: mediaMap.get(media.id)?.url ?? null,
+      })),
+      sustainabilityCertificate: product.sustainabilityCertificate
+        ? mediaMap.get(product.sustainabilityCertificate)
+        : null,
+      variants: product.variants.map((variant) => ({
+        ...variant,
+        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+      })),
+      returnable: product.returnExchangePolicy?.returnable ?? false,
+      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+      specifications: product.specifications.map((spec) => ({
+        key: spec.key,
+        value: spec.value,
+      })),
+    },
+  }));
+
+  return enhancedData;
+}
 
     async updateProductValue(id: string, values: UpdateProductValue) {
         const data = await db

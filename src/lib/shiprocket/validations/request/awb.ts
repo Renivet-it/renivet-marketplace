@@ -1,10 +1,11 @@
 import { z } from "zod";
 
 export const awbSchema = z.object({
-    shipment_id: z.number({
-        required_error: "Shipment ID is required",
-        invalid_type_error: "Shipment ID must be a number",
-    }),
+    shipment_id: z
+        .number({
+            required_error: "Shipment ID is required",
+            invalid_type_error: "Shipment ID must be a number",
+        }),
     courier_id: z
         .number({
             invalid_type_error: "Courier ID must be a number",
