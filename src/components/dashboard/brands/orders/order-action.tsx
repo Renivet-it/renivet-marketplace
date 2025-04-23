@@ -24,6 +24,7 @@ import { TableOrder } from "./orders-table";
 import { generateInvoice } from "@/actions/shiprocket/generate-invoice";
 import { generateLabel } from "@/actions/shiprocket/generate-label";
 import { generateManifest } from "@/actions/shiprocket/generate-manifest";
+import OrderShipment from "./order-shipment";
 interface PageProps {
     order: TableOrder;
 }
@@ -32,6 +33,7 @@ export function OrderAction({ order }: PageProps) {
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     const handleDownload = async (type: "invoice" | "label" | "manifest") => {
         try {
@@ -86,7 +88,7 @@ export function OrderAction({ order }: PageProps) {
                         <DropdownMenuItem
                             onClick={() => {
                                 // TODO: Implement ship products logic
-                                toast.info("Ship products functionality coming soon");
+                               setIsSheetOpen(true);
                             }}
                         >
                             <Icons.Truck className="size-4" />
@@ -188,6 +190,8 @@ export function OrderAction({ order }: PageProps) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            {/* shipment component */}
+            <OrderShipment isSheetOpen={isSheetOpen} setIsSheetOpen={setIsSheetOpen} side="bottom" order={order}></OrderShipment>
         </>
     );
 }

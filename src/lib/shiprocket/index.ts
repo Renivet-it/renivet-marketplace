@@ -22,6 +22,7 @@ import {
     PickupResponse,
     PrintManifestResponse,
 } from "./validations/response";
+import { getCouriersParams } from "./validations/request/couriers";
 
 class ShipRocket {
     private static instance: ShipRocket;
@@ -376,6 +377,33 @@ class ShipRocket {
             };
         }
     }
+
+    async getCouriers(params?: getCouriersParams) {
+        try {
+            const res = await this.axiosInstance.get("/courier/courierListWithCounts", {
+                params
+            });
+            if (res.status !== 200)
+                throw new AppError(
+                    "Unable to get couriers",
+                    "INTERNAL_SERVER_ERROR"
+                );
+
+            return {
+                status: true,
+                message: "Get couriers successfully!",
+                data: res.data,
+            };
+        } catch (err) {
+            return {
+                status: false,
+                message: sanitizeError(err),
+                data: null,
+            };
+        }
+    }
+
+    async requestShipment(shipmentData) {}
 }
 
 export const shiprocket = async () => await ShipRocket.getInstance();
