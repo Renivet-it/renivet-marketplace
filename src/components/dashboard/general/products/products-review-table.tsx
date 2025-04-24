@@ -3,6 +3,7 @@
 import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import {
@@ -42,7 +43,8 @@ import {
     convertValueToLabel,
     formatPriceTag,
 } from "@/lib/utils";
-import { ProductWithBrand } from "@/lib/validations";
+import { CachedBrand, ProductWithBrand } from "@/lib/validations";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -56,10 +58,22 @@ import {
 } from "@tanstack/react-table";
 import { format } from "date-fns";
 import Link from "next/link";
-import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
+import {
+    parseAsInteger,
+    parseAsString,
+    parseAsStringLiteral,
+    useQueryState,
+    parseAsArrayOf
+} from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductAction } from "./product-admin-action";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 export type TableProduct = ProductWithBrand & {
     stock: number;
     brandName: string;
@@ -310,19 +324,34 @@ const columns: ColumnDef<TableProduct>[] = [
         id: "actions",
         cell: ({ row }) => {
             const data = row.original;
-            return <ProductAction product={{ ...data, visibility: data.visibility ?? true }} />;
+            return (
+                <ProductAction
+                    product={{ ...data, visibility: data.visibility ?? true }}
+                />
+            );
         },
     },
 ];
+
+// interface PageProps {
+//     initialData: {
+//         data: ProductWithBrand[];
+//         count: number;
+//     };
+// }
 
 interface PageProps {
     initialData: {
         data: ProductWithBrand[];
         count: number;
     };
+    brandData?: {
+        data: CachedBrand[];
+        count: number;
+    };
 }
 
-export function ProductsReviewTable({ initialData }: PageProps) {
+export function ProductsReviewTable({ initialData, brandData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
@@ -330,13 +359,18 @@ export function ProductsReviewTable({ initialData }: PageProps) {
     });
     const [productImage, setImageFilter] = useQueryState(
         "productImage",
-        parseAsStringLiteral([
-            "with",
-            "without",
-            "all",
-        ] as const).withDefault("all")
+        parseAsStringLiteral(["with", "without", "all"] as const).withDefault(
+            "all"
+        )
     );
-
+    const [brandFilter, setBrandFilter] = useQueryState(
+        "brand",
+        parseAsString.withDefault("all")
+    );
+    const [brandIds, setBrandIds] = useQueryState(
+        "brandIds",
+        parseAsArrayOf(parseAsString).withDefault([])
+    );
     const [verificationStatus, setVerificationStatus] = useQueryState(
         "verificationStatus",
         parseAsStringLiteral([
@@ -353,11 +387,28 @@ export function ProductsReviewTable({ initialData }: PageProps) {
         {}
     );
     const [rowSelection, setRowSelection] = useState({});
+    const { data: brandsData } = trpc.general.brands.getBrands.useQuery(
+        {
+            page: 1, // Always fetch from first page
+            limit: 150, // Use total count to fetch all brands
+            search,
+        },
+        {
+            initialData: brandData, // Use brandData prop
+        }
+    );
 
     const {
         data: { data: dataRaw, count },
     } = trpc.brands.products.getProducts.useQuery(
-        { limit, page, search, verificationStatus, productImage },
+        {
+            limit,
+            page,
+            search,
+            verificationStatus,
+            productImage,
+            brandIds: brandIds.length > 0 ? brandIds : undefined, // Add brandIds filter
+        },
         { initialData }
     );
 
@@ -369,8 +420,7 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                     ? x.variants.reduce((acc, curr) => acc + curr.quantity, 0)
                     : (x.quantity ?? 0),
                 brandName: x.brand.name,
-                                    visibility: x.isPublished,
-
+                visibility: x.isPublished,
             })),
         [dataRaw]
     );
@@ -444,7 +494,11 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                             )}
                         </SelectContent>
                     </Select>
-                    <Select onValueChange={(value: ImageFilter) => setImageFilter(value)}>
+                    <Select
+                        onValueChange={(value: ImageFilter) =>
+                            setImageFilter(value)
+                        }
+                    >
                         <SelectTrigger>
                             <SelectValue placeholder="Filter by Image" />
                         </SelectTrigger>
@@ -456,6 +510,53 @@ export function ProductsReviewTable({ initialData }: PageProps) {
                             <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                     </Select>
+                    <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+        <Button variant="outline" className="w-full md:w-48">
+            {brandIds.length > 0
+                ? `${brandIds.length} brand(s) selected`
+                : "Filter by brands..."}
+        </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent className="max-h-80 w-60 overflow-y-auto">
+        {brandsData?.data?.map((brand) => (
+            <DropdownMenuItem
+                key={brand.id}
+                asChild
+                onSelect={(e) => e.preventDefault()}
+            >
+                <div className="flex items-center space-x-2">
+                    <Checkbox
+                        checked={brandIds.includes(brand.id)}
+                        onCheckedChange={(checked) => {
+                            const newBrandIds = checked
+                                ? [...brandIds, brand.id]
+                                : brandIds.filter((id) => id !== brand.id);
+                            setBrandIds(newBrandIds);
+                            if (newBrandIds.length > 0) {
+                                setBrandFilter("all");
+                            }
+                        }}
+                    />
+                    <span
+                        className="cursor-pointer"
+                        onClick={() => {
+                            const newBrandIds = brandIds.includes(brand.id)
+                                ? brandIds.filter((id) => id !== brand.id)
+                                : [...brandIds, brand.id];
+                            setBrandIds(newBrandIds);
+                            if (newBrandIds.length > 0) {
+                                setBrandFilter("all");
+                            }
+                        }}
+                    >
+                        {brand.name}
+                    </span>
+                </div>
+            </DropdownMenuItem>
+        ))}
+    </DropdownMenuContent>
+</DropdownMenu>
                 </div>
 
                 <DataTableViewOptions table={table} />
