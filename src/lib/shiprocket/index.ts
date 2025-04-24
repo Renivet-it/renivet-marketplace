@@ -22,7 +22,7 @@ import {
     PickupResponse,
     PrintManifestResponse,
 } from "./validations/response";
-import { getCouriersParams } from "./validations/request/couriers";
+import { GetCourierServiceabilityParams, getCouriersParams } from "./validations/request/couriers";
 
 class ShipRocket {
     private static instance: ShipRocket;
@@ -386,6 +386,31 @@ class ShipRocket {
             if (res.status !== 200)
                 throw new AppError(
                     "Unable to get couriers",
+                    "INTERNAL_SERVER_ERROR"
+                );
+
+            return {
+                status: true,
+                message: "Get couriers successfully!",
+                data: res.data,
+            };
+        } catch (err) {
+            return {
+                status: false,
+                message: sanitizeError(err),
+                data: null,
+            };
+        }
+    }
+
+    async getCouriersForDeliveryLocation(params: GetCourierServiceabilityParams){
+        try {
+            const res = await this.axiosInstance.get("/courier/serviceability", {
+                params
+            });
+            if (res.status !== 200)
+                throw new AppError(
+                    "Unable to get serviceability couriers",
                     "INTERNAL_SERVER_ERROR"
                 );
 

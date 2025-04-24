@@ -34,6 +34,7 @@ import {
     userQueries,
     userWishlistQueries,
     waitlistQueries,
+    addressQueries
 } from "@/lib/db/queries";
 import * as schema from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
@@ -94,6 +95,7 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
             users: userQueries,
             userWishlists: userWishlistQueries,
             waitlists: waitlistQueries,
+            addresses: addressQueries,
         },
     };
 };

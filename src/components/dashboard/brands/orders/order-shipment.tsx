@@ -1,4 +1,14 @@
 "use client";
+
+import {
+    ApiResponse,
+    CourierListResponse,
+    GetCourierForDeliveryLocation,
+} from "@/actions/shiprocket/types/CourierContext";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProgressCircle } from "@/components/ui/progress-circle";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Sheet,
     SheetContent,
@@ -6,10 +16,13 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { IndianRupee, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { string } from "zod";
+import CourierCardList from "./courier-card-list";
 import { TableOrder } from "./orders-table";
 
 interface PageProps {
@@ -25,20 +38,40 @@ export default function OrderShipment({
     side = "right",
     order,
 }: PageProps) {
+    const { data: customerAddressDetails, refetch } =
+        trpc.general.addresses.getAddressById.useQuery(
+            {
+                addressId: order.addressId,
+            },
+            {
+                enabled: false, // prevent auto-fetching if needed
+            }
+        );
     const [loading, setLoading] = useState(false);
+    const [allCourierResponse, setAllCourierResponse] = useState(undefined);
+    const [recommendedCourierForShiping, setRecommendedCourierForShiping] =
+        useState<ApiResponse<CourierListResponse> | undefined>(undefined);
+    const [selectedCourier, setSelectedCourier] =
+        useState<GetCourierForDeliveryLocation | null>(null);
+
     useEffect(() => {
         const fetchCouriers = async () => {
             try {
                 setLoading(true);
-                console.log("Fetching from API route...");
-                const res = await fetch("/api/shiprocket/couriers");
-                const data = await res.json();
-
-                if (data.status) {
-                    console.log(data.data);
-                } else {
-                    toast.error(data.message);
-                }
+                const res1 = await fetch("/api/shiprocket/couriers");
+                const params = new URLSearchParams({
+                    pickup_postcode: "734004",
+                    delivery_postcode: "734001",
+                    cod: "0", // or "0"
+                    weight: "0.5",
+                    order_id: `${order.shiprocketOrderId ?? ""}`,
+                }).toString();
+                const res2 = await fetch(
+                    `/api/shiprocket/couriers/serviceability?${params}`
+                );
+                await refetch();
+                setAllCourierResponse(await res1.json());
+                setRecommendedCourierForShiping(await res2.json());
             } catch (err) {
                 toast.error("Something went wrong");
             } finally {
@@ -67,8 +100,27 @@ export default function OrderShipment({
                             <Loader2 className="mr-2 animate-spin" />
                             Loading courier partners...
                         </div>
+                    ) : recommendedCourierForShiping?.data?.data
+                          .available_courier_companies?.length ? (
+                        <CourierCardList
+                            couriers={
+                                recommendedCourierForShiping.data.data
+                                    .available_courier_companies as GetCourierForDeliveryLocation[]
+                            }
+                            selectedCourierId={
+                                selectedCourier?.courier_company_id
+                            }
+                            onCourierSelect={(
+                                courier: GetCourierForDeliveryLocation
+                            ) => {
+                                setSelectedCourier(courier);
+                                console.log("Selected Courier:", courier);
+                            }}
+                        />
                     ) : (
-                        <></>
+                        <div className="text-sm text-muted-foreground">
+                            No courier data found.
+                        </div>
                     )}
                 </SheetContent>
             </Sheet>
