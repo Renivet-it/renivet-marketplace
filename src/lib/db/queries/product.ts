@@ -820,195 +820,416 @@ class ProductQuery {
         return data;
     }
 
+    // async updateProduct(productId: string, values: UpdateProduct) {
+    //     const data = await db.transaction(async (tx) => {
+    //         const updatedProduct = await tx
+    //             .update(products)
+    //             .set(values)
+    //             .where(eq(products.id, productId))
+    //             .returning()
+    //             .then((res) => res[0]);
+    //         // Step 2: Extract return/exchange policy fields
+    //         const {
+    //             returnable,
+    //             returnDescription,
+    //             exchangeable,
+    //             exchangeDescription,
+    //         } = values;
+
+    //         // Step 3: Check for existing return/exchange policy by productId
+    //         const existingPolicy = await tx
+    //             .select({ id: returnExchangePolicy.id }) // Only fetch the id for efficiency
+    //             .from(returnExchangePolicy)
+    //             .where(eq(returnExchangePolicy.productId, productId))
+    //             .limit(1)
+    //             .then((res) => res[0]);
+
+    //         if (existingPolicy) {
+    //             // Update the existing policy using its id
+    //             await tx
+    //                 .update(returnExchangePolicy)
+    //                 .set({
+    //                     returnable: returnable ?? false,
+    //                     returnDescription: returnDescription ?? null,
+    //                     exchangeable: exchangeable ?? false,
+    //                     exchangeDescription: exchangeDescription ?? null,
+    //                     updatedAt: new Date(),
+    //                 })
+    //                 .where(eq(returnExchangePolicy.id, existingPolicy.id));
+    //         } else {
+    //             // Insert a new policy if none exists
+    //             await tx.insert(returnExchangePolicy).values({
+    //                 productId,
+    //                 returnable: returnable ?? false,
+    //                 returnDescription: returnDescription ?? null,
+    //                 exchangeable: exchangeable ?? false,
+    //                 exchangeDescription: exchangeDescription ?? null,
+    //                 createdAt: new Date(),
+    //                 updatedAt: new Date(),
+    //             });
+    //         }
+    //         const [existingOptions, existingVariants] = await Promise.all([
+    //             tx.query.productOptions.findMany({
+    //                 where: eq(productOptions.productId, productId),
+    //             }),
+    //             tx.query.productVariants.findMany({
+    //                 where: eq(productVariants.productId, productId),
+    //             }),
+    //         ]);
+    //         // Step 3: Handle specifications (simplified: delete all, then insert new)
+    //         await tx
+    //             .delete(productSpecifications)
+    //             .where(eq(productSpecifications.productId, productId));
+
+    //         const specifications = values.specifications ?? [];
+    //         if (specifications.length) {
+    //             await tx.insert(productSpecifications).values(
+    //                 specifications.map((spec) => ({
+    //                     productId,
+    //                     key: spec.key,
+    //                     value: spec.value,
+    //                     createdAt: new Date(),
+    //                     updatedAt: new Date(),
+    //                 }))
+    //             );
+    //         }
+    //         const optionsToBeAdded = values.options.filter(
+    //             (option) => !existingOptions.find((o) => o.id === option.id)
+    //         );
+    //         const optionsToBeUpdated = values.options.filter((option) => {
+    //             const existing = existingOptions.find(
+    //                 (o) => o.id === option.id
+    //             );
+    //             return (
+    //                 existing &&
+    //                 JSON.stringify(option) !== JSON.stringify(existing)
+    //             );
+    //         });
+    //         const optionsToBeDeleted = existingOptions.filter(
+    //             (option) => !values.options.find((o) => o.id === option.id)
+    //         );
+
+    //         const variantsToBeAdded = values.variants.filter(
+    //             (variant) => !existingVariants.find((v) => v.id === variant.id)
+    //         );
+    //         const variantsToBeUpdated = values.variants.filter((variant) => {
+    //             const existing = existingVariants.find(
+    //                 (v) => v.id === variant.id
+    //             );
+    //             return (
+    //                 existing &&
+    //                 JSON.stringify(variant) !== JSON.stringify(existing)
+    //             );
+    //         });
+    //         const variantsToBeDeleted = existingVariants.filter(
+    //             (variant) => !values.variants.find((v) => v.id === variant.id)
+    //         );
+
+    //         await Promise.all([
+    //             optionsToBeAdded.length &&
+    //                 tx.insert(productOptions).values(optionsToBeAdded),
+    //             variantsToBeAdded.length &&
+    //                 tx
+    //                     .insert(productVariants)
+    //                     .values(variantsToBeAdded)
+    //                     .returning(),
+    //             ...optionsToBeUpdated.map((option) =>
+    //                 tx
+    //                     .update(productOptions)
+    //                     .set(option)
+    //                     .where(
+    //                         and(
+    //                             eq(productOptions.productId, productId),
+    //                             eq(productOptions.id, option.id)
+    //                         )
+    //                     )
+    //             ),
+    //             ...variantsToBeUpdated.map((variant) =>
+    //                 tx
+    //                     .update(productVariants)
+    //                     .set(variant)
+    //                     .where(
+    //                         and(
+    //                             eq(productVariants.productId, productId),
+    //                             eq(productVariants.id, variant.id)
+    //                         )
+    //                     )
+    //             ),
+    //         ]);
+
+    //         await Promise.all([
+    //             tx
+    //                 .update(productOptions)
+    //                 .set({
+    //                     isDeleted: true,
+    //                     deletedAt: new Date(),
+    //                     updatedAt: new Date(),
+    //                 })
+    //                 .where(
+    //                     and(
+    //                         eq(productOptions.productId, productId),
+    //                         inArray(
+    //                             productOptions.id,
+    //                             optionsToBeDeleted.map((o) => o.id)
+    //                         )
+    //                     )
+    //                 ),
+    //             tx
+    //                 .update(productVariants)
+    //                 .set({
+    //                     isDeleted: true,
+    //                     deletedAt: new Date(),
+    //                     updatedAt: new Date(),
+    //                 })
+    //                 .where(
+    //                     and(
+    //                         eq(productVariants.productId, productId),
+    //                         inArray(
+    //                             productVariants.id,
+    //                             variantsToBeDeleted.map((v) => v.id)
+    //                         )
+    //                     )
+    //                 ),
+    //         ]);
+
+    //         const [updatedOptions, updatedVariants] = await Promise.all([
+    //             tx.query.productOptions.findMany({
+    //                 where: eq(productOptions.productId, productId),
+    //             }),
+    //             tx.query.productVariants.findMany({
+    //                 where: eq(productVariants.productId, productId),
+    //             }),
+    //         ]);
+
+    //         return {
+    //             ...updatedProduct,
+    //             options: updatedOptions,
+    //             variants: updatedVariants,
+    //         };
+    //     });
+
+    //     return data;
+    // }
+
     async updateProduct(productId: string, values: UpdateProduct) {
-        const data = await db.transaction(async (tx) => {
-            const updatedProduct = await tx
-                .update(products)
-                .set(values)
-                .where(eq(products.id, productId))
-                .returning()
-                .then((res) => res[0]);
-            // Step 2: Extract return/exchange policy fields
-            const {
-                returnable,
-                returnDescription,
-                exchangeable,
-                exchangeDescription,
-            } = values;
+        try {
+            const data = await db.transaction(async (tx) => {
+                try {
+                    // Update product
+                    const updatedProduct = await tx
+                        .update(products)
+                        .set(values)
+                        .where(eq(products.id, productId))
+                        .returning()
+                        .then((res) => res[0]);
 
-            // Step 3: Check for existing return/exchange policy by productId
-            const existingPolicy = await tx
-                .select({ id: returnExchangePolicy.id }) // Only fetch the id for efficiency
-                .from(returnExchangePolicy)
-                .where(eq(returnExchangePolicy.productId, productId))
-                .limit(1)
-                .then((res) => res[0]);
+                    if (!updatedProduct) {
+                        throw new Error(`Product with ID ${productId} not found or failed to update`);
+                    }
 
-            if (existingPolicy) {
-                // Update the existing policy using its id
-                await tx
-                    .update(returnExchangePolicy)
-                    .set({
-                        returnable: returnable ?? false,
-                        returnDescription: returnDescription ?? null,
-                        exchangeable: exchangeable ?? false,
-                        exchangeDescription: exchangeDescription ?? null,
-                        updatedAt: new Date(),
-                    })
-                    .where(eq(returnExchangePolicy.id, existingPolicy.id));
-            } else {
-                // Insert a new policy if none exists
-                await tx.insert(returnExchangePolicy).values({
-                    productId,
-                    returnable: returnable ?? false,
-                    returnDescription: returnDescription ?? null,
-                    exchangeable: exchangeable ?? false,
-                    exchangeDescription: exchangeDescription ?? null,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                });
-            }
-            const [existingOptions, existingVariants] = await Promise.all([
-                tx.query.productOptions.findMany({
-                    where: eq(productOptions.productId, productId),
-                }),
-                tx.query.productVariants.findMany({
-                    where: eq(productVariants.productId, productId),
-                }),
-            ]);
-            // Step 3: Handle specifications (simplified: delete all, then insert new)
-            await tx
-                .delete(productSpecifications)
-                .where(eq(productSpecifications.productId, productId));
+                    // Handle return/exchange policy
+                    const { returnable, returnDescription, exchangeable, exchangeDescription } = values;
 
-            const specifications = values.specifications ?? [];
-            if (specifications.length) {
-                await tx.insert(productSpecifications).values(
-                    specifications.map((spec) => ({
-                        productId,
-                        key: spec.key,
-                        value: spec.value,
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                    }))
-                );
-            }
-            const optionsToBeAdded = values.options.filter(
-                (option) => !existingOptions.find((o) => o.id === option.id)
-            );
-            const optionsToBeUpdated = values.options.filter((option) => {
-                const existing = existingOptions.find(
-                    (o) => o.id === option.id
-                );
-                return (
-                    existing &&
-                    JSON.stringify(option) !== JSON.stringify(existing)
-                );
+                    const existingPolicy = await tx
+                        .select({ id: returnExchangePolicy.id })
+                        .from(returnExchangePolicy)
+                        .where(eq(returnExchangePolicy.productId, productId))
+                        .limit(1)
+                        .then((res) => res[0]);
+
+                    if (existingPolicy) {
+                        await tx
+                            .update(returnExchangePolicy)
+                            .set({
+                                returnable: returnable ?? false,
+                                returnDescription: returnDescription ?? null,
+                                exchangeable: exchangeable ?? false,
+                                exchangeDescription: exchangeDescription ?? null,
+                                updatedAt: new Date(),
+                            })
+                            .where(eq(returnExchangePolicy.id, existingPolicy.id));
+                    } else {
+                        await tx.insert(returnExchangePolicy).values({
+                            productId,
+                            returnable: returnable ?? false,
+                            returnDescription: returnDescription ?? null,
+                            exchangeable: exchangeable ?? false,
+                            exchangeDescription: exchangeDescription ?? null,
+                            createdAt: new Date(),
+                            updatedAt: new Date(),
+                        });
+                    }
+
+                    // Fetch existing options and variants
+                    const [existingOptions, existingVariants] = await Promise.all([
+                        tx.query.productOptions.findMany({
+                            where: eq(productOptions.productId, productId),
+                        }).catch((err) => {
+                            throw new Error(`Failed to fetch product options: ${err.message}`);
+                        }),
+                        tx.query.productVariants.findMany({
+                            where: eq(productVariants.productId, productId),
+                        }).catch((err) => {
+                            throw new Error(`Failed to fetch product variants: ${err.message}`);
+                        }),
+                    ]);
+
+                    // Handle specifications
+                    await tx
+                        .delete(productSpecifications)
+                        .where(eq(productSpecifications.productId, productId))
+                        .catch((err) => {
+                            throw new Error(`Failed to delete product specifications: ${err.message}`);
+                        });
+
+                    const specifications = values.specifications ?? [];
+                    if (specifications.length) {
+                        await tx.insert(productSpecifications).values(
+                            specifications.map((spec) => ({
+                                productId,
+                                key: spec.key,
+                                value: spec.value,
+                                createdAt: new Date(),
+                                updatedAt: new Date(),
+                            }))
+                        ).catch((err) => {
+                            throw new Error(`Failed to insert product specifications: ${err.message}`);
+                        });
+                    }
+
+                    // Handle options and variants
+                    const optionsToBeAdded = values.options.filter(
+                        (option) => !existingOptions.find((o) => o.id === option.id)
+                    );
+                    const optionsToBeUpdated = values.options.filter((option) => {
+                        const existing = existingOptions.find((o) => o.id === option.id);
+                        return existing && JSON.stringify(option) !== JSON.stringify(existing);
+                    });
+                    const optionsToBeDeleted = existingOptions.filter(
+                        (option) => !values.options.find((o) => o.id === option.id)
+                    );
+
+                    const variantsToBeAdded = values.variants.filter(
+                        (variant) => !existingVariants.find((v) => v.id === variant.id)
+                    );
+                    const variantsToBeUpdated = values.variants.filter((variant) => {
+                        const existing = existingVariants.find((v) => v.id === variant.id);
+                        return existing && JSON.stringify(variant) !== JSON.stringify(existing);
+                    });
+                    const variantsToBeDeleted = existingVariants.filter(
+                        (variant) => !values.variants.find((v) => v.id === variant.id)
+                    );
+
+                    await Promise.all([
+                        optionsToBeAdded.length &&
+                            tx.insert(productOptions).values(optionsToBeAdded).catch((err) => {
+                                throw new Error(`Failed to insert product options: ${err.message}`);
+                            }),
+                        variantsToBeAdded.length &&
+                            tx.insert(productVariants).values(variantsToBeAdded).returning().catch((err) => {
+                                throw new Error(`Failed to insert product variants: ${err.message}`);
+                            }),
+                        ...optionsToBeUpdated.map((option) =>
+                            tx
+                                .update(productOptions)
+                                .set(option)
+                                .where(
+                                    and(
+                                        eq(productOptions.productId, productId),
+                                        eq(productOptions.id, option.id)
+                                    )
+                                )
+                                .catch((err) => {
+                                    throw new Error(`Failed to update product option ${option.id}: ${err.message}`);
+                                })
+                        ),
+                        ...variantsToBeUpdated.map((variant) =>
+                            tx
+                                .update(productVariants)
+                                .set(variant)
+                                .where(
+                                    and(
+                                        eq(productVariants.productId, productId),
+                                        eq(productVariants.id, variant.id)
+                                    )
+                                )
+                                .catch((err) => {
+                                    throw new Error(`Failed to update product variant ${variant.id}: ${err.message}`);
+                                })
+                        ),
+                    ]);
+                    await Promise.all([
+                        tx
+                            .update(productOptions)
+                            .set({
+                                isDeleted: true,
+                                deletedAt: new Date(),
+                                updatedAt: new Date(),
+                            })
+                            .where(
+                                and(
+                                    eq(productOptions.productId, productId),
+                                    inArray(
+                                        productOptions.id,
+                                        optionsToBeDeleted.map((o) => o.id)
+                                    )
+                                )
+                            )
+                            .catch((err) => {
+                                throw new Error(`Failed to delete product options: ${err.message}`);
+                            }),
+                        tx
+                            .update(productVariants)
+                            .set({
+                                isDeleted: true,
+                                deletedAt: new Date(),
+                                updatedAt: new Date(),
+                            })
+                            .where(
+                                and(
+                                    eq(productVariants.productId, productId),
+                                    inArray(
+                                        productVariants.id,
+                                        variantsToBeDeleted.map((v) => v.id)
+                                    )
+                                )
+                            )
+                            .catch((err) => {
+                                throw new Error(`Failed to delete product variants: ${err.message}`);
+                            }),
+                    ]);
+                        const [updatedOptions, updatedVariants] = await Promise.all([
+                        tx.query.productOptions.findMany({
+                            where: eq(productOptions.productId, productId),
+                        }).catch((err) => {
+                            throw new Error(`Failed to fetch updated product options: ${err.message}`);
+                        }),
+                        tx.query.productVariants.findMany({
+                            where: eq(productVariants.productId, productId),
+                        }).catch((err) => {
+                            throw new Error(`Failed to fetch updated product variants: ${err.message}`);
+                        }),
+                    ]);
+
+                    return {
+                        ...updatedProduct,
+                        options: updatedOptions,
+                        variants: updatedVariants,
+                    };
+                } catch (error:any) {
+                    // Log the error to the server console
+                    console.error(`Transaction error for product ${productId}:`, error.message);
+                    throw new Error(`Transaction failed: ${error.message}`);
+                }
             });
-            const optionsToBeDeleted = existingOptions.filter(
-                (option) => !values.options.find((o) => o.id === option.id)
-            );
 
-            const variantsToBeAdded = values.variants.filter(
-                (variant) => !existingVariants.find((v) => v.id === variant.id)
-            );
-            const variantsToBeUpdated = values.variants.filter((variant) => {
-                const existing = existingVariants.find(
-                    (v) => v.id === variant.id
-                );
-                return (
-                    existing &&
-                    JSON.stringify(variant) !== JSON.stringify(existing)
-                );
-            });
-            const variantsToBeDeleted = existingVariants.filter(
-                (variant) => !values.variants.find((v) => v.id === variant.id)
-            );
-
-            await Promise.all([
-                optionsToBeAdded.length &&
-                    tx.insert(productOptions).values(optionsToBeAdded),
-                variantsToBeAdded.length &&
-                    tx
-                        .insert(productVariants)
-                        .values(variantsToBeAdded)
-                        .returning(),
-                ...optionsToBeUpdated.map((option) =>
-                    tx
-                        .update(productOptions)
-                        .set(option)
-                        .where(
-                            and(
-                                eq(productOptions.productId, productId),
-                                eq(productOptions.id, option.id)
-                            )
-                        )
-                ),
-                ...variantsToBeUpdated.map((variant) =>
-                    tx
-                        .update(productVariants)
-                        .set(variant)
-                        .where(
-                            and(
-                                eq(productVariants.productId, productId),
-                                eq(productVariants.id, variant.id)
-                            )
-                        )
-                ),
-            ]);
-
-            await Promise.all([
-                tx
-                    .update(productOptions)
-                    .set({
-                        isDeleted: true,
-                        deletedAt: new Date(),
-                        updatedAt: new Date(),
-                    })
-                    .where(
-                        and(
-                            eq(productOptions.productId, productId),
-                            inArray(
-                                productOptions.id,
-                                optionsToBeDeleted.map((o) => o.id)
-                            )
-                        )
-                    ),
-                tx
-                    .update(productVariants)
-                    .set({
-                        isDeleted: true,
-                        deletedAt: new Date(),
-                        updatedAt: new Date(),
-                    })
-                    .where(
-                        and(
-                            eq(productVariants.productId, productId),
-                            inArray(
-                                productVariants.id,
-                                variantsToBeDeleted.map((v) => v.id)
-                            )
-                        )
-                    ),
-            ]);
-
-            const [updatedOptions, updatedVariants] = await Promise.all([
-                tx.query.productOptions.findMany({
-                    where: eq(productOptions.productId, productId),
-                }),
-                tx.query.productVariants.findMany({
-                    where: eq(productVariants.productId, productId),
-                }),
-            ]);
-
-            return {
-                ...updatedProduct,
-                options: updatedOptions,
-                variants: updatedVariants,
-            };
-        });
-
-        return data;
+            return data;
+        } catch (error:any) {
+            // Log the error to the server console
+            console.error(`Failed to update product ${productId}:`, error.message);
+            // Throw a clear error to be caught by the API handler
+            throw new Error(`Unable to update product: ${error.message}`);
+        }
     }
 
     async updateProductAvailability(productId: string, isAvailable: boolean) {
