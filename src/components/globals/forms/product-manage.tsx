@@ -271,12 +271,22 @@ export function ProductManageForm({
                 const toastId = toast.loading("Updating product...");
                 return { toastId };
             },
-            onSuccess: (_, __, { toastId }) => {
+            // onSuccess: (_, __, { toastId }) => {
+            //     toast.success("Product updated successfully", { id: toastId });
+            //     form.reset(form.getValues());
+            //     // router.refresh();
+            //     window.location.reload();
+            // },
+            onSuccess: (data, { productId }, { toastId }) => {
+                if (!data || data.id !== productId) {
+                  console.error("Invalid response:", data);
+                  toast.error("Update failed: Invalid product data", { id: toastId });
+                  return;
+                }
                 toast.success("Product updated successfully", { id: toastId });
                 form.reset(form.getValues());
-                // router.refresh();
                 window.location.reload();
-            },
+              },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
             },
