@@ -1216,7 +1216,7 @@ class ProductQuery {
                         options: updatedOptions,
                         variants: updatedVariants,
                     };
-                } catch (error) {
+                } catch (error:any) {
                     // Log the error to the server console
                     console.error(`Transaction error for product ${productId}:`, error.message);
                     throw new Error(`Transaction failed: ${error.message}`);
@@ -1224,7 +1224,7 @@ class ProductQuery {
             });
 
             return data;
-        } catch (error) {
+        } catch (error:any) {
             // Log the error to the server console
             console.error(`Failed to update product ${productId}:`, error.message);
             // Throw a clear error to be caught by the API handler
