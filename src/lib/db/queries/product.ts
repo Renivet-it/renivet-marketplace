@@ -8,21 +8,22 @@ import {
     Product,
     ProductWithBrand,
     productWithBrandSchema,
+    ReturnExchangePolicy,
     UpdateProduct,
     UpdateProductJourney,
     UpdateProductValue,
-    ReturnExchangePolicy
 } from "@/lib/validations";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "..";
 import {
+    brands,
     productOptions,
     products,
     productsJourney,
+    productSpecifications,
     productValues,
     productVariants,
     returnExchangePolicy,
-    productSpecifications
 } from "../schema";
 
 class ProductQuery {
@@ -164,9 +165,11 @@ class ProductQuery {
                 mediaItem: variant.image ? mediaMap.get(variant.image) : null,
             })),
             returnable: product.returnExchangePolicy?.returnable ?? false,
-            returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+            returnDescription:
+                product.returnExchangePolicy?.returnDescription ?? null,
             exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-            exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+            exchangeDescription:
+                product.returnExchangePolicy?.exchangeDescription ?? null,
             specifications: product.specifications.map((spec) => ({
                 key: spec.key,
                 value: spec.value,
@@ -363,9 +366,11 @@ class ProductQuery {
                 mediaItem: variant.image ? mediaMap.get(variant.image) : null,
             })),
             returnable: product.returnExchangePolicy?.returnable ?? false,
-            returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+            returnDescription:
+                product.returnExchangePolicy?.returnDescription ?? null,
             exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-            exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+            exchangeDescription:
+                product.returnExchangePolicy?.exchangeDescription ?? null,
             specifications: product.specifications.map((spec) => ({
                 key: spec.key,
                 value: spec.value,
@@ -462,9 +467,11 @@ class ProductQuery {
                 mediaItem: variant.image ? mediaMap.get(variant.image) : null,
             })),
             returnable: data.returnExchangePolicy?.returnable ?? false,
-            returnDescription: data.returnExchangePolicy?.returnDescription ?? null,
+            returnDescription:
+                data.returnExchangePolicy?.returnDescription ?? null,
             exchangeable: data.returnExchangePolicy?.exchangeable ?? false,
-            exchangeDescription: data.returnExchangePolicy?.exchangeDescription ?? null,
+            exchangeDescription:
+                data.returnExchangePolicy?.exchangeDescription ?? null,
             specifications: data.specifications.map((spec) => ({
                 key: spec.key,
                 value: spec.value,
@@ -671,9 +678,11 @@ class ProductQuery {
                 mediaItem: variant.image ? mediaMap.get(variant.image) : null,
             })),
             returnable: data.returnExchangePolicy?.returnable ?? false,
-            returnDescription: data.returnExchangePolicy?.returnDescription ?? null,
+            returnDescription:
+                data.returnExchangePolicy?.returnDescription ?? null,
             exchangeable: data.returnExchangePolicy?.exchangeable ?? false,
-            exchangeDescription: data.returnExchangePolicy?.exchangeDescription ?? null,
+            exchangeDescription:
+                data.returnExchangePolicy?.exchangeDescription ?? null,
             specifications: data.specifications.map((spec) => ({
                 key: spec.key,
                 value: spec.value,
@@ -694,38 +703,37 @@ class ProductQuery {
                 .values(values)
                 .returning()
                 .then((res) => res[0]);
-                console.log("Return/Exchange Policy Fields:", {
-                    returnable: values.returnable,
-                    returnDescription: values.returnDescription,
-                    exchangeable: values.exchangeable,
-                    exchangeDescription: values.exchangeDescription,
-                });
+            console.log("Return/Exchange Policy Fields:", {
+                returnable: values.returnable,
+                returnDescription: values.returnDescription,
+                exchangeable: values.exchangeable,
+                exchangeDescription: values.exchangeDescription,
+            });
 
-                const returnPolicyData = {
-                    productId: newProduct.id,
-                    returnable: values.returnable ?? false, // Default to false if undefined
-                    returnDescription: values.returnDescription ?? null, // Default to null if undefined
-                    exchangeable: values.exchangeable ?? false, // Default to false if undefined
-                    exchangeDescription: values.exchangeDescription ?? null, // Default to null if undefined
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                };
+            const returnPolicyData = {
+                productId: newProduct.id,
+                returnable: values.returnable ?? false, // Default to false if undefined
+                returnDescription: values.returnDescription ?? null, // Default to null if undefined
+                exchangeable: values.exchangeable ?? false, // Default to false if undefined
+                exchangeDescription: values.exchangeDescription ?? null, // Default to null if undefined
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
 
-                await tx.insert(returnExchangePolicy).values(returnPolicyData);
+            await tx.insert(returnExchangePolicy).values(returnPolicyData);
 
-                const specifications = values.specifications ?? [];
-                if (specifications.length) {
-                    await tx.insert(productSpecifications).values(
-                        specifications.map((spec) => ({
-                            productId: newProduct.id,
-                            key: spec.key,
-                            value: spec.value,
-                            createdAt: new Date(),
-                            updatedAt: new Date(),
-                        }))
-                    );
-                }
-
+            const specifications = values.specifications ?? [];
+            if (specifications.length) {
+                await tx.insert(productSpecifications).values(
+                    specifications.map((spec) => ({
+                        productId: newProduct.id,
+                        key: spec.key,
+                        value: spec.value,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    }))
+                );
+            }
 
             const [newOptions, newVariants] = await Promise.all([
                 !!values.options.length
@@ -820,46 +828,46 @@ class ProductQuery {
                 .where(eq(products.id, productId))
                 .returning()
                 .then((res) => res[0]);
-                    // Step 2: Extract return/exchange policy fields
-                    const {
-                        returnable,
-                        returnDescription,
-                        exchangeable,
-                        exchangeDescription,
-                    } = values;
+            // Step 2: Extract return/exchange policy fields
+            const {
+                returnable,
+                returnDescription,
+                exchangeable,
+                exchangeDescription,
+            } = values;
 
-                    // Step 3: Check for existing return/exchange policy by productId
-                    const existingPolicy = await tx
-                        .select({ id: returnExchangePolicy.id }) // Only fetch the id for efficiency
-                        .from(returnExchangePolicy)
-                        .where(eq(returnExchangePolicy.productId, productId))
-                        .limit(1)
-                        .then((res) => res[0]);
+            // Step 3: Check for existing return/exchange policy by productId
+            const existingPolicy = await tx
+                .select({ id: returnExchangePolicy.id }) // Only fetch the id for efficiency
+                .from(returnExchangePolicy)
+                .where(eq(returnExchangePolicy.productId, productId))
+                .limit(1)
+                .then((res) => res[0]);
 
-                    if (existingPolicy) {
-                        // Update the existing policy using its id
-                        await tx
-                            .update(returnExchangePolicy)
-                            .set({
-                                returnable: returnable ?? false,
-                                returnDescription: returnDescription ?? null,
-                                exchangeable: exchangeable ?? false,
-                                exchangeDescription: exchangeDescription ?? null,
-                                updatedAt: new Date(),
-                            })
-                            .where(eq(returnExchangePolicy.id, existingPolicy.id));
-                    } else {
-                        // Insert a new policy if none exists
-                        await tx.insert(returnExchangePolicy).values({
-                            productId,
-                            returnable: returnable ?? false,
-                            returnDescription: returnDescription ?? null,
-                            exchangeable: exchangeable ?? false,
-                            exchangeDescription: exchangeDescription ?? null,
-                            createdAt: new Date(),
-                            updatedAt: new Date(),
-                        });
-                    }
+            if (existingPolicy) {
+                // Update the existing policy using its id
+                await tx
+                    .update(returnExchangePolicy)
+                    .set({
+                        returnable: returnable ?? false,
+                        returnDescription: returnDescription ?? null,
+                        exchangeable: exchangeable ?? false,
+                        exchangeDescription: exchangeDescription ?? null,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(returnExchangePolicy.id, existingPolicy.id));
+            } else {
+                // Insert a new policy if none exists
+                await tx.insert(returnExchangePolicy).values({
+                    productId,
+                    returnable: returnable ?? false,
+                    returnDescription: returnDescription ?? null,
+                    exchangeable: exchangeable ?? false,
+                    exchangeDescription: exchangeDescription ?? null,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                });
+            }
             const [existingOptions, existingVariants] = await Promise.all([
                 tx.query.productOptions.findMany({
                     where: eq(productOptions.productId, productId),
@@ -870,20 +878,20 @@ class ProductQuery {
             ]);
             // Step 3: Handle specifications (simplified: delete all, then insert new)
             await tx
-            .delete(productSpecifications)
-            .where(eq(productSpecifications.productId, productId));
+                .delete(productSpecifications)
+                .where(eq(productSpecifications.productId, productId));
 
             const specifications = values.specifications ?? [];
             if (specifications.length) {
-            await tx.insert(productSpecifications).values(
-                specifications.map((spec) => ({
-                    productId,
-                    key: spec.key,
-                    value: spec.value,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                }))
-            );
+                await tx.insert(productSpecifications).values(
+                    specifications.map((spec) => ({
+                        productId,
+                        key: spec.key,
+                        value: spec.value,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    }))
+                );
             }
             const optionsToBeAdded = values.options.filter(
                 (option) => !existingOptions.find((o) => o.id === option.id)
