@@ -87,6 +87,7 @@ export function ProductAction({ product }: PageProps) {
                             <Link
                                 // href={`/dashboard/brands/${product.brandId}/products/p/${product.id}`}
                                 href={`/dashboard/general/products/preview-form/${product.id}`}
+                                target="_blank"
                             >
                                 <Icons.Edit className="size-4" />
                                 <span>Edit</span>
@@ -107,6 +108,7 @@ export function ProductAction({ product }: PageProps) {
                         <DropdownMenuItem asChild>
                             <Link
                                 href={`/dashboard/general/products/preview-form/${product.id}/values`}
+                                target="_blank"
                             >
                                 <Icons.ShoppingCart className="size-4" />
                                 <span>
@@ -120,6 +122,7 @@ export function ProductAction({ product }: PageProps) {
                         <DropdownMenuItem asChild>
                             <Link
                                 href={`/dashboard/general/products/preview-form/${product.id}/journey`}
+                                target="_blank"
                             >
                                 <Icons.Globe className="size-4" />
                                 <span>

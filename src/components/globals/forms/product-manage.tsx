@@ -274,6 +274,8 @@ export function ProductManageForm({
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Product updated successfully", { id: toastId });
                 form.reset(form.getValues());
+                // router.refresh();
+                window.location.reload();
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
