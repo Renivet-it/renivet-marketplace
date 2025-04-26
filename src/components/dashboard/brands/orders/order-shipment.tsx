@@ -5,10 +5,6 @@ import {
     CourierListResponse,
     GetCourierForDeliveryLocation,
 } from "@/actions/shiprocket/types/CourierContext";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ProgressCircle } from "@/components/ui/progress-circle";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Sheet,
     SheetContent,
@@ -16,12 +12,12 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
+import { GetCourierServiceabilityParams } from "@/lib/shiprocket/validations/request/couriers";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { IndianRupee, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { string } from "zod";
 import CourierCardList from "./courier-card-list";
 import { TableOrder } from "./orders-table";
 
@@ -32,19 +28,34 @@ interface PageProps {
     order: TableOrder;
 }
 
+interface initialShippingAvaibilityParams {
+    pickup_postcode: string;
+    delivery_postcode: string;
+    order_id: string;
+}
+
 export default function OrderShipment({
     isSheetOpen,
     setIsSheetOpen,
     side = "right",
     order,
 }: PageProps) {
-    const { data: customerAddressDetails, refetch } =
+    const { data: customerAddressDetails, refetch: refetchCustomerAddress } =
         trpc.general.addresses.getAddressById.useQuery(
             {
                 addressId: order.addressId,
             },
             {
-                enabled: false, // prevent auto-fetching if needed
+                enabled: false,
+            }
+        );
+    const { data: brandAddressDetails, refetch: refetchBrandAddress } =
+        trpc.general.addresses.getBrandAddressFromOrderID.useQuery(
+            {
+                orderId: order.id,
+            },
+            {
+                enabled: false,
             }
         );
     const [loading, setLoading] = useState(false);
@@ -53,25 +64,43 @@ export default function OrderShipment({
         useState<ApiResponse<CourierListResponse> | undefined>(undefined);
     const [selectedCourier, setSelectedCourier] =
         useState<GetCourierForDeliveryLocation | null>(null);
+    const [serviceabilityParams, setServiceabilityParams] =
+        useState<initialShippingAvaibilityParams | null>(null);
 
     useEffect(() => {
         const fetchCouriers = async () => {
+            setLoading(true);
             try {
-                setLoading(true);
-                const res1 = await fetch("/api/shiprocket/couriers");
-                const params = new URLSearchParams({
-                    pickup_postcode: "734004",
-                    delivery_postcode: "734001",
-                    cod: "0", // or "0"
-                    weight: "0.5",
+                // Refetch address details first
+                await refetchCustomerAddress();
+                await refetchBrandAddress();
+
+                // Prepare the params properly
+                const initialParams: initialShippingAvaibilityParams = {
+                    pickup_postcode: `${brandAddressDetails?.warehousePostalCode ?? ""}`,
+                    delivery_postcode: `${customerAddressDetails?.zip ?? ""}`,
                     order_id: `${order.shiprocketOrderId ?? ""}`,
-                }).toString();
-                const res2 = await fetch(
-                    `/api/shiprocket/couriers/serviceability?${params}`
+                };
+
+                // Save the params to state
+                setServiceabilityParams(initialParams);
+
+                // Fetch all couriers
+                const couriersResponse = await fetch(
+                    "/api/shiprocket/couriers"
                 );
-                await refetch();
-                setAllCourierResponse(await res1.json());
-                setRecommendedCourierForShiping(await res2.json());
+                const couriersData = await couriersResponse.json();
+                setAllCourierResponse(couriersData);
+
+                // Fetch recommended courier based on serviceability params
+                const queryParams = new URLSearchParams(
+                    initialParams as any
+                ).toString();
+                const recommendedResponse = await fetch(
+                    `/api/shiprocket/couriers/serviceability?${queryParams}`
+                );
+                const recommendedData = await recommendedResponse.json();
+                setRecommendedCourierForShiping(recommendedData);
             } catch (err) {
                 toast.error("Something went wrong");
             } finally {
@@ -80,6 +109,9 @@ export default function OrderShipment({
         };
         if (isSheetOpen) fetchCouriers();
     }, [isSheetOpen]);
+    console.log("customerAddressDetails", customerAddressDetails);
+    console.log("brandAddressDetails", brandAddressDetails);
+    console.log("orders", order);
     return (
         <>
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
