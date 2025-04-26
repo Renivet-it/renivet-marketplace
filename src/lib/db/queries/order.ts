@@ -526,6 +526,13 @@ class OrderQuery {
 
         return data;
     }
+
+    async orderShipmentDetailsByOrderId(orderId: string) {
+        const data = await db.query.orderShipments.findFirst({
+            where: eq(orderShipments.orderId, orderId),
+        });
+        return data;
+    }
 }
 
 export const orderQueries = new OrderQuery();

@@ -1,5 +1,8 @@
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { addressSchema } from "@/lib/validations";
+import {
+    addressSchema,
+    brandDetailsAddressWithSafeSchema,
+} from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -17,10 +20,30 @@ export const addressesRouter = createTRPCRouter({
             if (!data)
                 throw new TRPCError({
                     code: "NOT_FOUND",
-                    message: "Blog not found",
+                    message: "User address not found",
                 });
             const parsed = addressSchema
                 .omit({ createdAt: true, updatedAt: true })
+                .parse(data);
+            return parsed;
+        }),
+    getBrandAddressFromOrderID: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { orderId } = input;
+            const data =
+                await queries.addresses.getBrandAddressFromOrderID(orderId);
+            if (!data)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand address not found",
+                });
+            const parsed = brandDetailsAddressWithSafeSchema
                 .parse(data);
             return parsed;
         }),
