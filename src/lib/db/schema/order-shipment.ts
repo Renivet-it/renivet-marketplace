@@ -3,6 +3,7 @@ import {
     boolean,
     index,
     integer,
+    jsonb,
     pgTable,
     text,
     timestamp,
@@ -59,6 +60,8 @@ export const orderShipments = pgTable(
         pickupTokenNumber: text("pickup_token_number"),
         ...timestamps,
         isAwbGenerated: boolean("is_awb_generated").default(false),
+        awbDetailsShipRocketJson: jsonb("awb_details_shiprocket_json").default({}),
+        pickUpDetailsShipRocketJson: jsonb("pick_up_details_shiprocket_json").default({}),
     },
     (table) => ({
         orderShipmentOrderIdIdx: index("order_shipment_order_id_idx").on(

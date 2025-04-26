@@ -194,13 +194,17 @@ class ShipRocket {
             const { awb_assign_status, response } = res.data;
             if (!awb_assign_status)
                 throw new AppError("Unable to generate AWB", "CONFLICT");
-            orderQueries.updateAwbGenerationStatus(
+            await orderQueries.updateAwbGenerationStatus(
                 values.shipment_id,
                 awb_assign_status === 1
             );
-            orderQueries.createAwbNumber(
+            await orderQueries.createAwbNumber(
                 values.shipment_id,
                 response.data.awb_code
+            );
+            await orderQueries.saveAwbShiprocketResponse(
+                values.shipment_id,
+                res.data
             );
             return {
                 status: true,
@@ -474,9 +478,7 @@ class ShipRocket {
                 pickup_date: shipmentData?.pickup_date
                     ? [shipmentData.pickup_date]
                     : undefined,
-                status: shipmentData?.status
-                    ? shipmentData.status
-                    : undefined,
+                status: shipmentData?.status ? shipmentData.status : undefined,
             };
 
             const res = await this.axiosInstance.post(
@@ -488,6 +490,20 @@ class ShipRocket {
                     "Unable to get serviceability couriers",
                     "INTERNAL_SERVER_ERROR"
                 );
+
+            await orderQueries.updatePickUpStatus(
+                shipmentData.shipment_id,
+                res.data.pickup_status === 1
+            );
+            await orderQueries.savePickupShiprocketResponse(
+                shipmentData.shipment_id,
+                res.data
+            );
+            await orderQueries.createPickupDetails(
+                shipmentData.shipment_id,
+                res.data.response.pickup_token_number,
+                res.data.response.pickup_scheduled_date
+            );
 
             return {
                 status: true,

@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
             );
         }
         const result = await courierService.requestShipment(body);
-
         return NextResponse.json(result);
     } catch (e) {
         return NextResponse.json(

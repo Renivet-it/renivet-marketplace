@@ -555,9 +555,50 @@ class OrderQuery {
     }
 
     async getShipmentDetailsByShipmentId(shipmentId: number) {
-        const result = db.query.orderShipments.findMany({
+        const result = await db.query.orderShipments.findMany({
             where: eq(orderShipments.shiprocketShipmentId, shipmentId),
         });
+        return result;
+    }
+
+    async updatePickUpStatus(shipmentId: number, status: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isPickupScheduled: status,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async savePickupShiprocketResponse(shipmentId: number, shipmentDetails: Record<string, any>) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                pickUpDetailsShipRocketJson: shipmentDetails,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async saveAwbShiprocketResponse(shipmentId: number, awbDetails: Record<string, any>) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                awbDetailsShipRocketJson: awbDetails,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async createPickupDetails(shipmentId: number, pickupToken: any, pickupDate: any){
+        const result = await db
+            .update(orderShipments)
+            .set({
+                pickupTokenNumber: pickupToken,
+                pickupScheduledDate: pickupDate
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
         return result;
     }
 }
