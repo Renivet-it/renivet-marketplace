@@ -6,6 +6,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { SignUp } from "@clerk/nextjs";
+
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -20,16 +22,9 @@ export default function Page() {
                 innerWrapper: "max-w-lg xl:max-w-2xl",
             }}
         >
-            <Card className="rounded-none">
-                <CardHeader>
-                    <CardTitle>Create an Account</CardTitle>
-                    <CardDescription>
-                        Create an account to access all features
-                    </CardDescription>
-                </CardHeader>
-
-                <SignUpForm />
-            </Card>
+        <div className="flex items-center justify-center">
+            <SignUp routing="hash" signInUrl="/auth/signin" />
+            </div>
         </GeneralShell>
     );
 }
