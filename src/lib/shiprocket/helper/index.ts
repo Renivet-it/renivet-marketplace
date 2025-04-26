@@ -4,13 +4,13 @@ export function parseCourierParams(
     params: URLSearchParams
 ): GetCourierServiceabilityParams {
     return {
-        pickup_postcode: parseInt(params.get("pickup_postcode") || ""),
-        delivery_postcode: parseInt(params.get("delivery_postcode") || ""),
+        pickup_postcode: parseInt(params.get("pickup_postcode")! || ""),
+        delivery_postcode: parseInt(params.get("delivery_postcode")! || ""),
         order_id: params.get("order_id")
             ? parseInt(params.get("order_id")!)
             : undefined,
-        cod: parseInt(params.get("cod")! || ""),
-        weight: parseInt(params.get("weight")! || ""),
+        cod: parseInt(params.get("cod")!) || undefined,
+        weight: parseInt(params.get("weight")!) || undefined,
         length: params.get("length")
             ? parseInt(params.get("length")!)
             : undefined,
