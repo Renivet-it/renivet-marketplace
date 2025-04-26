@@ -1,6 +1,7 @@
 import { shiprocket } from "@/lib/shiprocket";
 import { CourierContextType, CourierOtherOptions, GetCourierForDeliveryLocation } from "../types/CourierContext";
-import { getCouriersParams } from "@/lib/shiprocket/validations/request/couriers";
+import { getCouriersParams, PostShipmentPickupBody } from "@/lib/shiprocket/validations/request/couriers";
+import { AWB } from "@/lib/shiprocket/validations/request/awb";
 
 const clientPromise = shiprocket();
 
@@ -18,11 +19,11 @@ export const courierService: CourierContextType = {
         const sr = await clientPromise;
         return sr.getCouriers(params);
     },
-    async generateAWB(orderId: any) {
+    async generateAWB(awbBody: AWB) {
         const sr = await clientPromise;
-        return sr.generateAWB(orderId);
+        return sr.generateAWB(awbBody);
     },
-    async requestShipment(shipmentData: any) {
+    async requestShipment(shipmentData) {
         const sr = await clientPromise;
         return sr.requestShipment(shipmentData);
     },

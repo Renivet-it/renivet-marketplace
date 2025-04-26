@@ -5,6 +5,13 @@ import {
     CourierListResponse,
     GetCourierForDeliveryLocation,
 } from "@/actions/shiprocket/types/CourierContext";
+import { Button } from "@/components/ui/button-general";
+import { Calendar } from "@/components/ui/calendar";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import {
     Sheet,
     SheetContent,
@@ -12,10 +19,10 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { GetCourierServiceabilityParams } from "@/lib/shiprocket/validations/request/couriers";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CourierCardList from "./courier-card-list";
@@ -59,6 +66,7 @@ export default function OrderShipment({
             }
         );
     const [loading, setLoading] = useState(false);
+    const [buttonLoading, setButtonLoading] = useState(false);
     const [allCourierResponse, setAllCourierResponse] = useState(undefined);
     const [recommendedCourierForShiping, setRecommendedCourierForShiping] =
         useState<ApiResponse<CourierListResponse> | undefined>(undefined);
@@ -66,22 +74,67 @@ export default function OrderShipment({
         useState<GetCourierForDeliveryLocation | null>(null);
     const [serviceabilityParams, setServiceabilityParams] =
         useState<initialShippingAvaibilityParams | null>(null);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+        undefined
+    );
+
+    const handleShipNow = async () => {
+        if (!serviceabilityParams || !selectedDate || !selectedCourier) {
+            toast.error("Please select a shipping date and a courier partner.");
+            return;
+        }
+        const awbPayload = {
+            shipment_id: order.shiprocketShipmentId,
+            courier_id: selectedCourier.courier_company_id,
+        };
+        const pickUpRequestPayload = {
+            shipment_id: order.shiprocketShipmentId,
+            pickup_date: format(selectedDate, "yyyy-MM-dd"),
+        };
+        try {
+            const generateAwb = await fetch(
+                "/api/shiprocket/couriers/generate-awb",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(awbPayload),
+                }
+            );
+            toast.success("AWB generated successfully!");
+            const madePickUpRequest = await fetch(
+                "/api/shiprocket/couriers/pickup",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(pickUpRequestPayload),
+                }
+            );
+            toast.success("AWB generated successfully!");
+        } catch (error) {
+            toast.error("An error occurred while generating the AWB.");
+            console.error(error);
+        }
+    };
 
     useEffect(() => {
         const fetchCouriers = async () => {
             setLoading(true);
+            setButtonLoading(true);
             try {
-                // Refetch address details first
-                await refetchCustomerAddress();
-                await refetchBrandAddress();
+                const { data: newCustomerAddressDetails } =
+                    await refetchCustomerAddress();
+                const { data: newBrandAddressDetails } =
+                    await refetchBrandAddress();
 
-                // Prepare the params properly
                 const initialParams: initialShippingAvaibilityParams = {
-                    pickup_postcode: `${brandAddressDetails?.warehousePostalCode ?? ""}`,
-                    delivery_postcode: `${customerAddressDetails?.zip ?? ""}`,
+                    pickup_postcode: `${newBrandAddressDetails?.warehousePostalCode ?? ""}`,
+                    delivery_postcode: `${newCustomerAddressDetails?.zip ?? ""}`,
                     order_id: `${order.shiprocketOrderId ?? ""}`,
                 };
-
                 // Save the params to state
                 setServiceabilityParams(initialParams);
 
@@ -105,16 +158,21 @@ export default function OrderShipment({
                 toast.error("Something went wrong");
             } finally {
                 setLoading(false);
+                setButtonLoading(false);
             }
         };
         if (isSheetOpen) fetchCouriers();
     }, [isSheetOpen]);
-    console.log("customerAddressDetails", customerAddressDetails);
-    console.log("brandAddressDetails", brandAddressDetails);
-    console.log("orders", order);
+
     return (
         <>
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <Sheet
+                open={isSheetOpen}
+                onOpenChange={() => {
+                    setIsSheetOpen(false);
+                    setSelectedDate(undefined);
+                }}
+            >
                 <SheetContent side={side}>
                     <SheetHeader className="mb-4">
                         <SheetTitle className={cn("capitalize text-primary")}>
@@ -126,6 +184,48 @@ export default function OrderShipment({
                             Display the list of courier partners and their
                             details please select your preferred
                         </SheetDescription>
+                        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal sm:w-[260px]",
+                                            !selectedDate &&
+                                                "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {selectedDate
+                                            ? format(selectedDate, "PPP")
+                                            : "Pick a shipping date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                        mode="single"
+                                        selected={selectedDate}
+                                        onSelect={setSelectedDate}
+                                        initialFocus
+                                        disabled={(date) => {
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+                                            return date < today;
+                                        }}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+
+                            <Button
+                                className="flex items-center gap-2" // You can adjust the layout of the icon and text
+                                onClick={handleShipNow}
+                                disabled={buttonLoading}
+                            >
+                                <Truck className="h-4 w-4" />{" "}
+                                {/* Adjust the size of the icon */}
+                                Ship Now
+                            </Button>
+                        </div>
                     </SheetHeader>
                     {loading ? (
                         <div className="flex h-24 items-center justify-center text-muted-foreground">

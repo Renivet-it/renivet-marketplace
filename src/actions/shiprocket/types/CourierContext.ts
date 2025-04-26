@@ -1,6 +1,8 @@
+import { AWB } from "@/lib/shiprocket/validations/request";
 import {
     GetCourierServiceabilityParams,
     getCouriersParams,
+    PostShipmentPickupBody,
 } from "@/lib/shiprocket/validations/request/couriers";
 
 export interface ApiResponse<T> {
@@ -163,6 +165,6 @@ export interface CourierContextType {
     getCouriersForDeliveryLocation: (
         params: GetCourierServiceabilityParams
     ) => Promise<ApiResponse<CourierListResponse>>;
-    generateAWB: (orderId: any) => Promise<any>;
-    requestShipment: (shipmentData: any) => Promise<any>;
+    generateAWB: (orderId: AWB) => Promise<any>;
+    requestShipment: (shipmentData: PostShipmentPickupBody) => Promise<any>;
 }

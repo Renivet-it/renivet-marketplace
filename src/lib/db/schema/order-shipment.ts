@@ -58,6 +58,7 @@ export const orderShipments = pgTable(
         pickupScheduledDate: timestamp("pickup_scheduled_date"),
         pickupTokenNumber: text("pickup_token_number"),
         ...timestamps,
+        isAwbGenerated: boolean("is_awb_generated").default(false),
     },
     (table) => ({
         orderShipmentOrderIdIdx: index("order_shipment_order_id_idx").on(

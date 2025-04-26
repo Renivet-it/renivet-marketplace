@@ -1,5 +1,7 @@
 import { env } from "@/../env";
+import { Body } from "@react-email/components";
 import axios, { AxiosInstance } from "axios";
+import { orderQueries } from "../db/queries";
 import { shipRocketCache } from "../redis/methods";
 import { AppError, sanitizeError } from "../utils";
 import {
@@ -13,6 +15,11 @@ import {
     PrintManifest,
 } from "./validations/request";
 import {
+    GetCourierServiceabilityParams,
+    getCouriersParams,
+    PostShipmentPickupBody,
+} from "./validations/request/couriers";
+import {
     AWBResponse,
     GenerateManifestResponse,
     InvoiceResponse,
@@ -22,7 +29,6 @@ import {
     PickupResponse,
     PrintManifestResponse,
 } from "./validations/response";
-import { GetCourierServiceabilityParams, getCouriersParams } from "./validations/request/couriers";
 
 class ShipRocket {
     private static instance: ShipRocket;
@@ -188,7 +194,14 @@ class ShipRocket {
             const { awb_assign_status, response } = res.data;
             if (!awb_assign_status)
                 throw new AppError("Unable to generate AWB", "CONFLICT");
-
+            orderQueries.updateAwbGenerationStatus(
+                values.shipment_id,
+                awb_assign_status === 1
+            );
+            orderQueries.createAwbNumber(
+                values.shipment_id,
+                response.data.awb_code
+            );
             return {
                 status: true,
                 message: "AWB generated",
@@ -380,9 +393,12 @@ class ShipRocket {
 
     async getCouriers(params?: getCouriersParams) {
         try {
-            const res = await this.axiosInstance.get("/courier/courierListWithCounts", {
-                params
-            });
+            const res = await this.axiosInstance.get(
+                "/courier/courierListWithCounts",
+                {
+                    params,
+                }
+            );
             if (res.status !== 200)
                 throw new AppError(
                     "Unable to get couriers",
@@ -403,11 +419,16 @@ class ShipRocket {
         }
     }
 
-    async getCouriersForDeliveryLocation(params: GetCourierServiceabilityParams){
+    async getCouriersForDeliveryLocation(
+        params: GetCourierServiceabilityParams
+    ) {
         try {
-            const res = await this.axiosInstance.get("/courier/serviceability", {
-                params
-            });
+            const res = await this.axiosInstance.get(
+                "/courier/serviceability",
+                {
+                    params,
+                }
+            );
             if (res.status !== 200)
                 throw new AppError(
                     "Unable to get serviceability couriers",
@@ -428,7 +449,59 @@ class ShipRocket {
         }
     }
 
-    async requestShipment(shipmentData) {}
+    async requestShipment(shipmentData: PostShipmentPickupBody) {
+        try {
+            const resultSet = await orderQueries.getShipmentDetailsByShipmentId(
+                shipmentData.shipment_id
+            );
+            const isAwbGeneratedFalse = resultSet.some(
+                (shipment) => shipment.isAwbGenerated === false
+            );
+
+            if (isAwbGeneratedFalse) {
+                throw new AppError(
+                    "AWB generation is pending for some shipments, cannot proceed.",
+                    "BAD_REQUEST"
+                );
+            }
+
+            const formatedShipmentData: {
+                shipment_id: number[];
+                pickup_date: Date[] | undefined;
+                status?: string | undefined;
+            } = {
+                shipment_id: [shipmentData.shipment_id],
+                pickup_date: shipmentData?.pickup_date
+                    ? [shipmentData.pickup_date]
+                    : undefined,
+                status: shipmentData?.status
+                    ? shipmentData.status
+                    : undefined,
+            };
+
+            const res = await this.axiosInstance.post(
+                "/courier/generate/pickup",
+                formatedShipmentData
+            );
+            if (res.status !== 200)
+                throw new AppError(
+                    "Unable to get serviceability couriers",
+                    "INTERNAL_SERVER_ERROR"
+                );
+
+            return {
+                status: true,
+                message: "pickup couriers set successfully!",
+                data: res.data,
+            };
+        } catch (err) {
+            return {
+                status: false,
+                message: sanitizeError(err),
+                data: null,
+            };
+        }
+    }
 }
 
 export const shiprocket = async () => await ShipRocket.getInstance();

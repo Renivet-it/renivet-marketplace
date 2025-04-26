@@ -7,7 +7,7 @@ import {
 } from "@/lib/validations";
 import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orderItems, orders, products, orderShipments } from "../schema";
+import { orderItems, orders, orderShipments, products } from "../schema";
 
 class OrderQuery {
     async getAllOrders() {
@@ -213,7 +213,7 @@ class OrderQuery {
                 sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
             )
             .as("filtered_order_items");
-    const ordersForBrand = db
+        const ordersForBrand = db
             .with(filteredProducts, filteredOrderItems)
             .select({
                 order: orders, // Select all order fields
@@ -532,6 +532,33 @@ class OrderQuery {
             where: eq(orderShipments.orderId, orderId),
         });
         return data;
+    }
+
+    async updateAwbGenerationStatus(shipmentId: number, status: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isAwbGenerated: status,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async createAwbNumber(shipmentId: number, awbCode: string) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                awbNumber: awbCode,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async getShipmentDetailsByShipmentId(shipmentId: number) {
+        const result = db.query.orderShipments.findMany({
+            where: eq(orderShipments.shiprocketShipmentId, shipmentId),
+        });
+        return result;
     }
 }
 

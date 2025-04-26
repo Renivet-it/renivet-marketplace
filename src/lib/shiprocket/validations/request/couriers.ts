@@ -4,31 +4,6 @@ export interface getCouriersParams {
     type: "active" | "inactive" | "all";
 }
 
-// export interface GetCourierServiceabilityParams {
-//     pickup_postcode: number; // required
-//     delivery_postcode: number; // required
-//     order_id?: number; // optional
-
-//     // Conditional: required based on context
-//     cod?: boolean; // 1 for COD, 0 for prepaid
-//     weight?: string; // in kg
-
-//     // Optional dimensions
-//     length?: number; // in cm
-//     breadth?: number; // in cm
-//     height?: number; // in cm
-
-//     declared_value?: number; // order price in INR
-
-//     mode?: "Air" | "Surface"; // travel mode
-
-//     is_return?: boolean; // 1 = return order
-
-//     couriers_type?: boolean; // 1 to show only "document" couriers
-//     only_local?: boolean; // 1 to show only hyperlocal couriers
-
-//     qc_check?: boolean; // QC check (only if is_return = 1)
-// }
 
 export const GetCourierServiceabilitySchema = z.object({
     pickup_postcode: z.coerce.number(), // converts string -> number
@@ -52,4 +27,11 @@ export const GetCourierServiceabilitySchema = z.object({
     qc_check: z.coerce.number().optional(),
 });
 
+export const postShipmentPickupSchema = z.object({
+    shipment_id: z.coerce.number(),
+    status: z.coerce.string().optional(),
+    pickup_date: z.coerce.date().optional(),
+});
+
 export type GetCourierServiceabilityParams = z.infer<typeof GetCourierServiceabilitySchema>;
+export type PostShipmentPickupBody = z.infer<typeof postShipmentPickupSchema>;
