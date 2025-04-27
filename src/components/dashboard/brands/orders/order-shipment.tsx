@@ -79,6 +79,7 @@ export default function OrderShipment({
     );
 
     const handleShipNow = async () => {
+        setButtonLoading(true);
         if (!serviceabilityParams || !selectedDate || !selectedCourier) {
             toast.error("Please select a shipping date and a courier partner.");
             return;
@@ -102,6 +103,11 @@ export default function OrderShipment({
                     body: JSON.stringify(awbPayload),
                 }
             );
+            const awbData = await generateAwb.json();
+            if (!awbData.status) {
+                toast.error(awbData.message);
+                return;
+            }
             toast.success("AWB generated successfully!");
             const madePickUpRequest = await fetch(
                 "/api/shiprocket/couriers/pickup",
@@ -113,10 +119,17 @@ export default function OrderShipment({
                     body: JSON.stringify(pickUpRequestPayload),
                 }
             );
-            toast.success("AWB generated successfully!");
+            const pickUpData = await madePickUpRequest.json();
+            if (!pickUpData.status) {
+                toast.error(pickUpData.message);
+                return;
+            }
+            toast.success("Pickup request generated successfully!");
         } catch (error) {
             toast.error("An error occurred while generating the AWB.");
             console.error(error);
+        } finally {
+            setButtonLoading(false);
         }
     };
 
