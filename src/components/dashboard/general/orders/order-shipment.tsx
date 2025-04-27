@@ -25,8 +25,9 @@ import { format } from "date-fns";
 import { CalendarIcon, Loader2, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import CourierCardList from "./courier-card-list";
+
 import { TableOrder } from "./orders-table";
+import CourierCardList from "./courier-card-list";
 
 interface PageProps {
     isSheetOpen: boolean;
@@ -85,11 +86,11 @@ export default function OrderShipment({
             return;
         }
         const awbPayload = {
-            shipment_id: order.shiprocketShipmentId,
+            shipment_id: order.shipments[0].shiprocketOrderId,
             courier_id: selectedCourier.courier_company_id,
         };
         const pickUpRequestPayload = {
-            shipment_id: order.shiprocketShipmentId,
+            shipment_id: order.shipments[0].shiprocketOrderId,
             pickup_date: format(selectedDate, "yyyy-MM-dd"),
         };
         try {
@@ -126,7 +127,7 @@ export default function OrderShipment({
             }
             toast.success("Pickup request generated successfully!");
         } catch (error) {
-            toast.error("An error occurred while generating the shipment.");
+            toast.error("An error occurred while generating the AWB.");
             console.error(error);
         } finally {
             setButtonLoading(false);
@@ -143,11 +144,15 @@ export default function OrderShipment({
                 const { data: newBrandAddressDetails } =
                     await refetchBrandAddress();
 
+                console.log("Initial order:", order);
+
+
                 const initialParams: initialShippingAvaibilityParams = {
                     pickup_postcode: `${newBrandAddressDetails?.warehousePostalCode ?? ""}`,
                     delivery_postcode: `${newCustomerAddressDetails?.zip ?? ""}`,
-                    order_id: `${order.shiprocketOrderId ?? ""}`,
+                    order_id: `${order.shipments[0].shiprocketOrderId ?? ""}`,
                 };
+                console.log("Initial Params:", initialParams);
                 // Save the params to state
                 setServiceabilityParams(initialParams);
 

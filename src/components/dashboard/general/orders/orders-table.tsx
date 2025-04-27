@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { OrderSingle } from "./order-single";
+import { OrderAction } from "./order-action";
 
 export type TableOrder = OrderWithItemAndBrand;
 
@@ -72,6 +73,13 @@ const columns: ColumnDef<TableOrder>[] = [
         cell: ({ row }) => {
             const data = row.original;
             return format(new Date(data.createdAt), "MMM dd, yyyy");
+        },
+    },
+    {
+        id: "actions",
+        cell: ({ row }) => {
+            const data = row.original;
+            return <OrderAction order={data} />;
         },
     },
 ];
