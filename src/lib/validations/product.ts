@@ -884,6 +884,16 @@ export const rejectProductSchema = productSchema.pick({
     rejectionReason: true,
 });
 
+export const updateProductMediaInputSchema = z.object({
+    productId: z.string(),
+    media: z.array(
+      z.object({
+        id: z.string(), // Assuming media.id is a string; adjust if it's a number
+        position: z.number(),
+      })
+    ),
+  });
+
 export type Product = z.infer<typeof productSchema>;
 export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
 export type ProductJourneyData = z.infer<typeof productJourneyDataSchema>;
@@ -903,3 +913,4 @@ export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;
 export type RejectProduct = z.infer<typeof rejectProductSchema>;
 export type ReturnExchangePolicy = z.infer<typeof returnExchangePolicySchema>;
+export type UpdateProductMediaInput = z.infer<typeof updateProductMediaInputSchema>;
