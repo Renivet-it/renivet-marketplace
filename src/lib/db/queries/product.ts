@@ -12,6 +12,7 @@ import {
     UpdateProduct,
     UpdateProductJourney,
     UpdateProductValue,
+    UpdateProductMediaInput
 } from "@/lib/validations";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "..";
@@ -1273,6 +1274,20 @@ class ProductQuery {
             // Throw a clear error to be caught by the API handler
             throw new Error(`Unable to update product: ${error.message}`);
         }
+    }
+
+    async updateProductMedia(productId: string, media: UpdateProductMediaInput["media"]) {
+        const data = await db
+        .update(products)
+        .set({
+            media,
+            updatedAt: new Date(),
+        })
+        .where(eq(products.id, productId))
+        .returning()
+        .then((res) => res[0]);
+
+    return data;
     }
 
     async updateProductAvailability(productId: string, isAvailable: boolean) {
