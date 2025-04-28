@@ -32,6 +32,7 @@ import {
     updateProductJourneySchema,
     updateProductSchema,
     updateProductValueSchema,
+    updateProductMediaInputSchema
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
@@ -220,6 +221,49 @@ export const productsRouter = createTRPCRouter({
 
             return data;
         }),
+    updateProductMedia: protectedProcedure
+    .input(updateProductMediaInputSchema)
+    .use(
+        isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+    )
+    .mutation(async ({ input, ctx }) => {
+        const { productId, media } = input;
+        const { queries, user } = ctx;
+
+        const existingProduct = await queries.products.getProduct({
+            productId,
+            isDeleted: false,
+        });
+        if (!existingProduct)
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Product not found",
+            });
+
+        const isAdmin = hasPermission(
+            user.sitePermissions,
+            [BitFieldSitePermission.ADMINISTRATOR]
+        );
+
+        if (!isAdmin && existingProduct.brand.id !== user.brand?.id)
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "You are not a member of this brand",
+            });
+
+        const data = await queries.products.updateProductMedia(
+            productId.toString(), // Convert to string if productId is a number
+            media
+        );
+
+        if (!data)
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Product not found",
+            });
+
+        return { success: true, product: data };
+    }),
     bulkCreateProducts: protectedProcedure
         .input(z.array(createProductSchema))
         .use(
