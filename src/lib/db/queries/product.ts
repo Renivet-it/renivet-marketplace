@@ -1015,10 +1015,23 @@ class ProductQuery {
         try {
             const data = await db.transaction(async (tx) => {
                 try {
+               // Strict validation for media: ensure it's always an array
+                const validatedMedia = Array.isArray(values.media) && values.media.every(
+                    (item) => item && typeof item === "object" && "id" in item && "position" in item
+                ) ? values.media : [];
+
+                // If media is empty or invalid, log a warning and use a default value
+                if (!values.media || values.media.length === 0) {
+                    console.warn(`Media field is empty or missing for product ${productId}. Using default empty array.`);
+                }
                     // Update product
-                    const updatedProduct = await tx
+                    let updatedProduct = await tx
                         .update(products)
-                        .set(values)
+                        .set({
+                            ...values,
+                            media: validatedMedia, // Use validated media
+                            updatedAt: new Date(),
+                        })
                         .where(eq(products.id, productId))
                         .returning()
                         .then((res) => res[0]);
@@ -1026,7 +1039,37 @@ class ProductQuery {
                     if (!updatedProduct) {
                         throw new Error(`Product with ID ${productId} not found or failed to update`);
                     }
+                // Post-update verification: Check if media was saved correctly
+                const maxRetries = 3;
+                let retryCount = 0;
+                while (retryCount < maxRetries) {
+                    if (JSON.stringify(updatedProduct.media) === JSON.stringify(validatedMedia)) {
+                        break; // Media was saved correctly
+                    }
 
+                    console.warn(`Media not saved correctly for product ${productId}. Retrying (${retryCount + 1}/${maxRetries})...`);
+                    updatedProduct = await tx
+                        .update(products)
+                        .set({
+                            ...values,
+                            media: validatedMedia,
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(products.id, productId))
+                        .returning()
+                        .then((res) => res[0]);
+
+                    if (!updatedProduct) {
+                        throw new Error(`Product with ID ${productId} not found during retry`);
+                    }
+
+                    retryCount++;
+                }
+
+                // Final check after retries
+                if (JSON.stringify(updatedProduct.media) !== JSON.stringify(validatedMedia)) {
+                    throw new Error(`Failed to save media for product ${productId} after ${maxRetries} retries`);
+                }
                     // Handle return/exchange policy
                     const { returnable, returnDescription, exchangeable, exchangeDescription } = values;
 

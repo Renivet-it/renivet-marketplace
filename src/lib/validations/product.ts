@@ -758,6 +758,7 @@ export const createProductSchema = productSchema
         options: z.array(productOptionSchema),
         variants: z.array(productVariantSchema),
         returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
+        media: z.array(productMediaSchema).optional(),
     })
     .superRefine((data, ctx) => {
         if (!data.productHasVariants) {
