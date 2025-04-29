@@ -22,7 +22,7 @@ export function ProductPassport({ className, product, ...props }: PageProps) {
         <div className={cn("space-y-6 pt-6", className)} {...props}>
             <div className="space-y-2 text-balance text-center">
                 <h3 className="text-2xl font-semibold md:text-3xl">
-                    Digital Product Passport
+                DecodeX - Behind the Product
                 </h3>
                 <p className="text-sm text-muted-foreground md:text-base">
                     With total transparency, we want to tell our community the

@@ -69,7 +69,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                 </CarouselContent>
             </Carousel>
 
-            <Marquee autoFill speed={100}>
+            <Marquee autoFill speed={100} style={{ height: "auto", padding: "0.25rem 0" }}>
                 <p className="text-sm">Wear Product You Value</p>
                 <Icons.Heart className="size-3 fill-background md:size-4" />
 
