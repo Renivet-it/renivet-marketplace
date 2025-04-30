@@ -202,6 +202,7 @@ class ProductQuery {
         sortBy = "createdAt",
         sortOrder = "desc",
         productImage,
+        productVisiblity,
     }: {
         limit: number;
         page: number;
@@ -220,6 +221,7 @@ class ProductQuery {
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
         productImage?: Product["productImageFilter"];
+        productVisiblity?: Product["productVisiblityFilter"];
     }) {
         const searchQuery = !!search?.length
             ? sql`(
@@ -294,6 +296,13 @@ class ProductQuery {
                     : productImage === "without"
                       ? noMedia(products, "media")
                       : undefined
+                : undefined,
+                productVisiblity
+                ? productVisiblity === "public"
+                  ? eq(products.isDeleted, false)
+                  : productVisiblity === "private"
+                  ? eq(products.isDeleted, true)
+                  : undefined
                 : undefined,
         ];
 

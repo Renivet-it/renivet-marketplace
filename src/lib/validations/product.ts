@@ -128,6 +128,9 @@ export const productVerificationStatusSchema = z.enum([
 export const productImageFilterSchema = z.enum(["with", "without", "all"], {
     invalid_type_error: "Product image must be 'with', 'without', or 'all'",
   }).optional();
+  export const productVisiblityFilterSchema = z.enum(["public", "private", "all"], {
+    invalid_type_error: "Product visiblity must be 'public', 'private', or 'all'",
+  }).optional();
 
 export const productSchema = z.object({
     // BASIC INFO
@@ -377,6 +380,7 @@ export const productSchema = z.object({
     // OTHER
     verificationStatus: productVerificationStatusSchema,
     productImageFilter: productImageFilterSchema,
+    productVisiblityFilter: productVisiblityFilterSchema,
     isDeleted: z.boolean({
         required_error: "Deleted status is required",
         invalid_type_error: "Deleted status must be a boolean",

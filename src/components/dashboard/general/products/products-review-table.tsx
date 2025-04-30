@@ -81,6 +81,7 @@ export type TableProduct = ProductWithBrand & {
 };
 
 type ImageFilter = "with" | "without" | "all";
+type VisiblityFilter = "private" | "public" | "all";
 
 const columns: ColumnDef<TableProduct>[] = [
     {
@@ -363,6 +364,12 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
             "all"
         )
     );
+    const [productVisiblity, setVisiblityFilter] = useQueryState(
+        "productVisiblity",
+        parseAsStringLiteral(["private", "public", "all"] as const).withDefault(
+            "public"
+        )
+    );
     const [brandFilter, setBrandFilter] = useQueryState(
         "brand",
         parseAsString.withDefault("all")
@@ -407,6 +414,7 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
             search,
             verificationStatus,
             productImage,
+            productVisiblity,
             brandIds: brandIds.length > 0 ? brandIds : undefined, // Add brandIds filter
         },
         { initialData }
@@ -506,6 +514,22 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                             <SelectItem value="with">With Image</SelectItem>
                             <SelectItem value="without">
                                 Without Image
+                            </SelectItem>
+                            <SelectItem value="all">All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        onValueChange={(value: VisiblityFilter) =>
+                            setVisiblityFilter(value)
+                        }
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Filter by Visiblity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="public">Public</SelectItem>
+                            <SelectItem value="private">
+                               Private
                             </SelectItem>
                             <SelectItem value="all">All</SelectItem>
                         </SelectContent>
