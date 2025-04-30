@@ -35,7 +35,7 @@ interface PageProps {
 
 export default function Page(props: PageProps) {
     return (
-        <DashShell>
+        <DashShell className="max-w-7xl">
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
                     <h1 className="text-2xl font-bold">Products</h1>

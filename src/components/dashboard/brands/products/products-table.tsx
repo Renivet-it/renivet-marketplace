@@ -62,6 +62,7 @@ export type TableProduct = ProductWithBrand & {
     stock: number;
 };
 type ImageFilter = "with" | "without" | "all";
+type VisiblityFilter = "private" | "public" | "all";
 
 const columns: ColumnDef<TableProduct>[] = [
     {
@@ -333,6 +334,12 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
             "all"
         )
     );
+     const [productVisiblity, setVisiblityFilter] = useQueryState(
+            "productVisiblity",
+            parseAsStringLiteral(["private", "public", "all"] as const).withDefault(
+                "public"
+            )
+        );
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
@@ -343,7 +350,7 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
     const {
         data: { data: dataRaw, count },
     } = trpc.brands.products.getProducts.useQuery(
-        { brandIds: [brandId], limit, page, productImage, search },
+        { brandIds: [brandId], limit, page, productImage, productVisiblity, search },
         { initialData }
     );
 
@@ -419,24 +426,22 @@ export function ProductsTable({ brandId, initialData }: PageProps) {
                             <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                     </Select>
-                {/* <div className="flex items-center gap-2">
                     <Select
-                        onValueChange={(value: ImageFilter) =>
-                            setImageFilter(value)
+                        onValueChange={(value: VisiblityFilter) =>
+                            setVisiblityFilter(value)
                         }
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Filter by Image" />
+                            <SelectValue placeholder="Filter by Visiblity" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="with">With Image</SelectItem>
-                            <SelectItem value="without">
-                                Without Image
+                            <SelectItem value="public">Public</SelectItem>
+                            <SelectItem value="private">
+                               Private
                             </SelectItem>
                             <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                     </Select>
-                </div> */}
                     <DataTableViewOptions table={table} />
             </div>
 
