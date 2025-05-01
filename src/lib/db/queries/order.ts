@@ -1,6 +1,7 @@
 import { mediaCache } from "@/lib/redis/methods";
 import {
     CreateOrder,
+    Order,
     OrderWithItemAndBrand,
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
@@ -199,7 +200,7 @@ class OrderQuery {
     //     const data = await ordersForBrand;
     //     return data;
     // }
-    async getOrdersByBrandId(brandId: string) {
+    async getOrdersByBrandId(brandId: string): Promise<Order[]> {
         const filteredProducts = db
             .select({ id: products.id })
             .from(products)
@@ -217,8 +218,8 @@ class OrderQuery {
             .with(filteredProducts, filteredOrderItems)
             .select({
                 order: orders, // Select all order fields
-                shiprocketOrderId: orderShipments.shiprocketOrderId, // Select only shiprocketOrderId
-                shiprocketShipmentId: orderShipments.shiprocketShipmentId,
+                shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
             })
             .from(orders)
             .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId)) // Join with orderShipments
@@ -231,8 +232,8 @@ class OrderQuery {
         // Map the data to a cleaner format if needed
         const formattedData = data.map((item) => ({
             ...item.order,
-            shiprocketOrderId: item.shiprocketOrderId || null, // Handle cases where shiprocketOrderId is null
-            shiprocketShipmentId: item.shiprocketShipmentId || null, // Handle cases where shiprocketOrderId is null
+            shiprocketOrderId: item?.shiprocketOrderId || null,
+            shiprocketShipmentId: item?.shiprocketShipmentId || null,
         }));
 
         return formattedData;
