@@ -1,4 +1,5 @@
 "use client";
+import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 
 import { Button } from "@/components/ui/button-general";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -152,7 +153,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                 const toastId = toast.loading("Creating your order...");
                 return { toastId };
             },
-            onSuccess: (newOrder, _, { toastId }) => {
+            onSuccess: async(newOrder, _, { toastId }) => {
                 toast.success("Order created, redirecting to payment page...", {
                     id: toastId,
                 });
