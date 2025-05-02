@@ -181,6 +181,20 @@ class ShipRocket {
 
     async generateAWB(values: AWB) {
         try {
+            const resultSet = await orderQueries.getShipmentDetailsByShipmentId(
+                values.shipment_id
+            );
+            const isAwbGeneratedTrue = resultSet.some(
+                (shipment) => shipment.isAwbGenerated === true
+            );
+
+            if (isAwbGeneratedTrue) {
+                return {
+                    status: true,
+                    message: "AWB alredy generated",
+                    data: resultSet,
+                };
+            }
             const res = await this.axiosInstance.post<AWBResponse>(
                 "/courier/assign/awb",
                 values

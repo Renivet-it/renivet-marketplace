@@ -108,7 +108,9 @@ export default function OrderShipment({
                 toast.error(awbData.message);
                 return;
             }
-            toast.success("AWB generated successfully!");
+            if (awbData.status) {
+                toast.success(awbData.message);
+            }
             const madePickUpRequest = await fetch(
                 "/api/shiprocket/couriers/pickup",
                 {

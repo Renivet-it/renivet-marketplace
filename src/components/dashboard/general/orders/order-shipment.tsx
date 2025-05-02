@@ -25,9 +25,8 @@ import { format } from "date-fns";
 import { CalendarIcon, Loader2, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
-import { TableOrder } from "./orders-table";
 import CourierCardList from "./courier-card-list";
+import { TableOrder } from "./orders-table";
 
 interface PageProps {
     isSheetOpen: boolean;
@@ -86,11 +85,11 @@ export default function OrderShipment({
             return;
         }
         const awbPayload = {
-            shipment_id: order.shipments[0].shiprocketOrderId,
+            shipment_id: order.shipments[0].shiprocketShipmentId,
             courier_id: selectedCourier.courier_company_id,
         };
         const pickUpRequestPayload = {
-            shipment_id: order.shipments[0].shiprocketOrderId,
+            shipment_id: order.shipments[0].shiprocketShipmentId,
             pickup_date: format(selectedDate, "yyyy-MM-dd"),
         };
         try {
@@ -109,7 +108,9 @@ export default function OrderShipment({
                 toast.error(awbData.message);
                 return;
             }
-            toast.success("AWB generated successfully!");
+            if (awbData.status) {
+                toast.success(awbData.message);
+            }
             const madePickUpRequest = await fetch(
                 "/api/shiprocket/couriers/pickup",
                 {
@@ -145,7 +146,6 @@ export default function OrderShipment({
                     await refetchBrandAddress();
 
                 console.log("Initial order:", order);
-
 
                 const initialParams: initialShippingAvaibilityParams = {
                     pickup_postcode: `${newBrandAddressDetails?.warehousePostalCode ?? ""}`,
