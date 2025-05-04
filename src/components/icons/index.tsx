@@ -107,6 +107,7 @@ import {
     Youtube,
     Tag,
     ClipboardList,
+    BrainCircuit,
     type LucideIcon,
     type LucideProps,
 } from "lucide-react";
@@ -222,6 +223,7 @@ export const Icons = {
     User,
     ShoppingBag,
     Home,
+    BrainCircuit,
     X_Twitter: (props: LucideProps) => (
         <svg
             aria-hidden="true"
