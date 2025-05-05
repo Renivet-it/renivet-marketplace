@@ -318,12 +318,17 @@ export function NavbarHome() {
                     {user ? (
                         <div className="flex items-center">
                             <Link
-                                aria-label="Mobile Cart Button"
-                                className="sm:hidden"
-                                href="/profile/cart"
-                                prefetch
+                            aria-label="Mobile Cart Button"
+                            className="relative sm:hidden"
+                            href="/profile/cart"
+                            prefetch
                             >
-                                <Icons.ShoppingCart className="size-6" />
+                           {(availableCart ?? []).length > 0 && (
+                            <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                {(availableCart ?? []).length}
+                            </div>
+                            )}
+                            <Icons.ShoppingCart className="size-6" />
                             </Link>
 
                             <div className="hidden items-center gap-5 md:flex">

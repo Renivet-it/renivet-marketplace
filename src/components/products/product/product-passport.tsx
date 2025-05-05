@@ -91,7 +91,7 @@ export function ProductPassport({ className, product, ...props }: PageProps) {
                         </Accordion>
                     ) : (
                         <p className="text-muted-foreground">
-                            No product values available
+                           Coming Soon
                         </p>
                     )}
                 </div>
@@ -136,7 +136,7 @@ export function ProductPassport({ className, product, ...props }: PageProps) {
                         </div>
                     ) : (
                         <p className="text-muted-foreground">
-                            No product journey available
+                           Coming Soon
                         </p>
                     )}
                 </div>
