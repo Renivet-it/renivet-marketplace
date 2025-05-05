@@ -864,4 +864,18 @@ export const ordersRouter = createTRPCRouter({
 
             return true;
         }),
+    getOrderShipmentDetailsByShipmentId: protectedProcedure
+        .input(
+            z.object({
+                shipmentId: z.number(),
+            })
+        )
+        .query(async ({ input, ctx }) => {
+            const { queries } = ctx;
+
+            const data = await queries.orders.getShipmentDetailsByShipmentId(
+                input.shipmentId
+            );
+            return data;
+        }),
 });

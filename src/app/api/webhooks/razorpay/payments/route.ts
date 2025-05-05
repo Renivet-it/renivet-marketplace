@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
 
                             // Generate label
                             const labelResult = await sr.generateLabel({
-                                shipment_id: shipment.shiprocketShipmentId!,
+                                shipment_id: [shipment.shiprocketShipmentId!],
                             });
 
                             // Generate invoice
@@ -237,14 +237,15 @@ export async function POST(req: NextRequest) {
 
                             // Generate manifest
                             const manifestResult = await sr.generateManifest({
-                                shipment_id: shipment.shiprocketShipmentId!,
+                                shipment_id: [shipment.shiprocketShipmentId!],
+
                             });
 
                             // Update shipment details in database
                             await db
                                 .update(orderShipments)
                                 .set({
-                                    awbNumber: awbResult.data?.data.awb_code,
+                                    awbNumber: (awbResult as any)?.data?.data?.awb_code, // Type assertion to bypass TS error
                                     status: "processing",
                                     labelUrl: labelResult.data,
                                     invoiceUrl: invoiceResult.data,

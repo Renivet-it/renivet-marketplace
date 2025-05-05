@@ -1,13 +1,14 @@
 import { mediaCache } from "@/lib/redis/methods";
 import {
     CreateOrder,
+    Order,
     OrderWithItemAndBrand,
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
 } from "@/lib/validations";
 import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orderItems, orders, products } from "../schema";
+import { orderItems, orders, orderShipments, products, users } from "../schema";
 
 class OrderQuery {
     async getAllOrders() {
@@ -173,6 +174,32 @@ class OrderQuery {
         };
     }
 
+    // async getOrdersByBrandId(brandId: string) {
+    //     const filteredProducts = db
+    //         .select({ id: products.id })
+    //         .from(products)
+    //         .where(eq(products.brandId, brandId))
+    //         .as("filtered_products");
+
+    //     const filteredOrderItems = db
+    //         .select({ orderId: orderItems.orderId })
+    //         .from(orderItems)
+    //         .where(
+    //             sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
+    //         )
+    //         .as("filtered_order_items");
+
+    //     const ordersForBrand = db
+    //         .with(filteredProducts, filteredOrderItems)
+    //         .select()
+    //         .from(orders)
+    //         .where(
+    //             sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
+    //         );
+
+    //     const data = await ordersForBrand;
+    //     return data;
+    // }
     async getOrdersByBrandId(brandId: string) {
         const filteredProducts = db
             .select({ id: products.id })
@@ -187,17 +214,61 @@ class OrderQuery {
                 sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
             )
             .as("filtered_order_items");
-
         const ordersForBrand = db
             .with(filteredProducts, filteredOrderItems)
-            .select()
+            .select({
+                id: orders.id,
+                userId: orders.userId,
+                firstName: users.firstName, // Reference users table
+                lastName: users.lastName, // Reference users table
+                shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
+                receiptId: orders.receiptId,
+                paymentId: orders.paymentId,
+                paymentMethod: orders.paymentMethod,
+                paymentStatus: orders.paymentStatus,
+                status: orders.status,
+                addressId: orders.addressId,
+                totalItems: orders.totalItems,
+                taxAmount: orders.taxAmount,
+                deliveryAmount: orders.deliveryAmount,
+                discountAmount: orders.discountAmount,
+                totalAmount: orders.totalAmount,
+                createdAt: orders.createdAt,
+                updatedAt: orders.updatedAt,
+            })
             .from(orders)
+            .leftJoin(users, eq(orders.userId, users.id)) // Join with users table
+            .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
             .where(
                 sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
             );
 
         const data = await ordersForBrand;
-        return data;
+
+        // Map the data to a cleaner format if needed
+        const formattedData = data.map((item) => ({
+                 id: item.id,
+                userId: item.userId,
+                firstName: item.firstName, // Reference item table
+                lastName: item.lastName, // Reference users table
+                shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
+                receiptId: item.receiptId,
+                paymentId: item.paymentId,
+                paymentMethod: item.paymentMethod,
+                paymentStatus: item.paymentStatus,
+                status: item.status,
+                addressId: item.addressId,
+                totalItems: item.totalItems,
+                taxAmount: item.taxAmount,
+                deliveryAmount: item.deliveryAmount,
+                discountAmount: item.discountAmount,
+                totalAmount: item.totalAmount,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+        }));
+        return formattedData;
     }
 
     async getOrdersByIds(orderIds: string[], year?: number) {
@@ -487,6 +558,81 @@ class OrderQuery {
             .then((res) => res[0]);
 
         return data;
+    }
+
+    async orderShipmentDetailsByOrderId(orderId: string) {
+        const data = await db.query.orderShipments.findFirst({
+            where: eq(orderShipments.orderId, orderId),
+        });
+        return data;
+    }
+
+    async updateAwbGenerationStatus(shipmentId: number, status: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isAwbGenerated: status,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async createAwbNumber(shipmentId: number, awbCode: string) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                awbNumber: awbCode,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async getShipmentDetailsByShipmentId(shipmentId: number) {
+        const result = await db.query.orderShipments.findMany({
+            where: eq(orderShipments.shiprocketShipmentId, shipmentId),
+        });
+        return result;
+    }
+
+    async updatePickUpStatus(shipmentId: number, status: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isPickupScheduled: status,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async savePickupShiprocketResponse(shipmentId: number, shipmentDetails: Record<string, any>) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                pickUpDetailsShipRocketJson: shipmentDetails,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async saveAwbShiprocketResponse(shipmentId: number, awbDetails: Record<string, any>) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                awbDetailsShipRocketJson: awbDetails,
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async createPickupDetails(shipmentId: number, pickupToken: any, pickupDate: any){
+        const result = await db
+            .update(orderShipments)
+            .set({
+                pickupTokenNumber: pickupToken,
+                pickupScheduledDate: pickupDate
+            })
+            .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
     }
 }
 
