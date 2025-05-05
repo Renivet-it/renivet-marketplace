@@ -106,6 +106,7 @@ import {
     X,
     Youtube,
     Tag,
+    CheckCircle,
     ClipboardList,
     type LucideIcon,
     type LucideProps,
@@ -220,6 +221,7 @@ export const Icons = {
     Facebook,
     Mail,
     User,
+    CheckCircle,
     ShoppingBag,
     Home,
     X_Twitter: (props: LucideProps) => (
