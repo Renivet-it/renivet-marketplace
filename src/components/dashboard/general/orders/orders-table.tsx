@@ -40,9 +40,17 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
             return <OrderSingle order={data} />;
         },
     },
+    // {
+    //     accessorKey: "userId",
+    //     header: "Customer ID",
+    // },
     {
-        accessorKey: "userId",
-        header: "Customer ID",
+        accessorKey: "fullName",
+        header: "Customer Name",
+        cell: ({ row }) => {
+            const data = row.original;
+            return data?.address?.fullName;
+        },
     },
     {
         accessorKey: "totalAmount",

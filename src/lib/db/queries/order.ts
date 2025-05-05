@@ -8,7 +8,7 @@ import {
 } from "@/lib/validations";
 import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orderItems, orders, orderShipments, products } from "../schema";
+import { orderItems, orders, orderShipments, products, users } from "../schema";
 
 class OrderQuery {
     async getAllOrders() {
@@ -200,7 +200,7 @@ class OrderQuery {
     //     const data = await ordersForBrand;
     //     return data;
     // }
-    async getOrdersByBrandId(brandId: string): Promise<Order[]> {
+    async getOrdersByBrandId(brandId: string) {
         const filteredProducts = db
             .select({ id: products.id })
             .from(products)
@@ -217,12 +217,29 @@ class OrderQuery {
         const ordersForBrand = db
             .with(filteredProducts, filteredOrderItems)
             .select({
-                order: orders, // Select all order fields
+                id: orders.id,
+                userId: orders.userId,
+                firstName: users.firstName, // Reference users table
+                lastName: users.lastName, // Reference users table
                 shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
                 shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
+                receiptId: orders.receiptId,
+                paymentId: orders.paymentId,
+                paymentMethod: orders.paymentMethod,
+                paymentStatus: orders.paymentStatus,
+                status: orders.status,
+                addressId: orders.addressId,
+                totalItems: orders.totalItems,
+                taxAmount: orders.taxAmount,
+                deliveryAmount: orders.deliveryAmount,
+                discountAmount: orders.discountAmount,
+                totalAmount: orders.totalAmount,
+                createdAt: orders.createdAt,
+                updatedAt: orders.updatedAt,
             })
             .from(orders)
-            .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId)) // Join with orderShipments
+            .leftJoin(users, eq(orders.userId, users.id)) // Join with users table
+            .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
             .where(
                 sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
             );
@@ -231,11 +248,26 @@ class OrderQuery {
 
         // Map the data to a cleaner format if needed
         const formattedData = data.map((item) => ({
-            ...item.order,
-            shiprocketOrderId: item?.shiprocketOrderId || null,
-            shiprocketShipmentId: item?.shiprocketShipmentId || null,
+                 id: item.id,
+                userId: item.userId,
+                firstName: item.firstName, // Reference item table
+                lastName: item.lastName, // Reference users table
+                shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
+                receiptId: item.receiptId,
+                paymentId: item.paymentId,
+                paymentMethod: item.paymentMethod,
+                paymentStatus: item.paymentStatus,
+                status: item.status,
+                addressId: item.addressId,
+                totalItems: item.totalItems,
+                taxAmount: item.taxAmount,
+                deliveryAmount: item.deliveryAmount,
+                discountAmount: item.discountAmount,
+                totalAmount: item.totalAmount,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
         }));
-
         return formattedData;
     }
 

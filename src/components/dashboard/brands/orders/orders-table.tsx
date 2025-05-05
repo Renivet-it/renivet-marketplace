@@ -48,8 +48,12 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
         },
     },
     {
-        accessorKey: "userId",
-        header: "Customer ID",
+        accessorKey: "fullName",
+        header: "Customer Name",
+        cell: ({ row }) => {
+            const data = row.original;
+            return `${data.firstName} ${data.lastName}`; // Combine firstName and lastName
+        },
     },
     {
         accessorKey: "totalAmount",

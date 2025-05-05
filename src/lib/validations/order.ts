@@ -95,6 +95,10 @@ export const orderSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
+            // Optional fields
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+
 });
 
 export const orderWithItemAndBrandSchema = orderSchema.extend({
