@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
                             await db
                                 .update(orderShipments)
                                 .set({
-                                    awbNumber: awbResult.data?.data.awb_code,
+                                    awbNumber: (awbResult as any)?.data?.data?.awb_code, // Type assertion to bypass TS error
                                     status: "processing",
                                     labelUrl: labelResult.data,
                                     invoiceUrl: invoiceResult.data,

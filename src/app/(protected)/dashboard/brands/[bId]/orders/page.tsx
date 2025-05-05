@@ -4,7 +4,8 @@ import { TableSkeleton } from "@/components/globals/skeletons";
 import { orderQueries } from "@/lib/db/queries";
 import { Metadata } from "next";
 import { Suspense } from "react";
-
+import { orderSchema } from "../../../../../../lib/validations";
+import { z } from "zod";
 export const metadata: Metadata = {
     title: "Orders",
     description: "View all the orders placed by the customers",
@@ -37,5 +38,6 @@ async function OrdersFetch({ params }: PageProps) {
     const { bId } = await params;
 
     const data = await orderQueries.getOrdersByBrandId(bId);
-    return <OrdersTable initialData={data} brandId={bId} />;
+    const parsedData = z.array(orderSchema).parse(data); // Parse to match orderSch
+    return <OrdersTable initialData={parsedData} brandId={bId} />;
 }
