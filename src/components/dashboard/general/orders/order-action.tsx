@@ -35,9 +35,20 @@ interface PageProps {
 
 export function OrderAction({ order, onAction }: PageProps) {
     const { data: orderShipmentDetails } =
-        trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery({
-            shipmentId: order.shipments[0].shiprocketShipmentId!,
-        });
+        // trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery({
+        //     // shipmentId: order.shipments[0].shiprocketShipmentId!,
+        //     shipmentId: order.shipments?.[0]?.shiprocketShipmentId ?? "",
+        // });
+        trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery(
+            {
+              shipmentId: order.shipments?.[0]?.shiprocketShipmentId
+                ? Number(order.shipments[0].shiprocketShipmentId)
+                : 0,
+            },
+            {
+              enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
+            }
+          );
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
