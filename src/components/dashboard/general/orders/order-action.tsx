@@ -134,7 +134,7 @@ export function OrderAction({ order, onAction }: PageProps) {
                                     }}
                                 >
                                     <Icons.Truck className="size-4" />
-                                    <span>Ship These Products</span>
+                                    <span>Ship Now</span>
                                 </DropdownMenuItem>
                             )}
                         </>
