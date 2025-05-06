@@ -81,11 +81,11 @@ export default function OrderShipment({
     );
 
     const handleShipNow = async () => {
-        setButtonLoading(true);
         if (!serviceabilityParams || !selectedDate || !selectedCourier) {
             toast.error("Please select a shipping date and a courier partner.");
             return;
         }
+        setButtonLoading(true);
         const awbPayload = {
             shipment_id: order.shiprocketShipmentId,
             courier_id: selectedCourier.courier_company_id,
