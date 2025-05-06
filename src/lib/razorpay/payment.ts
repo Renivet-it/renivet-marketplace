@@ -5,6 +5,7 @@ import { CachedUser } from "@/lib/validations";
 import { RazorpayPaymentOptions } from "@/types";
 import { Dispatch, SetStateAction } from "react";
 import { wait } from "../utils";
+import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 
 export function createRazorpayPaymentOptions({
     orderId,
@@ -29,6 +30,7 @@ export function createRazorpayPaymentOptions({
     user: {
         id: string;
         email: string;
+        firstName: string;
     };
     setIsProcessing: Dispatch<SetStateAction<boolean>>;
     setIsProcessingModalOpen: Dispatch<SetStateAction<boolean>>;
@@ -79,6 +81,17 @@ export function createRazorpayPaymentOptions({
                     "You will receive an email with the order details shortly with a payment confirmation. Redirecting..."
                 );
                 setProcessingModalState("success");
+
+                // Send WhatsApp notification after successful payment
+                const formattedPhone = deliveryAddress.phone.startsWith("+")
+                    ? deliveryAddress.phone
+                    : `+91${deliveryAddress.phone}`; // Adjust country code as needed
+
+                await sendWhatsAppNotification({
+                    phone: formattedPhone,
+                    template: "order_confirmation",
+                    parameters: [user.firstName, orderId],
+                });
                 refetch();
 
                 await wait(2000);
