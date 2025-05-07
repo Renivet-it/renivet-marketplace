@@ -27,7 +27,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="h-[calc(100vh-20vh)] w-full"
+                className="w-full"
             >
                 <CarouselContent
                     classNames={{
@@ -41,9 +41,9 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                 <Image
                                     src={item.imageUrl}
                                     alt={item.title}
-                                    width={2000}
-                                    height={2000}
-                                    className="size-full object-cover brightness-50"
+                                    width={1920}
+                                    height={1080}
+                                    className="size-full object-contain brightness-50"
                                     priority={index === 0}
                                 />
                                 <div className="absolute inset-0 flex flex-col items-center justify-center space-y-5 p-4 text-center text-background md:space-y-10">
