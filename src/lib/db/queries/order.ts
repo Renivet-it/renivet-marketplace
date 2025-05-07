@@ -517,7 +517,19 @@ class OrderQuery {
 
         return data;
     }
+    async deleteOrder(orderId: string) {
+        const data = await db
+            .delete(orders)
+            .where(eq(orders.id, orderId))
+            .returning()
+            .then((res) => res[0] ?? null);
 
+        if (!data) {
+            throw new Error(`Order with ID ${orderId} not found`);
+        }
+
+        return data;
+    }
     async updateOrderStatus(id: string, values: UpdateOrderStatus) {
         const data = await db
             .update(orders)

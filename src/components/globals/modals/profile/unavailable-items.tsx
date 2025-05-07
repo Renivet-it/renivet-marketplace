@@ -65,13 +65,13 @@ export function UnavailableItemsModal({
                 <DialogHeader>
                     <DialogTitle>Unavailable Items</DialogTitle>
                     <DialogDescription>
-                        You have {unavailableCart.length} item(s) in your cart
+                        You have {unavailableCart?.length} item(s) in your cart
                         that are no longer available.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-5">
-                    {unavailableCart.map((item) => {
+                    {unavailableCart?.map((item) => {
                         const itemMedia =
                             item.variantId && item.product.variants.length > 0
                                 ? !!item.product.variants.find(
@@ -207,7 +207,7 @@ export function UnavailableItemsModal({
                         onClick={() => {
                             removeProducts({
                                 userId,
-                                items: unavailableCart.map((item) => ({
+                                items: unavailableCart?.map((item) => ({
                                     productId: item.productId,
                                     variantId: item.variantId,
                                 })),

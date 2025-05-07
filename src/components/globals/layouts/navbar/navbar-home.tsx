@@ -320,7 +320,7 @@ export function NavbarHome() {
                             <Link
                             aria-label="Mobile Cart Button"
                             className="relative sm:hidden"
-                            href="/profile/cart"
+                            href="/mycart"
                             prefetch
                             >
                            {(availableCart ?? []).length > 0 && (
@@ -473,7 +473,7 @@ export function NavbarHome() {
                                     <span className="sr-only">Wishlist</span>
                                 </Link>
 
-                                <Link href="/profile/cart" className="relative">
+                                <Link href="/mycart" className="relative">
                                     {availableCart?.length
                                         ? availableCart.length > 0 && (
                                               <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
