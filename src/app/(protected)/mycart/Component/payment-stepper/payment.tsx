@@ -1,16 +1,16 @@
+// src/app/(protected)/mycart/Component/payment-stepper/payment.tsx
 import { GeneralShell } from "@/components/globals/layouts";
-import { OrderPage } from "@/components/orders";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orderQueries } from "@/lib/db/queries";
 import { userCache } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Script from "next/script";
 import { Suspense } from "react";
+import CartDataFetcher from "./cart-data-fetcher";
 
 interface PageProps {
-    params: Promise<{ id: string }>;
+    params: Promise<{ id: string | null }>;
 }
 
 export default function Page({ params }: PageProps) {
@@ -25,19 +25,16 @@ export default function Page({ params }: PageProps) {
 }
 
 async function CheckoutFetch({ params }: PageProps) {
-    const { id } = await params;
+    await params; // Resolve params (id is null)
 
     const { userId } = await auth();
     if (!userId) redirect("/auth/signin");
 
-    const [data, currentUser] = await Promise.all([
-        orderQueries.getOrderById(id),
-        userCache.get(userId),
-    ]);
+    const currentUser = await userCache.get(userId);
     if (!currentUser) redirect("/auth/signin");
-    if (!data) redirect("/mycart");
 
-    return <OrderPage initialData={data} user={currentUser} />;
+    // Pass to client-side CartDataFetcher
+    return <CartDataFetcher userId={userId} user={currentUser} />;
 }
 
 function OrderSkeleton() {
@@ -47,16 +44,13 @@ function OrderSkeleton() {
                 <Skeleton className="h-32 w-full" />
                 <Separator />
                 <Skeleton className="h-10 w-full" />
-
                 <div className="space-y-2">
                     {[...Array(3)].map((_, i) => (
                         <Skeleton key={i} className="h-52 w-full" />
                     ))}
                 </div>
             </div>
-
             <div className="hidden w-px bg-border md:inline-block" />
-
             <Skeleton className="h-64 w-full lg:max-w-96" />
         </div>
     );

@@ -440,7 +440,7 @@ export function ProductCartAddForm({
                               onClick={(e) => {
                                       if (isAddedToCart) {
                                           e.preventDefault(); // Prevent form submission
-                                          redirect("/profile/cart");
+                                          redirect("/mycart");
                                       }
                                       // Default form submission handles addToCart
                                   }}
