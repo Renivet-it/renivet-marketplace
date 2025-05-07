@@ -1,0 +1,322 @@
+"use client";
+
+import { Button } from "@/components/ui/button-general";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input-general";
+import { Separator } from "@/components/ui/separator";
+import { DEFAULT_MESSAGES } from "@/config/const";
+import { useCartStore } from "@/lib/store/cart-store";
+import { trpc } from "@/lib/trpc/client";
+import {
+    calculateTotalPriceWithCoupon,
+    convertPaiseToRupees,
+    convertValueToLabel,
+    formatPriceTag,
+    handleClientError,
+} from "@/lib/utils";
+import { CouponWithCategory } from "@/lib/validations";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+interface PageProps {
+    userId: string;
+}
+
+export default function CheckoutSection({ userId }: PageProps) {
+    const router = useRouter();
+    const { selectedShippingAddress } = useCartStore();
+
+    const [isHasCouponChecked, setIsHasCouponChecked] = useState(false);
+    const [couponCode, setCouponCode] = useState<string>("");
+    const [couponStatus, setCouponStatus] = useState<
+        "idle" | "valid" | "invalid"
+    >("idle");
+    const [coupon, setCoupon] = useState<CouponWithCategory | null>(null);
+
+    const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery({
+        userId,
+    });
+    const { data: user, isPending: isUserFetching } =
+        trpc.general.users.currentUser.useQuery();
+
+    const availableCart = useMemo(
+        () =>
+            userCart?.filter(
+                (c) =>
+                    c.product.isPublished &&
+                    c.product.verificationStatus === "approved" &&
+                    !c.product.isDeleted &&
+                    c.product.isAvailable &&
+                    (!!c.product.quantity ? c.product.quantity > 0 : true) &&
+                    c.product.isActive &&
+                    (!c.variant ||
+                        (c.variant &&
+                            !c.variant.isDeleted &&
+                            c.variant.quantity > 0))
+            ) || [],
+        [userCart]
+    );
+
+    const itemsCount = useMemo(
+        () =>
+            availableCart
+                .filter((item) => item.status)
+                .reduce((acc, item) => acc + item.quantity, 0) || 0,
+        [availableCart]
+    );
+
+    const totalPrice = useMemo(
+        () =>
+            availableCart
+                .filter((item) => item.status)
+                .reduce((acc, item) => {
+                    const itemPrice = item.variantId
+                        ? (item.product.variants.find(
+                              (v) => v.id === item.variantId
+                          )?.price ??
+                          item.product.price ??
+                          0)
+                        : (item.product.price ?? 0);
+                    return acc + itemPrice * item.quantity;
+                }, 0) || 0,
+        [availableCart]
+    );
+
+    const priceList = useMemo(() => {
+        const items = availableCart
+            .filter((item) => item.status)
+            .map((item) => {
+                const itemPrice = item.variantId
+                    ? (item.product.variants.find(
+                          (v) => v.id === item.variantId
+                      )?.price ??
+                      item.product.price ??
+                      0)
+                    : (item.product.price ?? 0);
+                return {
+                    price: itemPrice,
+                    quantity: item.quantity,
+                    categoryId: item.product.categoryId,
+                    subCategoryId: item.product.subcategoryId,
+                    productTypeId: item.product.productTypeId,
+                };
+            });
+
+        return calculateTotalPriceWithCoupon(
+            items.map((item) => item.price * item.quantity),
+            coupon
+                ? {
+                      discountType: coupon.discountType,
+                      discountValue: coupon.discountValue,
+                      maxDiscountAmount: coupon.maxDiscountAmount,
+                      categoryId: coupon.categoryId,
+                      subCategoryId: coupon.subCategoryId,
+                      productTypeId: coupon.productTypeId,
+                  }
+                : null,
+            items
+        );
+    }, [availableCart, coupon]);
+
+    const { mutate: validateCoupon, isPending: isValidating } =
+        trpc.general.coupons.validateCoupon.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Validating coupon...");
+                return { toastId };
+            },
+            onSuccess: (data, _, { toastId }) => {
+                toast.success("Coupon applied successfully", { id: toastId });
+                setCouponStatus("valid");
+                setCoupon(data);
+            },
+            onError: (err, _, ctx) => {
+                setCouponStatus("invalid");
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    const { mutate: createOrder, isPending: isOrderCreating } =
+        trpc.general.orders.createOrder.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Creating your order...");
+                return { toastId };
+            },
+            onSuccess: async (newOrder, _, { toastId }) => {
+                toast.success("Order created, redirecting to payment page...", {
+                    id: toastId,
+                });
+                router.push(`/orders/${newOrder.id}`);
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    return (
+        <div className="mx-auto w-full max-w-md rounded-lg bg-white p-4 shadow">
+            {/* Header Section */}
+            <div className="mb-4">
+                <h2 className="text-lg font-semibold">Order Summary</h2>
+                <p className="text-sm text-gray-500">
+                    You are about to place an order for {itemsCount} items with
+                    a total of{" "}
+                    {formatPriceTag(+convertPaiseToRupees(totalPrice), true)}.
+                    Please review your order before proceeding.
+                </p>
+            </div>
+
+            {/* Price Summary Section */}
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <ul className="space-y-1">
+                        {Object.entries(priceList)
+                            .filter(([key]) => key !== "total")
+                            .map(([key, value]) => (
+                                <li
+                                    key={key}
+                                    className="flex justify-between text-sm"
+                                >
+                                    <span>{convertValueToLabel(key)}:</span>
+                                    <span>
+                                        {formatPriceTag(
+                                            +convertPaiseToRupees(value),
+                                            true
+                                        )}
+                                    </span>
+                                </li>
+                            ))}
+                    </ul>
+
+                    <Separator />
+
+                    <div className="flex justify-between font-semibold text-destructive">
+                        <span>Total:</span>
+                        <span>
+                            {formatPriceTag(
+                                +convertPaiseToRupees(priceList.total),
+                                true
+                            )}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Coupon Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                            id="coupon"
+                            checked={isHasCouponChecked}
+                            onCheckedChange={(checked) => {
+                                setIsHasCouponChecked(!!checked);
+                                if (!checked) {
+                                    setCouponCode("");
+                                    setCouponStatus("idle");
+                                    setCoupon(null);
+                                }
+                            }}
+                            disabled={isValidating}
+                            className="rounded-none"
+                        />
+                        <label htmlFor="coupon">I have a coupon</label>
+                    </div>
+
+                    {isHasCouponChecked && (
+                        <div className="flex items-center gap-2">
+                            <Input
+                                className="h-9"
+                                value={couponCode}
+                                onChange={(e) => {
+                                    setCouponCode(e.target.value);
+                                    setCouponStatus("idle");
+                                    setCoupon(null);
+                                }}
+                                disabled={isValidating}
+                            />
+                            <Button
+                                type="button"
+                                variant="accent"
+                                size="sm"
+                                disabled={
+                                    isValidating || couponStatus === "valid"
+                                }
+                                onClick={() =>
+                                    validateCoupon({
+                                        code: couponCode,
+                                        totalAmount: priceList.total,
+                                    })
+                                }
+                            >
+                                Apply
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Footer/Action Section */}
+            <div className="mt-6 flex justify-end">
+                <Button
+                    size="sm"
+                    disabled={
+                        isUserFetching ||
+                        isOrderCreating ||
+                        isValidating ||
+                        (isHasCouponChecked && couponStatus !== "valid")
+                    }
+                    onClick={() => {
+                        if (!user)
+                            return toast.error(
+                                DEFAULT_MESSAGES.ERRORS.USER_FETCHING
+                            );
+
+                        if (user.addresses.length === 0)
+                            return toast.error("Please add an address to proceed");
+
+                        if (!selectedShippingAddress) {
+                            return toast.error(
+                                "Please select a shipping address."
+                            );
+                        }
+
+                        createOrder({
+                            userId,
+                            coupon: coupon?.code,
+                            addressId: selectedShippingAddress.id,
+                            deliveryAmount: priceList.delivery.toString(),
+                            taxAmount: "0",
+                            totalAmount: priceList.total.toString(),
+                            discountAmount: priceList.discount.toString(),
+                            paymentMethod: null,
+                            totalItems: itemsCount,
+                            shiprocketOrderId: null,
+                            shiprocketShipmentId: null,
+                            items:
+                                userCart
+                                    ?.filter((item) => item.status)
+                                    .map((item) => ({
+                                        price: item.variantId
+                                            ? (item.product.variants.find(
+                                                  (v) => v.id === item.variantId
+                                              )?.price ??
+                                              item.product.price ??
+                                              0)
+                                            : (item.product.price ?? 0),
+                                        brandId: item.product.brandId,
+                                        productId: item.product.id,
+                                        variantId: item.variantId,
+                                        sku:
+                                            item.variant?.nativeSku ??
+                                            item.product.nativeSku,
+                                        quantity: item.quantity,
+                                        categoryId: item.product.categoryId,
+                                    })) || [],
+                        });
+                    }}
+                >
+                    Proceed to checkout
+                </Button>
+            </div>
+        </div>
+    );
+}

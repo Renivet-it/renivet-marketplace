@@ -7,13 +7,15 @@ import {
 import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
 import { Suspense } from "react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 // Import the CartComponent
-// import CartComponent from "./CartComponent";
 import CartComponent from "./Component/cart-component";
 
-// // Import the new client component for stepper navigation
+// Import the new client component for stepper navigation
 import CheckoutStepper from "./Component/checkout-stepper";
+import CheckoutSection from "./Component/checkout-section";
 
 type LayoutProps = {
     children: React.ReactNode;
@@ -27,7 +29,11 @@ export const metadata: Metadata = {
     },
 };
 
-export default function Layout({ children, searchParams }: LayoutProps) {
+export default async function Layout({ children, searchParams }: LayoutProps) {
+    // Fetch the userId using Clerk's auth
+    const { userId } = await auth();
+    if (!userId) redirect("/auth/signin");
+
     // Read the step from the query parameter (default to 0 if not present)
     const currentStep = parseInt(searchParams.step || "0", 10);
 
@@ -55,6 +61,7 @@ export default function Layout({ children, searchParams }: LayoutProps) {
                                     <h2 className="mb-4 text-lg font-semibold text-gray-800">
                                         Price Details (1 Item)
                                     </h2>
+                                    <CheckoutSection userId={userId} />
                                     {/* Add your price summary logic here */}
                                     <a
                                         href="?step=1"
