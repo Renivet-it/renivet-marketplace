@@ -58,9 +58,7 @@ export default async function Layout({ children, searchParams }: LayoutProps) {
                                 </Suspense>
                                 {/* Summary Section */}
                                 <div className="w-full rounded-lg bg-white p-4 shadow md:w-1/3">
-                                    <h2 className="mb-4 text-lg font-semibold text-gray-800">
-                                        Price Details (1 Item)
-                                    </h2>
+
                                     <CheckoutSection userId={userId} />
                                     {/* Add your price summary logic here */}
                                     <a

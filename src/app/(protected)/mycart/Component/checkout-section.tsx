@@ -1,12 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button-general";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
+import { Icons } from "@/components/icons";
+
 import {
     calculateTotalPriceWithCoupon,
     convertPaiseToRupees,
@@ -19,6 +20,14 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+// Reintroduce Dialog components for the coupon modal
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-general";
+
 interface PageProps {
     userId: string;
 }
@@ -27,7 +36,7 @@ export default function CheckoutSection({ userId }: PageProps) {
     const router = useRouter();
     const { selectedShippingAddress } = useCartStore();
 
-    const [isHasCouponChecked, setIsHasCouponChecked] = useState(false);
+    const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
     const [couponCode, setCouponCode] = useState<string>("");
     const [couponStatus, setCouponStatus] = useState<
         "idle" | "valid" | "invalid"
@@ -129,6 +138,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                 toast.success("Coupon applied successfully", { id: toastId });
                 setCouponStatus("valid");
                 setCoupon(data);
+                setIsCouponModalOpen(false); // Close the modal on successful coupon application
             },
             onError: (err, _, ctx) => {
                 setCouponStatus("invalid");
@@ -155,7 +165,90 @@ export default function CheckoutSection({ userId }: PageProps) {
 
     return (
         <div className="mx-auto w-full max-w-md rounded-lg bg-white p-4 shadow">
-            {/* Header Section */}
+            {/* Coupon Section (Myntra-like) */}
+            {/* <div
+                className="mb-4 flex cursor-pointer items-center gap-2 border-b pb-2"
+                onClick={() => setIsCouponModalOpen(true)}
+            >
+                <h2 className="text-lg font-semibold">Coupons</h2>
+
+                <span className="text-lg"> <Icons.Tag className="size-4" /> </span>
+                <span className="text-sm font-medium text-blue-600">
+                    {coupon ? `Coupon Applied: ${coupon.code}` : "Apply Coupon"}
+                </span>
+            </div> */}
+<div className="mb-4 border-b pb-2">
+  {/* Heading */}
+  <h2 className="text-lg font-semibold">Coupons</h2>
+
+  {/* Content Section: Icon + Text and Apply Button */}
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-2">
+      <Icons.Tag className="size-4 text-black" />
+      <span className="text-sm font-medium text-black">
+        {coupon ? `Coupon Applied: ${coupon.code}` : "Apply Coupons"}
+      </span>
+    </div>
+
+    <button
+      className="rounded-sm border border-pink-500 px-4 py-1 text-xs font-semibold text-pink-500 hover:bg-pink-50"
+      onClick={() => setIsCouponModalOpen(true)}
+    >
+      APPLY
+    </button>
+  </div>
+</div>
+
+            {/* Coupon Modal */}
+            <Dialog
+                open={isCouponModalOpen}
+                onOpenChange={(open) => {
+                    setIsCouponModalOpen(open);
+                    if (!open) {
+                        // Reset coupon input when closing the modal (unless a coupon is applied)
+                        if (couponStatus !== "valid") {
+                            setCouponCode("");
+                            setCouponStatus("idle");
+                        }
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Apply Coupon</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex items-center gap-2">
+                        <Input
+                            className="h-9"
+                            value={couponCode}
+                            onChange={(e) => {
+                                setCouponCode(e.target.value);
+                                setCouponStatus("idle");
+                            }}
+                            disabled={isValidating}
+                            placeholder="Enter coupon code"
+                        />
+                        <Button
+                            type="button"
+                            variant="accent"
+                            size="sm"
+                            disabled={
+                                isValidating || couponStatus === "valid"
+                            }
+                            onClick={() =>
+                                validateCoupon({
+                                    code: couponCode,
+                                    totalAmount: priceList.total,
+                                })
+                            }
+                        >
+                            Apply
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Order Summary Section */}
             <div className="mb-4">
                 <h2 className="text-lg font-semibold">Order Summary</h2>
                 <p className="text-sm text-gray-500">
@@ -200,58 +293,6 @@ export default function CheckoutSection({ userId }: PageProps) {
                         </span>
                     </div>
                 </div>
-
-                {/* Coupon Section */}
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                            id="coupon"
-                            checked={isHasCouponChecked}
-                            onCheckedChange={(checked) => {
-                                setIsHasCouponChecked(!!checked);
-                                if (!checked) {
-                                    setCouponCode("");
-                                    setCouponStatus("idle");
-                                    setCoupon(null);
-                                }
-                            }}
-                            disabled={isValidating}
-                            className="rounded-none"
-                        />
-                        <label htmlFor="coupon">I have a coupon</label>
-                    </div>
-
-                    {isHasCouponChecked && (
-                        <div className="flex items-center gap-2">
-                            <Input
-                                className="h-9"
-                                value={couponCode}
-                                onChange={(e) => {
-                                    setCouponCode(e.target.value);
-                                    setCouponStatus("idle");
-                                    setCoupon(null);
-                                }}
-                                disabled={isValidating}
-                            />
-                            <Button
-                                type="button"
-                                variant="accent"
-                                size="sm"
-                                disabled={
-                                    isValidating || couponStatus === "valid"
-                                }
-                                onClick={() =>
-                                    validateCoupon({
-                                        code: couponCode,
-                                        totalAmount: priceList.total,
-                                    })
-                                }
-                            >
-                                Apply
-                            </Button>
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Footer/Action Section */}
@@ -261,8 +302,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                     disabled={
                         isUserFetching ||
                         isOrderCreating ||
-                        isValidating ||
-                        (isHasCouponChecked && couponStatus !== "valid")
+                        isValidating
                     }
                     onClick={() => {
                         if (!user)
