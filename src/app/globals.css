@@ -174,3 +174,11 @@ h3.tiptap-heading + h2.tiptap-heading {
         @apply bg-background text-foreground;
     }
 }
+
+.scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
