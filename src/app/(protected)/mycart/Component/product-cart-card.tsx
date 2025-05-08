@@ -119,7 +119,7 @@ export function ProductCartCard({
                         />
                     )}
 
-                    <div className="group relative aspect-square max-w-20 shrink-0">
+                    <div className="group relative aspect-[4/5] max-w-28 shrink-0">
                         <Image
                             src={imageUrl}
                             alt={imageAlt}
@@ -230,7 +230,7 @@ export function ProductCartCard({
                             </DialogHeader>
 
                             <div className="flex items-start gap-3 py-2">
-                                <div className="relative aspect-square max-w-16 shrink-0">
+                                <div className="relative aspect-[4/5] max-w-20 shrink-0">
                                     <Image
                                         src={imageUrl}
                                         alt={imageAlt}
