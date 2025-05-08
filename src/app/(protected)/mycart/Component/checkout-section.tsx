@@ -157,6 +157,8 @@ export default function CheckoutSection({ userId }: PageProps) {
                     id: toastId,
                 });
                 router.push(`/orders/${newOrder.id}`);
+                router.push("?step=1");
+
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -296,13 +298,15 @@ export default function CheckoutSection({ userId }: PageProps) {
             </div>
 
             {/* Footer/Action Section */}
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 ">
                 <Button
                     size="sm"
+                    className="w-full"
                     disabled={
                         isUserFetching ||
                         isOrderCreating ||
-                        isValidating
+                        isValidating ||
+                        !userCart?.some((item) => item.status)
                     }
                     onClick={() => {
                         if (!user)
@@ -352,6 +356,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                         categoryId: item.product.categoryId,
                                     })) || [],
                         });
+
                     }}
                 >
                     Proceed to checkout

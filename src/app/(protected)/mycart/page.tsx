@@ -61,12 +61,12 @@ export default async function Layout({ children, searchParams }: LayoutProps) {
 
                                     <CheckoutSection userId={userId} />
                                     {/* Add your price summary logic here */}
-                                    <a
+                                    {/* <a
                                         href="?step=1"
                                         className="mt-4 inline-block w-full rounded-lg bg-gray-800 py-2 text-center text-white hover:bg-gray-900"
                                     >
                                         Proceed to Address
-                                    </a>
+                                    </a> */}
                                 </div>
                             </div>
                         )}
@@ -82,16 +82,15 @@ export default async function Layout({ children, searchParams }: LayoutProps) {
                                 </div>
                                 {/* Summary Section */}
                                 <div className="w-full rounded-lg bg-white p-4 shadow md:w-1/3">
-                                    <h2 className="mb-4 text-lg font-semibold text-gray-800">
-                                        Price Details (1 Item)
-                                    </h2>
+                                <CheckoutSection userId={userId} />
+
                                     {/* Add your price summary logic here */}
-                                    <a
+                                    {/* <a
                                         href="?step=2"
                                         className="mt-4 inline-block w-full rounded-lg bg-gray-800 py-2 text-center text-white hover:bg-gray-900"
                                     >
                                         Proceed to Payment
-                                    </a>
+                                    </a> */}
                                 </div>
                             </div>
                         )}
