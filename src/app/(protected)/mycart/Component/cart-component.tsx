@@ -11,7 +11,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import ShippingAddress from "../../profile/cart/component/shipping-address";
+import ShippingAddress from "./shipping-address";
 
 export const metadata: Metadata = {
     title: "Shopping Cart",
@@ -21,12 +21,12 @@ export const metadata: Metadata = {
 export default function CartComponent() {
     return (
         <div className="space-y-5 md:basis-3/4">
-            <Card className="w-full rounded-none">
+            {/* <Card className="w-full rounded-none">
                 <CardHeader className="px-4 md:p-6">
                     <CardTitle>Shopping Cart</CardTitle>
                     <CardDescription>View and manage your cart</CardDescription>
                 </CardHeader>
-            </Card>
+            </Card> */}
            <ShippingAddress></ShippingAddress>
             <Suspense fallback={<CartSkeleton />}>
                 <CartFetch />
