@@ -56,7 +56,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
 
     return (
         <>
-            <Card className={cn("border-0 shadow-none", className)} {...props}>
+            <Card className={cn("border border-gray-200 shadow-none", className)} {...props}>
                 <CardHeader className="p-2">
                     {isLoading ? (
                         <div className="flex h-24 items-center justify-center text-muted-foreground">
@@ -71,7 +71,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                             </div>
                             <Dialog open={formOpen} onOpenChange={setFormOpen}>
                                 <DialogTrigger asChild>
-                                    <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                    <span className="cursor-pointer text-sm font-medium text-blue-600 hover:underline">
                                         Add New Address
                                     </span>
                                 </DialogTrigger>
@@ -96,6 +96,9 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                         </>
                     ) : (
                         <div className="rounded-md p-2">
+                            <div className="text-sm text-gray-500 mb-1">
+                                Deliver to
+                            </div>
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-1 font-semibold text-base">
@@ -124,9 +127,9 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                 </div>
                                 <Dialog>
                                     <DialogTrigger asChild>
-                                        <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline mt-1">
+                                        <button className="rounded-sm border border-blue-500 px-4 py-1 text-xs font-semibold text-blue-500 hover:bg-blue-100">
                                             Change
-                                        </span>
+                                        </button>
                                     </DialogTrigger>
                                     <DialogContent className="sm:max-w-[500px]">
                                         <DialogHeader>
@@ -159,12 +162,12 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                         />
 
                                                         <div className="flex-1">
-                                                            <div className="flex items-center gap-1 font-semibold text-base">
+                                                            <div className="flex items-center gap-1 text-base font-semibold">
                                                                 {address.fullName}
                                                                 {address.isPrimary && (
                                                                     <Badge
                                                                         variant="default"
-                                                                        className="bg-blue-500 text-white text-xs ml-2"
+                                                                        className="ml-2 bg-blue-500 text-xs text-white"
                                                                     >
                                                                         Primary
                                                                     </Badge>
@@ -172,7 +175,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                                 {isSelected && (
                                                                     <Badge
                                                                         variant="default"
-                                                                        className="bg-green-600 text-white text-xs ml-2"
+                                                                        className="ml-2 bg-green-600 text-xs text-white"
                                                                     >
                                                                         Selected
                                                                     </Badge>
@@ -199,7 +202,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                         <DialogFooter className="mt-4">
                                             <Dialog open={formOpen} onOpenChange={setFormOpen}>
                                                 <DialogTrigger asChild>
-                                                    <span className="text-sm font-medium text-blue-600 cursor-pointer hover:underline">
+                                                    <span className="cursor-pointer text-sm font-medium text-blue-600 hover:underline">
                                                         + Add New Address
                                                     </span>
                                                 </DialogTrigger>
