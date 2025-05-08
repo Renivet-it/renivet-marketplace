@@ -1,4 +1,3 @@
-import { CartPage } from "@/components/profile";
 import {
     Card,
     CardDescription,
@@ -12,6 +11,7 @@ import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import ShippingAddress from "./shipping-address";
+import { CartPage } from "./cartorder-section";
 
 export const metadata: Metadata = {
     title: "Shopping Cart",
@@ -21,12 +21,6 @@ export const metadata: Metadata = {
 export default function CartComponent() {
     return (
         <div className="space-y-5 md:basis-3/4">
-            {/* <Card className="w-full rounded-none">
-                <CardHeader className="px-4 md:p-6">
-                    <CardTitle>Shopping Cart</CardTitle>
-                    <CardDescription>View and manage your cart</CardDescription>
-                </CardHeader>
-            </Card> */}
            <ShippingAddress></ShippingAddress>
             <Suspense fallback={<CartSkeleton />}>
                 <CartFetch />
