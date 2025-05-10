@@ -13,7 +13,7 @@ import { redirect } from "next/navigation";
 // Import the CartComponent
 import CartComponent from "./Component/cart-component";
 import ShippingAddress from "./Component/address-stepper/address-stepper";
-
+import AddressCheckoutSection from "./Component/address-stepper/address-checkout-section";
 // Import the new client component for stepper navigation
 import CheckoutStepper from "./Component/checkout-stepper";
 import CheckoutSection from "./Component/checkout-section";
@@ -84,8 +84,7 @@ export default async function Layout({ children, searchParams }: LayoutProps) {
                                 </div>
                                 {/* Summary Section */}
                                 <div className="w-full rounded-lg bg-white p-4 shadow md:w-1/3">
-                                <CheckoutSection userId={userId} />
-
+                                <AddressCheckoutSection userId={userId} />
                                     {/* Add your price summary logic here */}
                                     {/* <a
                                         href="?step=2"
