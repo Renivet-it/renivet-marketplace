@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 
 // Import the CartComponent
 import CartComponent from "./Component/cart-component";
+import ShippingAddress from "./Component/address-stepper/address-stepper";
 
 // Import the new client component for stepper navigation
 import CheckoutStepper from "./Component/checkout-stepper";
@@ -76,8 +77,9 @@ export default async function Layout({ children, searchParams }: LayoutProps) {
                                 {/* Address Section */}
                                 <div className="w-full rounded-lg bg-white p-4 shadow md:w-2/3">
                                     <h2 className="mb-4 text-lg font-semibold text-gray-800">
-                                        Delivery Address
+                                      Select Delivery Address
                                     </h2>
+                                    <ShippingAddress/>
                                     {/* Add address content here if needed */}
                                 </div>
                                 {/* Summary Section */}
