@@ -36,6 +36,7 @@ export function UserAddressDeleteModal({
             },
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Address deleted", { id: toastId });
+                setIsOpen(false);
                 refetch();
             },
             onError: (err, _, ctx) => {
