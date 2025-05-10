@@ -130,62 +130,64 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                     return (
                                         <div
                                             key={address.id}
-                                            className="flex items-start space-x-3 rounded-md border border-gray-200 p-3 hover:bg-gray-50"
+                                            className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between space-y-2 sm:space-y-0 sm:space-x-3 rounded-md border border-gray-200 p-3 hover:bg-gray-50"
                                         >
-                                            <RadioGroupItem
-                                                value={address.id}
-                                                className="mt-1 size-4"
-                                                checked={isSelected}
-                                            />
+                                            <div className="flex items-center space-x-3">
+                                                <RadioGroupItem
+                                                    value={address.id}
+                                                    className="mt-1 size-4"
+                                                    checked={isSelected}
+                                                />
 
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-1 text-base font-semibold text-gray-900">
-                                                    {address.fullName}
-                                                    {address.isPrimary && (
-                                                        <Badge
-                                                            variant="default"
-                                                            className="ml-2 bg-blue-100 text-blue-800 text-xs"
-                                                        >
-                                                            Primary
-                                                        </Badge>
-                                                    )}
-                                                    {isSelected && (
-                                                        <Badge
-                                                            variant="default"
-                                                            className="ml-2 bg-green-100 text-green-800 text-xs"
-                                                        >
-                                                            Selected
-                                                        </Badge>
-                                                    )}
-                                                </div>
+                                                <div className="w-full sm:w-auto flex-1 sm:flex-none">
+                                                    <div className="flex items-center gap-1 text-base font-semibold text-gray-900">
+                                                        {address.fullName}
+                                                        {address.isPrimary && (
+                                                            <Badge
+                                                                variant="default"
+                                                                className="ml-2 bg-blue-100 text-blue-800 text-xs"
+                                                            >
+                                                                Primary
+                                                            </Badge>
+                                                        )}
+                                                        {isSelected && (
+                                                            <Badge
+                                                                variant="default"
+                                                                className="ml-2 bg-green-100 text-green-800 text-xs"
+                                                            >
+                                                                Selected
+                                                            </Badge>
+                                                        )}
+                                                    </div>
 
-                                                <div className="text-sm text-gray-600">
-                                                    {address.street}, {address.city}, {address.state} - {address.zip}
-                                                </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        {address.street}, {address.city}, {address.state} - {address.zip}
+                                                    </div>
 
-                                                <div className="text-sm text-gray-600 flex items-center">
-                                                    <Phone
-                                                        className="mr-1 text-gray-600"
-                                                        size={14}
-                                                    />
-                                                    {address.phone}
+                                                    <div className="text-sm text-gray-600 flex items-center">
+                                                        <Phone
+                                                            className="mr-1 text-gray-600"
+                                                            size={14}
+                                                        />
+                                                        {address.phone}
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex sm:flex-row flex-col items-center sm:gap-3 gap-2">
+                                            <div className="flex flex-row items-center gap-1 sm:gap-3 sm:ml-auto sm:pl-4">
                                                 <button
-                                                    className="text-sm text-blue-600 hover:underline flex items-center sm:p-0 p-2"
+                                                    className="text-xs sm:text-sm text-blue-600 hover:underline flex items-center p-1 sm:p-0"
                                                     onClick={() => {
                                                         setEditAddress(address);
                                                         setEditFormOpen(true);
                                                     }}
                                                 >
-                                                    <Edit className="size-4 sm:size-4 mr-1" />
+                                                    <Edit className="size-3 sm:size-4 mr-1" />
                                                     Edit
                                                 </button>
                                                 <button
                                                     className={cn(
-                                                        "text-sm text-red-600 hover:underline flex items-center sm:p-0 p-2",
+                                                        "text-xs sm:text-sm text-red-600 hover:underline flex items-center p-1 sm:p-0",
                                                         isOnlyPrimary && "opacity-50 cursor-not-allowed"
                                                     )}
                                                     onClick={() => {
@@ -196,7 +198,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                     }}
                                                     disabled={isOnlyPrimary}
                                                 >
-                                                    <Trash2 className="size-4 sm:size-4 mr-1" />
+                                                    <Trash2 className="size-3 sm:size-4 mr-1" />
                                                     Delete
                                                 </button>
                                             </div>
