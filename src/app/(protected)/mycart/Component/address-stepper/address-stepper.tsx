@@ -21,12 +21,15 @@ import { Loader2, Phone, Trash2, Edit, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "../add-address";
 import { AddressManageForm } from "@/components/globals/forms";
+import { UserAddressDeleteModal } from "@/components/globals/modals";
 
 export default function ShippingAddress({ className, ...props }: GenericProps) {
     const { data: user, isLoading, refetch } = trpc.general.users.currentUser.useQuery();
     const addresses = useMemo(() => user?.addresses ?? [], [user?.addresses]);
     const [addFormOpen, setAddFormOpen] = useState(false);
     const [editFormOpen, setEditFormOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteAddress, setDeleteAddress] = useState(null);
     const [editAddress, setEditAddress] = useState(null);
     const setSelectedShippingAddress = useCartStore(
         (state) => state.setSelectedShippingAddress
@@ -50,18 +53,6 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
             setSelectedShippingAddress(selectedAddress);
         }
     }, [selectedAddress, setSelectedShippingAddress]);
-
-    const { mutate: deleteAddress, isPending: isDeleting } =
-        trpc.general.users.deleteAddress.useMutation({
-            onSuccess: () => {
-                refetch();
-                setSelectedAddressId("");
-            },
-        });
-
-    const handleDelete = (addressId: string) => {
-        deleteAddress({ userId: user?.id, addressId });
-    };
 
     return (
         <>
@@ -176,8 +167,10 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                 </button>
                                                 <button
                                                     className="text-sm text-red-600 hover:underline flex items-center"
-                                                    onClick={() => handleDelete(address.id)}
-                                                    disabled={isDeleting}
+                                                    onClick={() => {
+                                                        setDeleteAddress(address);
+                                                        setIsDeleteModalOpen(true);
+                                                    }}
                                                 >
                                                     <Trash2 className="size-4 mr-1" />
                                                     Delete
@@ -245,6 +238,14 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                     )}
                 </CardHeader>
             </Card>
+
+            {deleteAddress && (
+                <UserAddressDeleteModal
+                    address={deleteAddress}
+                    isOpen={isDeleteModalOpen}
+                    setIsOpen={setIsDeleteModalOpen}
+                />
+            )}
         </>
     );
 }
