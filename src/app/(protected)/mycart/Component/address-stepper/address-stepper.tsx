@@ -125,7 +125,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                             >
                                 {addresses.map((address) => {
                                     const isSelected = address.id === selectedAddressId;
-                                    const isOnlyPrimary = addresses.length === 1 && address.isPrimary;
+                                    const isOnlyPrimary = address.isPrimary;
 
                                     return (
                                         <div
