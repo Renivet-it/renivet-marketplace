@@ -257,9 +257,9 @@ export const ordersRouter = createTRPCRouter({
                     line_items_total: input.totalItems,
                     shipping_fee: input.deliveryAmount,
                     receipt: receiptId,
-                    transfers: brandTransfers,
+                    // transfers: brandTransfers,
                 });
-
+                console.log("Razorpay Order Response:", rzpOrder);
                 // Group items by brand for shipping
                 const itemsByBrand = input.items.reduce(
                     (acc, item) => {
