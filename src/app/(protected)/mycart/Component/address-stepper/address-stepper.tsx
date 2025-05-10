@@ -23,14 +23,29 @@ import AddAddressForm from "../add-address";
 import { AddressManageForm } from "@/components/globals/forms";
 import { UserAddressDeleteModal } from "@/components/globals/modals";
 
+// Define the Address interface based on the structure of the address object
+interface Address {
+    id: string;
+    phone: string;
+    type: "home" | "work" | "other";
+    alias: string;
+    aliasSlug: string;
+    fullName: string;
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    isPrimary: boolean;
+}
+
 export default function ShippingAddress({ className, ...props }: GenericProps) {
-    const { data: user, isLoading, refetch } = trpc.general.users.currentUser.useQuery();
+    const { data: user, isLoading } = trpc.general.users.currentUser.useQuery();
     const addresses = useMemo(() => user?.addresses ?? [], [user?.addresses]);
     const [addFormOpen, setAddFormOpen] = useState(false);
     const [editFormOpen, setEditFormOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [deleteAddress, setDeleteAddress] = useState(null);
-    const [editAddress, setEditAddress] = useState(null);
+    const [deleteAddress, setDeleteAddress] = useState<Address | null>(null);
+    const [editAddress, setEditAddress] = useState<Address | null>(null);
     const setSelectedShippingAddress = useCartStore(
         (state) => state.setSelectedShippingAddress
     );
@@ -102,7 +117,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                     ) : (
                         <div className="space-y-2 mt-2">
                             <RadioGroup
-                                defaultValue={selectedAddressId}
+                                value={selectedAddressId}
                                 onValueChange={(value) =>
                                     setSelectedAddressId(value)
                                 }
@@ -110,6 +125,8 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                             >
                                 {addresses.map((address) => {
                                     const isSelected = address.id === selectedAddressId;
+                                    const isOnlyPrimary = addresses.length === 1 && address.isPrimary;
+
                                     return (
                                         <div
                                             key={address.id}
@@ -118,6 +135,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                             <RadioGroupItem
                                                 value={address.id}
                                                 className="mt-1 size-4"
+                                                checked={isSelected}
                                             />
 
                                             <div className="flex-1">
@@ -154,25 +172,31 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex sm:flex-row flex-col items-center sm:gap-3 gap-2">
                                                 <button
-                                                    className="text-sm text-blue-600 hover:underline flex items-center"
+                                                    className="text-sm text-blue-600 hover:underline flex items-center sm:p-0 p-2"
                                                     onClick={() => {
                                                         setEditAddress(address);
                                                         setEditFormOpen(true);
                                                     }}
                                                 >
-                                                    <Edit className="size-4 mr-1" />
+                                                    <Edit className="size-4 sm:size-4 mr-1" />
                                                     Edit
                                                 </button>
                                                 <button
-                                                    className="text-sm text-red-600 hover:underline flex items-center"
+                                                    className={cn(
+                                                        "text-sm text-red-600 hover:underline flex items-center sm:p-0 p-2",
+                                                        isOnlyPrimary && "opacity-50 cursor-not-allowed"
+                                                    )}
                                                     onClick={() => {
-                                                        setDeleteAddress(address);
-                                                        setIsDeleteModalOpen(true);
+                                                        if (!isOnlyPrimary) {
+                                                            setDeleteAddress(address);
+                                                            setIsDeleteModalOpen(true);
+                                                        }
                                                     }}
+                                                    disabled={isOnlyPrimary}
                                                 >
-                                                    <Trash2 className="size-4 mr-1" />
+                                                    <Trash2 className="size-4 sm:size-4 mr-1" />
                                                     Delete
                                                 </button>
                                             </div>
@@ -224,8 +248,8 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                 setFormOpen={setEditFormOpen}
                                                 key={editAddress?.id}
                                                 address={editAddress}
-                                                setSelectedAddress={(address) => {
-                                                    setSelectedAddressId(address.id);
+                                                setSelectedAddress={(address: any) => {
+                                                    setSelectedAddressId(address?.id);
                                                     setEditFormOpen(false);
                                                     setEditAddress(null);
                                                 }}
