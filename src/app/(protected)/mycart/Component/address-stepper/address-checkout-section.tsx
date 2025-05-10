@@ -143,9 +143,12 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                     >
                         {/* Product Image */}
                         <div className="h-10 w-10 flex-shrink-0">
-                            {item.product.media && item.product.media.length > 0 ? (
+                            {item.product.media &&
+     item.product.media.length > 0 &&
+     item.product.media[0].mediaItem &&
+     item.product.media[0].mediaItem.url ? (
                                 <Image
-                                    src={item.product.media[0].mediaItem.url}
+                                src={item.product.media[0].mediaItem.url}
                                     alt={item.product.title}
                                     width={1000}
                                     height={1000}
