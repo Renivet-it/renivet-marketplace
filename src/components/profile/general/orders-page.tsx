@@ -349,6 +349,111 @@ function OrderCard({
     return (
         <>
             <Card className="rounded-none">
+                <CardHeader>
+                    <ul>
+                        <li className="flex items-center gap-4">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#696e79]">
+                                <svg height="20px" width="23px">
+                                    <g
+                                        id="Page-1"
+                                        stroke="none"
+                                        fill-rule="evenodd"
+                                        fill="#FFFFFF"
+                                    >
+                                        <g
+                                            id="Orders-revamp---List---Return-Flow"
+                                            transform="translate(-16.000000, -158.000000)"
+                                            fill-rule="nonzero"
+                                        >
+                                            <g
+                                                id="Group-17-Copy-98"
+                                                transform="translate(0.000000, 137.000000)"
+                                            >
+                                                <g
+                                                    id="Group-6-Copy"
+                                                    transform="translate(12.000000, 16.000000)"
+                                                >
+                                                    <g
+                                                        id="Asset"
+                                                        transform="translate(0.000000, 1.000000)"
+                                                    >
+                                                        <g id="Group-2">
+                                                            <g
+                                                                id="Group-7"
+                                                                transform="translate(4.000000, 4.000000)"
+                                                            >
+                                                                <path
+                                                                    d="M11.3333333,6.88888889 L14,6.88888889 C15.9636791,6.88888889 17.5555556,8.48076533 17.5555556,10.4444444 C17.5555556,12.4081236 15.9636791,14 14,14 L6,14 C5.50908022,14 5.11111111,14.3979691 5.11111111,14.8888889 C5.11111111,15.3798087 5.50908022,15.7777778 6,15.7777778 L14,15.7777778 C16.9455187,15.7777778 19.3333333,13.3899631 19.3333333,10.4444444 C19.3333333,7.49892578 16.9455187,5.11111111 14,5.11111111 L11.3333333,5.11111111 C10.8424136,5.11111111 10.4444444,5.50908022 10.4444444,6 C10.4444444,6.49091978 10.8424136,6.88888889 11.3333333,6.88888889 Z"
+                                                                    id="Path-3"
+                                                                ></path>
+                                                                <path
+                                                                    d="M10.1848493,11.9611183 C10.531982,11.6139856 10.531982,11.0511723 10.1848493,10.7040396 C9.8377166,10.3569069 9.27490328,10.3569069 8.92777058,10.7040396 L5.37146064,14.2603495 C5.02432794,14.6074822 5.02432794,15.1702955 5.37146064,15.5174282 L8.92777058,19.0737382 C9.27490328,19.4208709 9.8377166,19.4208709 10.1848493,19.0737382 C10.531982,18.7266055 10.531982,18.1637922 10.1848493,17.8166595 L7.25707872,14.8888889 L10.1848493,11.9611183 Z"
+                                                                    id="Path-8"
+                                                                ></path>
+                                                            </g>
+                                                        </g>
+                                                    </g>
+                                                </g>
+                                            </g>
+                                        </g>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div>
+                                <span className="text-[14px] font-bold leading-[1] text-[#282c3f]">
+                                    Refund Credited
+                                </span>
+                                <p className="text-[14px] font-bold leading-[1.5] text-[#696e79]">
+                                    Your refund of{" "}
+                                    <span className="text-[14px] font-bold leading-[1] text-[#282c3f]">
+                                        {formatPriceTag(
+                                            +convertPaiseToRupees(
+                                                order.totalAmount
+                                            ),
+                                            true
+                                        )}
+                                    </span>{" "}
+                                    for the return has been processed
+                                    successfully on Tue, 25 Jun 2024.
+                                </p>
+                            </div>
+                        </li>
+                    </ul>
+                </CardHeader>
+                <CardContent>
+                    {Object.entries(itemsByBrand).map(
+                        ([brandId, { brand, items, shipment }]) => (
+                            <div key={brandId} className="space-y-4">
+                                <div className="flex items-center justify-between py-3">
+                                    <h3 className="font-semibold">
+                                        {brand.name}
+                                    </h3>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {items.map((item) => (
+                                        <ProductOrderCard
+                                            item={item}
+                                            key={item.id}
+                                            trackingInfo={
+                                                shipment && {
+                                                    trackingNumber:
+                                                        shipment.trackingNumber,
+                                                    awbNumber:
+                                                        shipment.awbNumber,
+                                                    estimatedDelivery:
+                                                        shipment.estimatedDeliveryDate,
+                                                }
+                                            }
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    )}
+                </CardContent>
+            </Card>
+            <Card className="rounded-none">
                 <CardHeader className="bg-primary p-4 py-6 text-primary-foreground md:p-6">
                     <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
