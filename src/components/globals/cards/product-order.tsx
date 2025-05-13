@@ -129,32 +129,6 @@ export function ProductOrderCard({
                 </div>
             </div>
 
-            <div className="space-y-2">
-                <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    disabled={!isAvailable}
-                    asChild
-                >
-                    <Link
-                        href={`/products/${item.product.slug}`}
-                        target="_blank"
-                        referrerPolicy="no-referrer"
-                        className={cn(
-                            !isAvailable &&
-                                "cursor-default opacity-50 hover:bg-background hover:text-foreground"
-                        )}
-                        onClick={(e) => {
-                            if (!isAvailable) e.preventDefault();
-                        }}
-                    >
-                        <Icons.RotateCcw />
-                        Buy Again
-                    </Link>
-                </Button>
-            </div>
-
             {trackingInfo && trackingInfo.estimatedDelivery && (
                 <div className="absolute right-4 top-4 text-xs text-muted-foreground">
                     Expected delivery:{" "}
