@@ -22,7 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Loader2, Phone } from "lucide-react";
+import { Loader2, Phone, Plus} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./add-address";
 
@@ -86,15 +86,19 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                     </div>
                 ) : addresses.length === 0 || !selectedAddress ? (
                     <>
-                        <div className="mb-2 text-sm text-muted-foreground">
-                            You have no saved addresses. Please add one to proceed with checkout.
-                        </div>
+                        <div className="space-y-2 mt-2">
+                            <div className="text-sm text-gray-600">
+                                You have no saved addresses. Please add one to proceed with checkout.
+                            </div>
                         <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                            <DialogTrigger asChild>
-                                <span className="cursor-pointer text-sm font-medium text-blue-600 hover:underline">
-                                    Add New Address
-                                </span>
-                            </DialogTrigger>
+                                <DialogTrigger asChild>
+                                    <div className="flex items-center gap-2 border border-dashed border-gray-300 rounded-md p-3 hover:bg-gray-50 cursor-pointer">
+                                        <Plus className="size-4 text-blue-600" />
+                                        <span className="text-sm text-blue-600">
+                                            Add a new address
+                                        </span>
+                                    </div>
+                                </DialogTrigger>
                             <DialogContent className="sm:max-w-[800px]">
                                 <DialogHeader>
                                     <DialogTitle>Add New Address</DialogTitle>
@@ -108,6 +112,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                 )}
                             </DialogContent>
                         </Dialog>
+                        </div>
                     </>
                 ) : (
                     <div className="rounded-md p-2">
