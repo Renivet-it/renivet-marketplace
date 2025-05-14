@@ -17,7 +17,7 @@ interface PageProps extends GenericProps {
 export function Landing({ className, banners, ...props }: PageProps) {
     return (
         <section className={cn("", className)} {...props}>
- <Carousel
+<Carousel
     opts={{
         align: "start",
         loop: true,
@@ -27,7 +27,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
             delay: 5000,
         }),
     ]}
-    className="w-full h-full lg:h-[70vh]" // Changed md: to lg: for height
+    className="w-full h-full lg:h-[70vh] xl:h-[80vh]" // Adjusted height for larger screens
 >
     <CarouselContent
         classNames={{
@@ -43,7 +43,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         alt={item.title}
                         width={1920}
                         height={1080}
-                        className="size-full object-contain brightness-50 lg:object-cover" // Changed md: to lg: for object-fit
+                        className="size-full object-contain brightness-50 lg:object-cover"
                         priority={index === 0}
                     />
                                 <div className="absolute inset-0 flex flex-col items-center justify-center space-y-5 p-4 text-center text-background md:space-y-10">
