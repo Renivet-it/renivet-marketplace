@@ -352,70 +352,20 @@ function OrderCard({
                 <CardHeader>
                     <ul>
                         <li className="flex items-center gap-4">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#696e79]">
-                                <svg height="20px" width="23px">
-                                    <g
-                                        id="Page-1"
-                                        stroke="none"
-                                        fill-rule="evenodd"
-                                        fill="#FFFFFF"
-                                    >
-                                        <g
-                                            id="Orders-revamp---List---Return-Flow"
-                                            transform="translate(-16.000000, -158.000000)"
-                                            fill-rule="nonzero"
-                                        >
-                                            <g
-                                                id="Group-17-Copy-98"
-                                                transform="translate(0.000000, 137.000000)"
-                                            >
-                                                <g
-                                                    id="Group-6-Copy"
-                                                    transform="translate(12.000000, 16.000000)"
-                                                >
-                                                    <g
-                                                        id="Asset"
-                                                        transform="translate(0.000000, 1.000000)"
-                                                    >
-                                                        <g id="Group-2">
-                                                            <g
-                                                                id="Group-7"
-                                                                transform="translate(4.000000, 4.000000)"
-                                                            >
-                                                                <path
-                                                                    d="M11.3333333,6.88888889 L14,6.88888889 C15.9636791,6.88888889 17.5555556,8.48076533 17.5555556,10.4444444 C17.5555556,12.4081236 15.9636791,14 14,14 L6,14 C5.50908022,14 5.11111111,14.3979691 5.11111111,14.8888889 C5.11111111,15.3798087 5.50908022,15.7777778 6,15.7777778 L14,15.7777778 C16.9455187,15.7777778 19.3333333,13.3899631 19.3333333,10.4444444 C19.3333333,7.49892578 16.9455187,5.11111111 14,5.11111111 L11.3333333,5.11111111 C10.8424136,5.11111111 10.4444444,5.50908022 10.4444444,6 C10.4444444,6.49091978 10.8424136,6.88888889 11.3333333,6.88888889 Z"
-                                                                    id="Path-3"
-                                                                ></path>
-                                                                <path
-                                                                    d="M10.1848493,11.9611183 C10.531982,11.6139856 10.531982,11.0511723 10.1848493,10.7040396 C9.8377166,10.3569069 9.27490328,10.3569069 8.92777058,10.7040396 L5.37146064,14.2603495 C5.02432794,14.6074822 5.02432794,15.1702955 5.37146064,15.5174282 L8.92777058,19.0737382 C9.27490328,19.4208709 9.8377166,19.4208709 10.1848493,19.0737382 C10.531982,18.7266055 10.531982,18.1637922 10.1848493,17.8166595 L7.25707872,14.8888889 L10.1848493,11.9611183 Z"
-                                                                    id="Path-8"
-                                                                ></path>
-                                                            </g>
-                                                        </g>
-                                                    </g>
-                                                </g>
-                                            </g>
-                                        </g>
-                                    </g>
-                                </svg>
-                            </div>
+                            <OrderHeader order={order} />
                             <div>
-                                <span className="text-[14px] font-bold leading-[1] text-[#282c3f]">
-                                    Refund Credited
-                                </span>
-                                <p className="text-[14px] font-bold leading-[1.5] text-[#696e79]">
-                                    Your refund of{" "}
-                                    <span className="text-[14px] font-bold leading-[1] text-[#282c3f]">
-                                        {formatPriceTag(
-                                            +convertPaiseToRupees(
-                                                order.totalAmount
-                                            ),
-                                            true
-                                        )}
-                                    </span>{" "}
-                                    for the return has been processed
-                                    successfully on Tue, 25 Jun 2024.
-                                </p>
+                                {(order.status === "pending" ||
+                                    order.status === "processing") && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() =>
+                                            setIsCancelModalOpen(true)
+                                        }
+                                    >
+                                        Cancel Order
+                                    </Button>
+                                )}
                             </div>
                         </li>
                     </ul>
@@ -452,202 +402,7 @@ function OrderCard({
                         )
                     )}
                 </CardContent>
-            </Card>
-            <Card className="rounded-none">
-                <CardHeader className="bg-primary p-4 py-6 text-primary-foreground md:p-6">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1">
-                            <p className="text-xs uppercase">Order Placed</p>
-                            <p className="text-sm">
-                                {format(
-                                    new Date(order.createdAt),
-                                    "MMMM dd, yyyy"
-                                )}
-                            </p>
-                        </div>
-
-                        <div className="space-y-1">
-                            <p className="text-xs uppercase">Total</p>
-                            <p className="text-sm">
-                                {formatPriceTag(
-                                    +convertPaiseToRupees(order.totalAmount),
-                                    true
-                                )}
-                            </p>
-                        </div>
-
-                        <div className="space-y-1">
-                            <p className="text-xs font-medium">ORDER #</p>
-                            <p className="text-sm">{order.id}</p>
-                        </div>
-                    </div>
-                </CardHeader>
-
-                <CardContent className="space-y-6 p-4 md:p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex flex-col gap-2 md:flex-row md:gap-4">
-                            <Badge variant="secondary" className="h-6">
-                                Order Status:{" "}
-                                {convertValueToLabel(order.status)}
-                            </Badge>
-
-                            <Badge variant="secondary" className="h-6">
-                                Payment Status:{" "}
-                                {convertValueToLabel(order.paymentStatus)}
-                            </Badge>
-                        </div>
-
-                        {(order.status === "pending" ||
-                            order.status === "processing") && (
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => setIsCancelModalOpen(true)}
-                            >
-                                Cancel Order
-                            </Button>
-                        )}
-                    </div>
-
-                    {unavailableItems.length === 0 &&
-                        order.status === "pending" &&
-                        (order.paymentStatus === "pending" ||
-                            order.paymentStatus === "failed") && (
-                            <div className="flex items-center gap-2 bg-muted/50 p-4 text-sm text-muted-foreground">
-                                <Icons.AlertCircle className="size-5" />
-
-                                <p>
-                                    Order is pending. Please complete the
-                                    payment to proceed.
-                                </p>
-
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="ml-auto"
-                                    asChild
-                                >
-                                    <Link href={`/orders/${order.id}`}>
-                                        Complete Payment
-                                        <Icons.ArrowRight className="size-4" />
-                                    </Link>
-                                </Button>
-                            </div>
-                        )}
-
-                    <Separator />
-
-                    {/* Group products by brand */}
-                    {Object.entries(itemsByBrand).map(
-                        ([brandId, { brand, items, shipment }]) => (
-                            <div key={brandId} className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="font-semibold">
-                                        {brand.name}
-                                    </h3>
-                                    {shipment && (
-                                        <Badge variant="outline">
-                                            Shipment Status:{" "}
-                                            {convertValueToLabel(
-                                                shipment.status
-                                            )}
-                                        </Badge>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    {items.map((item) => (
-                                        <ProductOrderCard
-                                            item={item}
-                                            key={item.id}
-                                            trackingInfo={
-                                                shipment && {
-                                                    trackingNumber:
-                                                        shipment.trackingNumber,
-                                                    awbNumber:
-                                                        shipment.awbNumber,
-                                                    estimatedDelivery:
-                                                        shipment.estimatedDeliveryDate,
-                                                }
-                                            }
-                                        />
-                                    ))}
-                                </div>
-
-                                {shipment && (
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Icons.Truck className="size-4" />
-                                        {shipment.awbNumber ? (
-                                            <div className="flex items-center gap-2">
-                                                <button className="hover:underline">
-                                                    <Link
-                                                        href={`https://shiprocket.co/tracking/${shipment.awbNumber}`}
-                                                        target="_blank"
-                                                    >
-                                                        Track Shipment
-                                                    </Link>
-                                                </button>
-                                                {shipment.invoiceUrl && (
-                                                    <>
-                                                        <span>•</span>
-                                                        <button className="hover:underline">
-                                                            <Link
-                                                                href={
-                                                                    shipment.invoiceUrl
-                                                                }
-                                                                target="_blank"
-                                                                download
-                                                            >
-                                                                Download Invoice
-                                                            </Link>
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <span>Preparing for shipment</span>
-                                        )}
-                                    </div>
-                                )}
-
-                                <Separator />
-                            </div>
-                        )
-                    )}
-                </CardContent>
-
-                <CardFooter className="bg-muted/50 p-4 md:p-6">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Icons.Package className="size-4 md:size-5" />
-                        <div>
-                            <span className="text-sm md:text-base">
-                                Ship to:{" "}
-                            </span>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <button className="cursor-pointer text-sm hover:underline md:text-base">
-                                        {shippingAddress?.fullName}
-                                    </button>
-                                </PopoverTrigger>
-
-                                <PopoverContent className="rounded-none">
-                                    <p className="text-sm">
-                                        {shippingAddress?.street}
-                                    </p>
-
-                                    <p className="text-sm">
-                                        {shippingAddress?.city},{" "}
-                                        {shippingAddress?.state}
-                                    </p>
-
-                                    <p className="text-sm">
-                                        {shippingAddress?.phone}
-                                    </p>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
-
+                <CardFooter>
                     <button className="ml-auto underline-offset-2 hover:underline">
                         <Link href={`/orders/${order.id}`} className="text-sm">
                             View Order Details
@@ -697,6 +452,95 @@ function OrderCard({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+        </>
+    );
+}
+
+function OrderHeader( { order }: { order: OrderWithItemAndBrand }) {
+    const getStatusIcon = () => {
+        if (
+            order.status === "cancelled" ||
+            order.paymentStatus === "failed" ||
+            order.paymentStatus === "refund_failed"
+        ) {
+            return "/assets/order/cancelled.svg";
+        }
+        if (
+            order.paymentStatus === "refunded" ||
+            order.paymentStatus === "refund_pending"
+        ) {
+            return "/assets/order/return.svg";
+        }
+        return "/assets/order/box.svg"; // fallback
+    };
+
+    const getStatusTick = () => {
+        if (order.paymentStatus === "refunded")
+            return "/assets/order/rupee.svg";
+
+        return order.paymentStatus === "paid" || order.status === "delivered"
+            ? "/assets/order/greentick.svg"
+            : null;
+    };
+
+    const getStatusHeading = () => {
+        switch (order.paymentStatus) {
+            case "refunded":
+                return "Refund Credited";
+            case "refund_pending":
+                return "Refund In Process";
+            case "failed":
+                return "Payment Failed";
+            case "pending":
+                return "Awaiting Payment";
+            case "paid":
+                return order.status === "delivered"
+                    ? "Order Delivered"
+                    : "Order Confirmed";
+            default:
+                return "Order Status";
+        }
+    };
+
+    const getStatusMessage = () => {
+        switch (order.paymentStatus) {
+            case "refunded":
+                return `Your refund of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} for the return has been processed successfully.`;
+            case "refund_pending":
+                return `Your refund of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} is being processed.`;
+            case "failed":
+                return "Your payment failed. Please try again.";
+            case "pending":
+                return `Your payment of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} is pending. Please complete the payment.`;
+            case "paid":
+                return order.status === "delivered"
+                    ? "Your order has been delivered successfully."
+                    : "Your order has been placed and is being processed.";
+            default:
+                return "Order is being processed.";
+        }
+    };
+
+    return (
+        <>
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[#696e79]">
+                <img src={getStatusIcon()} alt="status-icon" />
+                {getStatusTick() && (
+                    <img
+                        className="absolute bottom-0 right-0"
+                        src={getStatusTick() ?? ""}
+                        alt="tick"
+                    />
+                )}
+            </div>
+            <div className="flex-1">
+                <span className="text-[14px] font-bold leading-[1] text-[#282c3f]">
+                    {getStatusHeading()}
+                </span>
+                <p className="text-[14px] font-bold leading-[1.5] text-[#696e79]">
+                    {getStatusMessage()}
+                </p>
+            </div>
         </>
     );
 }
