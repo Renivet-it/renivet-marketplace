@@ -286,7 +286,7 @@ export const ordersRouter = createTRPCRouter({
                             orderId: rzpOrder.id,
                         }))
                     ),
-                    queries.userCarts.dropActiveItemsFromCart(user.id),
+                    // queries.userCarts.dropActiveItemsFromCart(user.id),
                     userCartCache.drop(user.id),
                 ]);
 
@@ -677,6 +677,38 @@ export const ordersRouter = createTRPCRouter({
             );
 
             return true;
+        }),
+        deleteOrder: protectedProcedure
+        .input(z.object({
+            orderId: z.string(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+            try {
+            const { queries } = ctx;
+
+                const deletedOrder = await queries.orders.deleteOrder(input.orderId);
+                return deletedOrder;
+            } catch (error) {
+                throw new Error(
+                    error instanceof Error ? error.message : `Failed to delete order ${input.orderId}`
+                );
+            }
+        }),
+        deleteItemFromCart: protectedProcedure
+        .input(z.object({
+            userId: z.string(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+            try {
+            const { queries } = ctx;
+
+                const deleteItemFromCart = await queries.userCarts.dropActiveItemsFromCart(input.userId);
+                return deleteItemFromCart;
+            } catch (error) {
+                throw new Error(
+                    error instanceof Error ? error.message : `Failed to delete cart ${input.userId}`
+                );
+            }
         }),
     cancelOrder: protectedProcedure
         .input(

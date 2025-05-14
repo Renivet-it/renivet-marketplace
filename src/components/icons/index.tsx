@@ -108,6 +108,7 @@ import {
     Tag,
     CheckCircle,
     ClipboardList,
+    Bookmark,
     type LucideIcon,
     type LucideProps,
 } from "lucide-react";
@@ -140,6 +141,7 @@ export const Icons = {
     RotateCcw,
     Filter,
     History,
+    Bookmark,
     ListRestart,
     Pin,
     Link,

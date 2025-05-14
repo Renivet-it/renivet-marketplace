@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductCartCard } from "@/components/globals/cards";
+import { ProductCartCard } from "./product-cart-card";
 import {
     CheckoutModal,
     UnavailableItemsModal,
@@ -208,34 +208,25 @@ export function CartPage({
                         />
                     ))}
                 </div>
-
+                <Link
+      href="profile/wishlist"
+ className="flex items-center justify-between px-4 py-3 rounded-md border-2 border-border hover:bg-muted transition"
+    >
+      <div className="flex items-center gap-2">
+        <Icons.Bookmark className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium text-primary">
+          Add More From Wishlist
+        </span>
+      </div>
+      <Icons.ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
                 {process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED === "true" && (
                     <p className="text-xs text-destructive">
                         * Checkouts are currently disabled due to testing
                     </p>
                 )}
 
-                <Button
-                    className="w-full"
-                    disabled={
-                        totalPrice === 0 ||
-                        process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED === "true"
-                    }
-                    onClick={() => {
-                        if (
-                            process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED ===
-                            "true"
-                        )
-                            return toast.error(
-                                "Checkouts are currently disabled due to testing"
-                            );
 
-                        setIsCheckoutModalOpen(true);
-                    }}
-                >
-                    Proceed to Checkout
-                    <Icons.ArrowRight />
-                </Button>
             </div>
 
             <CheckoutModal

@@ -163,7 +163,7 @@ export function OrderPage({
                     );
 
                 setIsProcessing(true);
-
+// @ts-ignore
                 const options = createRazorpayPaymentOptions({
                     orderId,
                     deliveryAddress,
