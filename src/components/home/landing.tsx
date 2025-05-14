@@ -17,35 +17,35 @@ interface PageProps extends GenericProps {
 export function Landing({ className, banners, ...props }: PageProps) {
     return (
         <section className={cn("", className)} {...props}>
-            <Carousel
-                opts={{
-                    align: "start",
-                    loop: true,
-                }}
-                plugins={[
-                    Autoplay({
-                        delay: 5000,
-                    }),
-                ]}
-                className="w-full"
-            >
-                <CarouselContent
-                    classNames={{
-                        wrapper: "size-full",
-                        inner: "size-full ml-0",
-                    }}
-                >
-                    {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative size-full">
-                                <Image
-                                    src={item.imageUrl}
-                                    alt={item.title}
-                                    width={1920}
-                                    height={1080}
-                                    className="size-full object-contain brightness-50"
-                                    priority={index === 0}
-                                />
+ <Carousel
+    opts={{
+        align: "start",
+        loop: true,
+    }}
+    plugins={[
+        Autoplay({
+            delay: 5000,
+        }),
+    ]}
+    className="w-full h-full md:h-[70vh]"
+>
+    <CarouselContent
+        classNames={{
+            wrapper: "size-full",
+            inner: "size-full ml-0",
+        }}
+    >
+        {banners.map((item, index) => (
+            <CarouselItem key={index} className="h-full p-0">
+                <div className="relative size-full">
+                    <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        width={1920}
+                        height={1080}
+                        className="size-full object-contain brightness-50 md:object-cover" // Fix for PC
+                        priority={index === 0}
+                    />
                                 <div className="absolute inset-0 flex flex-col items-center justify-center space-y-5 p-4 text-center text-background md:space-y-10">
                                     <h1 className="max-w-3xl text-balance text-3xl font-bold uppercase md:text-5xl lg:text-7xl">
                                         {item.title}
