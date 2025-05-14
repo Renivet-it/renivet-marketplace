@@ -22,7 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Loader2, Phone, Plus} from "lucide-react";
+import { Loader2, Phone, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./add-address";
 
