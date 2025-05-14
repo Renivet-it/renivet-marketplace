@@ -27,7 +27,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
             delay: 5000,
         }),
     ]}
-    className="w-full h-full md:h-[70vh]"
+    className="w-full h-full lg:h-[70vh]" // Changed md: to lg: for height
 >
     <CarouselContent
         classNames={{
@@ -43,7 +43,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         alt={item.title}
                         width={1920}
                         height={1080}
-                        className="size-full object-contain brightness-50 md:object-cover" // Fix for PC
+                        className="size-full object-contain brightness-50 lg:object-cover" // Changed md: to lg: for object-fit
                         priority={index === 0}
                     />
                                 <div className="absolute inset-0 flex flex-col items-center justify-center space-y-5 p-4 text-center text-background md:space-y-10">
