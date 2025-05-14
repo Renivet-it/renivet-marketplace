@@ -42,11 +42,6 @@ export function BrandProducts({
                     >
                         top-rated brand products
                     </h2>
-                    <img
-                        src="assets/marketing/downward-rotation-svgrepo-com.svg"
-                        alt="arrow-down"
-                        className="h-10 w-10"
-                    />
                 </div>
                 <div className="scrollbar-hide flex flex-col gap-4 overflow-x-auto px-1">
                     <div className="flex gap-4">
