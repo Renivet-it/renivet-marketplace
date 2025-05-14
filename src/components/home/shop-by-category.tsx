@@ -27,20 +27,43 @@ export function ShopByCategories({
                     {titleData?.title || "Shop by Category"}
                 </h2>
 
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                <div className="scrollbar-hide grid auto-cols-[40%] grid-flow-col grid-rows-2 gap-3 overflow-x-auto sm:hidden">
                     {shopByCategories.map((category, index) => (
                         <Link
                             key={index}
                             href={category.url || "/shop"}
                             className="block"
                         >
-                            <div className="aspect-[4/5] overflow-hidden">
+                            <div className="overflow-hidden rounded-lg shadow-sm">
                                 <Image
                                     src={category.imageUrl}
                                     alt="Category"
-                                    width={200}
-                                    height={250}
-                                    className="size-full object-cover"
+                                    width={300} // optional: to match the ratio better
+                                    height={400}
+                                    quality={90}
+                                    className="max-h-full max-w-full object-contain"
+                                />
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+
+                {/* Desktop - Grid Layout */}
+                <div className="hidden grid-cols-2 gap-4 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {shopByCategories.map((category, index) => (
+                        <Link
+                            key={index}
+                            href={category.url || "/shop"}
+                            className="block"
+                        >
+                            <div className="overflow-hidden rounded-lg shadow-sm">
+                                <Image
+                                    src={category.imageUrl}
+                                    alt="Category"
+                                    width={300} // optional: to match the ratio better
+                                    height={400}
+                                    quality={90}
+                                    className="max-h-full max-w-full object-contain"
                                 />
                             </div>
                         </Link>

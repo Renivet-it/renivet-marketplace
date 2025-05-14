@@ -16,28 +16,25 @@ export function AdvertisementPage({ advertisements }: PageProps) {
             {advertisements.map((ad) => (
                 <div
                     key={ad.id}
-                    className="relative size-full"
-                    style={{ height: `${ad.height}vh` }}
+                    className="relative h-full w-full"
                 >
                     {ad.url ? (
                         <Link href={ad.url} target="_blank">
                             <Image
                                 src={ad.imageUrl}
                                 alt={ad.title}
-                                fill
+                                width={1920}
+                                height={1080}
                                 className="object-cover"
-                                sizes="100vw"
-                                priority
                             />
                         </Link>
                     ) : (
                         <Image
                             src={ad.imageUrl}
                             alt={ad.title}
-                            fill
+                            width={1920}
+                            height={1080}
                             className="object-cover"
-                            sizes="100vw"
-                            priority
                         />
                     )}
                 </div>
