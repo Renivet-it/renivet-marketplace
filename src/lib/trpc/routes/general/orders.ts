@@ -21,6 +21,7 @@ import {
     generatePickupLocationCode,
     generateReceiptId,
     getRawNumberFromPhone,
+    generateOrderId
 } from "@/lib/utils";
 import {
     categorySchema,
@@ -101,7 +102,7 @@ export const ordersRouter = createTRPCRouter({
             return data;
         }),
  createOrder: protectedProcedure
-    .input(
+.input(
         createOrderSchema.omit({ id: true, receiptId: true }).extend({
             items: z.array(
                 createOrderItemSchema
@@ -135,7 +136,6 @@ export const ordersRouter = createTRPCRouter({
 
         return next();
     })
-    // Removed the Shiprocket balance check middleware
     .mutation(async ({ input, ctx }) => {
         const { queries, user, db, schemas } = ctx;
 
@@ -179,13 +179,18 @@ export const ordersRouter = createTRPCRouter({
             });
 
         try {
-            const orderId = `${input.razorpayOrderId}_${brandIds.join("_")}`;
+            // Generate a readable and concise order_id
+            const brandName = existingBrands[0]?.name || "UNKNOWN"; // Use the first brand's name
+            const orderId = generateOrderId(brandName);
+            console.log("Creating order with new ID:", orderId);
+
             const newOrder = await queries.orders.createOrder({
                 ...input,
                 id: orderId,
                 receiptId,
                 userId: user.id,
             });
+            console.log("Database order created successfully:", newOrder);
 
             await Promise.all([
                 db.insert(schemas.orderItems).values(
@@ -196,6 +201,7 @@ export const ordersRouter = createTRPCRouter({
                 ),
                 userCartCache.drop(user.id),
             ]);
+            console.log("Order items inserted and cart cleared for user:", user.id);
 
             const sr = await shiprocket();
             const itemsByBrand = input.items.reduce(
@@ -208,10 +214,15 @@ export const ordersRouter = createTRPCRouter({
                 },
                 {} as Record<string, typeof input.items>
             );
+            console.log("Items grouped by brand for Shiprocket:", itemsByBrand);
 
             for (const [brandId, brandItems] of Object.entries(itemsByBrand)) {
                 const brand = existingBrands.find((b) => b.id === brandId);
-                if (!brand) continue;
+                if (!brand) {
+                    console.warn(`Brand not found for brandId: ${brandId}, skipping Shiprocket order creation`);
+                    continue;
+                }
+                console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${brandId})`);
 
                 const productDetails = await Promise.all(
                     brandItems.map(async (item) => {
@@ -238,6 +249,7 @@ export const ordersRouter = createTRPCRouter({
                         };
                     })
                 );
+                console.log(`Product details for brand ${brand.name}:`, productDetails);
 
                 const orderDimensions = productDetails.reduce(
                     (acc, { product, variant, item }) => {
@@ -254,18 +266,50 @@ export const ordersRouter = createTRPCRouter({
                     },
                     { weight: 0, length: 0, width: 0, height: 0 }
                 );
+                console.log(`Order dimensions for brand ${brand.name}:`, orderDimensions);
+
+                // Ensure dimensions meet Shiprocket's minimum requirements
+                const validatedDimensions = {
+                    weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams (0.1 kg after conversion)
+                    length: Math.max(orderDimensions.length, 0.5), // Minimum 0.5 cm
+                    width: Math.max(orderDimensions.width, 0.5), // Minimum 0.5 cm
+                    height: Math.max(orderDimensions.height, 0.5), // Minimum 0.5 cm
+                };
+                console.log(`Validated dimensions for brand ${brand.name}:`, validatedDimensions);
 
                 const orderValue = brandItems.reduce((acc, item) => {
                     return acc + (item.price || 0) * item.quantity;
                 }, 0);
+                console.log(`Order value for brand ${brand.name}:`, orderValue);
 
-                const srOrder = await sr.requestCreateOrder({
+                const pickupLocation = generatePickupLocationCode({
+                    brandId,
+                    brandName: brand.name,
+                });
+                console.log(`Generated pickup location for brand ${brand.name}:`, pickupLocation);
+
+                const orderItemsForShiprocket = await Promise.all(
+                    brandItems.map(async (item) => {
+                        const product = productDetails.find(
+                            (p) => p.item.productId === item.productId
+                        );
+
+                        return {
+                            name: product?.product?.title || item.sku || "",
+                            sku: item.sku || "",
+                            units: item.quantity,
+                            selling_price: Math.floor(
+                                +convertPaiseToRupees(item.price || 0)
+                            ),
+                        };
+                    })
+                );
+                console.log(`Order items for Shiprocket for brand ${brand.name}:`, orderItemsForShiprocket);
+
+                const srOrderRequest = {
                     order_id: orderId,
                     order_date: format(new Date(), "yyyy-MM-dd"),
-                    pickup_location: generatePickupLocationCode({
-                        brandId,
-                        brandName: brand.name,
-                    }),
+                    pickup_location: pickupLocation,
                     billing_customer_name: existingAddress.fullName.split(" ")[0],
                     billing_last_name: existingAddress.fullName.split(" ")[1] || "",
                     billing_address: existingAddress.street,
@@ -276,71 +320,64 @@ export const ordersRouter = createTRPCRouter({
                     billing_email: user.email,
                     billing_phone: +getRawNumberFromPhone(existingAddress.phone),
                     shipping_is_billing: true,
-                    order_items: await Promise.all(
-                        brandItems.map(async (item) => {
-                            const product = productDetails.find(
-                                (p) => p.item.productId === item.productId
-                            );
-
-                            return {
-                                name: product?.product?.title || item.sku || "",
-                                sku: item.sku || "",
-                                units: item.quantity,
-                                selling_price: Math.floor(
-                                    +convertPaiseToRupees(item.price || 0)
-                                ),
-                            };
-                        })
-                    ),
+                    order_items: orderItemsForShiprocket,
                     payment_method: input.paymentMethod === "COD" ? "COD" : "Prepaid",
                     sub_total: Math.floor(+convertPaiseToRupees(orderValue)),
                     length: Math.max(orderDimensions.length, 0.5),
                     breadth: Math.max(orderDimensions.width, 0.5),
                     height: Math.max(orderDimensions.height, 0.5),
                     weight: +(Math.max(orderDimensions.weight, 0.1) / 1000).toFixed(2),
-                });
+                };
+                console.log(`Shiprocket order request for brand ${brand.name}:`, srOrderRequest);
 
-                if (srOrder.status && srOrder.data) {
-                    const shipment = await db
-                        .insert(schemas.orderShipments)
-                        .values({
-                            orderId: newOrder.id,
-                            brandId: brandId,
-                            shiprocketOrderId: srOrder.data.order_id,
-                            shiprocketShipmentId: srOrder.data.shipment_id,
-                            status: "pending",
-                            courierCompanyId: srOrder.data.courier_company_id || null,
-                            courierName: srOrder.data.courier_name || null,
-                            awbNumber: srOrder.data.awb_code || null,
-                        })
-                        .returning()
-                        .then((res) => res[0]);
+                try {
+                    const srOrder = await sr.requestCreateOrder(srOrderRequest);
+                    console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
 
-                    const orderItemsForBrand = await db
-                        .select({
-                            orderItem: schemas.orderItems,
-                            product: schemas.products,
-                        })
-                        .from(schemas.orderItems)
-                        .where(
-                            and(
-                                eq(schemas.orderItems.orderId, newOrder.id),
-                                eq(schemas.products.brandId, brandId)
+                    if (srOrder.status && srOrder.data) {
+                        const shipment = await db
+                            .insert(schemas.orderShipments)
+                            .values({
+                                orderId: newOrder.id,
+                                brandId: brandId,
+                                shiprocketOrderId: srOrder.data.order_id,
+                                shiprocketShipmentId: srOrder.data.shipment_id,
+                                status: "pending",
+                                courierCompanyId: srOrder.data.courier_company_id || null,
+                                courierName: srOrder.data.courier_name || null,
+                                awbNumber: srOrder.data.awb_code || null,
+                            })
+                            .returning()
+                            .then((res) => res[0]);
+
+                        const orderItemsForBrand = await db
+                            .select({
+                                orderItem: schemas.orderItems,
+                                product: schemas.products,
+                            })
+                            .from(schemas.orderItems)
+                            .where(
+                                and(
+                                    eq(schemas.orderItems.orderId, newOrder.id),
+                                    eq(schemas.products.brandId, brandId)
+                                )
                             )
-                        )
-                        .innerJoin(
-                            schemas.products,
-                            eq(schemas.orderItems.productId, schemas.products.id)
-                        );
+                            .innerJoin(
+                                schemas.products,
+                                eq(schemas.orderItems.productId, schemas.products.id)
+                            );
 
-                    if (orderItemsForBrand.length > 0) {
-                        await db.insert(schemas.orderShipmentItems).values(
-                            orderItemsForBrand.map((row) => ({
-                                shipmentId: shipment.id,
-                                orderItemId: row.orderItem.id,
-                            }))
-                        );
+                        if (orderItemsForBrand.length > 0) {
+                            await db.insert(schemas.orderShipmentItems).values(
+                                orderItemsForBrand.map((row) => ({
+                                    shipmentId: shipment.id,
+                                    orderItemId: row.orderItem.id,
+                                }))
+                            );
+                        }
                     }
+                } catch (shiprocketError) {
+                    console.error(`Error creating Shiprocket order for brand ${brand.name}:`, shiprocketError);
                 }
             }
 
