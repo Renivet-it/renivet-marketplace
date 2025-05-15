@@ -57,6 +57,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
     );
 
     const unavailableItems = userCart?.filter((item) => !availableItems.map((i) => i.id).includes(item.id)) || [];
+    console.log("Available Items:", availableItems);
     console.log("Unavailable Items:", unavailableItems);
 
     const itemsCount = useMemo(
@@ -78,7 +79,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
             };
         });
 
-        return calculateTotalPriceWithCoupon(
+        const priceDetails = calculateTotalPriceWithCoupon(
             items.map((item) => item.price * item.quantity),
             appliedCoupon
                 ? {
@@ -92,15 +93,23 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                 : null,
             items
         );
+        console.log("Price List:", priceDetails);
+        return priceDetails;
     }, [availableItems, appliedCoupon]);
 
     const totalQuantity = availableItems.reduce((acc, item) => acc + item.quantity, 0);
 
     const { mutate: createOrder, isPending: isOrderCreating } = trpc.general.orders.createOrder.useMutation({
         onSuccess: (newOrder) => {
-            console.log("Order created:", newOrder);
+            console.log("Successfully created order:", newOrder);
         },
         onError: (err) => {
+            console.error("Error creating order:", {
+                message: err.message,
+                code: err.code,
+                stack: err.stack,
+                shape: err.shape,
+            });
             handleClientError(err);
         },
     });
@@ -114,6 +123,12 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
             toast.success("Cart cleared", { id: toastId });
         },
         onError: (err, _, ctx) => {
+            console.error("Error clearing cart:", {
+                message: err.message,
+                code: err.code,
+                stack: err.stack,
+                shape: err.shape,
+            });
             return handleClientError(err, ctx?.toastId);
         },
     });
@@ -127,9 +142,13 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
             if (!selectedShippingAddress) throw new Error("No shipping address selected");
             if (availableItems.length === 0) throw new Error("Cart is empty");
 
+            console.log("Initiating payment with total amount (in paise):", priceList.total);
+
             // Create a single Razorpay order for the total amount
             const razorpayOrderId = await getShiprocketBalance(priceList.total);
             if (!razorpayOrderId) throw new Error("Failed to create Razorpay order");
+
+            console.log("Razorpay order ID created:", razorpayOrderId);
 
             setIsProcessing(true);
 
@@ -146,6 +165,8 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                 {} as Record<string, typeof availableItems>
             );
 
+            console.log("Items grouped by brand:", itemsByBrand);
+
             const orderDetailsByBrand = Object.entries(itemsByBrand).map(([brandId, brandItems]) => {
                 const brandTotal = brandItems.reduce(
                     (acc, item) => {
@@ -157,14 +178,14 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                     0
                 );
 
-                return {
+                const orderDetails = {
                     userId: user.id,
                     coupon: appliedCoupon?.code,
                     addressId: selectedShippingAddress.id,
-                    deliveryAmount: (priceList.delivery * (brandTotal / priceList.items)).toString(), // Pro-rate delivery amount
-                    taxAmount: "0",
-                    totalAmount: brandTotal.toString(),
-                    discountAmount: (priceList.discount * (brandTotal / priceList.items)).toString(), // Pro-rate discount
+                    deliveryAmount: Number((priceList.delivery * (brandTotal / priceList.items)).toFixed(2)),
+                    taxAmount: 0,
+                    totalAmount: Number(brandTotal.toFixed(2)),
+                    discountAmount: Number((priceList.discount * (brandTotal / priceList.items)).toFixed(2)),
                     paymentMethod: "razorpay",
                     totalItems: brandItems.reduce((acc, item) => acc + item.quantity, 0),
                     shiprocketOrderId: null,
@@ -180,12 +201,16 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                         quantity: item.quantity,
                         categoryId: item.product.categoryId,
                     })),
-                    razorpayOrderId: razorpayOrderId, // Pass the Razorpay order_id
+                    razorpayOrderId: razorpayOrderId,
                 };
+
+                return orderDetails;
             });
 
+            console.log("Order details by brand before payment:", orderDetailsByBrand);
+
             const options = createRazorpayPaymentOptions({
-                orderId: razorpayOrderId, // Use the Razorpay order_id for payment
+                orderId: razorpayOrderId,
                 deliveryAddress: selectedShippingAddress,
                 prices: priceList,
                 user,
@@ -196,7 +221,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                 setProcessingModalState,
                 refetch: () => {},
                 createOrder,
-                orderDetailsByBrand, // Pass all order details for multiple orders
+                orderDetailsByBrand,
                 deleteItemFromCart,
             });
 
@@ -206,6 +231,10 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
             toast.success("Payment initialized!", { id: context?.toastId });
         },
         onError: (err, _, ctx) => {
+            console.error("Payment initialization failed:", {
+                message: err.message,
+                stack: err.stack,
+            });
             setIsProcessing(false);
             setProcessingModalTitle("Payment Initialization Failed");
             setProcessingModalDescription(
@@ -228,7 +257,6 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
     return (
         <>
             <div {...props}>
-                {/* Order Summary Section */}
                 <div className="space-y-4">
                     <h2 className="text-xl font-semibold text-gray-800">
                         Price Details ({totalQuantity} {totalQuantity === 1 ? "item" : "items"})
@@ -255,7 +283,6 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                     </div>
                 </div>
 
-                {/* Payment Button Section */}
                 <div className="space-y-3">
                     <Button
                         size="lg"
