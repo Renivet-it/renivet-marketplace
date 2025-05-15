@@ -47,14 +47,14 @@ export function createRazorpayPaymentOptions({
         userId: string;
         coupon?: string;
         addressId: string;
-        deliveryAmount: string;
-        taxAmount: string;
-        totalAmount: string;
-        discountAmount: string;
+        deliveryAmount: number;
+        taxAmount: number;
+        totalAmount: number;
+        discountAmount: number;
         paymentMethod: string | null;
         totalItems: number;
-        shiprocketOrderId: string | null;
-        shiprocketShipmentId: string | null;
+        shiprocketOrderId: number | null | undefined;
+        shiprocketShipmentId: number | null | undefined;
         items: Array<{
             price: number;
             brandId: string;
@@ -70,14 +70,14 @@ export function createRazorpayPaymentOptions({
         userId: string;
         coupon?: string;
         addressId: string;
-        deliveryAmount: string;
-        taxAmount: string;
-        totalAmount: string;
-        discountAmount: string;
+        deliveryAmount: number;
+        taxAmount: number;
+        totalAmount: number;
+        discountAmount: number;
         paymentMethod: string | null;
         totalItems: number;
-        shiprocketOrderId: string | null;
-        shiprocketShipmentId: string | null;
+        shiprocketOrderId: number | null | undefined;
+        shiprocketShipmentId: number | null | undefined;
         items: Array<{
             price: number;
             brandId: string;
@@ -115,67 +115,120 @@ export function createRazorpayPaymentOptions({
         theme: {
             color: "#0070ba",
         },
-        order_id: orderId, // Use the single Razorpay order_id for payment
+        order_id: orderId,
         handler: async (payload) => {
+            console.log("Payment handler triggered with payload:", payload);
+
             setIsProcessingModalOpen(true);
             setProcessingModalTitle("Processing payment...");
             setProcessingModalDescription("Please wait while we process your payment");
+            setProcessingModalState("pending");
 
             try {
+                // Step 1: Verify payment
+                console.log("Verifying payment...");
                 await verifyPayment(payload);
+                console.log("Payment verified successfully");
 
-                // Create multiple orders (one per brand) after payment verification
-                await Promise.all(
-                    orderDetailsByBrand.map((orderDetails) => {
-                        return createOrder(orderDetails);
-                    })
-                );
+                // Step 2: Validate order details
+                if (!orderDetailsByBrand || orderDetailsByBrand.length === 0) {
+                    throw new Error("No order details found to create orders");
+                }
+                console.log("Order details validated, proceeding to create orders...");
 
-                setProcessingModalTitle("Awaiting Confirmation");
+                // Step 3: Create orders for each brand
+                const createdOrders = [];
+                for (const [index, orderDetails] of orderDetailsByBrand.entries()) {
+                    try {
+                        console.log(`Creating order ${index + 1}/${orderDetailsByBrand.length} for brand...`, orderDetails);
+                        await createOrder(orderDetails);
+                        createdOrders.push(orderDetails);
+                        console.log(`Order ${index + 1} created successfully`);
+                    } catch (error) {
+                        console.error(`Failed to create order ${index + 1}:`, {
+                            error: error instanceof Error ? error.message : "Unknown error",
+                            stack: error instanceof Error ? error.stack : undefined,
+                            errorCode: (error as any)?.code || "N/A",
+                            errorShape: (error as any)?.shape || "N/A",
+                        });
+                        // Continue with the next order even if one fails
+                    }
+                }
+
+                if (createdOrders.length === 0) {
+                    throw new Error("No orders were created successfully. Please contact support.");
+                }
+
+                // Step 4: Send WhatsApp notification
+                console.log("Sending WhatsApp notification...");
+                try {
+                    const formattedPhone = deliveryAddress.phone.startsWith("+")
+                        ? deliveryAddress.phone
+                        : `+91${deliveryAddress.phone}`;
+                    await sendWhatsAppNotification({
+                        phone: formattedPhone,
+                        template: "order_confirmation",
+                        parameters: [user.firstName, orderId],
+                    });
+                    console.log("WhatsApp notification sent successfully");
+                } catch (error) {
+                    console.error("Failed to send WhatsApp notification:", {
+                        error: error instanceof Error ? error.message : "Unknown error",
+                        stack: error instanceof Error ? error.stack : undefined,
+                    });
+                    // Continue even if notification fails
+                }
+
+                // Step 5: Clear cart
+                console.log("Clearing cart...");
+                try {
+                    await deleteItemFromCart({ userId: user.id });
+                    console.log("Cart cleared successfully");
+                } catch (error) {
+                    console.error("Failed to clear cart:", {
+                        error: error instanceof Error ? error.message : "Unknown error",
+                        stack: error instanceof Error ? error.stack : undefined,
+                    });
+                    // Continue even if cart clearing fails
+                }
+
+                // Step 6: Update UI and redirect
+                setProcessingModalTitle("Order Placed Successfully");
                 setProcessingModalDescription(
-                    "You will receive an email with the order details shortly with a payment confirmation. Redirecting..."
+                    `Your order${createdOrders.length > 1 ? "s have" : " has"} been placed successfully. Redirecting to your orders...`
                 );
                 setProcessingModalState("success");
 
-                // Send WhatsApp notification
-                const formattedPhone = deliveryAddress.phone.startsWith("+")
-                    ? deliveryAddress.phone
-                    : `+91${deliveryAddress.phone}`;
-                await sendWhatsAppNotification({
-                    phone: formattedPhone,
-                    template: "order_confirmation",
-                    parameters: [user.firstName, orderId],
-                });
-
-                // Clear cart
-                deleteItemFromCart({ userId: user.id });
-                refetch();
-
                 await wait(2000);
                 setIsProcessingModalOpen(false);
+                refetch();
 
+                console.log("Redirecting to /profile/orders...");
                 window.location.href = "/profile/orders";
             } catch (error) {
-                console.error("Payment verification or order creation failed:", {
+                console.error("Payment handler failed:", {
                     error: error instanceof Error ? error.message : "Unknown error",
                     stack: error instanceof Error ? error.stack : undefined,
                 });
-                setProcessingModalTitle("Order processing failed");
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                setProcessingModalTitle("Order Processing Failed");
                 setProcessingModalDescription(
-                    "Your order could not be processed. Please try again later. Reason: " +
-                        (error instanceof Error ? error.message : "Unknown") +
-                        ". If you were charged, please contact support."
+                    errorMessage.includes("signature")
+                        ? "Failed to verify your payment. The payment details are invalid. Please try again or contact support."
+                        : errorMessage.includes("Unauthorized")
+                        ? "You are not authorized to perform this action. Please log in and try again."
+                        : `Failed to process your order: ${errorMessage}. Please try again or contact support.`
                 );
                 setProcessingModalState("error");
-                refetch();
 
-                await wait(10000);
+                await wait(5000);
                 setIsProcessingModalOpen(false);
                 setIsProcessing(false);
             }
         },
         modal: {
             ondismiss: async () => {
+                console.log("Payment modal dismissed by user");
                 setIsProcessing(false);
                 setProcessingModalTitle("Payment Cancelled");
                 setProcessingModalDescription("You cancelled the payment process.");
@@ -197,7 +250,6 @@ export const initializeRazorpayPayment = (options: RazorpayPaymentOptions) => {
         if (!(window as any).Razorpay) {
             throw new Error("Razorpay SDK not loaded");
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rzp = new (window as any).Razorpay(options);
         rzp.open();
         console.log("Razorpay payment modal opened successfully");
