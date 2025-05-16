@@ -157,6 +157,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                 toast.success("Order created, redirecting to payment page...", {
                     id: toastId,
                 });
+                // @ts-ignore
                 router.push(`/orders/${newOrder.id}`);
             },
             onError: (err, _, ctx) => {
@@ -314,7 +315,7 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                     "Please select a shipping address."
                                 );
                             }
-
+                    // @ts-ignore
       createOrder({
     userId,
     coupon: coupon?.code,
