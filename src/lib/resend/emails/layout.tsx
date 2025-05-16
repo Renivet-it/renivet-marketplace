@@ -61,9 +61,15 @@ export default function Layout({ children, heading, preview }: Props) {
                                     {children}
 
                                     <div className="mt-5">
-                                        <p className="my-0">Cheers,</p>
+                                        <p className="my-0">Warm regards,</p>
                                         <p className="my-0">
                                             The Renivet Team 🌿
+                                        </p>
+                                        <p className="my-0">
+                                        📩 support@renivet.com
+                                        </p>
+                                        <p className="my-0">
+                                        🌐 www.renivet.com
                                         </p>
                                     </div>
                                 </div>
