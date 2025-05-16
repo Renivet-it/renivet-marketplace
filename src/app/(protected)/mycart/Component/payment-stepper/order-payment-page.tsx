@@ -13,9 +13,8 @@ import { toast } from "sonner";
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
-import {
-    calculateTotalPriceWithCoupon,
-} from "@/lib/utils";
+import { calculateTotalPriceWithCoupon } from "@/lib/utils";
+
 interface PageProps extends GenericProps {
     initialData: OrderWithItemAndBrand;
     user: CachedUser;
@@ -27,7 +26,6 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
     const [processingModalDescription, setProcessingModalDescription] = useState("");
     const [processingModalState, setProcessingModalState] = useState<"pending" | "success" | "error">("pending");
     const [isProcessing, setIsProcessing] = useState(false);
-    const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
     const { selectedShippingAddress, appliedCoupon } = useCartStore();
 
@@ -59,7 +57,9 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
     );
 
     const unavailableItems = userCart?.filter((item) => !availableItems.map((i) => i.id).includes(item.id)) || [];
-console.log("Unavailable Items:", unavailableItems);
+    console.log("Available Items:", availableItems);
+    console.log("Unavailable Items:", unavailableItems);
+
     const itemsCount = useMemo(
         () => availableItems.reduce((acc, item) => acc + item.quantity, 0),
         [availableItems]
@@ -79,7 +79,7 @@ console.log("Unavailable Items:", unavailableItems);
             };
         });
 
-        return calculateTotalPriceWithCoupon(
+        const priceDetails = calculateTotalPriceWithCoupon(
             items.map((item) => item.price * item.quantity),
             appliedCoupon
                 ? {
@@ -93,67 +93,121 @@ console.log("Unavailable Items:", unavailableItems);
                 : null,
             items
         );
+        console.log("Price List:", priceDetails);
+        return priceDetails;
     }, [availableItems, appliedCoupon]);
 
     const totalQuantity = availableItems.reduce((acc, item) => acc + item.quantity, 0);
 
     const { mutate: createOrder, isPending: isOrderCreating } = trpc.general.orders.createOrder.useMutation({
+        onSuccess: (newOrder) => {
+            console.log("Successfully created order:", newOrder);
+        },
+        onError: (err) => {
+            console.error("Error creating order:", {
+                message: err.message,
+                shape: err.shape,
+            });
+            handleClientError(err);
+        },
+    });
+
+    const { mutate: deleteItemFromCart, isPending: isRemoving } = trpc.general.orders.deleteItemFromCart.useMutation({
         onMutate: () => {
-            const toastId = toast.loading("Processing your order...");
+            const toastId = toast.loading("Clearing cart...");
             return { toastId };
         },
-        onSuccess: (newOrder, _, { toastId }) => {
-            toast.success("Order processed!", { id: toastId });
-            setCreatedOrderId(newOrder.id);
-            initPayment({ orderId: newOrder.id });
+        onSuccess: (_, __, { toastId }) => {
+            toast.success("Cart cleared", { id: toastId });
         },
         onError: (err, _, ctx) => {
-            setIsProcessing(false);
+            console.error("Error clearing cart:", {
+                message: err.message,
+                shape: err.shape,
+            });
+
             return handleClientError(err, ctx?.toastId);
         },
     });
 
-    const { mutate: deleteOrder, isPending: isCancelling } = trpc.general.orders.deleteOrder.useMutation({
-        onMutate: () => {
-            const toastId = toast.loading("Redirecting...");
-            return { toastId };
-        },
-        onSuccess: (_, __, { toastId }) => {
-            toast.success("Redirecting to cart", { id: toastId });
-            window.location.href = "/mycart";
-        },
-        onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
-        },
-    });
-    const { mutate: deleteItemFromCart, isPending: isRemoving } = trpc.general.orders.deleteItemFromCart.useMutation({
-        onMutate: () => {
-            const toastId = toast.loading("Redirecting...");
-            return { toastId };
-        },
-        onSuccess: (_, __, { toastId }) => {
-            toast.success("Removing Cart", { id: toastId });
-        },
-        onError: (err, _, ctx) => {
-            return handleClientError(err, ctx?.toastId);
-        },
-    });
     const { mutate: initPayment, isPending: isPaymentInitializing } = useMutation({
         onMutate: () => {
             const toastId = toast.loading("Initializing payment...");
             return { toastId };
         },
-        mutationFn: async ({ orderId }: { orderId: string }) => {
+        mutationFn: async () => {
             if (!selectedShippingAddress) throw new Error("No shipping address selected");
             if (availableItems.length === 0) throw new Error("Cart is empty");
 
-            const hasBalance = await getShiprocketBalance();
-            if (!hasBalance) throw new Error("Cannot proceed with payment, please try again later");
+            console.log("Initiating payment with total amount (in paise):", priceList.total);
+
+            // Create a single Razorpay order for the total amount
+            const razorpayOrderId = await getShiprocketBalance(priceList.total);
+            if (!razorpayOrderId) throw new Error("Failed to create Razorpay order");
+
+            console.log("Razorpay order ID created:", razorpayOrderId);
 
             setIsProcessing(true);
 
+            // Group items by brand to create multiple orders after payment
+            const itemsByBrand = availableItems.reduce(
+                (acc, item) => {
+                    const brandId = item.product.brandId;
+                    if (!acc[brandId]) {
+                        acc[brandId] = [];
+                    }
+                    acc[brandId].push(item);
+                    return acc;
+                },
+                {} as Record<string, typeof availableItems>
+            );
+
+            console.log("Items grouped by brand:", itemsByBrand);
+
+            const orderDetailsByBrand = Object.entries(itemsByBrand).map(([brandId, brandItems]) => {
+                const brandTotal = brandItems.reduce(
+                    (acc, item) => {
+                        const price = item.variantId
+                            ? (item.product.variants?.find((v) => v.id === item.variantId)?.price ?? item.product.price ?? 0)
+                            : (item.product.price ?? 0);
+                        return acc + price * item.quantity;
+                    },
+                    0
+                );
+
+                const orderDetails = {
+                    userId: user.id,
+                    coupon: appliedCoupon?.code,
+                    addressId: selectedShippingAddress.id,
+                    deliveryAmount: Number((priceList.delivery * (brandTotal / priceList.items)).toFixed(2)),
+                    taxAmount: 0,
+                    totalAmount: Number(brandTotal.toFixed(2)),
+                    discountAmount: Number((priceList.discount * (brandTotal / priceList.items)).toFixed(2)),
+                    paymentMethod: "razorpay",
+                    totalItems: brandItems.reduce((acc, item) => acc + item.quantity, 0),
+                    shiprocketOrderId: null,
+                    shiprocketShipmentId: null,
+                    items: brandItems.map((item) => ({
+                        price: item.variantId
+                            ? (item.product.variants.find((v) => v.id === item.variantId)?.price ?? item.product.price ?? 0)
+                            : (item.product.price ?? 0),
+                        brandId: item.product.brandId,
+                        productId: item.product.id,
+                        variantId: item.variantId,
+                        sku: item.variant?.nativeSku ?? item.product.nativeSku,
+                        quantity: item.quantity,
+                        categoryId: item.product.categoryId,
+                    })),
+                    razorpayOrderId: razorpayOrderId,
+                };
+
+                return orderDetails;
+            });
+
+            console.log("Order details by brand before payment:", orderDetailsByBrand);
+
             const options = createRazorpayPaymentOptions({
-                orderId,
+                orderId: razorpayOrderId,
                 deliveryAddress: selectedShippingAddress,
                 prices: priceList,
                 user,
@@ -163,9 +217,9 @@ console.log("Unavailable Items:", unavailableItems);
                 setProcessingModalDescription,
                 setProcessingModalState,
                 refetch: () => {},
-                createdOrderId,
-                deleteOrder,
-                deleteItemFromCart
+                createOrder,
+                orderDetailsByBrand,
+                deleteItemFromCart,
             });
 
             initializeRazorpayPayment(options);
@@ -174,7 +228,17 @@ console.log("Unavailable Items:", unavailableItems);
             toast.success("Payment initialized!", { id: context?.toastId });
         },
         onError: (err, _, ctx) => {
+            console.error("Payment initialization failed:", {
+                message: err.message,
+                stack: err.stack,
+            });
             setIsProcessing(false);
+            setProcessingModalTitle("Payment Initialization Failed");
+            setProcessingModalDescription(
+                `Failed to initialize payment: ${err.message}. Please try again.`
+            );
+            setProcessingModalState("error");
+            setIsProcessingModalOpen(true);
             return handleClientError(err, ctx?.toastId);
         },
     });
@@ -184,37 +248,12 @@ console.log("Unavailable Items:", unavailableItems);
             toast.error("Cart or address missing");
             return;
         }
-
-        createOrder({
-            userId: user.id,
-            coupon: appliedCoupon?.code,
-            addressId: selectedShippingAddress.id,
-            deliveryAmount: priceList.delivery.toString(),
-            taxAmount: "0",
-            totalAmount: priceList.total.toString(),
-            discountAmount: priceList.discount.toString(),
-            paymentMethod: null,
-            totalItems: itemsCount,
-            shiprocketOrderId: null,
-            shiprocketShipmentId: null,
-            items: availableItems.map((item) => ({
-                price: item.variantId
-                    ? (item.product.variants.find((v) => v.id === item.variantId)?.price ?? item.product.price ?? 0)
-                    : (item.product.price ?? 0),
-                brandId: item.product.brandId,
-                productId: item.product.id,
-                variantId: item.variantId,
-                sku: item.variant?.nativeSku ?? item.product.nativeSku,
-                quantity: item.quantity,
-                categoryId: item.product.categoryId,
-            })),
-        });
+        initPayment();
     };
 
     return (
         <>
             <div {...props}>
-                {/* Order Summary Section */}
                 <div className="space-y-4">
                     <h2 className="text-xl font-semibold text-gray-800">
                         Price Details ({totalQuantity} {totalQuantity === 1 ? "item" : "items"})
@@ -241,58 +280,15 @@ console.log("Unavailable Items:", unavailableItems);
                     </div>
                 </div>
 
-               {/* Payment Button Section */}
-               <div className="space-y-3">
-                    {/* <Button
+                <div className="space-y-3">
+                    <Button
                         size="lg"
                         className="w-full"
                         disabled={
                             isProcessing ||
                             isPaymentInitializing ||
                             isOrderCreating ||
-                            order?.paymentStatus === "paid" ||
-                            order?.status !== "pending" ||
-                            unavailableItems.length > 0 ||
-                            !selectedShippingAddress
-                        }
-                        variant={
-                            unavailableItems.length > 0
-                                ? "destructive"
-                                : order?.paymentStatus === "pending"
-                                ? "default"
-                                : order?.paymentStatus === "paid"
-                                ? "accent"
-                                : order?.paymentStatus === "failed"
-                                ? "destructive"
-                                : "secondary"
-                        }
-                        onClick={handlePayNow}
-                    >
-                        {unavailableItems.length > 0
-                            ? "Aborted"
-                            : !selectedShippingAddress
-                         ? "Select Address"
-                          : order?.paymentStatus === "pending"
-                            ? "Pay Now"
-                            : order?.paymentStatus === "paid"
-                            ? "Already Paid"
-                            : order?.paymentStatus === "failed" && order?.status === "pending"
-                            ? "Retry Payment"
-                            : order?.paymentStatus === "refund_pending"
-                            ? "Refund Pending"
-                            : order?.paymentStatus === "refunded"
-                            ? "Refunded"
-                            : order?.paymentStatus === "refund_failed"
-                            ? "Refund Failed"
-                            : "Order Cancelled"}
-                    </Button> */}
-                        <Button
-                        size="lg"
-                        className="w-full"
-                        disabled={
-                            isProcessing ||
-                            isPaymentInitializing ||
-                            isOrderCreating ||
+                            isRemoving ||
                             order?.paymentStatus === "paid" ||
                             order?.status !== "pending" ||
                             !selectedShippingAddress ||
