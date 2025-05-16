@@ -156,7 +156,7 @@ export function OrderPage({
                         addressId: deliveryAddress.id,
                     });
 
-                const hasBalance = await getShiprocketBalance();
+                const hasBalance = await getShiprocketBalance(10);
                 if (!hasBalance)
                     throw new Error(
                         "Cannot proceed with payment, please try again later"

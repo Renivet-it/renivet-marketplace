@@ -106,8 +106,6 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
         onError: (err) => {
             console.error("Error creating order:", {
                 message: err.message,
-                code: err.code,
-                stack: err.stack,
                 shape: err.shape,
             });
             handleClientError(err);
@@ -125,10 +123,9 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
         onError: (err, _, ctx) => {
             console.error("Error clearing cart:", {
                 message: err.message,
-                code: err.code,
-                stack: err.stack,
                 shape: err.shape,
             });
+
             return handleClientError(err, ctx?.toastId);
         },
     });

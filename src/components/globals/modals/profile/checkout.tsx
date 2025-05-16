@@ -315,41 +315,38 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                                 );
                             }
 
-                            createOrder({
-                                userId,
-                                coupon: coupon?.code,
-                               addressId: selectedShippingAddress.id,
-                                deliveryAmount: priceList.delivery.toString(),
-                                taxAmount: "0",
-                                totalAmount: priceList.total.toString(),
-                                discountAmount: priceList.discount.toString(),
-                                paymentMethod: null,
-                                totalItems: itemsCount,
-                                shiprocketOrderId: null,
-                                shiprocketShipmentId: null,
-                                items:
-                                    userCart
-                                        ?.filter((item) => item.status)
-                                        .map((item) => ({
-                                            price: item.variantId
-                                                ? (item.product.variants.find(
-                                                      (v) =>
-                                                          v.id ===
-                                                          item.variantId
-                                                  )?.price ??
-                                                  item.product.price ??
-                                                  0)
-                                                : (item.product.price ?? 0),
-                                            brandId: item.product.brandId,
-                                            productId: item.product.id,
-                                            variantId: item.variantId,
-                                            sku:
-                                                item.variant?.nativeSku ??
-                                                item.product.nativeSku,
-                                            quantity: item.quantity,
-                                            categoryId: item.product.categoryId,
-                                        })) || [],
-                            });
+      createOrder({
+    userId,
+    coupon: coupon?.code,
+    addressId: selectedShippingAddress.id,
+    deliveryAmount: priceList.delivery.toString(),
+    taxAmount: "0",
+    totalAmount: priceList.total.toString(),
+    discountAmount: priceList.discount.toString(),
+    paymentMethod: null,
+    totalItems: itemsCount,
+    shiprocketOrderId: null,
+    shiprocketShipmentId: null,
+    items:
+        userCart
+            ?.filter((item) => item.status)
+            .map((item) => ({
+                price: item.variantId
+                    ? (item.product.variants.find(
+                          (v) => v.id === item.variantId
+                      )?.price ??
+                      item.product.price ??
+                      0)
+                    : (item.product.price ?? 0),
+                brandId: item.product.brandId,
+                productId: item.product.id,
+                variantId: item.variantId,
+                sku: (item.variant?.nativeSku ?? item.product.nativeSku ?? "") as string, // Ensure sku is a string
+                quantity: item.quantity,
+                categoryId: item.product.categoryId,
+            })) || [],
+    razorpayOrderId: "test", // Add the missing razorpayOrderId
+});
                         }}
                     >
                         Proceed to checkout

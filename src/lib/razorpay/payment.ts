@@ -83,7 +83,7 @@ export function createRazorpayPaymentOptions({
             brandId: string;
             productId: string;
             variantId: string | null;
-            sku: string;
+            sku: any;
             quantity: number;
             categoryId: string;
         }>;
