@@ -34,6 +34,8 @@ import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
+import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
 
 export const ordersRouter = createTRPCRouter({
     getOrders: protectedProcedure
@@ -101,348 +103,407 @@ export const ordersRouter = createTRPCRouter({
 
             return data;
         }),
- createOrder: protectedProcedure
-.input(
-        createOrderSchema.omit({ id: true, receiptId: true }).extend({
+        createOrder: protectedProcedure
+        .input(
+          createOrderSchema.omit({ id: true, receiptId: true }).extend({
             items: z.array(
-                createOrderItemSchema
-                    .omit({
-                        orderId: true,
-                    })
-                    .extend({
-                        brandId: z.string(),
-                        price: productSchema.shape.price,
-                        categoryId: categorySchema.shape.id,
-                    })
+              createOrderItemSchema
+                .omit({
+                  orderId: true,
+                })
+                .extend({
+                  brandId: z.string(),
+                  price: productSchema.shape.price,
+                  categoryId: categorySchema.shape.id,
+                })
             ),
             coupon: z.string().optional(),
             razorpayOrderId: z.string(),
+            razorpayPaymentId: z.string(),
+          })
+        )
+        .use(({ ctx, input, next }) => {
+          const { user } = ctx;
+          const { userId } = input;
+
+          if (user.id !== userId)
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "You are not allowed to create an order for another user",
+            });
+          if (user.brand !== null)
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
+            });
+
+          return next();
         })
-    )
-    .use(({ ctx, input, next }) => {
-        const { user } = ctx;
-        const { userId } = input;
+        .mutation(async ({ input, ctx }) => {
+          const { queries, user, db, schemas } = ctx;
 
-        if (user.id !== userId)
-            throw new TRPCError({
-                code: "FORBIDDEN",
-                message: "You are not allowed to create an order for another user",
-            });
-        if (user.brand !== null)
-            throw new TRPCError({
-                code: "FORBIDDEN",
-                message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
-            });
-
-        return next();
-    })
-    .mutation(async ({ input, ctx }) => {
-        const { queries, user, db, schemas } = ctx;
-
-        const existingAddress = user.addresses.find(
+          const existingAddress = user.addresses.find(
             (add) => add.id === input.addressId
-        );
-        if (!existingAddress)
+          );
+          if (!existingAddress)
             throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Address not found",
+              code: "NOT_FOUND",
+              message: "Address not found",
             });
 
-        const receiptId = generateReceiptId();
+          const existingCategories = await categoryCache.getAll();
+          const cachedAllBrands = await brandCache.getAll();
+          const brandIds = [...new Set(input.items.map((item) => item.brandId))];
 
-        const existingCategories = await categoryCache.getAll();
-        const cachedAllBrands = await brandCache.getAll();
-        const brandIds = [
-            ...new Set(input.items.map((item) => item.brandId)),
-        ];
-
-        const existingBrands = cachedAllBrands.filter((brand) =>
+          const existingBrands = cachedAllBrands.filter((brand) =>
             brandIds.includes(brand.id)
-        );
+          );
 
-        if (existingBrands.length !== brandIds.length)
+          if (existingBrands.length !== brandIds.length)
             throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Order contains invalid brand(s)",
+              code: "NOT_FOUND",
+              message: "Order contains invalid brand(s)",
             });
 
-        const brandsWithoutRzpAccount = existingBrands.filter(
+          const brandsWithoutRzpAccount = existingBrands.filter(
             (brand) => brand.rzpAccountId === null
-        );
+          );
 
-        if (brandsWithoutRzpAccount.length > 0)
+          if (brandsWithoutRzpAccount.length > 0)
             throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `Product(s) from brand(s) ${brandsWithoutRzpAccount
-                    .map((brand) => `'${brand.name}'`)
-                    .join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
+              code: "BAD_REQUEST",
+              message: `Product(s) from brand(s) ${brandsWithoutRzpAccount
+                .map((brand) => `'${brand.name}'`)
+                .join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
             });
 
-        try {
-            // Generate a readable and concise order_id
-            const brandName = existingBrands[0]?.name || "UNKNOWN"; // Use the first brand's name
-            const orderId = generateOrderId(brandName);
-            console.log("Creating order with new ID:", orderId);
+          try {
+            // NEW: Array to store all created orders
+            const createdOrders = [];
 
-            const newOrder = await queries.orders.createOrder({
+            // NEW: Process each item individually to create a separate order
+            for (const item of input.items) {
+              const receiptId = generateReceiptId();
+              const brand = existingBrands.find((b) => b.id === item.brandId);
+              if (!brand) {
+                console.warn(`Brand not found for brandId: ${item.brandId}, skipping item`);
+                continue;
+              }
+
+              // Generate a readable and concise order_id for this item
+              const orderId = generateOrderId(brand.name);
+              console.log("Creating order with new ID:", orderId);
+
+              // NEW: Create order for this single item
+              const newOrder = await queries.orders.createOrder({
                 ...input,
                 id: orderId,
                 receiptId,
                 userId: user.id,
-            });
-            console.log("Database order created successfully:", newOrder);
+                // Adjust totalAmount to reflect single item
+                // @ts-ignore
+                totalAmount: item.price * item.quantity,
+              });
+              console.log("Database order created successfully:", newOrder);
 
-            await Promise.all([
-                db.insert(schemas.orderItems).values(
-                    input.items.map((item) => ({
-                        ...item,
-                        orderId: orderId,
-                    }))
-                ),
-                userCartCache.drop(user.id),
-            ]);
-            console.log("Order items inserted and cart cleared for user:", user.id);
+              // NEW: Insert single order item
+              await db.insert(schemas.orderItems).values({
+                ...item,
+                orderId: orderId,
+              });
+              console.log("Order item inserted for order:", orderId);
 
-            const sr = await shiprocket();
-            const itemsByBrand = input.items.reduce(
-                (acc, item) => {
-                    if (!acc[item.brandId]) {
-                        acc[item.brandId] = [];
-                    }
-                    acc[item.brandId].push(item);
-                    return acc;
+              // Clear user cart (do this once after all orders are created to avoid multiple calls)
+              // Moved outside the loop
+
+              const sr = await shiprocket();
+
+              // NEW: Process Shiprocket order for this single item
+              console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`);
+
+              try {
+                await sendBrandOrderNotificationEmail({
+                  orderId: newOrder.id,
+                  brand: {
+                    id: brand.id,
+                    email: brand.email,
+                    name: brand.name,
+                    street: existingAddress.street,
+                    city: existingAddress.city,
+                    state: existingAddress.state,
+                    zip: existingAddress.zip,
+                    country: "India",
+                    customerName: existingAddress.fullName.split(" ")[0],
+                  },
+                });
+                console.log(`Order confirmation email sent for order ${newOrder.id}`);
+              } catch (emailError) {
+                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
+                // Log the error but don't fail the mutation
+              }
+
+              const product = await queries.products.getProduct({
+                productId: item.productId,
+                isActive: true,
+                isDeleted: false,
+                isAvailable: true,
+                isPublished: true,
+                verificationStatus: "approved",
+              });
+
+              const variant =
+                item.variantId && product
+                  ? product.variants.find((v) => v.id === item.variantId)
+                  : null;
+
+              const productDetails = { product, variant, item };
+              console.log(`Product details for brand ${brand.name}:`, productDetails);
+
+              const dims = variant || product;
+              const orderDimensions = {
+                // @ts-ignore
+                weight: (dims.weight || 0) * item.quantity,
+                // @ts-ignore
+                length: dims.length || 0,
+                // @ts-ignore
+                width: dims.width || 0,
+                // @ts-ignore
+                height: (dims.height || 0) * item.quantity,
+              };
+              console.log(`Order dimensions for brand ${brand.name}:`, orderDimensions);
+
+              // Ensure dimensions meet Shiprocket's minimum requirements
+              const validatedDimensions = {
+                weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams
+                length: Math.max(orderDimensions.length, 0.5), // Minimum 0.5 cm
+                width: Math.max(orderDimensions.width, 0.5), // Minimum 0.5 cm
+                height: Math.max(orderDimensions.height, 0.5), // Minimum 0.5 cm
+              };
+              console.log(`Validated dimensions for brand ${brand.name}:`, validatedDimensions);
+
+              const orderValue = (item.price || 0) * item.quantity;
+              console.log(`Order value for brand ${brand.name}:`, orderValue);
+
+            const pickupLocation = generatePickupLocationCode({
+                brandId: item.brandId,
+                brandName: brand.name,
+              });
+              console.log(`Generated pickup location for brand ${brand.name}:`, pickupLocation);
+
+              const orderItemsForShiprocket = [
+                {
+                  name: product?.title || item.sku || "",
+                  sku: item.sku || "",
+                  units: item.quantity,
+                  selling_price: Math.floor(+convertPaiseToRupees(item.price || 0)),
                 },
-                {} as Record<string, typeof input.items>
-            );
-            console.log("Items grouped by brand for Shiprocket:", itemsByBrand);
+              ];
+              console.log(`Order items for Shiprocket for brand ${brand.name}:`, orderItemsForShiprocket);
 
-            for (const [brandId, brandItems] of Object.entries(itemsByBrand)) {
-                const brand = existingBrands.find((b) => b.id === brandId);
-                if (!brand) {
-                    console.warn(`Brand not found for brandId: ${brandId}, skipping Shiprocket order creation`);
-                    continue;
-                }
-                console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${brandId})`);
+              const srOrderRequest = {
+                order_id: orderId,
+                order_date: format(new Date(), "yyyy-MM-dd"),
+                pickup_location: pickupLocation,
+                billing_customer_name: existingAddress.fullName.split(" ")[0],
+                billing_last_name: existingAddress.fullName.split(" ")[1] || "",
+                billing_address: existingAddress.street,
+                billing_city: existingAddress.city,
+                billing_pincode: +existingAddress.zip,
+                billing_state: existingAddress.state,
+                billing_country: "India",
+                billing_email: user.email,
+                billing_phone: +getRawNumberFromPhone(existingAddress.phone),
+                shipping_is_billing: true,
+                order_items: orderItemsForShiprocket,
+                payment_method: (input.paymentMethod === "COD" ? "COD" : "Prepaid") as "COD" | "Prepaid",
+                sub_total: Math.floor(+convertPaiseToRupees(orderValue)),
+                length: Math.max(orderDimensions.length, 0.5),
+                breadth: Math.max(orderDimensions.width, 0.5),
+                height: Math.max(orderDimensions.height, 0.5),
+                weight: +(Math.max(orderDimensions.weight, 0.1) / 1000).toFixed(2),
+              };
+              console.log(`Shiprocket order request for brand ${brand.name}:`, srOrderRequest);
 
-                const productDetails = await Promise.all(
-                    brandItems.map(async (item) => {
-                        const product = await queries.products.getProduct({
-                            productId: item.productId,
-                            isActive: true,
-                            isDeleted: false,
-                            isAvailable: true,
-                            isPublished: true,
-                            verificationStatus: "approved",
-                        });
+              try {
+                const srOrder = await sr.requestCreateOrder(srOrderRequest);
+                console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
 
-                        const variant =
-                            item.variantId && product
-                                ? product.variants.find(
-                                      (v) => v.id === item.variantId
-                                  )
-                                : null;
-
-                        return {
-                            product,
-                            variant,
-                            item,
-                        };
+                if (srOrder.status && srOrder.data) {
+                  const shipment = await db
+                    .insert(schemas.orderShipments)
+                    .values({
+                      orderId: newOrder.id,
+                      brandId: item.brandId,
+                      shiprocketOrderId: srOrder.data.order_id,
+                      shiprocketShipmentId: srOrder.data.shipment_id,
+                      status: "pending",
+                      courierCompanyId: srOrder.data.courier_company_id || null,
+                      courierName: srOrder.data.courier_name || null,
+                      awbNumber: srOrder.data.awb_code || null,
                     })
-                );
-                console.log(`Product details for brand ${brand.name}:`, productDetails);
+                    .returning()
+                    .then((res) => res[0]);
 
-                const orderDimensions = productDetails.reduce(
-                    (acc, { product, variant, item }) => {
-                        if (!product) return acc;
-
-                        const dims = variant || product;
-
-                        return {
-                            weight: acc.weight + (dims.weight || 0) * item.quantity,
-                            length: Math.max(acc.length, dims.length || 0),
-                            width: Math.max(acc.width, dims.width || 0),
-                            height: acc.height + (dims.height || 0) * item.quantity,
-                        };
-                    },
-                    { weight: 0, length: 0, width: 0, height: 0 }
-                );
-                console.log(`Order dimensions for brand ${brand.name}:`, orderDimensions);
-
-                // Ensure dimensions meet Shiprocket's minimum requirements
-                const validatedDimensions = {
-                    weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams (0.1 kg after conversion)
-                    length: Math.max(orderDimensions.length, 0.5), // Minimum 0.5 cm
-                    width: Math.max(orderDimensions.width, 0.5), // Minimum 0.5 cm
-                    height: Math.max(orderDimensions.height, 0.5), // Minimum 0.5 cm
-                };
-                console.log(`Validated dimensions for brand ${brand.name}:`, validatedDimensions);
-
-                const orderValue = brandItems.reduce((acc, item) => {
-                    return acc + (item.price || 0) * item.quantity;
-                }, 0);
-                console.log(`Order value for brand ${brand.name}:`, orderValue);
-
-                const pickupLocation = generatePickupLocationCode({
-                    brandId,
-                    brandName: brand.name,
-                });
-                console.log(`Generated pickup location for brand ${brand.name}:`, pickupLocation);
-
-                const orderItemsForShiprocket = await Promise.all(
-                    brandItems.map(async (item) => {
-                        const product = productDetails.find(
-                            (p) => p.item.productId === item.productId
-                        );
-
-                        return {
-                            name: product?.product?.title || item.sku || "",
-                            sku: item.sku || "",
-                            units: item.quantity,
-                            selling_price: Math.floor(
-                                +convertPaiseToRupees(item.price || 0)
-                            ),
-                        };
+                  const orderItemsForBrand = await db
+                    .select({
+                      orderItem: schemas.orderItems,
+                      product: schemas.products,
                     })
-                );
-                console.log(`Order items for Shiprocket for brand ${brand.name}:`, orderItemsForShiprocket);
-
-                const srOrderRequest = {
-                    order_id: orderId,
-                    order_date: format(new Date(), "yyyy-MM-dd"),
-                    pickup_location: pickupLocation,
-                    billing_customer_name: existingAddress.fullName.split(" ")[0],
-                    billing_last_name: existingAddress.fullName.split(" ")[1] || "",
-                    billing_address: existingAddress.street,
-                    billing_city: existingAddress.city,
-                    billing_pincode: +existingAddress.zip,
-                    billing_state: existingAddress.state,
-                    billing_country: "India",
-                    billing_email: user.email,
-                    billing_phone: +getRawNumberFromPhone(existingAddress.phone),
-                    shipping_is_billing: true,
-                    order_items: orderItemsForShiprocket,
-                    // payment_method: input.paymentMethod === "COD" ? "COD" : "Prepaid",
-                    payment_method: (input.paymentMethod === "COD" ? "COD" : "Prepaid") as "COD" | "Prepaid",
-                    sub_total: Math.floor(+convertPaiseToRupees(orderValue)),
-                    length: Math.max(orderDimensions.length, 0.5),
-                    breadth: Math.max(orderDimensions.width, 0.5),
-                    height: Math.max(orderDimensions.height, 0.5),
-                    weight: +(Math.max(orderDimensions.weight, 0.1) / 1000).toFixed(2),
-                };
-                console.log(`Shiprocket order request for brand ${brand.name}:`, srOrderRequest);
-
-                try {
-                    const srOrder = await sr.requestCreateOrder(srOrderRequest);
-                    console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
-
-                    if (srOrder.status && srOrder.data) {
-                        const shipment = await db
-                            .insert(schemas.orderShipments)
-                            .values({
-                                orderId: newOrder.id,
-                                brandId: brandId,
-                                shiprocketOrderId: srOrder.data.order_id,
-                                shiprocketShipmentId: srOrder.data.shipment_id,
-                                status: "pending",
-                                courierCompanyId: srOrder.data.courier_company_id || null,
-                                courierName: srOrder.data.courier_name || null,
-                                awbNumber: srOrder.data.awb_code || null,
-                            })
-                            .returning()
-                            .then((res) => res[0]);
-
-                        const orderItemsForBrand = await db
-                            .select({
-                                orderItem: schemas.orderItems,
-                                product: schemas.products,
-                            })
-                            .from(schemas.orderItems)
-                            .where(
-                                and(
-                                    eq(schemas.orderItems.orderId, newOrder.id),
-                                    eq(schemas.products.brandId, brandId)
-                                )
-                            )
-                            .innerJoin(
-                                schemas.products,
-                                eq(schemas.orderItems.productId, schemas.products.id)
-                            );
-
-                        if (orderItemsForBrand.length > 0) {
-                            await db.insert(schemas.orderShipmentItems).values(
-                                orderItemsForBrand.map((row) => ({
-                                    shipmentId: shipment.id,
-                                    orderItemId: row.orderItem.id,
-                                }))
-                            );
-                        }
-                    }
-                } catch (shiprocketError) {
-                    console.error(`Error creating Shiprocket order for brand ${brand.name}:`, shiprocketError);
-                }
-            }
-
-            const uniqueBrandIds = [...new Set(input.items.map((item) => item.brandId))];
-            await Promise.all(
-                uniqueBrandIds.map(async (brandId) => {
-                    const brandItems = input.items.filter(
-                        (item) => item.brandId === brandId
+                    .from(schemas.orderItems)
+                    .where(
+                      and(
+                        eq(schemas.orderItems.orderId, newOrder.id),
+                        eq(schemas.products.brandId, item.brandId)
+                      )
+                    )
+                    .innerJoin(
+                      schemas.products,
+                      eq(schemas.orderItems.productId, schemas.products.id)
                     );
 
-                    const brandRevenue = brandItems.reduce(
-                        (acc, item) => acc + (item.price ?? 0) * item.quantity,
-                        0
+                  if (orderItemsForBrand.length > 0) {
+                    await db.insert(schemas.orderShipmentItems).values(
+                      orderItemsForBrand.map((row) => ({
+                        shipmentId: shipment.id,
+                        orderItemId: row.orderItem.id,
+                      }))
+                    );
+                  }
+                }
+              } catch (shiprocketError) {
+                console.error(`Error creating Shiprocket order for brand ${brand.name}:`, shiprocketError);
+              }
+                    // NEW: Logic 1 - Validate and Deduct Stock
+                    console.log(`Validating stock for order ${newOrder.id}`);
+                    const isStockAvailable = product && (
+                    product.verificationStatus === "approved" &&
+                    !product.isDeleted &&
+                    product.isAvailable &&
+                    (product.quantity ? product.quantity >= item.quantity : true) &&
+                    (!variant || (variant && !variant.isDeleted && variant.quantity >= item.quantity))
                     );
 
-                    await analytics.track({
-                        namespace: BRAND_EVENTS.ORDER.CREATED,
-                        brandId,
-                        event: {
-                            orderId: newOrder.id,
-                            orderTotal: formatPriceTag(
-                                +convertPaiseToRupees(newOrder.totalAmount),
-                                true
-                            ),
-                            brandRevenue: formatPriceTag(
-                                +convertPaiseToRupees(brandRevenue),
-                                true
-                            ),
-                            orderItems: brandItems.map((item) => ({
-                                productId: item.productId,
-                                variantId: item.variantId,
-                                quantity: item.quantity,
-                                sku: item.sku,
-                                price: formatPriceTag(
-                                    +convertPaiseToRupees(item.price ?? 0),
-                                    true
-                                ),
-                            })),
-                        },
+                    if (!isStockAvailable) {
+                    console.warn(`Order ${newOrder.id} has insufficient stock`);
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Insufficient stock for the item",
                     });
-                })
-            );
+                    }
 
-            if (input.coupon) {
-                const existingCoupon = await queries.coupons.getCoupon({
-                    code: input.coupon,
-                    isActive: true,
+                    console.log(`Deducting stock for order ${newOrder.id}`);
+                    const stockUpdate = [{
+                    productId: item.productId,
+                    variantId: item.variantId ?? undefined, // Convert null to undefined
+                    // @ts-ignore
+                    quantity: variant ? variant.quantity - item.quantity : product.quantity - item.quantity,
+                    }];
+
+                    try {
+                    await queries.products.updateProductStock(stockUpdate);
+                    console.log(`Stock updated successfully for order ${newOrder.id}`);
+                    } catch (stockError) {
+                    console.error(`Failed to update stock for order ${newOrder.id}:`, stockError);
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: "Failed to update product stock",
+                    });
+                    }
+
+                    // NEW: Logic 2 - Mark as Paid
+                    console.log(`Marking order ${newOrder.id} as paid`);
+                    try {
+                    await queries.orders.updateOrderStatus(newOrder.id, {
+                        paymentId: input.razorpayPaymentId,
+                        paymentMethod: "online",
+                        paymentStatus: "paid",
+                        status: "processing",
+                    });
+                    console.log(`Order ${newOrder.id} marked as paid`);
+                    } catch (statusError) {
+                    console.error(`Failed to update order status for order ${newOrder.id}:`, statusError);
+                    throw new TRPCError({
+                        code: "INTERNAL_SERVER_ERROR",
+                        message: "Failed to update order payment status",
+                    });
+                    }
+              // NEW: Track analytics for this order
+              const brandRevenue = (item.price ?? 0) * item.quantity;
+              await analytics.track({
+                namespace: BRAND_EVENTS.ORDER.CREATED,
+                brandId: item.brandId,
+                event: {
+                  orderId: newOrder.id,
+                  orderTotal: formatPriceTag(
+                    +convertPaiseToRupees(newOrder.totalAmount),
+                    true
+                  ),
+                  brandRevenue: formatPriceTag(
+                    +convertPaiseToRupees(brandRevenue),
+                    true
+                  ),
+                  orderItems: [
+                    {
+                      productId: item.productId,
+                      variantId: item.variantId,
+                      quantity: item.quantity,
+                      sku: item.sku,
+                      price: formatPriceTag(
+                        +convertPaiseToRupees(item.price ?? 0),
+                        true
+                      ),
+                    },
+                  ],
+                },
+              });
+
+              // NEW: Send order confirmation email for this order
+              try {
+                await sendOrderConfirmationEmail({
+                  orderId: newOrder.id,
+                  user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: "",
+                  },
                 });
-                if (existingCoupon)
-                    await queries.coupons.updateCouponUses(
-                        existingCoupon.code,
-                        existingCoupon.uses + 1
-                    );
+                console.log(`Order confirmation email sent for order ${newOrder.id}`);
+              } catch (emailError) {
+                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
+                // Log the error but don't fail the mutation
+              }
+
+              createdOrders.push(newOrder);
             }
 
-            return newOrder;
-        } catch (err) {
+            // NEW: Clear user cart once after all orders are created
+            await userCartCache.drop(user.id);
+            console.log("Cart cleared for user:", user.id);
+
+            // NEW: Handle coupon usage (apply to all orders if provided)
+            if (input.coupon) {
+              const existingCoupon = await queries.coupons.getCoupon({
+                code: input.coupon,
+                isActive: true,
+              });
+              if (existingCoupon)
+                await queries.coupons.updateCouponUses(
+                  existingCoupon.code,
+                  existingCoupon.uses + input.items.length // Increment by number of orders
+                );
+            }
+
+            // NEW: Return all created orders
+            return createdOrders;
+          } catch (err) {
             console.error(err);
             throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to create order",
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create order(s)",
             });
-        }
-    }),
+          }
+        }),
     updateOrderStatus: protectedProcedure
         .input(
             z.object({

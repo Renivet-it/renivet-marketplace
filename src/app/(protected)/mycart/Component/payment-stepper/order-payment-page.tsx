@@ -179,7 +179,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                     userId: user.id,
                     coupon: appliedCoupon?.code,
                     addressId: selectedShippingAddress.id,
-                    deliveryAmount: Number((priceList.delivery * (brandTotal / priceList.items)).toFixed(2)),
+                    deliveryAmount: priceList.delivery,
                     taxAmount: 0,
                     totalAmount: Number(brandTotal.toFixed(2)),
                     discountAmount: Number((priceList.discount * (brandTotal / priceList.items)).toFixed(2)),

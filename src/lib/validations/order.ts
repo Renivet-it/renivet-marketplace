@@ -98,6 +98,7 @@ export const orderSchema = z.object({
             // Optional fields
         firstName: z.string().optional(),
         lastName: z.string().optional(),
+        razorpayOrderId: z.string().optional(),
 
 });
 
