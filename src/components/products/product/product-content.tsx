@@ -10,6 +10,7 @@ import { CachedCart, ProductWithBrand } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
 import { ProductDetails } from "./product-detais";
+import { DeliveryOption } from "./product-delivery";
 
 interface PageProps extends GenericProps {
     initialCart?: CachedCart[];
@@ -17,7 +18,6 @@ interface PageProps extends GenericProps {
     isWishlisted: boolean;
     userId?: string;
 }
-
 export function ProductContent({
     className,
     initialCart,
@@ -28,6 +28,7 @@ export function ProductContent({
 }: PageProps) {
     const [isProductShareModalOpen, setIsProductShareModalOpen] =
         useState(false);
+const warehousePincode = "110001";
 
     return (
         <>
@@ -59,13 +60,19 @@ export function ProductContent({
 
                 <Separator />
 
+
                 <ProductCartAddForm
                     product={product}
                     isWishlisted={isWishlisted}
                     initialCart={initialCart}
                     userId={userId}
                 />
-
+                <Separator />
+      <DeliveryOption
+                    initialZipCode="734003"
+                    warehousePincode={warehousePincode}
+                    initialEstimatedDelivery="Mon, May 26"
+                />
                 <Separator />
                 <ProductDetails product={product} />
             </div>
