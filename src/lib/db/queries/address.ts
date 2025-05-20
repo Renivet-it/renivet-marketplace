@@ -20,6 +20,13 @@ class AddressQueries {
             );
         return brandDetails;
     }
+    async getBrandConfidentials(brandId: string) {
+    const brandDetails = await brandConfidentialQueries.getBrandConfidential(brandId);
+    if (!brandDetails) {
+      throw new Error("Brand not found");
+    }
+    return brandDetails;
+  }
 }
 
 export const addressQueries = new AddressQueries();
