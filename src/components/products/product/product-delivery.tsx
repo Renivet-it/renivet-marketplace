@@ -3,6 +3,16 @@
 import { useState, useTransition } from "react";
 import { Icons } from "@/components/icons";
 import { getEstimatedDelivery } from "@/actions/shiprocket/get-estimate-delivery";
+import { trpc } from "@/lib/trpc/client";
+
+// Define an Address type for the saved addresses
+interface Address {
+  id: string;
+  name: string;
+  pincode: string;
+  address: string;
+  label: string; // e.g., "HOME", "WORK"
+}
 
 interface DeliveryOptionProps {
   initialZipCode: string;
@@ -19,19 +29,41 @@ export function DeliveryOption({
   const [estimatedDelivery, setEstimatedDelivery] = useState(initialEstimatedDelivery);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newZipCode, setNewZipCode] = useState("");
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  // Fetch current user data using tRPC
+  const { data: user, isPending: isUserFetching } = trpc.general.users.currentUser.useQuery();
+
+  // Map user addresses to the Address type
+  const savedAddresses: Address[] = user?.addresses?.map((addr: any) => ({
+    id: addr.id,
+    name: addr.fullName,
+    pincode: addr.zip,
+    address: `${addr.street}, ${addr.city}, ${addr.state}`,
+    label: addr.type.toUpperCase(), // e.g., "HOME", "WORK"
+  })) || [];
+
+  // Handle clicking the "Change" button to open the modal
   const handleChangeClick = () => {
     setIsModalOpen(true);
     setNewZipCode(zipCode);
     setError("");
+    setSelectedAddress(null); // Reset selected address when opening the modal
   };
 
+  // Handle selecting an address from the saved addresses list
+  const handleAddressSelect = (address: Address) => {
+    setSelectedAddress(address);
+    setNewZipCode(address.pincode); // Update the pincode input with the selected address's pincode
+    setError(""); // Clear any existing errors
+  };
+
+  // Handle form submission to check delivery estimate
   const handleZipCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Parse pincodes to integers
     const deliveryPincode = parseInt(newZipCode, 10);
     const pickupPincode = parseInt(warehousePincode, 10);
 
@@ -41,36 +73,49 @@ export function DeliveryOption({
     }
 
     startTransition(async () => {
-      const result = await getEstimatedDelivery({
-        pickupPostcode: pickupPincode,
-        deliveryPostcode: deliveryPincode,
-      });
-
-      if (result.data.data?.available_courier_companies?.length > 0) {
-        const estimatedDateStr = result.data.data.available_courier_companies[0].etd; // e.g., "2025-05-26"
-console.log("Estimated delivery date:", result.data);
-        // Parse the estimated delivery date
-        const estimatedDate = new Date(estimatedDateStr);
-        const today = new Date("2025-05-21T01:16:00+05:30"); // Current date and time: May 21, 2025, 01:16 AM IST
-
-        // Validate that the estimated date is in the future
-        if (estimatedDate <= today) {
-          setError("Estimated delivery date must be in the future.");
-          return;
-        }
-
-        // Format the date to "Mon, May 26"
-        const formattedDate = estimatedDate.toLocaleDateString("en-US", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
+      try {
+        setError(""); // Reset error state
+        const result = await getEstimatedDelivery({
+          pickupPostcode: pickupPincode,
+          deliveryPostcode: deliveryPincode,
         });
 
-        setZipCode(newZipCode);
-        setEstimatedDelivery(formattedDate);
-        setIsModalOpen(false);
-      } else {
-        setError(result.message || "Failed to fetch delivery estimate.");
+        if (result?.data?.data?.available_courier_companies?.length > 0) {
+          const estimatedDateStr = result.data.data.available_courier_companies[0].etd;
+
+          if (!estimatedDateStr) {
+            setError("Unable to retrieve estimated delivery date.");
+            return;
+          }
+
+          const estimatedDate = new Date(estimatedDateStr);
+          const today = new Date(); // Current date: 02:04 AM IST, May 21, 2025
+
+          if (isNaN(estimatedDate.getTime())) {
+            setError("Invalid estimated delivery date received.");
+            return;
+          }
+
+          if (estimatedDate <= today) {
+            setError("Estimated delivery date must be in the future.");
+            return;
+          }
+
+          const formattedDate = estimatedDate.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+          });
+
+          setZipCode(newZipCode);
+          setEstimatedDelivery(formattedDate);
+          setIsModalOpen(false);
+        } else {
+          setError(result.message || "No delivery options available for this pincode.");
+        }
+      } catch (err) {
+        console.error("Failed to fetch delivery estimate:", err);
+        setError("Failed to fetch delivery estimate. Please try again.");
       }
     });
   };
@@ -101,38 +146,117 @@ console.log("Estimated delivery date:", result.data);
         <Icons.Truck className="w-5 h-5" />
         <span className="text-sm">Get it by {estimatedDelivery}</span>
       </div>
+
+      {/* Modal for entering pincode or selecting saved address */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
-            <h3 className="text-lg font-semibold mb-4">Enter Your Pincode</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Use Pincode to Check Delivery Info</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <span className="sr-only">Close</span>
+                <Icons.X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Enter Pincode Section */}
             <form onSubmit={handleZipCodeSubmit}>
-              <input
-                type="text"
-                value={newZipCode}
-                onChange={(e) => setNewZipCode(e.target.value)}
-                placeholder="Enter pincode"
-                className="w-full p-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                pattern="\d{6}"
-                required
-              />
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Enter a PIN code
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newZipCode}
+                    onChange={(e) => setNewZipCode(e.target.value)}
+                    placeholder="Enter pincode"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    pattern="\d{6}"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={isPending}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:bg-gray-100"
+                  >
+                    {isPending ? "Checking..." : "Check"}
+                  </button>
+                </div>
+              </div>
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-              <div className="flex justify-end gap-2">
+            </form>
+
+            {/* Saved Addresses Section */}
+            {isUserFetching ? (
+              <p className="text-sm text-gray-600 mb-4">Loading saved addresses...</p>
+            ) : savedAddresses.length > 0 ? (
+              <>
+                <div className="flex items-center gap-2 my-4">
+                  <hr className="flex-grow border-gray-300" />
+                  <span className="text-sm text-gray-500">OR</span>
+                  <hr className="flex-grow border-gray-300" />
+                </div>
+
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Select a saved address to check delivery info
+                  </h4>
+                  <div className="space-y-3 max-h-48 overflow-y-auto">
+                    {savedAddresses.map((address) => (
+                      <div
+                        key={address.id}
+                        className="flex items-start gap-2 p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleAddressSelect(address)}
+                      >
+                        <input
+                          type="radio"
+                          name="saved-address"
+                          checked={selectedAddress?.id === address.id}
+                          onChange={() => handleAddressSelect(address)}
+                          className="mt-1"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-800">
+                              {address.name}, {address.pincode}
+                            </span>
+                            <span className="text-xs px-2 py-1 bg-gray-100 rounded-md">
+                              {address.label}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">{address.address}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              {selectedAddress && (
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
+                  onClick={handleZipCodeSubmit}
                   disabled={isPending}
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
                 >
                   {isPending ? "Checking..." : "Submit"}
                 </button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
       )}

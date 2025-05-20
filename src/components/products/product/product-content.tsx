@@ -68,11 +68,12 @@ const warehousePincode = "110001";
                     userId={userId}
                 />
                 <Separator />
-      <DeliveryOption
-                    initialZipCode="734003"
-                    warehousePincode={warehousePincode}
-                    initialEstimatedDelivery="Mon, May 26"
-                />
+<DeliveryOption
+          initialZipCode="734003"
+          warehousePincode={warehousePincode}
+          initialEstimatedDelivery="Mon, May 26"
+          userId={userId} // Pass userId to DeliveryOption
+        />
                 <Separator />
                 <ProductDetails product={product} />
             </div>
