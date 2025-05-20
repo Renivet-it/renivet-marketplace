@@ -1,5 +1,5 @@
 {
-  "id": "e0215f9d-826e-4809-92c5-fb617d599e5f",
+  "id": "f4969ea3-9a5e-4da4-bcb7-054030061ff3",
   "prevId": "b90095d0-8e5e-4f8f-abc2-4edebab1b1b1",
   "version": "7",
   "dialect": "postgresql",
@@ -5102,6 +5102,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "return_period": {
+          "name": "return_period",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "exchange_period": {
+          "name": "exchange_period",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
         },
         "created_at": {
           "name": "created_at",
