@@ -1,0 +1,2 @@
+ALTER TABLE "return_exchange_policies" ADD COLUMN "return_period" integer DEFAULT 5 NOT NULL;--> statement-breakpoint
+ALTER TABLE "return_exchange_policies" ADD COLUMN "exchange_period" integer DEFAULT 5 NOT NULL;
