@@ -491,9 +491,11 @@ export const returnExchangePolicySchema = z.object({
 
     returnable: z.boolean(),
     returnDescription: z.string().nullable().optional(),
+    returnPeriod: z.number().nonnegative(),
 
     exchangeable: z.boolean(),
     exchangeDescription: z.string().nullable().optional(),
+    exchangePeriod: z.number().nonnegative(),
 
     createdAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
     updatedAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),

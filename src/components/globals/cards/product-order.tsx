@@ -4,6 +4,7 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { OrderWithItemAndBrand } from "@/lib/validations";
+import { OrderShipment } from "@/lib/validations/order-shipment";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,12 +16,16 @@ interface PageProps extends GenericProps {
         awbNumber?: string | null;
         estimatedDelivery?: Date | null;
     };
+    serverNow?: Date;
+    shipmentDetails: OrderShipment | undefined;
 }
 
 export function ProductOrderCard({
     className,
     item,
     trackingInfo,
+    serverNow,
+    shipmentDetails,
     ...props
 }: PageProps) {
     const itemMedia = item.product.media?.[0]?.mediaItem ?? null;
@@ -49,6 +54,40 @@ export function ProductOrderCard({
             (item.variant &&
                 !item.variant.isDeleted &&
                 item.variant.quantity > 0));
+
+    function canReturnItem(
+        shipmentDate: string | Date | null | undefined,
+        returnPeriod: number | null | undefined,
+        serverNow: Date | undefined
+    ): boolean {
+        if (!shipmentDate || !returnPeriod || !serverNow) return false;
+
+        const shipment = new Date(shipmentDate);
+        const returnDeadline = new Date(shipment);
+        returnDeadline.setDate(returnDeadline.getDate() + returnPeriod);
+
+        console.log("⏱️ return deadline:", returnDeadline);
+        console.log("📦 shipment:", shipment);
+        console.log("🕒 serverNow:", serverNow);
+
+        return serverNow <= returnDeadline;
+    }
+
+    const canReturn =
+        item.returnExchangePolicy?.returnable &&
+        canReturnItem(
+            shipmentDetails?.shipmentDate,
+            item.returnExchangePolicy?.returnPeriod,
+            serverNow
+        );
+
+    const canExchange =
+        item.returnExchangePolicy?.exchangeable &&
+        canReturnItem(
+            shipmentDetails?.shipmentDate,
+            item.returnExchangePolicy?.exchangePeriod,
+            serverNow
+        );
 
     return (
         <div
@@ -130,22 +169,26 @@ export function ProductOrderCard({
                     </p>{" "}
                 </div>
                 <div className="flex gap-2">
-                    <Button
-                        className="md:flex-none flex-1"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => ("") }
-                    >
-                        Return
-                    </Button>
-                    <Button
-                        className="md:flex-none flex-1"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => ("")}
-                    >
-                        Exchange
-                    </Button>
+                    {canReturn && (
+                        <Button
+                            className="flex-1 md:flex-none"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => ""}
+                        >
+                            Return
+                        </Button>
+                    )}
+                    {canExchange && (
+                        <Button
+                            className="flex-1 md:flex-none"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => ""}
+                        >
+                            Exchange
+                        </Button>
+                    )}
                 </div>
             </div>
 

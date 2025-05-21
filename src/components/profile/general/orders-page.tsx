@@ -383,6 +383,8 @@ function OrderCard({
                                 <div className="space-y-2">
                                     {items.map((item) => (
                                         <ProductOrderCard
+                                            shipmentDetails={shipment}
+                                            serverNow={order.serverNow}
                                             item={item}
                                             key={item.id}
                                             trackingInfo={
