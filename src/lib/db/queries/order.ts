@@ -221,8 +221,10 @@ class OrderQuery {
                 userId: orders.userId,
                 firstName: users.firstName, // Reference users table
                 lastName: users.lastName, // Reference users table
-                shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-                shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
+                shiprocketOrderId:
+                    orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId:
+                    orderShipments?.shiprocketShipmentId ?? undefined,
                 receiptId: orders.receiptId,
                 paymentId: orders.paymentId,
                 paymentMethod: orders.paymentMethod,
@@ -248,25 +250,25 @@ class OrderQuery {
 
         // Map the data to a cleaner format if needed
         const formattedData = data.map((item) => ({
-                 id: item.id,
-                userId: item.userId,
-                firstName: item.firstName, // Reference item table
-                lastName: item.lastName, // Reference users table
-                shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-                shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
-                receiptId: item.receiptId,
-                paymentId: item.paymentId,
-                paymentMethod: item.paymentMethod,
-                paymentStatus: item.paymentStatus,
-                status: item.status,
-                addressId: item.addressId,
-                totalItems: item.totalItems,
-                taxAmount: item.taxAmount,
-                deliveryAmount: item.deliveryAmount,
-                discountAmount: item.discountAmount,
-                totalAmount: item.totalAmount,
-                createdAt: item.createdAt,
-                updatedAt: item.updatedAt,
+            id: item.id,
+            userId: item.userId,
+            firstName: item.firstName, // Reference item table
+            lastName: item.lastName, // Reference users table
+            shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+            shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
+            receiptId: item.receiptId,
+            paymentId: item.paymentId,
+            paymentMethod: item.paymentMethod,
+            paymentStatus: item.paymentStatus,
+            status: item.status,
+            addressId: item.addressId,
+            totalItems: item.totalItems,
+            taxAmount: item.taxAmount,
+            deliveryAmount: item.deliveryAmount,
+            discountAmount: item.discountAmount,
+            totalAmount: item.totalAmount,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
         }));
         return formattedData;
     }
@@ -456,6 +458,7 @@ class OrderQuery {
                             },
                         },
                         variant: true,
+                        returnExchangePolicy: true,
                     },
                 },
             },
@@ -492,9 +495,10 @@ class OrderQuery {
                 mediaItem: variant.image ? mediaMap.get(variant.image) : null,
             })),
         }));
-
+        const serverNow = new Date();
         const enhancedData = data.map((d) => ({
             ...d,
+            serverNow,
             items: d.items.map((i) => ({
                 ...i,
                 product: enhancedProducts.find((p) => p.id === i.productId),
@@ -616,7 +620,10 @@ class OrderQuery {
         return result;
     }
 
-    async savePickupShiprocketResponse(shipmentId: number, shipmentDetails: Record<string, any>) {
+    async savePickupShiprocketResponse(
+        shipmentId: number,
+        shipmentDetails: Record<string, any>
+    ) {
         const result = await db
             .update(orderShipments)
             .set({
@@ -626,7 +633,10 @@ class OrderQuery {
         return result;
     }
 
-    async saveAwbShiprocketResponse(shipmentId: number, awbDetails: Record<string, any>) {
+    async saveAwbShiprocketResponse(
+        shipmentId: number,
+        awbDetails: Record<string, any>
+    ) {
         const result = await db
             .update(orderShipments)
             .set({
@@ -636,18 +646,22 @@ class OrderQuery {
         return result;
     }
 
-    async createPickupDetails(shipmentId: number, pickupToken: any, pickupDate: any){
+    async createPickupDetails(
+        shipmentId: number,
+        pickupToken: any,
+        pickupDate: any
+    ) {
         const result = await db
             .update(orderShipments)
             .set({
                 pickupTokenNumber: pickupToken,
-                pickupScheduledDate: pickupDate
+                pickupScheduledDate: pickupDate,
             })
             .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
         return result;
     }
 
-    async updateShipmentDate(awbNumber: string, shipmentDate: Date){
+    async updateShipmentDate(awbNumber: string, shipmentDate: Date) {
         const result = await db
             .update(orderShipments)
             .set({
