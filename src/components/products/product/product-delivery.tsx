@@ -48,17 +48,17 @@ export function DeliveryOption({
         label: addr.type.toUpperCase(), // e.g., "HOME", "WORK"
     })) || [];
 
-    // Handle clicking the "Change" button to open the modal
+    // Handle clicking the "Change/Check" button to open the modal
     const handleChangeClick = () => {
         setIsModalOpen(true);
-        setNewZipCode(selectedAddress?.pincode || initialZipCode || ""); // Use selectedAddress pincode if available
-        setTempSelectedAddress(selectedAddress); // Pre-select the confirmed address in the modal
+        setNewZipCode(selectedAddress?.pincode || initialZipCode || "");
+        setTempSelectedAddress(selectedAddress); // Pre-select the confirmed address
         setError("");
     };
 
     // Handle selecting an address from the saved addresses list
     const handleAddressSelect = (address: Address) => {
-        setTempSelectedAddress(address); // Set temporary selection, keep modal open
+        setTempSelectedAddress(address);
         setNewZipCode(address.pincode); // Update pincode input
         setError(""); // Clear errors
     };
@@ -111,7 +111,7 @@ export function DeliveryOption({
                         day: "numeric",
                     });
 
-                    // Set selected address only on submit
+                    // Set selected address for both saved and manual pincodes
                     if (tempSelectedAddress) {
                         setSelectedAddress(tempSelectedAddress); // Use saved address
                     } else {
@@ -126,7 +126,7 @@ export function DeliveryOption({
 
                     setZipCode(newZipCode);
                     setEstimatedDelivery(formattedDate);
-                    setIsModalOpen(false); // Close modal only on submit
+                    setTimeout(() => setIsModalOpen(false), 300); // Slight delay for better UX
                 } else {
                     setError(result.message || "No delivery options available for this pincode.");
                 }
@@ -148,17 +148,19 @@ export function DeliveryOption({
             <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
                     <span className="text-base font-medium text-gray-800">
-                        {selectedAddress ? `${selectedAddress.name}, ${selectedAddress.pincode}` : initialZipCode}
+                        {selectedAddress ? selectedAddress.pincode : initialZipCode || "Enter pincode"}
                     </span>
-                    <span className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
-                        ✓
-                    </span>
+                    {(selectedAddress || initialZipCode) && (
+                        <span className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
+                            ✓
+                        </span>
+                    )}
                 </div>
                 <button
                     onClick={handleChangeClick}
                     className="text-red-500 font-semibold text-sm hover:underline focus:outline-none"
                 >
-                    CHANGE
+                    {user ? "CHANGE" : "CHECK"}
                 </button>
             </div>
             <div className="flex items-center gap-2 mt-2 text-gray-600">
@@ -166,7 +168,7 @@ export function DeliveryOption({
                 {estimatedDelivery ? (
                     <span className="text-sm">Get it by {estimatedDelivery}</span>
                 ) : (
-                    <span className="text-sm">Loading...</span>
+                    <span className="text-sm">Enter pincode to check delivery date</span>
                 )}
             </div>
 
@@ -195,7 +197,10 @@ export function DeliveryOption({
                                     <input
                                         type="text"
                                         value={newZipCode}
-                                        onChange={(e) => setNewZipCode(e.target.value)}
+                                        onChange={(e) => {
+                                            setNewZipCode(e.target.value);
+                                            setTempSelectedAddress(null); // Clear selected address when typing manually
+                                        }}
                                         placeholder="Enter pincode"
                                         className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         pattern="\d{6}"
@@ -272,7 +277,7 @@ export function DeliveryOption({
                             <button
                                 type="button"
                                 onClick={handleZipCodeSubmit}
-                                disabled={isPending || (!tempSelectedAddress && !newZipCode)}
+                                disabled={isPending || !newZipCode}
                                 className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
                             >
                                 {isPending ? "Checking..." : "Submit"}
