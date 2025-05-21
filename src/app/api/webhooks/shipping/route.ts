@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
 
         const body = await req.json();
         const parsed = webhookResponse.parse(body);
+        const parsedAwb = parsed.awb.toString();
 
         // Find shipment by AWB
         const shipment = await db.query.orderShipments.findFirst({
@@ -107,6 +108,12 @@ export async function POST(req: NextRequest) {
                 paymentMethod: shipment.order.paymentMethod,
                 paymentStatus: shipment.order.paymentStatus,
             });
+
+            // updaate delivery date
+            const today = new Date();
+            const shipmentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+            await orderQueries.updateShipmentDate(parsedAwb, shipmentDate);
 
             await analytics.track({
                 namespace: BRAND_EVENTS.ORDER.DELIVERED,
