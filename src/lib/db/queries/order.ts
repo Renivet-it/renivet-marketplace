@@ -653,6 +653,16 @@ class OrderQuery {
             .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
         return result;
     }
+
+    async updateShipmentDate(awbNumber: string, shipmentDate: Date){
+        const result = await db
+            .update(orderShipments)
+            .set({
+                shipmentDate: shipmentDate,
+            })
+            .where(eq(orderShipments.awbNumber, awbNumber));
+        return result;
+    }
 }
 
 export const orderQueries = new OrderQuery();
