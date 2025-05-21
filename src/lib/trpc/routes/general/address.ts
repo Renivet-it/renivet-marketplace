@@ -47,4 +47,24 @@ export const addressesRouter = createTRPCRouter({
                 .parse(data);
             return parsed;
         }),
+            getBrandConfidential: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { brandId } = input;
+            const data =
+                await queries.addresses.getBrandConfidentials(brandId);
+            if (!data)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand address not found",
+                });
+            const parsed = brandDetailsAddressWithSafeSchema
+                .parse(data);
+            return parsed;
+        }),
 });
