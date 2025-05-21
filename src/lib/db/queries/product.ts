@@ -26,7 +26,24 @@ import {
     productVariants,
     returnExchangePolicy,
 } from "../schema";
+import { categoryQueries } from "./category";
+import { productTypeQueries } from "./product-type";
+import { subCategoryQueries } from "./sub-category";
+import { brandQueries } from "./brand";
+import { InferenceClient } from "@huggingface/inference";
 
+
+const token = process.env.HF_TOKEN;
+
+const hf = new InferenceClient(token);
+
+async function getEmbedding(text: string): Promise<number[]> {
+    const response = await hf.featureExtraction({
+        model: "sentence-transformers/all-MiniLM-L6-v2",
+        inputs: text,
+    });
+    return response as number[];
+}
 class ProductQuery {
     async getProductCount({
         brandId,
@@ -184,218 +201,256 @@ class ProductQuery {
         return parsed;
     }
 
-    async getProducts({
-        limit,
-        page,
-        search,
-        brandIds,
-        minPrice,
-        maxPrice,
-        categoryId,
-        subcategoryId,
-        productTypeId,
-        isActive,
-        isAvailable,
-        isPublished,
-        isDeleted,
-        verificationStatus,
-        sortBy = "createdAt",
-        sortOrder = "desc",
-        productImage,
-        productVisiblity,
-    }: {
-        limit: number;
-        page: number;
-        search?: string;
-        brandIds?: string[];
-        minPrice?: number | null;
-        maxPrice?: number | null;
-        categoryId?: string;
-        subcategoryId?: string;
-        productTypeId?: string;
-        isActive?: boolean;
-        isAvailable?: boolean;
-        isPublished?: boolean;
-        isDeleted?: boolean;
-        verificationStatus?: Product["verificationStatus"];
-        sortBy?: "price" | "createdAt";
-        sortOrder?: "asc" | "desc";
-        productImage?: Product["productImageFilter"];
-        productVisiblity?: Product["productVisiblityFilter"];
-    }) {
-        const searchQuery = !!search?.length
+async getProducts({
+    limit,
+    page,
+    search,
+    brandIds,
+    minPrice,
+    maxPrice,
+    categoryId,
+    subcategoryId,
+    productTypeId,
+    isActive,
+    isAvailable,
+    isPublished,
+    isDeleted,
+    verificationStatus,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    productImage,
+    productVisiblity,
+}: {
+    limit: number;
+    page: number;
+    search?: string;
+    brandIds?: string[];
+    minPrice?: number | null;
+    maxPrice?: number | null;
+    categoryId?: string;
+    subcategoryId?: string;
+    productTypeId?: string;
+    isActive?: boolean;
+    isAvailable?: boolean;
+    isPublished?: boolean;
+    isDeleted?: boolean;
+    verificationStatus?: Product["verificationStatus"];
+    sortBy?: "price" | "createdAt";
+    sortOrder?: "asc" | "desc";
+    productImage?: Product["productImageFilter"];
+    productVisiblity?: Product["productVisiblityFilter"];
+}) {
+    // Price conversions remain the same
+    minPrice = !!minPrice
+        ? minPrice < 0
+            ? 0
+            : convertPriceToPaise(minPrice)
+        : null;
+    maxPrice = !!maxPrice
+        ? maxPrice > 10000
+            ? null
+            : convertPriceToPaise(maxPrice)
+        : null;
+
+    let searchQuery;
+    // if (search?.length) {
+    //     // Get embedding for the search query
+    //     const searchEmbedding = await getEmbedding(search);
+
+    //     // Use cosine similarity with pgvector
+    //     searchQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < 0.8`;
+    // }
+        if (search?.length) {
+        // Get embedding for the search query
+        const searchEmbedding = await getEmbedding(search);
+
+        // Create two tiers of relevance
+        const highRelevanceThreshold = 0.6; // Strong matches (adjust as needed)
+        const lowRelevanceThreshold = 0.8; // Weaker but still relevant matches
+
+        // Tier 1: Strong matches (high relevance)
+        const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
+
+        // Tier 2: Weaker matches (still relevant)
+        const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+
+        // Combine with OR but order by tier first, then similarity
+        searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+
+        // // Order by tier first (high relevance comes first), then by similarity
+        // orderBy.push(
+        //     sql`CASE
+        //         WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0
+        //         ELSE 1
+        //     END ASC`,
+        //     sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+        // );
+    }
+
+    const filters = [
+        searchQuery,
+        !!brandIds?.length
+            ? inArray(products.brandId, brandIds)
+            : undefined,
+        !!minPrice
             ? sql`(
-            setweight(to_tsvector('english', ${products.title}), 'A') ||
-            setweight(to_tsvector('english', ${products.description}), 'B'))
-            @@ plainto_tsquery('english', ${search})`
-            : undefined;
-
-        minPrice = !!minPrice
-            ? minPrice < 0
-                ? 0
-                : convertPriceToPaise(minPrice)
-            : null;
-        maxPrice = !!maxPrice
-            ? maxPrice > 10000
-                ? null
-                : convertPriceToPaise(maxPrice)
-            : null;
-
-        const filters = [
-            searchQuery,
-            !!brandIds?.length
-                ? inArray(products.brandId, brandIds)
-                : undefined,
-            !!minPrice
-                ? sql`(
-                    COALESCE(${products.price}, 0) >= ${minPrice} 
-                    OR EXISTS (
-                        SELECT 1 FROM ${productVariants} pv
-                        WHERE pv.product_id = ${products.id}
-                        AND COALESCE(pv.price, 0) >= ${minPrice}
-                        AND pv.is_deleted = false
-                    )
-                )`
-                : undefined,
-            !!maxPrice
-                ? sql`(
-                    COALESCE(${products.price}, 0) <= ${maxPrice}
-                    OR EXISTS (
-                        SELECT 1 FROM ${productVariants} pv
-                        WHERE pv.product_id = ${products.id}
-                        AND COALESCE(pv.price, 0) <= ${maxPrice}
-                        AND pv.is_deleted = false
-                    )
-                )`
-                : undefined,
-            isActive !== undefined
-                ? eq(products.isActive, isActive)
-                : undefined,
-            isAvailable !== undefined
-                ? eq(products.isAvailable, isAvailable)
-                : undefined,
-            isPublished !== undefined
-                ? eq(products.isPublished, isPublished)
-                : undefined,
-            isDeleted !== undefined
-                ? eq(products.isDeleted, isDeleted)
-                : undefined,
-            categoryId ? eq(products.categoryId, categoryId) : undefined,
-            subcategoryId
-                ? eq(products.subcategoryId, subcategoryId)
-                : undefined,
-            productTypeId
-                ? eq(products.productTypeId, productTypeId)
-                : undefined,
-            verificationStatus
-                ? eq(products.verificationStatus, verificationStatus)
-                : undefined,
-            productImage
-                ? productImage === "with"
-                    ? hasMedia(products, "media")
-                    : productImage === "without"
-                      ? noMedia(products, "media")
-                      : undefined
-                : undefined,
-                productVisiblity
-                ? productVisiblity === "public"
-                  ? eq(products.isDeleted, false)
-                  : productVisiblity === "private"
-                  ? eq(products.isDeleted, true)
+                COALESCE(${products.price}, 0) >= ${minPrice} 
+                OR EXISTS (
+                    SELECT 1 FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                    AND COALESCE(pv.price, 0) >= ${minPrice}
+                    AND pv.is_deleted = false
+                )
+            )`
+            : undefined,
+        !!maxPrice
+            ? sql`(
+                COALESCE(${products.price}, 0) <= ${maxPrice}
+                OR EXISTS (
+                    SELECT 1 FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                    AND COALESCE(pv.price, 0) <= ${maxPrice}
+                    AND pv.is_deleted = false
+                )
+            )`
+            : undefined,
+        isActive !== undefined
+            ? eq(products.isActive, isActive)
+            : undefined,
+        isAvailable !== undefined
+            ? eq(products.isAvailable, isAvailable)
+            : undefined,
+        isPublished !== undefined
+            ? eq(products.isPublished, isPublished)
+            : undefined,
+        isDeleted !== undefined
+            ? eq(products.isDeleted, isDeleted)
+            : undefined,
+        categoryId ? eq(products.categoryId, categoryId) : undefined,
+        subcategoryId
+            ? eq(products.subcategoryId, subcategoryId)
+            : undefined,
+        productTypeId
+            ? eq(products.productTypeId, productTypeId)
+            : undefined,
+        verificationStatus
+            ? eq(products.verificationStatus, verificationStatus)
+            : undefined,
+        productImage
+            ? productImage === "with"
+                ? hasMedia(products, "media")
+                : productImage === "without"
+                  ? noMedia(products, "media")
                   : undefined
-                : undefined,
-        ];
+            : undefined,
+        productVisiblity
+            ? productVisiblity === "public"
+              ? eq(products.isDeleted, false)
+              : productVisiblity === "private"
+              ? eq(products.isDeleted, true)
+              : undefined
+            : undefined,
+    ].filter(Boolean);
 
-        const data = await db.query.products.findMany({
-            with: {
-                brand: true,
-                variants: true,
-                category: true,
-                subcategory: true,
-                productType: true,
-                options: true,
-                journey: true,
-                values: true,
-                returnExchangePolicy: true,
-                specifications: {
-                    columns: {
-                        key: true,
-                        value: true,
-                    },
+    const orderBy = [];
+
+    if (search?.length) {
+        // Order by cosine similarity (1 - distance)
+        const searchEmbedding = await getEmbedding(search);
+                 const highRelevanceThreshold = 0.6; // Strong matches (adjust as needed)
+        orderBy.push(
+            sql`CASE 
+                WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0 
+                ELSE 1 
+            END ASC`,
+            sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+        );
+        // orderBy.push(sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`);
+    }
+
+    // Add the regular sort order
+    orderBy.push(
+        sortOrder === "asc"
+            ? asc(products[sortBy])
+            : desc(products[sortBy])
+    );
+
+    const data = await db.query.products.findMany({
+        with: {
+            brand: true,
+            variants: true,
+            category: true,
+            subcategory: true,
+            productType: true,
+            options: true,
+            journey: true,
+            values: true,
+            returnExchangePolicy: true,
+            specifications: {
+                columns: {
+                    key: true,
+                    value: true,
                 },
             },
-            where: and(...filters),
-            limit,
-            offset: (page - 1) * limit,
-            orderBy: searchQuery
-                ? [
-                      sortOrder === "asc"
-                          ? asc(products[sortBy])
-                          : desc(products[sortBy]),
-                      desc(sql`ts_rank(
-                        setweight(to_tsvector('english', ${products.title}), 'A') ||
-                        setweight(to_tsvector('english', ${products.description}), 'B'),
-                        plainto_tsquery('english', ${search})
-                      )`),
-                  ]
-                : [
-                      sortOrder === "asc"
-                          ? asc(products[sortBy])
-                          : desc(products[sortBy]),
-                  ],
-            extras: {
-                count: db.$count(products, and(...filters)).as("product_count"),
-            },
+        },
+        where: and(...filters),
+        limit,
+        offset: (page - 1) * limit,
+        orderBy,
+        extras: {
+            count: db.$count(products, and(...filters)).as("product_count"),
+        },
+    });
+
+    // Rest of your media handling remains the same
+    const mediaIds = new Set<string>();
+    for (const product of data) {
+        product.media.forEach((media) => mediaIds.add(media.id));
+        product.variants.forEach((variant) => {
+            if (variant.image) mediaIds.add(variant.image);
         });
-
-        const mediaIds = new Set<string>();
-        for (const product of data) {
-            product.media.forEach((media) => mediaIds.add(media.id));
-            product.variants.forEach((variant) => {
-                if (variant.image) mediaIds.add(variant.image);
-            });
-            if (product.sustainabilityCertificate)
-                mediaIds.add(product.sustainabilityCertificate);
-        }
-        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-        const mediaMap = new Map(
-            mediaItems.data.map((item) => [item.id, item])
-        );
-
-        const enhancedData = data.map((product) => ({
-            ...product,
-            media: product.media.map((media) => ({
-                ...media,
-                mediaItem: mediaMap.get(media.id),
-            })),
-            sustainabilityCertificate: product.sustainabilityCertificate
-                ? mediaMap.get(product.sustainabilityCertificate)
-                : null,
-            variants: product.variants.map((variant) => ({
-                ...variant,
-                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-            })),
-            returnable: product.returnExchangePolicy?.returnable ?? false,
-            returnDescription:
-                product.returnExchangePolicy?.returnDescription ?? null,
-            exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-            exchangeDescription:
-                product.returnExchangePolicy?.exchangeDescription ?? null,
-            specifications: product.specifications.map((spec) => ({
-                key: spec.key,
-                value: spec.value,
-            })),
-        }));
-
-        const parsed: ProductWithBrand[] = productWithBrandSchema
-            .array()
-            .parse(enhancedData);
-
-        return {
-            data: parsed,
-            count: +data?.[0]?.count || 0,
-        };
+        if (product.sustainabilityCertificate)
+            mediaIds.add(product.sustainabilityCertificate);
     }
+    const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+    const mediaMap = new Map(
+        mediaItems.data.map((item) => [item.id, item])
+    );
+
+    const enhancedData = data.map((product) => ({
+        ...product,
+        media: product.media.map((media) => ({
+            ...media,
+            mediaItem: mediaMap.get(media.id),
+        })),
+        sustainabilityCertificate: product.sustainabilityCertificate
+            ? mediaMap.get(product.sustainabilityCertificate)
+            : null,
+        variants: product.variants.map((variant) => ({
+            ...variant,
+            mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+        })),
+        returnable: product.returnExchangePolicy?.returnable ?? false,
+        returnDescription:
+            product.returnExchangePolicy?.returnDescription ?? null,
+        exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+        exchangeDescription:
+            product.returnExchangePolicy?.exchangeDescription ?? null,
+        specifications: product.specifications.map((spec) => ({
+            key: spec.key,
+            value: spec.value,
+        })),
+    }));
+
+    const parsed: ProductWithBrand[] = productWithBrandSchema
+        .array()
+        .parse(enhancedData);
+
+    return {
+        data: parsed,
+        count: +data?.[0]?.count || 0,
+    };
+}
 
     async getProduct({
         productId,
@@ -708,11 +763,91 @@ class ProductQuery {
         }
     ) {
         const data = await db.transaction(async (tx) => {
-            const newProduct = await tx
-                .insert(products)
-                .values(values)
-                .returning()
-                .then((res) => res[0]);
+
+console.log("Input values:", values);
+        let categoryName = "";
+        let subcategoryName = "";
+        let productTypeName = "";
+        let brandName = "";
+
+    if (values.categoryId) {
+          const category = await categoryQueries.getCategory(values.categoryId);
+          categoryName = category?.name || "";
+        }
+            if (values.brandId) {
+          const brand = await brandQueries.getBrand(values.brandId);
+          brandName = brand?.name || "";
+        }
+                    if (values.subcategoryId) {
+          const subcategory = await subCategoryQueries.getSubCategory(values.subcategoryId);
+          subcategoryName = subcategory?.name || "";
+        }
+            if (values.productTypeId) {
+          const productType = await productTypeQueries.getProductType(values.productTypeId);
+          productTypeName = productType?.name || "";
+        }
+    // Combine fields for embedding
+    const specsText = (values.specifications ?? [])
+      .map((spec) => `${spec.key}:${spec.value}`)
+      .join(" ");
+
+    const text = [
+      values.title,
+      values.description || "",
+      values.sizeAndFit || "",
+      values.metaTitle || "",
+      values.metaDescription || "",
+      values.materialAndCare || "",
+      brandName,
+      categoryName || "",
+      subcategoryName,
+      productTypeName,
+      specsText,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    console.log("Text for embedding:", text);
+
+    let embeddings: number[] | null = null;
+    if (text) {
+      try {
+        console.log("Calling Hugging Face API for feature extraction...");
+        const response = await hf.featureExtraction({
+          model: "sentence-transformers/all-MiniLM-L6-v2",
+   inputs: text,
+        });
+
+        console.log("Hugging Face API response:", response);
+
+        // Extract the embedding array
+        const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+        if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
+          console.error(`Invalid embedding for product with title ${values.title}. Response length: ${embeddingArray?.length}`);
+        } else {
+          embeddings = embeddingArray;
+          console.log(`Generated embedding for product ${values.title}: ${embeddings.length} dimensions`);
+        }
+      } catch (error) {
+        console.error(`Error generating embedding for product with title ${values.title}:`, error);
+      }
+    } else {
+      console.warn(`No text available for embedding generation for product with title ${values.title}`);
+    }
+
+    // Insert the new product with embeddings
+    const newProduct = await tx
+      .insert(products)
+      .values({
+        ...values,
+        embeddings, // Include embeddings in the initial insert
+      })
+      .returning()
+      .then((res) => res[0]);
+
+    console.log("Inserted product:", newProduct);
+
             console.log("Return/Exchange Policy Fields:", {
                 returnable: values.returnable,
                 returnDescription: values.returnDescription,
@@ -783,12 +918,21 @@ class ProductQuery {
     async bulkCreateProducts(
         values: (CreateProduct & {
             slug: string;
+            embeddings?: number[] | null;
         })[]
     ) {
         const data = await db.transaction(async (tx) => {
-            const newProducts = await tx
+            // const newProducts = await tx
+            //     .insert(products)
+            //     .values(values)
+            //     .returning()
+            //     .then((res) => res);
+                const newProducts = await tx
                 .insert(products)
-                .values(values)
+                .values(values.map((value) => ({
+                    ...value,
+                    embeddings: value.embeddings, // Include embeddings
+                })))
                 .returning()
                 .then((res) => res);
 
@@ -1034,11 +1178,85 @@ class ProductQuery {
                 if (!values.media || values.media.length === 0) {
                     console.warn(`Media field is empty or missing for product ${productId}. Using default empty array.`);
                 }
+        let categoryName = "";
+        let subcategoryName = "";
+        let productTypeName = "";
+        let brandName = "";
+
+    if (values.categoryId) {
+          const category = await categoryQueries.getCategory(values.categoryId);
+          categoryName = category?.name || "";
+        }
+            if (values.subcategoryId) {
+          const subcategory = await subCategoryQueries.getSubCategory(values.subcategoryId);
+          subcategoryName = subcategory?.name || "";
+        }
+            if (values.productTypeId) {
+          const productType = await productTypeQueries.getProductType(values.productTypeId);
+          productTypeName = productType?.name || "";
+        }
+            if (values.brandId) {
+          const brand = await brandQueries.getBrand(values.brandId);
+          brandName = brand?.name || "";
+        }
+
+                        // Combine fields for embedding
+        const specsText = (values.specifications ?? [])
+          .map((spec) => `${spec.key}:${spec.value}`)
+          .join(" ");
+
+        const text = [
+          values.title || "",
+          values.description || "",
+          values.sizeAndFit || "",
+          values.metaTitle || "",
+          values.metaDescription || "",
+          values.materialAndCare || "",
+          brandName,
+          categoryName,
+          subcategoryName,
+          productTypeName,
+          specsText,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
+        console.log("Text for embedding:", text);
+
+        let embeddings: number[] | null = null;
+        if (text) {
+          try {
+            console.log("Calling Hugging Face API for feature extraction...");
+            const response = await hf.featureExtraction({
+              model: "sentence-transformers/all-MiniLM-L6-v2",
+              inputs: text,
+            });
+
+            console.log("Hugging Face API response:", response);
+
+            // Extract the embedding array
+            const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+            if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
+              console.error(`Invalid embedding for product ${productId}. Response length: ${embeddingArray?.length}`);
+            } else {
+              embeddings = embeddingArray;
+              console.log(`Generated embedding for product ${productId}: ${embeddings.length} dimensions`);
+            }
+          } catch (error) {
+            console.error(`Error generating embedding for product ${productId}:`, error);
+          }
+        } else {
+          console.warn(`No text available for embedding generation for product ${productId}`);
+        }
+
+
                     // Update product
                     let updatedProduct = await tx
                         .update(products)
                         .set({
                             ...values,
+                            embeddings,
                             media: validatedMedia, // Use validated media
                             updatedAt: new Date(),
                         })

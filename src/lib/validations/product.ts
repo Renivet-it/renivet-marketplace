@@ -354,7 +354,7 @@ export const productSchema = z.object({
                 invalid_type_error: "Meta description must be a string",
             })
             .min(3, "Meta description must be at least 3 characters long")
-            .max(160, "Meta description must be at most 160 characters long")
+            .max(260, "Meta description must be at most 160 characters long")
             .nullable()
     ),
     metaKeywords: z.array(
