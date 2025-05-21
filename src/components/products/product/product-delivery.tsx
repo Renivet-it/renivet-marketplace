@@ -31,7 +31,8 @@ export function DeliveryOption({
 }: DeliveryOptionProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newZipCode, setNewZipCode] = useState(initialZipCode || "");
-    const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+    const [tempSelectedAddress, setTempSelectedAddress] = useState<Address | null>(null); // Temporary selection in modal
+    const [selectedAddress, setSelectedAddress] = useState<Address | null>(null); // Confirmed selection
     const [error, setError] = useState("");
     const [isPending, startTransition] = useTransition();
 
@@ -50,16 +51,16 @@ export function DeliveryOption({
     // Handle clicking the "Change" button to open the modal
     const handleChangeClick = () => {
         setIsModalOpen(true);
-        setNewZipCode(initialZipCode || "");
+        setNewZipCode(selectedAddress?.pincode || initialZipCode || ""); // Use selectedAddress pincode if available
+        setTempSelectedAddress(selectedAddress); // Pre-select the confirmed address in the modal
         setError("");
-        setSelectedAddress(null); // Reset selected address when opening the modal
     };
 
     // Handle selecting an address from the saved addresses list
     const handleAddressSelect = (address: Address) => {
-        setSelectedAddress(address);
-        setNewZipCode(address.pincode); // Update the pincode input with the selected address's pincode
-        setError(""); // Clear any existing errors
+        setTempSelectedAddress(address); // Set temporary selection, keep modal open
+        setNewZipCode(address.pincode); // Update pincode input
+        setError(""); // Clear errors
     };
 
     // Handle form submission to check delivery estimate
@@ -110,9 +111,22 @@ export function DeliveryOption({
                         day: "numeric",
                     });
 
+                    // Set selected address only on submit
+                    if (tempSelectedAddress) {
+                        setSelectedAddress(tempSelectedAddress); // Use saved address
+                    } else {
+                        setSelectedAddress({
+                            id: "manual",
+                            name: "Custom Pincode",
+                            pincode: newZipCode,
+                            address: "Manually entered pincode",
+                            label: "CUSTOM",
+                        }); // Create temporary address for manual pincode
+                    }
+
                     setZipCode(newZipCode);
                     setEstimatedDelivery(formattedDate);
-                    setIsModalOpen(false);
+                    setIsModalOpen(false); // Close modal only on submit
                 } else {
                     setError(result.message || "No delivery options available for this pincode.");
                 }
@@ -133,7 +147,9 @@ export function DeliveryOption({
             </div>
             <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
-                    <span className="text-base font-medium text-gray-800">{initialZipCode}</span>
+                    <span className="text-base font-medium text-gray-800">
+                        {selectedAddress ? `${selectedAddress.name}, ${selectedAddress.pincode}` : initialZipCode}
+                    </span>
                     <span className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-xs">
                         ✓
                     </span>
@@ -147,7 +163,11 @@ export function DeliveryOption({
             </div>
             <div className="flex items-center gap-2 mt-2 text-gray-600">
                 <Icons.Truck className="w-5 h-5" />
-                <span className="text-sm">Get it by {estimatedDelivery}</span>
+                {estimatedDelivery ? (
+                    <span className="text-sm">Get it by {estimatedDelivery}</span>
+                ) : (
+                    <span className="text-sm">Loading...</span>
+                )}
             </div>
 
             {/* Modal for entering pincode or selecting saved address */}
@@ -218,7 +238,7 @@ export function DeliveryOption({
                                                 <input
                                                     type="radio"
                                                     name="saved-address"
-                                                    checked={selectedAddress?.id === address.id}
+                                                    checked={tempSelectedAddress?.id === address.id}
                                                     onChange={() => handleAddressSelect(address)}
                                                     className="mt-1"
                                                 />
@@ -249,16 +269,14 @@ export function DeliveryOption({
                             >
                                 Cancel
                             </button>
-                            {selectedAddress && (
-                                <button
-                                    type="button"
-                                    onClick={handleZipCodeSubmit}
-                                    disabled={isPending}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
-                                >
-                                    {isPending ? "Checking..." : "Submit"}
-                                </button>
-                            )}
+                            <button
+                                type="button"
+                                onClick={handleZipCodeSubmit}
+                                disabled={isPending || (!tempSelectedAddress && !newZipCode)}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
+                            >
+                                {isPending ? "Checking..." : "Submit"}
+                            </button>
                         </div>
                     </div>
                 </div>

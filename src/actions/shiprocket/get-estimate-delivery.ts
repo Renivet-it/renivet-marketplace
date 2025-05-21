@@ -26,7 +26,6 @@ export async function getEstimatedDelivery({
       weight: 1, // Default weight: 1 kg
       cod: 0, // Default: Non-COD shipment
     });
-console.log("Shiprocket API response:", JSON.stringify(response, null, 2));
     // Return the entire response
     return {
       success: response.status,
