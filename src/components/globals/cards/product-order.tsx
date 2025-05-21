@@ -24,7 +24,9 @@ export function ProductOrderCard({
     ...props
 }: PageProps) {
     const itemMedia = item.product.media?.[0]?.mediaItem ?? null;
-    const imageUrl = itemMedia?.url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+    const imageUrl =
+        itemMedia?.url ??
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
     const imageAlt = itemMedia?.alt ?? item.product.title;
 
     const itemPrice =
@@ -126,6 +128,24 @@ export function ProductOrderCard({
                         <span className="font-semibold">Added on: </span>
                         {format(new Date(item.createdAt), "MMM dd, yyyy")}
                     </p>{" "}
+                </div>
+                <div className="flex gap-2">
+                    <Button
+                        className="md:flex-none flex-1"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => ("") }
+                    >
+                        Return
+                    </Button>
+                    <Button
+                        className="md:flex-none flex-1"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => ("")}
+                    >
+                        Exchange
+                    </Button>
                 </div>
             </div>
 
