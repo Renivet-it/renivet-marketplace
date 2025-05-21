@@ -38,7 +38,17 @@ import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
+import { InferenceClient } from "@huggingface/inference";
 import { products, productVariants, returnExchangePolicy, productSpecifications } from "@/lib/db/schema/product";
+const token = process.env.HF_TOKEN;
+if (!token) {
+  console.error("HF_TOKEN environment variable is not set");
+}
+const client = new InferenceClient(token);
+
+
+
+
 export const productsRouter = createTRPCRouter({
     getProducts: publicProcedure
         .input(
@@ -356,6 +366,57 @@ export const productsRouter = createTRPCRouter({
            const newProducts: any[] = [];
 
            for (const product of input) {
+            const category = await queries.categories.getCategory(product.categoryId);
+             const productTypeName = await queries.productTypes.getProductType(product.productTypeId);
+             const subCategoryName = await queries.subCategories.getSubCategory(product.subcategoryId);
+             // Generate embeddings for the product
+      const specsText = (product.specifications ?? [])
+        .map((spec) => `${spec.key}:${spec.value}`)
+        .join(" ");
+
+      const text = [
+        product.title,
+        product.description || "",
+        product.sizeAndFit || "",
+        product.metaTitle || "",
+        product.metaDescription || "",
+        product.materialAndCare || "",
+        user.brand?.name || "",
+        (product as any).category?.name || (category as any).name || "",
+        (product as any).subcategory?.name || (subCategoryName as any).name || "",
+        (product as any).productType?.name || (productTypeName as any).name || "",
+        specsText,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+      console.log("Text for embedding:", text);
+
+      let embeddings: number[] | null = null;
+      if (text) {
+        try {
+          console.log("Calling Hugging Face API for feature extraction...");
+          const response = await client.featureExtraction({
+            model: "sentence-transformers/all-MiniLM-L6-v2",
+            inputs: text,
+          });
+
+          console.log("Hugging Face API response:", response);
+
+          const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+          if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
+            console.error(`Invalid embedding for product with SKU ${product.sku}. Response length: ${embeddingArray?.length}`);
+          } else {
+            embeddings = embeddingArray;
+            console.log(`Generated embedding for product ${product.sku}: ${embeddings.length} dimensions`);
+          }
+        } catch (error) {
+          console.error(`Error generating embedding for product with SKU ${product.sku}:`, error);
+        }
+      } else {
+        console.warn(`No text available for embedding generation for product with SKU ${product.sku}`);
+      }
                const existingProductId = existingSKUMap.get(product.sku);
 
                if (existingProductId) {
@@ -380,6 +441,7 @@ export const productsRouter = createTRPCRouter({
                                length: product.length,
                                weight: product.weight,
                                brandId: product.brandId,
+                               embeddings,
                                updatedAt: new Date(),
                            })
                            .where(eq(products.id, existingProductId))
@@ -535,6 +597,7 @@ if (product.variants && product.variants.length > 0) {
                 newProducts.push({
                     ...product,
                     slug,
+                     embeddings, // Include embeddings for new product
                     returnExchangePolicy: {
                         returnable: product.returnable,
                         exchangeable: product.exchangeable,

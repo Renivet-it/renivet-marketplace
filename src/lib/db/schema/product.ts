@@ -14,6 +14,7 @@ import {
     text,
     timestamp,
     uuid,
+    vector
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
@@ -92,17 +93,24 @@ export const products = pgTable(
         rejectedAt: timestamp("rejected_at"),
         rejectionReason: text("rejection_reason"),
         lastReviewedAt: timestamp("last_reviewed_at"),
+        embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
     (table) => ({
         productSkuIdx: index("product_sku_idx").on(table.sku),
-        productFtsIdx: index("product_fts_idx").using(
-            "gin",
-            sql`(
-            setweight(to_tsvector('english', ${table.title}), 'A') ||
-            setweight(to_tsvector('english', ${table.description}), 'B')
-        )`
-        ),
+        // productFtsIdx: index("product_fts_idx").using(
+        //     "gin",
+        //     sql`(
+        //     setweight(to_tsvector('english', ${table.title}), 'A') ||
+        //     setweight(to_tsvector('english', ${table.description}), 'B')
+        // )`
+        // ),
+            productEmbeddingIdx: index("product_embedding_idx").using(
+        "ivfflat",
+        sql`${table.embeddings} vector_cosine_ops`
+    ).with({
+        lists: 100 // Adjust based on your dataset size
+    })
     })
 );
 
