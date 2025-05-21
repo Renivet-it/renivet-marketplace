@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/lib/trpc/trpc";
 import {
     addressSchema,
     brandDetailsAddressWithSafeSchema,
@@ -47,7 +47,7 @@ export const addressesRouter = createTRPCRouter({
                 .parse(data);
             return parsed;
         }),
-            getBrandConfidential: protectedProcedure
+            getBrandConfidential: publicProcedure
         .input(
             z.object({
                 brandId: z.string(),
