@@ -456,7 +456,7 @@ function OrderCard({
     );
 }
 
-function OrderHeader( { order }: { order: OrderWithItemAndBrand }) {
+function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
     const getStatusIcon = () => {
         if (
             order.status === "cancelled" ||
