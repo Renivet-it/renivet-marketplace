@@ -1511,6 +1511,8 @@ class ProductQuery {
 
         return data;
     }
+
+    async getProcuctReturnExchangePolicyByProductId(){}
 }
 
 export const productQueries = new ProductQuery();
