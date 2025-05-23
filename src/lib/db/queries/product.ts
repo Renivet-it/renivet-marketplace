@@ -32,7 +32,15 @@ import { InferenceClient } from "@huggingface/inference";
 
 const token = process.env.HF_TOKEN;
 
-const client = new InferenceClient(token);
+const hf = new InferenceClient(token);
+
+async function getEmbedding(text: string): Promise<number[]> {
+    const response = await hf.featureExtraction({
+        model: "sentence-transformers/all-MiniLM-L6-v2",
+        inputs: text,
+    });
+    return response as number[];
+}
 class ProductQuery {
     async getProductCount({
         brandId,
@@ -190,212 +198,221 @@ class ProductQuery {
         return parsed;
     }
 
-    async getProducts({
-     limit,
-  page,
-  search,
-  brandIds,
-  minPrice,
-  maxPrice,
-  categoryId,
-  subcategoryId,
-  productTypeId,
-  isActive,
-  isAvailable,
-  isPublished,
-  isDeleted,
-  verificationStatus,
-  sortBy = "createdAt",
-  sortOrder = "desc",
-  productImage,
-  productVisiblity,
-}: GetProductsParams) {
-  // Prepare full-text search query if search term is provided
-  const searchQuery = !!search?.length
-    ? sql`(
-        setweight(to_tsvector('english', ${products.title}), 'A') ||
-        setweight(to_tsvector('english', ${products.description}), 'B'))
-        @@ plainto_tsquery('english', ${search})`
-    : undefined;
-
-  // Normalize price filters
-  minPrice = !!minPrice
-    ? minPrice < 0
-      ? 0
-      : convertPriceToPaise(minPrice)
-    : null;
-  maxPrice = !!maxPrice
-    ? maxPrice > 10000
-      ? null
-      : convertPriceToPaise(maxPrice)
-    : null;
-
-  // Define filters
-  const filters = [
-    searchQuery,
-    !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
-    !!minPrice
-      ? sql`(
-          COALESCE(${products.price}, 0) >= ${minPrice} 
-          OR EXISTS (
-            SELECT 1 FROM ${productVariants} pv
-            WHERE pv.product_id = ${products.id}
-            AND COALESCE(pv.price, 0) >= ${minPrice}
-            AND pv.is_deleted = false
-          )
-        )`
-      : undefined,
-    !!maxPrice
-      ? sql`(
-          COALESCE(${products.price}, 0) <= ${maxPrice}
-          OR EXISTS (
-            SELECT 1 FROM ${productVariants} pv
-            WHERE pv.product_id = ${products.id}
-            AND COALESCE(pv.price, 0) <= ${maxPrice}
-            AND pv.is_deleted = false
-          )
-        )`
-      : undefined,
-    isActive !== undefined ? eq(products.isActive, isActive) : undefined,
-    isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
-    isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
-    isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
-    categoryId ? eq(products.categoryId, categoryId) : undefined,
-    subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
-    productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
-    verificationStatus
-      ? eq(products.verificationStatus, verificationStatus)
-      : undefined,
-    productImage
-      ? productImage === "with"
-        ? hasMedia(products, "media")
-        : productImage === "without"
-        ? noMedia(products, "media")
-        : undefined
-      : undefined,
-    productVisiblity
-      ? productVisiblity === "public"
-        ? eq(products.isDeleted, false)
-        : productVisiblity === "private"
-        ? eq(products.isDeleted, true)
-        : undefined
-      : undefined,
-  ].filter((f) => f !== undefined);
-
-  // Fetch products from database
-  let data = await db.query.products.findMany({
-    with: {
-      brand: true,
-      variants: true,
-      category: true,
-      subcategory: true,
-      productType: true,
-      options: true,
-      journey: true,
-      values: true,
-      returnExchangePolicy: true,
-      specifications: {
-        columns: {
-          key: true,
-          value: true,
-        },
-      },
-    },
-    where: and(...filters),
+async getProducts({
     limit,
-    offset: (page - 1) * limit,
-    orderBy: searchQuery
-      ? [
-          sql`ts_rank(
-            setweight(to_tsvector('english', ${products.title}), 'A') ||
-            setweight(to_tsvector('english', ${products.description}), 'B'),
-            plainto_tsquery('english', ${search})
-          ) DESC`,
-          sortOrder === "asc" ? asc(products[sortBy]) : desc(products[sortBy]),
-        ]
-      : [sortOrder === "asc" ? asc(products[sortBy]) : desc(products[sortBy])],
-    extras: {
-      count: db.$count(products, and(...filters)).as("product_count"),
-    },
-  });
+    page,
+    search,
+    brandIds,
+    minPrice,
+    maxPrice,
+    categoryId,
+    subcategoryId,
+    productTypeId,
+    isActive,
+    isAvailable,
+    isPublished,
+    isDeleted,
+    verificationStatus,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    productImage,
+    productVisiblity,
+}: {
+    limit: number;
+    page: number;
+    search?: string;
+    brandIds?: string[];
+    minPrice?: number | null;
+    maxPrice?: number | null;
+    categoryId?: string;
+    subcategoryId?: string;
+    productTypeId?: string;
+    isActive?: boolean;
+    isAvailable?: boolean;
+    isPublished?: boolean;
+    isDeleted?: boolean;
+    verificationStatus?: Product["verificationStatus"];
+    sortBy?: "price" | "createdAt";
+    sortOrder?: "asc" | "desc";
+    productImage?: Product["productImageFilter"];
+    productVisiblity?: Product["productVisiblityFilter"];
+}) {
+    // Price conversions remain the same
+    minPrice = !!minPrice
+        ? minPrice < 0
+            ? 0
+            : convertPriceToPaise(minPrice)
+        : null;
+    maxPrice = !!maxPrice
+        ? maxPrice > 10000
+            ? null
+            : convertPriceToPaise(maxPrice)
+        : null;
 
-  // Perform semantic search if search term is provided
-  if (search && data.length > 0) {
-    const productSentences = data.map((product) =>
-      `${product.title} ${product.description || ""}`.trim()
+    let searchQuery;
+    if (search?.length) {
+        // Get embedding for the search query
+        const searchEmbedding = await getEmbedding(search);
+
+        // Use cosine similarity with pgvector
+        searchQuery = sql`${products.embeddings} <=> ${searchEmbedding}::vector < 0.5`;
+    }
+
+    const filters = [
+        searchQuery,
+        !!brandIds?.length
+            ? inArray(products.brandId, brandIds)
+            : undefined,
+        !!minPrice
+            ? sql`(
+                COALESCE(${products.price}, 0) >= ${minPrice} 
+                OR EXISTS (
+                    SELECT 1 FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                    AND COALESCE(pv.price, 0) >= ${minPrice}
+                    AND pv.is_deleted = false
+                )
+            )`
+            : undefined,
+        !!maxPrice
+            ? sql`(
+                COALESCE(${products.price}, 0) <= ${maxPrice}
+                OR EXISTS (
+                    SELECT 1 FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                    AND COALESCE(pv.price, 0) <= ${maxPrice}
+                    AND pv.is_deleted = false
+                )
+            )`
+            : undefined,
+        isActive !== undefined
+            ? eq(products.isActive, isActive)
+            : undefined,
+        isAvailable !== undefined
+            ? eq(products.isAvailable, isAvailable)
+            : undefined,
+        isPublished !== undefined
+            ? eq(products.isPublished, isPublished)
+            : undefined,
+        isDeleted !== undefined
+            ? eq(products.isDeleted, isDeleted)
+            : undefined,
+        categoryId ? eq(products.categoryId, categoryId) : undefined,
+        subcategoryId
+            ? eq(products.subcategoryId, subcategoryId)
+            : undefined,
+        productTypeId
+            ? eq(products.productTypeId, productTypeId)
+            : undefined,
+        verificationStatus
+            ? eq(products.verificationStatus, verificationStatus)
+            : undefined,
+        productImage
+            ? productImage === "with"
+                ? hasMedia(products, "media")
+                : productImage === "without"
+                  ? noMedia(products, "media")
+                  : undefined
+            : undefined,
+        productVisiblity
+            ? productVisiblity === "public"
+              ? eq(products.isDeleted, false)
+              : productVisiblity === "private"
+              ? eq(products.isDeleted, true)
+              : undefined
+            : undefined,
+    ].filter(Boolean);
+
+    const orderBy = [];
+
+    if (search?.length) {
+        // Order by cosine similarity (1 - distance)
+        const searchEmbedding = await getEmbedding(search);
+        orderBy.push(sql`${products.embeddings} <=> ${searchEmbedding}::vector ASC`);
+    }
+
+    // Add the regular sort order
+    orderBy.push(
+        sortOrder === "asc"
+            ? asc(products[sortBy])
+            : desc(products[sortBy])
     );
-    const semanticScores = await client.sentenceSimilarity({
-      model: "sentence-transformers/all-MiniLM-L6-v2",
-      inputs: {
-        source_sentence: search,
-        sentences: productSentences,
-      },
+
+    const data = await db.query.products.findMany({
+        with: {
+            brand: true,
+            variants: true,
+            category: true,
+            subcategory: true,
+            productType: true,
+            options: true,
+            journey: true,
+            values: true,
+            returnExchangePolicy: true,
+            specifications: {
+                columns: {
+                    key: true,
+                    value: true,
+                },
+            },
+        },
+        where: and(...filters),
+        limit,
+        offset: (page - 1) * limit,
+        orderBy,
+        extras: {
+            count: db.$count(products, and(...filters)).as("product_count"),
+        },
     });
 
-    // Map products to their semantic similarity scores
-    const semanticResults = data.map((product, index) => ({
-      productId: product.id,
-      score: semanticScores[index],
+    // Rest of your media handling remains the same
+    const mediaIds = new Set<string>();
+    for (const product of data) {
+        product.media.forEach((media) => mediaIds.add(media.id));
+        product.variants.forEach((variant) => {
+            if (variant.image) mediaIds.add(variant.image);
+        });
+        if (product.sustainabilityCertificate)
+            mediaIds.add(product.sustainabilityCertificate);
+    }
+    const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+    const mediaMap = new Map(
+        mediaItems.data.map((item) => [item.id, item])
+    );
+
+    const enhancedData = data.map((product) => ({
+        ...product,
+        media: product.media.map((media) => ({
+            ...media,
+            mediaItem: mediaMap.get(media.id),
+        })),
+        sustainabilityCertificate: product.sustainabilityCertificate
+            ? mediaMap.get(product.sustainabilityCertificate)
+            : null,
+        variants: product.variants.map((variant) => ({
+            ...variant,
+            mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+        })),
+        returnable: product.returnExchangePolicy?.returnable ?? false,
+        returnDescription:
+            product.returnExchangePolicy?.returnDescription ?? null,
+        exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+        exchangeDescription:
+            product.returnExchangePolicy?.exchangeDescription ?? null,
+        specifications: product.specifications.map((spec) => ({
+            key: spec.key,
+            value: spec.value,
+        })),
     }));
 
-    // Sort products by semantic similarity score (descending)
-    const sortedProductIds = semanticResults
-      .sort((a, b) => b.score - a.score)
-      .map((result) => result.productId);
+    const parsed: ProductWithBrand[] = productWithBrandSchema
+        .array()
+        .parse(enhancedData);
 
-    // Reorder data based on semantic scores
-    data = sortedProductIds
-      .map((id) => data.find((product) => product.id === id)!)
-      .filter(Boolean);
-  }
-
-  // Fetch and map media items
-  const mediaIds = new Set<string>();
-  for (const product of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  // Enhance data with media and additional fields
-  const enhancedData = data.map((product) => ({
-    ...product,
-    media: product.media.map((media) => ({
-      ...media,
-      mediaItem: mediaMap.get(media.id),
-    })),
-    sustainabilityCertificate: product.sustainabilityCertificate
-      ? mediaMap.get(product.sustainabilityCertificate)
-      : null,
-    variants: product.variants.map((variant) => ({
-      ...variant,
-      mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-    })),
-    returnable: product.returnExchangePolicy?.returnable ?? false,
-    returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-    exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-    exchangeDescription:
-      product.returnExchangePolicy?.exchangeDescription ?? null,
-    specifications: product.specifications.map((spec) => ({
-      key: spec.key,
-      value: spec.value,
-    })),
-  }));
-
-  // Parse data with schema
-  const parsed: ProductWithBrand[] = productWithBrandSchema
-    .array()
-    .parse(enhancedData);
-
-  return {
-    data: parsed,
-    count: Number(data?.[0]?.count) || 0,
-  };
+    return {
+        data: parsed,
+        count: +data?.[0]?.count || 0,
+    };
 }
 
     async getProduct({

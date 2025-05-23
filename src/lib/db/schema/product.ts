@@ -98,13 +98,19 @@ export const products = pgTable(
     },
     (table) => ({
         productSkuIdx: index("product_sku_idx").on(table.sku),
-        productFtsIdx: index("product_fts_idx").using(
-            "gin",
-            sql`(
-            setweight(to_tsvector('english', ${table.title}), 'A') ||
-            setweight(to_tsvector('english', ${table.description}), 'B')
-        )`
-        ),
+        // productFtsIdx: index("product_fts_idx").using(
+        //     "gin",
+        //     sql`(
+        //     setweight(to_tsvector('english', ${table.title}), 'A') ||
+        //     setweight(to_tsvector('english', ${table.description}), 'B')
+        // )`
+        // ),
+            productEmbeddingIdx: index("product_embedding_idx").using(
+        "ivfflat",
+        sql`${table.embeddings} vector_cosine_ops`
+    ).with({
+        lists: 100 // Adjust based on your dataset size
+    })
     })
 );
 
