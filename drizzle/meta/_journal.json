@@ -1002,6 +1002,13 @@
       "when": 1745705189257,
       "tag": "0143_rare_norman_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 144,
+      "version": "7",
+      "when": 1747951141840,
+      "tag": "0144_foamy_enchantress",
+      "breakpoints": true
     }
   ]
 }

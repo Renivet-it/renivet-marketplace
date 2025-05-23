@@ -14,6 +14,7 @@ import {
     text,
     timestamp,
     uuid,
+    vector
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
@@ -92,6 +93,7 @@ export const products = pgTable(
         rejectedAt: timestamp("rejected_at"),
         rejectionReason: text("rejection_reason"),
         lastReviewedAt: timestamp("last_reviewed_at"),
+        embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
     (table) => ({
