@@ -39,21 +39,7 @@ async function getEmbedding(text: string): Promise<number[]> {
         model: "sentence-transformers/all-MiniLM-L6-v2",
         inputs: text,
     });
-
-
-    // Handle different response formats
-    let embedding: number[];
-    if (Array.isArray(response)) {
-        embedding = response;
-    } else if (response && Array.isArray(response[0])) {
-        embedding = response[0];
-    } else if (response?.embeddings) {
-        embedding = response.embeddings;
-    } else {
-        throw new Error(`Invalid embedding format: ${JSON.stringify(response)}`);
-    }
-
-    return embedding;
+    return response as number[];
 }
 class ProductQuery {
     async getProductCount({
@@ -263,30 +249,13 @@ async getProducts({
             : convertPriceToPaise(maxPrice)
         : null;
 
-    // let searchQuery;
-//     if (search?.length) {
-//         // Get embedding for the search query
-//         const searchEmbedding = await getEmbedding(search);
-//         const result = JSON.stringify(searchEmbedding);
-// console.log("Embedding type:", typeof result);
-//         // Use cosine similarity with pgvector
-//         searchQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < 0.8`;
-//     }
-let searchQuery;
-  if (search?.length) {
-      // Get embedding for the search query
-    //   const searchEmbedding = await getEmbedding(search);
+    let searchQuery;
+    if (search?.length) {
+        // Get embedding for the search query
+        const searchEmbedding = await getEmbedding(search);
 
-    //   // Format embedding as a pgvector-compatible string
-    //   const vectorString = `[${searchEmbedding.join(",")}]`;
-
-    //   // Log for debugging
-    //   console.log("Search embedding (first 5 values):", searchEmbedding.slice(0, 5));
-    //   console.log("Vector string sample:", vectorString.slice(0, 20) + "...");
-
-    //   // Use cosine similarity with pgvector
-    // //   searchQuery = sql`${products.embeddings} <=> ${vectorString}::vector < 0.8`;
-    //   searchQuery = sql`${products.embeddings} <=> (SELECT ('['||${JSON.stringify(searchEmbedding).slice(1,-1)}||']')::vector) < 0.8`;
+        // Use cosine similarity with pgvector
+        searchQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < 0.8`;
     }
 
     const filters = [
@@ -356,17 +325,12 @@ let searchQuery;
 
     const orderBy = [];
 
-    // if (search?.length) {
-    //     // Order by cosine similarity (1 - distance)
-    //     const searchEmbedding = await getEmbedding(search);
-    //     orderBy.push(sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`);
-    // }
-// if (search?.length) {
-// const searchEmbedding = await getEmbedding(search);
-//     const vectorString = `[${searchEmbedding.join(",")}]`;
-//     searchQuery = sql`${products.embeddings} <=> (SELECT ('['||${JSON.stringify(searchEmbedding).slice(1,-1)}||']')::vector) < 0.8`;
-//     orderBy.push(sql`${products.embeddings} <=> ${vectorString}::vector ASC`);
-//   }
+    if (search?.length) {
+        // Order by cosine similarity (1 - distance)
+        const searchEmbedding = await getEmbedding(search);
+        orderBy.push(sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`);
+    }
+
     // Add the regular sort order
     orderBy.push(
         sortOrder === "asc"
