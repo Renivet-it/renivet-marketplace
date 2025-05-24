@@ -105,12 +105,12 @@ export const products = pgTable(
         //     setweight(to_tsvector('english', ${table.description}), 'B')
         // )`
         // ),
-            productEmbeddingIdx: index("product_embedding_idx").using(
-        "ivfflat",
-        sql`${table.embeddings} vector_cosine_ops`
-    ).with({
-        lists: 100 // Adjust based on your dataset size
-    })
+    //         productEmbeddingIdx: index("product_embedding_idx").using(
+    //     "ivfflat",
+    //     sql`${table.embeddings} vector_cosine_ops`
+    // ).with({
+    //     lists: 100 // Adjust based on your dataset size
+    // })
     })
 );
 
