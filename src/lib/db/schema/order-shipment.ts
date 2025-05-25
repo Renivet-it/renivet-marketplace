@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
     bigint,
     boolean,
+    foreignKey,
     index,
     integer,
     jsonb,
@@ -20,7 +21,8 @@ export const orderShipments = pgTable(
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         orderId: text("order_id")
             .notNull()
-            .references(() => orders.id, { onDelete: "cascade" }).unique(),
+            .references(() => orders.id, { onDelete: "cascade" })
+            .unique("order_id_unique_idx"),
         brandId: uuid("brand_id")
             .notNull()
             .references(() => brands.id, { onDelete: "cascade" }),
@@ -108,10 +110,8 @@ export const returnShipments = pgTable(
     "order_return_shipments",
     {
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
-        deliveredOrderId: text("delivered_order_id")
-            .notNull()
-            .references(() => orderShipments.orderId, { onDelete: "cascade" }),
-        returnOrderId: text("return_order_id").notNull(),
+        deliveredOrderId: text("delivered_order_id").notNull(),
+        returnOrderId: text("return_order_id").notNull().unique(),
         srOrderId: bigint("sr_order_id", { mode: "number" }),
         srShipmentId: bigint("sr_shipment_id", { mode: "number" }),
         status: text("status"),
@@ -122,12 +122,17 @@ export const returnShipments = pgTable(
         ...timestamps,
     },
     (table) => ({
-        returnShipmentDeliveredOrderIdIdx: index(
-            "rs_doi_idx"
-        ).on(table.deliveredOrderId),
-        returnShipmentReturnOrderIdIdx: index(
-            "rs_roi_idx"
-        ).on(table.returnOrderId),
+        returnShipmentDeliveredOrderIdIdx: index("rs_doi_idx").on(
+            table.deliveredOrderId
+        ),
+        returnShipmentReturnOrderIdIdx: index("rs_roi_idx").on(
+            table.returnOrderId
+        ),
+        deliveredOrderIdFK: foreignKey({
+            columns: [table.deliveredOrderId],
+            foreignColumns: [orderShipments.orderId],
+            name: "delivered_order_id_fk",
+        }).onDelete("cascade"),
     })
 );
 
@@ -135,15 +140,9 @@ export const exchangeShipments = pgTable(
     "order_exchange_shipments",
     {
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
-        deliveredOrderId: text("delivered_order_id")
-            .notNull()
-            .references(() => orderShipments.orderId, { onDelete: "cascade" }),
-        returnedOrderId: uuid("returned_order_id")
-            .notNull()
-            .references(() => returnShipments.id, {
-                onDelete: "cascade",
-            }),
-        exchangeOrderId: text("exchange_order_id").notNull(),
+        deliveredOrderId: text("delivered_order_id").notNull(),
+        returnedOrderId: uuid("returned_order_id").notNull(),
+        exchangeOrderId: text("exchange_order_id").notNull().unique(),
         srOrderId: bigint("sr_order_id", { mode: "number" }),
         srShipmentId: bigint("sr_shipment_id", { mode: "number" }),
         status: text("status"),
@@ -153,12 +152,22 @@ export const exchangeShipments = pgTable(
         ...timestamps,
     },
     (table) => ({
-        exchangeShipmentDeliveredOrderIdIdx: index(
-            "es_doi_idx"
-        ).on(table.deliveredOrderId),
-        exchangeShipmentReturnedOrderIdIdx: index(
-            "es_roi_idx"
-        ).on(table.returnedOrderId),
+        exchangeShipmentDeliveredOrderIdIdx: index("es_doi_idx").on(
+            table.deliveredOrderId
+        ),
+        exchangeShipmentReturnedOrderIdIdx: index("es_roi_idx").on(
+            table.returnedOrderId
+        ),
+        deliveredOrderIdFK: foreignKey({
+            columns: [table.deliveredOrderId],
+            foreignColumns: [orderShipments.orderId],
+            name: "delivered_order_id_fk",
+        }).onDelete("cascade"),
+        returnedOrderIdFK: foreignKey({
+            columns: [table.returnedOrderId],
+            foreignColumns: [returnShipments.id],
+            name: "return_order_id_fk",
+        }).onDelete("cascade"),
     })
 );
 
@@ -187,24 +196,30 @@ export const orderShipmentItemsRelations = relations(
     })
 );
 
-export const returnShipmentsRelations = relations(returnShipments, ({ one }) => ({
-    deliveredOrder: one(orderShipments, {
-        fields: [returnShipments.deliveredOrderId],
-        references: [orderShipments.orderId],
-    }),
-    exchange: one(exchangeShipments, {
-        fields: [returnShipments.id],
-        references: [exchangeShipments.returnedOrderId],
-    }),
-}));
+export const returnShipmentsRelations = relations(
+    returnShipments,
+    ({ one }) => ({
+        deliveredOrder: one(orderShipments, {
+            fields: [returnShipments.deliveredOrderId],
+            references: [orderShipments.orderId],
+        }),
+        exchange: one(exchangeShipments, {
+            fields: [returnShipments.id],
+            references: [exchangeShipments.returnedOrderId],
+        }),
+    })
+);
 
-export const exchangeShipmentsRelations = relations(exchangeShipments, ({ one }) => ({
-    deliveredOrder: one(orderShipments, {
-        fields: [exchangeShipments.deliveredOrderId],
-        references: [orderShipments.orderId],
-    }),
-    returnedOrder: one(returnShipments, {
-        fields: [exchangeShipments.returnedOrderId],
-        references: [returnShipments.id],
-    }),
-}));
+export const exchangeShipmentsRelations = relations(
+    exchangeShipments,
+    ({ one }) => ({
+        deliveredOrder: one(orderShipments, {
+            fields: [exchangeShipments.deliveredOrderId],
+            references: [orderShipments.orderId],
+        }),
+        returnedOrder: one(returnShipments, {
+            fields: [exchangeShipments.returnedOrderId],
+            references: [returnShipments.id],
+        }),
+    })
+);
