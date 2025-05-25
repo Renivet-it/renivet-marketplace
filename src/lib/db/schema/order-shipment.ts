@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+    bigint,
     boolean,
     index,
     integer,
@@ -19,7 +20,7 @@ export const orderShipments = pgTable(
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         orderId: text("order_id")
             .notNull()
-            .references(() => orders.id, { onDelete: "cascade" }),
+            .references(() => orders.id, { onDelete: "cascade" }).unique(),
         brandId: uuid("brand_id")
             .notNull()
             .references(() => brands.id, { onDelete: "cascade" }),
@@ -60,8 +61,13 @@ export const orderShipments = pgTable(
         pickupTokenNumber: text("pickup_token_number"),
         ...timestamps,
         isAwbGenerated: boolean("is_awb_generated").default(false),
-        awbDetailsShipRocketJson: jsonb("awb_details_shiprocket_json").default({}),
-        pickUpDetailsShipRocketJson: jsonb("pick_up_details_shiprocket_json").default({}),
+        awbDetailsShipRocketJson: jsonb("awb_details_shiprocket_json").default(
+            {}
+        ),
+        pickUpDetailsShipRocketJson: jsonb(
+            "pick_up_details_shiprocket_json"
+        ).default({}),
+        isRtoReturn: boolean("is_rto_return").default(false),
     },
     (table) => ({
         orderShipmentOrderIdIdx: index("order_shipment_order_id_idx").on(
@@ -98,6 +104,64 @@ export const orderShipmentItems = pgTable(
     })
 );
 
+export const returnShipments = pgTable(
+    "order_return_shipments",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        deliveredOrderId: text("delivered_order_id")
+            .notNull()
+            .references(() => orderShipments.orderId, { onDelete: "cascade" }),
+        returnOrderId: text("return_order_id").notNull(),
+        srOrderId: bigint("sr_order_id", { mode: "number" }),
+        srShipmentId: bigint("sr_shipment_id", { mode: "number" }),
+        status: text("status"),
+        rtoExchangeType: boolean("rto_exchange_type").default(false),
+        awb: bigint("awb", { mode: "number" }),
+        courierCompanyName: text("company_name_courier"),
+        srResponse: jsonb("sr_response_json").default({}),
+        ...timestamps,
+    },
+    (table) => ({
+        returnShipmentDeliveredOrderIdIdx: index(
+            "rs_doi_idx"
+        ).on(table.deliveredOrderId),
+        returnShipmentReturnOrderIdIdx: index(
+            "rs_roi_idx"
+        ).on(table.returnOrderId),
+    })
+);
+
+export const exchangeShipments = pgTable(
+    "order_exchange_shipments",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        deliveredOrderId: text("delivered_order_id")
+            .notNull()
+            .references(() => orderShipments.orderId, { onDelete: "cascade" }),
+        returnedOrderId: uuid("returned_order_id")
+            .notNull()
+            .references(() => returnShipments.id, {
+                onDelete: "cascade",
+            }),
+        exchangeOrderId: text("exchange_order_id").notNull(),
+        srOrderId: bigint("sr_order_id", { mode: "number" }),
+        srShipmentId: bigint("sr_shipment_id", { mode: "number" }),
+        status: text("status"),
+        awb: bigint("awb", { mode: "number" }),
+        courierCompanyName: text("company_courier_name"),
+        srResponse: jsonb("sr_response_json").default({}),
+        ...timestamps,
+    },
+    (table) => ({
+        exchangeShipmentDeliveredOrderIdIdx: index(
+            "es_doi_idx"
+        ).on(table.deliveredOrderId),
+        exchangeShipmentReturnedOrderIdIdx: index(
+            "es_roi_idx"
+        ).on(table.returnedOrderId),
+    })
+);
+
 export const orderShipmentsRelations = relations(
     orderShipments,
     ({ one, many }) => ({
@@ -122,3 +186,25 @@ export const orderShipmentItemsRelations = relations(
         }),
     })
 );
+
+export const returnShipmentsRelations = relations(returnShipments, ({ one }) => ({
+    deliveredOrder: one(orderShipments, {
+        fields: [returnShipments.deliveredOrderId],
+        references: [orderShipments.orderId],
+    }),
+    exchange: one(exchangeShipments, {
+        fields: [returnShipments.id],
+        references: [exchangeShipments.returnedOrderId],
+    }),
+}));
+
+export const exchangeShipmentsRelations = relations(exchangeShipments, ({ one }) => ({
+    deliveredOrder: one(orderShipments, {
+        fields: [exchangeShipments.deliveredOrderId],
+        references: [orderShipments.orderId],
+    }),
+    returnedOrder: one(returnShipments, {
+        fields: [exchangeShipments.returnedOrderId],
+        references: [returnShipments.id],
+    }),
+}));

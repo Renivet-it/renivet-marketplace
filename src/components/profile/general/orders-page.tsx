@@ -351,12 +351,13 @@ function OrderCard({
             <Card className="rounded-none">
                 <CardHeader>
                     <ul>
-                        <li className="flex items-center gap-4">
+                        <li className="flex flex-col sm:flex-row items-center gap-4">
                             <OrderHeader order={order} />
-                            <div>
+                            <div className="flex-1 w-full sm:w-auto sm:flex-none">
                                 {(order.status === "pending" ||
                                     order.status === "processing") && (
                                     <Button
+                                        className="w-full sm:w-auto"
                                         variant="destructive"
                                         size="sm"
                                         onClick={() =>
