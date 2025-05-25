@@ -73,6 +73,7 @@ export const orderShipmentSchema = z.object({
         .nullable(),
     pickupTokenNumber: z.string().nullable(),
     isAwbGenerated: z.boolean().default(false),
+    isRtoReturn: z.boolean().default(false),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
