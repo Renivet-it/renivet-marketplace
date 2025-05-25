@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const createReturnShipmentSchema = z.object({
+export const returnShipmentSchema = z.object({
   deliveredOrderId: z.string(),
   returnOrderId: z.string(),
   srOrderId: z.number().optional(),
@@ -11,3 +11,5 @@ export const createReturnShipmentSchema = z.object({
   courierCompanyName: z.string().optional(),
   srResponse: z.record(z.any()).optional(),
 });
+
+export type returnShipment = z.infer<typeof returnShipmentSchema>;
