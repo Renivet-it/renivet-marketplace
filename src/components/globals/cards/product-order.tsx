@@ -61,15 +61,9 @@ export function ProductOrderCard({
         serverNow: Date | undefined
     ): boolean {
         if (!shipmentDate || !returnPeriod || !serverNow) return false;
-
         const shipment = new Date(shipmentDate);
         const returnDeadline = new Date(shipment);
         returnDeadline.setDate(returnDeadline.getDate() + returnPeriod);
-
-        console.log("⏱️ return deadline:", returnDeadline);
-        console.log("📦 shipment:", shipment);
-        console.log("🕒 serverNow:", serverNow);
-
         return serverNow <= returnDeadline;
     }
 
@@ -88,6 +82,8 @@ export function ProductOrderCard({
             item.returnExchangePolicy?.exchangePeriod,
             serverNow
         );
+
+    const isDelivered: boolean = shipmentDetails?.status === "delivered";
 
     return (
         <div
@@ -169,7 +165,7 @@ export function ProductOrderCard({
                     </p>{" "}
                 </div>
                 <div className="flex gap-2">
-                    {canReturn && (
+                    {isDelivered && canReturn && (
                         <Button
                             className="flex-1 md:flex-none"
                             variant="outline"
@@ -179,7 +175,7 @@ export function ProductOrderCard({
                             Return
                         </Button>
                     )}
-                    {canExchange && (
+                    {isDelivered && canExchange && (
                         <Button
                             className="flex-1 md:flex-none"
                             variant="outline"
