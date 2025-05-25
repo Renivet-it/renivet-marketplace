@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const createExchangeShipmentSchema = z.object({
+export const exchangeShipmentSchema = z.object({
   deliveredOrderId: z.string(),
   returnedOrderId: z.string().uuid(),
   exchangeOrderId: z.string(),
@@ -11,3 +11,5 @@ export const createExchangeShipmentSchema = z.object({
   courierCompanyName: z.string().optional(),
   srResponse: z.record(z.any()).optional(),
 });
+
+export type exchangeShipment = z.infer<typeof exchangeShipmentSchema>;
