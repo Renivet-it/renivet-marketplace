@@ -1016,6 +1016,20 @@
       "when": 1747699781589,
       "tag": "0144_burly_zzzax",
       "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1748183385493,
+      "tag": "0145_chief_tusk",
+      "breakpoints": true
+    },
+    {
+      "idx": 146,
+      "version": "7",
+      "when": 1748186312199,
+      "tag": "0146_stiff_lord_hawal",
+      "breakpoints": true
     }
   ]
 }
