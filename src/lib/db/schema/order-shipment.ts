@@ -14,6 +14,7 @@ import {
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { orderItems, orders } from "./order";
+import { mediaExchangeShipment, mediaReturnShipment } from "./media";
 
 export const orderShipments = pgTable(
     "order_shipments",
@@ -223,3 +224,12 @@ export const exchangeShipmentsRelations = relations(
         }),
     })
 );
+
+
+export const returnShipmentMediaRelation = relations(returnShipments, ({ many }) => ({
+  mediaReturn: many(mediaReturnShipment),
+}));
+
+export const exchangeShipmentMediaRelation = relations(exchangeShipments, ({ many }) => ({
+  mediaReturn: many(mediaExchangeShipment),
+}));
