@@ -10,7 +10,7 @@ import * as schema from "./schema";
 const connection = postgres(process.env.DATABASE_URL!, {
     max: 20, // Maximum number of connections in the pool (adjust based on your DB's max_connections)
     idle_timeout: 30, // Close idle connections after 30 seconds
-    connect_timeout: 2, // Timeout for establishing a new connection (in seconds)
+    connect_timeout: 5, // Timeout for establishing a new connection (in seconds)
     max_lifetime: 60 * 30, // Close connections after 30 minutes to avoid stale connections
   });
 

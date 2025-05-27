@@ -2,6 +2,7 @@ import { InferenceClient } from "@huggingface/inference";
 import { db } from "@/lib/db";
 import { products, brands, categories, subCategories, productTypes } from "@/lib/db/schema"; // Your schemas
 import { eq } from "drizzle-orm";
+import { getEmbedding } from "@/lib/python/sematic-search";
 
 const token = process.env.HF_TOKEN;
 const client = new InferenceClient(token);
@@ -79,7 +80,8 @@ async function generateProductEmbeddings() {
       });
 
       // Extract the embedding array
-      const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+      // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+      const embeddingArray = await getEmbedding(text);
       if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
         console.error(`Invalid embedding for product ${product.id}`);
         continue;
