@@ -40,6 +40,9 @@ import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { InferenceClient } from "@huggingface/inference";
 import { products, productVariants, returnExchangePolicy, productSpecifications } from "@/lib/db/schema/product";
+import { getEmbedding } from "@/lib/python/sematic-search";
+
+
 const token = process.env.HF_TOKEN;
 if (!token) {
   console.error("HF_TOKEN environment variable is not set");
@@ -396,15 +399,17 @@ export const productsRouter = createTRPCRouter({
       let embeddings: number[] | null = null;
       if (text) {
         try {
-          console.log("Calling Hugging Face API for feature extraction...");
-          const response = await client.featureExtraction({
-            model: "sentence-transformers/all-MiniLM-L6-v2",
-            inputs: text,
-          });
+        //   console.log("Calling Hugging Face API for feature extraction...");
+        //   const response = await client.featureExtraction({
+        //     model: "sentence-transformers/all-MiniLM-L6-v2",
+        //     inputs: text,
+        //   });
 
-          console.log("Hugging Face API response:", response);
+        //   console.log("Hugging Face API response:", response);
 
-          const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+        //   const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+            const embeddingArray = await getEmbedding(text);
+
           if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
             console.error(`Invalid embedding for product with SKU ${product.sku}. Response length: ${embeddingArray?.length}`);
           } else {

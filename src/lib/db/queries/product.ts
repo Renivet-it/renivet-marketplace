@@ -31,19 +31,19 @@ import { productTypeQueries } from "./product-type";
 import { subCategoryQueries } from "./sub-category";
 import { brandQueries } from "./brand";
 import { InferenceClient } from "@huggingface/inference";
-
+import { getEmbedding } from "@/lib/python/sematic-search";
 
 const token = process.env.HF_TOKEN;
 
 const hf = new InferenceClient(token);
 
-async function getEmbedding(text: string): Promise<number[]> {
-    const response = await hf.featureExtraction({
-        model: "sentence-transformers/all-MiniLM-L6-v2",
-        inputs: text,
-    });
-    return response as number[];
-}
+// async function getEmbedding(text: string): Promise<number[]> {
+//     const response = await hf.featureExtraction({
+//         model: "sentence-transformers/all-MiniLM-L6-v2",
+//         inputs: text,
+//     });
+//     return response as number[];
+// }
 class ProductQuery {
     async getProductCount({
         brandId,
@@ -813,16 +813,17 @@ console.log("Input values:", values);
     let embeddings: number[] | null = null;
     if (text) {
       try {
-        console.log("Calling Hugging Face API for feature extraction...");
-        const response = await hf.featureExtraction({
-          model: "sentence-transformers/all-MiniLM-L6-v2",
-   inputs: text,
-        });
+//         console.log("Calling Hugging Face API for feature extraction...");
+//         const response = await hf.featureExtraction({
+//           model: "sentence-transformers/all-MiniLM-L6-v2",
+//    inputs: text,
+//         });
 
-        console.log("Hugging Face API response:", response);
+//         console.log("Hugging Face API response:", response);
 
         // Extract the embedding array
-        const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+        // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+        const embeddingArray = await getEmbedding(text);
         if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
           console.error(`Invalid embedding for product with title ${values.title}. Response length: ${embeddingArray?.length}`);
         } else {
@@ -1227,16 +1228,17 @@ console.log("Input values:", values);
         let embeddings: number[] | null = null;
         if (text) {
           try {
-            console.log("Calling Hugging Face API for feature extraction...");
-            const response = await hf.featureExtraction({
-              model: "sentence-transformers/all-MiniLM-L6-v2",
-              inputs: text,
-            });
+            // console.log("Calling Hugging Face API for feature extraction...");
+            // const response = await hf.featureExtraction({
+            //   model: "sentence-transformers/all-MiniLM-L6-v2",
+            //   inputs: text,
+            // });
 
-            console.log("Hugging Face API response:", response);
+            // console.log("Hugging Face API response:", response);
 
             // Extract the embedding array
-            const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+            // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+            const embeddingArray = await getEmbedding(text);
             if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
               console.error(`Invalid embedding for product ${productId}. Response length: ${embeddingArray?.length}`);
             } else {
