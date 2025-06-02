@@ -297,6 +297,23 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             },
         ],
     },
+{
+    title: "Marketing Management",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Bulk Email Campaigns",
+            url: "/dashboard/general/email-campaigns",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Bulk WhatsApp Messaging",
+            url: "/dashboard/general/whatsapp-messaging",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        }
+    ]
+}
 ];
 
 export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
