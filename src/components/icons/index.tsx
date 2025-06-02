@@ -109,6 +109,7 @@ import {
     CheckCircle,
     ClipboardList,
     Bookmark,
+    Megaphone,
     type LucideIcon,
     type LucideProps,
 } from "lucide-react";
@@ -226,6 +227,7 @@ export const Icons = {
     CheckCircle,
     ShoppingBag,
     Home,
+    Megaphone,
     X_Twitter: (props: LucideProps) => (
         <svg
             aria-hidden="true"
