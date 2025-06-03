@@ -2,12 +2,14 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import { useReturnStore } from "@/lib/store/return-store";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { OrderWithItemAndBrand } from "@/lib/validations";
 import { OrderShipment } from "@/lib/validations/order-shipment";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface PageProps extends GenericProps {
     item: OrderWithItemAndBrand["items"][number];
@@ -28,6 +30,8 @@ export function ProductOrderCard({
     shipmentDetails,
     ...props
 }: PageProps) {
+    const router = useRouter();
+    const setReturnItem = useReturnStore((state) => state.setReturnItem);
     const itemMedia = item.product.media?.[0]?.mediaItem ?? null;
     const imageUrl =
         itemMedia?.url ??
@@ -84,6 +88,10 @@ export function ProductOrderCard({
         );
 
     const isDelivered: boolean = shipmentDetails?.status === "delivered";
+    const handelReturn = (item: OrderWithItemAndBrand["items"][number]) => {
+        setReturnItem(item);
+        router.push(`/profile/orders/return/${item.id}`);
+    };
 
     return (
         <div
@@ -165,12 +173,20 @@ export function ProductOrderCard({
                     </p>{" "}
                 </div>
                 <div className="flex gap-2">
+                    <Button
+                        className="flex-1 md:flex-none"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handelReturn(item)}
+                    >
+                        Return
+                    </Button>
                     {isDelivered && canReturn && (
                         <Button
                             className="flex-1 md:flex-none"
                             variant="outline"
                             size="sm"
-                            onClick={() => ""}
+                            onClick={() => handelReturn(item)}
                         >
                             Return
                         </Button>
