@@ -205,7 +205,7 @@ export function MarketingEmailForm() {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(() => setConfirmSend(true))} className="space-y-6">
         <div
           ref={dropRef}
           onDrop={onDrop}
@@ -235,7 +235,7 @@ export function MarketingEmailForm() {
             <p className="text-red-500 text-sm mt-2">{errors.file.message}</p>
           )}
           <p className="text-xs text-gray-400 mt-2">
-            Required columns: Email, FirstName, Discount(%), expiryDate, BrandName;
+            Required columns: Email, FirstName, Discount(%), expiryDate, BrandName
           </p>
         </div>
 
@@ -246,6 +246,7 @@ export function MarketingEmailForm() {
                 Recipient Preview ({recipients.length} recipients)
               </h3>
               <button
+                type="button"
                 onClick={() => setShowPreview(!showPreview)}
                 className="text-indigo-600 hover:underline text-sm font-medium"
               >
@@ -316,6 +317,7 @@ export function MarketingEmailForm() {
             </p>
             <div className="flex justify-end gap-3">
               <button
+                type="button"
                 onClick={() => setConfirmSend(false)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm font-medium"
               >
@@ -323,7 +325,8 @@ export function MarketingEmailForm() {
                 Cancel
               </button>
               <button
-                onClick={onSubmit}
+                type="button"
+                onClick={handleSubmit(onSubmit)}
                 disabled={isLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-medium"
               >

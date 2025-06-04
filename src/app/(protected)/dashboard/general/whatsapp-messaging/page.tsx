@@ -1,51 +1,32 @@
-// File: app/dashboard/test-redirect/page.tsx
 import { DashShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-
-export const metadata: Metadata = {
-  title: "Bulk Email Campaigns",
-  description: "Test page to verify redirect functionality",
-};
+import { Suspense } from "react";
+import { MarketingWhatsAppForm } from "@/components/globals/whatsapp-template/bulk-whatsapp-send";
 
 interface PageProps {
-  searchParams: Promise<{
-    redirectTo?: string;
-  }>;
+  searchParams: Promise<object>;
 }
 
-export default async function Page({ searchParams }: PageProps) {
-  const { redirectTo } = await searchParams;
+export const metadata: Metadata = {
+  title: "Bulk WhatsApp Campaigns",
+  description: "Upload a CSV file to send personalized bulk WhatsApp messages",
+};
 
-  // If redirectTo query param is present, redirect to that URL
-  if (redirectTo) {
-    redirect(redirectTo);
-  }
-
+export default function BulkWhatsAppPage({ searchParams }: PageProps) {
   return (
     <DashShell>
-      <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
-        <div className="space-y-1 text-center md:text-start">
-          <h1 className="text-2xl font-bold">Test Redirect</h1>
-          <p className="text-balance text-sm text-muted-foreground">
-            Test page to verify redirect functionality
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="flex flex-col items-start gap-4">
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Bulk WhatsApp Campaigns
+          </h1>
+          <p className="text-sm text-gray-500">
+            Upload a CSV file to send personalized bulk WhatsApp messages
           </p>
         </div>
-        <div className="flex gap-4">
-          <Link
-            href="/dashboard/test-redirect?redirectTo=/dashboard"
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Redirect to Dashboard
-          </Link>
-          <Link
-            href="/dashboard/test-redirect?redirectTo=/dashboard/tests"
-            className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-          >
-            Redirect to Tests
-          </Link>
-        </div>
+        <Suspense fallback={<div className="text-center text-gray-500">Loading...</div>}>
+          <MarketingWhatsAppForm />
+        </Suspense>
       </div>
     </DashShell>
   );
