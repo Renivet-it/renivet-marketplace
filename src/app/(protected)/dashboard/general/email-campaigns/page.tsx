@@ -18,7 +18,7 @@ export default function BulkEmailPage({ searchParams }: PageProps) {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex flex-col items-start gap-4">
           <h1 className="text-2xl font-semibold text-gray-800">
-            Bulk Email Campaigns
+            Bulk Email Campaigns(100/day)
           </h1>
           <p className="text-sm text-gray-500">
             Upload an Excel or CSV file to send personalized bulk emails
