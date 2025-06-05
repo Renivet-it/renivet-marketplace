@@ -19,7 +19,7 @@ export function MarketingWhatsAppForm() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [progress, setProgress] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
-  const [confirmSend, setConfirmSend] = useState(true);
+  const [confirmSend, setConfirmSend] = useState(false); // Fixed: Initialize to false
   const [fileError, setFileError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -53,34 +53,12 @@ export function MarketingWhatsAppForm() {
     return /^[0-9]+(%?)$/.test(discount);
   };
 
-  const validateExpiryDate = (date: string) => {
-    // Accept YYYY-MM-DD or MM/DD/YYYY
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      const [year, month, day] = date.split("-").map(Number);
-      return month >= 1 && month <= 12 && day >= 1 && day <= 31;
-    }
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
-      const [month, day, year] = date.split("/").map(Number);
-      return year >= 2020 && month >= 1 && month <= 12 && day >= 1 && day <= 31;
-    }
-    return false;
-  };
-
   const transformPhoneNumber = (phone: string) => {
     phone = phone.replace(/["\s]/g, "");
     if (/^\d{10}$/.test(phone)) {
       return `+91${phone}`;
     }
     return phone;
-  };
-
-  const transformExpiryDate = (date: string) => {
-    date = date.trim().replace(/^"|"$/g, "");
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
-      const [month, day, year] = date.split("/").map(Number);
-      return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    }
-    return date;
   };
 
   const handleFileChange = (file: File | undefined) => {
@@ -129,7 +107,7 @@ export function MarketingWhatsAppForm() {
               full_name: row.full_name?.trim().replace(/^"|"$/g, "") || "",
               phone_number: transformPhoneNumber(row.phone_number || ""),
               discount: row.discount?.trim().replace(/^"|"$/g, "") || "",
-              expiry_date: transformExpiryDate(row.expiry_date?.trim().replace(/^"|"$/g, "") || ""),
+              expiry_date: row.expiry_date?.trim().replace(/^"|"$/g, "") || "",
             };
 
             // Detailed validation
@@ -141,9 +119,7 @@ export function MarketingWhatsAppForm() {
             if (!transformedRow.discount || !validateDiscount(transformedRow.discount)) {
               errors.push(`Invalid discount: ${transformedRow.discount}`);
             }
-            if (!transformedRow.expiry_date || !validateExpiryDate(transformedRow.expiry_date)) {
-              errors.push(`Invalid expiry_date: ${transformedRow.expiry_date}`);
-            }
+            if (!transformedRow.expiry_date) errors.push("Missing expiry_date");
 
             if (errors.length > 0) {
               invalidRows.push(`Row ${index + 2}: ${errors.join(", ")}`);
@@ -378,20 +354,20 @@ export function MarketingWhatsAppForm() {
               <button
                 type="button"
                 onClick={() => setConfirmSend(false)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm font-medium"
-              >
-                <X className="w-4 h-4" />
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit(onSubmit)}
-                disabled={isLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-medium"
-              >
-                <Send className="w-4 h-4" />
-                {isLoading ? "Sending..." : "Confirm Send"}
-              </button>
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm font-semibold"
+            >
+              <X className="w-4 h-4" />
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit(onSubmit)}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-semibold"
+            >
+              <Send className="w-4 h-4" />
+              {isLoading ? "Sending..." : "Confirm Send"}
+            </button>
             </div>
           </div>
         </div>
@@ -399,3 +375,5 @@ export function MarketingWhatsAppForm() {
     </div>
   );
 }
+
+export default MarketingWhatsAppForm;
