@@ -2,39 +2,33 @@
 
 import { sendPromoOfferMessage } from "@/lib/whatsapp/index";
 
-export async function sendWhatsAppMessages(data: {
-  data: Array<{ full_name: string; phone_number: string; discount: string; expiry_date: string }>;
+export async function sendSingleWhatsAppMessage(recipient: {
+  full_name: string;
+  phone_number: string;
+  discount: string;
+  expiry_date: string;
 }) {
   try {
-    let successCount = 0;
-    const errors: string[] = [];
+    const result = await sendPromoOfferMessage({
+      recipientPhoneNumber: recipient.phone_number,
+      templateName: "promo_offer_2025",
+      languageCode: "en_US",
+      parameters: [recipient.full_name, recipient.discount, recipient.expiry_date],
+    });
 
-    for (const row of data.data) {
-      try {
-        const result = await sendPromoOfferMessage({
-          recipientPhoneNumber: row.phone_number,
-          template: "promo_offer_2025",
-          lang: "en_US",
-          // @ts-ignore
-          parameters: [row.full_name, row.discount, row.expiry_date],
-        });
-        if (result.success) {
-          successCount++;
-        }
-      } catch (err: any) {
-        errors.push(`Failed to send to ${row.phone_number}: ${err.message}`);
-      }
-    }
+    const messageStatus = result.data.status || "unknown";
+    const success = result.success;
 
-    if (errors.length > 0) {
-      return {
-        error: `Sent ${successCount} messages, but encountered errors: ${errors.join("; ")}`,
-        successCount,
-      };
-    }
-
-    return { successCount };
+    return {
+      success,
+      status: messageStatus,
+      error: success ? null : `Failed to deliver to ${recipient.phone_number}: Status ${messageStatus}`,
+    };
   } catch (err: any) {
-    return { error: err.message || "Failed to process WhatsApp messages", successCount: 0 };
+    return {
+      success: false,
+      status: "failed",
+      error: `Failed to send to ${recipient.phone_number}: ${err.message}`,
+    };
   }
 }
