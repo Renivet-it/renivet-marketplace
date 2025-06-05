@@ -1,4 +1,4 @@
-import { bigint, boolean, foreignKey, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, foreignKey, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { typeMasters } from "./types";
 import { timestamps } from "../helper";
 
