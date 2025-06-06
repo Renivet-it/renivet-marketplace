@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { Download, Upload, Send, X } from "lucide-react";
-import { sendWhatsAppMessages } from "@/actions/whatsapp/send-marketing-notification";
+import { sendSingleWhatsAppMessage } from "@/actions/whatsapp/send-marketing-notification";
+import * as XLSX from "xlsx";
 
 type Recipient = {
   full_name: string;
@@ -19,7 +20,7 @@ export function MarketingWhatsAppForm() {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [progress, setProgress] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
-  const [confirmSend, setConfirmSend] = useState(false); // Fixed: Initialize to false
+  const [confirmSend, setConfirmSend] = useState(false);
   const [fileError, setFileError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -54,10 +55,13 @@ export function MarketingWhatsAppForm() {
   };
 
   const transformPhoneNumber = (phone: string) => {
-    phone = phone.replace(/["\s]/g, "");
-    if (/^\d{10}$/.test(phone)) {
+    // Remove spaces, quotes, and other non-digit characters except the leading +
+    phone = phone.replace(/[^+\d]/g, "");
+    // If the number doesn't start with +, assume it's a 10-digit Indian number
+    if (!phone.startsWith("+") && /^\d{10}$/.test(phone)) {
       return `+91${phone}`;
     }
+    // If it starts with +, assume it's already in E.164 format
     return phone;
   };
 
@@ -110,7 +114,6 @@ export function MarketingWhatsAppForm() {
               expiry_date: row.expiry_date?.trim().replace(/^"|"$/g, "") || "",
             };
 
-            // Detailed validation
             const errors: string[] = [];
             if (!transformedRow.full_name) errors.push("Missing full_name");
             if (!transformedRow.phone_number || !validatePhoneNumber(transformedRow.phone_number)) {
@@ -185,41 +188,96 @@ export function MarketingWhatsAppForm() {
     console.log("Step 17: Template downloaded");
   };
 
-  const onSubmit = async () => {
-    console.log("Step 18: onSubmit called", { recipients });
-    if (recipients.length === 0) {
-      console.log("Step 19: No recipients found");
-      toast.error("Please upload a valid CSV file with recipient data.");
-      return;
+const onSubmit = async () => {
+  console.log("Step 18: onSubmit called", { recipients });
+  if (recipients.length === 0) {
+    console.log("Step 19: No recipients found");
+    toast.error("Please upload a valid CSV file with recipient data.");
+    return;
+  }
+
+  setIsLoading(true);
+  setProgress(0);
+  console.log("Step 20: Set loading and progress", { isLoading: true, progress: 0 });
+
+  let successCount = 0;
+  const errors: string[] = [];
+  const logEntries: Array<{ phone_number: string; full_name: string; status: string }> = [];
+  const totalRecipients = recipients.length;
+
+  // Process each recipient one by one and update progress
+  for (let i = 0; i < totalRecipients; i++) {
+    const recipient = recipients[i];
+    console.log(`Step 21.${i + 1}: Processing recipient ${i + 1}/${totalRecipients}`, { recipient });
+
+    const result = await sendSingleWhatsAppMessage(recipient);
+    console.log(`Step 22.${i + 1}: sendSingleWhatsAppMessage result`, { result });
+
+    logEntries.push({
+      phone_number: recipient.phone_number,
+      full_name: recipient.full_name,
+      status: result.status,
+    });
+
+    if (result.success) {
+      successCount++;
+    } else if (result.error) {
+      errors.push(result.error);
     }
 
-    setIsLoading(true);
-    setProgress(0);
-    console.log("Step 20: Set loading and progress", { isLoading: true, progress: 0 });
+    // Calculate and update progress
+    const currentProgress = ((i + 1) / totalRecipients) * 100;
+    setProgress(currentProgress);
+    console.log(`Step 23.${i + 1}: Updated progress`, { progress: currentProgress });
+  }
 
-    const formData = { data: recipients };
-    console.log("Step 21: FormData created", { formData });
+  // Generate Excel file client-side
+  if (logEntries.length > 0) {
+    console.log("Step 24: Generating Excel file", { logEntries });
+    const worksheetData = logEntries.map((entry) => ({
+      "Phone Number": entry.phone_number,
+      "Full Name": entry.full_name,
+      Status: entry.status,
+    }));
 
-    const result = await sendWhatsAppMessages(formData);
-    console.log("Step 22: sendWhatsAppMessages result", { result });
-    setProgress(100);
-    console.log("Step 23: Set progress to 100");
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Message Log");
 
-    if (result.successCount > 0) {
-      console.log("Step 24: WhatsApp sending successful", { successCount: result.successCount });
-      toast.success(`Successfully sent ${result.successCount} WhatsApp messages`);
-      setRecipients([]);
-      setShowPreview(false);
-      setConfirmSend(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      console.log("Step 25: Reset state after success", { recipients: [], showPreview: false, confirmSend: false });
-    } else {
-      console.log("Step 26: WhatsApp sending failed", { error: result.error });
-      toast.error(result.error || "Failed to send WhatsApp messages");
-    }
-    setIsLoading(false);
-    console.log("Step 27: Set loading to false", { isLoading: false });
-  };
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `whatsapp_message_log_${new Date().toISOString().split("T")[0]}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    console.log("Step 25: Excel file downloaded");
+  } else {
+    console.log("Step 24: No log entries to generate Excel file");
+    toast.warning("No log entries available to generate Excel file.");
+  }
+
+  // Display toast based on result
+  if (successCount > 0) {
+    console.log("Step 26: WhatsApp sending successful", { successCount });
+    toast.success(`Successfully sent ${successCount} WhatsApp messages`);
+  } else {
+    console.log("Step 28: WhatsApp sending failed", { errors });
+    toast.error(errors.join("; ") || "Failed to send WhatsApp messages");
+  }
+
+  // Reset state regardless of success or failure
+  setRecipients([]);
+  setShowPreview(false);
+  setConfirmSend(false);
+  if (fileInputRef.current) fileInputRef.current.value = "";
+  console.log("Step 27: Reset state", { recipients: [], showPreview: false, confirmSend: false });
+
+  setIsLoading(false);
+  setProgress(100);
+  console.log("Step 29: Set loading to false", { isLoading: false, progress: 100 });
+};
 
   return (
     <div className="max-w-5xl mx-auto p-8 bg-gray-50 rounded-xl shadow-lg">
@@ -251,7 +309,7 @@ export function MarketingWhatsAppForm() {
             accept=".csv"
             {...register("file")}
             onChange={(e) => {
-              console.log("Step 28: File input onChange triggered", { files: e.target.files });
+              console.log("Step 30: File input onChange triggered", { files: e.target.files });
               handleFileChange(e.target.files?.[0]);
             }}
             ref={fileInputRef}
@@ -326,7 +384,7 @@ export function MarketingWhatsAppForm() {
               ></div>
             </div>
             <p className="text-sm text-gray-600 mt-2 text-center">
-              {progress === 100 ? "Finalizing..." : `Processing ${progress}%`}
+              {progress === 100 ? "Finalizing..." : `Processing ${progress.toFixed(0)}%`}
             </p>
           </div>
         )}
@@ -341,37 +399,37 @@ export function MarketingWhatsAppForm() {
         </button>
       </form>
 
-      {confirmSend && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Confirm Bulk WhatsApp Send
-            </h3>
-            <p className="text-sm text-gray-600 mb-6">
-              You are about to send WhatsApp messages to {recipients.length} recipients. Are you sure?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmSend(false)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm font-semibold"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit(onSubmit)}
-              disabled={isLoading}
-              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-semibold"
-            >
-              <Send className="w-4 h-4" />
-              {isLoading ? "Sending..." : "Confirm Send"}
-            </button>
-            </div>
-          </div>
-        </div>
-      )}
+{confirmSend && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div className="bg-white rounded-lg p-6 max-w-md w-full">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        Confirm Bulk WhatsApp Send
+      </h3>
+      <p className="text-sm text-gray-600 mb-6">
+        You are about to send WhatsApp messages to {recipients.length} recipients. Are you sure?
+      </p>
+      <div className="flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => setConfirmSend(false)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm font-semibold"
+        >
+          <X className="w-4 h-4" />
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit(onSubmit)}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-semibold"
+        >
+          <Send className="w-4 h-4" />
+          {isLoading ? "Sending..." : "Confirm Send"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
