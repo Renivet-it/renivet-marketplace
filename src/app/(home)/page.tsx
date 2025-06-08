@@ -7,6 +7,9 @@ import {
     ShopByCategories,
 } from "@/components/home";
 import {
+    ShopByNewCategories,
+} from "@/components/home/new-home-page/shop-by-new-category";
+import {
     advertisementQueries,
     blogQueries,
     homeBrandProductQueries,
@@ -25,6 +28,9 @@ export default function Page() {
                 }
             >
                 <BannersFetch />
+            </Suspense>
+                        <Suspense>
+                <ShopByNewCategoriesFetch />
             </Suspense>
             <Suspense>
                 <MarketingStripFetch />
@@ -66,6 +72,19 @@ async function ShopByCategoriesFetch() {
     if (!sbc.length) return null;
 
     return <ShopByCategories shopByCategories={sbc} titleData={sbcT} />;
+}
+
+async function ShopByNewCategoriesFetch() {
+    const [sbc, sbcT] = await Promise.all([
+        homeShopByCategoryQueries.getAllHomeShopByCategories(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    console.log("ShopByNewCategoriesFetch - sbc:", sbc); // Debug log
+    if (!Array.isArray(sbc) || !sbc.length) {
+        console.warn("ShopByNewCategoriesFetch: No categories found or invalid data", sbc);
+        return null;
+    }
+    return <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />;
 }
 
 async function BlogsFetch() {

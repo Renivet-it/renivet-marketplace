@@ -17,54 +17,51 @@ export function ShopByNewCategories({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-5 md:px-8 md:py-10",
+                "flex w-full justify-center py-4",
                 className
             )}
             {...props}
         >
-            <div className="w-full max-w-5xl space-y-5 xl:max-w-[100rem]">
-                <h2 className="mb-6 text-center text-4xl font-semibold capitalize tracking-tight text-accent">
+            <div className="w-full space-y-4">
+                {/* Title */}
+                <h2 className="text-center text-[20px] font-bold uppercase tracking-wide text-gray-800">
                     {titleData?.title || "Shop by Category"}
                 </h2>
 
-                <div className="scrollbar-hide grid auto-cols-[40%] grid-flow-col grid-rows-2 gap-3 overflow-x-auto sm:hidden">
+                {/* Horizontal Scrollable Categories */}
+                <div className="scrollbar-hide grid auto-cols-[calc(33.333%-8px)] grid-flow-col gap-3 overflow-x-auto px-2 md:auto-cols-[150px]">
                     {shopByCategories.map((category, index) => (
                         <Link
                             key={index}
                             href={category.url || "/shop"}
                             className="block"
                         >
-                            <div className="overflow-hidden rounded-lg shadow-sm">
-                                <Image
-                                    src={category.imageUrl}
-                                    alt="Category"
-                                    width={300} // optional: to match the ratio better
-                                    height={400}
-                                    quality={90}
-                                    className="max-h-full max-w-full object-contain"
-                                />
-                            </div>
-                        </Link>
-                    ))}
-                </div>
-
-                {/* Desktop - Grid Layout */}
-                <div className="hidden grid-cols-2 gap-4 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                    {shopByCategories.map((category, index) => (
-                        <Link
-                            key={index}
-                            href={category.url || "/shop"}
-                            className="block"
-                        >
-                            <div className="overflow-hidden rounded-lg shadow-sm">
-                                <Image
-                                    src={category.imageUrl}
-                                    alt="Category"
-                                    width={300} // optional: to match the ratio better
-                                    height={400}
-                                    quality={90}
-                                    className="max-h-full max-w-full object-contain"
-                                />
+                            <div className="flex flex-col items-center bg-gray-50 rounded-md p-2 w-full">
+                                {/* Image Container */}
+                                <div className="overflow-hidden rounded-md w-full">
+                                    <Image
+                                        src={category.imageUrl}
+                                        alt={category.title || "Category"}
+                                        width={150}
+                                        height={180}
+                                        quality={85}
+                                        className="h-[180px] w-full object-cover md:w-[150px]"
+                                    />
+                                </div>
+                                {/* Category Title and Link */}
+                                <div className="mt-3 text-center w-full">
+                                    <p className="text-[14px] font-bold text-gray-800">
+                                        {category.title || "Category"}
+                                    </p>
+                                    <p
+                                        className={cn(
+                                            "text-[12px] hover:underline",
+                                            index === 0 ? "text-blue-600 font-semibold" : "text-gray-500"
+                                        )}
+                                    >
+                                        {index === 0 ? "Shop Now!" : "Shop"}
+                                    </p>
+                                </div>
                             </div>
                         </Link>
                     ))}
