@@ -1,4 +1,4 @@
-import React from 'react'; // Add this if using React <17
+import React from 'react';
 import { cn } from "@/lib/utils";
 import { HomeShopByCategory } from "@/lib/validations";
 import Image from "next/image";
@@ -23,14 +23,14 @@ export function ShopByNewCategories({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-4",
+                "flex w-full justify-center py-6",
                 className
             )}
             {...props}
         >
-            <div className="w-full space-y-4 max-w-screen-xl mx-auto">
+            <div className="w-full space-y-6 max-w-screen-2xl mx-auto">
                 {/* Title */}
-                <h2 className="text-center text-[20px] font-bold uppercase tracking-wide text-gray-800">
+                <h2 className="text-center text-2xl md:text-3xl font-bold uppercase tracking-wide text-gray-800">
                     {titleData?.title || "Shop by Category"}
                 </h2>
 
@@ -54,12 +54,12 @@ export function ShopByNewCategories({
                                     />
                                 </div>
                                 <div className="mt-3 text-center w-full">
-                                    <p className="text-[14px] font-bold text-gray-800">
+                                    <p className="text-sm font-bold text-gray-800">
                                         {category.title || "Category"}
                                     </p>
                                     <p
                                         className={cn(
-                                            "text-[12px] hover:underline",
+                                            "text-xs hover:underline",
                                             index === 0 ? "text-blue-600 font-semibold" : "text-gray-500"
                                         )}
                                     >
@@ -71,8 +71,8 @@ export function ShopByNewCategories({
                     ))}
                 </div>
 
-                {/* Desktop View (Carousel) */}
-                <div className="hidden md:block px-4">
+                {/* Desktop View (Wider Carousel) */}
+                <div className="hidden md:block px-6">
                     <Carousel
                         opts={{
                             align: "start",
@@ -80,28 +80,28 @@ export function ShopByNewCategories({
                         }}
                         className="w-full"
                     >
-                        <CarouselContent className="-ml-2">
+                        <CarouselContent className="-ml-4">
                             {shopByCategories.map((category, index) => (
-                                <CarouselItem key={index} className="pl-4 basis-[220px]">
+                                <CarouselItem key={index} className="pl-6 basis-[280px]">
                                     <Link href={category.url || "/shop"} className="block">
-                                        <div className="flex flex-col items-center bg-gray-50 rounded-md p-2 hover:shadow-md transition-shadow duration-200">
-                                            <div className="overflow-hidden rounded-md w-full">
+                                        <div className="flex flex-col items-center bg-gray-50 rounded-lg p-3 hover:shadow-md transition-shadow duration-200">
+                                            <div className="overflow-hidden rounded-lg w-full">
                                                 <Image
                                                     src={category.imageUrl}
                                                     alt={category.title || "Category"}
-                                                    width={200}
-                                                    height={200}
-                                                    quality={85}
-                                                    className="h-[200px] w-full object-cover"
+                                                    width={260}
+                                                    height={260}
+                                                    quality={90}
+                                                    className="h-[260px] w-full object-cover"
                                                 />
                                             </div>
-                                            <div className="mt-3 text-center w-full">
-                                                <p className="text-[15px] font-bold text-gray-800">
+                                            <div className="mt-4 text-center w-full">
+                                                <p className="text-base font-bold text-gray-800">
                                                     {category.title || "Category"}
                                                 </p>
                                                 <p
                                                     className={cn(
-                                                        "text-[13px] hover:underline",
+                                                        "text-sm hover:underline mt-1",
                                                         index === 0 ? "text-blue-600 font-semibold" : "text-gray-500"
                                                     )}
                                                 >
