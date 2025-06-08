@@ -108,9 +108,7 @@ export const products = pgTable(
             productEmbeddingIdx: index("product_embedding_idx").using(
         "ivfflat",
         sql`${table.embeddings} vector_cosine_ops`
-    ).with({
-        lists: 100 // Adjust based on your dataset size
-    })
+    )
     })
 );
 

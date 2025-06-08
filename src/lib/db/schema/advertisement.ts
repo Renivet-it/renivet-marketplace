@@ -56,3 +56,12 @@ export const homeShopByCategoryTitle = pgTable("home_shop_by_category_title", {
     title: text("title").notNull().default("Shop by Category"),
     ...timestamps,
 });
+
+export const homeshopbyNewCategory = pgTable("home_shop_by_new_categories", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});

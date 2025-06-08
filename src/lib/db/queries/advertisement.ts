@@ -8,6 +8,10 @@ import {
     UpdateAdvertisement,
     UpdateHomeBrandProduct,
     UpdateHomeShopByCategory,
+    CreateHomeShopByNewCategory,
+    homeShopByNewCategorySchema,
+    UpdateHomeShopByNewCategory,
+
 } from "@/lib/validations";
 import { and, asc, desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
@@ -16,6 +20,7 @@ import {
     homeBrandProducts,
     homeShopByCategories,
     homeShopByCategoryTitle,
+    homeshopbyNewCategory,
 } from "../schema";
 
 class AdvertiseMentQuery {
@@ -383,6 +388,95 @@ class HomeShopByCategoriesQuery {
     }
 }
 
+
+class HomeShopByNewCategoriesQuery {
+    async getAllHomeShopByNewCategories() {
+        const data = await db.query.homeshopbyNewCategory.findMany({
+            orderBy: [asc(homeshopbyNewCategory.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getHomeShopByNewCategories({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeshopbyNewCategory.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeshopbyNewCategory.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeshopbyNewCategory)
+                    .as("home_shop_by_new_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomeShopByNewCategory(id: string) {
+        const data = await db.query.homeshopbyNewCategory.findFirst({
+            where: eq(homeshopbyNewCategory.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomeShopByNewCategory(
+        values: CreateHomeShopByNewCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeshopbyNewCategory)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomeShopByNewCategory(
+        id: string,
+        values: UpdateHomeShopByNewCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeshopbyNewCategory)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeshopbyNewCategory.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomeShopByNewCategory(id: string) {
+        const data = await db
+            .delete(homeshopbyNewCategory)
+            .where(eq(homeshopbyNewCategory.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+}
+
 class HomeShopByCategoryTitleQuery {
     async getHomeShopByCategoryTitle() {
         const data = await db.query.homeShopByCategoryTitle.findFirst();
@@ -424,5 +518,6 @@ class HomeShopByCategoryTitleQuery {
 export const advertisementQueries = new AdvertiseMentQuery();
 export const homeBrandProductQueries = new HomeBrandProductsQuery();
 export const homeShopByCategoryQueries = new HomeShopByCategoriesQuery();
+export const homeShopByNewCategoryQueries = new HomeShopByNewCategoriesQuery();
 export const homeShopByCategoryTitleQueries =
     new HomeShopByCategoryTitleQuery();

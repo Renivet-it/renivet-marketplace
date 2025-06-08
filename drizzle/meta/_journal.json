@@ -1009,6 +1009,13 @@
       "when": 1747951141840,
       "tag": "0144_foamy_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 145,
+      "version": "7",
+      "when": 1749415484070,
+      "tag": "0145_purple_lord_hawal",
+      "breakpoints": true
     }
   ]
 }
