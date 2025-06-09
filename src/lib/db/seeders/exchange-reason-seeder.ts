@@ -1,3 +1,7 @@
+import { db } from "@/lib/db/index";
+import { reasonMasters } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
+
 const causes = [
     {
         id: "a52259ca-f762-492f-be5e-36c0a68075ef",
@@ -184,3 +188,61 @@ const causes = [
         subCauses: [],
     },
 ];
+
+export async function seedReasons() {
+    await db.transaction(async (tx) => {
+        // Delete level 2 sub-causes first
+        await tx
+            .delete(reasonMasters)
+            .where(
+                and(
+                    eq(reasonMasters.level, 2),
+                    eq(reasonMasters.reasonType, "return_reason")
+                )
+            );
+
+        // Then delete level 1 parent causes
+        await tx
+            .delete(reasonMasters)
+            .where(
+                and(
+                    eq(reasonMasters.level, 1),
+                    eq(reasonMasters.reasonType, "return_reason")
+                )
+            );
+
+        // Insert parent causes and their sub-causes
+        for (const cause of causes) {
+            await tx.insert(reasonMasters).values({
+                id: cause.id,
+                name: cause.name,
+                reasonType: cause.reasonType,
+                level: cause.level,
+                shortOrder: cause.shortOrder,
+            });
+
+            for (const sub of cause.subCauses) {
+                await tx.insert(reasonMasters).values({
+                    id: sub.id,
+                    name: sub.name,
+                    reasonType: sub.reasonType,
+                    level: sub.level,
+                    shortOrder: sub.shortOrder,
+                    parentId: cause.id,
+                });
+            }
+        }
+    });
+
+    console.log("✅ Seeded all reason masters in a transaction!");
+}
+
+async function main() {
+    await seedReasons();
+    process.exit(0);
+}
+
+main().catch((e) => {
+    console.error("❌ Seeding failed", e);
+    process.exit(1);
+});
