@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button-general";
 import { MarketingStrip as TypeMarketingStrip } from "@/lib/validations";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PageProps extends GenericProps {
     marketingStrip: TypeMarketingStrip[];
@@ -19,8 +20,8 @@ export function DealofTheMonthStrip({
     const [timeLeft, setTimeLeft] = useState({
         days: 2,
         hours: 6,
-        minutes: 5,
-        seconds: 30,
+        minutes: 3,
+        seconds: 25,
     });
 
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -54,7 +55,7 @@ export function DealofTheMonthStrip({
 
     useEffect(() => {
         const slideInterval = setInterval(() => {
-            setCurrentIndex((prev) => 
+            setCurrentIndex((prev) =>
                 prev === marketingStrip.length - 1 ? 0 : prev + 1
             );
         }, 5000);
@@ -63,15 +64,27 @@ export function DealofTheMonthStrip({
     }, [marketingStrip.length]);
 
     const itemsPerView = 2;
-    const displayItems = marketingStrip.slice(
+    let displayItems = marketingStrip.slice(
         currentIndex,
         currentIndex + itemsPerView
     );
 
     if (displayItems.length < itemsPerView) {
         const remainingItems = marketingStrip.slice(0, itemsPerView - displayItems.length);
-        displayItems.push(...remainingItems);
+        displayItems = [...displayItems, ...remainingItems];
     }
+
+    const handlePrev = () => {
+        setCurrentIndex((prev) =>
+            prev === 0 ? marketingStrip.length - 1 : prev - 1
+        );
+    };
+
+    const handleNext = () => {
+        setCurrentIndex((prev) =>
+            prev === marketingStrip.length - 1 ? 0 : prev + 1
+        );
+    };
 
     return (
         <section
@@ -122,47 +135,82 @@ export function DealofTheMonthStrip({
                             ))}
                         </div>
                     </div>
-
-                    {/* Carousel Dots */}
-                    <div className="flex gap-1 md:gap-2 justify-center mt-2">
-                        {marketingStrip.map((_, index) => (
-                            <span
-                                key={index}
-                                className={cn(
-                                    "w-1 h-1 md:w-3 md:h-3 rounded-full",
-                                    index === currentIndex ? "bg-gray-800" : "bg-gray-400"
-                                )}
-                                onClick={() => setCurrentIndex(index)}
-                            />
-                        ))}
-                    </div>
                 </div>
 
                 {/* Right Side - Images (Carousel) */}
-                <div className="w-1/2 flex gap-2 md:gap-4 justify-center">
-                    {displayItems.map((item, index) => (
+                <div className="w-1/2 flex flex-col items-center gap-2 md:gap-4">
+                    {/* Images */}
+                    <div className="flex items-center gap-2 md:gap-4 w-full">
+                        {/* Left Image */}
                         <div
-                            key={index}
+                            className="relative flex flex-col items-center bg-white rounded-md p-1 md:p-2 hover:shadow-md transition-shadow duration-200 w-[55%]"
+                        >
+                            <div className="overflow-hidden rounded-md w-full">
+                                <Image
+                                    src={displayItems[0].imageUrl}
+                                    alt={displayItems[0].title}
+                                    width={180}
+                                    height={300}
+                                    quality={85}
+                                    className="h-[200px] md:h-[400px] w-full object-cover"
+                                />
+                            </div>
+                            <div className="absolute bottom-8 md:bottom-16 left-2 md:left-4 bg-white p-1 md:p-3 rounded-md shadow-md">
+                                <p className="text-[8px] md:text-sm text-gray-500">01 — Spring Sale</p>
+                                <p className="text-sm md:text-lg font-bold text-gray-800">25% OFF</p>
+                            </div>
+                        </div>
+
+                        {/* Right Image */}
+                        <div
                             className="relative flex flex-col items-center bg-white rounded-md p-1 md:p-2 hover:shadow-md transition-shadow duration-200 w-[45%]"
                         >
                             <div className="overflow-hidden rounded-md w-full">
                                 <Image
-                                    src={item.imageUrl}
-                                    alt={item.title}
-                                    width={index === 0 ? 150 : 100} // Scaled down for mobile
-                                    height={200}
+                                    src={displayItems[1].imageUrl}
+                                    alt={displayItems[1].title}
+                                    width={150}
+                                    height={300}
                                     quality={85}
-                                    className="h-[150px] md:h-[300px] w-full object-cover"
+                                    className="h-[200px] md:h-[400px] w-full object-cover"
                                 />
                             </div>
-                            {index === 0 && (
-                                <div className="absolute bottom-8 md:bottom-16 left-2 md:left-4 bg-white p-1 md:p-3 rounded-md shadow-md">
-                                    <p className="text-[8px] md:text-sm text-gray-500">01 — Special Offer</p>
-                                    <p className="text-sm md:text-lg font-bold text-gray-800">30% OFF</p>
-                                </div>
-                            )}
                         </div>
-                    ))}
+                    </div>
+
+                    {/* Carousel Navigation (Arrows and Dots Below Images) */}
+                    <div className="flex items-center justify-center gap-4 mt-2">
+                        {/* Navigation Arrows */}
+                        <button
+                            onClick={handlePrev}
+                            className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-300 hover:bg-gray-800 transition-colors duration-300 flex items-center justify-center"
+                        >
+                            <ChevronLeft className="w-3 h-3 md:w-4 md:h-4 text-gray-600 hover:text-white transition-colors duration-300" />
+                        </button>
+
+                        {/* Carousel Dots */}
+                        <div className="flex gap-1 md:gap-2">
+                            {marketingStrip.map((_, index) => (
+                                <span
+                                    key={index}
+                                    className={cn(
+                                        "w-2 h-2 md:w-3 md:h-3 rounded-full cursor-pointer",
+                                        index === currentIndex ? "bg-gray-800" : "bg-gray-300",
+                                        "hover:bg-gray-600 transition-colors duration-300"
+                                    )}
+                                    onClick={() => setCurrentIndex(index)}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Right Arrow */}
+                        <button
+                            onClick={handleNext}
+                            className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-300 hover:bg-gray-800 transition-colors duration-300 flex items-center justify-center"
+                        >
+                            <ChevronRight className="w-3 h-3 md:w-4 md:h-4 text-gray-600 hover:text-white transition-colors duration-300" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
