@@ -1,6 +1,7 @@
 import { AdvertisementPage, Blogs, BrandProducts, Landing, MarketingStrip, ShopByCategories } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
+import { AdvertisementDiscountPage } from "@/components/home/new-home-page/discount-section";
 import { advertisementQueries, blogQueries, homeBrandProductQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
@@ -21,6 +22,9 @@ export default function Page() {
             </Suspense>
             <Suspense>
                 <DealMarketingStripFetch />
+            </Suspense>
+                        <Suspense>
+                <NewAdvertisementsFetch />
             </Suspense>
             <Suspense>
                 <MarketingStripFetch />
@@ -130,4 +134,14 @@ async function AdvertisementsFetch() {
     if (!advertisements.length) return null;
 
     return <AdvertisementPage advertisements={advertisements} />;
+}
+
+async function NewAdvertisementsFetch() {
+    const advertisements = await advertisementQueries.getAllAdvertisements({
+        isPublished: true,
+        orderBy: "position",
+    });
+    if (!advertisements.length) return null;
+
+    return <AdvertisementDiscountPage advertisements={advertisements} />;
 }
