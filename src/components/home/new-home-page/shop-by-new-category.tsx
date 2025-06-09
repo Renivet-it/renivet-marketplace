@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { cn } from "@/lib/utils";
 import { HomeShopByCategory } from "@/lib/validations";
 import Image from "next/image";

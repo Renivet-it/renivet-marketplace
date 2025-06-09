@@ -1,23 +1,10 @@
-import {
-    AdvertisementPage,
-    Blogs,
-    BrandProducts,
-    Landing,
-    MarketingStrip,
-    ShopByCategories,
-} from "@/components/home";
-import {
-    ShopByNewCategories,
-} from "@/components/home/new-home-page/shop-by-new-category";
-import {
-    advertisementQueries,
-    blogQueries,
-    homeBrandProductQueries,
-    homeShopByCategoryQueries,
-    homeShopByCategoryTitleQueries,
-} from "@/lib/db/queries";
+import { AdvertisementPage, Blogs, BrandProducts, Landing, MarketingStrip, ShopByCategories } from "@/components/home";
+import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
+import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
+import { advertisementQueries, blogQueries, homeBrandProductQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
+
 
 export default function Page() {
     return (
@@ -29,8 +16,11 @@ export default function Page() {
             >
                 <BannersFetch />
             </Suspense>
-                        <Suspense>
+            <Suspense>
                 <ShopByNewCategoriesFetch />
+            </Suspense>
+            <Suspense>
+                <DealMarketingStripFetch />
             </Suspense>
             <Suspense>
                 <MarketingStripFetch />
@@ -118,6 +108,18 @@ async function MarketingStripFetch() {
     );
 
     return <MarketingStrip marketingStrip={sorted} />;
+}
+
+async function DealMarketingStripFetch() {
+    const cachedMarktingStrip = await marketingStripCache.getAll();
+    if (!cachedMarktingStrip.length) return null;
+
+    const sorted = cachedMarktingStrip.sort(
+        (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return <DealofTheMonthStrip marketingStrip={sorted} />;
 }
 
 async function AdvertisementsFetch() {
