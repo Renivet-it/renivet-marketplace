@@ -9,19 +9,19 @@ const baseReasonMasterSchema = z.object({
     isActive: z.boolean(),
     shortOrder: z.number(),
     reasonType: z.string(),
-    createdAt: z.string(),
-    updatedAt: z.string(),
+    createdAt: z.date(),
+    updatedAt: z.date(),
 });
 
 // Step 2: Declare the type interface first
 export type ReasonNode = z.infer<typeof baseReasonMasterSchema> & {
-    children: ReasonNode[];
+    children?: ReasonNode[];
 };
 
 // Step 3: Explicitly annotate NodeSchema
 export const NodeSchema: z.ZodType<ReasonNode> = z.lazy(() =>
     baseReasonMasterSchema.extend({
-        children: z.array(NodeSchema),
+        children: z.array(NodeSchema).optional(),
     })
 );
 

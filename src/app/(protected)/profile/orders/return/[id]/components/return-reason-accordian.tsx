@@ -101,9 +101,9 @@ export default function ReturnReasonsAccordion({
                             <div className="text-lg font-semibold">
                                 {clickedReason.name}
                             </div>
-                            {clickedReason.children?.length > 0 && (
+                            {(clickedReason?.children?.length ?? 0) > 0 && (
                                 <div className="mt-4 space-y-2 pl-4 pt-2 text-left">
-                                    {clickedReason.children.map((child) => {
+                                    {clickedReason?.children?.map((child) => {
                                         const isSelected =
                                             selectedChildId === child.id;
 
@@ -157,7 +157,7 @@ export default function ReturnReasonsAccordion({
                         </Card>
                     </div>
                 )}
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                     {otherReasons?.map((reason) => (
                         <Card
                             key={reason.id}
@@ -165,7 +165,7 @@ export default function ReturnReasonsAccordion({
                                 setOpenId(reason.id);
                                 setSelectedChildId(null);
                             }}
-                            className="h-52 w-64 cursor-pointer text-wrap text-center transition-all hover:bg-accent"
+                            className="h-52 w-[calc(50%-0.5rem)] cursor-pointer text-wrap text-center transition-all hover:bg-accent sm:w-64"
                             style={{ alignContent: "center" }}
                         >
                             <div className="flex h-full items-center justify-center font-semibold">
