@@ -28,7 +28,6 @@ export default function ReturnReasonsAccordion({
         trpc.general.returnExchangeReasons.getSpecificReason.useQuery({
             type: "return_reason",
         });
-    console.log("reasons", reasons);
     const selectedReturnItem = useReturnStore((s) => s.selectedReturnItem);
     const setReturnItemPayload = useReturnStore((s) => s.setReturnItemPayload);
 
