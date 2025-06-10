@@ -25,7 +25,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-full lg:h-[70vh] xl:h-[80vh]"
+                className="w-full h-full lg:h-[70vh] xl:h-[70vh]"
             >
                 <CarouselContent
                     classNames={{

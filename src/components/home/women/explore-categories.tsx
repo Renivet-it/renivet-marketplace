@@ -42,8 +42,8 @@ export function ExploreCategories({
                             href={category.url || "/shop"}
                             className="block"
                         >
-                            <div className="flex flex-col items-center bg-gray-50 rounded-md p-2 w-full">
-                                <div className="overflow-hidden rounded-md w-full">
+                            <div className="flex flex-col items-center bg-gray-50 p-2 w-full">
+                                <div className="overflow-hidden w-full">
                                     <Image
                                         src={category.imageUrl}
                                         alt={category.title || "Category"}

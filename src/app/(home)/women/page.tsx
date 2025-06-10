@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import { Landing } from "@/components/home/women/banner";
 import { ExploreCategories } from "@/components/home/women/explore-categories";
 import { ElevateYourLooks } from "@/components/home/women/elavate-looks";
+import { MiddleAnimationSection } from "@/components/home/women/middle-animation-banner";
 
 export default function Page() {
     return (
@@ -24,6 +25,9 @@ export default function Page() {
             </Suspense>
                         <Suspense>
                 <ElevateYourLooksFetch />
+            </Suspense>
+                        <Suspense>
+                <MiddleAnimationSectionFetch />
             </Suspense>
             <Suspense>
                 <DealMarketingStripFetch />
@@ -113,6 +117,18 @@ async function BannersFetch() {
     );
 
     return <Landing banners={sorted} />;
+}
+
+async function MiddleAnimationSectionFetch() {
+    const cachedBanners = await bannerCache.getAll();
+    if (!cachedBanners.length) return null;
+
+    const sorted = cachedBanners.sort(
+        (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return <MiddleAnimationSection banners={sorted} />;
 }
 
 async function MarketingStripFetch() {
