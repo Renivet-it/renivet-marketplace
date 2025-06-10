@@ -12,6 +12,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import ReturnReasonsAccordion from "./components/return-reason-accordian";
+import ReturnPageStepper from "./components/return-step-accordian";
 
 export default function Page() {
     return (
@@ -33,6 +35,7 @@ export function ReturnPage() {
     const router = useRouter();
     const returnItem = useReturnStore((state) => state.selectedReturnItem);
     const [isHydrated, setIsHydrated] = useState(false);
+    console.log("returnItem", returnItem);
 
     useEffect(() => {
         setIsHydrated(true);
@@ -82,6 +85,7 @@ export function ReturnPage() {
                 itemPrice={itemPrice as number}
             />
             {/* Use returnItem for details */}
+            <ReturnPageStepper className={"mt-4"} />
         </div>
     );
 }

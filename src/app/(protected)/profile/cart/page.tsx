@@ -27,7 +27,10 @@ export default function Page() {
                     <CardDescription>View and manage your cart</CardDescription>
                 </CardHeader>
             </Card>
-           <ShippingAddress></ShippingAddress>
+            <ShippingAddress
+                title={"shipping address"}
+                description={"please select address for this order shipment"}
+            />
             <Suspense fallback={<CartSkeleton />}>
                 <CartFetch />
             </Suspense>

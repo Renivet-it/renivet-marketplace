@@ -27,7 +27,22 @@ import { Loader2, Phone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./address-add-form";
 
-export default function ShippingAddress({ className, ...props }: GenericProps) {
+interface Props extends GenericProps {
+    className?: string;
+    title: string;
+    description?: string;
+    titleClassName?: string;
+    descriptionClassName?: string;
+}
+
+export default function ShippingAddress({
+    className,
+    title,
+    description,
+    titleClassName,
+    descriptionClassName,
+    ...props
+}: Props) {
     const { data: user, isLoading } = trpc.general.users.currentUser.useQuery();
     const addresses = useMemo(() => user?.addresses ?? [], [user?.addresses]);
     const [formOpen, setFormOpen] = useState(false);
@@ -58,12 +73,16 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
         <>
             <Card>
                 <CardHeader>
-                    <CardTitle className={cn("capitalize")}>
-                        shipping address
+                    <CardTitle className={cn("capitalize", titleClassName)}>
+                        {title}
                     </CardTitle>
-                    <CardDescription className={cn("lowercase")}>
-                        please select address for this order shipment
-                    </CardDescription>
+                    {description && (
+                        <CardDescription
+                            className={cn("lowercase", descriptionClassName)}
+                        >
+                            {description}
+                        </CardDescription>
+                    )}
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
@@ -242,6 +261,10 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                             <DialogTitle>
                                                 Add New Address
                                             </DialogTitle>
+                                            <DialogDescription>
+                                                Please fill out the form below
+                                                to add a new shipping address.
+                                            </DialogDescription>
                                         </DialogHeader>
 
                                         {user?.id && (
