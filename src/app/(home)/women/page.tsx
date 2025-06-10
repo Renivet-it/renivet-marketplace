@@ -7,7 +7,7 @@ import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
 import { Landing } from "@/components/home/women/banner";
 import { ExploreCategories } from "@/components/home/women/explore-categories";
-import { ElavateYourLooks } from "@/components/home/women/elavate-looks";
+import { ElevateYourLooks } from "@/components/home/women/elavate-looks";
 
 export default function Page() {
     return (
@@ -23,7 +23,7 @@ export default function Page() {
                 <ShopByNewCategoriesFetch />
             </Suspense>
                         <Suspense>
-                <ElavateYourLooksFetch />
+                <ElevateYourLooksFetch />
             </Suspense>
             <Suspense>
                 <DealMarketingStripFetch />
@@ -84,7 +84,7 @@ async function ShopByNewCategoriesFetch() {
     return <ExploreCategories shopByCategories={sbc} titleData={sbcT} />;
 }
 
-async function ElavateYourLooksFetch() {
+async function ElevateYourLooksFetch() {
     const [sbc, sbcT] = await Promise.all([
         homeShopByCategoryQueries.getAllHomeShopByCategories(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
@@ -92,7 +92,7 @@ async function ElavateYourLooksFetch() {
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
     }
-    return <ElavateYourLooks shopByCategories={sbc} titleData={sbcT} />;
+    return <ElevateYourLooks shopByCategories={sbc} titleData={sbcT} />;
 }
 async function BlogsFetch() {
     const blogs = await blogQueries.getBlogs({

@@ -14,7 +14,7 @@ interface PageProps extends GenericProps {
     title?: string;
 }
 
-export function ElavateYourLooks ({
+export function ElevateYourLooks({
     className,
     shopByCategories,
     title = "Elevate Your Look",
@@ -30,37 +30,42 @@ export function ElavateYourLooks ({
         >
             <div className="w-full max-w-screen-2xl mx-auto px-4">
                 {/* Title */}
-                <h2 className="text-center text-3xl font-bold uppercase text-gray-900 mb-12">
+                <h4 className="text-center text-3xl font-bold text-gray-900 mb-12">
                     {title}
-                </h2>
+                </h4>
 
                 {/* Carousel */}
                 <div className="px-2">
                     <Carousel
                         opts={{
                             align: "start",
-                            dragFree: true,
+                            loop: true,
+                            slidesToScroll: "auto"
                         }}
                         className="w-full"
                     >
-                        <CarouselContent className="-ml-4">
+                        <CarouselContent className="-ml-2">
                             {shopByCategories.map((category, index) => (
-                                <CarouselItem key={index} className="pl-4 basis-[220px]">
+                                <CarouselItem 
+                                    key={index} 
+                                    className="pl-2 basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/6 min-w-0"
+                                >
                                     <Link 
                                         href={category.url || "/shop"} 
-                                        className="group flex flex-col items-center w-full"
+                                        className="group flex flex-col items-center w-full px-1"
                                     >
-                                        <div className="rounded-lg overflow-hidden w-[200px] h-[200px] mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
+                                        <div className="rounded-lg overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
                                             <Image
                                                 src={category.imageUrl}
                                                 alt={category.title || "Category"}
                                                 width={200}
                                                 height={200}
+                                                sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
                                                 quality={100}
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
-                                        <p className="text-lg font-medium uppercase text-gray-800">
+                                        <p className="text-lg font-medium uppercase text-gray-800 sm:text-sm text-center">
                                             {category.title || "Category"}
                                         </p>
                                     </Link>
