@@ -4,7 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useReturnStore } from "@/lib/store/return-store";
 import { returnOrderPhaseOne } from "@/lib/store/validation/return-store-validation";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { Loader } from "lucide-react";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { toast } from "sonner";
 import { ZodError } from "zod";
@@ -14,25 +16,6 @@ interface Props extends GenericProps {
     setValidator: (fn: () => boolean) => void;
 }
 
-const reasons = [
-    {
-        id: "1",
-        title: "Wrong item delivered",
-        children: [
-            { id: "1-1", title: "Wrong size" },
-            { id: "1-2", title: "Wrong color" },
-        ],
-    },
-    {
-        id: "2",
-        title: "Product damaged",
-        children: [
-            { id: "2-1", title: "Packaging damaged" },
-            { id: "2-2", title: "Product broken" },
-        ],
-    },
-];
-
 export default function ReturnReasonsAccordion({
     className,
     setValidator,
@@ -41,12 +24,13 @@ export default function ReturnReasonsAccordion({
     const [openId, setOpenId] = useState<string | null>(null);
     const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
     const [comment, setComment] = useState<string>("");
-
+    const { data: reasons, isLoading } =
+        trpc.general.returnExchangeReasons.getSpecificReason.useQuery({
+            type: "return_reason",
+        });
+    console.log("reasons", reasons);
     const selectedReturnItem = useReturnStore((s) => s.selectedReturnItem);
     const setReturnItemPayload = useReturnStore((s) => s.setReturnItemPayload);
-
-    const clickedReason = reasons.find((r) => r.id === openId);
-    const otherReasons = reasons.filter((r) => r.id !== openId);
 
     const validate = useCallback(() => {
         try {
@@ -80,6 +64,20 @@ export default function ReturnReasonsAccordion({
         setValidator(validate);
     }, [validate, setValidator]);
 
+    if (isLoading) {
+        return (
+            <div className="flex h-40 items-center justify-center">
+                <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">
+                    Loading reasons...
+                </span>
+            </div>
+        );
+    }
+
+    const clickedReason = reasons?.find((r) => r.id === openId);
+    const otherReasons = reasons?.filter((r) => r.id !== openId);
+
     return (
         <>
             <div className="text-center">
@@ -102,7 +100,7 @@ export default function ReturnReasonsAccordion({
                             style={{ alignContent: "center" }}
                         >
                             <div className="text-lg font-semibold">
-                                {clickedReason.title}
+                                {clickedReason.name}
                             </div>
                             {clickedReason.children?.length > 0 && (
                                 <div className="mt-4 space-y-2 pl-4 pt-2 text-left">
@@ -138,7 +136,7 @@ export default function ReturnReasonsAccordion({
                                                         );
                                                     }}
                                                 />
-                                                <span>{child.title}</span>
+                                                <span>{child.name}</span>
                                             </Card>
                                         );
                                     })}
@@ -161,7 +159,7 @@ export default function ReturnReasonsAccordion({
                     </div>
                 )}
                 <div className="flex gap-4">
-                    {otherReasons.map((reason) => (
+                    {otherReasons?.map((reason) => (
                         <Card
                             key={reason.id}
                             onClick={() => {
@@ -172,7 +170,7 @@ export default function ReturnReasonsAccordion({
                             style={{ alignContent: "center" }}
                         >
                             <div className="flex h-full items-center justify-center font-semibold">
-                                {reason.title}
+                                {reason.name}
                             </div>
                         </Card>
                     ))}

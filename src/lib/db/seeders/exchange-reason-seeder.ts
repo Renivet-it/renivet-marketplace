@@ -197,7 +197,7 @@ export async function seedReasons() {
             .where(
                 and(
                     eq(reasonMasters.level, 2),
-                    eq(reasonMasters.reasonType, "return_reason")
+                    eq(reasonMasters.reasonType, "exchange_reason")
                 )
             );
 
@@ -207,7 +207,7 @@ export async function seedReasons() {
             .where(
                 and(
                     eq(reasonMasters.level, 1),
-                    eq(reasonMasters.reasonType, "return_reason")
+                    eq(reasonMasters.reasonType, "exchange_reason")
                 )
             );
 
