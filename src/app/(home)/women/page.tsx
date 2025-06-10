@@ -6,7 +6,8 @@ import { advertisementQueries, blogQueries, homeBrandProductQueries, homeShopByC
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
 import { Landing } from "@/components/home/women/banner";
-
+import { ExploreCategories } from "@/components/home/women/explore-categories";
+import { ElavateYourLooks } from "@/components/home/women/elavate-looks";
 
 export default function Page() {
     return (
@@ -20,6 +21,9 @@ export default function Page() {
             </Suspense>
             <Suspense>
                 <ShopByNewCategoriesFetch />
+            </Suspense>
+                        <Suspense>
+                <ElavateYourLooksFetch />
             </Suspense>
             <Suspense>
                 <DealMarketingStripFetch />
@@ -66,7 +70,7 @@ async function ShopByCategoriesFetch() {
     ]);
     if (!sbc.length) return null;
 
-    return <ShopByCategories shopByCategories={sbc} titleData={sbcT} />;
+    return <ExploreCategories shopByCategories={sbc} titleData={sbcT} />;
 }
 
 async function ShopByNewCategoriesFetch() {
@@ -74,14 +78,22 @@ async function ShopByNewCategoriesFetch() {
         homeShopByCategoryQueries.getAllHomeShopByCategories(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
     ]);
-    console.log("ShopByNewCategoriesFetch - sbc:", sbc); // Debug log
     if (!Array.isArray(sbc) || !sbc.length) {
-        console.warn("ShopByNewCategoriesFetch: No categories found or invalid data", sbc);
         return null;
     }
-    return <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />;
+    return <ExploreCategories shopByCategories={sbc} titleData={sbcT} />;
 }
 
+async function ElavateYourLooksFetch() {
+    const [sbc, sbcT] = await Promise.all([
+        homeShopByCategoryQueries.getAllHomeShopByCategories(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    return <ElavateYourLooks shopByCategories={sbc} titleData={sbcT} />;
+}
 async function BlogsFetch() {
     const blogs = await blogQueries.getBlogs({
         isPublished: true,
