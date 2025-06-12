@@ -15,6 +15,7 @@ import {
 } from "./product";
 import { roleSchema } from "./role";
 import { safeUserSchema } from "./user";
+import { brandConfidentialSchema } from "./brand-confidential";
 
 export const brandSchema = z.object({
     id: z
@@ -123,6 +124,7 @@ export const brandSchema = z.object({
             })
             .nullable()
     ),
+    // confidentialData: brandConfidentialSchema.optional(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

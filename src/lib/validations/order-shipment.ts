@@ -85,6 +85,41 @@ export const orderShipmentSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
+        // awbDetailsShipRocketJson: z.object({}).nullable().default({}),
+  awbDetailsShipRocketJson: z
+    .object({
+      awb_assign_status: z.number().optional(),
+      no_pickup_popup: z.number().optional(),
+      quick_pick: z.number().optional(),
+      response: z
+        .object({
+          data: z
+            .object({
+              applied_weight: z.number().optional(),
+              assigned_date_time: z
+                .object({
+                  date: z.string().optional(),
+                  timezone: z.string().optional(),
+                  timezone_type: z.number().optional(),
+                })
+                .optional(),
+              awb_code: z.string().optional(),
+              awb_code_status: z.number().optional(),
+              child_courier_name: z.string().nullable().optional(),
+              cod: z.number().optional(),
+              company_id: z.number().optional(),
+              courier_company_id: z.number().optional(),
+              courier_name: z.string().optional(),
+              freight_charges: z.number().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+    })
+    .nullable()
+    .optional()
+    .default({}),
+
 });
 
 export const orderShipmentWithRelationsSchema = orderShipmentSchema.extend({
@@ -106,6 +141,7 @@ export const createOrderShipmentSchema = orderShipmentSchema.omit({
     pickupTokenNumber: true,
     createdAt: true,
     updatedAt: true,
+    awbDetailsShipRocketJson: true,
 });
 
 export const updateOrderShipmentSchema = orderShipmentSchema.pick({
@@ -124,6 +160,7 @@ export const updateOrderShipmentSchema = orderShipmentSchema.pick({
     isPickupScheduled: true,
     pickupScheduledDate: true,
     pickupTokenNumber: true,
+    awbDetailsShipRocketJson: true,
 });
 
 export type OrderShipment = z.infer<typeof orderShipmentSchema>;

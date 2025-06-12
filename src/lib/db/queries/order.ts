@@ -20,7 +20,12 @@ class OrderQuery {
                     with: {
                         product: {
                             with: {
-                                brand: true,
+                                // brand: true,
+                                brand: {
+                                    with: {
+                                        confidential: true, // Loads all confidential data
+                                    },
+                                },
                                 variants: true,
                                 category: true,
                                 subcategory: true,
@@ -73,6 +78,8 @@ class OrderQuery {
                 product: enhancedProducts.find((p) => p.id === i.productId),
             })),
         }));
+
+        console.log(enhancedData, "test");
 
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
