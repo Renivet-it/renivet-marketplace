@@ -225,7 +225,8 @@ export const brandConfidentialWithBrandSchema = brandConfidentialSchema.extend({
     bankAccountVerificationDocument: cachedBrandMediaItemSchema.nullish(),
     udyamRegistrationCertificate: cachedBrandMediaItemSchema.nullish(),
     iecCertificate: cachedBrandMediaItemSchema.nullish(),
-    brand: brandSchema,
+    // brand: brandSchema,
+    brand: z.lazy(() => brandSchema),
 });
 
 export const addressWithSafeSchema = z.object({
@@ -339,19 +340,20 @@ export const addressWithSafeSchema = z.object({
 });
 
 export const brandDetailsAddressWithSafeSchema = addressWithSafeSchema.extend({
-    brand: brandSchema.omit({
-        createdAt: true,
-        updatedAt: true,
-        confidentialVerificationStatus: true,
-        confidentialVerificationRejectedReason: true,
-        confidentialVerificationRejectedAt: true,
-        rzpAccountId: true,
-        ownerId: true,
-        phone: true,
-        bio: true,
-    })
+    brand: z.lazy(() =>
+        brandSchema.omit({
+            createdAt: true,
+            updatedAt: true,
+            confidentialVerificationStatus: true,
+            confidentialVerificationRejectedReason: true,
+            confidentialVerificationRejectedAt: true,
+            rzpAccountId: true,
+            ownerId: true,
+            phone: true,
+            bio: true,
+        })
+    ),
 });
-
 
 
 export const createBrandConfidentialSchema = brandConfidentialSchema
@@ -422,6 +424,26 @@ export const updateBrandConfidentialSchema = brandConfidentialSchema
         }
     );
 
+// export const linkBrandToRazorpaySchema = brandConfidentialSchema
+//     .pick({
+//         authorizedSignatoryName: true,
+//         addressLine1: true,
+//         addressLine2: true,
+//         city: true,
+//         state: true,
+//         postalCode: true,
+//         country: true,
+//         pan: true,
+//         gstin: true,
+//     })
+//     .extend({
+//         id: brandSchema.shape.id,
+//         name: brandSchema.shape.name,
+//         email: brandSchema.shape.email,
+//         phone: brandSchema.shape.phone,
+//         ownerId: brandSchema.shape.ownerId,
+//     });
+
 export const linkBrandToRazorpaySchema = brandConfidentialSchema
     .pick({
         authorizedSignatoryName: true,
@@ -435,11 +457,35 @@ export const linkBrandToRazorpaySchema = brandConfidentialSchema
         gstin: true,
     })
     .extend({
-        id: brandSchema.shape.id,
-        name: brandSchema.shape.name,
-        email: brandSchema.shape.email,
-        phone: brandSchema.shape.phone,
-        ownerId: brandSchema.shape.ownerId,
+        id: z
+            .string({
+                required_error: "ID is required",
+                invalid_type_error: "ID must be a string",
+            })
+            .uuid("ID is invalid"),
+        name: z
+            .string({
+                required_error: "Name is required",
+                invalid_type_error: "Name must be a string",
+            }),
+        email: z
+            .string({
+                required_error: "Email is required",
+                invalid_type_error: "Email must be a string",
+            })
+            .email("Email is invalid"),
+        phone: z
+            .string({
+                required_error: "Phone is required",
+                invalid_type_error: "Phone must be a string",
+            })
+            .min(10, "Phone must be at least 10 characters long"),
+        ownerId: z
+            .string({
+                required_error: "Owner ID is required",
+                invalid_type_error: "Owner ID must be a string",
+            })
+            .uuid("Owner ID is invalid"),
     });
 
 export type BrandConfidential = z.infer<typeof brandConfidentialSchema>;
