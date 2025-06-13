@@ -14,6 +14,7 @@ import { brandMediaItems } from "./brand-media-item";
 import { brandPageSections } from "./brand-page";
 import { brandSubscriptions } from "./brand-subscription";
 import { categoryRequests } from "./category";
+import { returnItemDetails, returnPaymentDetails } from "./order-return-exchange";
 import { products } from "./product";
 import { brandRoles, roles } from "./role";
 import { users } from "./user";
@@ -292,5 +293,16 @@ export const bannedBrandMemberRelations = relations(
             fields: [bannedBrandMembers.brandId],
             references: [brands.id],
         }),
+    })
+);
+
+export const brandReturnOrderRelations = relations(brands, ({ many }) => ({
+    returnOrders: many(returnItemDetails),
+}));
+
+export const brandReturnPaymentDetailsRelations = relations(
+    brands,
+    ({ many }) => ({
+        returnPaymentDetails: many(returnPaymentDetails),
     })
 );

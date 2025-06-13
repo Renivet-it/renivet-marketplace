@@ -13,8 +13,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
-import { orderItems, orders } from "./order";
 import { mediaExchangeShipment, mediaReturnShipment } from "./media";
+import { orderItems, orders } from "./order";
+import {
+    returnAddressDetails,
+    returnItemDetails,
+    returnPaymentDetails,
+} from "./order-return-exchange";
 
 export const orderShipments = pgTable(
     "order_shipments",
@@ -120,6 +125,7 @@ export const returnShipments = pgTable(
         awb: bigint("awb", { mode: "number" }),
         courierCompanyName: text("company_name_courier"),
         srResponse: jsonb("sr_response_json").default({}),
+        isPayable: boolean("is_payable").default(false),
         ...timestamps,
     },
     (table) => ({
@@ -208,6 +214,18 @@ export const returnShipmentsRelations = relations(
             fields: [returnShipments.id],
             references: [exchangeShipments.returnedOrderId],
         }),
+        item: one(returnItemDetails, {
+            fields: [returnShipments.returnOrderId],
+            references: [returnItemDetails.returnId],
+        }),
+        address: one(returnAddressDetails, {
+            fields: [returnShipments.returnOrderId],
+            references: [returnAddressDetails.returnId],
+        }),
+        payment: one(returnPaymentDetails, {
+            fields: [returnShipments.returnOrderId],
+            references: [returnPaymentDetails.returnId],
+        }),
     })
 );
 
@@ -225,11 +243,16 @@ export const exchangeShipmentsRelations = relations(
     })
 );
 
+export const returnShipmentMediaRelation = relations(
+    returnShipments,
+    ({ many }) => ({
+        mediaReturn: many(mediaReturnShipment),
+    })
+);
 
-export const returnShipmentMediaRelation = relations(returnShipments, ({ many }) => ({
-  mediaReturn: many(mediaReturnShipment),
-}));
-
-export const exchangeShipmentMediaRelation = relations(exchangeShipments, ({ many }) => ({
-  mediaReturn: many(mediaExchangeShipment),
-}));
+export const exchangeShipmentMediaRelation = relations(
+    exchangeShipments,
+    ({ many }) => ({
+        mediaReturn: many(mediaExchangeShipment),
+    })
+);
