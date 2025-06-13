@@ -1072,6 +1072,13 @@
       "when": 1749839616311,
       "tag": "0152_hard_glorian",
       "breakpoints": true
+    },
+    {
+      "idx": 153,
+      "version": "7",
+      "when": 1749849255674,
+      "tag": "0153_boring_manta",
+      "breakpoints": true
     }
   ]
 }

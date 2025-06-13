@@ -19,6 +19,7 @@ import {
     returnAddressDetails,
     returnItemDetails,
     returnPaymentDetails,
+    returnReasonDetails,
 } from "./order-return-exchange";
 
 export const orderShipments = pgTable(
@@ -225,6 +226,10 @@ export const returnShipmentsRelations = relations(
         payment: one(returnPaymentDetails, {
             fields: [returnShipments.returnOrderId],
             references: [returnPaymentDetails.returnId],
+        }),
+        reasonDetail: one(returnReasonDetails, {
+            fields: [returnShipments.returnOrderId],
+            references: [returnReasonDetails.returnId],
         }),
     })
 );

@@ -1,6 +1,14 @@
-import { bigint, boolean, foreignKey, pgTable, text, uuid } from "drizzle-orm/pg-core";
-import { typeMasters } from "./types";
+import {
+    bigint,
+    boolean,
+    foreignKey,
+    pgTable,
+    text,
+    uuid,
+} from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
+import { typeMasters } from "./types";
+import { relations } from "drizzle-orm";
 
 export const reasonMasters = pgTable(
     "reason_master",
@@ -13,7 +21,7 @@ export const reasonMasters = pgTable(
         isActive: boolean("is_active").default(true),
         shortOrder: bigint("short_order", { mode: "number" }),
         reasonType: text("reason_type"),
-        ...timestamps
+        ...timestamps,
     },
     (t) => [
         foreignKey({
@@ -25,6 +33,17 @@ export const reasonMasters = pgTable(
             columns: [t.reasonType],
             foreignColumns: [typeMasters.code],
             name: "reason_master_reason_type_fkey",
-        })
+        }),
     ]
+);
+
+export const reasonMastersRelations = relations(
+    reasonMasters,
+    ({ one, many }) => ({
+        parent: one(reasonMasters, {
+            fields: [reasonMasters.parentId],
+            references: [reasonMasters.id],
+        }),
+        children: many(reasonMasters),
+    })
 );

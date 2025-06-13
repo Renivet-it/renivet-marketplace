@@ -12,5 +12,6 @@ export const OrderReturnRouter = createTRPCRouter({
                     message: "Payload is courrupted or missing",
                 });
             }
+            console.log("return payload received:", input);
         }),
 });

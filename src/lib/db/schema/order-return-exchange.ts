@@ -11,9 +11,10 @@ import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { returnShipments } from "./order-shipment";
 import { users } from "./user";
+import { reasonMasters } from "./reason";
 
 export const returnItemDetails = pgTable(
-    "return_item_details",
+    "order_return_item_details",
     {
         id: uuid("id").primaryKey().defaultRandom(),
         orderId: uuid("delivered_order_id"),
@@ -23,7 +24,6 @@ export const returnItemDetails = pgTable(
         sku: text("sku"),
         units: integer("units"),
         sellingPrice: integer("selling_price"),
-        returnComment: text("return_comment"),
         ...timestamps,
     },
     (t) => [
@@ -41,7 +41,7 @@ export const returnItemDetails = pgTable(
 );
 
 export const returnPaymentDetails = pgTable(
-    "return_payment_details",
+    "order_return_payment_details",
     {
         id: uuid("id").primaryKey().defaultRandom(),
         returnId: text("return_id"),
@@ -79,7 +79,7 @@ export const returnPaymentDetails = pgTable(
 );
 
 export const returnAddressDetails = pgTable(
-    "return_address_details",
+    "order_return_address_details",
     {
         id: uuid("id").primaryKey().defaultRandom(),
         returnId: text("return_id"),
@@ -98,6 +98,29 @@ export const returnAddressDetails = pgTable(
             name: "return_address_details_return_id_fk",
             columns: [t.returnId],
             foreignColumns: [returnShipments.returnOrderId],
+        }).onDelete("cascade"),
+    ]
+);
+
+export const returnReasonDetails = pgTable(
+    "order_return_reason_details",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        returnId: text("return_id"),
+        subReasonId: uuid("sub_reason_id"),
+        comment: text("comment"),
+        ...timestamps,
+    },
+    (t) => [
+        foreignKey({
+            name: "return_reason_details_return_id_fk",
+            columns: [t.returnId],
+            foreignColumns: [returnShipments.returnOrderId],
+        }).onDelete("cascade"),
+        foreignKey({
+            name: "return_reason_details_sub_reason_id_fk",
+            columns: [t.subReasonId],
+            foreignColumns: [reasonMasters.id],
         }).onDelete("cascade"),
     ]
 );
@@ -137,3 +160,17 @@ export const returnItemDetailsRelations = relations(returnItemDetails, ({ one })
         references: [brands.id],
     }),
 }));
+
+export const returnReasonDetailsRelations = relations(
+  returnReasonDetails,
+  ({ one }) => ({
+    return: one(returnShipments, {
+      fields: [returnReasonDetails.returnId],
+      references: [returnShipments.returnOrderId],
+    }),
+    reason: one(reasonMasters, {
+      fields: [returnReasonDetails.subReasonId],
+      references: [reasonMasters.id],
+    }),
+  })
+);
