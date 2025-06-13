@@ -67,5 +67,6 @@ async function OrdersFetch({ searchParams }: PageProps) {
 
 async function OrdersDownloadFetch() {
     const data = await orderQueries.getAllOrders();
+    // console.log("Fetched orders for download:", data);
     return <OrdersDownload orders={data} />;
 }

@@ -12,68 +12,60 @@ interface PageProps {
 }
 
 export function OrdersDownload({ orders }: PageProps) {
+    console.log("OrdersDownload component rendered with orders:", orders);
     const handleDownload = () => {
         try {
-            const csvData = orders.flatMap((order) =>
-                order.items.map((item) => ({
-                    "Order ID": order.id,
-                    "Receipt ID": order.receiptId,
-                    "Order Date": new Date(
-                        order.createdAt
-                    ).toLocaleDateString(),
-                    "Order Status": convertValueToLabel(order.status),
-                    "Payment Status": convertValueToLabel(order.paymentStatus),
-                    "Payment Method": convertValueToLabel(
-                        order.paymentMethod || ""
-                    ),
-                    "Total Amount": convertPaiseToRupees(order.totalAmount),
-                    "Tax Amount": convertPaiseToRupees(order.taxAmount),
-                    "Delivery Amount": convertPaiseToRupees(
-                        order.deliveryAmount
-                    ),
-                    "Discount Amount": convertPaiseToRupees(
-                        order.discountAmount
-                    ),
-                    "Brand Name": item.product.brand.name,
-                    "Product Title": item.product.title,
-                    "Product SKU": item.sku || item.product.sku || "",
-                    Category: item.product.category.name,
-                    Subcategory: item.product.subcategory.name,
-                    "Product Type": item.product.productType.name,
-                    Quantity: item.quantity,
-                    "Variant Details": item.variant
-                        ? Object.entries(item.variant.combinations)
-                              .map(
-                                  ([key, value]) =>
-                                      `${item.product.options.find((o) => o.id === key)?.name}: ${
-                                          item.product.options
-                                              .find((o) => o.id === key)
-                                              ?.values.find(
-                                                  (v) => v.id === value
-                                              )?.name
-                                      }`
-                              )
-                              .join(", ")
-                        : "No Variant",
-                    "Shipment Status": convertValueToLabel(
-                        order.shipments.find(
-                            (s) => s.brandId === item.product.brand.id
-                        )?.status || "pending"
-                    ),
-                    "AWB Number":
-                        order.shipments.find(
-                            (s) => s.brandId === item.product.brand.id
-                        )?.awbNumber || "",
-                    "Invoice URL":
-                        order.shipments.find(
-                            (s) => s.brandId === item.product.brand.id
-                        )?.invoiceUrl || "",
-                    "Manifest URL":
-                        order.shipments.find(
-                            (s) => s.brandId === item.product.brand.id
-                        )?.manifestUrl || "",
-                }))
-            );
+            console.log(`Total orders: ${orders.length}`);
+            const csvData = orders.map((order) => {
+                // For orders with multiple items, you might want to aggregate some values
+                const totalItems = order.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+                const totalPrice = order.items.reduce((sum, item) => sum + (item.product.price || 0), 0);
+                const totalMRP = order.items.reduce((sum, item) => sum + (item.product.price || 0), 0);
+                const netMRP = totalMRP - (totalMRP * 0.18);
+const commissionAmount = (order.items[0]?.product?.category?.commissionRate || 0) / 100 * totalMRP;
+const gstOnCommission = commissionAmount * 0.18;
+                return {
+                    "Name": order.id || "",
+                    "Order Status": order.status || "",
+                    "Created at": order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "",
+                    "Billing Name": order.address?.fullName || "",
+                    "Lineitem_sku": order.items[0]?.product?.sku || "", // Added Lineitem_sku
+                    "Billing City": order.address?.city || "",
+                    "Billing ZIP": order.address?.zip || "",
+                    "Net MRP": convertPaiseToRupees(netMRP), // Added Net MRP(logic needed)
+                    "HSN": order.items[0]?.product?.hsCode || "",
+                    "Lineitem_name": order.items[0]?.product?.title || "", // Added Lineitem_name
+                    "Seller Register State": order.items[0]?.product?.brand?.confidential?.state || "", // need to add the seller info
+                    // "GST/TCS %": order.taxRate || "", // need to add the seller info
+                    "Billing Phone": order.address?.phone || "",
+                    "Payment Method": convertValueToLabel(order.paymentMethod || "Prepaid"),
+                    "Account No.": order.items[0]?.product?.brand.confidential?.bankAccountNumber || "", // need to add the seller info
+                    "IFSC Code": order.items[0]?.product?.brand.confidential?.bankIfscCode || "", // need to add the seller info
+                    "Bank Name": order.items[0]?.product?.brand.confidential?.bankName || "", // need to add the seller info
+                    "Beneficiary Name": order.items[0]?.product?.brand.confidential?.bankAccountHolderName || "", // need to add the seller info
+                    "SUM of COMM.%": order.items[0]?.product?.category.commissionRate || "", // need to add the commission info
+                    "SUM of COMM. Amt":  convertPaiseToRupees((order.items[0]?.product?.category?.commissionRate || 0) / 100 * totalMRP), // need to add the commission info
+                    "SUM of GST on COMM.@18%": convertPaiseToRupees(gstOnCommission), // need to add the commission info
+                    "SUM of TCS 1%": convertPaiseToRupees(netMRP * 0.01), // need to add the commission info
+                    "SUM of TDS 1%": convertPaiseToRupees(totalMRP * 0.01), // need to add the commission info
+                    "SUM of LINEITEM_QUANTITY": totalItems,
+                    "SUM of LINEITEM_PRICE": convertPaiseToRupees(totalPrice),
+                    "SUM of TOTAL_MRP": convertPaiseToRupees(totalMRP),
+                    "SUM of DISCOUNT_AMOUNT": convertPaiseToRupees(order.discountAmount || 0),
+                    "SUM of SHIPPING": order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0,
+                    // "SUM of TAX": convertPaiseToRupees(order.taxAmount || 0),
+                    // "SUM of TAXABLE VALUE": convertPaiseToRupees((order.totalAmount || 0) - (order.taxAmount || 0)),
+"SUM of Payment to Seller": convertPaiseToRupees(
+  (totalMRP ?? 0) === 0
+    ? 0
+    : (order?.totalAmount ?? 0) -
+      ((order?.items?.[0]?.product?.category?.commissionRate ?? 0) / 100 * (totalMRP ?? 0)) -
+      ((order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0) * 100)
+),
+                };
+            });
+
+            console.log(`Total rows in CSV data: ${csvData.length}`);
 
             const csv = unparse(csvData, {
                 quotes: true,
@@ -93,10 +85,10 @@ export function OrdersDownload({ orders }: PageProps) {
             link.click();
             URL.revokeObjectURL(link.href);
 
-            toast.success("Orders exported successfully");
+            toast.success(`Exported ${csvData.length} orders successfully`);
         } catch (error) {
             toast.error("Failed to export orders");
-            console.error(error);
+            console.error("Export error:", error);
         }
     };
 

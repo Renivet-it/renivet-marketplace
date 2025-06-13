@@ -7,6 +7,7 @@ import {
     productTypeSchema,
     subCategorySchema,
 } from "./category";
+import { brandConfidentialSchema } from "./brand-confidential";
 
 export const productOptionValueSchema = z.object({
     id: z
@@ -728,7 +729,10 @@ export const productVariantGroupSchema = z.object({
 });
 
 export const productWithBrandSchema = productSchema.extend({
-    brand: z.lazy(() => brandSchema),
+    // brand: z.lazy(() => brandSchema),
+        brand: z.lazy(() => brandSchema.extend({
+        confidential: brandConfidentialSchema.optional() // ← Add this line
+    })),
     options: z.array(productOptionSchema),
     variants: z.array(enhancedProductVariantSchema),
     returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
@@ -739,6 +743,8 @@ export const productWithBrandSchema = productSchema.extend({
     productType: productTypeSchema,
     journey: productJourneySchema.nullable(),
     values: productValueSchema.nullable(),
+        confidentialData: brandConfidentialSchema.optional() // ← Add this line
+
 });
 
 export const createProductSchema = productSchema
