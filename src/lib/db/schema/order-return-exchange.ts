@@ -17,7 +17,7 @@ export const returnItemDetails = pgTable(
     {
         id: uuid("id").primaryKey().defaultRandom(),
         orderId: uuid("delivered_order_id"),
-        returnId: uuid("return_id"),
+        returnId: text("return_id"),
         brandId: uuid("brand_id"),
         productName: text("product_name"),
         sku: text("sku"),
@@ -44,8 +44,8 @@ export const returnPaymentDetails = pgTable(
     "return_payment_details",
     {
         id: uuid("id").primaryKey().defaultRandom(),
-        returnId: uuid("return_id"),
-        userId: uuid("payment_refund_requested_user_id"),
+        returnId: text("return_id"),
+        userId: text("payment_refund_requested_user_id"),
         brandId: uuid("brand_id"),
         accountHolderName: text("account_holder_name"),
         accountNumber: text("account_number"),
@@ -82,7 +82,7 @@ export const returnAddressDetails = pgTable(
     "return_address_details",
     {
         id: uuid("id").primaryKey().defaultRandom(),
-        returnId: uuid("return_id"),
+        returnId: text("return_id"),
         customerName: text("customer_name"),
         pickupAddress: text("pickup_address"),
         pickupCity: text("pickup_city"),
