@@ -4,6 +4,7 @@ import {
     getCouriersParams,
     PostShipmentPickupBody,
 } from "@/lib/shiprocket/validations/request/couriers";
+import { OrderReturnShiprockRequest } from "@/lib/shiprocket/validations/request/order-return";
 
 export interface ApiResponse<T> {
     status: boolean;
@@ -167,4 +168,5 @@ export interface CourierContextType {
     ) => Promise<ApiResponse<CourierListResponse>>;
     generateAWB: (orderId: AWB) => Promise<any>;
     requestShipment: (shipmentData: PostShipmentPickupBody) => Promise<any>;
+    returnShipment: (payload: OrderReturnShiprockRequest) => Promise<any>;
 }

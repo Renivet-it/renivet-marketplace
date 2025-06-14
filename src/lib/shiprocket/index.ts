@@ -19,6 +19,7 @@ import {
     getCouriersParams,
     PostShipmentPickupBody,
 } from "./validations/request/couriers";
+import { OrderReturnShiprockRequest } from "./validations/request/order-return";
 import {
     AWBResponse,
     GenerateManifestResponse,
@@ -29,6 +30,7 @@ import {
     PickupResponse,
     PrintManifestResponse,
 } from "./validations/response";
+import { OrderReturnShiprockResponse } from "./validations/response/order-return";
 
 class ShipRocket {
     private static instance: ShipRocket;
@@ -547,6 +549,33 @@ class ShipRocket {
             return {
                 status: false,
                 message: sanitizeError(err),
+                data: null,
+            };
+        }
+    }
+
+    async returnOrderShipment(returnOrderpayload: OrderReturnShiprockRequest) {
+        try {
+            const res = await this.axiosInstance.post(
+                "orders/create/return",
+                returnOrderpayload
+            );
+            if (res.status !== 200) {
+                throw new AppError(
+                    "Unable to return order shipment",
+                    "INTERNAL_SERVER_ERROR"
+                );
+            }
+            return {
+                status: true,
+                message: "Order return generated successfully!",
+                data: res.data as OrderReturnShiprockResponse,
+            };
+        } catch (error) {
+            console.error("Error in returnOrderShipment:", error);
+            return {
+                status: false,
+                message: sanitizeError(error),
                 data: null,
             };
         }
