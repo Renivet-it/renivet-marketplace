@@ -76,7 +76,6 @@ export const orderShipments = pgTable(
         pickUpDetailsShipRocketJson: jsonb(
             "pick_up_details_shiprocket_json"
         ).default({}),
-        isRtoReturn: boolean("is_rto_return").default(false),
     },
     (table) => ({
         orderShipmentOrderIdIdx: index("order_shipment_order_id_idx").on(

@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+    boolean,
     index,
     integer,
     pgTable,
@@ -57,6 +58,7 @@ export const orders = pgTable(
         deliveryAmount: integer("delivery_amount").notNull(),
         discountAmount: integer("discount_amount").notNull().default(0),
         totalAmount: integer("total_amount").notNull(),
+        isRtoReturn: boolean("is_rto_return").default(false),
         ...timestamps,
     },
     (table) => ({

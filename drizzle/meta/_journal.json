@@ -1079,6 +1079,13 @@
       "when": 1749849255674,
       "tag": "0153_boring_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 154,
+      "version": "7",
+      "when": 1749929300143,
+      "tag": "0154_clever_chronomancer",
+      "breakpoints": true
     }
   ]
 }
