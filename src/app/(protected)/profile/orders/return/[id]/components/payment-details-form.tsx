@@ -24,6 +24,7 @@ export interface PaymentDetailsFormHandles {
 interface PaymentDetailsFormProps {
   defaultValues?: Partial<ReturnOrderPhaseThree>;
   readOnly?: boolean;
+  isLoading?: boolean;
 }
 
 const PaymentDetailsForm = forwardRef<PaymentDetailsFormHandles, PaymentDetailsFormProps>(

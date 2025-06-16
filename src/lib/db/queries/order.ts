@@ -1,14 +1,33 @@
 import { mediaCache } from "@/lib/redis/methods";
 import {
     CreateOrder,
-    Order,
     OrderWithItemAndBrand,
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
 } from "@/lib/validations";
+import {
+    returnShipment,
+    returnShipmentAddress,
+    returnShipmentItem,
+    returnShipmentPayment,
+    returnShipmentReason,
+} from "@/lib/validations/order-return";
 import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orderItems, orders, orderShipments, products, users } from "../schema";
+import {
+    orderItems,
+    orders,
+    orderShipments,
+    products,
+    returnShipments,
+    users,
+} from "../schema";
+import {
+    returnAddressDetails,
+    returnItemDetails,
+    returnPaymentDetails,
+    returnReasonDetails,
+} from "../schema/order-return-exchange";
 
 class OrderQuery {
     async getAllOrders() {
@@ -675,6 +694,72 @@ class OrderQuery {
                 shipmentDate: shipmentDate,
             })
             .where(eq(orderShipments.awbNumber, awbNumber));
+        return result;
+    }
+
+    async getBrandUserItemsDetailsByOrderId(orderId: string) {
+        const data = await db.query.orderShipments.findFirst({
+            where: (t, { eq }) => eq(t.orderId, orderId),
+            with: {
+                order: {
+                    with: {
+                        user: true,
+                        item: {
+                            with: {
+                                product: true,
+                                variant: true,
+                            },
+                        },
+                    },
+                },
+                brand: {
+                    with: {
+                        confidential: true,
+                    },
+                },
+            },
+        });
+        return data;
+    }
+
+    async insertOrderReturnShipement(value: Array<returnShipment>) {
+        const result = db.insert(returnShipments).values(value).returning();
+        return result;
+    }
+
+    async insertOrderReturnAddress(value: Array<returnShipmentAddress>) {
+        const result = db
+            .insert(returnAddressDetails)
+            .values(value)
+            .returning();
+        return result;
+    }
+
+    async insertOrderReturnItemDetails(value: Array<returnShipmentItem>) {
+        const result = db.insert(returnItemDetails).values(value).returning();
+        return result;
+    }
+
+    async insertOrderReturnPaymentDetails(value: Array<returnShipmentPayment>) {
+        const result = db
+            .insert(returnPaymentDetails)
+            .values(value)
+            .returning();
+        return result;
+    }
+
+    async insertOrderReturnReasonDetails(value: Array<returnShipmentReason>) {
+        const result = db.insert(returnReasonDetails).values(value).returning();
+        return result;
+    }
+
+    async updateOrderShipmentReturnflagData(orderId: string, isRtoReturnProcced: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isRtoReturn: isRtoReturnProcced
+            })
+            .where(eq(orderShipments.orderId, orderId));
         return result;
     }
 }

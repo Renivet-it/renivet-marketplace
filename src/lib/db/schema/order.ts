@@ -124,6 +124,10 @@ export const orderRelations = relations(orders, ({ one, many }) => ({
     }),
     refunds: many(refunds),
     shipments: many(orderShipments),
+    item: one(orderItems, {
+        fields: [orders.id],
+        references: [orderItems.orderId]
+    })
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({

@@ -12,12 +12,13 @@ import { brands } from "./brand";
 import { returnShipments } from "./order-shipment";
 import { users } from "./user";
 import { reasonMasters } from "./reason";
+import { orders } from "./order";
 
 export const returnItemDetails = pgTable(
     "order_return_item_details",
     {
         id: uuid("id").primaryKey().defaultRandom(),
-        orderId: uuid("delivered_order_id"),
+        orderId: text("delivered_order_id"),
         returnId: text("return_id"),
         brandId: uuid("brand_id"),
         productName: text("product_name"),
@@ -37,6 +38,11 @@ export const returnItemDetails = pgTable(
             columns: [t.brandId],
             foreignColumns: [brands.id],
         }).onDelete("cascade"),
+        foreignKey({
+            name: "return_item_details_order_id_fk",
+            columns: [t.orderId],
+            foreignColumns: [orders.id],
+        }).onDelete("cascade")
     ]
 );
 

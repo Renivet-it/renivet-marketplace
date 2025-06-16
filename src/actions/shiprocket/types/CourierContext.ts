@@ -169,4 +169,5 @@ export interface CourierContextType {
     generateAWB: (orderId: AWB) => Promise<any>;
     requestShipment: (shipmentData: PostShipmentPickupBody) => Promise<any>;
     returnShipment: (payload: OrderReturnShiprockRequest) => Promise<any>;
+    returnAwbGenerate: (payload: AWB) => Promise<any>;
 }

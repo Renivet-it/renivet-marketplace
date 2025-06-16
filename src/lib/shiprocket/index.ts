@@ -556,8 +556,12 @@ class ShipRocket {
 
     async returnOrderShipment(returnOrderpayload: OrderReturnShiprockRequest) {
         try {
-            const res = await this.axiosInstance.post(
-                "orders/create/return",
+            // const res = await this.axiosInstance.post(
+            //     "orders/create/return",
+            //     returnOrderpayload
+            // );
+            const res = await axios.post(
+                "https://665003eb-a31d-43b9-9a5e-3e8ccf04ae7c.mock.pstmn.io/orders/create/return",
                 returnOrderpayload
             );
             if (res.status !== 200) {
@@ -573,6 +577,42 @@ class ShipRocket {
             };
         } catch (error) {
             console.error("Error in returnOrderShipment:", error);
+            return {
+                status: false,
+                message: sanitizeError(error),
+                data: null,
+            };
+        }
+    }
+
+    async generateReturnAwb(payload: AWB) {
+        try {
+            // const res = await this.axiosInstance.post<AWBResponse>(
+            //     "/courier/assign/awb",
+            //     payload
+            // );
+            const res = await axios.post(
+                "https://665003eb-a31d-43b9-9a5e-3e8ccf04ae7c.mock.pstmn.io/courier/assign/awb",
+                payload
+            );
+            if (res.status !== 200)
+                throw new AppError(
+                    "Unable to generate AWB",
+                    "INTERNAL_SERVER_ERROR"
+                );
+
+            const awbResponseData: AWBResponse = res.data;
+
+            if (!awbResponseData.awb_assign_status) {
+                throw new AppError("Unable to generate AWB.", "CONFLICT");
+            }
+
+            return {
+                status: true,
+                message: "AWB generated",
+                data: awbResponseData,
+            };
+        } catch (error) {
             return {
                 status: false,
                 message: sanitizeError(error),

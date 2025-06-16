@@ -52,4 +52,10 @@ export const courierService: CourierContextType = {
         const response = await sr.returnOrderShipment(payload);
         return response;
     },
+
+    async returnAwbGenerate(payload) {
+        const sr = await clientPromise;
+        const response = await sr.generateReturnAwb(payload);
+        return response;
+    },
 };

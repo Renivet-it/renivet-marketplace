@@ -3,10 +3,11 @@
 import { Button } from "@/components/ui/button-general";
 import { useReturnStore } from "@/lib/store/return-store";
 import { cn } from "@/lib/utils";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ReturnPaymentDetails } from "./return-payment-details";
 import ReturnReasonsAccordion from "./return-reason-accordian";
 import { ReturnStepAddress } from "./return-step-address";
+import { LoaderIcon } from "lucide-react";
 
 interface Props extends GenericProps {
     className?: string;
@@ -24,6 +25,7 @@ export default function ReturnPageStepper({ className, ...props }: Props) {
     };
 
     const validatorRef = useRef<() => boolean | Promise<boolean>>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleNext = async () => {
         if (validatorRef.current) {
@@ -56,6 +58,7 @@ export default function ReturnPageStepper({ className, ...props }: Props) {
             {step === STEPS.PAYMENT && (
                 <ReturnPaymentDetails
                     setValidator={(fn) => (validatorRef.current = fn)}
+                    setIsLoading={setIsSubmitting}
                 />
             )}
 
@@ -69,8 +72,17 @@ export default function ReturnPageStepper({ className, ...props }: Props) {
                     <div />
                 )}
 
-                <Button onClick={handleNext}>
-                    {step === STEPS.FINAL_STEP ? "Submit" : "Continue"}
+                <Button onClick={handleNext} disabled={isSubmitting}>
+                    {isSubmitting ? (
+                        <>
+                            <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                        </>
+                    ) : step === STEPS.FINAL_STEP ? (
+                        "Submit"
+                    ) : (
+                        "Continue"
+                    )}
                 </Button>
             </div>
         </div>
