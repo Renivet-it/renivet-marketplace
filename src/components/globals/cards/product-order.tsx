@@ -19,7 +19,7 @@ interface PageProps extends GenericProps {
         estimatedDelivery?: Date | null;
     };
     serverNow?: Date;
-    shipmentDetails: OrderShipment | undefined;
+    shipmentDetails?: OrderShipment | undefined;
 }
 
 export function ProductOrderCard({

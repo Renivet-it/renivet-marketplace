@@ -30,7 +30,7 @@ export default function Page() {
     );
 }
 
-export function ReturnPage() {
+function ReturnPage() {
     const router = useRouter();
     const returnItem = useReturnStore((state) => state.selectedReturnItem);
     const [isHydrated, setIsHydrated] = useState(false);
@@ -99,7 +99,7 @@ interface ReturnPageProductDetailsHeaderProps extends GenericProps {
     itemPrice: number;
 }
 
-export function ReturnPageProductDetailsHeader({
+function ReturnPageProductDetailsHeader({
     imageUrl,
     imageAlt,
     productTitle,
