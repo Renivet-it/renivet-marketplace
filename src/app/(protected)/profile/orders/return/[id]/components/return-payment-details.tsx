@@ -53,10 +53,10 @@ export function ReturnPaymentDetails({
                             setIsLoading?.(true);
                             const response = await mutateAsync(typedPayload);
                             if (response.status === true) {
-                                useReturnStore.getState().reset();
                                 setDialogOpen(true);
                                 const timeout = setTimeout(() => {
                                     router.push("/profile/orders");
+                                    useReturnStore.getState().reset();
                                 }, 2000);
                                 setAutoCloseTimeout(timeout);
                             }
@@ -73,13 +73,21 @@ export function ReturnPaymentDetails({
                 return isValid ?? false;
             });
         }
-    }, [setValidator, mutateAsync, setAutoCloseTimeout, setDialogOpen, router]);
+    }, [
+        setValidator,
+        mutateAsync,
+        setAutoCloseTimeout,
+        setDialogOpen,
+        router,
+        setIsLoading,
+    ]);
 
     const handleDialogChange = (open: boolean) => {
         if (!open) {
             // If user closes manually, clear timeout and redirect
             if (autoCloseTimeout) clearTimeout(autoCloseTimeout);
             router.push("/profile/orders");
+            useReturnStore.getState().reset();
         }
         setDialogOpen(open);
     };
@@ -114,13 +122,19 @@ export function ReturnPaymentDetails({
                     <div className="mt-4 flex justify-center gap-4">
                         <button
                             className="rounded bg-primary px-4 py-2 text-white"
-                            onClick={() => router.push("/profile/orders")}
+                            onClick={() => {
+                                router.push("/profile/orders");
+                                useReturnStore.getState().reset();
+                            }}
                         >
                             Go to Orders
                         </button>
                         <button
                             className="rounded bg-muted px-4 py-2 text-primary"
-                            onClick={() => router.push("/shop")}
+                            onClick={() => {
+                                router.push("/shop");
+                                useReturnStore.getState().reset();
+                            }}
                         >
                             Continue Shopping
                         </button>

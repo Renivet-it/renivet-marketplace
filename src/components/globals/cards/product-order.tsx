@@ -93,6 +93,8 @@ export function ProductOrderCard({
         router.push(`/profile/orders/return/${item.id}`);
     };
 
+    const isRtoReturned = shipmentDetails?.isRtoReturn;
+
     return (
         <div
             key={item.id}
@@ -173,15 +175,7 @@ export function ProductOrderCard({
                     </p>{" "}
                 </div>
                 <div className="flex gap-2">
-                    <Button
-                        className="flex-1 md:flex-none"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handelReturn(item)}
-                    >
-                        Return
-                    </Button>
-                    {isDelivered && canReturn && (
+                    {!isRtoReturned && isDelivered && canReturn && (
                         <Button
                             className="flex-1 md:flex-none"
                             variant="outline"
@@ -191,15 +185,16 @@ export function ProductOrderCard({
                             Return
                         </Button>
                     )}
-                    {isDelivered && canExchange && (
-                        <Button
-                            className="flex-1 md:flex-none"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => ""}
-                        >
-                            Exchange
-                        </Button>
+                    {!isRtoReturned && isDelivered && canExchange && (
+                        // <Button
+                        //     className="flex-1 md:flex-none"
+                        //     variant="outline"
+                        //     size="sm"
+                        //     onClick={() => ""}
+                        // >
+                        //     Exchange
+                        // </Button>
+                        <></>
                     )}
                 </div>
             </div>

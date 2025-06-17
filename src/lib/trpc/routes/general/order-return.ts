@@ -136,7 +136,7 @@ export const OrderReturnRouter = createTRPCRouter({
                         srOrderId: returnResponseData.order_id,
                         srShipmentId: returnResponseData.shipment_id,
                         srResponse: returnResponseData,
-                        status: returnResponseData.status,
+                        status: returnResponseData.status.toLowerCase(),
                         isPayable: true,
                     },
                 ];

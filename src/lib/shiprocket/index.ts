@@ -556,12 +556,8 @@ class ShipRocket {
 
     async returnOrderShipment(returnOrderpayload: OrderReturnShiprockRequest) {
         try {
-            // const res = await this.axiosInstance.post(
-            //     "orders/create/return",
-            //     returnOrderpayload
-            // );
-            const res = await axios.post(
-                "https://665003eb-a31d-43b9-9a5e-3e8ccf04ae7c.mock.pstmn.io/orders/create/return",
+            const res = await this.axiosInstance.post(
+                "orders/create/return",
                 returnOrderpayload
             );
             if (res.status !== 200) {
@@ -587,12 +583,8 @@ class ShipRocket {
 
     async generateReturnAwb(payload: AWB) {
         try {
-            // const res = await this.axiosInstance.post<AWBResponse>(
-            //     "/courier/assign/awb",
-            //     payload
-            // );
-            const res = await axios.post(
-                "https://665003eb-a31d-43b9-9a5e-3e8ccf04ae7c.mock.pstmn.io/courier/assign/awb",
+            const res = await this.axiosInstance.post<AWBResponse>(
+                "/courier/assign/awb",
                 payload
             );
             if (res.status !== 200)
