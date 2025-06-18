@@ -23,3 +23,6 @@ export * from "./tag";
 export * from "./ticket";
 export * from "./user";
 export * from "./wishlist";
+export * from "./media";
+export * from "./reason";
+export * from "./types";

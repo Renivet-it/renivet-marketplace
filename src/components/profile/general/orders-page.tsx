@@ -349,110 +349,43 @@ function OrderCard({
     return (
         <>
             <Card className="rounded-none">
-                <CardHeader className="bg-primary p-4 py-6 text-primary-foreground md:p-6">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1">
-                            <p className="text-xs uppercase">Order Placed</p>
-                            <p className="text-sm">
-                                {format(
-                                    new Date(order.createdAt),
-                                    "MMMM dd, yyyy"
+                <CardHeader>
+                    <ul>
+                        <li className="flex flex-col sm:flex-row items-center gap-4">
+                            <OrderHeader order={order} />
+                            <div className="flex-1 w-full sm:w-auto sm:flex-none">
+                                {(order.status === "pending" ||
+                                    order.status === "processing") && (
+                                    <Button
+                                        className="w-full sm:w-auto"
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() =>
+                                            setIsCancelModalOpen(true)
+                                        }
+                                    >
+                                        Cancel Order
+                                    </Button>
                                 )}
-                            </p>
-                        </div>
-
-                        <div className="space-y-1">
-                            <p className="text-xs uppercase">Total</p>
-                            <p className="text-sm">
-                                {formatPriceTag(
-                                    +convertPaiseToRupees(order.totalAmount),
-                                    true
-                                )}
-                            </p>
-                        </div>
-
-                        <div className="space-y-1">
-                            <p className="text-xs font-medium">ORDER #</p>
-                            <p className="text-sm">{order.id}</p>
-                        </div>
-                    </div>
-                </CardHeader>
-
-                <CardContent className="space-y-6 p-4 md:p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex flex-col gap-2 md:flex-row md:gap-4">
-                            <Badge variant="secondary" className="h-6">
-                                Order Status:{" "}
-                                {convertValueToLabel(order.status)}
-                            </Badge>
-
-                            <Badge variant="secondary" className="h-6">
-                                Payment Status:{" "}
-                                {convertValueToLabel(order.paymentStatus)}
-                            </Badge>
-                        </div>
-
-                        {(order.status === "pending" ||
-                            order.status === "processing") && (
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => setIsCancelModalOpen(true)}
-                            >
-                                Cancel Order
-                            </Button>
-                        )}
-                    </div>
-
-                    {unavailableItems.length === 0 &&
-                        order.status === "pending" &&
-                        (order.paymentStatus === "pending" ||
-                            order.paymentStatus === "failed") && (
-                            <div className="flex items-center gap-2 bg-muted/50 p-4 text-sm text-muted-foreground">
-                                <Icons.AlertCircle className="size-5" />
-
-                                <p>
-                                    Order is pending. Please complete the
-                                    payment to proceed.
-                                </p>
-
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="ml-auto"
-                                    asChild
-                                >
-                                    <Link href={`/orders/${order.id}`}>
-                                        Complete Payment
-                                        <Icons.ArrowRight className="size-4" />
-                                    </Link>
-                                </Button>
                             </div>
-                        )}
-
-                    <Separator />
-
-                    {/* Group products by brand */}
+                        </li>
+                    </ul>
+                </CardHeader>
+                <CardContent>
                     {Object.entries(itemsByBrand).map(
                         ([brandId, { brand, items, shipment }]) => (
                             <div key={brandId} className="space-y-4">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between py-3">
                                     <h3 className="font-semibold">
                                         {brand.name}
                                     </h3>
-                                    {shipment && (
-                                        <Badge variant="outline">
-                                            Shipment Status:{" "}
-                                            {convertValueToLabel(
-                                                shipment.status
-                                            )}
-                                        </Badge>
-                                    )}
                                 </div>
 
                                 <div className="space-y-2">
                                     {items.map((item) => (
                                         <ProductOrderCard
+                                            shipmentDetails={shipment}
+                                            serverNow={order.serverNow}
                                             item={item}
                                             key={item.id}
                                             trackingInfo={
@@ -468,81 +401,11 @@ function OrderCard({
                                         />
                                     ))}
                                 </div>
-
-                                {shipment && (
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                        <Icons.Truck className="size-4" />
-                                        {shipment.awbNumber ? (
-                                            <div className="flex items-center gap-2">
-                                                <button className="hover:underline">
-                                                    <Link
-                                                        href={`https://shiprocket.co/tracking/${shipment.awbNumber}`}
-                                                        target="_blank"
-                                                    >
-                                                        Track Shipment
-                                                    </Link>
-                                                </button>
-                                                {shipment.invoiceUrl && (
-                                                    <>
-                                                        <span>•</span>
-                                                        <button className="hover:underline">
-                                                            <Link
-                                                                href={
-                                                                    shipment.invoiceUrl
-                                                                }
-                                                                target="_blank"
-                                                                download
-                                                            >
-                                                                Download Invoice
-                                                            </Link>
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <span>Preparing for shipment</span>
-                                        )}
-                                    </div>
-                                )}
-
-                                <Separator />
                             </div>
                         )
                     )}
                 </CardContent>
-
-                <CardFooter className="bg-muted/50 p-4 md:p-6">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Icons.Package className="size-4 md:size-5" />
-                        <div>
-                            <span className="text-sm md:text-base">
-                                Ship to:{" "}
-                            </span>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <button className="cursor-pointer text-sm hover:underline md:text-base">
-                                        {shippingAddress?.fullName}
-                                    </button>
-                                </PopoverTrigger>
-
-                                <PopoverContent className="rounded-none">
-                                    <p className="text-sm">
-                                        {shippingAddress?.street}
-                                    </p>
-
-                                    <p className="text-sm">
-                                        {shippingAddress?.city},{" "}
-                                        {shippingAddress?.state}
-                                    </p>
-
-                                    <p className="text-sm">
-                                        {shippingAddress?.phone}
-                                    </p>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
-
+                <CardFooter>
                     <button className="ml-auto underline-offset-2 hover:underline">
                         <Link href={`/orders/${order.id}`} className="text-sm">
                             View Order Details
@@ -592,6 +455,95 @@ function OrderCard({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+        </>
+    );
+}
+
+function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
+    const getStatusIcon = () => {
+        if (
+            order.status === "cancelled" ||
+            order.paymentStatus === "failed" ||
+            order.paymentStatus === "refund_failed"
+        ) {
+            return "/assets/order/cancelled.svg";
+        }
+        if (
+            order.paymentStatus === "refunded" ||
+            order.paymentStatus === "refund_pending"
+        ) {
+            return "/assets/order/return.svg";
+        }
+        return "/assets/order/box.svg"; // fallback
+    };
+
+    const getStatusTick = () => {
+        if (order.paymentStatus === "refunded")
+            return "/assets/order/rupee.svg";
+
+        return order.paymentStatus === "paid" || order.status === "delivered"
+            ? "/assets/order/greentick.svg"
+            : null;
+    };
+
+    const getStatusHeading = () => {
+        switch (order.paymentStatus) {
+            case "refunded":
+                return "Refund Credited";
+            case "refund_pending":
+                return "Refund In Process";
+            case "failed":
+                return "Payment Failed";
+            case "pending":
+                return "Awaiting Payment";
+            case "paid":
+                return order.status === "delivered"
+                    ? "Order Delivered"
+                    : "Order Confirmed";
+            default:
+                return "Order Status";
+        }
+    };
+
+    const getStatusMessage = () => {
+        switch (order.paymentStatus) {
+            case "refunded":
+                return `Your refund of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} for the return has been processed successfully.`;
+            case "refund_pending":
+                return `Your refund of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} is being processed.`;
+            case "failed":
+                return "Your payment failed. Please try again.";
+            case "pending":
+                return `Your payment of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} is pending. Please complete the payment.`;
+            case "paid":
+                return order.status === "delivered"
+                    ? "Your order has been delivered successfully."
+                    : "Your order has been placed and is being processed.";
+            default:
+                return "Order is being processed.";
+        }
+    };
+
+    return (
+        <>
+            <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[#696e79]">
+                <img src={getStatusIcon()} alt="status-icon" />
+                {getStatusTick() && (
+                    <img
+                        className="absolute bottom-0 right-0"
+                        src={getStatusTick() ?? ""}
+                        alt="tick"
+                    />
+                )}
+            </div>
+            <div className="flex-1">
+                <span className="text-[14px] font-bold leading-[1] text-[#282c3f]">
+                    {getStatusHeading()}
+                </span>
+                <p className="text-[14px] font-bold leading-[1.5] text-[#696e79]">
+                    {getStatusMessage()}
+                </p>
+            </div>
         </>
     );
 }

@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+    boolean,
     index,
     integer,
     pgTable,
@@ -10,7 +11,7 @@ import {
 import { timestamps } from "../helper";
 import { addresses } from "./address";
 import { orderShipments } from "./order-shipment";
-import { products, productVariants } from "./product";
+import { products, productVariants, returnExchangePolicy } from "./product";
 import { refunds } from "./refund";
 import { users } from "./user";
 
@@ -123,6 +124,10 @@ export const orderRelations = relations(orders, ({ one, many }) => ({
     }),
     refunds: many(refunds),
     shipments: many(orderShipments),
+    item: one(orderItems, {
+        fields: [orders.id],
+        references: [orderItems.orderId]
+    })
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -137,5 +142,9 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     variant: one(productVariants, {
         fields: [orderItems.variantId],
         references: [productVariants.id],
+    }),
+    returnExchangePolicy: one(returnExchangePolicy, {
+        fields: [orderItems.productId],
+        references: [returnExchangePolicy.productId],
     }),
 }));

@@ -1731,6 +1731,8 @@ console.log("Input values:", values);
 
         return data;
     }
+
+    async getProcuctReturnExchangePolicyByProductId(){}
 }
 
 export const productQueries = new ProductQuery();

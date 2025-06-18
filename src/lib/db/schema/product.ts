@@ -213,6 +213,9 @@ export const productSpecifications = pgTable("product_specifications", {
     exchangeable: boolean("exchangeable").default(false),
     exchangeDescription: text("exchange_description"), // optional exchange note
 
+    returnPeriod: integer("return_period").notNull().default(5),
+    exchangePeriod: integer("exchange_period").notNull().default(5),
+
     ...timestamps,
   });
 

@@ -1,0 +1,1 @@
+ALTER TABLE "return_payment_details" ALTER COLUMN "payment_refund_requested_user_id" SET DATA TYPE text;

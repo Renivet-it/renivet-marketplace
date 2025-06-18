@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
+    <g fill="none" fill-rule="evenodd">
+        <circle cx="7" cy="7" r="6.5" fill="#03A685" stroke="#FFF"/>
+        <text fill="#FFF" font-family="PingFangSC-Medium, PingFang SC" font-size="10" font-weight="400">
+            <tspan x="4" y="11">₹</tspan>
+        </text>
+    </g>
+</svg>

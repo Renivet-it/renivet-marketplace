@@ -2,11 +2,14 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import { useReturnStore } from "@/lib/store/return-store";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { OrderWithItemAndBrand } from "@/lib/validations";
+import { OrderShipment } from "@/lib/validations/order-shipment";
 import { format } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface PageProps extends GenericProps {
     item: OrderWithItemAndBrand["items"][number];
@@ -15,16 +18,24 @@ interface PageProps extends GenericProps {
         awbNumber?: string | null;
         estimatedDelivery?: Date | null;
     };
+    serverNow?: Date;
+    shipmentDetails?: OrderShipment | undefined;
 }
 
 export function ProductOrderCard({
     className,
     item,
     trackingInfo,
+    serverNow,
+    shipmentDetails,
     ...props
 }: PageProps) {
+    const router = useRouter();
+    const setReturnItem = useReturnStore((state) => state.setReturnItem);
     const itemMedia = item.product.media?.[0]?.mediaItem ?? null;
-    const imageUrl = itemMedia?.url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+    const imageUrl =
+        itemMedia?.url ??
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
     const imageAlt = itemMedia?.alt ?? item.product.title;
 
     const itemPrice =
@@ -47,6 +58,42 @@ export function ProductOrderCard({
             (item.variant &&
                 !item.variant.isDeleted &&
                 item.variant.quantity > 0));
+
+    function canReturnItem(
+        shipmentDate: string | Date | null | undefined,
+        returnPeriod: number | null | undefined,
+        serverNow: Date | undefined
+    ): boolean {
+        if (!shipmentDate || !returnPeriod || !serverNow) return false;
+        const shipment = new Date(shipmentDate);
+        const returnDeadline = new Date(shipment);
+        returnDeadline.setDate(returnDeadline.getDate() + returnPeriod);
+        return serverNow <= returnDeadline;
+    }
+
+    const canReturn =
+        item.returnExchangePolicy?.returnable &&
+        canReturnItem(
+            shipmentDetails?.shipmentDate,
+            item.returnExchangePolicy?.returnPeriod,
+            serverNow
+        );
+
+    const canExchange =
+        item.returnExchangePolicy?.exchangeable &&
+        canReturnItem(
+            shipmentDetails?.shipmentDate,
+            item.returnExchangePolicy?.exchangePeriod,
+            serverNow
+        );
+
+    const isDelivered: boolean = shipmentDetails?.status === "delivered";
+    const handelReturn = (item: OrderWithItemAndBrand["items"][number]) => {
+        setReturnItem(item);
+        router.push(`/profile/orders/return/${item.id}`);
+    };
+
+    const isRtoReturned = shipmentDetails?.isRtoReturn;
 
     return (
         <div
@@ -127,32 +174,29 @@ export function ProductOrderCard({
                         {format(new Date(item.createdAt), "MMM dd, yyyy")}
                     </p>{" "}
                 </div>
-            </div>
-
-            <div className="space-y-2">
-                <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    disabled={!isAvailable}
-                    asChild
-                >
-                    <Link
-                        href={`/products/${item.product.slug}`}
-                        target="_blank"
-                        referrerPolicy="no-referrer"
-                        className={cn(
-                            !isAvailable &&
-                                "cursor-default opacity-50 hover:bg-background hover:text-foreground"
-                        )}
-                        onClick={(e) => {
-                            if (!isAvailable) e.preventDefault();
-                        }}
-                    >
-                        <Icons.RotateCcw />
-                        Buy Again
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    {!isRtoReturned && isDelivered && canReturn && (
+                        <Button
+                            className="flex-1 md:flex-none"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handelReturn(item)}
+                        >
+                            Return
+                        </Button>
+                    )}
+                    {!isRtoReturned && isDelivered && canExchange && (
+                        // <Button
+                        //     className="flex-1 md:flex-none"
+                        //     variant="outline"
+                        //     size="sm"
+                        //     onClick={() => ""}
+                        // >
+                        //     Exchange
+                        // </Button>
+                        <></>
+                    )}
+                </div>
             </div>
 
             {trackingInfo && trackingInfo.estimatedDelivery && (

@@ -1,18 +1,25 @@
 import { shiprocket } from "@/lib/shiprocket";
-import { CourierContextType, CourierOtherOptions, GetCourierForDeliveryLocation } from "../types/CourierContext";
-import { getCouriersParams, PostShipmentPickupBody } from "@/lib/shiprocket/validations/request/couriers";
 import { AWB } from "@/lib/shiprocket/validations/request/awb";
+import {
+    getCouriersParams,
+    PostShipmentPickupBody,
+} from "@/lib/shiprocket/validations/request/couriers";
+import {
+    CourierContextType,
+    CourierOtherOptions,
+    GetCourierForDeliveryLocation,
+} from "../types/CourierContext";
 
 const clientPromise = shiprocket();
 
 function parseCourierOthers(others: string): CourierOtherOptions | string {
     try {
-      return JSON.parse(others);
+        return JSON.parse(others);
     } catch (e) {
-      console.warn("Failed to parse 'others':", e);
-      return "";
+        console.warn("Failed to parse 'others':", e);
+        return "";
     }
-  }
+}
 
 export const courierService: CourierContextType = {
     async getCouriers(params?: getCouriersParams) {
@@ -28,13 +35,27 @@ export const courierService: CourierContextType = {
         return sr.requestShipment(shipmentData);
     },
 
-    async getCouriersForDeliveryLocation (params) {
+    async getCouriersForDeliveryLocation(params) {
         const sr = await clientPromise;
         const response = await sr.getCouriersForDeliveryLocation(params);
-        response.data?.data.available_courier_companies?.forEach((courier: GetCourierForDeliveryLocation) => {
-            courier.parsedOthers = parseCourierOthers(courier.others);
-          });
+        response.data?.data.available_courier_companies?.forEach(
+            (courier: GetCourierForDeliveryLocation) => {
+                courier.parsedOthers = parseCourierOthers(courier.others);
+            }
+        );
 
         return response;
-    }
+    },
+
+    async returnShipment(payload) {
+        const sr = await clientPromise;
+        const response = await sr.returnOrderShipment(payload);
+        return response;
+    },
+
+    async returnAwbGenerate(payload) {
+        const sr = await clientPromise;
+        const response = await sr.generateReturnAwb(payload);
+        return response;
+    },
 };

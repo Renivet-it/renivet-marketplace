@@ -1,14 +1,33 @@
 import { mediaCache } from "@/lib/redis/methods";
 import {
     CreateOrder,
-    Order,
     OrderWithItemAndBrand,
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
 } from "@/lib/validations";
+import {
+    returnShipment,
+    returnShipmentAddress,
+    returnShipmentItem,
+    returnShipmentPayment,
+    returnShipmentReason,
+} from "@/lib/validations/order-return";
 import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
 import { db } from "..";
-import { orderItems, orders, orderShipments, products, users } from "../schema";
+import {
+    orderItems,
+    orders,
+    orderShipments,
+    products,
+    returnShipments,
+    users,
+} from "../schema";
+import {
+    returnAddressDetails,
+    returnItemDetails,
+    returnPaymentDetails,
+    returnReasonDetails,
+} from "../schema/order-return-exchange";
 
 class OrderQuery {
     async getAllOrders() {
@@ -228,8 +247,10 @@ class OrderQuery {
                 userId: orders.userId,
                 firstName: users.firstName, // Reference users table
                 lastName: users.lastName, // Reference users table
-                shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-                shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
+                shiprocketOrderId:
+                    orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId:
+                    orderShipments?.shiprocketShipmentId ?? undefined,
                 receiptId: orders.receiptId,
                 paymentId: orders.paymentId,
                 paymentMethod: orders.paymentMethod,
@@ -255,25 +276,25 @@ class OrderQuery {
 
         // Map the data to a cleaner format if needed
         const formattedData = data.map((item) => ({
-                 id: item.id,
-                userId: item.userId,
-                firstName: item.firstName, // Reference item table
-                lastName: item.lastName, // Reference users table
-                shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-                shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
-                receiptId: item.receiptId,
-                paymentId: item.paymentId,
-                paymentMethod: item.paymentMethod,
-                paymentStatus: item.paymentStatus,
-                status: item.status,
-                addressId: item.addressId,
-                totalItems: item.totalItems,
-                taxAmount: item.taxAmount,
-                deliveryAmount: item.deliveryAmount,
-                discountAmount: item.discountAmount,
-                totalAmount: item.totalAmount,
-                createdAt: item.createdAt,
-                updatedAt: item.updatedAt,
+            id: item.id,
+            userId: item.userId,
+            firstName: item.firstName, // Reference item table
+            lastName: item.lastName, // Reference users table
+            shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+            shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
+            receiptId: item.receiptId,
+            paymentId: item.paymentId,
+            paymentMethod: item.paymentMethod,
+            paymentStatus: item.paymentStatus,
+            status: item.status,
+            addressId: item.addressId,
+            totalItems: item.totalItems,
+            taxAmount: item.taxAmount,
+            deliveryAmount: item.deliveryAmount,
+            discountAmount: item.discountAmount,
+            totalAmount: item.totalAmount,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
         }));
         return formattedData;
     }
@@ -463,6 +484,7 @@ class OrderQuery {
                             },
                         },
                         variant: true,
+                        returnExchangePolicy: true,
                     },
                 },
             },
@@ -499,9 +521,10 @@ class OrderQuery {
                 mediaItem: variant.image ? mediaMap.get(variant.image) : null,
             })),
         }));
-
+        const serverNow = new Date();
         const enhancedData = data.map((d) => ({
             ...d,
+            serverNow,
             items: d.items.map((i) => ({
                 ...i,
                 product: enhancedProducts.find((p) => p.id === i.productId),
@@ -623,7 +646,10 @@ class OrderQuery {
         return result;
     }
 
-    async savePickupShiprocketResponse(shipmentId: number, shipmentDetails: Record<string, any>) {
+    async savePickupShiprocketResponse(
+        shipmentId: number,
+        shipmentDetails: Record<string, any>
+    ) {
         const result = await db
             .update(orderShipments)
             .set({
@@ -633,7 +659,10 @@ class OrderQuery {
         return result;
     }
 
-    async saveAwbShiprocketResponse(shipmentId: number, awbDetails: Record<string, any>) {
+    async saveAwbShiprocketResponse(
+        shipmentId: number,
+        awbDetails: Record<string, any>
+    ) {
         const result = await db
             .update(orderShipments)
             .set({
@@ -643,14 +672,94 @@ class OrderQuery {
         return result;
     }
 
-    async createPickupDetails(shipmentId: number, pickupToken: any, pickupDate: any){
+    async createPickupDetails(
+        shipmentId: number,
+        pickupToken: any,
+        pickupDate: any
+    ) {
         const result = await db
             .update(orderShipments)
             .set({
                 pickupTokenNumber: pickupToken,
-                pickupScheduledDate: pickupDate
+                pickupScheduledDate: pickupDate,
             })
             .where(eq(orderShipments.shiprocketShipmentId, shipmentId));
+        return result;
+    }
+
+    async updateShipmentDate(awbNumber: string, shipmentDate: Date) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                shipmentDate: shipmentDate,
+            })
+            .where(eq(orderShipments.awbNumber, awbNumber));
+        return result;
+    }
+
+    async getBrandUserItemsDetailsByOrderId(orderId: string) {
+        const data = await db.query.orderShipments.findFirst({
+            where: (t, { eq }) => eq(t.orderId, orderId),
+            with: {
+                order: {
+                    with: {
+                        user: true,
+                        item: {
+                            with: {
+                                product: true,
+                                variant: true,
+                            },
+                        },
+                    },
+                },
+                brand: {
+                    with: {
+                        confidential: true,
+                    },
+                },
+            },
+        });
+        return data;
+    }
+
+    async insertOrderReturnShipement(value: Array<returnShipment>) {
+        const result = db.insert(returnShipments).values(value).returning();
+        return result;
+    }
+
+    async insertOrderReturnAddress(value: Array<returnShipmentAddress>) {
+        const result = db
+            .insert(returnAddressDetails)
+            .values(value)
+            .returning();
+        return result;
+    }
+
+    async insertOrderReturnItemDetails(value: Array<returnShipmentItem>) {
+        const result = db.insert(returnItemDetails).values(value).returning();
+        return result;
+    }
+
+    async insertOrderReturnPaymentDetails(value: Array<returnShipmentPayment>) {
+        const result = db
+            .insert(returnPaymentDetails)
+            .values(value)
+            .returning();
+        return result;
+    }
+
+    async insertOrderReturnReasonDetails(value: Array<returnShipmentReason>) {
+        const result = db.insert(returnReasonDetails).values(value).returning();
+        return result;
+    }
+
+    async updateOrderShipmentReturnflagData(orderId: string, isRtoReturnProcced: boolean) {
+        const result = await db
+            .update(orderShipments)
+            .set({
+                isRtoReturn: isRtoReturnProcced
+            })
+            .where(eq(orderShipments.orderId, orderId));
         return result;
     }
 }
