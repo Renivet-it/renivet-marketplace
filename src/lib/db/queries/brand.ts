@@ -100,6 +100,7 @@ class BrandQuery {
             // @ts-ignore
                 pageSections: rest.pageSections.map((section) => ({
                     ...section,
+            // @ts-ignore
                     sectionProducts: section.sectionProducts.map((sp) => ({
                         ...sp,
                         product: enhancedProducts.find(
@@ -181,6 +182,7 @@ class BrandQuery {
         const products = data.flatMap((brand) =>
             // @ts-ignore
             brand.pageSections.flatMap((section) =>
+            // @ts-ignore
                 section.sectionProducts.map(({ product }) => product)
             )
         );
@@ -218,6 +220,7 @@ class BrandQuery {
             // @ts-ignore
                 pageSections: rest.pageSections.map((section) => ({
                     ...section,
+            // @ts-ignore
                     sectionProducts: section.sectionProducts.map((sp) => ({
                         ...sp,
                         product: enhancedProducts.find(
@@ -313,6 +316,7 @@ class BrandQuery {
             // @ts-ignore
             pageSections: data.pageSections.map((section) => ({
                 ...section,
+            // @ts-ignore
                 sectionProducts: section.sectionProducts.map((sp) => ({
                     ...sp,
                     product: enhancedProducts.find(
