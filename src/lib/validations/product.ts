@@ -116,7 +116,7 @@ export const productMediaSchema = z.object({
 });
 
 export const enhancedProductMediaSchema = productMediaSchema.extend({
-    mediaItem: cachedBrandMediaItemSchema.nullable(),
+    mediaItem: cachedBrandMediaItemSchema.nullable().optional(),
 });
 
 export const productVerificationStatusSchema = z.enum([
