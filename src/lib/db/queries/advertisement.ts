@@ -11,6 +11,7 @@ import {
     CreateHomeShopByNewCategory,
     homeShopByNewCategorySchema,
     UpdateHomeShopByNewCategory,
+    createWomenBrandProduct
 
 } from "@/lib/validations";
 import { and, asc, desc, eq, ilike } from "drizzle-orm";
@@ -21,6 +22,7 @@ import {
     homeShopByCategories,
     homeShopByCategoryTitle,
     homeshopbyNewCategory,
+    womenHomeBannersSection
 } from "../schema";
 
 class AdvertiseMentQuery {
@@ -303,14 +305,91 @@ class HomeBrandProductsQuery {
 
 class WomenHomeSectionQuery{
 
-    async getAllHomeBrandProducts() {
-        const data = await db.query.homeBrandProducts.findMany({
-            orderBy: [asc(homeBrandProducts.position)],
+       async getAllHomeShopByCategories(p0: { limit: number; page: number; }) {
+        const data = await db.query.womenHomeBannersSection.findMany({
+            orderBy: [asc(womenHomeBannersSection.createdAt)],
         });
 
         return data;
     }
 
+    async getHomeShopByCategories({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenHomeBannersSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenHomeBannersSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenHomeBannersSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomeShopByCategory(id: string) {
+        const data = await db.query.womenHomeBannersSection.findFirst({
+            where: eq(womenHomeBannersSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomeShopByCategory(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenHomeBannersSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomeShopByCategory(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenHomeBannersSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenHomeBannersSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomeShopByCategory(id: string) {
+        const data = await db
+            .delete(womenHomeBannersSection)
+            .where(eq(womenHomeBannersSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 }
 
 
