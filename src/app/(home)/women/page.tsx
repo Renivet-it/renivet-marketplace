@@ -280,7 +280,7 @@ async function NewAdvertisementsFetch() {
 }
 
 async function DiscountPage() {
-    const advertisements = await advertisementQueries.getAllAdvertisements({
+    const advertisements = await WomenHomeSectionQueries.getNewOfferSections({
         isPublished: true,
         orderBy: "position",
     });

@@ -1,7 +1,7 @@
 import {
     ShopByCategoriesTable,
     ShopByCategoryTitle,
-} from "@/components/dashboard/general/women/new-collection/shop-by-categories-table";
+} from "@/components/dashboard/general/women/discount-offers/shop-by-categories-table";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
@@ -64,7 +64,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data, titleData] = await Promise.all([
-        WomenHomeSectionQueries.getNewCollections({
+        WomenHomeSectionQueries.getNewOfferSections({
             limit,
             page,
         }),
