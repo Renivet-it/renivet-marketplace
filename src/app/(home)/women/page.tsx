@@ -150,15 +150,13 @@ async function WomenSkincareFetch() {
 }
 
 async function MiddleAnimationSectionFetch() {
-    const cachedBanners = await bannerCache.getAll();
-    if (!cachedBanners.length) return null;
 
-    const sorted = cachedBanners.sort(
-        (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
+        const brandProducts =
+        await WomenHomeSectionQueries.getAlloutfitVarients();
+    if (!brandProducts.length) return null;
 
-    return <MiddleAnimationSection banners={sorted} />;
+    return <MiddleAnimationSection banners={brandProducts} />;
+
 }
 
 async function BrandStoryTellingFetch() {

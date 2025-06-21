@@ -335,6 +335,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
+            title: "Outfit Varients",
+            url: "/dashboard/general/women-section/outfit-varients",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
             title: "Style Directory Section",
             url: "/dashboard/general/women-section/style-directory",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,

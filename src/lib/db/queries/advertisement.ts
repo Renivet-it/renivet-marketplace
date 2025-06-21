@@ -24,7 +24,8 @@ import {
     homeshopbyNewCategory,
     womenHomeBannersSection,
     womenExploreCategorySection,
-    womenElavateLookSection
+    womenElavateLookSection,
+    womenMiddleBuyNowSection
 } from "../schema";
 
 class AdvertiseMentQuery {
@@ -566,6 +567,94 @@ console.log("test");
         const data = await db
             .delete(womenElavateLookSection)
             .where(eq(womenElavateLookSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+        //outfit varients
+        async getAlloutfitVarients(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenMiddleBuyNowSection.findMany({
+                orderBy: [asc(womenMiddleBuyNowSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getoutfitVarients({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenMiddleBuyNowSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenMiddleBuyNowSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenMiddleBuyNowSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getoutfitVarient(id: string) {
+        const data = await db.query.womenMiddleBuyNowSection.findFirst({
+            where: eq(womenMiddleBuyNowSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createAlloutfitVarients(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenMiddleBuyNowSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateAlloutfitVarients(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenMiddleBuyNowSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenMiddleBuyNowSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteoutfitVarients(id: string) {
+        const data = await db
+            .delete(womenMiddleBuyNowSection)
+            .where(eq(womenMiddleBuyNowSection.id, id))
             .returning()
             .then((res) => res[0]);
 
