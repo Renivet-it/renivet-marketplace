@@ -22,7 +22,8 @@ import {
     homeShopByCategories,
     homeShopByCategoryTitle,
     homeshopbyNewCategory,
-    womenHomeBannersSection
+    womenHomeBannersSection,
+    womenExploreCategorySection
 } from "../schema";
 
 class AdvertiseMentQuery {
@@ -385,6 +386,96 @@ class WomenHomeSectionQuery{
         const data = await db
             .delete(womenHomeBannersSection)
             .where(eq(womenHomeBannersSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+    //explore categories
+
+        async getAllexploreCategories(p0: { limit: number; page: number; }) {
+        const data = await db.query.womenExploreCategorySection.findMany({
+            orderBy: [asc(womenExploreCategorySection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllexploreCategoriesAll({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenExploreCategorySection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenExploreCategorySection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenExploreCategorySection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getAllexploreCategory(id: string) {
+        const data = await db.query.womenExploreCategorySection.findFirst({
+            where: eq(womenExploreCategorySection.id, id),
+        });
+
+        return data;
+    }
+
+    async createAllexploreCategories(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenExploreCategorySection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateAllexploreCategories(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenExploreCategorySection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenExploreCategorySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteAllexploreCategories(id: string) {
+        const data = await db
+            .delete(womenExploreCategorySection)
+            .where(eq(womenExploreCategorySection.id, id))
             .returning()
             .then((res) => res[0]);
 

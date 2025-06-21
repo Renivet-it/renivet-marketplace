@@ -71,10 +71,20 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
     ]);
 
+    // Transform data to include required properties for ShopByCategoriesTable
+    const transformedData = data.map((item, idx) => ({
+        id: item.id,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        imageUrl: item.imageUrl ?? "",
+        url: item.url ?? null,
+        position: (item as any).position ?? idx, // fallback to index if position is missing
+    }));
+
     return (
         <>
             {/* <ShopByCategoryTitle titleData={titleData} /> */}
-            <ShopByCategoriesTable initialData={data} />
+            <ShopByCategoriesTable initialData={{ data: transformedData, count: transformedData.length }} />
         </>
     );
 }

@@ -98,8 +98,8 @@ async function ShopByCategoriesFetch() {
 
 async function ShopByNewCategoriesFetch() {
     const [sbc, sbcT] = await Promise.all([
-        homeShopByCategoryQueries.getAllHomeShopByCategories(),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+        // homeShopByCategoryQueries.getAllHomeShopByCategories(),
+        await WomenHomeSectionQueries.getAllexploreCategories()
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
