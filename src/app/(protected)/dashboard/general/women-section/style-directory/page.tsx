@@ -16,8 +16,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-    title: "Outfit Varients",
-    description: "Manage the platform's Outfit Varients",
+    title: "Style Directory",
+    description: "Manage the platform's Style Directory",
 };
 
 interface PageProps {
@@ -32,7 +32,7 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">Outfit Varients</h1>
+                    <h1 className="text-2xl font-bold">Style Directory</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage the platform&apos;s style directory
                     </p>
@@ -42,7 +42,7 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/women-section/outfit-varients/new">
+                    <Link href="/dashboard/general/women-section/style-directory/new">
                         <Icons.PlusCircle className="size-5" />
                         New women style directory
                     </Link>

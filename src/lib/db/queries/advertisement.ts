@@ -26,7 +26,17 @@ import {
     womenExploreCategorySection,
     womenElavateLookSection,
     womenMiddleBuyNowSection,
-    womenStyleDirectorySection
+    womenStyleDirectorySection,
+    womenNewCollectionSection,
+    womenOfferSection,
+    womenMoodBoardSection,
+    womenStyleSubstanceSection,
+    womenSummerSaleSection,
+    womenFindYourStyleSection,
+    womenSuggestedLookSection,
+    womenBranStoryTellingSection,
+    womenBrandSection,
+    womenBrandSkinCareSection
 } from "../schema";
 
 class AdvertiseMentQuery {
@@ -748,6 +758,904 @@ console.log("test");
 
         return data;
     }
+
+        //new collection
+        async getNewCollections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenNewCollectionSection.findMany({
+                orderBy: [asc(womenNewCollectionSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllNewCollection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenNewCollectionSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenNewCollectionSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenNewCollectionSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getNewCollection(id: string) {
+        const data = await db.query.womenNewCollectionSection.findFirst({
+            where: eq(womenNewCollectionSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createNewCollectionDirectory(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenNewCollectionSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateNewCollectionDirectory(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenNewCollectionSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenNewCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletNewCollectionDirectory(id: string) {
+        const data = await db
+            .delete(womenNewCollectionSection)
+            .where(eq(womenNewCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+    //women-offer-section
+
+      async getNewOfferSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenOfferSection.findMany({
+                orderBy: [asc(womenOfferSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllNewOfferSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenOfferSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenOfferSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenOfferSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getNewOfferSection(id: string) {
+        const data = await db.query.womenOfferSection.findFirst({
+            where: eq(womenOfferSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createNewOfferSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenOfferSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateNewOfferSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenOfferSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenOfferSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletNewOfferSection(id: string) {
+        const data = await db
+            .delete(womenOfferSection)
+            .where(eq(womenOfferSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+// womenMoodBoardSection
+
+
+      async getWomenMoodBoards(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenMoodBoardSection.findMany({
+                orderBy: [asc(womenMoodBoardSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllWomenMoodBoard({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenMoodBoardSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenMoodBoardSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenMoodBoardSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getWomenMoodBoard(id: string) {
+        const data = await db.query.womenMoodBoardSection.findFirst({
+            where: eq(womenMoodBoardSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createWomenMoodBoard(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenMoodBoardSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateWomenMoodBoard(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenMoodBoardSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenMoodBoardSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletWomenMoodBoard(id: string) {
+        const data = await db
+            .delete(womenMoodBoardSection)
+            .where(eq(womenMoodBoardSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+    // StyleSubstanceSection
+
+
+      async getWomenStyleSubstanceSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenStyleSubstanceSection.findMany({
+                orderBy: [asc(womenStyleSubstanceSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllWomenStyleSubstanceSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenStyleSubstanceSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenStyleSubstanceSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenStyleSubstanceSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getWomenStyleSubstanceSection(id: string) {
+        const data = await db.query.womenStyleSubstanceSection.findFirst({
+            where: eq(womenStyleSubstanceSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createWomenStyleSubstanceSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenStyleSubstanceSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateWomenStyleSubstanceSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenStyleSubstanceSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenStyleSubstanceSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletWomenStyleSubstanceSection(id: string) {
+        const data = await db
+            .delete(womenStyleSubstanceSection)
+            .where(eq(womenStyleSubstanceSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+      // StyleSubstanceSection
+
+
+      async getWomenSummerSaleSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenSummerSaleSection.findMany({
+                orderBy: [asc(womenSummerSaleSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllWomenSummerSaleSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenSummerSaleSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenSummerSaleSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenSummerSaleSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getWomenSummerSaleSection(id: string) {
+        const data = await db.query.womenSummerSaleSection.findFirst({
+            where: eq(womenSummerSaleSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createWomenSummerSaleSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenSummerSaleSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateWomenSummerSaleSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenSummerSaleSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenSummerSaleSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletWomenSummerSaleSection(id: string) {
+        const data = await db
+            .delete(womenSummerSaleSection)
+            .where(eq(womenSummerSaleSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+          // StyleSubstanceSection
+
+
+      async getWomenFindYourStyleSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenFindYourStyleSection.findMany({
+                orderBy: [asc(womenFindYourStyleSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllWomenFindYourStyleSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenFindYourStyleSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenFindYourStyleSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenFindYourStyleSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getWomenFindYourStyleSection(id: string) {
+        const data = await db.query.womenFindYourStyleSection.findFirst({
+            where: eq(womenFindYourStyleSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createWomenFindYourStyleSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenFindYourStyleSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateWomenFindYourStyleSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenFindYourStyleSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenFindYourStyleSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletWomenFindYourStyleSection(id: string) {
+        const data = await db
+            .delete(womenFindYourStyleSection)
+            .where(eq(womenFindYourStyleSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+        // StyleSubstanceSection
+
+
+      async getSuggestedLookSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenSuggestedLookSection.findMany({
+                orderBy: [asc(womenSuggestedLookSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllSuggestedLookSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenSuggestedLookSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenSuggestedLookSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenSuggestedLookSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getSuggestedLookSection(id: string) {
+        const data = await db.query.womenSuggestedLookSection.findFirst({
+            where: eq(womenSuggestedLookSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createSuggestedLookSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenSuggestedLookSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateSuggestedLookSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenSuggestedLookSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenSuggestedLookSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletSuggestedLookSection(id: string) {
+        const data = await db
+            .delete(womenSuggestedLookSection)
+            .where(eq(womenSuggestedLookSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+            // StyleSubstanceSection
+
+
+      async getwomenBrandSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenBrandSection.findMany({
+                orderBy: [asc(womenBrandSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllwomenBrandSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenBrandSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenBrandSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenBrandSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getwomenBrandSection(id: string) {
+        const data = await db.query.womenBrandSection.findFirst({
+            where: eq(womenBrandSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createwomenBrandSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenBrandSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatewomenBrandSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenBrandSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenBrandSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletwomenBrandSection(id: string) {
+        const data = await db
+            .delete(womenBrandSection)
+            .where(eq(womenBrandSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+      // StyleSubstanceSection
+
+
+      async getwomenBranStoryTellingSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenBranStoryTellingSection.findMany({
+                orderBy: [asc(womenBranStoryTellingSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllwomenBranStoryTellingSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenBranStoryTellingSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenBranStoryTellingSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenBranStoryTellingSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getwomenBranStoryTellingSection(id: string) {
+        const data = await db.query.womenBranStoryTellingSection.findFirst({
+            where: eq(womenBranStoryTellingSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createwomenBranStoryTellingSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenBranStoryTellingSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatewomenBranStoryTellingSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenBranStoryTellingSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenBranStoryTellingSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletwomenBranStoryTellingSection(id: string) {
+        const data = await db
+            .delete(womenBranStoryTellingSection)
+            .where(eq(womenBranStoryTellingSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+      // StyleSubstanceSection
+
+
+      async getwomenBrandSkinCareSections(p0: { limit: number; page: number; }) {
+            const data = await db.query.womenBrandSkinCareSection.findMany({
+                orderBy: [asc(womenBrandSkinCareSection.createdAt)],
+            });
+            console.log("test");
+            return data;
+        }
+
+    async getAllwomenBrandSkinCareSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenBrandSkinCareSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenBrandSkinCareSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenBrandSkinCareSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getwomenBrandSkinCareSection(id: string) {
+        const data = await db.query.womenBrandSkinCareSection.findFirst({
+            where: eq(womenBrandSkinCareSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createwomenBrandSkinCareSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenBrandSkinCareSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatewomenBrandSkinCareSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenBrandSkinCareSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenBrandSkinCareSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletwomenBrandSkinCareSection(id: string) {
+        const data = await db
+            .delete(womenBrandSkinCareSection)
+            .where(eq(womenBrandSkinCareSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
 }
 
 
