@@ -23,7 +23,8 @@ import {
     homeShopByCategoryTitle,
     homeshopbyNewCategory,
     womenHomeBannersSection,
-    womenExploreCategorySection
+    womenExploreCategorySection,
+    womenElavateLookSection
 } from "../schema";
 
 class AdvertiseMentQuery {
@@ -476,6 +477,95 @@ class WomenHomeSectionQuery{
         const data = await db
             .delete(womenExploreCategorySection)
             .where(eq(womenExploreCategorySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+    //elavatelooks
+          async getAllelavateLooks(p0: { limit: number; page: number; }) {
+        const data = await db.query.womenElavateLookSection.findMany({
+            orderBy: [asc(womenElavateLookSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllelavateLooksAll({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenElavateLookSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenElavateLookSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenElavateLookSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getAllelavateLook(id: string) {
+        const data = await db.query.womenElavateLookSection.findFirst({
+            where: eq(womenElavateLookSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createAllelavateLooks(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenElavateLookSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateAllelavateLooks(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenElavateLookSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenElavateLookSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteAllelavateLooks(id: string) {
+        const data = await db
+            .delete(womenElavateLookSection)
+            .where(eq(womenElavateLookSection.id, id))
             .returning()
             .then((res) => res[0]);
 
