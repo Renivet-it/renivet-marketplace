@@ -79,8 +79,7 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
     });
 
     const { mutateAsync: createAdAsync } =
-        trpc.general.content.WomenHomeBrandProduct..useMutation();
-        
+        trpc.general.content.womenhomeBannerRouter.createWomenBanner.useMutation();
     const { mutateAsync: updateAdAsync } =
         trpc.general.content.homeShopByCategories.updateHomeShopByCategory.useMutation();
 

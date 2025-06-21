@@ -80,7 +80,7 @@ export default function Page() {
 
 async function BannersFetch() {
     const brandProducts =
-        await WomenHomeSectionQueries.getAllHomeBrandProducts();
+        await WomenHomeSectionQueries.getAllHomeShopByCategories();
     if (!brandProducts.length) return null;
 
     return <Landing banners={brandProducts} />;

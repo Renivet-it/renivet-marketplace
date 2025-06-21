@@ -642,9 +642,11 @@ export const womenhomeBannerRouter = createTRPCRouter({
                 });
 
             const newHomeShopByCategory =
-                await queries.homeShopByCategories.createHomeShopByCategory({
+                await queries.womenhomebanner.createHomeShopByCategory({
                     ...input,
                     imageUrl: input.imageUrl,
+                    title: "",
+                    isActive: false
                 });
 
             return newHomeShopByCategory;
