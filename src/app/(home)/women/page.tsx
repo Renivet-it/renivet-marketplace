@@ -180,15 +180,11 @@ async function NewCollectionMiddleFetch() {
     return <NewCollection banners={brandProducts} />;
 }
 async function SpecialOfferFetch() {
-    const cachedBanners = await bannerCache.getAll();
-    if (!cachedBanners.length) return null;
+     const brandProducts =
+        await WomenHomeSectionQueries.getWomenSummerSaleSections();
+    if (!brandProducts.length) return null;
 
-    const sorted = cachedBanners.sort(
-        (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-
-    return <SpecialOffer banners={sorted} />;
+    return <SpecialOffer banners={brandProducts} />;
 }
 
 async function FindYourStyleFetch() {
