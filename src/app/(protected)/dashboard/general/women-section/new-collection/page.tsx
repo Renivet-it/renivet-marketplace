@@ -1,7 +1,7 @@
 import {
     ShopByCategoriesTable,
     ShopByCategoryTitle,
-} from "@/components/dashboard/general/women/style-directory/shop-by-categories-table";
+} from "@/components/dashboard/general/women/new-collection/shop-by-categories-table";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
@@ -42,7 +42,7 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/women-section/style-directory/new">
+                    <Link href="/dashboard/general/women-section/new-collection/new">
                         <Icons.PlusCircle className="size-5" />
                         New women style directory
                     </Link>
@@ -64,11 +64,10 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data, titleData] = await Promise.all([
-        WomenHomeSectionQueries.getAllstyleDirectory({
+        WomenHomeSectionQueries.getNewCollections({
             limit,
             page,
         }),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
     ]);
 
     // Transform data to include required properties for ShopByCategoriesTable

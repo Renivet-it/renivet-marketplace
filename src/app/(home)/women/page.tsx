@@ -173,15 +173,11 @@ async function BrandStoryTellingFetch() {
 
 
 async function NewCollectionMiddleFetch() {
-    const cachedBanners = await bannerCache.getAll();
-    if (!cachedBanners.length) return null;
+      const brandProducts =
+        await WomenHomeSectionQueries.getNewCollections();
+    if (!brandProducts.length) return null;
 
-    const sorted = cachedBanners.sort(
-        (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
-
-    return <NewCollection banners={sorted} />;
+    return <NewCollection banners={brandProducts} />;
 }
 async function SpecialOfferFetch() {
     const cachedBanners = await bannerCache.getAll();
@@ -219,8 +215,7 @@ async function FindYourStyleFetch() {
 
 async function StyleDirectoryFetch() {
     const [sbc, sbcT] = await Promise.all([
-        homeShopByCategoryQueries.getAllHomeShopByCategories(),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+        WomenHomeSectionQueries.getAllstyleDirectory(),
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;

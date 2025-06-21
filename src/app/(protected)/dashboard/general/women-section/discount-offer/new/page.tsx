@@ -1,4 +1,4 @@
-import { ShopByCategoryManageForm } from "@/components/globals/forms";
+import { ShopByCategoryManageForm } from "@/components/globals/forms/women/new-collection";
 import { DashShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
 
@@ -12,10 +12,10 @@ export default function Page() {
         <DashShell>
             <div className="space-y-1">
                 <h1 className="text-2xl font-bold">
-                    Create New Shop by Category
+                    Create New Women Style Directory
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                    Create a new Shop by Category and publish it to the platform
+                    Create a new women Style Directory and publish it to the platform
                 </p>
             </div>
 
