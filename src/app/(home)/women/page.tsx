@@ -292,7 +292,7 @@ async function DiscountPage() {
 
 async function MoodBoardFetch() {
     const [sbc, sbcT] = await Promise.all([
-        homeShopByCategoryQueries.getAllHomeShopByCategories(),
+       WomenHomeSectionQueries.getWomenMoodBoards(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
@@ -303,8 +303,7 @@ async function MoodBoardFetch() {
 
 async function TopCollectionFetch() {
     const [sbc, sbcT] = await Promise.all([
-        homeShopByCategoryQueries.getAllHomeShopByCategories(),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+              WomenHomeSectionQueries.getWomenStyleSubstanceSections(),
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
