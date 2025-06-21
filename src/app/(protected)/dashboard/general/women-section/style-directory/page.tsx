@@ -1,13 +1,14 @@
 import {
     ShopByCategoriesTable,
     ShopByCategoryTitle,
-} from "@/components/dashboard/general/shop-by-categories";
+} from "@/components/dashboard/general/women/style-directory/shop-by-categories-table";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import {
     homeShopByCategoryQueries,
+    WomenHomeSectionQueries,
     homeShopByCategoryTitleQueries,
 } from "@/lib/db/queries";
 import { Metadata } from "next";
@@ -15,8 +16,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-    title: "Shop by Category",
-    description: "Manage the platform's shop by category",
+    title: "Outfit Varients",
+    description: "Manage the platform's Outfit Varients",
 };
 
 interface PageProps {
@@ -31,9 +32,9 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">Shop by Category</h1>
+                    <h1 className="text-2xl font-bold">Outfit Varients</h1>
                     <p className="text-balance text-sm text-muted-foreground">
-                        Manage the platform&apos;s shop by category
+                        Manage the platform&apos;s style directory
                     </p>
                 </div>
 
@@ -41,9 +42,9 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/shop-by-category/new">
+                    <Link href="/dashboard/general/women-section/outfit-varients/new">
                         <Icons.PlusCircle className="size-5" />
-                        New Shop by Category
+                        New women style directory
                     </Link>
                 </Button>
             </div>
@@ -63,17 +64,27 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data, titleData] = await Promise.all([
-        homeShopByCategoryQueries.getHomeShopByCategories({
+        WomenHomeSectionQueries.getAllstyleDirectory({
             limit,
             page,
         }),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
     ]);
 
+    // Transform data to include required properties for ShopByCategoriesTable
+    const transformedData = data.map((item, idx) => ({
+        id: item.id,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        imageUrl: item.imageUrl ?? "",
+        url: item.url ?? null,
+        position: (item as any).position ?? idx, // fallback to index if position is missing
+    }));
+
     return (
         <>
-            <ShopByCategoryTitle titleData={titleData} />
-            <ShopByCategoriesTable initialData={data} />
+            {/* <ShopByCategoryTitle titleData={titleData} /> */}
+            <ShopByCategoriesTable initialData={{ data: transformedData, count: transformedData.length }} />
         </>
     );
 }
