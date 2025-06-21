@@ -1,7 +1,8 @@
 import {
     ShopByCategoriesTable,
     ShopByCategoryTitle,
-} from "@/components/dashboard/general/women/explore-category/shop-by-categories-table";
+} from "@/components/dashboard/general/women/elavate-looks/shop-by-categories-table";
+
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";

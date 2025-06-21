@@ -109,8 +109,7 @@ async function ShopByNewCategoriesFetch() {
 
 async function ElevateYourLooksFetch() {
     const [sbc, sbcT] = await Promise.all([
-        homeShopByCategoryQueries.getAllHomeShopByCategories(),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+        WomenHomeSectionQueries.getAllelavateLooks(),
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;

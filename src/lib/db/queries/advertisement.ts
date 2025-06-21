@@ -490,7 +490,7 @@ class WomenHomeSectionQuery{
         const data = await db.query.womenElavateLookSection.findMany({
             orderBy: [asc(womenElavateLookSection.createdAt)],
         });
-
+console.log("test");
         return data;
     }
 
