@@ -314,149 +314,149 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         }
     ]
 },
-// {
-//     title: "Women Home Page Section",
-//     url: "#",
-//     icon: "Megaphone",
-//     items: [
-//         {
-//             title: "Women Banners Section",
-//             url: "/dashboard/general/women-section/women-banner",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
-//         },
-//         {
-//             title: "Explore Categories Section",
-//             url: "/dashboard/general/women-section/explore-category",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Elavate Your Looks Section",
-//             url: "/dashboard/general/women-section/elavate-looks",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Outfit Varients",
-//             url: "/dashboard/general/women-section/outfit-varients",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Style Directory Section",
-//             url: "/dashboard/general/women-section/style-directory",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "New Collection Section",
-//             url: "/dashboard/general/women-section/new-collection",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Discount Offer Section ",
-//             url: "/dashboard/general/women-section/discount-offer",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Mood Board Section ",
-//             url: "/dashboard/general/women-section/mood-board",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//          {
-//             title: "Top Collection Section ",
-//             url: "/dashboard/general/women-section/top-collection",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Seasonal Sale Section ",
-//             url: "/dashboard/general/women-section/seasonal-sale",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//                 {
-//             title: "Find Your Style Section ",
-//             url: "/dashboard/general/women-section/find-your-style",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//                 {
-//             title: "Suggested Look Section ",
-//             url: "/dashboard/general/women-section/suggested-looks",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Brand Story Telling Section ",
-//             url: "/dashboard/general/women-section/brand-story-telling",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Skincare Section ",
-//             url: "/dashboard/general/women-section/skincare-section",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
+{
+    title: "Women Home Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Women Banners Section",
+            url: "/dashboard/general/women-section/women-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Explore Categories Section",
+            url: "/dashboard/general/women-section/explore-category",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Elavate Your Looks Section",
+            url: "/dashboard/general/women-section/elavate-looks",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Outfit Varients",
+            url: "/dashboard/general/women-section/outfit-varients",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Style Directory Section",
+            url: "/dashboard/general/women-section/style-directory",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "New Collection Section",
+            url: "/dashboard/general/women-section/new-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Discount Offer Section ",
+            url: "/dashboard/general/women-section/discount-offer",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Mood Board Section ",
+            url: "/dashboard/general/women-section/mood-board",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+         {
+            title: "Top Collection Section ",
+            url: "/dashboard/general/women-section/top-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Seasonal Sale Section ",
+            url: "/dashboard/general/women-section/seasonal-sale",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+                {
+            title: "Find Your Style Section ",
+            url: "/dashboard/general/women-section/find-your-style",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+                {
+            title: "Suggested Look Section ",
+            url: "/dashboard/general/women-section/suggested-looks",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Brand Story Telling Section ",
+            url: "/dashboard/general/women-section/brand-story-telling",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Skincare Section ",
+            url: "/dashboard/general/women-section/skincare-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
 
-//     ]
-// },
-// {
-//     title: "Men Home Page Section",
-//     url: "#",
-//     icon: "Megaphone",
-//     items: [
-//         {
-//             title: "Mens Banners Section",
-//             url: "/dashboard/general/men-section/men-banner",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
-//         },
-//         {
-//             title: "Explore Categories Section",
-//             url: "/dashboard/general/men-section/explore-category",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Elavate Your Looks Section",
-//             url: "/dashboard/general/men-section/elavate-looks",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Outfit Varients",
-//             url: "/dashboard/general/men-section/outfit-varients",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Style Directory Section",
-//             url: "/dashboard/general/men-section/style-directory",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//          {
-//             title: "Top Collection Section ",
-//             url: "/dashboard/general/men-section/top-collection",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Discount Offer Section ",
-//             url: "/dashboard/general/men-section/discount-offer",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//         {
-//             title: "Seasonal Sale Section ",
-//             url: "/dashboard/general/men-section/seasonal-sale",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
+    ]
+},
+{
+    title: "Men Home Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Mens Banners Section",
+            url: "/dashboard/general/men-section/men-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Explore Categories Section",
+            url: "/dashboard/general/men-section/explore-category",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Elavate Your Looks Section",
+            url: "/dashboard/general/men-section/elavate-looks",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Outfit Varients",
+            url: "/dashboard/general/men-section/outfit-varients",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Style Directory Section",
+            url: "/dashboard/general/men-section/style-directory",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+         {
+            title: "Top Collection Section ",
+            url: "/dashboard/general/men-section/top-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Discount Offer Section ",
+            url: "/dashboard/general/men-section/discount-offer",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Seasonal Sale Section ",
+            url: "/dashboard/general/men-section/seasonal-sale",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
 
-//         {
-//             title: "Suggested Look Section ",
-//             url: "/dashboard/general/men-section/suggested-looks",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//        {
-//             title: "New Collection Section",
-//             url: "/dashboard/general/men-section/new-collection",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
-//                {
-//             title: "Top Collection Banner Section",
-//             url: "/dashboard/general/men-section/top-collection-banner",
-//             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-//         },
+        {
+            title: "Suggested Look Section ",
+            url: "/dashboard/general/men-section/suggested-looks",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+       {
+            title: "New Collection Section",
+            url: "/dashboard/general/men-section/new-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+               {
+            title: "Top Collection Banner Section",
+            url: "/dashboard/general/men-section/top-collection-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
 
 
-//     ]
-// },
+    ]
+},
 
 {
     title: "Ui / Ux Page Section",
