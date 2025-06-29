@@ -209,6 +209,101 @@ export const homeShopByCategorySchema = z.object({
         .transform((v) => new Date(v)),
 });
 
+
+export const womenHomeBannerSchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+       title: z
+        .string({
+            required_error: "Title is required",
+            invalid_type_error: "Title must be a string",
+        })
+        .uuid("Title is invalid"),
+    imageUrl: z
+        .string({
+            required_error: "Image URL is required",
+            invalid_type_error: "Image URL must be a string",
+        })
+        .url("Image URL is invalid"),
+    url: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                required_error: "URL is required",
+                invalid_type_error: "URL must be a string",
+            })
+            .url("URL is invalid")
+            .nullable()
+    ),
+            isActive: z.boolean({
+            required_error: "Is Active is required",
+            invalid_type_error: "Is Active must be a boolean",
+        }),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
+
+export const homeShopByNewCategorySchema = z.object({
+    id: z
+        .string({
+            required_error: "ID is required",
+            invalid_type_error: "ID must be a string",
+        })
+        .uuid("ID is invalid"),
+        title: z
+        .string({
+            required_error: "Title is required",
+            invalid_type_error: "Title must be a string",
+        }),
+        isActive: z.boolean({
+            required_error: "Is Active is required",
+            invalid_type_error: "Is Active must be a boolean",
+        }),
+    imageUrl: z
+        .string({
+            required_error: "Image URL is required",
+            invalid_type_error: "Image URL must be a string",
+        })
+        .url("Image URL is invalid"),
+    url: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                required_error: "URL is required",
+                invalid_type_error: "URL must be a string",
+            })
+            .url("URL is invalid")
+            .nullable()
+    ),
+    createdAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Created at is required",
+            invalid_type_error: "Created at must be a date",
+        })
+        .transform((v) => new Date(v)),
+    updatedAt: z
+        .union([z.string(), z.date()], {
+            required_error: "Updated at is required",
+            invalid_type_error: "Updated at must be a date",
+        })
+        .transform((v) => new Date(v)),
+});
+
 export const createHomeShopByCategorySchema = homeShopByCategorySchema
     .omit({
         id: true,
@@ -224,7 +319,48 @@ export const createHomeShopByCategorySchema = homeShopByCategorySchema
             .nullable(),
     });
 
+    export const createwomenHomePageBannerSchema = womenHomeBannerSchema
+    .omit({
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+    })
+    .extend({
+        imageUrl: z
+            .string({
+                required_error: "Image URL is required",
+                invalid_type_error: "Image URL must be a string",
+            })
+            .nullable().optional(),
+    });
+
+    export const updateWomenBanner = createwomenHomePageBannerSchema;
+
+export type WomenHomeBrandProduct = z.infer<typeof homeBrandProductSchema>;
+export type createWomenBrandProduct = z.infer<
+    typeof createwomenHomePageBannerSchema
+>;
+export type updateWomenBrandProduct = z.infer<
+    typeof updateWomenBanner
+>;
+
+
+    export const createHomeShopByNewCategorySchema = homeShopByNewCategorySchema
+    .omit({
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+    })
+    .extend({
+        imageUrl: z
+            .string({
+                required_error: "Image URL is required",
+                invalid_type_error: "Image URL must be a string",
+            })
+            .nullable(),
+    });
 export const updateHomeShopByCategorySchema = createHomeShopByCategorySchema;
+export const updateHomeShopByNewCategorySchema = createHomeShopByNewCategorySchema;
 
 export type HomeShopByCategory = z.infer<typeof homeShopByCategorySchema>;
 export type CreateHomeShopByCategory = z.infer<
@@ -232,4 +368,13 @@ export type CreateHomeShopByCategory = z.infer<
 >;
 export type UpdateHomeShopByCategory = z.infer<
     typeof updateHomeShopByCategorySchema
+>;
+
+
+export type HomeShopByNewCategory = z.infer<typeof homeShopByNewCategorySchema>;
+export type CreateHomeShopByNewCategory = z.infer<
+    typeof createHomeShopByNewCategorySchema
+>;
+export type UpdateHomeShopByNewCategory = z.infer<
+    typeof updateHomeShopByNewCategorySchema
 >;

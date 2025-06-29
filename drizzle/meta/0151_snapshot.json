@@ -5181,6 +5181,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "is_featured_men": {
+          "name": "is_featured_men",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_featured_women": {
+          "name": "is_featured_women",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "embeddings": {
           "name": "embeddings",
           "type": "vector(384)",

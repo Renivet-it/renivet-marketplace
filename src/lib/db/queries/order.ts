@@ -1,6 +1,7 @@
 import { mediaCache } from "@/lib/redis/methods";
 import {
     CreateOrder,
+    Order,
     OrderWithItemAndBrand,
     orderWithItemAndBrandSchema,
     UpdateOrderStatus,
@@ -247,10 +248,8 @@ class OrderQuery {
                 userId: orders.userId,
                 firstName: users.firstName, // Reference users table
                 lastName: users.lastName, // Reference users table
-                shiprocketOrderId:
-                    orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-                shiprocketShipmentId:
-                    orderShipments?.shiprocketShipmentId ?? undefined,
+                shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
                 receiptId: orders.receiptId,
                 paymentId: orders.paymentId,
                 paymentMethod: orders.paymentMethod,
@@ -276,25 +275,25 @@ class OrderQuery {
 
         // Map the data to a cleaner format if needed
         const formattedData = data.map((item) => ({
-            id: item.id,
-            userId: item.userId,
-            firstName: item.firstName, // Reference item table
-            lastName: item.lastName, // Reference users table
-            shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-            shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
-            receiptId: item.receiptId,
-            paymentId: item.paymentId,
-            paymentMethod: item.paymentMethod,
-            paymentStatus: item.paymentStatus,
-            status: item.status,
-            addressId: item.addressId,
-            totalItems: item.totalItems,
-            taxAmount: item.taxAmount,
-            deliveryAmount: item.deliveryAmount,
-            discountAmount: item.discountAmount,
-            totalAmount: item.totalAmount,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
+                 id: item.id,
+                userId: item.userId,
+                firstName: item.firstName, // Reference item table
+                lastName: item.lastName, // Reference users table
+                shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
+                shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
+                receiptId: item.receiptId,
+                paymentId: item.paymentId,
+                paymentMethod: item.paymentMethod,
+                paymentStatus: item.paymentStatus,
+                status: item.status,
+                addressId: item.addressId,
+                totalItems: item.totalItems,
+                taxAmount: item.taxAmount,
+                deliveryAmount: item.deliveryAmount,
+                discountAmount: item.discountAmount,
+                totalAmount: item.totalAmount,
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
         }));
         return formattedData;
     }

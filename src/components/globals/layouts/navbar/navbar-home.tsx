@@ -201,7 +201,7 @@ export function NavbarHome() {
 
                     <div className="hidden items-center gap-1 lg:flex">
                         <NavigationMenu>
-                            <NavigationMenuList>
+                            {/* <NavigationMenuList>
                                 {isCategoriesLoading ? (
                                     <></>
                                 ) : (
@@ -304,7 +304,106 @@ export function NavbarHome() {
                                             </NavigationMenuItem>
                                         ))
                                 )}
-                            </NavigationMenuList>
+                            </NavigationMenuList> */}
+        <NavigationMenuList>
+            {isCategoriesLoading ? (
+                <></>
+            ) : (
+                categories &&
+                subcategories &&
+                productTypes &&
+                categories.data
+                    .sort((a, b) =>
+                        a.createdAt.getTime() > b.createdAt.getTime() ? 1 : -1
+                    )
+                    .slice(0, 5)
+                    .map((category) => (
+                        <NavigationMenuItem key={category.id}>
+                            {/* Special handling for Men and Women categories */}
+                            {category.name === "Men" || category.name === "Women" ? (
+                                <div className="relative">
+                                    <NavigationMenuTrigger
+                                        className="bg-transparent hover:bg-transparent"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            window.location.href = `/${category.name.toLowerCase()}`;
+                                        }}
+                                    >
+                                        <Link
+                                            href={`/${category.name.toLowerCase()}`}
+                                            className="absolute inset-0"
+                                            aria-hidden="true"
+                                        />
+                                        {category.name}
+                                    </NavigationMenuTrigger>
+                                    <NavigationMenuContent>
+                                        <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
+                                            {subcategories.data
+                                                .filter(
+                                                    (sub) =>
+                                                        sub.categoryId === category.id &&
+                                                        productTypes.data.some(
+                                                            (pt) =>
+                                                                pt.subCategoryId === sub.id &&
+                                                                (pt.productCount ?? 0) > 0
+                                                        )
+                                                )
+                                                .map((subcategory) => (
+                                                    <div
+                                                        key={subcategory.id}
+                                                        className="space-y-2"
+                                                    >
+                                                        <Link
+                                                            href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                                            className="block hover:opacity-80"
+                                                        >
+                                                            <h3 className="font-medium text-primary">
+                                                                {subcategory.name}
+                                                            </h3>
+                                                        </Link>
+                                                        <ul className="space-y-1">
+                                                            {productTypes.data
+                                                                .filter(
+                                                                    (pt) =>
+                                                                        pt.subCategoryId === subcategory.id &&
+                                                                        (pt.productCount ?? 0) > 0
+                                                                )
+                                                                .map((productType) => (
+                                                                    <li key={productType.id}>
+                                                                        <NavigationMenuLink asChild>
+                                                                            <Link
+                                                                                href={handleNavigate(
+                                                                                    category.id,
+                                                                                    subcategory.id,
+                                                                                    productType.id
+                                                                                )}
+                                                                                className="block text-sm text-muted-foreground hover:font-semibold hover:text-foreground"
+                                                                            >
+                                                                                {productType.name}
+                                                                            </Link>
+                                                                        </NavigationMenuLink>
+                                                                    </li>
+                                                                ))}
+                                                        </ul>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </NavigationMenuContent>
+                                </div>
+                            ) : (
+                                <>
+                                    <NavigationMenuTrigger className="bg-transparent">
+                                        {category.name}
+                                    </NavigationMenuTrigger>
+                                    <NavigationMenuContent>
+                                        {/* ... existing content for other categories ... */}
+                                    </NavigationMenuContent>
+                                </>
+                            )}
+                        </NavigationMenuItem>
+                    ))
+            )}
+        </NavigationMenuList>
                         </NavigationMenu>
                     </div>
                 </div>
