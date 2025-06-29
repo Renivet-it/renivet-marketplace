@@ -33,13 +33,13 @@ const menuItems = {
         },
         {
             title: "Elevate Your Looks Section",
-            url: "/dashboard/general/women-section/elevate-looks",
+            url: "/dashboard/general/women-section/elavate-looks",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
             queryKey: "getAllElevateLooks", // Replace with actual query key
         },
         {
             title: "Outfit Variants",
-            url: "/dashboard/general/women-section/outfit-variants",
+            url: "/dashboard/general/women-section/outfit-varients",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
             queryKey: "getAllOutfitVariants", // Replace with actual query key
         },
