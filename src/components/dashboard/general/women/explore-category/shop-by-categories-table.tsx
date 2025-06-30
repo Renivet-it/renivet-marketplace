@@ -65,7 +65,7 @@ const columns: ColumnDef<TableShopByCategory>[] = [
         header: "Title",
         cell: ({ row }) => {
             const data = row.original;
-            return format(new Date(data.createdAt), "MMM dd, yyyy");
+            return data.title;
         },
     },
     {

@@ -43,18 +43,20 @@ export default function Page() {
                                     <Suspense>
                 <StyleDirectoryFetch />
             </Suspense>
+                       <Suspense>
+                <MoodBoardFetch />
+            </Suspense>
+                   <Suspense>
+                <DiscountPage />
+            </Suspense>
+                                   <Suspense>
+                <TopCollectionFetch />
+            </Suspense>
                 <Suspense>
                 <NewCollectionMiddleFetch />
             </Suspense>
-            <Suspense>
-                <DiscountPage />
-            </Suspense>
-           <Suspense>
-                <MoodBoardFetch />
-            </Suspense>
-                       <Suspense>
-                <TopCollectionFetch />
-            </Suspense>
+
+
 
                         <Suspense>
                 <SpecialOfferFetch />

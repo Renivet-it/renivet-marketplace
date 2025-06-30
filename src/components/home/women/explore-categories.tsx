@@ -21,7 +21,7 @@ export function ExploreCategories({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(false);
-
+console.log(titleData, "titleData");
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -73,7 +73,7 @@ export function ExploreCategories({
         )}
 
         {/* Scrollable Categories Row */}
-        <div
+           <div
           ref={scrollContainerRef}
           onScroll={checkScrollPosition}
           className="flex overflow-x-auto space-x-4 sm:space-x-6 px-4 scrollbar-hide relative"
@@ -86,9 +86,7 @@ export function ExploreCategories({
             >
               <div
                 className="
-                  w-[160px] h-[160px]
-                  sm:w-[180px] sm:h-[180px]
-                  md:w-[200px] md:h-[200px]
+                  w-[240px] h-[300px]
                   rounded-[24px] overflow-hidden
                   border border-gray-200 shadow-md
                   transition-transform group-hover:scale-105
@@ -98,8 +96,8 @@ export function ExploreCategories({
                 <Image
                   src={category.imageUrl}
                   alt={"Category"}
-                  width={200}
-                  height={200}
+                  width={240}
+                  height={240}
                   quality={90}
                   className="w-full h-full object-cover"
                 />
@@ -108,10 +106,11 @@ export function ExploreCategories({
                 className="
                   mt-2 font-semibold text-gray-900
                   text-base truncate
-                  w-[160px] sm:w-[180px] md:w-[200px]
+                  w-[240px]
                 "
               >
-                {"Category"}
+                {/* //@ts-ignore// */}
+                {category.title || "Category Title"}
               </p>
             </Link>
           ))}

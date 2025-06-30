@@ -25,42 +25,44 @@ export function MoodboardItem({
   if (!moodboardItems.length) return null;
 
   return (
-    <section className={cn("w-full py-12 md:py-16 bg-white", className)}>
+    <section className={cn("w-full py-6 md:py-12 bg-white", className)}>
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Title & Subtitle */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-6 md:mb-10">
+          <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">
             {title}
           </h2>
-          <p className="text-gray-600 text-lg">
-            A curated collage of whats trending, timeless
+          <p className="text-gray-600 text-xs md:text-base">
+            A curated collage of what&apos;s trending, timeless
           </p>
         </div>
 
-        {/* Image Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+        {/* Image Grid - Mobile optimized */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 lg:gap-6">
           {moodboardItems.slice(0, 6).map((item) => (
             <div
               key={item.id}
-              className="group relative aspect-square overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+              className="group relative w-full aspect-[3/4] overflow-hidden rounded-md md:rounded-lg shadow-xs md:shadow-sm hover:shadow-md transition-all duration-300"
             >
               {item.url ? (
                 <Link href={item.url} className="block h-full w-full">
                   <Image
                     src={item.imageUrl}
                     alt={item.title || "Moodboard item"}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    width={320}
+                    height={427}
+                    className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 320px"
                   />
                 </Link>
               ) : (
                 <Image
                   src={item.imageUrl}
                   alt={item.title || "Moodboard item"}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  width={320}
+                  height={427}
+                  className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+                  sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 320px"
                 />
               )}
             </div>
