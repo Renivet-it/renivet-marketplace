@@ -33,7 +33,7 @@ export function MoodboardItem({
             {title}
           </h2>
           <p className="text-gray-600 text-xs md:text-base">
-            A curated collage of what's trending, timeless
+            A curated collage of what&apos;s trending, timeless
           </p>
         </div>
 
