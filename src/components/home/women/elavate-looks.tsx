@@ -54,12 +54,12 @@ export function ElevateYourLooks({
                                         href={category.url || "/shop"}
                                         className="group flex flex-col items-center w-full px-1"
                                     >
-                                        <div className="rounded-lg overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
+       <div className="rounded-full overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
                                             <Image
                                                 src={category.imageUrl}
                                                 alt={"Category"}
-                                                width={200}
-                                                height={200}
+                                                width={176}
+                                                height={176}
                                                 sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
                                                 quality={100}
                                                 className="h-full w-full object-cover"
