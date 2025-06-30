@@ -125,6 +125,7 @@ export const homeBrandProductSchema = z.object({
             .url("URL is invalid")
             .nullable()
     ),
+            title: z.any().nullable().optional(),
     position: z
         .number({
             required_error: "Position is required",
@@ -201,6 +202,7 @@ export const homeShopByCategorySchema = z.object({
             invalid_type_error: "Created at must be a date",
         })
         .transform((v) => new Date(v)),
+        title: z.any().optional(),
     updatedAt: z
         .union([z.string(), z.date()], {
             required_error: "Updated at is required",
@@ -317,6 +319,7 @@ export const createHomeShopByCategorySchema = homeShopByCategorySchema
                 invalid_type_error: "Image URL must be a string",
             })
             .nullable(),
+            title: z.any().nullable().optional(),
     });
 
     export const createwomenHomePageBannerSchema = womenHomeBannerSchema

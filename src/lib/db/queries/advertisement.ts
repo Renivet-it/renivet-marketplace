@@ -466,6 +466,7 @@ class WomenHomeSectionQuery{
     async createAllexploreCategories(
         values: createWomenBrandProduct & {
             imageUrl: string;
+           title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -810,6 +811,7 @@ console.log("test");
         const data = await db.query.womenNewCollectionSection.findFirst({
             where: eq(womenNewCollectionSection.id, id),
         });
+        console.log("testdata", id);
 
         return data;
     }

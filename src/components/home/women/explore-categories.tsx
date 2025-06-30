@@ -21,7 +21,7 @@ export function ExploreCategories({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(false);
-
+console.log(titleData, "titleData");
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -111,7 +111,8 @@ export function ExploreCategories({
                   w-[160px] sm:w-[180px] md:w-[200px]
                 "
               >
-                {"Category"}
+                {/* //@ts-ignore// */}
+                {category.title || "Category Title"}
               </p>
             </Link>
           ))}

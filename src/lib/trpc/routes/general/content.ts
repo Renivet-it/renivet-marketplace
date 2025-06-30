@@ -916,7 +916,7 @@ console.log("homeShopByCategories", homeShopByCategories);
             const { id } = input;
 
             const existingHomeShopByCategory =
-                await queries.homeShopByCategories.getHomeShopByCategory(id);
+                await queries.womenhomebanner.getAllelavateLook(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -924,10 +924,11 @@ console.log("homeShopByCategories", homeShopByCategories);
                 });
 
             const existingImageUrl = existingHomeShopByCategory.imageUrl;
+            // @ts-ignore
             const existingKey = getUploadThingFileKey(existingImageUrl);
 
             await Promise.all([
-                queries.homeShopByCategories.deleteHomeShopByCategory(id),
+                queries.womenhomebanner.deleteAllelavateLooks(id),
                 utApi.deleteFiles([existingKey]),
             ]);
 
@@ -1095,7 +1096,7 @@ console.log("homeShopByCategories", homeShopByCategories);
             const { id } = input;
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getHomeShopByCategory(id);
+                await queries.womenhomebanner.getstyledirectory(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -1107,7 +1108,7 @@ console.log("homeShopByCategories", homeShopByCategories);
             const existingKey = getUploadThingFileKey(existingImageUrl);
 
             await Promise.all([
-                queries.womenhomebanner.deleteHomeShopByCategory(id),
+                queries.womenhomebanner.deletestyleDirectory(id),
                 utApi.deleteFiles([existingKey]),
             ]);
 
@@ -1277,6 +1278,7 @@ console.log("homeShopByCategories", homeShopByCategories);
 
             const existingHomeShopByCategory =
                 await queries.womenhomebanner.getNewCollection(id);
+                console.log(existingHomeShopByCategory, "existingHomeShopByCategory");
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -1456,7 +1458,7 @@ console.log("homeShopByCategories", homeShopByCategories);
             const { id } = input;
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getNewCollection(id);
+                await queries.womenhomebanner.getNewOfferSection(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -3011,7 +3013,8 @@ export const womenExpoloreCategorySectionRouter = createTRPCRouter({
                 await queries.womenhomebanner.createAllexploreCategories({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    // title: input.title,
+                    title: input.title ?? null,
                     isActive: false
                 });
 
@@ -3106,7 +3109,7 @@ export const womenExpoloreCategorySectionRouter = createTRPCRouter({
             const existingHomeShopByCategory =
 
 // @ts-ignore
-                await queries.womenhomebanner.createAllexploreCategories(id);
+                await queries.womenhomebanner.getAllexploreCategory(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",

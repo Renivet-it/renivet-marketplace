@@ -51,6 +51,8 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
         defaultValues: {
             imageUrl: shopByCategory?.imageUrl ?? "",
             url: shopByCategory?.url ?? null,
+            //@ts-ignore
+            title: shopByCategory?.title ?? "",
         },
     });
 
@@ -221,6 +223,27 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                                     </div>
                                 )}
                             </div>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Title</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Title"
+                                    value={field.value ?? ""}
+                                    disabled={isPending}
+                                />
+                            </FormControl>
 
                             <FormMessage />
                         </FormItem>
