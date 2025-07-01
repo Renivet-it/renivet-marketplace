@@ -53,9 +53,6 @@ export default function Page() {
                                    <Suspense>
                 <TopCollectionFetch />
             </Suspense>
-                <Suspense>
-                <NewCollectionMiddleFetch />
-            </Suspense>
 
 
 
@@ -66,12 +63,18 @@ export default function Page() {
                                                 <Suspense>
                 <SuggestedLookFetch />
             </Suspense>
-
-                                              <Suspense>
-                <FindYourStyleFetch />
+                     <Suspense>
+                <NewCollectionMiddleFetch />
             </Suspense>
+
+                                              {/* <Suspense>
+                <FindYourStyleFetch />
+            </Suspense> */}
                         <Suspense>
                 <BrandStoryTellingFetch />
+            </Suspense>
+                                                          <Suspense>
+                <FindYourStyleFetch />
             </Suspense>
                                     <Suspense>
                 <BrandProductsFetch />

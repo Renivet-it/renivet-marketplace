@@ -16,11 +16,12 @@ export function FindYourStyle({ advertisements }: PageProps) {
       {advertisements.map((ad) => (
         <div
           key={ad.id}
-          className="relative w-full max-w-5xl md:max-w-6xl lg:max-w-7xl mx-auto overflow-hidden shadow-lg"
+          className="relative w-full max-w-[1440px] mx-auto overflow-hidden shadow-lg"
           style={{
             clipPath: "polygon(3% 1%, 10% 0%, 20% 2%, 30% 0%, 40% 1%, 50% 0%, 60% 2%, 70% 0%, 80% 1%, 90% 0%, 97% 2%, 99% 5%, 100% 10%, 99% 20%, 100% 30%, 99% 40%, 100% 50%, 99% 60%, 100% 70%, 99% 80%, 100% 90%, 98% 97%, 90% 99%, 80% 100%, 70% 99%, 60% 100%, 50% 99%, 40% 100%, 30% 99%, 20% 100%, 10% 99%, 2% 98%, 0% 90%, 1% 80%, 0% 70%, 1% 60%, 0% 50%, 1% 40%, 0% 30%, 1% 20%, 0% 10%)",
             background: "white",
-            position: "relative",
+            height: "670px",
+            width: "100%"
           }}
         >
           {/* Decorative Background Elements */}
@@ -32,18 +33,19 @@ export function FindYourStyle({ advertisements }: PageProps) {
               opacity: 0.3,
             }}
           />
-          {/* 2:1 Aspect Ratio Container */}
-          <div className="relative w-full" style={{ paddingTop: "50%" }}>
+          {/* 1440×670 Container */}
+          <div className="relative w-full h-full">
             {ad.url ? (
               <Link href={ad.url} target="_blank" className="absolute inset-0">
                 <Image
                   src={ad.imageUrl}
                   alt={ad.title}
-                  fill
-                  className="object-cover"
+                  width={1440}
+                  height={670}
+                  className="object-cover w-full h-full"
                   priority
                   quality={100}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1440px"
                 />
               </Link>
             ) : (
@@ -51,11 +53,12 @@ export function FindYourStyle({ advertisements }: PageProps) {
                 <Image
                   src={ad.imageUrl}
                   alt={ad.title}
-                  fill
-                  className="object-cover"
+                  width={1440}
+                  height={670}
+                  className="object-cover w-full h-full"
                   priority
                   quality={100}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1440px"
                 />
               </div>
             )}
