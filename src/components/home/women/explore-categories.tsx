@@ -21,7 +21,7 @@ export function ExploreCategories({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAtStart, setIsAtStart] = useState(true);
   const [isAtEnd, setIsAtEnd] = useState(false);
-console.log(titleData, "titleData");
+
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -73,7 +73,7 @@ console.log(titleData, "titleData");
         )}
 
         {/* Scrollable Categories Row */}
-           <div
+        <div
           ref={scrollContainerRef}
           onScroll={checkScrollPosition}
           className="flex overflow-x-auto space-x-4 sm:space-x-6 px-4 scrollbar-hide relative"
@@ -87,7 +87,7 @@ console.log(titleData, "titleData");
               <div
                 className="
                   w-[240px] h-[300px]
-                  rounded-[24px] overflow-hidden
+                  overflow-hidden
                   border border-gray-200 shadow-md
                   transition-transform group-hover:scale-105
                   hover:bg-gray-50
