@@ -59,15 +59,17 @@ export default function Page() {
 
 
                         <Suspense>
+                            {/* festive styl;e */}
                 <SpecialOfferFetch />
-            </Suspense>
-                                    <Suspense>
-                <FindYourStyleFetch />
             </Suspense>
                                                 <Suspense>
                 <SuggestedLookFetch />
             </Suspense>
-            <Suspense>
+
+                                              <Suspense>
+                <FindYourStyleFetch />
+            </Suspense>
+                        <Suspense>
                 <BrandStoryTellingFetch />
             </Suspense>
             <Suspense>
