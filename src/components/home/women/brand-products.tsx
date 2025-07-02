@@ -34,13 +34,9 @@ export function WomenBrandProducts({
                 {/* Mobile Header */}
                 <div className="flex flex-col items-center gap-2 mb-4">
                     <h2 className="text-2xl font-bold uppercase tracking-wider">
-                        OUR WOMEN'S STORE
+                        OUR WOMEN&apos;S STORE
                     </h2>
-                    <div className="flex gap-4">
-                        <span className="text-sm uppercase tracking-widest">OcAU</span>
-                        <span className="text-sm uppercase tracking-widest">expressions</span>
-                        <span className="text-sm uppercase tracking-widest">ONSAR</span>
-                    </div>
+
                 </div>
                 <div className="scrollbar-hide flex flex-col gap-4 overflow-x-auto px-1">
                     <div className="flex gap-4">

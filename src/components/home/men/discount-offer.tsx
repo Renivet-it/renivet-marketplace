@@ -17,7 +17,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
         <div key={ad.id} className="relative w-full overflow-hidden">
           {/* Full-width 1496×652 Container */}
           <div
-            className="relative w-full mx-auto" 
+            className="relative w-full mx-auto"
             style={{
               aspectRatio: "1496/652",
               maxWidth: "1496px"
