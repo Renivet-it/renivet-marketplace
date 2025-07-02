@@ -17,7 +17,7 @@ interface PageProps extends GenericProps {
 export function ElevateYourLooks({
     className,
     shopByCategories,
-    title = "Refine Your Style",
+    title = "Elevate Your Look",
     ...props
 }: PageProps) {
     return (
@@ -54,21 +54,19 @@ export function ElevateYourLooks({
                                         href={category.url || "/shop"}
                                         className="group flex flex-col items-center w-full px-1"
                                     >
-                                        <div className="rounded-lg overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
+       <div className="rounded-full overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
                                             <Image
                                                 src={category.imageUrl}
-//@ts-ignore
-                                                alt={category.title || "Category"}
-                                                width={200}
-                                                height={200}
+                                                alt={"Category"}
+                                                width={176}
+                                                height={176}
                                                 sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
                                                 quality={100}
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
                                         <p className="text-lg font-medium uppercase text-gray-800 sm:text-sm text-center">
-{/* @ts-ignore */}
-                                            {category.title || "Category"}
+                                            { "Category"}
                                         </p>
                                     </Link>
                                 </CarouselItem>

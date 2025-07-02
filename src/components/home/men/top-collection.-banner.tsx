@@ -33,14 +33,14 @@ export function TopCollectionBanner({ advertisements }: PageProps) {
             key={ad.id}
             className="relative w-full overflow-hidden rounded-2xl bg-gray-50 shadow-sm hover:shadow-md transition-shadow"
           >
-            {/* Full-width image container */}
-            <div className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[500px]">
+            {/* Fixed 1269×826 container */}
+            <div className="relative w-full" style={{ aspectRatio: "1269/826" }}>
               <Image
                 src={ad.imageUrl}
                 alt={ad.title}
-                fill
-                className="object-cover"
-                sizes="100vw"
+                width={1269}
+                height={826}
+                className="object-cover w-full h-full"
                 priority
               />
               {/* Text overlay */}
