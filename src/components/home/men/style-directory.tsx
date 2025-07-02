@@ -52,17 +52,17 @@ export function StyleDirectory({
                                             <div className="overflow-hidden w-full bg-gray-100 rounded-t-lg">
                                                 <Image
                                                     src={category.imageUrl}
-// @ts-ignore
+      // @ts-ignore
                                                     alt={category.title || "Category"}
-                                                    width={100}
-                                                    height={100}
+                                                    width={186}
+                                                    height={204}
                                                     quality={85}
                                                     className="h-[80px] w-full object-cover"
                                                 />
                                             </div>
                                             <div className="mt-1 text-center w-full px-1">
                                                 <p className="text-[10px] font-bold text-gray-800 uppercase truncate">
-{/* @ts-ignore */}
+      {/* @ts-ignore */}
                                                     {category.title || "Category"}
                                                 </p>
                                             </div>
@@ -88,22 +88,19 @@ export function StyleDirectory({
                                 <CarouselItem key={index} className="pl-6 basis-[200px]">
                                     <Link href={category.url || "/shop"} className="block">
                                         <div className="flex flex-col items-center p-2 transition-shadow duration-200">
-                                            <div className="overflow-hidden rounded-t-lg w-full bg-gray-100">
+                                            <div className="overflow-hidden w-full bg-gray-100 rounded-t-[53.542px]">
                                                 <Image
                                                     src={category.imageUrl}
-// @ts-ignore
-                                                    alt={category.title || "Category"}
-                                                    width={200}
-                                                    height={200}
+                                                    alt={"Category"}
+                                                    width={186}
+                                                    height={204}
                                                     quality={90}
                                                     className="h-[200px] w-full object-cover"
                                                 />
                                             </div>
                                             <div className="mt-4 text-center w-full">
                                                 <p className="text-base font-bold text-gray-800 uppercase">
-
-{/* @ts-ignore */}
-                                                    {category.title || "Category"}
+                                                    {"Category"}
                                                 </p>
                                             </div>
                                         </div>

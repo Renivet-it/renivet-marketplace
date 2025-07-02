@@ -43,12 +43,13 @@ export default function Page() {
                        <Suspense>
                 <TopCollectionBannerFecth />
             </Suspense>
+                                    <Suspense>
+                <DiscountPage />
+            </Suspense>
                        <Suspense>
                 <TopCollectionFetch />
             </Suspense>
-                        <Suspense>
-                <DiscountPage />
-            </Suspense>
+
 
                         {/* <Suspense>
                 <SpecialOfferFetch />

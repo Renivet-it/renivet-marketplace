@@ -13,50 +13,53 @@ interface PageProps extends GenericProps {
 
 export function SuggestedLook({ className, banners, ...props }: PageProps) {
   return (
-    <section className={cn("pt-10 md:pt-16 lg:pt-20", className)} {...props}>
-      {/* Added header title */}
-      <div className="max-w-screen-xl mx-auto px-4 lg:px-6 mb-6">
-              <h1 className="text-center text-3xl sm:text-4xl font-bold text-gray-900 mb-10">
-          Suggested Looks For You
-        </h1>
+    <section className={cn("w-full pt-10 md:pt-16 lg:pt-20 pb-12 md:pb-16 px-4 sm:px-6 lg:px-8", className)} {...props}>
+      {/* Centered Title Section */}
+      <div className="w-full flex justify-center mb-6 md:mb-8">
+        <div className="max-w-screen-2xl w-full text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            Suggested Looks
+          </h2>
+        </div>
       </div>
 
-      <Carousel
-        opts={{
-          align: "start",
-          loop: true,
-        }}
-        plugins={[
-          Autoplay({
-            delay: 5000,
-          }),
-        ]}
-        className="w-full aspect-[2.6/1]"
-      >
-        <CarouselContent
-          classNames={{
-            wrapper: "size-full",
-            inner: "size-full ml-0",
-          }}
-        >
-          {banners.map((item, index) => (
-            <CarouselItem key={index} className="h-full p-0">
-              <div className="relative size-full overflow-hidden rounded-2xl">
-                <Link href="/shop" className="block size-full">
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                    priority={index === 0}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
-                  />
-                </Link>
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
+      {/* Full-width Carousel with outer padding */}
+      <div className="w-full overflow-hidden">
+        <div className="w-screen ml-[calc(-50vw+50%)]">
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            plugins={[
+              Autoplay({
+                delay: 5000,
+              }),
+            ]}
+            className="w-full h-[300px]"
+          >
+            <CarouselContent className="ml-0">
+              {banners.map((item, index) => (
+                <CarouselItem key={index} className="h-full p-0">
+                  <div className="relative w-full h-full">
+                    <Link href="/shop" className="block size-full">
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        width={1440}
+                        height={300}
+                        className="object-cover w-full h-full"
+                        priority={index === 0}
+                        sizes="100vw"
+                      />
+                    </Link>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
+        </div>
+      </div>
     </section>
   );
 }

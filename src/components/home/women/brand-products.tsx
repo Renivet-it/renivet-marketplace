@@ -31,17 +31,12 @@ export function WomenBrandProducts({
             {...props}
         >
             <div className="container md:hidden">
-                <div className="flex justify-center gap-2">
-                    <h2
-                        className={cn(
-                            "text-xl sm:text-3xl",
-                            "text-center",
-                            "capitalize",
-                            "pb-4"
-                        )}
-                    >
-                        our women brand
+                {/* Mobile Header */}
+                <div className="flex flex-col items-center gap-2 mb-4">
+                    <h2 className="text-2xl font-bold uppercase tracking-wider">
+                        OUR WOMEN&apos;S STORE
                     </h2>
+
                 </div>
                 <div className="scrollbar-hide flex flex-col gap-4 overflow-x-auto px-1">
                     <div className="flex gap-4">
@@ -52,6 +47,13 @@ export function WomenBrandProducts({
                 </div>
             </div>
             <div className="hidden w-full max-w-5xl md:block xl:max-w-[100rem]">
+                {/* Desktop Header */}
+                <div className="flex flex-col items-center gap-2 mb-8">
+                    <h2 className="text-3xl font-bold uppercase tracking-wider">
+                        OUR WOMEN&apos;S STORE
+                    </h2>
+                </div>
+
                 <Carousel
                     plugins={[
                         Autoplay({

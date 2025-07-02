@@ -15,7 +15,6 @@ export interface CollectionItem {
 
 interface TopCollectionProps {
   collections: CollectionItem[];
-  title?: string;
   className?: string;
 }
 
@@ -28,39 +27,49 @@ export function TopCollection({
   return (
     <section className={cn("w-full py-8 md:py-12 bg-white", className)}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
+        {/* Title Section */}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {collections.map((item) => (
-            <Link
+            <div
               key={item.id}
-              href={item.url || "#"}
-              className="flex flex-col w-full max-w-[360px] sm:max-w-[420px] mx-auto bg-white rounded-lg sm:rounded-xl shadow-md sm:shadow-lg overflow-hidden hover:shadow-lg sm:hover:shadow-xl transition-shadow duration-300"
+              className="relative w-full aspect-[605/755] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
             >
-              {/* Responsive Image Container */}
-              <div className="relative w-full aspect-[4/3.2] sm:aspect-[4/3.5]">
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  priority
-                />
-              </div>
+              <Link href={item.url || "#"} className="block h-full w-full">
+                {/* Image with exact dimensions */}
+                <div className="relative w-full h-full">
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    width={605}
+                    height={755}
+                    className="object-cover w-full h-full"
+                    priority
+                  />
+                </div>
 
-              <div className="flex-1 flex flex-col p-4 sm:p-6">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 text-center">
-                  {item.title}
-                </h2>
+                {/* Text Overlay */}
+                <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-8 text-white">
+                  <div>
+                    <h3 className="text-2xl sm:text-3xl font-bold mb-2">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm sm:text-base italic">
+                      {item.description?.[0]}
+                    </p>
+                  </div>
 
-                {item.description && (
-                  <ul className="text-sm sm:text-base text-gray-700 mt-2 sm:mt-3 space-y-1 sm:space-y-2 list-disc list-inside">
-                    {item.description.map((line, idx) => (
-                      <li key={idx}>{line}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Link>
+                  <div className="text-right">
+                    <p className="text-lg sm:text-xl font-semibold mb-2">
+                      {item.description?.[1]}
+                    </p>
+                    <button className="bg-white text-gray-900 px-6 py-2 rounded-full text-sm sm:text-base font-medium hover:bg-gray-100 transition">
+                      {item.ctaText || "BUY NOW"}
+                    </button>
+                  </div>
+                </div>
+              </Link>
+            </div>
           ))}
         </div>
       </div>
