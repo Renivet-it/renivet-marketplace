@@ -13,43 +13,51 @@ interface PageProps extends GenericProps {
 
 export function SuggestedLook({ className, banners, ...props }: PageProps) {
   return (
-    <section className={cn("pt-10 md:pt-16 lg:pt-20", className)} {...props}>
-      <Carousel
-        opts={{
-          align: "start",
-          loop: true,
-        }}
-        plugins={[
-          Autoplay({
-            delay: 5000,
-          }),
-        ]}
-        className="w-full aspect-[2.6/1]"
-      >
-        <CarouselContent
-          classNames={{
-            wrapper: "size-full",
-            inner: "size-full ml-0",
+    <section className={cn("pt-10 md:pt-16 lg:pt-20 w-full pb-12 md:pb-16", className)} {...props}>
+      {/* Centered Title Section */}
+      <div className="w-full flex justify-center mb-6">
+        <div className="max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            Suggested Looks
+          </h2>
+        </div>
+      </div>
+
+      {/* Full-width Carousel */}
+      <div className="w-screen">
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
           }}
+          plugins={[
+            Autoplay({
+              delay: 5000,
+            }),
+          ]}
+          className="w-full h-[300px]"
         >
-          {banners.map((item, index) => (
-            <CarouselItem key={index} className="h-full p-0">
-              <div className="relative size-full overflow-hidden rounded-2xl"> {/* Added rounded-2xl and overflow-hidden */}
-                <Link href="/shop" className="block size-full">
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                    priority={index === 0}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
-                  />
-                </Link>
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
+          <CarouselContent className="ml-0">
+            {banners.map((item, index) => (
+              <CarouselItem key={index} className="h-full p-0">
+                <div className="relative w-full h-full">
+                  <Link href="/shop" className="block size-full">
+                    <Image
+                      src={item.imageUrl}
+                      alt={item.title}
+                      width={1440}
+                      height={300}
+                      className="object-cover w-full h-full"
+                      priority={index === 0}
+                      sizes="100vw"
+                    />
+                  </Link>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
     </section>
   );
 }

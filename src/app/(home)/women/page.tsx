@@ -1,4 +1,4 @@
-import { AdvertisementPage, Blogs, MarketingStrip, ShopByCategories } from "@/components/home";
+import { AdvertisementPage, Blogs, MarketingStrip } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
 import { AdvertisementDiscountPage } from "@/components/home/new-home-page/discount-section";
@@ -18,6 +18,7 @@ import { SpecialOffer } from "@/components/home/women/special-offer";
 import { FindYourStyle } from "@/components/home/women/find-your-style";
 import { SuggestedLook } from "@/components/home/women/suggested-looks";
 import { BrandProducts } from "@/components/home/women/women-store-brand";
+import { WomenBrandProducts } from "@/components/home/women/brand-products";
 import { BrandStoryTelling } from "@/components/home/women/brand-storytelling";
 import { WomenSkincare } from "@/components/home/women/women-glowing-skincare";
 import { ProductGrid } from "@/components/home/women/product-grid";
@@ -52,9 +53,6 @@ export default function Page() {
                                    <Suspense>
                 <TopCollectionFetch />
             </Suspense>
-                <Suspense>
-                <NewCollectionMiddleFetch />
-            </Suspense>
 
 
 
@@ -65,12 +63,21 @@ export default function Page() {
                                                 <Suspense>
                 <SuggestedLookFetch />
             </Suspense>
-
-                                              <Suspense>
-                <FindYourStyleFetch />
+                     <Suspense>
+                <NewCollectionMiddleFetch />
             </Suspense>
+
+                                              {/* <Suspense>
+                <FindYourStyleFetch />
+            </Suspense> */}
                         <Suspense>
                 <BrandStoryTellingFetch />
+            </Suspense>
+                                                          <Suspense>
+                <FindYourStyleFetch />
+            </Suspense>
+                                    <Suspense>
+                <BrandProductsFetch />
             </Suspense>
             <Suspense>
                 <WomenSkincareFetch />
@@ -162,6 +169,15 @@ async function BlogsFetch() {
 
 //     return <Landing banners={sorted} />;
 // }
+
+async function BrandProductsFetch() {
+    const brandProducts =
+        await homeBrandProductQueries.getAllHomeBrandProducts();
+    if (!brandProducts.length) return null;
+
+    return <WomenBrandProducts brandProducts={brandProducts} />;
+}
+
 
 async function WomenSkincareFetch() {
         const brandProducts =

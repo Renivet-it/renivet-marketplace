@@ -15,8 +15,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-    title: "Top Collection",
-    description: "Manage the platform's Top Collection",
+    title: "Special Offer Section",
+    description: "Manage the platform's Special Offer Section",
 };
 
 interface PageProps {

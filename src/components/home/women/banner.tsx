@@ -58,13 +58,13 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     }}
                 >
                     {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full px-12 py-6 lg:px-20">
-                            <div className="relative size-full rounded-3xl overflow-hidden bg-gray-100">
+                        <CarouselItem key={index} className="h-full px-0 py-0">
+                            <div className="relative size-full overflow-hidden bg-gray-100">
                                 <Image
                                     src={item.imageUrl}
                                     alt={item.title}
-                                    width={1920}
-                                    height={1080}
+                                    width={1440}
+                                    height={550}
                                     className="size-full object-cover brightness-75"
                                     priority={index === 0}
                                 />

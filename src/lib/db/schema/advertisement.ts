@@ -139,7 +139,7 @@ export const womenMoodBoardSection = pgTable("women_mood_board_section", {
     ...timestamps,
 });
 
-export const womenStyleSubstanceSection = pgTable("women_style_section", {
+export const womenStyleSubstanceSection = pgTable("women_style_substance_section", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),
     imageUrl: text("image_url"),
