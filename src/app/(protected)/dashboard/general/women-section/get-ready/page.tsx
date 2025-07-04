@@ -1,6 +1,6 @@
 import {
     ShopByCategoriesTable,
-} from "@/components/dashboard/general/women/new-collection/shop-by-categories-table";
+} from "@/components/dashboard/general/women/get-ready/shop-by-categories-table";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";

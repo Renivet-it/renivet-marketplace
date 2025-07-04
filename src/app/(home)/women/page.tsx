@@ -60,11 +60,16 @@ export default function Page() {
                 <TopCollectionFetch />
             </Suspense>
 
-
+                 <Suspense>
+                <NewCollectionDiscountFetch />
+            </Suspense>
 
                         <Suspense>
                             {/* festive styl;e */}
                 <SpecialOfferFetch />
+            </Suspense>
+                                    <Suspense>
+                <GetReadyFetch />
             </Suspense>
                                                 <Suspense>
                 <SuggestedLookFetch />
@@ -72,12 +77,8 @@ export default function Page() {
                      <Suspense>
                 <NewCollectionMiddleFetch />
             </Suspense>
-                  <Suspense>
-                <newCollectionDiscountFetch />
-            </Suspense>
-                        <Suspense>
-                <getReadyFetch />
-            </Suspense>
+
+
                         <Suspense>
                 <BrandStoryTellingFetch />
             </Suspense>
@@ -262,19 +263,18 @@ async function FindYourStyleFetch() {
     return <FindYourStyle advertisements={brandProducts} />;
 }
 
-async function getReadyFetch() {
+async function GetReadyFetch() {
      const brandProducts =
     //@ts-ignore
 
      await WomenHomeSectionQueries.getWomenGetReadySection();
     if (!brandProducts.length) return null;
     //@ts-ignore
-
-    return <GetReadySection advertisements={brandProducts} />;
+    return <GetReadySection banners={brandProducts} />;
 }
 
 
-async function newCollectionDiscountFetch() {
+async function NewCollectionDiscountFetch() {
      const brandProducts =
     //@ts-ignore
 
@@ -282,7 +282,7 @@ async function newCollectionDiscountFetch() {
     if (!brandProducts.length) return null;
     //@ts-ignore
 
-    return <GetNewDiscountCollection advertisements={brandProducts} />;
+    return <GetNewDiscountCollection banners={brandProducts} />;
 }
 
 // async function StyleDirectoryFetch() {
