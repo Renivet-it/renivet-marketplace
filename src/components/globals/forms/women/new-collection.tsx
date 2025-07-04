@@ -79,7 +79,7 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
     });
 
     const { mutateAsync: createAdAsync } =
-        trpc.general.content.womenNewCollectionRouter.createWomenBanner.useMutation();
+        trpc.general.content.WomenNewCollectionRouter.createWomenBanner.useMutation();
     const { mutateAsync: updateAdAsync } =
     // @ts-ignore
         trpc.general.content.womenNewCollectionRouter.updateHomeShopByCategory.useMutation();
