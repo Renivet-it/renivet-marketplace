@@ -2,36 +2,35 @@
 
 import { cn } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
-import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
-import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
 
-interface PageProps extends GenericProps {
+interface PageProps {
   banners: Banner[];
+  className?: string;
 }
 
-export function SpecialOffer({ className, banners, ...props }: PageProps) {
+export function SpecialOffer({ className, banners }: PageProps) {
   return (
-    <section className={cn("w-full py-8 md:py-12 bg-white", className)}>
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Title Section */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {banners.map((item : any) => (
+    <section
+      className={cn("w-full py-8 md:py-12", className)}
+      style={{ backgroundColor: "#f4f0ec" }}
+    >
+      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {banners.map((item: any) => (
             <div
               key={item.id}
-              className="relative w-full aspect-[605/755] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
+              className="relative w-full aspect-[584/450] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
             >
-              {/* @ts-ignore */}
               <Link href={item.url || "#"} className="block h-full w-full">
-                {/* Image with exact dimensions */}
+                {/* Image with new dimensions */}
                 <div className="relative w-full h-full">
                   <Image
                     src={item.imageUrl}
                     alt={item.title}
-                    width={605}
-                    height={755}
+                    width={584}
+                    height={467}
                     className="object-cover w-full h-full"
                     priority
                   />
@@ -53,7 +52,7 @@ export function SpecialOffer({ className, banners, ...props }: PageProps) {
                       {item.description?.[1]}
                     </p>
                     <button className="bg-white text-gray-900 px-6 py-2 rounded-full text-sm sm:text-base font-medium hover:bg-gray-100 transition">
-                      { "BUY NOW"}
+                      BUY NOW
                     </button>
                   </div>
                 </div>

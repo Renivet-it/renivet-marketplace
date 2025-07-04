@@ -7,13 +7,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
 
-interface PageProps extends GenericProps {
+interface PageProps {
   banners: Banner[];
+  className?: string;
 }
 
-export function SuggestedLook({ className, banners, ...props }: PageProps) {
+export function SuggestedLook({ className, banners }: PageProps) {
   return (
-    <section className={cn("pt-10 md:pt-16 lg:pt-20 w-full pb-12 md:pb-16", className)} {...props}>
+    <section
+      className={cn("pt-10 md:pt-16 lg:pt-20 w-full pb-12 md:pb-16", className)}
+      style={{ backgroundColor: "#f4f0ec" }}
+    >
       {/* Centered Title Section */}
       <div className="w-full flex justify-center mb-6">
         <div className="max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8 text-center">

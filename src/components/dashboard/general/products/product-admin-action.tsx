@@ -23,12 +23,24 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TableProduct as ReviewTableProduct } from "./products-review-table";
-import { toggleFeaturedProduct, menToggleFeaturedProduct } from "@/actions/product-action"; // Import the server action
+import {
+    toggleFeaturedProduct,
+    menToggleFeaturedProduct,
+    toggleWomenStyleWithSubstance,
+    toggleMenStyleWithSubstance
+} from "@/actions/product-action";
 import { trpc } from "@/lib/trpc/client";
 import { parseAsInteger, useQueryState } from "nuqs";
 
 interface PageProps {
-    product: ReviewTableProduct & { visibility: boolean; stock: number; isFeaturedWomen?: boolean };
+    product: ReviewTableProduct & {
+        visibility: boolean;
+        stock: number;
+        isFeaturedWomen?: boolean;
+        isFeaturedMen?: boolean;
+        isStyleWithSubstanceWoMen?: boolean;
+        isStyleWithSubstanceMen?: boolean;
+    };
 }
 
 export function ProductAction({ product }: PageProps) {
@@ -45,12 +57,12 @@ export function ProductAction({ product }: PageProps) {
     const [search] = useQueryState("search", {
         defaultValue: "",
     });
-        const { refetch } = trpc.brands.products.getProducts.useQuery({
-            limit,
-            page,
-            search,
-        });
 
+    const { refetch } = trpc.brands.products.getProducts.useQuery({
+        limit,
+        page,
+        search,
+    });
 
     const handleToggleFeatured = async () => {
         setIsLoading(true);
@@ -69,7 +81,7 @@ export function ProductAction({ product }: PageProps) {
         }
     };
 
-        const handleToggleFeaturedMen = async () => {
+    const handleToggleFeaturedMen = async () => {
         setIsLoading(true);
         try {
             const result = await menToggleFeaturedProduct(product.id, product.isFeaturedMen ?? false);
@@ -81,6 +93,40 @@ export function ProductAction({ product }: PageProps) {
             }
         } catch (error) {
             toast.error("Failed to update featured status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleToggleWomenStyleWithSubstance = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleWomenStyleWithSubstance(product.id, product.isStyleWithSubstanceWoMen ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleToggleMenStyleWithSubstance = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleMenStyleWithSubstance(product.id, product.isStyleWithSubstanceMen ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
         } finally {
             setIsLoading(false);
         }
@@ -156,6 +202,7 @@ export function ProductAction({ product }: PageProps) {
                             </Link>
                         </DropdownMenuItem>
 
+                        {/* Featured Products Section */}
                         <DropdownMenuItem onClick={handleToggleFeatured} disabled={isLoading}>
                             <Icons.Star className="size-4" />
                             <span>{product.isFeaturedWomen ? "Remove from Featured Women" : "Add to Featured Women"}</span>
@@ -164,6 +211,17 @@ export function ProductAction({ product }: PageProps) {
                         <DropdownMenuItem onClick={handleToggleFeaturedMen} disabled={isLoading}>
                             <Icons.Star className="size-4" />
                             <span>{product.isFeaturedMen ? "Remove from Featured Men" : "Add to Featured Men"}</span>
+                        </DropdownMenuItem>
+
+                        {/* Style With Substance Section */}
+                        <DropdownMenuItem onClick={handleToggleWomenStyleWithSubstance} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isStyleWithSubstanceWoMen ? "Remove from Style With Substance (Women)" : "Add to Style With Substance (Women)"}</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={handleToggleMenStyleWithSubstance} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isStyleWithSubstanceMen ? "Remove from Style With Substance (Men)" : "Add to Style With Substance (Men)"}</span>
                         </DropdownMenuItem>
 
                         {product.isPublished && (
@@ -209,6 +267,7 @@ export function ProductAction({ product }: PageProps) {
                 </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* Existing modals */}
             <ProductSendReviewModal
                 product={product}
                 isOpen={isSendForReviewModalOpen}

@@ -7,13 +7,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
 
-interface PageProps extends GenericProps {
+interface PageProps {
     banners: Banner[];
+    className?: string;
 }
 
-export function BrandStoryTelling({ className, banners, ...props }: PageProps) {
+export function BrandStoryTelling({ className, banners }: PageProps) {
     return (
-        <section className={cn("pt-10 md:pt-16 lg:pt-20", className)} {...props}>
+        <section
+            className={cn("pt-10 md:pt-16 lg:pt-20", className)}
+            style={{ backgroundColor: "#f4f0ec" }}
+        >
             <Carousel
                 opts={{
                     align: "start",
@@ -21,10 +25,9 @@ export function BrandStoryTelling({ className, banners, ...props }: PageProps) {
                 }}
                 plugins={[
                     Autoplay({
-                        delay: 2000, // Slide changes every 5 seconds
+                        delay: 2000, // Slide changes every 2 seconds
                     }),
                 ]}
-                className="w-full aspect-[3/1]"
             >
                 <CarouselContent
                     classNames={{

@@ -14,6 +14,8 @@ import {
     createWomenBrandProduct
 
 } from "@/lib/validations";
+import { mediaCache } from "@/lib/redis/methods";
+
 import { and, asc, desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import {
@@ -46,7 +48,10 @@ import {
     menDiscountOfferSection,
     menSuggestedLookForYou,
     menNewCollectionSectionn,
-    menTopCollectionBanner
+    menTopCollectionBanner,
+    womenStyleWithSubstanceMiddlePageSection,
+    womenNewCollectionDiscountSection,
+    womenGetReadySection,
 
 } from "../schema";
 
@@ -2473,6 +2478,241 @@ console.log("test");
 
            //top-collection banner section
 
+        async getWomenGetReadySection(p0: { limit: number; page: number; }) {
+        const data = await db.query.womenGetReadySection.findMany({
+            orderBy: [asc(womenGetReadySection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getWomenGetReadySections({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenGetReadySection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenGetReadySection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenGetReadySection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getAllWomenGetReadySection(id: string) {
+        const data = await db.query.womenGetReadySection.findFirst({
+            where: eq(womenGetReadySection.id, id),
+        });
+
+        return data;
+    }
+
+    async createWomenGetReadySection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenGetReadySection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateWomenGetReadySection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenGetReadySection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenGetReadySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteWomenGetReadySection(id: string) {
+        const data = await db
+            .delete(womenGetReadySection)
+            .where(eq(womenGetReadySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+        async getWomenStyleWithSubstanceMiddleSection() {
+        const data = await db.query.womenStyleWithSubstanceMiddlePageSection.findMany({
+            orderBy: [asc(womenStyleWithSubstanceMiddlePageSection.createdAt)],
+                with: {
+                  product: {
+                    with: {
+                      brand: true,
+                      variants: true,
+                      returnExchangePolicy: true,
+                      specifications: true
+                    }
+                  }
+                },
+        });
+          const mediaIds = new Set<string>();
+          for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+              if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+              mediaIds.add(product.sustainabilityCertificate);
+          }
+          const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+          const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+          const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+              ...product,
+              media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+                url: mediaMap.get(media.id)?.url ?? null,
+              })),
+              sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+              variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+                url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+              })),
+              returnable: product.returnExchangePolicy?.returnable ?? false,
+              returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+              exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+              exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+              specifications: product.specifications.map((spec) => ({
+                key: spec.key,
+                value: spec.value,
+              })),
+            },
+          }));
+          return enhancedData;
+
+    }
+
+
+         //new collection discount section
+
+        async getnewCollectionDiscountSection(p0: { limit: number; page: number; }) {
+        const data = await db.query.womenNewCollectionDiscountSection.findMany({
+            orderBy: [asc(womenNewCollectionDiscountSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllnewCollectionDiscount({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.womenNewCollectionDiscountSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(womenNewCollectionDiscountSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(womenNewCollectionDiscountSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getnewCollectionDiscount(id: string) {
+        const data = await db.query.womenNewCollectionDiscountSection.findFirst({
+            where: eq(womenNewCollectionDiscountSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createnewCollectionDiscount(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(womenNewCollectionDiscountSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatenewCollectionDiscount(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(womenNewCollectionDiscountSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(womenNewCollectionDiscountSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletenewCollectionDiscount(id: string) {
+        const data = await db
+            .delete(womenNewCollectionDiscountSection)
+            .where(eq(womenNewCollectionDiscountSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+         //get ready banner section
+
         async getMenTopcollections(p0: { limit: number; page: number; }) {
         const data = await db.query.menTopCollectionBanner.findMany({
             orderBy: [asc(menTopCollectionBanner.createdAt)],
@@ -2558,6 +2798,7 @@ console.log("test");
 
         return data;
     }
+
 
 
 }

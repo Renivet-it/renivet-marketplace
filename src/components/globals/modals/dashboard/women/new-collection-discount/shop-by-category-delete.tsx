@@ -45,11 +45,13 @@ export function ShopByCategoryDeleteModal({
                     const toastId = toast.loading("Deleting shop by category");
                     return { toastId };
                 },
+                //@ts-ignore
                 onSuccess: (_, __, { toastId }) => {
                     toast.success("Shop by category deleted", { id: toastId });
                     setIsOpen(false);
                     refetch();
                 },
+                //@ts-ignore
                 onError: (err, _, ctx) => {
                     return handleClientError(err, ctx?.toastId);
                 },

@@ -12,13 +12,23 @@ interface PageProps {
   className?: string;
 }
 
-export function NewCollection({ className, banners }: PageProps) {
+export function GetReadySection({ className, banners }: PageProps) {
   return (
     <section
-      className={cn("pt-10 md:pt-16 lg:pt-20", className)}
+      className={cn("pt-10 md:pt-16 lg:pt-20 w-full pb-12 md:pb-16", className)}
       style={{ backgroundColor: "#f4f0ec" }}
     >
-      <div className="max-w-[1440px] mx-auto">
+      {/* Centered Title Section */}
+      <div className="w-full flex justify-center mb-6">
+        <div className="max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            Get Ready
+          </h2>
+        </div>
+      </div>
+
+      {/* Full-width Carousel */}
+      <div className="w-screen">
         <Carousel
           opts={{
             align: "start",
@@ -29,27 +39,21 @@ export function NewCollection({ className, banners }: PageProps) {
               delay: 5000,
             }),
           ]}
-          className="w-full"
-          style={{ height: "600px" }}
+          className="w-full h-[300px]"
         >
-          <CarouselContent
-            classNames={{
-              wrapper: "size-full",
-              inner: "size-full ml-0",
-            }}
-          >
+          <CarouselContent className="ml-0">
             {banners.map((item, index) => (
               <CarouselItem key={index} className="h-full p-0">
-                <div className="relative w-[1440px] h-[600px] overflow-hidden">
+                <div className="relative w-full h-full">
                   <Link href="/shop" className="block size-full">
                     <Image
                       src={item.imageUrl}
                       alt={item.title}
                       width={1440}
-                      height={600}
-                      className="object-cover"
+                      height={300}
+                      className="object-cover w-full h-full"
                       priority={index === 0}
-                      sizes="1440px"
+                      sizes="100vw"
                     />
                   </Link>
                 </div>
