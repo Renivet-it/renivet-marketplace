@@ -35,7 +35,10 @@ export function TopCollection({
   if (!collections.length) return null;
 
   return (
-    <section className={cn("w-full py-8 md:py-12 bg-white", className)}>
+    <section
+      className={cn("w-full py-8 md:py-12", className)}
+      style={{ backgroundColor: "#f4f0ec" }}
+    >
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-left text-gray-900 mb-8 md:mb-12">
           {title}
@@ -56,7 +59,10 @@ export function TopCollection({
                 key={collection.id}
                 className="pl-2 basis-full sm:basis-1/2 lg:basis-1/2 snap-start"
               >
-                <div className="group relative h-full bg-gray-50 rounded-xl md:rounded-2xl overflow-hidden shadow-sm transition-all duration-300 p-4 md:p-6 flex flex-col items-start text-left space-y-3 md:space-y-4">
+                <div
+                  className="group relative h-full rounded-xl md:rounded-2xl overflow-hidden shadow-sm transition-all duration-300 p-4 md:p-6 flex flex-col items-start text-left space-y-3 md:space-y-4"
+                  style={{ backgroundColor: "#f4f0ec" }}
+                >
                   {/* Context/Brand Label */}
                   {collection.context && (
                     <div className="text-xs md:text-sm font-semibold text-gray-500 flex items-center space-x-2">
@@ -68,9 +74,10 @@ export function TopCollection({
                   {/* Responsive Image Container */}
                   <div
                     className={cn(
-                      "relative w-full rounded-lg md:rounded-xl bg-gray-100 overflow-hidden",
+                      "relative w-full rounded-lg md:rounded-xl overflow-hidden",
                       "aspect-[16/9] md:h-[322px] md:w-[571px]" // Mobile: 16:9, Desktop: fixed 571×322
                     )}
+                    style={{ backgroundColor: "#f4f0ec" }}
                   >
                     <Image
                       src={collection.imageUrl}

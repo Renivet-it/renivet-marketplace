@@ -103,6 +103,18 @@ const menuItems = {
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
             queryKey: "getAllSkincare", // Replace with actual query key
         },
+                {
+            title: "Get Ready Section",
+            url: "/dashboard/general/women-section/get-ready",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getGetReady", // Replace with actual query key
+        },
+                {
+            title: "Skincare Section",
+            url: "/dashboard/general/women-section/new-discount-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getNewDiscount", // Replace with actual query key
+        },
     ],
 };
 
@@ -123,6 +135,8 @@ const queryMap: Record<string, (params: { limit: number; page: number }) => Prom
     getAllSuggestedLooks: WomenHomeSectionQueries.getSuggestedLookSections,
     getAllBrandStoryTelling: WomenHomeSectionQueries.getwomenBranStoryTellingSections,
     getAllSkincare: WomenHomeSectionQueries.getwomenBrandSkinCareSections,
+    getGetReady: WomenHomeSectionQueries.getWomenGetReadySection,
+    getNewDiscount: WomenHomeSectionQueries.getnewCollectionDiscountSection,
 };
 
 // Function to fetch the first product's image URL for a section

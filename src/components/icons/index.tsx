@@ -115,6 +115,7 @@ import {
     Venus,
     House,
     Users,
+    Layers,
     type LucideIcon,
     type LucideProps,
 } from "lucide-react";
@@ -126,6 +127,7 @@ export const Icons = {
     AlertCircle,
     PiggyBank,
     Info,
+    Layers,
     ExternalLink,
     Forward,
     MoreVertical,

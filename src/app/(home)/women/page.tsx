@@ -22,6 +22,9 @@ import { WomenBrandProducts } from "@/components/home/women/brand-products";
 import { BrandStoryTelling } from "@/components/home/women/brand-storytelling";
 import { WomenSkincare } from "@/components/home/women/women-glowing-skincare";
 import { ProductGrid } from "@/components/home/women/product-grid";
+import { StyleWithSubstance } from "@/components/home/women/style-with-substance";
+import { GetReadySection } from "@/components/home/women/get-ready-style";
+import { GetNewDiscountCollection } from "@/components/home/women/new-discount-collection";
 export default function Page() {
     return (
         <>
@@ -50,15 +53,23 @@ export default function Page() {
                    <Suspense>
                 <DiscountPage />
             </Suspense>
+                  <Suspense>
+        <StyleWithSubstanceFetch />
+      </Suspense>
                                    <Suspense>
                 <TopCollectionFetch />
             </Suspense>
 
-
+                 <Suspense>
+                <NewCollectionDiscountFetch />
+            </Suspense>
 
                         <Suspense>
                             {/* festive styl;e */}
                 <SpecialOfferFetch />
+            </Suspense>
+                                    <Suspense>
+                <GetReadyFetch />
             </Suspense>
                                                 <Suspense>
                 <SuggestedLookFetch />
@@ -67,9 +78,7 @@ export default function Page() {
                 <NewCollectionMiddleFetch />
             </Suspense>
 
-                                              {/* <Suspense>
-                <FindYourStyleFetch />
-            </Suspense> */}
+
                         <Suspense>
                 <BrandStoryTellingFetch />
             </Suspense>
@@ -98,6 +107,13 @@ async function BannersFetch() {
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <Landing banners={brandProducts} />;
+}
+async function StyleWithSubstanceFetch() {
+  const products = await WomenHomeSectionQueries.getWomenStyleWithSubstanceMiddleSection();
+  if (!products.length) return null;
+  console.log("ProductsProductsProducts:", products);
+    //@ts-ignore
+  return <StyleWithSubstance products={products} />;
 }
 async function ProductGridFetch() {
   const products = await productQueries.getWomenPageFeaturedProducts();
@@ -245,6 +261,28 @@ async function FindYourStyleFetch() {
     //@ts-ignore
 
     return <FindYourStyle advertisements={brandProducts} />;
+}
+
+async function GetReadyFetch() {
+     const brandProducts =
+    //@ts-ignore
+
+     await WomenHomeSectionQueries.getWomenGetReadySection();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <GetReadySection banners={brandProducts} />;
+}
+
+
+async function NewCollectionDiscountFetch() {
+     const brandProducts =
+    //@ts-ignore
+
+     await WomenHomeSectionQueries.getnewCollectionDiscountSection();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+
+    return <GetNewDiscountCollection banners={brandProducts} />;
 }
 
 // async function StyleDirectoryFetch() {

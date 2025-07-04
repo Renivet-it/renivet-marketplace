@@ -295,3 +295,31 @@ export const menTopCollectionBanner = pgTable("men_top_collection_banner", {
     url: text("url"),
     ...timestamps,
 });
+
+export const womenStyleWithSubstance = pgTable("women_style_with_substance", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const womenGetReadySection = pgTable("women_get_ready_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const womenNewCollectionDiscountSection = pgTable("women_new_collection_discount_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+

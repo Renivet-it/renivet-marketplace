@@ -41,8 +41,8 @@ export function DiscountOffer({ advertisements }: PageProps) {
                       className="size-full object-cover brightness-100"
                       priority={index === 0}
                     />
-                    {/* Shop Now Button */}
-                    <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8">
+                    {/* Centered Shop Now Button */}
+                    <div className="absolute inset-0 flex items-center justify-center">
                       <button className="bg-white text-gray-900 font-bold py-2 px-6 md:py-3 md:px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-300 text-sm md:text-base">
                         Shop Now
                       </button>
@@ -58,8 +58,8 @@ export function DiscountOffer({ advertisements }: PageProps) {
                       className="size-full object-cover brightness-100"
                       priority={index === 0}
                     />
-                    {/* Shop Now Button */}
-                    <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8">
+                    {/* Centered Shop Now Button */}
+                    <div className="absolute inset-0 flex items-center justify-center">
                       <button className="bg-white text-gray-900 font-bold py-2 px-6 md:py-3 md:px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-300 text-sm md:text-base">
                         Shop Now
                       </button>

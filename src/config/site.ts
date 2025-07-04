@@ -389,6 +389,16 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/women-section/skincare-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
+                       {
+            title: "Get Ready Section",
+            url: "/dashboard/general/women-section/get-ready",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+                {
+            title: "Skincare Section",
+            url: "/dashboard/general/women-section/new-discount-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
 
     ]
 },

@@ -15,6 +15,8 @@ interface PageProps extends GenericProps {
 }
 
 export function Landing({ className, banners, ...props }: PageProps) {
+    const aspectRatio = 1440 / 500; // Calculate the aspect ratio
+
     return (
         <section className={cn("", className)} {...props}>
             <nav className="flex justify-around items-center p-4 bg-gray-100 md:hidden">
@@ -49,7 +51,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-full lg:h-[50vh] xl:h-[50vh]"
+                className="w-full"
             >
                 <CarouselContent
                     classNames={{
@@ -58,14 +60,20 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     }}
                 >
                     {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full px-0 py-0">
-                            <div className="relative size-full overflow-hidden bg-gray-100">
+                        <CarouselItem key={index} className="px-0 py-0">
+                            <div
+                                className="relative w-full overflow-hidden bg-gray-100"
+                                style={{
+                                    // Maintain the aspect ratio
+                                    paddingBottom: `${(1 / aspectRatio) * 100}%`
+                                }}
+                            >
                                 <Image
                                     src={item.imageUrl}
                                     alt={item.title}
                                     width={1440}
                                     height={550}
-                                    className="size-full object-cover brightness-75"
+                                    className="absolute inset-0 w-full h-full object-cover brightness-75"
                                     priority={index === 0}
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center p-6">

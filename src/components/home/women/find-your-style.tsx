@@ -12,7 +12,10 @@ export function FindYourStyle({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <div className="relative w-full px-4 py-12 md:px-8 md:py-16 mt-8">
+    <div
+      className="relative w-full px-4 py-12 md:px-8 md:py-16 mt-8"
+      style={{ backgroundColor: "#f4f0ec" }}
+    >
       {advertisements.map((ad) => (
         <div
           key={ad.id}
@@ -32,41 +35,37 @@ export function FindYourStyle({ advertisements }: PageProps) {
               opacity: 0.3,
             }}
           />
-          {/* 1440×670 Container */}
-<div
-  key={ad.id}
-  className="relative w-full max-w-[1440px] mx-auto overflow-hidden shadow-lg bg-white"
-  style={{ height: "670px" }}
->
-  <div className="relative w-full h-full">
-    {ad.url ? (
-      <Link href={ad.url} target="_blank" className="absolute inset-0">
-        <Image
-          src={ad.imageUrl}
-          alt={ad.title}
-          fill
-          className="object-cover"
-          priority
-          quality={100}
-          sizes="(max-width: 768px) 100vw, 1440px"
-        />
-      </Link>
-    ) : (
-      <div className="absolute inset-0">
-        <Image
-          src={ad.imageUrl}
-          alt={ad.title}
-          fill
-          className="object-cover"
-          priority
-          quality={100}
-          sizes="(max-width: 768px) 100vw, 1440px"
-        />
-      </div>
-    )}
-  </div>
-</div>
 
+          {/* 1440×670 Container */}
+          <div
+            className="relative w-full h-full"
+          >
+            {ad.url ? (
+              <Link href={ad.url} target="_blank" className="absolute inset-0">
+                <Image
+                  src={ad.imageUrl}
+                  alt={ad.title}
+                  fill
+                  className="object-cover"
+                  priority
+                  quality={100}
+                  sizes="(max-width: 768px) 100vw, 1440px"
+                />
+              </Link>
+            ) : (
+              <div className="absolute inset-0">
+                <Image
+                  src={ad.imageUrl}
+                  alt={ad.title}
+                  fill
+                  className="object-cover"
+                  priority
+                  quality={100}
+                  sizes="(max-width: 768px) 100vw, 1440px"
+                />
+              </div>
+            )}
+          </div>
         </div>
       ))}
     </div>
