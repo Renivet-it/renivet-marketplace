@@ -100,7 +100,8 @@ export function StyleDirectory({
                                             </div>
                                             <div className="mt-4 text-center w-full">
                                                 <p className="text-base font-bold text-gray-800 uppercase">
-                                                    {"Category"}
+                                                                                                       {category.title || "Category"}
+
                                                 </p>
                                             </div>
                                         </div>

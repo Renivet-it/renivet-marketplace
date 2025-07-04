@@ -13,14 +13,14 @@ import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
 
-interface PageProps extends GenericProps {
+interface PageProps {
     brandProducts: HomeBrandProduct[];
+    className?: string;
 }
 
 export function WomenBrandProducts({
     className,
     brandProducts,
-    ...props
 }: PageProps) {
     return (
         <section
@@ -28,7 +28,7 @@ export function WomenBrandProducts({
                 "flex w-full justify-center py-5 md:px-8 md:py-10",
                 className
             )}
-            {...props}
+            style={{ backgroundColor: "#f4f0ec" }}
         >
             <div className="container md:hidden">
                 {/* Mobile Header */}
@@ -36,7 +36,6 @@ export function WomenBrandProducts({
                     <h2 className="text-2xl font-bold uppercase tracking-wider">
                         OUR WOMEN&apos;S STORE
                     </h2>
-
                 </div>
                 <div className="scrollbar-hide flex flex-col gap-4 overflow-x-auto px-1">
                     <div className="flex gap-4">

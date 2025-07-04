@@ -8,13 +8,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
 
-interface PageProps extends GenericProps {
+interface PageProps {
     banners: Banner[];
+    className?: string;
 }
 
-export function WomenSkincare({ className, banners, ...props }: PageProps) {
+export function WomenSkincare({ className, banners }: PageProps) {
     return (
-        <section className={cn("", className)} {...props}>
+        <section 
+            className={cn("w-full", className)}
+            style={{ backgroundColor: "#f4f0ec" }}
+        >
             <Carousel
                 opts={{
                     align: "start",
@@ -34,20 +38,20 @@ export function WomenSkincare({ className, banners, ...props }: PageProps) {
                     }}
                 >
                     {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full px-12 py-6 lg:px-20">
+                        <CarouselItem key={index} className="h-full px-4 sm:px-12 py-6 lg:px-20">
                             <div className="relative size-full rounded-3xl overflow-hidden">
                                 <Image
                                     src={item.imageUrl}
                                     alt={item.title}
-                                    width={1920}
-                                    height={1080}
-                                    className="size-full object-cover brightness-75"
+                                    fill
+                                    className="object-cover brightness-75"
                                     priority={index === 0}
+                                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center p-6">
                                     <Button
                                         size="lg"
-                                        className="hidden md:block bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 md:py-3 md:px-6"
+                                        className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-6"
                                         asChild
                                     >
                                         <Link href="/shop">Discover More</Link>

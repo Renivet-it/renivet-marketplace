@@ -827,7 +827,7 @@ console.log("homeShopByCategories", homeShopByCategories);
                 await queries.womenhomebanner.createAllelavateLooks({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title ?? null,
                     isActive: false
                 });
 
@@ -1006,7 +1006,8 @@ console.log("homeShopByCategories", homeShopByCategories);
                 await queries.womenhomebanner.createAllstyleDirectory({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title ?? null,
+                    // @ts-ignore
                     isActive: false
                 });
 

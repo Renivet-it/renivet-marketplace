@@ -561,6 +561,7 @@ console.log("test");
     async createAllelavateLooks(
         values: createWomenBrandProduct & {
             imageUrl: string;
+           title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -736,6 +737,7 @@ console.log("test");
     async createAllstyleDirectory(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
