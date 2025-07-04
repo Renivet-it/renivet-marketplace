@@ -15,7 +15,7 @@ interface PageProps {
 
 export function WomenSkincare({ className, banners }: PageProps) {
     return (
-        <section 
+        <section
             className={cn("w-full", className)}
             style={{ backgroundColor: "#f4f0ec" }}
         >

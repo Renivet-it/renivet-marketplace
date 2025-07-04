@@ -36,7 +36,9 @@ export function ProductGrid({ className, products, ...props }: ProductGridProps)
   }
 
   const getPricing = (product: Product) => {
+    //@ts-ignore
     if (product.variants?.length > 0) {
+    //@ts-ignore
       const variant = product.variants[0];
       return {
         discountedPrice: variant.price || variant.costPerItem,
@@ -55,7 +57,7 @@ export function ProductGrid({ className, products, ...props }: ProductGridProps)
   const hasMoreProducts = products.length > 10;
 
   return (
-    <section 
+    <section
       className={cn("pt-4 pb-10", className)}
       style={{ backgroundColor: "#f4f0ec" }}
       {...props}

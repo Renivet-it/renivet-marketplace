@@ -36,7 +36,7 @@ export function MoodboardItem({
 
         {/* Full-width image with clickable link - always clickable with fallback to /shop */}
         {moodboardItems.slice(0, 1).map((item) => (
-          <div key={item.id} className="w-full relative" style={{ height: '1289px' }}>
+          <div key={item.id} className="w-full relative" style={{ height: "1289px" }}>
             <Link
               href={item.url || "/shop"} // Fallback to /shop if no URL provided
               className="block h-full w-full"

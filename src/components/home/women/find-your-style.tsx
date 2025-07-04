@@ -12,9 +12,9 @@ export function FindYourStyle({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <div 
+    <div
       className="relative w-full px-4 py-12 md:px-8 md:py-16 mt-8"
-      style={{ backgroundColor: '#f4f0ec' }}
+      style={{ backgroundColor: "#f4f0ec" }}
     >
       {advertisements.map((ad) => (
         <div
