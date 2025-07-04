@@ -17,13 +17,13 @@ interface PageProps extends GenericProps {
 export function ElevateYourLooks({
     className,
     shopByCategories,
-    title = "Elevate Your Look",
+    title = "Refine Your Style",
     ...props
 }: PageProps) {
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-12 bg-white",
+                "flex w-full justify-center py-12 bg-[#F4F0EC]", // Fixed background color
                 className
             )}
             {...props}
@@ -54,10 +54,10 @@ export function ElevateYourLooks({
                                         href={category.url || "/shop"}
                                         className="group flex flex-col items-center w-full px-1"
                                     >
-       <div className="rounded-full overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
+                                        <div className="rounded-full overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
                                             <Image
                                                 src={category.imageUrl}
-                                                alt={"Category"}
+                                                alt={category.title || "Category"} // Fixed alt text
                                                 width={176}
                                                 height={176}
                                                 sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
@@ -66,7 +66,7 @@ export function ElevateYourLooks({
                                             />
                                         </div>
                                         <p className="text-lg font-medium uppercase text-gray-800 sm:text-sm text-center">
-                                            { "Category"}
+                                            {category.title || "Category"} {/* Fixed category title */}
                                         </p>
                                     </Link>
                                 </CarouselItem>
