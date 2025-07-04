@@ -480,6 +480,51 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     ]
 },
 
+
+{
+    title: "Kids Home Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Kids Banners Section",
+            url: "/dashboard/general/kids/men-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Explore Categories Section",
+            url: "/dashboard/general/kids/explore-category",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Kids Special Care Section",
+            url: "/dashboard/general/kids/special-care",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Elevate Section",
+            url: "/dashboard/general/kids/elevate-kids",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Doll Buying Section",
+            url: "/dashboard/general/kids/doll-buying",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Discount Section",
+            url: "/dashboard/general/kids/discount-offer",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Twining Mom Section ",
+            url: "/dashboard/general/kids/twining-offer",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+    ]
+},
+
+
 {
     title: "Ui / Ux Page Section",
     url: "#",
