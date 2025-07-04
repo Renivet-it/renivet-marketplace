@@ -138,7 +138,7 @@ export async function toggleWomenStyleWithSubstance(productId: string, isFeature
             // Remove from featured products (soft delete)
             const result = await db
                 .update(womenStyleWithSubstanceMiddlePageSection)
-                .set({ 
+                .set({
                     isDeleted: true,
                     deletedAt: new Date()
                 })
