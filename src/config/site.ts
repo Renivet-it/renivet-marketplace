@@ -458,7 +458,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/men-section/new-collection",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
-               {
+        {
             title: "Top Collection Banner Section",
             url: "/dashboard/general/men-section/top-collection-banner",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,

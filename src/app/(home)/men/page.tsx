@@ -17,6 +17,7 @@ import { SpecialOffer } from "@/components/home/men/special-offer";
 import { SuggestedLook } from "@/components/home/men/suggested-looks";
 import { ProductGrid } from "@/components/home/men/product-grid";
 import { TopCollectionBanner } from "@/components/home/men/top-collection.-banner";
+import { StyleWithSubstance } from "@/components/home/men/style-substance";
 
 export default function Page() {
     return (
@@ -40,6 +41,9 @@ export default function Page() {
                                     <Suspense>
                 <StyleDirectoryFetch />
             </Suspense>
+                              <Suspense>
+                    <StyleWithSubstanceFetch />
+                  </Suspense>
                        <Suspense>
                 <TopCollectionBannerFecth />
             </Suspense>
@@ -79,6 +83,8 @@ async function BannersFetch() {
     //@ts-ignore
     return <Landing banners={brandProducts} />;
 }
+
+
 
 
 async function ShopByNewCategoriesFetch() {
@@ -201,7 +207,13 @@ async function SuggestedLookFetch() {
     return <SuggestedLook banners={brandProducts} />;
 }
 
-
+async function StyleWithSubstanceFetch() {
+  const products = await WomenHomeSectionQueries.getmenStyleWithSubstanceMiddleSection();
+  if (!products.length) return null;
+  console.log("ProductsProductsProducts:", products);
+    //@ts-ignore
+  return <StyleWithSubstance products={products} />;
+}
 
 async function DiscountPage() {
     const advertisements = await WomenHomeSectionQueries.getDiscountOfferSections({

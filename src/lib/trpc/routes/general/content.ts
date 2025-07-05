@@ -3570,7 +3570,7 @@ console.log("homeShopByCategories", homeShopByCategories);
                 await queries.womenhomebanner.createMenelevateLooksection({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title ?? null,
                     isActive: false
                 });
 
@@ -3754,7 +3754,7 @@ console.log("homeShopByCategories", homeShopByCategories);
                 await queries.womenhomebanner.createStyleDirectorySection({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title ?? null,
                     isActive: false
                 });
 
@@ -4119,7 +4119,7 @@ export const menExpoloreCategorySectionRouter = createTRPCRouter({
                 await queries.womenhomebanner.createMenExploreCategorySection({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title ?? null,
                     isActive: false
                 });
 

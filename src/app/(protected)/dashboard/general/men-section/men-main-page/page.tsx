@@ -82,6 +82,13 @@ const menuItems = {
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
             queryKey: "getAllNewCollection", // Replace with actual query key
         },
+                {
+            title: "Top Collection Banner Section",
+            url: "/dashboard/general/men-section/top-collection-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getMenTopcollections", // Replace with actual query key
+
+        },
 
 
     ]
@@ -100,6 +107,7 @@ const queryMap: Record<string, (params: { limit: number; page: number }) => Prom
     getAllSeasonalSale: WomenHomeSectionQueries.getWomenSummerSaleSections,
     getAllFindYourStyle: WomenHomeSectionQueries.getWomenSummerSaleSections,
     getAllSuggestedLooks: WomenHomeSectionQueries.getSuggestedLooksForYous,
+    getMenTopcollections: WomenHomeSectionQueries.getMenTopcollections,
 };
 
 // Function to fetch the first product's image URL for a section

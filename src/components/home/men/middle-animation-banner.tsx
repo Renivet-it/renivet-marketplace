@@ -14,7 +14,7 @@ interface PageProps extends GenericProps {
 
 export function MiddleAnimationSection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("pt-10 md:pt-16 lg:pt-20", className)} {...props}>
+        <section className={cn(className)} {...props}>
             <Carousel
                 opts={{
                     align: "start",
@@ -25,7 +25,7 @@ export function MiddleAnimationSection({ className, banners, ...props }: PagePro
                         delay: 5000,
                     }),
                 ]}
-                className="w-full aspect-[3/1]" // Corrected to match the image's 4:1 aspect ratio
+                className="w-full aspect-[3/1] bg-[#F4F0EC]" // Corrected to match the image's 4:1 aspect ratio
             >
                 <CarouselContent
                     classNames={{

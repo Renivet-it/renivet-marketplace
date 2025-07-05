@@ -1,48 +1,36 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+import { Banner } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
-export interface CollectionItem {
-  id: string;
-  imageUrl: string;
-  title: string;
-  description?: string[];
-  ctaText?: string;
-  url?: string;
-}
-
-interface TopCollectionProps {
-  collections: CollectionItem[];
+interface PageProps {
+  collections: Banner[];
   className?: string;
 }
 
-export function TopCollection({
-  collections,
-  className,
-}: TopCollectionProps) {
-  if (!collections.length) return null;
-
+export function TopCollection({ className, collections }: PageProps) {
   return (
-    <section className={cn("w-full py-8 md:py-12 bg-white", className)}>
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Title Section */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {collections.map((item) => (
+    <section
+      className={cn("w-full py-8 md:py-12", className)}
+      style={{ backgroundColor: "#f4f0ec" }}
+    >
+      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {collections.map((item: any) => (
             <div
               key={item.id}
-              className="relative w-full aspect-[605/755] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
+              className="relative w-full aspect-[584/450] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
             >
               <Link href={item.url || "#"} className="block h-full w-full">
-                {/* Image with exact dimensions */}
+                {/* Image with new dimensions */}
                 <div className="relative w-full h-full">
                   <Image
                     src={item.imageUrl}
                     alt={item.title}
-                    width={605}
-                    height={755}
+                    width={584}
+                    height={467}
                     className="object-cover w-full h-full"
                     priority
                   />
@@ -64,7 +52,7 @@ export function TopCollection({
                       {item.description?.[1]}
                     </p>
                     <button className="bg-white text-gray-900 px-6 py-2 rounded-full text-sm sm:text-base font-medium hover:bg-gray-100 transition">
-                      {item.ctaText || "BUY NOW"}
+                      BUY NOW
                     </button>
                   </div>
                 </div>

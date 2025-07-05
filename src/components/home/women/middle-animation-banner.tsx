@@ -25,7 +25,7 @@ export function MiddleAnimationSection({ className, banners, ...props }: PagePro
                         delay: 5000,
                     }),
                 ]}
-                className="w-full aspect-[3/1]" // Corrected to match the image's 4:1 aspect ratio
+                className="w-full aspect-[3/1] bg-[#F4F0EC]" // Corrected to match the image's 4:1 aspect ratio
             >
                 <CarouselContent
                     classNames={{

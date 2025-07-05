@@ -52,6 +52,7 @@ import {
     womenStyleWithSubstanceMiddlePageSection,
     womenNewCollectionDiscountSection,
     womenGetReadySection,
+    menCuratedHerEssence
 
 } from "../schema";
 
@@ -1815,6 +1816,7 @@ console.log("test");
     async createMenExploreCategorySection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -1906,6 +1908,7 @@ console.log("test");
     async createMenelevateLooksection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -2083,6 +2086,7 @@ console.log("test");
     async createStyleDirectorySection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -2567,6 +2571,61 @@ console.log("test");
     }
 
 
+        async getmenStyleWithSubstanceMiddleSection() {
+        const data = await db.query.menCuratedHerEssence.findMany({
+            orderBy: [asc(menCuratedHerEssence.createdAt)],
+                with: {
+                  product: {
+                    with: {
+                      brand: true,
+                      variants: true,
+                      returnExchangePolicy: true,
+                      specifications: true
+                    }
+                  }
+                },
+        });
+          const mediaIds = new Set<string>();
+          for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+              if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+              mediaIds.add(product.sustainabilityCertificate);
+          }
+          const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+          const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+          const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+              ...product,
+              media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+                url: mediaMap.get(media.id)?.url ?? null,
+              })),
+              sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+              variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+                url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+              })),
+              returnable: product.returnExchangePolicy?.returnable ?? false,
+              returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+              exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+              exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+              specifications: product.specifications.map((spec) => ({
+                key: spec.key,
+                value: spec.value,
+              })),
+            },
+          }));
+          return enhancedData;
+
+    }
         async getWomenStyleWithSubstanceMiddleSection() {
         const data = await db.query.womenStyleWithSubstanceMiddlePageSection.findMany({
             orderBy: [asc(womenStyleWithSubstanceMiddlePageSection.createdAt)],
