@@ -12,7 +12,7 @@ interface PageProps extends GenericProps {
     banners: Banner[];
 }
 
-export function MiddleAnimationSection({ className, banners, ...props }: PageProps) {
+export function FreshInkCollection({ className, banners, ...props }: PageProps) {
     return (
         <section className={cn(className)} {...props}>
             <Carousel
@@ -25,7 +25,7 @@ export function MiddleAnimationSection({ className, banners, ...props }: PagePro
                         delay: 5000,
                     }),
                 ]}
-                className="w-full aspect-[3/1] bg-[#F4F0EC]" // Corrected to match the image's 4:1 aspect ratio
+                className="w-full aspect-[3/1] pt-20 bg-[#F4F0EC]" // Corrected to match the image's 4:1 aspect ratio
             >
                 <CarouselContent
                     classNames={{
@@ -40,7 +40,7 @@ export function MiddleAnimationSection({ className, banners, ...props }: PagePro
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
-                                        width={1200} // Image's actual width
+                                        width={1400} // Image's actual width
                                         height={300} // Image's actual height
                                         className="size-full object-contain brightness-100"
                                         priority={index === 0}

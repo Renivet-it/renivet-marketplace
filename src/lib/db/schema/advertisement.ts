@@ -323,3 +323,23 @@ export const womenNewCollectionDiscountSection = pgTable("women_new_collection_d
     ...timestamps,
 });
 
+
+
+export const menMoodBoardSection = pgTable("men_mood_board_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const menFreshInkCollectionSection = pgTable("men_fresh_ink_collection", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+

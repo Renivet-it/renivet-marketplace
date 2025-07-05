@@ -42,12 +42,12 @@ export function ExploreCategories({
 
   return (
     <section
-      className={cn("flex w-full justify-center py-6", className)}
+      className={cn("flex w-full justify-center py-12 bg-[#F4F0EC]", className)}
       {...props}
     >
-      <div className="max-w-screen-xl mx-auto px-0 sm:px-4 w-full relative">
+      <div className="max-w-screen-2xl mx-auto w-full relative">
         {/* Title */}
-        <h2 className="text-center text-3xl font-semibold text-gray-900 mb-8">
+        <h2 className="text-center text-3xl font-bold text-gray-900 mb-8 px-4">
           {titleData?.title || "Explore Categories"}
         </h2>
 
@@ -55,7 +55,7 @@ export function ExploreCategories({
         {!isAtStart && (
           <button
             onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 hidden sm:block"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 hidden sm:block"
             aria-label="Scroll left"
           >
             <ChevronLeft className="w-6 h-6 text-gray-700" />
@@ -65,7 +65,7 @@ export function ExploreCategories({
         {!isAtEnd && (
           <button
             onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 hidden sm:block"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 hidden sm:block"
             aria-label="Scroll right"
           >
             <ChevronRight className="w-6 h-6 text-gray-700" />
@@ -76,48 +76,43 @@ export function ExploreCategories({
         <div
           ref={scrollContainerRef}
           onScroll={checkScrollPosition}
-          className="flex overflow-x-auto space-x-4 sm:space-x-6 px-4 scrollbar-hide relative"
+          className="flex overflow-x-auto gap-6 pl-4 scrollbar-hide relative"
         >
           {shopByCategories.map((category, index) => (
             <Link
               key={index}
               href={category.url || "/shop"}
-              className="flex-shrink-0 group text-center"
+              className={cn(
+                "flex-shrink-0 group text-center",
+                index === 0 ? "ml-0" : ""
+              )}
             >
-              <div
-                className="
-                  w-[240px] h-[300px]
-                  overflow-hidden
-                  border border-gray-200 shadow-md
-                  transition-transform group-hover:scale-105
-                  hover:bg-gray-50
-                "
-              >
-                <Image
-                  src={category.imageUrl}
-                  alt={"Category"}
-                  width={240}
-                  height={240}
-                  quality={90}
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-[240px] h-[300px] flex flex-col bg-[#F4F0EC] border border-gray-300">
+                {/* Image Container */}
+                <div className="relative h-[240px] w-full overflow-hidden border-b border-gray-300">
+                  <Image
+                    src={category.imageUrl}
+                    alt={category.title || "Category"}
+                    width={240}
+                    height={240}
+                    quality={90}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* Text Container */}
+                <div className="h-[60px] w-full bg-[#F4F0EC] flex items-center justify-center px-2">
+                  <p className="font-bold text-gray-900 text-lg text-center uppercase tracking-wider">
+                    {category.title || "CATEGORY"}
+                  </p>
+                </div>
               </div>
-              <p
-                className="
-                  mt-2 font-semibold text-gray-900
-                  text-base truncate
-                  w-[240px]
-                "
-              >
-                {/* //@ts-ignore// */}
-                {category.title || "Category Title"}
-              </p>
             </Link>
           ))}
         </div>
 
         {/* Mobile indicators */}
-        <div className="flex justify-center mt-4 sm:hidden">
+        <div className="flex justify-center mt-4 sm:hidden px-4">
           {shopByCategories.map((_, index) => (
             <div
               key={index}

@@ -52,6 +52,9 @@ import {
     womenStyleWithSubstanceMiddlePageSection,
     womenNewCollectionDiscountSection,
     womenGetReadySection,
+    menCuratedHerEssence,
+    menFreshInkCollectionSection,
+    menMoodBoardSection
 
 } from "../schema";
 
@@ -1815,6 +1818,7 @@ console.log("test");
     async createMenExploreCategorySection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -1906,6 +1910,7 @@ console.log("test");
     async createMenelevateLooksection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -2083,6 +2088,7 @@ console.log("test");
     async createStyleDirectorySection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -2567,6 +2573,61 @@ console.log("test");
     }
 
 
+        async getmenStyleWithSubstanceMiddleSection() {
+        const data = await db.query.menCuratedHerEssence.findMany({
+            orderBy: [asc(menCuratedHerEssence.createdAt)],
+                with: {
+                  product: {
+                    with: {
+                      brand: true,
+                      variants: true,
+                      returnExchangePolicy: true,
+                      specifications: true
+                    }
+                  }
+                },
+        });
+          const mediaIds = new Set<string>();
+          for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+              if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+              mediaIds.add(product.sustainabilityCertificate);
+          }
+          const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+          const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+          const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+              ...product,
+              media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+                url: mediaMap.get(media.id)?.url ?? null,
+              })),
+              sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+              variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+                url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+              })),
+              returnable: product.returnExchangePolicy?.returnable ?? false,
+              returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+              exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+              exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+              specifications: product.specifications.map((spec) => ({
+                key: spec.key,
+                value: spec.value,
+              })),
+            },
+          }));
+          return enhancedData;
+
+    }
         async getWomenStyleWithSubstanceMiddleSection() {
         const data = await db.query.womenStyleWithSubstanceMiddlePageSection.findMany({
             orderBy: [asc(womenStyleWithSubstanceMiddlePageSection.createdAt)],
@@ -2801,6 +2862,187 @@ console.log("test");
         return data;
     }
 
+
+
+    //fresh ink collection
+
+
+        async getMenFreshInkCollection(p0: { limit: number; page: number; }) {
+        const data = await db.query.menFreshInkCollectionSection.findMany({
+            orderBy: [asc(menFreshInkCollectionSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllMenFreshInkCollections({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.menFreshInkCollectionSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(menFreshInkCollectionSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(menFreshInkCollectionSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getAllMenFreshInkCollection(id: string) {
+        const data = await db.query.menFreshInkCollectionSection.findFirst({
+            where: eq(menFreshInkCollectionSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createMenFreshInkCollection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(menFreshInkCollectionSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateMenFreshInkCollection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(menFreshInkCollectionSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(menFreshInkCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteMenFreshInkCollection(id: string) {
+        const data = await db
+            .delete(menFreshInkCollectionSection)
+            .where(eq(menFreshInkCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+    //moodboardsection
+
+
+        async getMenMoodBoardSection(p0: { limit: number; page: number; }) {
+        const data = await db.query.menMoodBoardSection.findMany({
+            orderBy: [asc(menMoodBoardSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllMenMoodBoardSections({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.menMoodBoardSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(menMoodBoardSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(menMoodBoardSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getAllMenMoodBoardSection(id: string) {
+        const data = await db.query.menMoodBoardSection.findFirst({
+            where: eq(menMoodBoardSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createMenMoodBoardSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(menMoodBoardSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateMenMoodBoardSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(menMoodBoardSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(menMoodBoardSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteMenMoodBoardSection(id: string) {
+        const data = await db
+            .delete(menMoodBoardSection)
+            .where(eq(menMoodBoardSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 
 
 }
