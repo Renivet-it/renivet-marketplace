@@ -14,7 +14,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <section className="w-full px-0 py-0">
+    <section className="w-full px-0 py-0 bg-[#F4F0EC]">
       <Carousel
         opts={{
           align: "start",

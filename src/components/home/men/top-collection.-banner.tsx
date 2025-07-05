@@ -14,7 +14,7 @@ interface PageProps {
 
 export function TopCollectionBanner({ className, advertisements }: PageProps) {
   return (
-    <section className={cn("w-full bg-[#F4F0EC]", className)}>
+    <section className={cn("w-full pt-10 bg-[#F4F0EC]", className)}>
       <Carousel
         opts={{
           align: "start",

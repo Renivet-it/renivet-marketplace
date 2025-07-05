@@ -89,6 +89,21 @@ const menuItems = {
             queryKey: "getMenTopcollections", // Replace with actual query key
 
         },
+                        {
+            title: "MoodBoard Section",
+            url: "/dashboard/general/men-section/mood-board",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getMenMoodBoardSection", // Replace with actual query key
+
+        },
+
+                {
+            title: "Fresh Ink Section",
+            url: "/dashboard/general/men-section/fresh-ink-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getMenFreshInkCollection", // Replace with actual query key
+
+        },
 
 
     ]
@@ -108,6 +123,8 @@ const queryMap: Record<string, (params: { limit: number; page: number }) => Prom
     getAllFindYourStyle: WomenHomeSectionQueries.getWomenSummerSaleSections,
     getAllSuggestedLooks: WomenHomeSectionQueries.getSuggestedLooksForYous,
     getMenTopcollections: WomenHomeSectionQueries.getMenTopcollections,
+    getMenMoodBoardSection: WomenHomeSectionQueries.getMenMoodBoardSection,
+    getMenFreshInkCollection: WomenHomeSectionQueries.getMenFreshInkCollection,
 };
 
 // Function to fetch the first product's image URL for a section

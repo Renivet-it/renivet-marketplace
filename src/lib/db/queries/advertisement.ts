@@ -52,7 +52,9 @@ import {
     womenStyleWithSubstanceMiddlePageSection,
     womenNewCollectionDiscountSection,
     womenGetReadySection,
-    menCuratedHerEssence
+    menCuratedHerEssence,
+    menFreshInkCollectionSection,
+    menMoodBoardSection
 
 } from "../schema";
 
@@ -2860,6 +2862,187 @@ console.log("test");
         return data;
     }
 
+
+
+    //fresh ink collection
+
+
+        async getMenFreshInkCollection(p0: { limit: number; page: number; }) {
+        const data = await db.query.menFreshInkCollectionSection.findMany({
+            orderBy: [asc(menFreshInkCollectionSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllMenFreshInkCollections({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.menFreshInkCollectionSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(menFreshInkCollectionSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(menFreshInkCollectionSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getAllMenFreshInkCollection(id: string) {
+        const data = await db.query.menFreshInkCollectionSection.findFirst({
+            where: eq(menFreshInkCollectionSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createMenFreshInkCollection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(menFreshInkCollectionSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateMenFreshInkCollection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(menFreshInkCollectionSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(menFreshInkCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteMenFreshInkCollection(id: string) {
+        const data = await db
+            .delete(menFreshInkCollectionSection)
+            .where(eq(menFreshInkCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+    //moodboardsection
+
+
+        async getMenMoodBoardSection(p0: { limit: number; page: number; }) {
+        const data = await db.query.menMoodBoardSection.findMany({
+            orderBy: [asc(menMoodBoardSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllMenMoodBoardSections({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.menMoodBoardSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(menMoodBoardSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(menMoodBoardSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getAllMenMoodBoardSection(id: string) {
+        const data = await db.query.menMoodBoardSection.findFirst({
+            where: eq(menMoodBoardSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createMenMoodBoardSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(menMoodBoardSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateMenMoodBoardSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(menMoodBoardSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(menMoodBoardSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteMenMoodBoardSection(id: string) {
+        const data = await db
+            .delete(menMoodBoardSection)
+            .where(eq(menMoodBoardSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 
 
 }

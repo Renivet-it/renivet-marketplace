@@ -18,6 +18,9 @@ import { SuggestedLook } from "@/components/home/men/suggested-looks";
 import { ProductGrid } from "@/components/home/men/product-grid";
 import { TopCollectionBanner } from "@/components/home/men/top-collection.-banner";
 import { StyleWithSubstance } from "@/components/home/men/style-substance";
+import { FreshInkCollection } from "@/components/home/men/fresh-ink-collection";
+import { MoodboardItemMen } from "@/components/home/men/moodboard";
+import { WomenBrandProducts } from "@/components/home/women/brand-products";
 
 export default function Page() {
     return (
@@ -41,11 +44,17 @@ export default function Page() {
                                     <Suspense>
                 <StyleDirectoryFetch />
             </Suspense>
+                                               <Suspense>
+                <MoodBoardMenFecth />
+            </Suspense>
                               <Suspense>
                     <StyleWithSubstanceFetch />
                   </Suspense>
                        <Suspense>
                 <TopCollectionBannerFecth />
+            </Suspense>
+                              <Suspense>
+                <MenFreshCollectionFetch />
             </Suspense>
                                     <Suspense>
                 <DiscountPage />
@@ -61,6 +70,9 @@ export default function Page() {
                                                 <Suspense>
                 <SuggestedLookFetch />
             </Suspense>
+                                                <Suspense>
+                            <BrandProductsFetch />
+                        </Suspense>
                             <Suspense>
                 <NewCollectionMiddleFetch />
             </Suspense>
@@ -83,8 +95,42 @@ async function BannersFetch() {
     //@ts-ignore
     return <Landing banners={brandProducts} />;
 }
+async function BrandProductsFetch() {
+    const brandProducts =
+        await homeBrandProductQueries.getAllHomeBrandProducts();
+    if (!brandProducts.length) return null;
+
+    return <WomenBrandProducts brandProducts={brandProducts} />;
+}
 
 
+async function MoodBoardMenFecth() {
+    const [sbc, sbcT] = await Promise.all([
+    //@ts-ignore
+
+        WomenHomeSectionQueries.getMenMoodBoardSection(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+
+    return <MoodboardItemMen moodboardItems={sbc} titleData={sbcT} />;
+}
+
+async function MenFreshCollectionFetch() {
+
+        const brandProducts =
+    //@ts-ignore
+
+        await WomenHomeSectionQueries.getMenFreshInkCollection();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+
+    return <FreshInkCollection banners={brandProducts} />;
+
+}
 
 
 async function ShopByNewCategoriesFetch() {
@@ -243,3 +289,4 @@ async function TopCollectionFetch() {
 
     return <TopCollection collections={sbc} titleData={sbcT} />;
 }
+
