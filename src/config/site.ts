@@ -488,7 +488,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     items: [
         {
             title: "Kids Banners Section",
-            url: "/dashboard/general/kids/men-banner",
+            url: "/dashboard/general/kids/kids-banner",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
         },
         {
@@ -503,22 +503,22 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Elevate Section",
-            url: "/dashboard/general/kids/elevate-kids",
+            url: "/dashboard/general/kids/elevate-iccon-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
-            title: "Doll Buying Section",
-            url: "/dashboard/general/kids/doll-buying",
+            title: "Doll Banner Section",
+            url: "/dashboard/general/kids/doll-banner-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
             title: "Discount Section",
-            url: "/dashboard/general/kids/discount-offer",
+            url: "/dashboard/general/kids/discount-banner",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
             title: "Twining Mom Section ",
-            url: "/dashboard/general/kids/twining-offer",
+            url: "/dashboard/general/kids/twining-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
     ]
