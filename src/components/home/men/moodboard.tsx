@@ -37,7 +37,7 @@ export function MoodboardItemMen({
         {/* Responsive image container */}
         {moodboardItems.slice(0, 1).map((item) => (
           <div
-            key={item.id} 
+            key={item.id}
             className="w-full relative aspect-[1440/1289] h-auto"
           >
             <Link

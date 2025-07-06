@@ -40,7 +40,7 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
       const discountedPrice = variant.price || variant.costPerItem;
       const originalPrice = variant.compareAtPrice || variant.costPerItem;
       const discount = originalPrice - discountedPrice;
-      return { 
+      return {
         discountedPrice: convertPaiseToRupees(discountedPrice),
         originalPrice: convertPaiseToRupees(originalPrice),
         discount: convertPaiseToRupees(discount)
