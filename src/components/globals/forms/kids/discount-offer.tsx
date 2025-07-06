@@ -79,10 +79,10 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
     });
 
     const { mutateAsync: createAdAsync } =
-        trpc.general.content.menDiscountOfferRouter.createWomenBanner.useMutation();
+        trpc.general.content.kidDiscountSectionRouter.createWomenBanner.useMutation();
     const { mutateAsync: updateAdAsync } =
     // @ts-ignore
-        trpc.general.content.menDiscountOfferRouter.updateHomeShopByCategory.useMutation();
+        trpc.general.content.kidDiscountSectionRouter.updateHomeShopByCategory.useMutation();
 
     const { mutate: createBrandProduct, isPending: isCreating } = useMutation({
         onMutate: () => {

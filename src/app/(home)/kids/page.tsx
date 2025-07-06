@@ -5,12 +5,14 @@ import { AdvertisementDiscountPage } from "@/components/home/new-home-page/disco
 import { advertisementQueries, blogQueries, homeBrandProductQueries, WomenHomeSectionQueries, homeShopByCategoryQueries, productQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
-import { Landing } from "@/components/home/men/banner";
 import { ExploreCategories } from "@/components/home/men/explore-categories";
 import { ProductGrid } from "@/components/home/men/product-grid";
-import { FreshInkCollection } from "@/components/home/men/fresh-ink-collection";
-import { MoodboardItemMen } from "@/components/home/men/moodboard";
-import { WomenBrandProducts } from "@/components/home/women/brand-products";
+import { Landing } from "@/components/home/kids/banner";
+import { DiscountOffer } from "@/components/home/kids/discount-offer";
+import { ExploreCategories } from "@/components/home/kids/explore-categories";
+import { ElevateYourLooks } from "@/components/home/kids/elavate-looks";
+import { ElevateYourLooks } from "@/components/home/kids/middle-animation-banner";
+
 
 export default function Page() {
     return (

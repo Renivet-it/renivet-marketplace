@@ -12,7 +12,7 @@ interface PageProps extends GenericProps {
     banners: Banner[];
 }
 
-export function MiddleAnimationSection({ className, banners, ...props }: PageProps) {
+export function TwiningSection({ className, banners, ...props }: PageProps) {
     return (
         <section className={cn("pt-10 md:pt-16 lg:pt-20", className)} {...props}>
             <Carousel

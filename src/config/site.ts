@@ -502,11 +502,6 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
-            title: "Elevate Section",
-            url: "/dashboard/general/kids/elevate-iccon-section",
-            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
-        },
-        {
             title: "Doll Banner Section",
             url: "/dashboard/general/kids/doll-banner-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,

@@ -4039,7 +4039,7 @@ export const kidSpecialCareSectionRouter = createTRPCRouter({
 
 
 //kids elevate section
-export const kidElevateSectionRouter = createTRPCRouter({
+export const kidDollBannerSectionRouter = createTRPCRouter({
     getwomenHomeBanners: publicProcedure
         .input(
             z.object({
@@ -4052,7 +4052,7 @@ export const kidElevateSectionRouter = createTRPCRouter({
             const { limit, page } = input;
 
             const homeShopByCategories =
-                await queries.womenhomebanner.getkidElevateSections({
+                await queries.womenhomebanner.getkidDollBuyingSections({
                     limit,
                     page,
                 });
@@ -4069,7 +4069,7 @@ export const kidElevateSectionRouter = createTRPCRouter({
             const { id } = input;
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getkidElevateSection(id);
+                await queries.womenhomebanner.getkidDollBuyingSection(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -4147,7 +4147,7 @@ export const kidElevateSectionRouter = createTRPCRouter({
                 });
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getkidElevateSection(id);
+                await queries.womenhomebanner.getkidDollBuyingSection(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -4198,7 +4198,7 @@ export const kidElevateSectionRouter = createTRPCRouter({
             const { id } = input;
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getkidElevateSection(id);
+                await queries.womenhomebanner.getkidDollBuyingSection(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -7496,5 +7496,13 @@ export const contentRouter = createTRPCRouter({
     WomenGetReadyRouter: WomenGetReadyRouter,
     WomenNewCollectionRouter: womenNewCollectionRouter,
     menMoodBoardSectionRouter: menMoodBoardSectionRouter,
-    menFresInkSectionRouter: menFresInkSectionRouter
+    menFresInkSectionRouter: menFresInkSectionRouter,
+    kidBannerSectionRouter: kidBannerSectionRouter,
+    kidExploreCategorySectionRouter: kidExploreCategorySectionRouter,
+    kidSpecialCareSectionRouter: kidSpecialCareSectionRouter,
+    kidDiscountSectionRouter: kidDiscountSectionRouter,
+    kidsDollTwiningSectionRouter: kidsDollTwiningSectionRouter,
+    kidDollBannerSectionRouter: kidDollBannerSectionRouter
+
+
 });

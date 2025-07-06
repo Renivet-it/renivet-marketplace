@@ -104,7 +104,7 @@ export function ShopByCategoriesTable({ initialData }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const { data = [], isLoading } =
-        trpc.general.content.menExpoloreCategorySectionRouter.getwomenHomeBanners.useQuery(
+        trpc.general.content.kidExploreCategorySectionRouter.getwomenHomeBanners.useQuery(
             { page, limit },
             {
                 // @ts-ignore
