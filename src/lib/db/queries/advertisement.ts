@@ -2877,7 +2877,10 @@ console.log("test");
         async getMenFreshInkCollection(p0: { limit: number; page: number; }) {
         const data = await db.query.menFreshInkCollectionSection.findMany({
             orderBy: [asc(menFreshInkCollectionSection.createdAt)],
+});
 
+        return data;
+    }
 
 
 
@@ -3199,6 +3202,7 @@ console.log("test");
     async createKidsExploreCategorySection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -3517,7 +3521,7 @@ console.log("test");
 
 
 
-     //kids specual care section
+     //kids mom twining section
 
         async getkidDollTwiningSections(p0: { limit: number; page: number; }) {
         const data = await db.query.kidsTwiningMomSection.findMany({
@@ -3606,9 +3610,12 @@ console.log("test");
     }
 
 
+    //kid doll buying section
+
+
             async getkidDollBuyingSections(p0: { limit: number; page: number; }) {
-        const data = await db.query.kidsTwiningMomSection.findMany({
-            orderBy: [asc(kidsTwiningMomSection.createdAt)],
+        const data = await db.query.kidsDollBuyingSectionn.findMany({
+            orderBy: [asc(kidsDollBuyingSectionn.createdAt)],
         });
 
         return data;
@@ -3622,13 +3629,13 @@ console.log("test");
         page: number;
         search?: string;
     }) {
-        const data = await db.query.kidsTwiningMomSection.findMany({
+        const data = await db.query.kidsDollBuyingSectionn.findMany({
             limit,
             offset: (page - 1) * limit,
-            orderBy: [asc(kidsTwiningMomSection.createdAt)],
+            orderBy: [asc(kidsDollBuyingSectionn.createdAt)],
             extras: {
                 count: db
-                    .$count(kidsTwiningMomSection)
+                    .$count(kidsDollBuyingSectionn)
                     .as("home_shop_by_category_count"),
             },
         });
@@ -3642,8 +3649,8 @@ console.log("test");
     }
 
     async getkidDollBuyingSection(id: string) {
-        const data = await db.query.kidsTwiningMomSection.findFirst({
-            where: eq(kidsTwiningMomSection.id, id),
+        const data = await db.query.kidsDollBuyingSectionn.findFirst({
+            where: eq(kidsDollBuyingSectionn.id, id),
         });
 
         return data;
@@ -3655,7 +3662,7 @@ console.log("test");
         }
     ) {
         const data = await db
-            .insert(kidsTwiningMomSection)
+            .insert(kidsDollBuyingSectionn)
             .values(values)
             .returning()
             .then((res) => res[0]);
@@ -3670,12 +3677,12 @@ console.log("test");
         }
     ) {
         const data = await db
-            .update(kidsTwiningMomSection)
+            .update(kidsDollBuyingSectionn)
             .set({
                 ...values,
                 updatedAt: new Date(),
             })
-            .where(eq(kidsTwiningMomSection.id, id))
+            .where(eq(kidsDollBuyingSectionn.id, id))
             .returning()
             .then((res) => res[0]);
 
@@ -3684,8 +3691,8 @@ console.log("test");
 
     async deletekidDollBuyingSection(id: string) {
         const data = await db
-            .delete(kidsTwiningMomSection)
-            .where(eq(kidsTwiningMomSection.id, id))
+            .delete(kidsDollBuyingSectionn)
+            .where(eq(kidsDollBuyingSectionn.id, id))
             .returning()
             .then((res) => res[0]);
 

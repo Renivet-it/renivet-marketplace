@@ -323,7 +323,7 @@ export const womenGetReadySection = pgTable("women_get_ready_section", {
     isActive: boolean("is_active").notNull().default(true),
     url: text("url"),
     ...timestamps,
-}
+});
 
 export const kidExploreCategory = pgTable("kid_explore_category", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
