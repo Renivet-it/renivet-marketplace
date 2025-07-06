@@ -25,7 +25,7 @@ export function BrandProducts({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-5 md:px-8 md:py-10",
+                "flex w-full bg-[#F4F0EC] justify-center py-5 md:px-8 md:py-10",
                 className
             )}
             {...props}
@@ -74,7 +74,7 @@ export function BrandProducts({
                         align: "start",
                     }}
                 >
-                    <CarouselContent className="-ml-2 md:-ml-4">
+                    <CarouselContent className="-ml-2 md:-ml-4 bg-[#F4F0EC]">
                         {brandProducts.map((item, index) => (
                             <CarouselItem
                                 key={index}

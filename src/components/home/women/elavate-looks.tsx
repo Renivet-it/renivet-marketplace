@@ -7,6 +7,8 @@ import {
     Carousel,
     CarouselContent,
     CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
 } from "@/components/ui/carousel";
 
 interface PageProps extends GenericProps {
@@ -23,19 +25,19 @@ export function ElevateYourLooks({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-12 bg-[#F4F0EC]", // Fixed background color
+                "flex w-full justify-center py-12 bg-[#F4F0EC]",
                 className
             )}
             {...props}
         >
-            <div className="w-full max-w-screen-2xl mx-auto px-4">
+            <div className="w-full max-w-screen-2xl mx-auto px-4 relative">
                 {/* Title */}
                 <h4 className="text-center text-3xl font-bold text-gray-900 mb-12">
                     {title}
                 </h4>
 
                 {/* Carousel */}
-                <div className="px-2">
+                <div className="px-2 relative">
                     <Carousel
                         opts={{
                             align: "start",
@@ -57,7 +59,7 @@ export function ElevateYourLooks({
                                         <div className="rounded-full overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
                                             <Image
                                                 src={category.imageUrl}
-                                                alt={category.title || "Category"} // Fixed alt text
+                                                alt={category.title || "Category"}
                                                 width={176}
                                                 height={176}
                                                 sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
@@ -66,12 +68,14 @@ export function ElevateYourLooks({
                                             />
                                         </div>
                                         <p className="text-lg font-medium uppercase text-gray-800 sm:text-sm text-center">
-                                            {category.title || "Category"} {/* Fixed category title */}
+                                            {category.title || "Category"}
                                         </p>
                                     </Link>
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
+                        <CarouselPrevious className="absolute left-0 -translate-x-6 top-1/2 -translate-y-1/2 hidden md:flex" />
+                        <CarouselNext className="absolute right-0 translate-x-6 top-1/2 -translate-y-1/2 hidden md:flex" />
                     </Carousel>
                 </div>
             </div>

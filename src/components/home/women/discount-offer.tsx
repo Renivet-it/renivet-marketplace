@@ -14,7 +14,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <section className="w-full px-0 py-0 bg-[#F4F0EC]">
+    <section className="w-full pb-10 px-0 py-0 bg-[#F4F0EC]">
       <Carousel
         opts={{
           align: "start",
@@ -25,7 +25,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
             delay: 5000,
           }),
         ]}
-        className="w-full aspect-[1440/305] min-h-[190px] sm:min-h-[305px]"
+        className="w-full aspect-[1440/305] sm:min-h-[305px]"
       >
         <CarouselContent className="ml-0">
           {advertisements.map((ad, index) => (

@@ -25,7 +25,7 @@ export function WomenBrandProducts({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-5 md:px-8 md:py-10",
+                "flex w-full justify-center bg-[#F4F0EC] py-5 md:px-8 md:py-10",
                 className
             )}
             style={{ backgroundColor: "#f4f0ec" }}
