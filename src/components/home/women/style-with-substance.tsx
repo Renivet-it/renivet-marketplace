@@ -4,9 +4,8 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button-general";
-import {
-    convertPaiseToRupees,
-} from "@/lib/utils";
+import { convertPaiseToRupees } from "@/lib/utils";
+
 interface Variant {
   id: string;
   price: number;
@@ -41,19 +40,23 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
       const discountedPrice = variant.price || variant.costPerItem;
       const originalPrice = variant.compareAtPrice || variant.costPerItem;
       const discount = originalPrice - discountedPrice;
-      return { discountedPrice, originalPrice, discount };
+      return {
+        discountedPrice: convertPaiseToRupees(discountedPrice),
+        originalPrice: convertPaiseToRupees(originalPrice),
+        discount: convertPaiseToRupees(discount)
+      };
     }
     return {
-      discountedPrice: product.discountedPrice,
-      originalPrice: product.originalPrice,
-      discount: product.discount,
+      discountedPrice: convertPaiseToRupees(product.discountedPrice),
+      originalPrice: convertPaiseToRupees(product.originalPrice),
+      discount: convertPaiseToRupees(product.discount),
     };
   };
 
   const visibleProducts = products.slice(0, 3);
 
   return (
-    <section className={cn("p-8 mt-10", className)}
+    <section className={cn("p-8 bg-[#F4F0EC]", className)}
       style={{ backgroundColor: "#ded6d6" }}
       {...props}>
       <div className="flex justify-between items-center mb-6">
@@ -83,10 +86,10 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
                   sizes="(max-width: 768px) 100vw"
                 />
               </div>
-<div className="flex-1 p-4 flex flex-col justify-center" style={{ backgroundColor: "#ede6df" }}>
-  <h3 className="text-lg font-medium text-gray-800 mb-2">{item.product.title}</h3>
-  <p className="text-xl font-bold text-black">₹{discountedPrice}</p>
-</div>
+              <div className="flex-1 p-4 flex flex-col justify-center" style={{ backgroundColor: "#ede6df" }}>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">{item.product.title}</h3>
+                <p className="text-xl font-bold text-black">₹{discountedPrice}</p>
+              </div>
             </Link>
           );
         })}

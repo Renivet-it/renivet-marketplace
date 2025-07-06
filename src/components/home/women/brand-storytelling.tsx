@@ -15,7 +15,7 @@ interface PageProps {
 export function BrandStoryTelling({ className, banners }: PageProps) {
     return (
         <section
-            className={cn("pt-10 md:pt-16 lg:pt-20", className)}
+            className={cn("pt-10 md:pt-16 bg-[#F4F0EC] lg:pt-20", className)}
             style={{ backgroundColor: "#f4f0ec" }}
         >
             <Carousel

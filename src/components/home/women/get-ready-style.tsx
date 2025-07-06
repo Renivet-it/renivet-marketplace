@@ -15,10 +15,10 @@ interface PageProps {
 export function GetReadySection({ className, banners }: PageProps) {
   return (
     <section
-      className={cn("pt-10 md:pt-16 lg:pt-20", className)}
+      className={cn("pt-6 md:pt-12 lg:pt-16", className)}
       style={{ backgroundColor: "#f4f0ec" }}
     >
-      <div className="max-w-[1440px] mx-auto">
+      <div className="max-w-[1440px] mx-auto px-0 sm:px-6">
         <Carousel
           opts={{
             align: "start",
@@ -30,7 +30,6 @@ export function GetReadySection({ className, banners }: PageProps) {
             }),
           ]}
           className="w-full"
-          style={{ height: "600px" }}
         >
           <CarouselContent
             classNames={{
@@ -40,16 +39,15 @@ export function GetReadySection({ className, banners }: PageProps) {
           >
             {banners.map((item, index) => (
               <CarouselItem key={index} className="h-full p-0">
-                <div className="relative w-[1440px] h-[600px] overflow-hidden">
+                <div className="relative w-full h-[70vh] sm:h-auto sm:aspect-[16/9] md:aspect-[3/1] lg:h-[500px] xl:h-[600px] overflow-hidden">
                   <Link href="/shop" className="block size-full">
                     <Image
                       src={item.imageUrl}
                       alt={item.title}
-                      width={1440}
-                      height={600}
-                      className="object-cover"
+                      fill
+                      className="object-contain sm:object-cover"
                       priority={index === 0}
-                      sizes="1440px"
+                      sizes="100vw"
                     />
                   </Link>
                 </div>
