@@ -5,13 +5,14 @@ import { AdvertisementDiscountPage } from "@/components/home/new-home-page/disco
 import { advertisementQueries, blogQueries, homeBrandProductQueries, WomenHomeSectionQueries, homeShopByCategoryQueries, productQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
-import { ExploreCategories } from "@/components/home/men/explore-categories";
 import { ProductGrid } from "@/components/home/men/product-grid";
 import { Landing } from "@/components/home/kids/banner";
 import { DiscountOffer } from "@/components/home/kids/discount-offer";
 import { ExploreCategories } from "@/components/home/kids/explore-categories";
 import { ElevateYourLooks } from "@/components/home/kids/elavate-looks";
-import { ElevateYourLooks } from "@/components/home/kids/middle-animation-banner";
+import { SpecialCare } from "@/components/home/kids/special-care";
+import { DollBanner } from "@/components/home/kids/doll-banner";
+import { TwiningSection } from "@/components/home/kids/twining-section";
 
 
 export default function Page() {
@@ -24,50 +25,30 @@ export default function Page() {
             >
                 <BannersFetch />
             </Suspense>
-            <Suspense>
-                <ShopByNewCategoriesFetch />
+                        <Suspense>
+                <ExploreCategoryFetch />
             </Suspense>
                         <Suspense>
-                <ElevateYourLooksFetch />
+                <SpecialCareSection />
             </Suspense>
-                        <Suspense>
-                <MiddleAnimationSectionFetch />
-            </Suspense>
-                                    <Suspense>
-                <StyleDirectoryFetch />
-            </Suspense>
-                                               <Suspense>
-                <MoodBoardMenFecth />
-            </Suspense>
-                              <Suspense>
-                    <StyleWithSubstanceFetch />
-                  </Suspense>
-                       <Suspense>
-                <TopCollectionBannerFecth />
-            </Suspense>
-                              <Suspense>
-                <MenFreshCollectionFetch />
-            </Suspense>
-                                    <Suspense>
-                <DiscountPage />
-            </Suspense>
-                       <Suspense>
-                <TopCollectionFetch />
-            </Suspense>
-
-
-                        {/* <Suspense>
-                <SpecialOfferFetch />
+                                    {/* <Suspense>
+                <ElevateYourLooks />
             </Suspense> */}
-                                                <Suspense>
-                <SuggestedLookFetch />
+                                               <Suspense>
+                <DiscountOfferSectionFetch />
             </Suspense>
+                              <Suspense>
+                    <DollBannerSection />
+                  </Suspense>
+
                                                 <Suspense>
-                            <BrandProductsFetch />
-                        </Suspense>
-                            <Suspense>
-                <NewCollectionMiddleFetch />
-            </Suspense>
+                    <KidTwiningFetch />
+                  </Suspense>
+                       {/* <Suspense>
+                <TopCollectionBannerFecth />
+            </Suspense> */}
+
+
             <div className="block md:hidden"> {/* Hidden on md and larger screens */}
               <Suspense>
                 <ProductGridFetch />
@@ -82,10 +63,53 @@ export default function Page() {
 
 async function BannersFetch() {
     //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.getMenHomeBannerSections();
+    const brandProducts = await WomenHomeSectionQueries.getKidsBannerSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <Landing banners={brandProducts} />;
+}
+
+async function ExploreCategoryFetch() {
+    //@ts-ignore
+    const [sbc, sbcT] = await Promise.all([
+        // homeShopByCategoryQueries.getAllHomeShopByCategories(),
+    //@ts-ignore
+        await WomenHomeSectionQueries.getKidsExploreCategorySections()
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+    return <ExploreCategories shopByCategories={sbc} titleData={sbcT} />;
+}
+
+async function SpecialCareSection() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.getKidsCareSections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <SpecialCare banners={brandProducts} />;
+}
+async function DiscountOfferSectionFetch() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.getkidDiscountOfferSections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <DiscountOffer advertisements={brandProducts} />;
+}
+async function DollBannerSection() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.getkidDollBuyingSections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <DollBanner banners={brandProducts} />;
+}
+async function KidTwiningFetch() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.getkidDollTwiningSections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <TwiningSection banners={brandProducts} />;
 }
 
 
