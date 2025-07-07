@@ -1,6 +1,6 @@
 import {
     ShopByCategoriesTable,
-} from "@/components/dashboard/general/men/banners/shop-by-categories-table";
+} from "@/components/dashboard/general/kids/discount-offers/shop-by-categories-table";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
@@ -15,7 +15,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-    title: "Men Home Banner",
+    title: "Discount Banner section",
     description: "Manage the platform's Men Home Banner",
 };
 
@@ -31,9 +31,9 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">Men Home Banner</h1>
+                    <h1 className="text-2xl font-bold">Discount Banner</h1>
                     <p className="text-balance text-sm text-muted-foreground">
-                        Manage the platform&apos;s Men Home Banner
+                        Manage the platform&apos;s Discount Banner
                     </p>
                 </div>
 

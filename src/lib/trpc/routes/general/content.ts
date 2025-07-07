@@ -4105,7 +4105,7 @@ export const kidDollBannerSectionRouter = createTRPCRouter({
                 });
 
             const newHomeShopByCategory =
-                await queries.womenhomebanner.createkidElevateSection({
+                await queries.womenhomebanner.createkidDollBuyingSection({
                     ...input,
                     imageUrl: input.imageUrl,
                     title: "",
@@ -4414,7 +4414,7 @@ export const kidsDollTwiningSectionRouter = createTRPCRouter({
             const { limit, page } = input;
 
             const homeShopByCategories =
-                await queries.womenhomebanner.getkidDollBuyingSections({
+                await queries.womenhomebanner.getkidDolllTwiningSections({
                     limit,
                     page,
                 });
@@ -4431,7 +4431,7 @@ export const kidsDollTwiningSectionRouter = createTRPCRouter({
             const { id } = input;
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getkidDollBuyingSection(id);
+                await queries.womenhomebanner.getkidDollTwiningSection(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -4467,7 +4467,7 @@ export const kidsDollTwiningSectionRouter = createTRPCRouter({
                 });
 
             const newHomeShopByCategory =
-                await queries.womenhomebanner.createkidDollBuyingSection({
+                await queries.womenhomebanner.createkidDollTwiningSection({
                     ...input,
                     imageUrl: input.imageUrl,
                     title: "",
@@ -4509,7 +4509,7 @@ export const kidsDollTwiningSectionRouter = createTRPCRouter({
                 });
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getkidDollBuyingSection(id);
+                await queries.womenhomebanner.getkidDollTwiningSection(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -4524,7 +4524,7 @@ export const kidsDollTwiningSectionRouter = createTRPCRouter({
             }
 
             const updatedHomeShopByCategory =
-                await queries.womenhomebanner.updatekidDollBuyingSection(
+                await queries.womenhomebanner.updatekidDollTwiningSection(
                     id,
                     {
                         ...values,
@@ -4560,7 +4560,7 @@ export const kidsDollTwiningSectionRouter = createTRPCRouter({
             const { id } = input;
 
             const existingHomeShopByCategory =
-                await queries.womenhomebanner.getkidDollBuyingSection(id);
+                await queries.womenhomebanner.getkidDollTwiningSection(id);
             if (!existingHomeShopByCategory)
                 throw new TRPCError({
                     code: "NOT_FOUND",
@@ -4572,7 +4572,7 @@ export const kidsDollTwiningSectionRouter = createTRPCRouter({
             const existingKey = getUploadThingFileKey(existingImageUrl);
 
             await Promise.all([
-                queries.womenhomebanner.deletekidDollBuyingSection(id),
+                queries.womenhomebanner.deletekidDollTwiningSection(id),
                 utApi.deleteFiles([existingKey]),
             ]);
 

@@ -25,7 +25,7 @@ export function SpecialCare({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full aspect-[3/1]" // Corrected to match the image's 4:1 aspect ratio
+                className="w-full"
             >
                 <CarouselContent
                     classNames={{
@@ -35,14 +35,14 @@ export function SpecialCare({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative size-full">
-                                <Link href="/shop">
+                            <div className="relative w-full aspect-[1440/600]"> {/* Maintain 1440:600 aspect ratio */}
+                                <Link href="/shop" className="block size-full">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
-                                        width={1200} // Image's actual width
-                                        height={300} // Image's actual height
-                                        className="size-full object-contain brightness-100"
+                                        fill // This will make the image fill the container
+                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1440px" // Responsive sizes
+                                        className="object-cover brightness-100"
                                         priority={index === 0}
                                     />
                                 </Link>
