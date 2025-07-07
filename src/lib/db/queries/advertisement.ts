@@ -3523,7 +3523,7 @@ console.log("test");
 
      //kids mom twining section
 
-        async getkidDollTwiningSections(p0: { limit: number; page: number; }) {
+        async getkidDolllTwiningSections(p0: { limit: number; page: number; }) {
         const data = await db.query.kidsTwiningMomSection.findMany({
             orderBy: [asc(kidsTwiningMomSection.createdAt)],
         });

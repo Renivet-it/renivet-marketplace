@@ -1,6 +1,6 @@
 "use client";
 
-import { ShopByCategoryDeleteModal } from "@/components/globals/modals/dashboard/men/explore-category/shop-by-category-delete";
+import { ShopByCategoryDeleteModal } from "@/components/globals/modals/dashboard/kids/explore-category/shop-by-category-delete";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import {

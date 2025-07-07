@@ -31,7 +31,7 @@ export function ShopByCategoryDeleteModal({
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
 
     const { refetch } =
-        trpc.general.content.womenExpoloreCategorySectionRouter.getwomenHomeBanners.useQuery(
+        trpc.general.content.kidExploreCategorySectionRouter.getwomenHomeBanners.useQuery(
             {
                 page,
                 limit,
@@ -39,7 +39,7 @@ export function ShopByCategoryDeleteModal({
         );
 
     const { mutate: deleteShopByCategory, isPending: isDeleting } =
-        trpc.general.content.womenExpoloreCategorySectionRouter.deleteWomenBanner.useMutation(
+        trpc.general.content.kidExploreCategorySectionRouter.deleteWomenBanner.useMutation(
             {
                 onMutate: () => {
                     const toastId = toast.loading("Deleting shop by category");
