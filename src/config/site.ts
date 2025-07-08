@@ -526,32 +526,32 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     items: [
         {
             title: "Banners Section",
-            url: "/dashboard/general/kids/kids-banner",
+            url: "/dashboard/general/home-living/banners",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
         },
         {
             title: "Explore Categories Section",
-            url: "/dashboard/general/kids/explore-category",
+            url: "/dashboard/general//home-living/explore-category",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
             title: "New Collection Section",
-            url: "/dashboard/general/kids/special-care",
+            url: "/dashboard/general//home-living/new-collection",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
             title: "Top Picks Section",
-            url: "/dashboard/general/kids/doll-banner-section",
+            url: "/dashboard/general//home-living/top-picks",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
             title: "Eco Banner Section",
-            url: "/dashboard/general/kids/discount-banner",
+            url: "/dashboard/general//home-living/eco-banners",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
             title: "Brand Section Banner",
-            url: "/dashboard/general/kids/twining-section",
+            url: "/dashboard/general//home-living/brand-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
     ]
