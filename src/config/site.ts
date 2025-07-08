@@ -537,7 +537,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Kids Section",
-            url: "/dashboard/general/kids-section/kids-main-page",
+            url: "/dashboard/general/kids/kids-main-page",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {

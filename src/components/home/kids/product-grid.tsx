@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button-general";
 import { Star } from "lucide-react";
 
 interface Product {
+  slug: any;
   id: string;
   media: { mediaItem: { url: string } }[];
   brand: { name: string };
