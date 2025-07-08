@@ -1,11 +1,11 @@
 "use client";
 
+import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
-import { Icons } from "../../icons";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
 
 interface PageProps extends GenericProps {
@@ -14,7 +14,7 @@ interface PageProps extends GenericProps {
 
 export function TwiningSection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("pt-10 md:pt-16 lg:pt-20", className)} {...props}>
+        <section className={cn("w-full mb-0 pb-8", className)} {...props}>
             <Carousel
                 opts={{
                     align: "start",
@@ -25,27 +25,32 @@ export function TwiningSection({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full aspect-[3/1]" // Corrected to match the image's 4:1 aspect ratio
+                className="w-full bg-[#F4F0EC] h-[375px] sm:h-[500px] lg:h-[500px]"
             >
-                <CarouselContent
-                    classNames={{
-                        wrapper: "size-full",
-                        inner: "size-full ml-0",
-                    }}
-                >
+                <CarouselContent className="h-full">
                     {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative size-full">
-                                <Link href="/shop">
-                                    <Image
-                                        src={item.imageUrl}
-                                        alt={item.title}
-                                        width={1200} // Image's actual width
-                                        height={300} // Image's actual height
-                                        className="size-full object-contain brightness-100"
-                                        priority={index === 0}
-                                    />
-                                </Link>
+                        <CarouselItem key={index} className="h-full pl-0">
+                            <div className="relative w-full h-full">
+                                <Image
+                                    src={item.imageUrl}
+                                    alt={item.title}
+                                    width={1440}
+                                    height={500}
+                                    className="w-full h-full object-cover"
+                                    priority={index === 0}
+                                    style={{
+                                        objectPosition: "center center"
+                                    }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <Button
+                                        size="lg"
+                                        className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-8"
+                                        asChild
+                                    >
+                                        <Link href="/shop">Shop Now</Link>
+                                    </Button>
+                                </div>
                             </div>
                         </CarouselItem>
                     ))}

@@ -26,7 +26,8 @@ import {
     productVariants,
     returnExchangePolicy,
     womenPageFeaturedProducts,
-    menPageFeaturedProducts
+    menPageFeaturedProducts,
+    kidsFreshCollectionSection
 } from "../schema";
 import { categoryQueries } from "./category";
 import { productTypeQueries } from "./product-type";
@@ -46,6 +47,9 @@ interface CreateMenPageFeaturedProduct {
     productId: string;
 }
 
+interface CreateKidsFeaturedProduct {
+    productId: string;
+}
 
 interface UpdateWomenPageFeaturedProduct {
     isDeleted?: boolean;
@@ -1769,6 +1773,30 @@ console.log("Input values:", values);
     }
 
 
+            async createKidsFeaturedProduct(values: CreateKidsFeaturedProduct) {
+            const data = await db
+                .insert(kidsFreshCollectionSection)
+                .values({
+                    productId: values.productId,
+                    isDeleted: false,
+                    deletedAt: null,
+                })
+                .returning()
+                .then((res) => res[0]);
+
+            return data;
+        }
+        async removeKidsFeaturedProduct(productId: string) {
+        const data = await db
+            .update(kidsFreshCollectionSection)
+            .set({ isDeleted: true, deletedAt: new Date() })
+            .where(eq(kidsFreshCollectionSection.productId, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
 
     async getProductValue(id: string) {
         const data = await db.query.productValues.findFirst({
@@ -1850,6 +1878,65 @@ console.log("Input values:", values);
 async getMenPageFeaturedProducts() {
   const data = await db.query.menPageFeaturedProducts.findMany({
     where: eq(menPageFeaturedProducts.isDeleted, false),
+    with: {
+      product: {
+        with: {
+          brand: true,
+          variants: true,
+          returnExchangePolicy: true,
+          specifications: true
+        }
+      }
+    },
+  });
+
+  const mediaIds = new Set<string>();
+  for (const { product } of data) {
+    product.media.forEach((media) => mediaIds.add(media.id));
+    product.variants.forEach((variant) => {
+      if (variant.image) mediaIds.add(variant.image);
+    });
+    if (product.sustainabilityCertificate)
+      mediaIds.add(product.sustainabilityCertificate);
+  }
+
+  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+
+  const enhancedData = data.map(({ product, ...rest }) => ({
+    ...rest,
+    product: {
+      ...product,
+      media: product.media.map((media) => ({
+        ...media,
+        mediaItem: mediaMap.get(media.id),
+        url: mediaMap.get(media.id)?.url ?? null,
+      })),
+      sustainabilityCertificate: product.sustainabilityCertificate
+        ? mediaMap.get(product.sustainabilityCertificate)
+        : null,
+      variants: product.variants.map((variant) => ({
+        ...variant,
+        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+      })),
+      returnable: product.returnExchangePolicy?.returnable ?? false,
+      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+      specifications: product.specifications.map((spec) => ({
+        key: spec.key,
+        value: spec.value,
+      })),
+    },
+  }));
+
+  return enhancedData;
+}
+
+async getKidsPageFeaturedProducts() {
+  const data = await db.query.kidsFreshCollectionSection.findMany({
+    where: eq(kidsFreshCollectionSection.isDeleted, false),
     with: {
       product: {
         with: {

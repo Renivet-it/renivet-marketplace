@@ -7,7 +7,6 @@ import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
-import { Home, ChevronRight } from "lucide-react";
 import { Icons } from "@/components/icons";
 
 interface PageProps extends GenericProps {
@@ -17,6 +16,7 @@ interface PageProps extends GenericProps {
 export function Landing({ className, banners, ...props }: PageProps) {
     return (
         <section className={cn("", className)} {...props}>
+            {/* Mobile Navigation */}
             <nav className="flex justify-around items-center p-4 bg-gray-100 md:hidden">
                 <Link href="/women" className="flex flex-col items-center text-gray-700 hover:text-green-600">
                     <Icons.Venus className="w-6 h-6" />
@@ -39,6 +39,8 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     <span className="text-xs">Beauty</span>
                 </Link>
             </nav>
+
+            {/* Banner Carousel */}
             <Carousel
                 opts={{
                     align: "start",
@@ -49,29 +51,24 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-full lg:h-[50vh] xl:h-[50vh]"
+                className="w-full bg-[#F4F0EC] h-[500px]"
             >
-                <CarouselContent
-                    classNames={{
-                        wrapper: "size-full",
-                        inner: "size-full ml-0",
-                    }}
-                >
+                <CarouselContent className="h-full">
                     {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full px-0 py-0">
-                            <div className="relative size-full overflow-hidden bg-gray-100">
+                        <CarouselItem key={index} className="h-full pl-0">
+                            <div className="relative w-full h-full">
                                 <Image
                                     src={item.imageUrl}
                                     alt={item.title}
                                     width={1440}
-                                    height={550}
-                                    className="size-full object-cover brightness-75"
+                                    height={500}
+                                    className="w-full h-full object-cover"
                                     priority={index === 0}
                                 />
-                                <div className="absolute inset-0 flex items-center justify-center p-6">
+                                <div className="absolute inset-0 flex items-center justify-center">
                                     <Button
                                         size="lg"
-                                        className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-6"
+                                        className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-8"
                                         asChild
                                     >
                                         <Link href="/shop">Shop Now</Link>

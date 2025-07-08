@@ -14,7 +14,7 @@ interface PageProps extends GenericProps {
 
 export function SpecialCare({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("pt-10 md:pt-16 lg:pt-20", className)} {...props}>
+        <section className={cn("pt-10 bg-[#F4F0EC] md:pt-16 lg:pt-20", className)} {...props}>
             <Carousel
                 opts={{
                     align: "start",

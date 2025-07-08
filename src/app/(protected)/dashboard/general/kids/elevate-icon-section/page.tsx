@@ -1,89 +1,46 @@
-import {
-    ShopByCategoriesTable,
-} from "@/components/dashboard/general/men/banners/shop-by-categories-table";
-import { DashShell } from "@/components/globals/layouts";
-import { TableSkeleton } from "@/components/globals/skeletons";
-import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button-dash";
-import {
-    homeShopByCategoryQueries,
-    WomenHomeSectionQueries,
-    homeShopByCategoryTitleQueries,
-} from "@/lib/db/queries";
-import { Metadata } from "next";
-import Link from "next/link";
-import { Suspense } from "react";
+// components/sustainable-badges.tsx
+import { BadgeCheck, Leaf, Sprout, Palette } from "lucide-react";
 
-export const metadata: Metadata = {
-    title: "Men Home Banner",
-    description: "Manage the platform's Men Home Banner",
-};
-
-interface PageProps {
-    searchParams: Promise<{
-        page?: string;
-        limit?: string;
-    }>;
-}
-
-export default function Page({ searchParams }: PageProps) {
-    return (
-        <DashShell>
-            <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
-                <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">Men Home Banner</h1>
-                    <p className="text-balance text-sm text-muted-foreground">
-                        Manage the platform&apos;s Men Home Banner
-                    </p>
-                </div>
-
-                <Button
-                    asChild
-                    className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
-                >
-                    <Link href="/dashboard/general/men-section/men-banner/new">
-                        <Icons.PlusCircle className="size-5" />
-                        New Men Home Banner
-                    </Link>
-                </Button>
+export const SustainableBadges = () => {
+  return (
+    <div className="bg-gray-50 py-12 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {/* GOTS Certified */}
+          <div className="flex flex-col items-center text-center p-6 bg-white rounded-lg shadow-sm">
+            <div className="p-3 mb-3 rounded-full bg-green-50">
+              <BadgeCheck className="text-green-600 w-8 h-8" />
             </div>
+            <h3 className="font-medium text-lg">GOTS Certified</h3>
+            <p className="text-gray-600 mt-1">Organic Cotton</p>
+          </div>
 
-            <Suspense fallback={<TableSkeleton />}>
-                <ShopByCategoriesFetch searchParams={searchParams} />
-            </Suspense>
-        </DashShell>
-    );
-}
+          {/* Sustainable */}
+          <div className="flex flex-col items-center text-center p-6 bg-white rounded-lg shadow-sm">
+            <div className="p-3 mb-3 rounded-full bg-green-50">
+              <Leaf className="text-green-600 w-8 h-8" />
+            </div>
+            <h3 className="font-medium text-lg">Sustainable</h3>
+          </div>
 
-async function ShopByCategoriesFetch({ searchParams }: PageProps) {
-    const { page: pageRaw, limit: limitRaw } = await searchParams;
+          {/* Eco-Friendly */}
+          <div className="flex flex-col items-center text-center p-6 bg-white rounded-lg shadow-sm">
+            <div className="p-3 mb-3 rounded-full bg-green-50">
+              <Sprout className="text-green-600 w-8 h-8" />
+            </div>
+            <h3 className="font-medium text-lg">Eco-Friendly</h3>
+          </div>
 
-    const limit =
-        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
-    const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
-
-    const [data] = await Promise.all([
-        WomenHomeSectionQueries.getMenHomeBannerSections({
-            limit,
-            page,
-        }),
-        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
-    ]);
-
-    // Transform data to include required properties for ShopByCategoriesTable
-    const transformedData = data.map((item, idx) => ({
-        id: item.id,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        imageUrl: item.imageUrl ?? "",
-        url: item.url ?? null,
-        position: (item as any).position ?? idx, // fallback to index if position is missing
-    }));
-
-    return (
-        <>
-            {/* <ShopByCategoryTitle titleData={titleData} /> */}
-            <ShopByCategoriesTable initialData={{ data: transformedData, count: transformedData.length }} />
-        </>
-    );
-}
+          {/* Non-Reactive Dyes */}
+          <div className="flex flex-col items-center text-center p-6 bg-white rounded-lg shadow-sm">
+            <div className="p-3 mb-3 rounded-full bg-green-50">
+              <Palette className="text-green-600 w-8 h-8" />
+            </div>
+            <h3 className="font-medium text-lg">Non-Reactive</h3>
+            <p className="text-gray-600 mt-1">Dyes</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

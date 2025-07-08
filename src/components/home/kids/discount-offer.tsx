@@ -25,7 +25,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
             delay: 5000,
           }),
         ]}
-        className="w-full aspect-[1440/305] min-h-[190px] sm:min-h-[305px]"
+        className="w-full bg-[#F4F0EC] aspect-[1440/700] min-h-[250px] sm:min-h-[400px] lg:min-h-[700px]"
       >
         <CarouselContent className="ml-0">
           {advertisements.map((ad, index) => (
@@ -37,7 +37,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
                       src={ad.imageUrl}
                       alt={ad.title}
                       width={1440}
-                      height={305}
+                      height={700}
                       className="size-full object-cover brightness-100"
                       priority={index === 0}
                     />
@@ -54,7 +54,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
                       src={ad.imageUrl}
                       alt={ad.title}
                       width={1440}
-                      height={305}
+                      height={700}
                       className="size-full object-cover brightness-100"
                       priority={index === 0}
                     />

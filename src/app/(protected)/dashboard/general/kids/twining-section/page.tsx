@@ -63,7 +63,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data] = await Promise.all([
-        WomenHomeSectionQueries.getkidDollTwiningSections({
+        WomenHomeSectionQueries.getkidDolllTwiningSections({
             limit,
             page,
         }),
@@ -71,7 +71,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     ]);
 
     // Transform data to include required properties for ShopByCategoriesTable
-    const transformedData = data.map((item, idx) => ({
+    const transformedData = data.map((item: { id: any; createdAt: any; updatedAt: any; imageUrl: any; url: any; }, idx: any) => ({
         id: item.id,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,

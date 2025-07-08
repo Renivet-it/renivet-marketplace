@@ -5,15 +5,14 @@ import { AdvertisementDiscountPage } from "@/components/home/new-home-page/disco
 import { advertisementQueries, blogQueries, homeBrandProductQueries, WomenHomeSectionQueries, homeShopByCategoryQueries, productQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
-import { ProductGrid } from "@/components/home/men/product-grid";
 import { Landing } from "@/components/home/kids/banner";
 import { DiscountOffer } from "@/components/home/kids/discount-offer";
 import { ExploreCategories } from "@/components/home/kids/explore-categories";
-import { ElevateYourLooks } from "@/components/home/kids/elavate-looks";
 import { SpecialCare } from "@/components/home/kids/special-care";
 import { DollBanner } from "@/components/home/kids/doll-banner";
 import { TwiningSection } from "@/components/home/kids/twining-section";
-
+import { ProductGrid } from "@/components/home/kids/product-grid";
+import { SustainableBadges } from "@/components/home/kids/elavate-looks";
 
 export default function Page() {
     return (
@@ -28,31 +27,35 @@ export default function Page() {
                         <Suspense>
                 <ExploreCategoryFetch />
             </Suspense>
+
                         <Suspense>
                 <SpecialCareSection />
             </Suspense>
-                                    {/* <Suspense>
-                <ElevateYourLooks />
-            </Suspense> */}
-                                               <Suspense>
-                <DiscountOfferSectionFetch />
+                                          <Suspense>
+                <SustanableBatchFetch />
             </Suspense>
                               <Suspense>
                     <DollBannerSection />
                   </Suspense>
+                                               <Suspense>
+                <DiscountOfferSectionFetch />
+            </Suspense>
+                          <Suspense>
+                <ProductGridFetch />
+              </Suspense>
 
+<div className="pb-10">
                                                 <Suspense>
                     <KidTwiningFetch />
                   </Suspense>
+                  </div>
                        {/* <Suspense>
                 <TopCollectionBannerFecth />
             </Suspense> */}
 
 
             <div className="block md:hidden"> {/* Hidden on md and larger screens */}
-              <Suspense>
-                <ProductGridFetch />
-              </Suspense>
+
             </div>
             {/* <Suspense>
                 <BlogsFetch />
@@ -67,6 +70,12 @@ async function BannersFetch() {
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <Landing banners={brandProducts} />;
+}
+
+async function SustanableBatchFetch() {
+    //@ts-ignore
+
+    return <SustainableBadges />;
 }
 
 async function ExploreCategoryFetch() {
@@ -106,12 +115,18 @@ async function DollBannerSection() {
 }
 async function KidTwiningFetch() {
     //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.getkidDollTwiningSections();
+    const brandProducts = await WomenHomeSectionQueries.getkidDolllTwiningSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <TwiningSection banners={brandProducts} />;
 }
-
+async function ProductGridFetch() {
+  const products = await productQueries.getKidsPageFeaturedProducts();
+  console.log("Products:", products);
+  if (!products.length) return null;
+    //@ts-ignore
+  return <ProductGrid products={products} />;
+}
 
 
 async function ShopByNewCategoriesFetch() {
@@ -126,14 +141,6 @@ async function ShopByNewCategoriesFetch() {
     }
     //@ts-ignore
     return <ExploreCategories shopByCategories={sbc} titleData={sbcT} />;
-}
-
-async function ProductGridFetch() {
-  const products = await productQueries.getMenPageFeaturedProducts();
-  console.log("Products:", products);
-  if (!products.length) return null;
-    //@ts-ignore
-  return <ProductGrid products={products} />;
 }
 
 
