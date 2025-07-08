@@ -519,6 +519,43 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     ]
 },
 
+{
+    title: "Home and Living  Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Banners Section",
+            url: "/dashboard/general/kids/kids-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Explore Categories Section",
+            url: "/dashboard/general/kids/explore-category",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "New Collection Section",
+            url: "/dashboard/general/kids/special-care",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Top Picks Section",
+            url: "/dashboard/general/kids/doll-banner-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Eco Banner Section",
+            url: "/dashboard/general/kids/discount-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Brand Section Banner",
+            url: "/dashboard/general/kids/twining-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+    ]
+},
 
 {
     title: "Ui / Ux Page Section",
@@ -552,6 +589,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
     ]
 }
+
 ];
 
 export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {

@@ -8766,7 +8766,14 @@ export const contentRouter = createTRPCRouter({
     kidSpecialCareSectionRouter: kidSpecialCareSectionRouter,
     kidDiscountSectionRouter: kidDiscountSectionRouter,
     kidsDollTwiningSectionRouter: kidsDollTwiningSectionRouter,
-    kidDollBannerSectionRouter: kidDollBannerSectionRouter
+    kidDollBannerSectionRouter: kidDollBannerSectionRouter,
+    homeAndLivingBannerRouter:homeAndLivingBannerRouter,
+    homeAndLivingExploreCategoryRouter: homeAndLivingExploreCategoryRouter,
+    homeAndLivingNewCollectionRouter:homeAndLivingNewCollectionRouter,
+    homeAndLivingTopPickcollectionRouter: homeAndLivingTopPickcollectionRouter,
+    homeAndLivingBannerMiddlecollectionRouter: homeAndLivingBannerMiddlecollectionRouter,
+    homeAndLivingEcoBannercollectionRouter: homeAndLivingEcoBannercollectionRouter,
+    homeAndLivingBrandRouter: homeAndLivingBrandRouter
 
 
 });
