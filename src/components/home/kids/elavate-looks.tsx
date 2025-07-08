@@ -1,7 +1,7 @@
 // components/sustainable-badges.tsx
 import { BadgeCheck, Leaf, Sprout, Palette } from "lucide-react";
 
-export const SustainableBadges = () => {
+const SustainableBadges = () => {
   return (
     <div className="bg-[#F4F0EC] py-12 px-4">
       <div className="max-w-6xl mx-auto">
@@ -44,3 +44,12 @@ export const SustainableBadges = () => {
     </div>
   );
 };
+
+export function Page() {
+  return (
+    <div>
+      {/* Use the component */}
+      <SustainableBadges />
+    </div>
+  );
+}

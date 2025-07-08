@@ -12,7 +12,7 @@ import { SpecialCare } from "@/components/home/kids/special-care";
 import { DollBanner } from "@/components/home/kids/doll-banner";
 import { TwiningSection } from "@/components/home/kids/twining-section";
 import { ProductGrid } from "@/components/home/kids/product-grid";
-import { SustainableBadges } from "@/components/home/kids/elavate-looks";
+import { Page as ElavateLooksPage } from "@/components/home/kids/elavate-looks";
 
 export default function Page() {
     return (
@@ -75,7 +75,7 @@ async function BannersFetch() {
 async function SustanableBatchFetch() {
     //@ts-ignore
 
-    return <SustainableBadges />;
+    return <ElavateLooksPage />;
 }
 
 async function ExploreCategoryFetch() {
