@@ -480,6 +480,46 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     ]
 },
 
+
+{
+    title: "Kids Home Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Kids Banners Section",
+            url: "/dashboard/general/kids/kids-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Explore Categories Section",
+            url: "/dashboard/general/kids/explore-category",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Kids Special Care Section",
+            url: "/dashboard/general/kids/special-care",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Doll Banner Section",
+            url: "/dashboard/general/kids/doll-banner-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Discount Section",
+            url: "/dashboard/general/kids/discount-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Twining Mom Section ",
+            url: "/dashboard/general/kids/twining-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+    ]
+},
+
+
 {
     title: "Ui / Ux Page Section",
     url: "#",
@@ -497,7 +537,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Kids Section",
-            url: "/dashboard/general/kids-section/kids-main-page",
+            url: "/dashboard/general/kids/kids-main-page",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {

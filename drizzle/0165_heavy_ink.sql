@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "is_kids_fetch_product" boolean DEFAULT false;

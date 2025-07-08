@@ -320,7 +320,7 @@ export function NavbarHome() {
                     .map((category) => (
                         <NavigationMenuItem key={category.id}>
                             {/* Special handling for Men and Women categories */}
-                            {category.name === "Men" || category.name === "Women" ? (
+                            {category.name === "Men" || category.name === "Kids" || category.name === "Women" ? (
                                 <div className="relative">
                                     <NavigationMenuTrigger
                                         className="bg-transparent hover:bg-transparent"

@@ -54,7 +54,14 @@ import {
     womenGetReadySection,
     menCuratedHerEssence,
     menFreshInkCollectionSection,
-    menMoodBoardSection
+    menMoodBoardSection,
+    kidHomeBannersSection,
+    kidExploreCategory,
+    kidElavateLookSection,
+    kidSpecialCareSection,
+    kidsDiscountOfferSection,
+    kidsDollBuyingSectionn,
+    kidsTwiningMomSection
 
 } from "../schema";
 
@@ -2870,10 +2877,22 @@ console.log("test");
         async getMenFreshInkCollection(p0: { limit: number; page: number; }) {
         const data = await db.query.menFreshInkCollectionSection.findMany({
             orderBy: [asc(menFreshInkCollectionSection.createdAt)],
-        });
+});
 
         return data;
     }
+
+
+
+        //  kids banner section
+
+    //     async getKidsBannerSections(p0: { limit: number; page: number; }) {
+    //     const data = await db.query.kidHomeBannersSection.findMany({
+    //         orderBy: [asc(kidHomeBannersSection.createdAt)],
+    //     });
+
+    //     return data;
+    // }
 
     async getAllMenFreshInkCollections({
         limit,
@@ -3043,6 +3062,643 @@ console.log("test");
 
         return data;
     }
+
+//kids banner section
+
+
+   async getKidsBannerSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidHomeBannersSection.findMany({
+            orderBy: [asc(kidHomeBannersSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllKidsBannerSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidHomeBannersSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidHomeBannersSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidHomeBannersSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getKidsBannerSection(id: string) {
+        const data = await db.query.kidHomeBannersSection.findFirst({
+            where: eq(kidHomeBannersSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createKidsBannerSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidHomeBannersSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateKidsBannerSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidHomeBannersSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidHomeBannersSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteKidsBannerSection(id: string) {
+        const data = await db
+            .delete(kidHomeBannersSection)
+            .where(eq(kidHomeBannersSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+    //kids explore categories section
+
+
+       async getKidsExploreCategorySections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidExploreCategory.findMany({
+            orderBy: [asc(kidExploreCategory.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllKidsExploreCategorySection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidExploreCategory.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidExploreCategory.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidExploreCategory)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getKidsExploreCategorySection(id: string) {
+        const data = await db.query.kidExploreCategory.findFirst({
+            where: eq(kidExploreCategory.id, id),
+        });
+
+        return data;
+    }
+
+    async createKidsExploreCategorySection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+            title: string | null; // Make title nullable
+        }
+    ) {
+        const data = await db
+            .insert(kidExploreCategory)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateKidsExploreCategorySection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidExploreCategory)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidExploreCategory.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteKidsExploreCategorySection(id: string) {
+        const data = await db
+            .delete(kidExploreCategory)
+            .where(eq(kidExploreCategory.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+//kids specual care section
+        async getKidsCareSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidSpecialCareSection.findMany({
+            orderBy: [asc(kidSpecialCareSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllKidsCareSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidSpecialCareSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidSpecialCareSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidSpecialCareSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getKidsCareSection(id: string) {
+        const data = await db.query.kidSpecialCareSection.findFirst({
+            where: eq(kidSpecialCareSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createKidsCareSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidSpecialCareSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateKidsCareSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidSpecialCareSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidSpecialCareSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteKidsCareSection(id: string) {
+        const data = await db
+            .delete(kidSpecialCareSection)
+            .where(eq(kidSpecialCareSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+
+    //kids specual care section
+        async getkidElevateSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidElavateLookSection.findMany({
+            orderBy: [asc(kidElavateLookSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllkidElevateSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidElavateLookSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidElavateLookSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidElavateLookSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getkidElevateSection(id: string) {
+        const data = await db.query.kidElavateLookSection.findFirst({
+            where: eq(kidElavateLookSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createkidElevateSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidElavateLookSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatekidElevateSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidElavateLookSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidElavateLookSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletekidElevateSection(id: string) {
+        const data = await db
+            .delete(kidElavateLookSection)
+            .where(eq(kidElavateLookSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+
+    //kids specual care section
+
+        async getkidDiscountOfferSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidsDiscountOfferSection.findMany({
+            orderBy: [asc(kidsDiscountOfferSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllkidDiscountOfferSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidsDiscountOfferSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidsDiscountOfferSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidsDiscountOfferSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getkidDiscountOfferSection(id: string) {
+        const data = await db.query.kidsDiscountOfferSection.findFirst({
+            where: eq(kidsDiscountOfferSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createkidDiscountOfferSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidsDiscountOfferSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatekidDiscountOfferSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidsDiscountOfferSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidsDiscountOfferSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletekidDiscountOfferSection(id: string) {
+        const data = await db
+            .delete(kidsDiscountOfferSection)
+            .where(eq(kidsDiscountOfferSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+
+     //kids mom twining section
+
+        async getkidDolllTwiningSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidsTwiningMomSection.findMany({
+            orderBy: [asc(kidsTwiningMomSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllkidDollTwiningSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidsTwiningMomSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidsTwiningMomSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidsTwiningMomSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getkidDollTwiningSection(id: string) {
+        const data = await db.query.kidsTwiningMomSection.findFirst({
+            where: eq(kidsTwiningMomSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createkidDollTwiningSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidsTwiningMomSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatekidDollTwiningSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidsTwiningMomSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidsTwiningMomSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletekidDollTwiningSection(id: string) {
+        const data = await db
+            .delete(kidsTwiningMomSection)
+            .where(eq(kidsTwiningMomSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+    //kid doll buying section
+
+
+            async getkidDollBuyingSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidsDollBuyingSectionn.findMany({
+            orderBy: [asc(kidsDollBuyingSectionn.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllkidDollBuyingSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidsDollBuyingSectionn.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidsDollBuyingSectionn.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidsDollBuyingSectionn)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getkidDollBuyingSection(id: string) {
+        const data = await db.query.kidsDollBuyingSectionn.findFirst({
+            where: eq(kidsDollBuyingSectionn.id, id),
+        });
+
+        return data;
+    }
+
+    async createkidDollBuyingSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidsDollBuyingSectionn)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatekidDollBuyingSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidsDollBuyingSectionn)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidsDollBuyingSectionn.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletekidDollBuyingSection(id: string) {
+        const data = await db
+            .delete(kidsDollBuyingSectionn)
+            .where(eq(kidsDollBuyingSectionn.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
 
 
 }

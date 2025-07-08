@@ -97,6 +97,7 @@ export const products = pgTable(
 isFeaturedWomen: boolean("is_featured_women").default(false),
         isStyleWithSubstanceMen: boolean("is_style_with_substance_men").default(false), // optional now
 isStyleWithSubstanceWoMen: boolean("is_style_with_substance_women").default(false),
+iskidsFetchSection: boolean("is_kids_fetch_product").default(false),
         embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
@@ -169,6 +170,21 @@ export const menCuratedHerEssence = pgTable(
         ...timestamps,
     },
 );
+
+export const kidsFreshCollectionSection = pgTable(
+    "kids_fresh_collection_section",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
+
+
 
 export const productOptions = pgTable(
     "product_options",
@@ -354,6 +370,13 @@ export const womenPageFeaturedProductsRelations = relations(womenPageFeaturedPro
 export const menPageFeaturedProductsRelation = relations(menPageFeaturedProducts, ({ one }) => ({
   product: one(products, {
     fields: [menPageFeaturedProducts.productId],
+    references: [products.id],
+  }),
+}));
+
+export const kidsFreshCollectionSectionRelation = relations(kidsFreshCollectionSection, ({ one }) => ({
+  product: one(products, {
+    fields: [kidsFreshCollectionSection.productId],
     references: [products.id],
   }),
 }));

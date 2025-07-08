@@ -305,7 +305,27 @@ export const womenStyleWithSubstance = pgTable("women_style_with_substance", {
     ...timestamps,
 });
 
+
+
+export const kidHomeBannersSection = pgTable("kids_home_banners_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
 export const womenGetReadySection = pgTable("women_get_ready_section", {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const kidExploreCategory = pgTable("kid_explore_category", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),
     imageUrl: text("image_url"),
@@ -315,6 +335,25 @@ export const womenGetReadySection = pgTable("women_get_ready_section", {
 });
 
 export const womenNewCollectionDiscountSection = pgTable("women_new_collection_discount_section", {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const kidElavateLookSection = pgTable("kid_home_elavate_look_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+
+export const kidSpecialCareSection = pgTable("kid_special_care_Section", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),
     imageUrl: text("image_url"),
@@ -326,6 +365,15 @@ export const womenNewCollectionDiscountSection = pgTable("women_new_collection_d
 
 
 export const menMoodBoardSection = pgTable("men_mood_board_section", {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const kidsDiscountOfferSection = pgTable("kids_discount_offer_section", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),
     imageUrl: text("image_url"),
@@ -335,6 +383,24 @@ export const menMoodBoardSection = pgTable("men_mood_board_section", {
 });
 
 export const menFreshInkCollectionSection = pgTable("men_fresh_ink_collection", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const kidsDollBuyingSectionn = pgTable("kids_doll_buying_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const kidsTwiningMomSection = pgTable("kids_twining_mom_section", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),
     imageUrl: text("image_url"),

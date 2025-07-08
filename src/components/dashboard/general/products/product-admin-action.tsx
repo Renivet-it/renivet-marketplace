@@ -27,7 +27,8 @@ import {
     toggleFeaturedProduct,
     menToggleFeaturedProduct,
     toggleWomenStyleWithSubstance,
-    toggleMenStyleWithSubstance
+    toggleMenStyleWithSubstance,
+    toggleKidsFetchSection
 } from "@/actions/product-action";
 import { trpc } from "@/lib/trpc/client";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -40,6 +41,7 @@ interface PageProps {
         isFeaturedMen?: boolean;
         isStyleWithSubstanceWoMen?: boolean;
         isStyleWithSubstanceMen?: boolean;
+        iskidsFetchSection?: boolean;
     };
 }
 
@@ -119,6 +121,23 @@ export function ProductAction({ product }: PageProps) {
         setIsLoading(true);
         try {
             const result = await toggleMenStyleWithSubstance(product.id, product.isStyleWithSubstanceMen ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+        const handleToggleKidsFetchProducts = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleKidsFetchSection(product.id, product.iskidsFetchSection ?? false);
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -224,6 +243,10 @@ export function ProductAction({ product }: PageProps) {
                             <span>{product.isStyleWithSubstanceMen ? "Remove from Style With Substance (Men)" : "Add to Style With Substance (Men)"}</span>
                         </DropdownMenuItem>
 
+                                                <DropdownMenuItem onClick={handleToggleKidsFetchProducts} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.iskidsFetchSection ? "Remove from Product Feature (Kids)" : "Add to Product Feature (Kids)"}</span>
+                        </DropdownMenuItem>
                         {product.isPublished && (
                             <>
                                 {/* Existing availability and activation items */}
