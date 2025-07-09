@@ -12,7 +12,7 @@ import { MiddleBannerSection } from "@/components/home/home-and-living/middle-ba
 import { EcoBannerSection as EcoBannerSectionComponent } from "@/components/home/home-and-living/eco-banner";
 import { BrandSection } from "@/components/home/home-and-living/brand-section";
 import { ProductGrid } from "@/components/home/kids/product-grid";
-import { Page as ElavateLooksPage } from "@/components/home/kids/elavate-looks";
+import { FeaturesSection as ElavateLooksPage } from "@/components/home/home-and-living/icons-section";
 
 export default function Page() {
     return (
@@ -40,9 +40,9 @@ export default function Page() {
                                                <Suspense>
                 <MiddleBannerFetch />
             </Suspense>
-                          <Suspense>
+                          {/* <Suspense>
                 <ProductGridFetch />
-              </Suspense>
+              </Suspense> */}
 
 <div className="pb-10">
                                                 <Suspense>

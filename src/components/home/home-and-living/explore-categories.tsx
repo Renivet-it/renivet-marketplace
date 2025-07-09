@@ -42,17 +42,14 @@ export function ExploreCategories({
 
   return (
     <section
-      className={cn("w-full bg-[#F4F0EC] pt-24 pb-12", className)}
+      className={cn("flex w-full justify-center py-12 bg-[#F4F0EC]", className)}
       {...props}
     >
-      <div className="max-w-screen-xl mx-auto w-full relative px-4">
-        {/* Title with proper spacing */}
-        <div className="mb-8">
-          <h2 className="text-center text-3xl font-semibold text-gray-900">
-            {titleData?.title || "Explore Categories"}
-          </h2>
-          <div className="w-20 h-1 bg-gray-300 mx-auto mt-4"></div>
-        </div>
+      <div className="max-w-screen-2xl mx-auto w-full relative">
+        {/* Title */}
+        <h2 className="text-center text-3xl font-bold text-gray-900 mb-8 px-4">
+          {titleData?.title || "Explore Categories"}
+        </h2>
 
         {/* Navigation Arrows */}
         {!isAtStart && (
@@ -79,48 +76,50 @@ export function ExploreCategories({
         <div
           ref={scrollContainerRef}
           onScroll={checkScrollPosition}
-          className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide relative"
+          className="flex overflow-x-auto gap-6 pl-4 scrollbar-hide relative"
         >
           {shopByCategories.map((category, index) => (
             <Link
               key={index}
               href={category.url || "/shop"}
-              className="flex-shrink-0 group text-center w-[200px] sm:w-[240px]"
+              className={cn(
+                "flex-shrink-0 group text-center",
+                index === 0 ? "ml-0" : ""
+              )}
             >
-              <div
-                className="
-                  w-full h-[200px] sm:h-[240px]
-                  overflow-hidden
-                  border border-gray-200
-                  transition-transform group-hover:scale-[1.02]
-                  hover:shadow-md
-                  rounded-lg
-                "
-              >
-                <Image
-                  src={category.imageUrl}
-                  alt={"Category"}
-                  width={240}
-                  height={240}
-                  quality={90}
-                  className="w-full h-full object-cover rounded-lg"
-                />
+              <div className="w-[240px] h-[300px] flex flex-col bg-[#F4F0EC] border border-gray-300">
+                {/* Image Container */}
+                <div className="relative h-[240px] w-full overflow-hidden border-b border-gray-300">
+                  <Image
+                    src={category.imageUrl}
+                    alt={category.title || "Category"}
+                    width={240}
+                    height={240}
+                    quality={90}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* Text Container */}
+                <div className="h-[60px] w-full bg-[#F4F0EC] flex items-center justify-center px-2">
+                  <p className="font-bold text-gray-900 text-lg text-center uppercase tracking-wider">
+                    {category.title || "CATEGORY"}
+                  </p>
+                </div>
               </div>
-              <p
-                className="
-                  mt-4 font-medium text-gray-900
-                  text-base
-                  px-2
-                "
-              >
-                {/* //@ts-ignore// */}
-                {category.title || "Category Title"}
-              </p>
             </Link>
           ))}
         </div>
 
-        {/* Mobile indicators - removed since we have proper scrolling */}
+        {/* Mobile indicators */}
+        <div className="flex justify-center mt-4 sm:hidden px-4">
+          {shopByCategories.map((_, index) => (
+            <div
+              key={index}
+              className="w-2 h-2 rounded-full bg-gray-300 mx-1"
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

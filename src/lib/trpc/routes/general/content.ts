@@ -4289,7 +4289,7 @@ export const homeAndLivingExploreCategoryRouter = createTRPCRouter({
                 await queries.womenhomebanner.createhomeAndLivingCategoryExploreSection({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title ?? null,
                     isActive: false
                 });
 

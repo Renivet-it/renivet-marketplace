@@ -3849,6 +3849,7 @@ console.log("test");
     async createhomeAndLivingCategoryExploreSection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db

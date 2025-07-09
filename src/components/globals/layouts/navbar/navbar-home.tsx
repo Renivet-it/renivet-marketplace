@@ -320,22 +320,29 @@ export function NavbarHome() {
                     .map((category) => (
                         <NavigationMenuItem key={category.id}>
                             {/* Special handling for Men and Women categories */}
-                            {category.name === "Men" || category.name === "Kids" || category.name === "Women" ? (
+                            {category.name === "Men" || category.name === "Kids" || category.name === "Women" || category.name === "Home and Living" ? (
                                 <div className="relative">
-                                    <NavigationMenuTrigger
-                                        className="bg-transparent hover:bg-transparent"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            window.location.href = `/${category.name.toLowerCase()}`;
-                                        }}
-                                    >
-                                        <Link
-                                            href={`/${category.name.toLowerCase()}`}
-                                            className="absolute inset-0"
-                                            aria-hidden="true"
-                                        />
-                                        {category.name}
-                                    </NavigationMenuTrigger>
+        <NavigationMenuTrigger
+            className="bg-transparent hover:bg-transparent"
+            onClick={(e) => {
+                e.preventDefault();
+                const path = category.name === "Home and Living"
+                    ? "/home-living"
+                    : `/${category.name.toLowerCase()}`;
+                window.location.href = path;
+            }}
+        >
+            <Link
+                href={
+                    category.name === "Home and Living"
+                        ? "/home-living"
+                        : `/${category.name.toLowerCase()}`
+                }
+                className="absolute inset-0"
+                aria-hidden="true"
+            />
+            {category.name}
+        </NavigationMenuTrigger>
                                     <NavigationMenuContent>
                                         <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
                                             {subcategories.data
