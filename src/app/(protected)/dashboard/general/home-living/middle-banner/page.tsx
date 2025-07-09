@@ -31,7 +31,7 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">Home and Living Banner</h1>
+                    <h1 className="text-2xl font-bold">Home and Living Middle Banner</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         Manage the platform&apos;s Home and Living Banner
                     </p>
@@ -41,9 +41,9 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/home-living/banners/new">
+                    <Link href="/dashboard/general/home-living/middle-banner/new">
                         <Icons.PlusCircle className="size-5" />
-                        New Home and Living Banne
+                        New Home and Living Banner
                     </Link>
                 </Button>
             </div>
@@ -63,7 +63,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data] = await Promise.all([
-        WomenHomeSectionQueries.gethomeAndLivingSections({
+        WomenHomeSectionQueries.gethomeAndLivingBannerMiddleSections({
             limit,
             page,
         }),

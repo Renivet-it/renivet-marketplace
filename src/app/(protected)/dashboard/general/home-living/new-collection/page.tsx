@@ -31,9 +31,9 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">explore category</h1>
+                    <h1 className="text-2xl font-bold">New collection</h1>
                     <p className="text-balance text-sm text-muted-foreground">
-                        Manage the platform&apos;s explore category
+                        Manage the platform&apos;s new collection
                     </p>
                 </div>
 
@@ -41,9 +41,9 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/men-section/explore-category/new">
+                    <Link href="/dashboard/general/home-living/new-collection/new">
                         <Icons.PlusCircle className="size-5" />
-                        New explore category section
+                        New new collection section
                     </Link>
                 </Button>
             </div>
@@ -63,7 +63,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data] = await Promise.all([
-        WomenHomeSectionQueries.getMenExploreCategorySections({
+        WomenHomeSectionQueries.gethomeAndLivingNewCollectionSections({
             limit,
             page,
         }),

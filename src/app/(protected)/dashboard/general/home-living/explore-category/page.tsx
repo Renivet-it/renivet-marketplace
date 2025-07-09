@@ -41,7 +41,7 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/men-section/explore-category/new">
+                    <Link href="/dashboard/general/home-living/explore-category/new">
                         <Icons.PlusCircle className="size-5" />
                         New explore category section
                     </Link>
@@ -63,7 +63,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data] = await Promise.all([
-        WomenHomeSectionQueries.getMenExploreCategorySections({
+        WomenHomeSectionQueries.gethomeAndLivingCategoryExploreSections({
             limit,
             page,
         }),

@@ -545,6 +545,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
+            title: "Middle Banner Section",
+            url: "/dashboard/general//home-living/middle-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+                {
             title: "Eco Banner Section",
             url: "/dashboard/general//home-living/eco-banners",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,

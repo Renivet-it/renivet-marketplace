@@ -15,8 +15,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-    title: "Explore Category",
-    description: "Manage the platform's Explore Category",
+    title: "Top Picks",
+    description: "Manage the platform's Top Picks",
 };
 
 interface PageProps {
@@ -31,9 +31,9 @@ export default function Page({ searchParams }: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">explore category</h1>
+                    <h1 className="text-2xl font-bold">Top Picks</h1>
                     <p className="text-balance text-sm text-muted-foreground">
-                        Manage the platform&apos;s explore category
+                        Manage the platform&apos;s Top Picks
                     </p>
                 </div>
 
@@ -41,7 +41,7 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/men-section/explore-category/new">
+                    <Link href="/dashboard/general/home-living/top-picks/new">
                         <Icons.PlusCircle className="size-5" />
                         New explore category section
                     </Link>
@@ -63,7 +63,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data] = await Promise.all([
-        WomenHomeSectionQueries.getMenExploreCategorySections({
+        WomenHomeSectionQueries.gethomeAndLivingTopPickSections({
             limit,
             page,
         }),
