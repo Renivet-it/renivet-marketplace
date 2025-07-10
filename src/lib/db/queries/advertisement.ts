@@ -61,7 +61,14 @@ import {
     kidSpecialCareSection,
     kidsDiscountOfferSection,
     kidsDollBuyingSectionn,
-    kidsTwiningMomSection
+    kidsTwiningMomSection,
+    homeAndLivingBrandSection,
+    homeAndLivingEcoBanner,
+    homeAndLivingBannerMiddle,
+    homeAndLivingTopPicks,
+    homeAndLivingNewCollectionSection,
+    homeAndLivingexploreCategorySection,
+    homeandLivingBanner
 
 } from "../schema";
 
@@ -3699,6 +3706,646 @@ console.log("test");
         return data;
     }
 
+
+
+    //   //home and living banner section
+
+
+            async gethomeAndLivingSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeandLivingBanner.findMany({
+            orderBy: [asc(homeandLivingBanner.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeandLivingBanner.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeandLivingBanner.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeandLivingBanner)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingSection(id: string) {
+        const data = await db.query.homeandLivingBanner.findFirst({
+            where: eq(homeandLivingBanner.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeandLivingBanner)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeandLivingBanner)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeandLivingBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingSection(id: string) {
+        const data = await db
+            .delete(homeandLivingBanner)
+            .where(eq(homeandLivingBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+       //   //home and living explore category section
+
+
+            async gethomeAndLivingCategoryExploreSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeAndLivingexploreCategorySection.findMany({
+            orderBy: [asc(homeAndLivingexploreCategorySection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingCategoryExploreSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeAndLivingexploreCategorySection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeAndLivingexploreCategorySection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeAndLivingexploreCategorySection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingCategoryExploreSection(id: string) {
+        const data = await db.query.homeAndLivingexploreCategorySection.findFirst({
+            where: eq(homeAndLivingexploreCategorySection.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingCategoryExploreSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+            title: string | null; // Make title nullable
+        }
+    ) {
+        const data = await db
+            .insert(homeAndLivingexploreCategorySection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingCategoryExploreSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeAndLivingexploreCategorySection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeAndLivingexploreCategorySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingCategoryExploreSection(id: string) {
+        const data = await db
+            .delete(homeAndLivingexploreCategorySection)
+            .where(eq(homeAndLivingexploreCategorySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+    // home and living new collection//
+
+
+
+
+    async gethomeAndLivingNewCollectionSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeAndLivingNewCollectionSection.findMany({
+            orderBy: [asc(homeAndLivingNewCollectionSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingNewCollectionSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeAndLivingNewCollectionSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeAndLivingNewCollectionSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeAndLivingNewCollectionSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingNewCollectionSection(id: string) {
+        const data = await db.query.homeAndLivingNewCollectionSection.findFirst({
+            where: eq(homeAndLivingNewCollectionSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingNewCollectionSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeAndLivingNewCollectionSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingNewCollectionSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeAndLivingNewCollectionSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeAndLivingNewCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingNewCollectionSection(id: string) {
+        const data = await db
+            .delete(homeAndLivingNewCollectionSection)
+            .where(eq(homeAndLivingNewCollectionSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+       // home and living new collection//
+
+
+
+
+    async gethomeAndLivingTopPickSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeAndLivingTopPicks.findMany({
+            orderBy: [asc(homeAndLivingTopPicks.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingTopPickSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeAndLivingTopPicks.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeAndLivingTopPicks.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeAndLivingTopPicks)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingTopPickSection(id: string) {
+        const data = await db.query.homeAndLivingTopPicks.findFirst({
+            where: eq(homeAndLivingTopPicks.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingTopPickSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeAndLivingTopPicks)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingTopPickSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeAndLivingTopPicks)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeAndLivingTopPicks.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingTopPickSection(id: string) {
+        const data = await db
+            .delete(homeAndLivingTopPicks)
+            .where(eq(homeAndLivingTopPicks.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+           // home and living new collection//
+
+
+
+
+    async gethomeAndLivingBannerMiddleSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeAndLivingBannerMiddle.findMany({
+            orderBy: [asc(homeAndLivingBannerMiddle.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingBannerMiddleSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeAndLivingBannerMiddle.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeAndLivingBannerMiddle.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeAndLivingBannerMiddle)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingBannerMiddleSection(id: string) {
+        const data = await db.query.homeAndLivingBannerMiddle.findFirst({
+            where: eq(homeAndLivingBannerMiddle.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingBannerMiddleSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeAndLivingBannerMiddle)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingBannerMiddleSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeAndLivingBannerMiddle)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeAndLivingBannerMiddle.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingBannerMiddleSection(id: string) {
+        const data = await db
+            .delete(homeAndLivingBannerMiddle)
+            .where(eq(homeAndLivingBannerMiddle.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+//homeAndLivingEcoBanner
+
+
+    async gethomeAndLivingEcoBanners(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeAndLivingEcoBanner.findMany({
+            orderBy: [asc(homeAndLivingEcoBanner.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingEcoBanner({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeAndLivingEcoBanner.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeAndLivingEcoBanner.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeAndLivingEcoBanner)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingEcoBanner(id: string) {
+        const data = await db.query.homeAndLivingEcoBanner.findFirst({
+            where: eq(homeAndLivingEcoBanner.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingEcoBanner(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeAndLivingEcoBanner)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingEcoBanner(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeAndLivingEcoBanner)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeAndLivingEcoBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingEcoBanner(id: string) {
+        const data = await db
+            .delete(homeAndLivingEcoBanner)
+            .where(eq(homeAndLivingEcoBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+    async gethomeAndLivingBrandSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeAndLivingBrandSection.findMany({
+            orderBy: [asc(homeAndLivingBrandSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingBrandSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeAndLivingBrandSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeAndLivingBrandSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeAndLivingBrandSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingBrandSection(id: string) {
+        const data = await db.query.homeAndLivingBrandSection.findFirst({
+            where: eq(homeAndLivingBrandSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingBrandSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeAndLivingBrandSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingBrandSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeAndLivingBrandSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeAndLivingBrandSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingBrandSection(id: string) {
+        const data = await db
+            .delete(homeAndLivingBrandSection)
+            .where(eq(homeAndLivingBrandSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 
 
 }

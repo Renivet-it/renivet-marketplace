@@ -2,7 +2,7 @@
 
 import { productQueries } from "@/lib/db/queries";
 import { db } from "@/lib/db";
-import { womenPageFeaturedProducts, products, menPageFeaturedProducts, womenStyleWithSubstanceMiddlePageSection, menCuratedHerEssence, kidsFreshCollectionSection } from "@/lib/db/schema";
+import { womenPageFeaturedProducts, products, menPageFeaturedProducts, womenStyleWithSubstanceMiddlePageSection, menCuratedHerEssence, homeandlivingNewArrival, homeandlivingTopPicks, kidsFreshCollectionSection } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -342,6 +342,163 @@ export async function toggleKidsFetchSection(productId: string, isFeatured: bool
             await db
                 .update(products)
                 .set({ iskidsFetchSection: true })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product added to Style With Substance list" };
+        }
+    } catch (error) {
+        console.error("Error toggling Style With Substance status:", error);
+        return { success: false, error: "Failed to update Style With Substance status" };
+    }
+}
+
+
+export async function toggleHomeAndLivingNewArrivalsSection(productId: string, isFeatured: boolean) {
+    try {
+        // Check if product exists in products table
+        const existingProduct = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        if (isFeatured) {
+            // Remove from featured products (soft delete)
+            const result = await db
+                .update(homeandlivingNewArrival)
+                .set({
+                    isDeleted: true,
+                    deletedAt: new Date()
+                })
+                .where(eq(homeandlivingNewArrival.productId, productId));
+
+            if (!result) {
+                return { success: false, error: "Featured product not found" };
+            }
+
+            // Update isStyleWithSubstanceMen to false in products table
+            await db
+                .update(products)
+                .set({ isHomeAndLivingSectionNewArrival: false })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product removed from Style With Substance list" };
+        } else {
+            // Check if product already exists and is not deleted
+            const existing = await db
+                .select()
+                .from(homeandlivingNewArrival)
+                .where(eq(homeandlivingNewArrival.productId, productId))
+                .then((res) => res[0]);
+
+            if (existing && !existing.isDeleted) {
+                return { success: false, error: "Product is already in Style With Substance" };
+            }
+
+            if (existing) {
+                // Restore if previously soft deleted
+                await db
+                    .update(homeandlivingNewArrival)
+                    .set({
+                        isDeleted: false,
+                        deletedAt: null
+                    })
+                    .where(eq(homeandlivingNewArrival.productId, productId));
+            } else {
+                // Add new entry
+                await db.insert(homeandlivingNewArrival)
+                    .values({ productId });
+            }
+
+            // Update isHomeAndLivingSectionNewArrival to true in products table
+            await db
+                .update(products)
+                .set({ isHomeAndLivingSectionNewArrival: true })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product added to Style With Substance list" };
+        }
+    } catch (error) {
+        console.error("Error toggling Style With Substance status:", error);
+        return { success: false, error: "Failed to update Style With Substance status" };
+    }
+}
+
+
+
+export async function toggleHomeAndLivingTopPicksSection(productId: string, isFeatured: boolean) {
+    try {
+        // Check if product exists in products table
+        const existingProduct = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        if (isFeatured) {
+            // Remove from featured products (soft delete)
+            const result = await db
+                .update(homeandlivingTopPicks)
+                .set({
+                    isDeleted: true,
+                    deletedAt: new Date()
+                })
+                .where(eq(homeandlivingTopPicks.productId, productId));
+
+            if (!result) {
+                return { success: false, error: "Featured product not found" };
+            }
+
+            // Update isStyleWithSubstanceMen to false in products table
+            await db
+                .update(products)
+                .set({ isHomeAndLivingSectionTopPicks: false })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product removed from Style With Substance list" };
+        } else {
+            // Check if product already exists and is not deleted
+            const existing = await db
+                .select()
+                .from(homeandlivingTopPicks)
+                .where(eq(homeandlivingTopPicks.productId, productId))
+                .then((res) => res[0]);
+
+            if (existing && !existing.isDeleted) {
+                return { success: false, error: "Product is already in Style With Substance" };
+            }
+
+            if (existing) {
+                // Restore if previously soft deleted
+                await db
+                    .update(homeandlivingTopPicks)
+                    .set({
+                        isDeleted: false,
+                        deletedAt: null
+                    })
+                    .where(eq(homeandlivingTopPicks.productId, productId));
+            } else {
+                // Add new entry
+                await db.insert(homeandlivingTopPicks)
+                    .values({ productId });
+            }
+
+            // Update isHomeAndLivingSectionTopPicks to true in products table
+            await db
+                .update(products)
+                .set({ isHomeAndLivingSectionTopPicks: true })
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");

@@ -519,6 +519,43 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     ]
 },
 
+{
+    title: "Home and Living  Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Banners Section",
+            url: "/dashboard/general/home-living/banners",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Explore Categories Section",
+            url: "/dashboard/general/home-living/explore-category",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "New Collection Section",
+            url: "/dashboard/general/home-living/new-collection",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Middle Banner Section",
+            url: "/dashboard/general/home-living/middle-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+                {
+            title: "Eco Banner Section",
+            url: "/dashboard/general/home-living/eco-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Brand Section Banner",
+            url: "/dashboard/general/home-living/brand-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+    ]
+},
 
 {
     title: "Ui / Ux Page Section",
@@ -552,6 +589,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
     ]
 }
+
 ];
 
 export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {

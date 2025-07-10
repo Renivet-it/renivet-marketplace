@@ -98,6 +98,8 @@ isFeaturedWomen: boolean("is_featured_women").default(false),
         isStyleWithSubstanceMen: boolean("is_style_with_substance_men").default(false), // optional now
 isStyleWithSubstanceWoMen: boolean("is_style_with_substance_women").default(false),
 iskidsFetchSection: boolean("is_kids_fetch_product").default(false),
+isHomeAndLivingSectionTopPicks: boolean("is_home_living_top_picks").default(false),
+isHomeAndLivingSectionNewArrival: boolean("is_home_living_new_Arrivals").default(false),
         embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
@@ -173,6 +175,32 @@ export const menCuratedHerEssence = pgTable(
 
 export const kidsFreshCollectionSection = pgTable(
     "kids_fresh_collection_section",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
+
+export const homeandlivingNewArrival = pgTable(
+    "home_and_living_new_arrival",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
+
+export const homeandlivingTopPicks = pgTable(
+    "home_living_top_picks",
     {
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         productId: uuid("product_id")
@@ -377,6 +405,20 @@ export const menPageFeaturedProductsRelation = relations(menPageFeaturedProducts
 export const kidsFreshCollectionSectionRelation = relations(kidsFreshCollectionSection, ({ one }) => ({
   product: one(products, {
     fields: [kidsFreshCollectionSection.productId],
+    references: [products.id],
+  }),
+}));
+
+export const homeandlivingNewArrivalRelation = relations(homeandlivingNewArrival, ({ one }) => ({
+  product: one(products, {
+    fields: [homeandlivingNewArrival.productId],
+    references: [products.id],
+  }),
+}));
+
+export const homeandlivingTopPicksRelation = relations(homeandlivingTopPicks, ({ one }) => ({
+  product: one(products, {
+    fields: [homeandlivingTopPicks.productId],
     references: [products.id],
   }),
 }));
