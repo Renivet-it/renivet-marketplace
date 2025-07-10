@@ -75,7 +75,7 @@ export function ProductGrid({ className, products, title = "top picks for you", 
         {/* Carousel Container */}
         <div className="relative">
           {/* Carousel Navigation Buttons */}
-          <button 
+          <button
             onClick={scrollLeft}
             className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition-colors"
             aria-label="Scroll left"
