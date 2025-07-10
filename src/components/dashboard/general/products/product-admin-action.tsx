@@ -28,7 +28,9 @@ import {
     menToggleFeaturedProduct,
     toggleWomenStyleWithSubstance,
     toggleMenStyleWithSubstance,
-    toggleKidsFetchSection
+    toggleKidsFetchSection,
+    toggleHomeAndLivingNewArrivalsSection,
+    toggleHomeAndLivingTopPicksSection
 } from "@/actions/product-action";
 import { trpc } from "@/lib/trpc/client";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -151,6 +153,40 @@ export function ProductAction({ product }: PageProps) {
         }
     };
 
+            const handletoggleHomeAndLivingNewArrivalsSection = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleHomeAndLivingNewArrivalsSection(product.id, product.iskidsFetchSection ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+            const handletoggleHomeAndLivingTopPicksSection = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleHomeAndLivingTopPicksSection(product.id, product.iskidsFetchSection ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <>
             <DropdownMenu>
@@ -243,9 +279,19 @@ export function ProductAction({ product }: PageProps) {
                             <span>{product.isStyleWithSubstanceMen ? "Remove from Style With Substance (Men)" : "Add to Style With Substance (Men)"}</span>
                         </DropdownMenuItem>
 
-                                                <DropdownMenuItem onClick={handleToggleKidsFetchProducts} disabled={isLoading}>
+                         <DropdownMenuItem onClick={handleToggleKidsFetchProducts} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
                             <span>{product.iskidsFetchSection ? "Remove from Product Feature (Kids)" : "Add to Product Feature (Kids)"}</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={handletoggleHomeAndLivingNewArrivalsSection} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isStyleWithSubstanceMen ? "Remove from New Arrivals (Home living)" : "Add to New Arrivals (Home living)"}</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={handletoggleHomeAndLivingTopPicksSection} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isStyleWithSubstanceMen ? "Remove from Top Picks(Home living)" : "Add to Top Picks(Home living)"}</span>
                         </DropdownMenuItem>
                         {product.isPublished && (
                             <>

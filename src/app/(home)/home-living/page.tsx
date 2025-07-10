@@ -11,9 +11,9 @@ import { ExploreCategories } from "@/components/home/home-and-living/explore-cat
 import { MiddleBannerSection } from "@/components/home/home-and-living/middle-banner";
 import { EcoBannerSection as EcoBannerSectionComponent } from "@/components/home/home-and-living/eco-banner";
 import { BrandSection } from "@/components/home/home-and-living/brand-section";
-import { ProductGrid } from "@/components/home/kids/product-grid";
+import { ProductGrid } from "@/components/home/home-and-living/product-grid";
+import { ProductGridNewArrivals } from "@/components/home/home-and-living/product-new-arrival";
 import { FeaturesSection as ElavateLooksPage } from "@/components/home/home-and-living/icons-section";
-
 export default function Page() {
     return (
         <>
@@ -40,10 +40,12 @@ export default function Page() {
                               <Suspense>
                     <EcoBannerSection />
                   </Suspense>
-                          {/* <Suspense>
-                <ProductGridFetch />
-              </Suspense> */}
-
+                          <Suspense>
+                <ProductGridFetchTopPicks />
+              </Suspense>
+                                     <Suspense>
+                <ProductGridFetchNewArrivals />
+              </Suspense>
 <div className="pb-10">
                                                 <Suspense>
                     <BrandSectionFetch />
@@ -120,12 +122,20 @@ async function BrandSectionFetch() {
     //@ts-ignore
     return <BrandSection banners={brandProducts} />;
 }
-async function ProductGridFetch() {
-  const products = await productQueries.getKidsPageFeaturedProducts();
+async function ProductGridFetchTopPicks() {
+  const products = await productQueries.getHomeAndLivingTopPicks();
   console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGrid products={products} />;
+}
+
+async function ProductGridFetchNewArrivals() {
+  const products = await productQueries.getHomeAndLivingNewArrivals();
+  console.log("Products:", products);
+  if (!products.length) return null;
+    //@ts-ignore
+  return <ProductGridNewArrivals products={products} />;
 }
 
 
