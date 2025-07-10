@@ -14,7 +14,7 @@ export function NewCollection({ className, banners, ...props }: PageProps) {
             <div className="mx-auto space-y-4 md:space-y-6 px-0 md:container">
                 {banners.map((item, index) => (
                     <div
-                        key={index} 
+                        key={index}
                         className="relative w-full h-auto min-h-[200px] md:h-[400px] bg-[#F4F0EC] rounded-none md:rounded-lg overflow-hidden"
                     >
                         {/* Mobile - full image without cropping */}
