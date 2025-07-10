@@ -34,18 +34,19 @@ export default function Page() {
                                           <Suspense>
                 <SustanableBatchFetch />
             </Suspense>
+                                      <Suspense>
+                <ProductGridFetchTopPicks />
+              </Suspense>
+                                     <Suspense>
+                <ProductGridFetchNewArrivals />
+              </Suspense>
                                                            <Suspense>
                 <MiddleBannerFetch />
             </Suspense>
                               <Suspense>
                     <EcoBannerSection />
                   </Suspense>
-                          <Suspense>
-                <ProductGridFetchTopPicks />
-              </Suspense>
-                                     <Suspense>
-                <ProductGridFetchNewArrivals />
-              </Suspense>
+
 <div className="pb-10">
                                                 <Suspense>
                     <BrandSectionFetch />

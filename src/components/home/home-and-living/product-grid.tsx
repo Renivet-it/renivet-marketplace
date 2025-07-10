@@ -4,14 +4,12 @@ import { cn, convertPaiseToRupees } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button-general";
-import { Star } from "lucide-react";
+import { useRef } from "react";
 
 interface Product {
   slug: any;
   id: string;
   media: { mediaItem: { url: string } }[];
-  brand: { name: string };
   title: string;
   variants?: {
     price: number;
@@ -19,9 +17,6 @@ interface Product {
   }[];
   price?: number;
   compareAtPrice?: number;
-  rating?: number;
-  reviewCount?: number;
-  status?: string;
   tags?: string[];
 }
 
@@ -30,127 +25,131 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
 }
 
-export function ProductGrid({ className, products, title = "Little Reinivet", ...props }: ProductGridProps) {
+export function ProductGrid({ className, products, title = "top picks for you", ...props }: ProductGridProps) {
   if (!products || !Array.isArray(products) || products.length === 0) {
     return null;
   }
+
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const scrollLeft = () => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: -339, behavior: "smooth" });
+    }
+  };
+
+  const scrollRight = () => {
+    if (carouselRef.current) {
+      carouselRef.current.scrollBy({ left: 339, behavior: "smooth" });
+    }
+  };
 
   const getProductData = (product: Product) => {
     const priceInPaise = product.variants?.[0]?.price || product.price || 0;
     const originalPriceInPaise = product.variants?.[0]?.compareAtPrice || product.compareAtPrice;
     const price = convertPaiseToRupees(priceInPaise);
     const originalPrice = originalPriceInPaise ? convertPaiseToRupees(originalPriceInPaise) : undefined;
+    const discount = originalPrice ? Math.round(((originalPrice - price) / originalPrice * 100)) : undefined;
 
     return {
       price,
       originalPrice,
-      rating: product.rating,
-      reviews: product.reviewCount,
-      status: product.status,
-      isBestSeller: product.tags?.includes("Best Seller"),
-      isSolo: product.tags?.includes("Solo")
+      discount,
+      category: product.tags?.find((tag) => ["STAND", "CANDLE", "PLANT"].includes(tag))
     };
   };
 
   return (
-    <section className={cn("w-full px-4 py-8 bg-[#d0d7cf]", className)} {...props}>
-      <div className="max-w-[1280px] mx-auto"> {/* Increased max-width to accommodate 3 cards */}
-        <div className="flex justify-between items-center mb-8 px-4">
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          <Link href="/products" className="text-sm font-medium text-gray-600 hover:text-gray-900">
-            Show all
-          </Link>
+    <section className={cn("w-full px-4 py-12 bg-[#F4F0EC]", className)} {...props}>
+      <div className="max-w-[1280px] mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-medium text-gray-900 mb-4">{title}</h2>
+          <p className="text-sm text-gray-500 max-w-2xl mx-auto">
+            Bibendum quis facilisi aliquet massa in pharetra nisi etiam ornare. Tellus
+            feugiat egestas nulla sem vel mi dictum nisi.Vivamus sem eget vestibul...
+          </p>
         </div>
 
-        <div className="flex gap-4 px-4 pb-4 justify-between"> {/* Removed overflow-x-auto, added justify-between */}
-          {products.slice(0, 3).map(({ product }) => {
-            const {
-              price,
-              originalPrice,
-              rating,
-              reviews,
-              status,
-              isBestSeller,
-              isSolo
-            } = getProductData(product);
+        {/* Carousel Container */}
+        <div className="relative">
+          {/* Carousel Navigation Buttons */}
+          <button 
+            onClick={scrollLeft}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition-colors"
+            aria-label="Scroll left"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={scrollRight}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition-colors"
+            aria-label="Scroll right"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
 
-            return (
-              <div key={product.id} className="flex-shrink-0 w-[393px]"> {/* Kept card width */}
-                <Card className="border border-gray-200 rounded-none shadow-none p-0 h-[604px]">
-                  <CardHeader className="p-0 relative group h-[393px]">
-                    <Link href={`/products/${product.slug}`} className="block h-full">
-                      <div className="relative w-full h-full overflow-hidden">
-                        <Image
-                          src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
-                          alt={product.title}
-                          fill
-                          className="object-cover group-hover:opacity-90 transition-opacity"
-                          sizes="393px"
-                          style={{ objectFit: "cover" }}
-                        />
-                      </div>
-                    </Link>
+          {/* Carousel */}
+          <div
+            ref={carouselRef}
+            className="flex overflow-x-auto scroll-smooth snap-x snap-mandatory gap-8 px-4 py-2 scrollbar-hide"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {products.map(({ product }) => {
+              const {
+                price,
+                originalPrice,
+                discount,
+                category
+              } = getProductData(product);
 
-                    {/* Badges */}
-                    <div className="absolute top-3 left-3 space-y-2">
-                      {isSolo && (
-                        <div className="bg-white text-xs font-bold px-3 py-1 rounded-sm">
-                          SOLO 50%
+              return (
+                <div 
+                  key={product.id} 
+                  className="flex-shrink-0 w-[339px] snap-start"
+                >
+                  <Card className="border-0 shadow-none p-0 h-[494px] bg-transparent">
+                    <CardHeader className="p-0 relative h-[339px]">
+                      <Link href={`/products/${product.slug}`} className="block h-full">
+                        <div className="relative w-full h-full overflow-hidden">
+                          <Image
+                            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                            alt={product.title}
+                            fill
+                            className="object-cover"
+                            sizes="339px"
+                          />
+                        </div>
+                      </Link>
+
+                      {discount && (
+                        <div className="absolute top-4 right-4 bg-white text-black text-lg font-bold px-3 py-1">
+                          -{discount}%
                         </div>
                       )}
-                      {isBestSeller && (
-                        <div className="bg-black text-white text-xs font-bold px-3 py-1 rounded-sm">
-                          BEST SOLO
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
+                    </CardHeader>
 
-                  <CardContent className="p-4 h-[211px] flex flex-col">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-[15px] font-medium text-gray-900 mb-1">
-                          {product.title}
-                        </h3>
-                        <p className="text-xs text-gray-500 mb-2">
-                          {product.brand.name}
+                    <CardContent className="p-0 pt-6 h-[155px]">
+                      {category && (
+                        <p className="text-sm text-gray-500 mb-1 uppercase">
+                          {category}
                         </p>
-                      </div>
-                      {rating && reviews && (
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-                          {rating} ({reviews})
-                        </div>
                       )}
-                    </div>
-
-                    <div className="mt-2">
-                      <div className="text-base font-bold text-gray-900">
-                          {/* @ts-ignore */}
+                      <h3 className="text-xl font-medium text-gray-900 mb-2">
+                        {product.title}
+                      </h3>
+                      <div className="text-xl font-medium text-gray-900">
                         ₹{typeof price === "number" ? price.toFixed(2) : price}
                       </div>
-                      {originalPrice && originalPrice > price && (
-                        <div className="text-xs text-gray-500 line-through mt-1">
-                          {/* @ts-ignore */}
-                          ₹{typeof originalPrice === "number" ? originalPrice.toFixed(2) : (originalPrice ?? "")}
-                        </div>
-                      )}
-                    </div>
-
-                    {status && (
-                      <div className="text-xs text-red-500 mt-2">
-                        {status}
-                      </div>
-                    )}
-
-                    <Button className="w-full mt-auto bg-black hover:bg-gray-900 text-white rounded-none py-3 text-sm font-medium">
-                      ADD TO CART
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
