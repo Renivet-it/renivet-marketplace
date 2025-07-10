@@ -43,7 +43,7 @@ export function BrandSection({ className, banners, ...props }: PageProps) {
                                         fill
                                         className="object-cover w-full h-full brightness-100"
                                         priority={index === 0}
-                                        sizes="(max-width: 768px) 100vw, 1400px"
+                                        sizes="(max-width: 768px) 100vw,1400px"
                                     />
                                 </Link>
                             </div>
