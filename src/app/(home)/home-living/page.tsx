@@ -34,12 +34,12 @@ export default function Page() {
                                           <Suspense>
                 <SustanableBatchFetch />
             </Suspense>
+                                                           <Suspense>
+                <MiddleBannerFetch />
+            </Suspense>
                               <Suspense>
                     <EcoBannerSection />
                   </Suspense>
-                                               <Suspense>
-                <MiddleBannerFetch />
-            </Suspense>
                           {/* <Suspense>
                 <ProductGridFetch />
               </Suspense> */}
@@ -104,7 +104,7 @@ async function MiddleBannerFetch() {
     const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingBannerMiddleSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <MiddleBannerSection advertisements={brandProducts} />;
+    return <MiddleBannerSection banners={brandProducts} />;
 }
 async function EcoBannerSection() {
     //@ts-ignore

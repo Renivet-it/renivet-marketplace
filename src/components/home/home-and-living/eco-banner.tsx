@@ -14,7 +14,7 @@ interface PageProps extends GenericProps {
 
 export function EcoBannerSection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn(className)} {...props}>
+        <section className={cn("w-full pt-8 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
             <Carousel
                 opts={{
                     align: "start",
@@ -25,7 +25,7 @@ export function EcoBannerSection({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full aspect-[3/1] pt-20 bg-[#F4F0EC]" // Corrected to match the image's 4:1 aspect ratio
+                className="w-full h-auto md:h-[600px]"
             >
                 <CarouselContent
                     classNames={{
@@ -35,15 +35,15 @@ export function EcoBannerSection({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative size-full">
-                                <Link href="/shop">
+                            <div className="relative w-full aspect-[1400/600]">
+                                <Link href="/shop" className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
-                                        width={1400} // Image's actual width
-                                        height={300} // Image's actual height
-                                        className="size-full object-contain brightness-100"
+                                        fill
+                                        className="object-cover w-full h-full brightness-100"
                                         priority={index === 0}
+                                        sizes="(max-width: 768px) 100vw, 1400px"
                                     />
                                 </Link>
                             </div>
