@@ -67,7 +67,7 @@ const menuItems = {
 // Mapping of query keys to actual query functions
 const queryMap: Record<string, (params: { limit: number; page: number }) => Promise<any[]>> = {
     getAllHomeBanners: WomenHomeSectionQueries.gethomeAndLivingSections,
-    getAllexploreCategories: homeShopByCategoryQueries.gethomeAndLivingCategoryExploreSections,
+    getAllexploreCategories: WomenHomeSectionQueries.gethomeAndLivingCategoryExploreSections,
     getAllNewCollection: WomenHomeSectionQueries.gethomeAndLivingNewCollectionSections,
     getAllCurateConcious: WomenHomeSectionQueries.gethomeAndLivingCurateConciousSections,
     getAllMiddleBanner: WomenHomeSectionQueries.gethomeAndLivingBannerMiddleSections,
