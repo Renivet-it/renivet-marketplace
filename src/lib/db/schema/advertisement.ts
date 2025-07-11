@@ -472,3 +472,12 @@ export const homeAndLivingBrandSection = pgTable("home_and_living_brand_Section"
     url: text("url"),
     ...timestamps,
 });
+
+export const homeAndLivingCurateConciousSection = pgTable("home_living_curate_concious_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});

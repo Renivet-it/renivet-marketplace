@@ -68,7 +68,8 @@ import {
     homeAndLivingTopPicks,
     homeAndLivingNewCollectionSection,
     homeAndLivingexploreCategorySection,
-    homeandLivingBanner
+    homeandLivingBanner,
+    homeAndLivingCurateConciousSection
 
 } from "../schema";
 
@@ -3799,7 +3800,6 @@ console.log("test");
 
 
 
-
        //   //home and living explore category section
 
 
@@ -3891,6 +3891,100 @@ console.log("test");
     }
 
 
+
+
+
+
+
+        //   //home and living explore category section
+
+
+            async gethomeAndLivingCurateConciousSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeAndLivingCurateConciousSection.findMany({
+            orderBy: [asc(homeAndLivingCurateConciousSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllhomeAndLivingCurateConciousSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeAndLivingCurateConciousSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeAndLivingCurateConciousSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeAndLivingCurateConciousSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async gethomeAndLivingCurateConciousSection(id: string) {
+        const data = await db.query.homeAndLivingCurateConciousSection.findFirst({
+            where: eq(homeAndLivingCurateConciousSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createhomeAndLivingCurateConciousSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+            title: string | null; // Make title nullable
+        }
+    ) {
+        const data = await db
+            .insert(homeAndLivingCurateConciousSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatehomeAndLivingCurateConciousSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeAndLivingCurateConciousSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeAndLivingCurateConciousSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletehomeAndLivingCurateConciousSection(id: string) {
+        const data = await db
+            .delete(homeAndLivingCurateConciousSection)
+            .where(eq(homeAndLivingCurateConciousSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 
     // home and living new collection//
 

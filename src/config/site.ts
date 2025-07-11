@@ -539,6 +539,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/home-living/new-collection",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
+                {
+            title: "Curate Concious Section",
+            url: "/dashboard/general/home-living/curate-concious",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
         {
             title: "Middle Banner Section",
             url: "/dashboard/general/home-living/middle-banner",
@@ -579,7 +584,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Home and Living Section",
-            url: "/dashboard/general/home-decour/home-decour-main-page",
+            url: "/dashboard/general/home-living/home-living-main-page",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {

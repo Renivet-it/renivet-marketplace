@@ -14,6 +14,9 @@ import { BrandSection } from "@/components/home/home-and-living/brand-section";
 import { ProductGrid } from "@/components/home/home-and-living/product-grid";
 import { ProductGridNewArrivals } from "@/components/home/home-and-living/product-new-arrival";
 import { FeaturesSection as ElavateLooksPage } from "@/components/home/home-and-living/icons-section";
+import { CurateConcious } from "@/components/home/home-and-living/curate-concious";
+
+
 export default function Page() {
     return (
         <>
@@ -31,6 +34,11 @@ export default function Page() {
                         <Suspense>
                 <NewCollectionSection />
             </Suspense>
+
+                        <Suspense>
+                <CurateSectionFetch />
+            </Suspense>
+
                                           <Suspense>
                 <SustanableBatchFetch />
             </Suspense>
@@ -123,9 +131,15 @@ async function BrandSectionFetch() {
     //@ts-ignore
     return <BrandSection banners={brandProducts} />;
 }
+async function CurateSectionFetch() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingCurateConciousSections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <CurateConcious banners={brandProducts} />;
+}
 async function ProductGridFetchTopPicks() {
   const products = await productQueries.getHomeAndLivingTopPicks();
-  console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGrid products={products} />;
@@ -133,7 +147,6 @@ async function ProductGridFetchTopPicks() {
 
 async function ProductGridFetchNewArrivals() {
   const products = await productQueries.getHomeAndLivingNewArrivals();
-  console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGridNewArrivals products={products} />;
