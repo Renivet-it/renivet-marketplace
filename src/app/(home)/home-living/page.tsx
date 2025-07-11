@@ -140,7 +140,6 @@ async function CurateSectionFetch() {
 }
 async function ProductGridFetchTopPicks() {
   const products = await productQueries.getHomeAndLivingTopPicks();
-  console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGrid products={products} />;
@@ -148,7 +147,6 @@ async function ProductGridFetchTopPicks() {
 
 async function ProductGridFetchNewArrivals() {
   const products = await productQueries.getHomeAndLivingNewArrivals();
-  console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGridNewArrivals products={products} />;
