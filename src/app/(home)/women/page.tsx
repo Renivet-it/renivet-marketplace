@@ -111,11 +111,13 @@ async function BannersFetch() {
 async function StyleWithSubstanceFetch() {
   const products = await WomenHomeSectionQueries.getWomenStyleWithSubstanceMiddleSection();
   if (!products.length) return null;
+  console.log("ProductsProductsProducts:", products);
     //@ts-ignore
   return <StyleWithSubstance products={products} />;
 }
 async function ProductGridFetch() {
   const products = await productQueries.getWomenPageFeaturedProducts();
+  console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
 

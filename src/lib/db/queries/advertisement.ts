@@ -4446,6 +4446,14 @@ console.log("test");
 
 
 class HomeShopByCategoriesQuery {
+    async getAllHomeShopByCategories() {
+        const data = await db.query.homeShopByCategories.findMany({
+            orderBy: [asc(homeShopByCategories.createdAt)],
+        });
+
+        return data;
+    }
+
     async getHomeShopByCategories({
         limit,
         page,
