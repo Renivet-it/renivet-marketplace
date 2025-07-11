@@ -584,7 +584,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Home and Living Section",
-            url: "/dashboard/general/home-decour/home-decour-main-page",
+            url: "/dashboard/general/home-living/home-living-main-page",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
