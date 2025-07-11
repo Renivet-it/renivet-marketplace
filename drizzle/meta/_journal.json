@@ -1184,6 +1184,13 @@
       "when": 1752176494741,
       "tag": "0168_small_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 169,
+      "version": "7",
+      "when": 1752263056893,
+      "tag": "0169_wakeful_vision",
+      "breakpoints": true
     }
   ]
 }
