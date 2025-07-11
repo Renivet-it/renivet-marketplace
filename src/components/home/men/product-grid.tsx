@@ -32,7 +32,6 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function ProductGrid({ className, products, ...props }: ProductGridProps) {
-  console.log("Products:", products); // Debug log
   if (!products || !Array.isArray(products) || products.length === 0) {
     return null;
   }
@@ -57,7 +56,6 @@ export function ProductGrid({ className, products, ...props }: ProductGridProps)
 
   const visibleProducts = products.slice(0, 10); // Limit to 10 products
   const hasMoreProducts = products.length > 10; // Check if there are more than 10 products
-  console.log("Visible Products:", visibleProducts); // Debug log
 
   return (
     <section className={cn("pt-4 pb-10 bg-gray-50", className)} {...props}>

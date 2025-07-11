@@ -149,7 +149,6 @@ async function ShopByNewCategoriesFetch() {
 
 async function ProductGridFetch() {
   const products = await productQueries.getMenPageFeaturedProducts();
-  console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGrid products={products} />;
@@ -256,7 +255,6 @@ async function SuggestedLookFetch() {
 async function StyleWithSubstanceFetch() {
   const products = await WomenHomeSectionQueries.getmenStyleWithSubstanceMiddleSection();
   if (!products.length) return null;
-  console.log("ProductsProductsProducts:", products);
     //@ts-ignore
   return <StyleWithSubstance products={products} />;
 }

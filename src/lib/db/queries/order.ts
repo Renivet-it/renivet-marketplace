@@ -99,12 +99,9 @@ class OrderQuery {
             })),
         }));
 
-        console.log(enhancedData, "test");
-
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
             .parse(enhancedData);
-
         return parsed;
     }
 

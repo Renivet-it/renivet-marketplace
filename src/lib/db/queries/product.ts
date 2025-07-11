@@ -783,7 +783,6 @@ async getProducts({
     ) {
         const data = await db.transaction(async (tx) => {
 
-console.log("Input values:", values);
         let categoryName = "";
         let subcategoryName = "";
         let productTypeName = "";
@@ -827,7 +826,6 @@ console.log("Input values:", values);
       .join(" ")
       .trim();
 
-    console.log("Text for embedding:", text);
 
     let embeddings: number[] | null = null;
     if (text) {

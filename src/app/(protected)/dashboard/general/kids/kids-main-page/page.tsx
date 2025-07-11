@@ -75,23 +75,49 @@ const queryMap: Record<string, (params: { limit: number; page: number }) => Prom
 };
 
 // Function to fetch the first product's image URL for a section
+// async function fetchFirstProductImage(queryKey: string, sectionTitle: string): Promise<string> {
+//     try {
+//         const queryFn = queryMap[queryKey];
+//         if (!queryFn) {
+//             throw new Error(`No query function found for ${queryKey}`);
+//         }
+//         const products = await queryFn({
+//             limit: 1,
+//             page: 1,
+//         });
+//         if (!products || products.length === 0) {
+//             throw new Error(`No products found for ${sectionTitle}`);
+//         }
+//         // Assuming products is an array with imageUrl field in each product
+//         const imageUrl = products[0]?.imageUrl;
+//         if (!imageUrl) {
+//             throw new Error(`No imageUrl found for first product in ${sectionTitle}`);
+//         }
+//         return imageUrl;
+//     } catch (error) {
+//         console.error(`Error fetching image for ${sectionTitle}:`, error);
+//         return `https://via.placeholder.com/300x200?text=${encodeURIComponent(sectionTitle)}`;
+//     }
+// }
 async function fetchFirstProductImage(queryKey: string, sectionTitle: string): Promise<string> {
     try {
         const queryFn = queryMap[queryKey];
         if (!queryFn) {
-            throw new Error(`No query function found for ${queryKey}`);
+            console.error(`No query function found for ${queryKey}`);
+            return `https://via.placeholder.com/300x200?text=${encodeURIComponent(sectionTitle)}`;
         }
         const products = await queryFn({
             limit: 1,
             page: 1,
         });
         if (!products || products.length === 0) {
-            throw new Error(`No products found for ${sectionTitle}`);
+            console.warn(`No products found for ${sectionTitle}`);
+            return `https://via.placeholder.com/300x200?text=${encodeURIComponent(sectionTitle)}`;
         }
-        // Assuming products is an array with imageUrl field in each product
         const imageUrl = products[0]?.imageUrl;
         if (!imageUrl) {
-            throw new Error(`No imageUrl found for first product in ${sectionTitle}`);
+            console.warn(`No imageUrl found for first product in ${sectionTitle}`);
+            return `https://via.placeholder.com/300x200?text=${encodeURIComponent(sectionTitle)}`;
         }
         return imageUrl;
     } catch (error) {
