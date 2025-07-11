@@ -122,7 +122,6 @@ async function KidTwiningFetch() {
 }
 async function ProductGridFetch() {
   const products = await productQueries.getKidsPageFeaturedProducts();
-  console.log("Products:", products);
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGrid products={products} />;
