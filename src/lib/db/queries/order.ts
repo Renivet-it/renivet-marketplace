@@ -102,7 +102,6 @@ class OrderQuery {
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
             .parse(enhancedData);
-
         return parsed;
     }
 
