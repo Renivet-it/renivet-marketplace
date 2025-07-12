@@ -20,7 +20,6 @@ export function FindYourStyle({ advertisements }: PageProps) {
           style={{
             background: "#f4f0ec",
             height: "auto",
-            minHeight: "50vh",
             aspectRatio: "1440/670",
             maxHeight: "670px"
           }}
