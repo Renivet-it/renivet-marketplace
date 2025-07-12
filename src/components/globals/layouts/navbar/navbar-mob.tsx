@@ -117,12 +117,24 @@ export function NavbarMob({ className, ...props }: GenericProps) {
     const navContainerRef = useRef<ElementRef<"div"> | null>(null);
     const navListRef = useRef<ElementRef<"ul"> | null>(null);
 
-    useEffect(() => {
-        if (typeof document === "undefined") return;
+    // useEffect(() => {
+    //     if (typeof document === "undefined") return;
 
-        if (isMenuOpen) document.body.style.overflow = "hidden";
-        else document.body.style.overflow = "auto";
-    }, [isMenuOpen]);
+    //     if (isMenuOpen) document.body.style.overflow = "hidden";
+    //     else document.body.style.overflow = "auto";
+    // }, [isMenuOpen]);
+    useEffect(() => {
+    if (isMenuOpen) {
+        document.body.style.overflow = "hidden";
+    } else {
+        document.body.style.overflow = "auto";
+    }
+
+    // Cleanup on unmount
+    return () => {
+        document.body.style.overflow = "auto";
+    };
+}, [isMenuOpen]);
 
     const { data: user } = trpc.general.users.currentUser.useQuery();
 

@@ -15,7 +15,7 @@ interface PageProps {
 export function SuggestedLook({ className, banners }: PageProps) {
   return (
     <section
-      className={cn("pt-10 lg:pt-20 w-full pb-12 md:pb-16 bg-[#F4F0EC]", className)}
+      className={cn("pt-10 lg:pt-20 w-full bg-[#F4F0EC]", className)}
       style={{ backgroundColor: "#f4f0ec" }}
     >
       {/* Centered Title Section */}
@@ -39,7 +39,7 @@ export function SuggestedLook({ className, banners }: PageProps) {
               delay: 5000,
             }),
           ]}
-          className="w-full h-[300px]"
+          className="w-full"
         >
           <CarouselContent className="ml-0">
             {banners.map((item, index) => (

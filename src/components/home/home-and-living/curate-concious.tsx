@@ -66,7 +66,7 @@ function CategoryCard({
         <div className={cn("relative group overflow-hidden bg-white", className)}>
             <Link href="/shop" className="block w-full h-full">
                 <Image
-                    src={banner.imageUrl}
+                     src={banner?.imageUrl || "/fallback-image.jpg"}
                     alt=""
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
