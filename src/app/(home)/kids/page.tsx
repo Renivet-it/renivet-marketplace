@@ -44,22 +44,10 @@ export default function Page() {
                 <ProductGridFetch />
               </Suspense>
 
-<div className="pb-10">
                                                 <Suspense>
                     <KidTwiningFetch />
                   </Suspense>
-                  </div>
-                       {/* <Suspense>
-                <TopCollectionBannerFecth />
-            </Suspense> */}
 
-
-            <div className="block md:hidden"> {/* Hidden on md and larger screens */}
-
-            </div>
-            {/* <Suspense>
-                <BlogsFetch />
-            </Suspense> */}
         </>
     );
 }

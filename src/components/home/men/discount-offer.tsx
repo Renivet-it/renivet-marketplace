@@ -25,7 +25,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
             delay: 5000,
           }),
         ]}
-        className="w-full aspect-[1440/305] min-h-[190px] sm:min-h-[305px]"
+        className="w-full aspect-[1440/305]"
       >
         <CarouselContent className="ml-0">
           {advertisements.map((ad, index) => (
