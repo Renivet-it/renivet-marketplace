@@ -53,16 +53,87 @@ export function ProductGrid({ className, products, title = "Little Reinivet", ..
   };
 
   return (
-    <section className={cn("w-full px-4 py-8 bg-[#d0d7cf]", className)} {...props}>
-      <div className="max-w-[1280px] mx-auto"> {/* Increased max-width to accommodate 3 cards */}
-        <div className="flex justify-between items-center mb-8 px-4">
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          <Link href="/products" className="text-sm font-medium text-gray-600 hover:text-gray-900">
-            Show all
+    <section className={cn("w-full px-4 py-6 bg-[#d0d7cf]", className)} {...props}>
+      <div className="max-w-[1280px] mx-auto">
+        <div className="flex justify-between items-center mb-4 px-1">
+          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+          <Link href="/products" className="text-xs font-medium text-gray-600 hover:text-gray-900 underline">
+            View all
           </Link>
         </div>
 
-        <div className="flex gap-4 px-4 pb-4 justify-between"> {/* Removed overflow-x-auto, added justify-between */}
+        {/* Mobile: Horizontal scroll with 3 cards in view */}
+        <div className="md:hidden overflow-x-auto pb-2 -mx-2 px-2">
+          <div className="flex space-x-3 w-max">
+            {products.slice(0, 3).map(({ product }) => {
+              const {
+                price,
+                originalPrice,
+                rating,
+                reviews,
+                status,
+                isBestSeller,
+                isSolo
+              } = getProductData(product);
+
+              return (
+                <div key={product.id} className="w-[140px] flex-shrink-0">
+                  <Card className="border border-gray-200 rounded-lg shadow-xs h-full flex flex-col">
+                    <CardHeader className="p-0 relative aspect-square">
+                      <Link href={`/products/${product.slug}`} className="block h-full">
+                        <div className="relative w-full h-full">
+                          <Image
+                            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                            alt={product.title}
+                            fill
+                            className="object-cover"
+                            sizes="140px"
+                          />
+                        </div>
+                      </Link>
+                      {isSolo && (
+                        <div className="absolute top-1 left-1 bg-white text-[8px] font-bold px-1 py-0.5 rounded-xs">
+                          SOLO
+                        </div>
+                      )}
+                    </CardHeader>
+
+                    <CardContent className="p-2 flex-grow flex flex-col">
+                      <div className="mb-1">
+                        <p className="text-[10px] text-gray-500 truncate">{product.brand.name}</p>
+                        <h3 className="text-xs font-medium text-gray-900 line-clamp-2 leading-tight">
+                          {product.title}
+                        </h3>
+                      </div>
+
+                      <div className="mt-auto">
+                        <div className="text-xs font-bold text-gray-900">
+            {/* @ts-ignore */}
+
+                          ₹{typeof price === "number" ? price.toFixed(0) : price}
+                        </div>
+                        {originalPrice && (
+                          <div className="text-[10px] text-gray-500 line-through">
+            {/* @ts-ignore */}
+
+                            ₹{typeof originalPrice === "number" ? originalPrice.toFixed(0) : originalPrice}
+                          </div>
+                        )}
+
+                        <Button className="w-full mt-1 bg-black text-white rounded-sm py-1 text-[10px] font-medium">
+                          Add
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop: Normal grid */}
+        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {products.slice(0, 3).map(({ product }) => {
             const {
               price,
@@ -75,77 +146,65 @@ export function ProductGrid({ className, products, title = "Little Reinivet", ..
             } = getProductData(product);
 
             return (
-              <div key={product.id} className="flex-shrink-0 w-[393px]"> {/* Kept card width */}
-                <Card className="border border-gray-200 rounded-none shadow-none p-0 h-[604px]">
-                  <CardHeader className="p-0 relative group h-[393px]">
+              <div key={product.id} className="w-full">
+                <Card className="border border-gray-200 rounded-lg shadow-sm overflow-hidden h-full flex flex-col">
+                  <CardHeader className="p-0 relative group aspect-square">
                     <Link href={`/products/${product.slug}`} className="block h-full">
-                      <div className="relative w-full h-full overflow-hidden">
+                      <div className="relative w-full h-full">
                         <Image
                           src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
                           alt={product.title}
                           fill
-                          className="object-cover group-hover:opacity-90 transition-opacity"
-                          sizes="393px"
-                          style={{ objectFit: "cover" }}
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 1024px) 50vw, 33vw"
                         />
                       </div>
                     </Link>
 
-                    {/* Badges */}
-                    <div className="absolute top-3 left-3 space-y-2">
+                    <div className="absolute top-2 left-2 space-y-1">
                       {isSolo && (
-                        <div className="bg-white text-xs font-bold px-3 py-1 rounded-sm">
+                        <div className="bg-white text-xs font-bold px-2 py-1 rounded-sm">
                           SOLO 50%
                         </div>
                       )}
                       {isBestSeller && (
-                        <div className="bg-black text-white text-xs font-bold px-3 py-1 rounded-sm">
-                          BEST SOLO
+                        <div className="bg-black text-white text-xs font-bold px-2 py-1 rounded-sm">
+                          BEST SELLER
                         </div>
                       )}
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-4 h-[211px] flex flex-col">
-                    <div className="flex justify-between items-start">
+                  <CardContent className="p-4 flex-grow flex flex-col">
+                    <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h3 className="text-[15px] font-medium text-gray-900 mb-1">
-                          {product.title}
-                        </h3>
-                        <p className="text-xs text-gray-500 mb-2">
-                          {product.brand.name}
-                        </p>
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">{product.title}</h3>
+                        <p className="text-xs text-gray-500">{product.brand.name}</p>
                       </div>
-                      {rating && reviews && (
-                        <div className="text-xs text-gray-500 flex items-center">
+                      {rating && (
+                        <div className="flex items-center text-xs text-gray-500">
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-                          {rating} ({reviews})
+                          {rating}
                         </div>
                       )}
                     </div>
 
-                    <div className="mt-2">
+                    <div className="mt-auto">
                       <div className="text-base font-bold text-gray-900">
-                          {/* @ts-ignore */}
+            {/* @ts-ignore */}
                         ₹{typeof price === "number" ? price.toFixed(2) : price}
                       </div>
-                      {originalPrice && originalPrice > price && (
-                        <div className="text-xs text-gray-500 line-through mt-1">
-                          {/* @ts-ignore */}
-                          ₹{typeof originalPrice === "number" ? originalPrice.toFixed(2) : (originalPrice ?? "")}
+                      {originalPrice && (
+                        <div className="text-xs text-gray-500 line-through">
+            {/* @ts-ignore */}
+                          ₹{typeof originalPrice === "number" ? originalPrice.toFixed(2) : originalPrice}
                         </div>
                       )}
+
+                      <Button className="w-full mt-3 bg-black hover:bg-gray-800 text-white rounded-md py-2 text-sm font-medium">
+                        Add to Cart
+                      </Button>
                     </div>
-
-                    {status && (
-                      <div className="text-xs text-red-500 mt-2">
-                        {status}
-                      </div>
-                    )}
-
-                    <Button className="w-full mt-auto bg-black hover:bg-gray-900 text-white rounded-none py-3 text-sm font-medium">
-                      ADD TO CART
-                    </Button>
                   </CardContent>
                 </Card>
               </div>

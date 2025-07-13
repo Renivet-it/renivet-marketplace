@@ -42,7 +42,7 @@ export function ExploreCategories({
 
   return (
     <section
-      className={cn("w-full bg-[#F4F0EC] pt-24 pb-12", className)}
+      className={cn("w-full bg-[#F4F0EC]", className)}
       {...props}
     >
       <div className="max-w-screen-xl mx-auto w-full relative px-4">

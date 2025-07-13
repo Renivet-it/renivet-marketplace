@@ -36,7 +36,7 @@ export function SuggestedLook({ className, banners, ...props }: PageProps) {
                 delay: 5000,
               }),
             ]}
-            className="w-full h-[300px]"
+            className="w-full"
           >
             <CarouselContent className="ml-0">
               {banners.map((item, index) => (

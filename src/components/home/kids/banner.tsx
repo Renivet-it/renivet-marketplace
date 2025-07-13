@@ -51,7 +51,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full bg-[#F4F0EC] h-[500px]"
+                className="w-full bg-[#F4F0EC]"
             >
                 <CarouselContent className="h-full">
                     {banners.map((item, index) => (
