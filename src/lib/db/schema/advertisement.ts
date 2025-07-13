@@ -481,3 +481,84 @@ export const homeAndLivingCurateConciousSection = pgTable("home_living_curate_co
     url: text("url"),
     ...timestamps,
 });
+
+export const beautyBannerSection = pgTable("beauty_living_banner", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+export const beautyExploreCategorySection = pgTable("beauty_explore_category_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const beautySkinBannerSection = pgTable("beauty_skin_banner_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const beautyCareRoutineSection = pgTable("beauty_care_routine_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const beautyNurtureSection = pgTable("beauty_nurture_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const beautyDiscountSection = pgTable("beauty_discount_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const beautBestSellerSection = pgTable("beauty_best_seller_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+
+export const beautMindFulSection = pgTable("beauty_mindful_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const beautySkinQuizSection = pgTable("beauty_skin_quiz_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});

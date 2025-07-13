@@ -69,7 +69,16 @@ import {
     homeAndLivingNewCollectionSection,
     homeAndLivingexploreCategorySection,
     homeandLivingBanner,
-    homeAndLivingCurateConciousSection
+    homeAndLivingCurateConciousSection,
+    beautyBannerSection,
+    beautyExploreCategorySection,
+    beautySkinBannerSection,
+    beautyCareRoutineSection,
+    beautyNurtureSection,
+    beautyDiscountSection,
+    beautBestSellerSection,
+    beautMindFulSection,
+    beautySkinQuizSection
 
 } from "../schema";
 
@@ -4442,6 +4451,809 @@ console.log("test");
     }
 
 
+
+    //beauty-section//
+
+
+        async getBeautyPersonalSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautyBannerSection.findMany({
+            orderBy: [asc(beautyBannerSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautyPersonalSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautyBannerSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautyBannerSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautyBannerSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautyPersonalSection(id: string) {
+        const data = await db.query.beautyBannerSection.findFirst({
+            where: eq(beautyBannerSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautyPersonalSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautyBannerSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautyPersonalSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautyBannerSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautyBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautyPersonalSection(id: string) {
+        const data = await db
+            .delete(beautyBannerSection)
+            .where(eq(beautyBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+        async getBeautyExploreCategorySections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautyExploreCategorySection.findMany({
+            orderBy: [asc(beautyExploreCategorySection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautyExploreCategorySection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautyExploreCategorySection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautyExploreCategorySection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautyExploreCategorySection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautyExploreCategorySection(id: string) {
+        const data = await db.query.beautyExploreCategorySection.findFirst({
+            where: eq(beautyExploreCategorySection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautyExploreCategorySection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautyExploreCategorySection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautyExploreCategorySection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautyExploreCategorySection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautyExploreCategorySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautyExploreCategorySection(id: string) {
+        const data = await db
+            .delete(beautyExploreCategorySection)
+            .where(eq(beautyExploreCategorySection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+
+
+
+        async getBeautySkinBannerSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautySkinBannerSection.findMany({
+            orderBy: [asc(beautySkinBannerSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautySkinBannerSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautySkinBannerSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautySkinBannerSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautySkinBannerSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        // @ts-ignore
+        const parsed = beautySkinBannerSection.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautySkinBannerSection(id: string) {
+        const data = await db.query.beautySkinBannerSection.findFirst({
+            where: eq(beautySkinBannerSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautySkinBannerSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautySkinBannerSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautySkinBannerSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautySkinBannerSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautySkinBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautySkinBannerSection(id: string) {
+        const data = await db
+            .delete(beautySkinBannerSection)
+            .where(eq(beautySkinBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+      async getBeautyCareRoutinetions(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautyCareRoutineSection.findMany({
+            orderBy: [asc(beautyCareRoutineSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautyCareRoutineSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautyCareRoutineSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautyCareRoutineSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautyCareRoutineSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautyCareRoutinetion(id: string) {
+        const data = await db.query.beautyCareRoutineSection.findFirst({
+            where: eq(beautyCareRoutineSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautyCareRoutineSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautyCareRoutineSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautyCareRoutineSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautyCareRoutineSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautyCareRoutineSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautyCareRoutineSection(id: string) {
+        const data = await db
+            .delete(beautyCareRoutineSection)
+            .where(eq(beautyCareRoutineSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+          async getBeautyNurtureSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautyNurtureSection.findMany({
+            orderBy: [asc(beautyNurtureSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautyNurtureSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautyNurtureSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautyNurtureSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautyNurtureSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautyNurtureSection(id: string) {
+        const data = await db.query.beautyNurtureSection.findFirst({
+            where: eq(beautyNurtureSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautyNurtureSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautyNurtureSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautyNurtureSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautyNurtureSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautyNurtureSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautyNurtureSection(id: string) {
+        const data = await db
+            .delete(beautyNurtureSection)
+            .where(eq(beautyNurtureSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+      async getBeautyDiscountSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautyDiscountSection.findMany({
+            orderBy: [asc(beautyDiscountSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautyDiscountSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautyDiscountSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautyDiscountSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautyDiscountSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautyDiscountSection(id: string) {
+        const data = await db.query.beautyDiscountSection.findFirst({
+            where: eq(beautyDiscountSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautyDiscountSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautyDiscountSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautyDiscountSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautyDiscountSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautyDiscountSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautyDiscountSection(id: string) {
+        const data = await db
+            .delete(beautyDiscountSection)
+            .where(eq(beautyDiscountSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+
+      async getBeautyBestSellerSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautBestSellerSection.findMany({
+            orderBy: [asc(beautBestSellerSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautyBestSellerSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautBestSellerSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautBestSellerSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautBestSellerSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautyBestSellerSection(id: string) {
+        const data = await db.query.beautBestSellerSection.findFirst({
+            where: eq(beautBestSellerSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautyBestSellerSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautBestSellerSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautyBestSellerSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautBestSellerSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautBestSellerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautyBestSellerSection(id: string) {
+        const data = await db
+            .delete(beautBestSellerSection)
+            .where(eq(beautBestSellerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+       async getBeautyMindFulSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautMindFulSection.findMany({
+            orderBy: [asc(beautMindFulSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautyMindFulSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautMindFulSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautMindFulSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautMindFulSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautyMindFulSection(id: string) {
+        const data = await db.query.beautMindFulSection.findFirst({
+            where: eq(beautMindFulSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautyMindFulSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautMindFulSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautyMindFulSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautMindFulSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautMindFulSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautyMindFulSection(id: string) {
+        const data = await db
+            .delete(beautMindFulSection)
+            .where(eq(beautMindFulSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+       async getBeautySkinQuizections(p0: { limit: number; page: number; }) {
+        const data = await db.query.beautySkinQuizSection.findMany({
+            orderBy: [asc(beautySkinQuizSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllBeautySkinQuizection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.beautySkinQuizSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(beautySkinQuizSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(beautySkinQuizSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getBeautySkinQuizection(id: string) {
+        const data = await db.query.beautySkinQuizSection.findFirst({
+            where: eq(beautySkinQuizSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createBeautySkinQuizection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(beautySkinQuizSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBeautySkinQuizection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(beautySkinQuizSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(beautySkinQuizSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteBeautySkinQuizection(id: string) {
+        const data = await db
+            .delete(beautySkinQuizSection)
+            .where(eq(beautySkinQuizSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    
 }
 
 
