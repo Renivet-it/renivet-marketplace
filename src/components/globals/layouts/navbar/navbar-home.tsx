@@ -320,27 +320,37 @@ export function NavbarHome() {
                     .map((category) => (
                         <NavigationMenuItem key={category.id}>
                             {/* Special handling for Men and Women categories */}
-                            {category.name === "Men" || category.name === "Kids" || category.name === "Women" || category.name === "Home and Living" ? (
+                            {category.name === "Men" || category.name === "Kids" || category.name === "Women" || category.name === "Home and Living" || category.name === "Beauty and Personal Care"? (
                                 <div className="relative">
-        <NavigationMenuTrigger
-            className="bg-transparent hover:bg-transparent"
-            onClick={(e) => {
-                e.preventDefault();
-                const path = category.name === "Home and Living"
-                    ? "/home-living"
-                    : `/${category.name.toLowerCase()}`;
-                window.location.href = path;
-            }}
-        >
-            <Link
-                href={
-                    category.name === "Home and Living"
-                        ? "/home-living"
-                        : `/${category.name.toLowerCase()}`
-                }
-                className="absolute inset-0"
-                aria-hidden="true"
-            />
+                            <NavigationMenuTrigger
+                                className="bg-transparent hover:bg-transparent"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    let path;
+                                    switch (category.name) {
+                                        case "Home and Living":
+                                            path = "/home-living";
+                                            break;
+                                        case "Beauty and Personal Care":
+                                            path = "/beauty-personal";
+                                            break;
+                                        default:
+                                            path = `/${category.name.toLowerCase()}`;
+                                    }
+                                    window.location.href = path;
+                                }}
+                            >
+ <Link
+                                    href={
+                                        category.name === "Home and Living"
+                                            ? "/home-living"
+                                            : category.name === "Beauty and Personal Care"
+                                            ? "/beauty-personal"
+                                            : `/${category.name.toLowerCase()}`
+                                    }
+                                    className="absolute inset-0"
+                                    aria-hidden="true"
+                                />
             {category.name}
         </NavigationMenuTrigger>
                                     <NavigationMenuContent>

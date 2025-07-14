@@ -32,52 +32,41 @@ export default function Page() {
             </Suspense>
 
                         <Suspense>
-                <NewCollectionSection />
+                <BeautySkinCareBanner />
             </Suspense>
 
                         <Suspense>
-                <CurateSectionFetch />
+                <BeautyCareRoutineFetch />
             </Suspense>
 
-                                          <Suspense>
-                <SustanableBatchFetch />
-            </Suspense>
-                                      <Suspense>
+                                      {/* <Suspense>
                 <ProductGridFetchTopPicks />
               </Suspense>
                                      <Suspense>
                 <ProductGridFetchNewArrivals />
-              </Suspense>
+              </Suspense> */}
                                                            <Suspense>
-                <MiddleBannerFetch />
+                <NurtureBannerFetch />
             </Suspense>
                               <Suspense>
-                    <EcoBannerSection />
+                    <BeautyDiscountFetch />
                   </Suspense>
-
-<div className="pb-10">
-                                                <Suspense>
-                    <BrandSectionFetch />
-                  </Suspense>
-                  </div>
-                       {/* <Suspense>
-                <TopCollectionBannerFecth />
-            </Suspense> */}
-
-
-            <div className="block md:hidden"> {/* Hidden on md and larger screens */}
-
-            </div>
-            {/* <Suspense>
-                <BlogsFetch />
-            </Suspense> */}
+                       <Suspense>
+                <BestSellerBannnerFetch />
+            </Suspense>
+                       <Suspense>
+                <BeautyMindFulFetch />
+            </Suspense>
+                       <Suspense>
+                <BeautySkinQuizFetch />
+            </Suspense>
         </>
     );
 }
 
 async function BannersFetch() {
     //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingSections();
+    const brandProducts = await WomenHomeSectionQueries.getBeautyPersonalSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <Landing banners={brandProducts} />;
@@ -94,7 +83,7 @@ async function ExploreCategoryFetch() {
     const [sbc, sbcT] = await Promise.all([
         // homeShopByCategoryQueries.getAllHomeShopByCategories(),
     //@ts-ignore
-        await WomenHomeSectionQueries.gethomeAndLivingCategoryExploreSections()
+        await WomenHomeSectionQueries.getBeautyExploreCategorySections()
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
@@ -103,27 +92,53 @@ async function ExploreCategoryFetch() {
     return <ExploreCategories shopByCategories={sbc} titleData={sbcT} />;
 }
 
-async function NewCollectionSection() {
+async function BeautySkinCareBanner() {
     //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingNewCollectionSections();
+    const brandProducts = await WomenHomeSectionQueries.getBeautySkinBannerSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <NewCollection banners={brandProducts} />;
 }
-async function MiddleBannerFetch() {
+async function NurtureBannerFetch() {
     //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingBannerMiddleSections();
+    const brandProducts = await WomenHomeSectionQueries.getBeautyNurtureSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <MiddleBannerSection banners={brandProducts} />;
 }
-async function EcoBannerSection() {
+async function BeautyDiscountFetch() {
     //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingEcoBanners();
+    const brandProducts = await WomenHomeSectionQueries.getBeautyDiscountSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <EcoBannerSectionComponent banners={brandProducts} />;
 }
+
+async function BestSellerBannnerFetch() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.getBeautyBestSellerSections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <EcoBannerSectionComponent banners={brandProducts} />;
+}
+
+async function BeautyMindFulFetch() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.getBeautyMindFulSections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <EcoBannerSectionComponent banners={brandProducts} />;
+}
+
+async function BeautySkinQuizFetch() {
+    //@ts-ignore
+    const brandProducts = await WomenHomeSectionQueries.getBeautySkinQuizections();
+    if (!brandProducts.length) return null;
+    //@ts-ignore
+    return <EcoBannerSectionComponent banners={brandProducts} />;
+}
+
+
 async function BrandSectionFetch() {
     //@ts-ignore
     const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingBrandSections();
@@ -131,9 +146,9 @@ async function BrandSectionFetch() {
     //@ts-ignore
     return <BrandSection banners={brandProducts} />;
 }
-async function CurateSectionFetch() {
+async function BeautyCareRoutineFetch() {
     //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingCurateConciousSections();
+    const brandProducts = await WomenHomeSectionQueries.getBeautyCareRoutinetions();
     if (!brandProducts.length) return null;
     //@ts-ignore
     return <CurateConcious banners={brandProducts} />;
