@@ -25,7 +25,7 @@ export function MindFullStarter({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-auto md:h-[500px]"
+                className="w-full h-auto md:h-[700px]"
             >
                 <CarouselContent
                     classNames={{
@@ -35,7 +35,7 @@ export function MindFullStarter({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full aspect-[1400/500]">
+                            <div className="relative w-full aspect-[1400/600]">
                                 <Link href="/shop" className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}
