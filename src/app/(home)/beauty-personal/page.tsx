@@ -5,16 +5,17 @@ import { AdvertisementDiscountPage } from "@/components/home/new-home-page/disco
 import { advertisementQueries, blogQueries, homeBrandProductQueries, WomenHomeSectionQueries, homeShopByCategoryQueries, productQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
-import { Landing } from "@/components/home/home-and-living/banner";
-import { NewCollection } from "@/components/home/home-and-living/new-collection";
-import { ExploreCategories } from "@/components/home/home-and-living/explore-categories";
-import { MiddleBannerSection } from "@/components/home/home-and-living/middle-banner";
-import { EcoBannerSection as EcoBannerSectionComponent } from "@/components/home/home-and-living/eco-banner";
-import { BrandSection } from "@/components/home/home-and-living/brand-section";
+import { Landing } from "@/components/home/beauty-personal/banner";
+import { BeautyCareSection } from "@/components/home/beauty-personal/beauty-care";
+import { BestSellerBanner } from "@/components/home/beauty-personal/best-seller-banner";
+import { DiscountOffer } from "@/components/home/beauty-personal/discount-banner";
+import { ExploreCategories } from "@/components/home/beauty-personal/explore-categories";
+import { MindFullStarter } from "@/components/home/beauty-personal/mindful-starter";
+import { NurtureBanner } from "@/components/home/beauty-personal/nurture-banner";
+import { SkinQuizBanner } from "@/components/home/beauty-personal/skin-quiz";
+import { SkinCareBanner } from "@/components/home/beauty-personal/skincare-banner";
 import { ProductGrid } from "@/components/home/home-and-living/product-grid";
 import { ProductGridNewArrivals } from "@/components/home/home-and-living/product-new-arrival";
-import { FeaturesSection as ElavateLooksPage } from "@/components/home/home-and-living/icons-section";
-import { CurateConcious } from "@/components/home/home-and-living/curate-concious";
 
 
 export default function Page() {
@@ -72,11 +73,11 @@ async function BannersFetch() {
     return <Landing banners={brandProducts} />;
 }
 
-async function SustanableBatchFetch() {
-    //@ts-ignore
+// async function SustanableBatchFetch() {
+//     //@ts-ignore
 
-    return <ElavateLooksPage />;
-}
+//     return <ElavateLooksPage />;
+// }
 
 async function ExploreCategoryFetch() {
     //@ts-ignore
@@ -97,21 +98,21 @@ async function BeautySkinCareBanner() {
     const brandProducts = await WomenHomeSectionQueries.getBeautySkinBannerSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <NewCollection banners={brandProducts} />;
+    return <SkinCareBanner banners={brandProducts} />;
 }
 async function NurtureBannerFetch() {
     //@ts-ignore
     const brandProducts = await WomenHomeSectionQueries.getBeautyNurtureSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <MiddleBannerSection banners={brandProducts} />;
+    return <NurtureBanner banners={brandProducts} />;
 }
 async function BeautyDiscountFetch() {
     //@ts-ignore
     const brandProducts = await WomenHomeSectionQueries.getBeautyDiscountSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <EcoBannerSectionComponent banners={brandProducts} />;
+    return <DiscountOffer banners={brandProducts} />;
 }
 
 async function BestSellerBannnerFetch() {
@@ -119,7 +120,7 @@ async function BestSellerBannnerFetch() {
     const brandProducts = await WomenHomeSectionQueries.getBeautyBestSellerSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <EcoBannerSectionComponent banners={brandProducts} />;
+    return <BestSellerBanner banners={brandProducts} />;
 }
 
 async function BeautyMindFulFetch() {
@@ -127,7 +128,7 @@ async function BeautyMindFulFetch() {
     const brandProducts = await WomenHomeSectionQueries.getBeautyMindFulSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <EcoBannerSectionComponent banners={brandProducts} />;
+    return <MindFullStarter banners={brandProducts} />;
 }
 
 async function BeautySkinQuizFetch() {
@@ -135,23 +136,17 @@ async function BeautySkinQuizFetch() {
     const brandProducts = await WomenHomeSectionQueries.getBeautySkinQuizections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <EcoBannerSectionComponent banners={brandProducts} />;
+    return <SkinQuizBanner banners={brandProducts} />;
 }
 
 
-async function BrandSectionFetch() {
-    //@ts-ignore
-    const brandProducts = await WomenHomeSectionQueries.gethomeAndLivingBrandSections();
-    if (!brandProducts.length) return null;
-    //@ts-ignore
-    return <BrandSection banners={brandProducts} />;
-}
+
 async function BeautyCareRoutineFetch() {
     //@ts-ignore
     const brandProducts = await WomenHomeSectionQueries.getBeautyCareRoutinetions();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <CurateConcious banners={brandProducts} />;
+    return <BeautyCareSection banners={brandProducts} />;
 }
 async function ProductGridFetchTopPicks() {
   const products = await productQueries.getHomeAndLivingTopPicks();
@@ -167,19 +162,5 @@ async function ProductGridFetchNewArrivals() {
   return <ProductGridNewArrivals products={products} />;
 }
 
-
-async function ShopByNewCategoriesFetch() {
-    //@ts-ignore
-    const [sbc, sbcT] = await Promise.all([
-        // homeShopByCategoryQueries.getAllHomeShopByCategories(),
-    //@ts-ignore
-        await WomenHomeSectionQueries.getMenExploreCategorySections()
-    ]);
-    if (!Array.isArray(sbc) || !sbc.length) {
-        return null;
-    }
-    //@ts-ignore
-    return <ExploreCategories shopByCategories={sbc} titleData={sbcT} />;
-}
 
 
