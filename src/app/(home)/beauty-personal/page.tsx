@@ -16,6 +16,7 @@ import { SkinQuizBanner } from "@/components/home/beauty-personal/skin-quiz";
 import { SkinCareBanner } from "@/components/home/beauty-personal/skincare-banner";
 import { ProductGrid } from "@/components/home/home-and-living/product-grid";
 import { ProductGridNewArrivals } from "@/components/home/home-and-living/product-new-arrival";
+import { Page as ElavateLooksPage } from "@/components/home/beauty-personal/elavate-looks";
 
 
 export default function Page() {
@@ -58,6 +59,9 @@ export default function Page() {
                        <Suspense>
                 <BeautyMindFulFetch />
             </Suspense>
+                                                   <Suspense>
+                            <SustanableBatchFetch />
+                        </Suspense>
                        <Suspense>
                 <BeautySkinQuizFetch />
             </Suspense>
@@ -73,11 +77,11 @@ async function BannersFetch() {
     return <Landing banners={brandProducts} />;
 }
 
-// async function SustanableBatchFetch() {
-//     //@ts-ignore
+async function SustanableBatchFetch() {
+    //@ts-ignore
 
-//     return <ElavateLooksPage />;
-// }
+    return <ElavateLooksPage />;
+}
 
 async function ExploreCategoryFetch() {
     //@ts-ignore
