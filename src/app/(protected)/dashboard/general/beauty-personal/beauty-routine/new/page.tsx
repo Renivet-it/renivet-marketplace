@@ -1,4 +1,4 @@
-import { ShopByCategoryManageForm } from "@/components/globals/forms/beauty-personal/banner";
+import { ShopByCategoryManageForm } from "@/components/globals/forms/beauty-personal/beauty-care";
 import { DashShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
 

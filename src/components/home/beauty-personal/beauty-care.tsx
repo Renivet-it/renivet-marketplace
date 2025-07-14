@@ -31,7 +31,7 @@ export function BeautyCareSection({
             <div className="w-full space-y-6 max-w-screen-2xl mx-auto">
                 {/* Title */}
                 <h4 className="text-center text-2xl md:text-3xl font-bold tracking-wide text-gray-800">
-                    {titleData?.title || "Style Directory"}
+                    {titleData?.title || "Care Routine"}
                 </h4>
 
                 {/* Mobile Carousel (4-5 items per view) */}

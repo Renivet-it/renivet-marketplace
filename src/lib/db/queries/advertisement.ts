@@ -4589,6 +4589,7 @@ console.log("test");
     async createBeautyExploreCategorySection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db
@@ -4771,6 +4772,7 @@ console.log("test");
     async createBeautyCareRoutineSection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+            title: string | null; // Make title nullable
         }
     ) {
         const data = await db

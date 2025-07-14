@@ -585,7 +585,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Beauty care Routine Section",
-            url: "/dashboard/general/beauty-personal/beauty-routine-care",
+            url: "/dashboard/general/beauty-personal/beauty-routine",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
@@ -595,7 +595,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
                 {
             title: "Discount Banner Section",
-            url: "/dashboard/general/beauty-personal/discount",
+            url: "/dashboard/general/beauty-personal/discount-banner",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {
@@ -605,7 +605,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Mindful starter Banner",
-            url: "/dashboard/general/beauty-personal/mindful-banner",
+            url: "/dashboard/general/beauty-personal/mindful-starter",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
         {

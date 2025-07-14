@@ -5729,7 +5729,7 @@ export const beautyExploreCategoryRouter = createTRPCRouter({
                 await queries.womenhomebanner.createBeautyExploreCategorySection({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title || null,
                     isActive: false
                 });
 
@@ -6088,7 +6088,7 @@ export const beautyCareRoutineRouter = createTRPCRouter({
                 await queries.womenhomebanner.createBeautyCareRoutineSection({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                  title: input.title || null,
                     isActive: false
                 });
 

@@ -116,7 +116,7 @@ async function BeautyDiscountFetch() {
     const brandProducts = await WomenHomeSectionQueries.getBeautyDiscountSections();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <DiscountOffer banners={brandProducts} />;
+    return <DiscountOffer advertisements={brandProducts} />;
 }
 
 async function BestSellerBannnerFetch() {
@@ -150,7 +150,7 @@ async function BeautyCareRoutineFetch() {
     const brandProducts = await WomenHomeSectionQueries.getBeautyCareRoutinetions();
     if (!brandProducts.length) return null;
     //@ts-ignore
-    return <BeautyCareSection banners={brandProducts} />;
+    return <BeautyCareSection shopByCategories={brandProducts} />;
 }
 async function ProductGridFetchTopPicks() {
   const products = await productQueries.getHomeAndLivingTopPicks();
