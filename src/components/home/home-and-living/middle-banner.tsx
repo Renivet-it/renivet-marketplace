@@ -36,7 +36,7 @@ export function MiddleBannerSection({ className, banners, ...props }: PageProps)
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative w-full aspect-[1400/500]">
-                                <Link href="/shop" className="block w-full h-full">
+                                <Link href={item.imageUrl || "/shop"} className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}

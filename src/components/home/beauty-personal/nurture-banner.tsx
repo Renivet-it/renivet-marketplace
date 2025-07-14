@@ -36,7 +36,7 @@ export function NurtureBanner({ className, banners, ...props }: PageProps) {
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative w-full h-[50vw] md:h-[500px] md:aspect-[1380/500]">
-                                <Link href="/shop" className="block w-full h-full">
+                                <Link href={item.imageUrl || "/shop"} className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}

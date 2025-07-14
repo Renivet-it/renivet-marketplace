@@ -36,7 +36,7 @@ export function MiddleAnimationSection({ className, banners, ...props }: PagePro
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative size-full">
-                                <Link href="/shop">
+                                <Link href={item.imageUrl || "/shop"}>
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}

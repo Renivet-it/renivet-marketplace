@@ -82,7 +82,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-6"
                                         asChild
                                     >
-                                        <Link href="/shop">Shop Now</Link>
+                                        <Link href={item.imageUrl || "/shop"}>Shop Now</Link>
                                     </Button>
                                 </div>
                             </div>

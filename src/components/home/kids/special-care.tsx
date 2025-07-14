@@ -36,7 +36,7 @@ export function SpecialCare({ className, banners, ...props }: PageProps) {
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative w-full aspect-[1440/600]"> {/* Maintain 1440:600 aspect ratio */}
-                                <Link href="/shop" className="block size-full">
+                                <Link href={item.imageUrl || "/shop"} className="block size-full">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}

@@ -42,7 +42,7 @@ export function SuggestedLook({ className, banners, ...props }: PageProps) {
               {banners.map((item, index) => (
                 <CarouselItem key={index} className="h-full p-0">
                   <div className="relative w-full h-full">
-                    <Link href="/shop" className="block size-full">
+                    <Link href={item.imageUrl || "/shop"} className="block size-full">
                       <Image
                         src={item.imageUrl}
                         alt={item.title}
