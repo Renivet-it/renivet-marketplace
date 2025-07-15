@@ -41,9 +41,7 @@ export default function Page() {
                 <BeautyCareRoutineFetch />
             </Suspense>
 
-                                      <Suspense>
-                <ProductGridFetchTopPicks />
-              </Suspense>
+
                                      <Suspense>
                 <ProductGridFetchNewArrivals />
               </Suspense>
@@ -62,6 +60,9 @@ export default function Page() {
                                                    <Suspense>
                             <SustanableBatchFetch />
                         </Suspense>
+                                                              <Suspense>
+                <ProductGridFetchTopPicks />
+              </Suspense>
                        <Suspense>
                 <BeautySkinQuizFetch />
             </Suspense>

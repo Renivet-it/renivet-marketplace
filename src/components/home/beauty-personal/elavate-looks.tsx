@@ -1,43 +1,37 @@
-// components/sustainable-badges.tsx
-import { BadgeCheck, Leaf, Sprout, Palette } from "lucide-react";
+import { ShieldCheck, User, Package, Truck } from "lucide-react";
 
-const SustainableBadges = () => {
+const ServiceBadges = () => {
   return (
-    <div className="bg-[#F4F0EC] py-12 px-4">
+    <div className="bg-[#F4EEDC] mt-10 py-10 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {/* GOTS Certified */}
+          {/* 100% Original & Authentic */}
           <div className="flex flex-col items-center">
-            <div className="p-4 mb-3 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-sm">
-              <BadgeCheck className="text-green-600 w-8 h-8" />
+            <div className="p-4 mb-3 w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm">
+              <ShieldCheck className="text-yellow-700 w-8 h-8" />
             </div>
-            <h3 className="font-medium text-center">GOTS Certified</h3>
-            <p className="text-gray-600 text-sm text-center">Organic Cotton</p>
+            <h3 className="font-semibold text-center text-[16px]">100% Original &amp; Authentic</h3>
           </div>
-
-          {/* Sustainable */}
+          {/* Customer First */}
           <div className="flex flex-col items-center">
-            <div className="p-4 mb-3 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-sm">
-              <Leaf className="text-green-600 w-8 h-8" />
+            <div className="p-4 mb-3 w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm">
+              <User className="text-yellow-700 w-8 h-8" />
             </div>
-            <h3 className="font-medium text-center">Sustainable</h3>
+            <h3 className="font-semibold text-center text-[16px]">Customer First</h3>
           </div>
-
-          {/* Eco-Friendly */}
+          {/* Zero Waste Packaging */}
           <div className="flex flex-col items-center">
-            <div className="p-4 mb-3 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-sm">
-              <Sprout className="text-green-600 w-8 h-8" />
+            <div className="p-4 mb-3 w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm">
+              <Package className="text-yellow-700 w-8 h-8" />
             </div>
-            <h3 className="font-medium text-center">Eco-Friendly</h3>
+            <h3 className="font-semibold text-center text-[16px]">Zero Waste Packaging</h3>
           </div>
-
-          {/* Non-Reactive Dyes */}
+          {/* Reliable And Free Shipping */}
           <div className="flex flex-col items-center">
-            <div className="p-4 mb-3 w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-sm">
-              <Palette className="text-green-600 w-8 h-8" />
+            <div className="p-4 mb-3 w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm">
+              <Truck className="text-yellow-700 w-8 h-8" />
             </div>
-            <h3 className="font-medium text-center">Non-Reactive</h3>
-            <p className="text-gray-600 text-sm text-center">Dyes</p>
+            <h3 className="font-semibold text-center text-[16px]">Reliable And Free Shipping</h3>
           </div>
         </div>
       </div>
@@ -48,8 +42,7 @@ const SustainableBadges = () => {
 export function Page() {
   return (
     <div>
-      {/* Use the component */}
-      <SustainableBadges />
+      <ServiceBadges />
     </div>
   );
 }
