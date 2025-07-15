@@ -30,7 +30,9 @@ import {
     toggleMenStyleWithSubstance,
     toggleKidsFetchSection,
     toggleHomeAndLivingNewArrivalsSection,
-    toggleHomeAndLivingTopPicksSection
+    toggleHomeAndLivingTopPicksSection,
+        toggleBeautyNewArrivalSection,
+    toggleBeautyTopPickSection
 } from "@/actions/product-action";
 import { trpc } from "@/lib/trpc/client";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -44,6 +46,10 @@ interface PageProps {
         isStyleWithSubstanceWoMen?: boolean;
         isStyleWithSubstanceMen?: boolean;
         iskidsFetchSection?: boolean;
+        isHomeAndLivingSectionNewArrival?: boolean;
+        isHomeAndLivingSectionTopPicks?: boolean;
+        isBeautyNewArrival?: boolean;
+        isBeautyTopPicks?: boolean;
     };
 }
 
@@ -156,7 +162,7 @@ export function ProductAction({ product }: PageProps) {
             const handletoggleHomeAndLivingNewArrivalsSection = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleHomeAndLivingNewArrivalsSection(product.id, product.iskidsFetchSection ?? false);
+            const result = await toggleHomeAndLivingNewArrivalsSection(product.id, product.isHomeAndLivingSectionNewArrival ?? false);
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -173,7 +179,7 @@ export function ProductAction({ product }: PageProps) {
             const handletoggleHomeAndLivingTopPicksSection = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleHomeAndLivingTopPicksSection(product.id, product.iskidsFetchSection ?? false);
+            const result = await toggleHomeAndLivingTopPicksSection(product.id, product.isHomeAndLivingSectionTopPicks ?? false);
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -187,6 +193,40 @@ export function ProductAction({ product }: PageProps) {
         }
     };
 
+
+              const handletoggleBeautyNewArrivalSection = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleBeautyNewArrivalSection(product.id, product.isBeautyNewArrival ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+                  const handletoggleBeautyTopPickSection = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleBeautyTopPickSection(product.id, product.isBeautyTopPicks ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
     return (
         <>
             <DropdownMenu>
@@ -286,12 +326,23 @@ export function ProductAction({ product }: PageProps) {
 
                         <DropdownMenuItem onClick={handletoggleHomeAndLivingNewArrivalsSection} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
-                            <span>{product.isStyleWithSubstanceMen ? "Remove from New Arrivals (Home living)" : "Add to New Arrivals (Home living)"}</span>
+                            <span>{product.isHomeAndLivingSectionNewArrival ? "Remove from New Arrivals (Home living)" : "Add to New Arrivals (Home living)"}</span>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem onClick={handletoggleHomeAndLivingTopPicksSection} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
-                            <span>{product.isStyleWithSubstanceMen ? "Remove from Top Picks(Home living)" : "Add to Top Picks(Home living)"}</span>
+                            <span>{product.isHomeAndLivingSectionTopPicks ? "Remove from Top Picks(Home living)" : "Add to Top Picks(Home living)"}</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={handletoggleBeautyNewArrivalSection} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isBeautyNewArrival ? "Remove from New Arrivals(Beauty Personal)" : "Add to New Arrivals(Beauty Personal)"}</span>
+                        </DropdownMenuItem>
+
+
+                        <DropdownMenuItem onClick={handletoggleBeautyTopPickSection} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isBeautyTopPicks ? "Remove from Top Picks(Beauty Personal)" : "Add to Top Picks(Beauty Personal)"}</span>
                         </DropdownMenuItem>
                         {product.isPublished && (
                             <>

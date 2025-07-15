@@ -100,6 +100,8 @@ isStyleWithSubstanceWoMen: boolean("is_style_with_substance_women").default(fals
 iskidsFetchSection: boolean("is_kids_fetch_product").default(false),
 isHomeAndLivingSectionTopPicks: boolean("is_home_living_top_picks").default(false),
 isHomeAndLivingSectionNewArrival: boolean("is_home_living_new_Arrivals").default(false),
+isBeautyTopPicks: boolean("is_beauty_top_picks").default(false),
+isBeautyNewArrival: boolean("is_beauty_new_Arrivals").default(false),
         embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
@@ -212,7 +214,32 @@ export const homeandlivingTopPicks = pgTable(
     },
 );
 
+export const beautyNewArrivals = pgTable(
+    "beauty_new_arrivals",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
 
+
+export const beautyTopPicks = pgTable(
+    "beauty_top_picks",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
 
 export const productOptions = pgTable(
     "product_options",
@@ -422,6 +449,22 @@ export const homeandlivingTopPicksRelation = relations(homeandlivingTopPicks, ({
     references: [products.id],
   }),
 }));
+
+export const beautyNewArrivalsRelation = relations(beautyNewArrivals, ({ one }) => ({
+  product: one(products, {
+    fields: [beautyNewArrivals.productId],
+    references: [products.id],
+  }),
+}));
+
+
+export const beautyTopPicksRelation = relations(beautyTopPicks, ({ one }) => ({
+  product: one(products, {
+    fields: [beautyTopPicks.productId],
+    references: [products.id],
+  }),
+}));
+
 
 export const womenStyleWithSubstanceMiddlePageSectionRelations = relations(womenStyleWithSubstanceMiddlePageSection, ({ one }) => ({
   product: one(products, {
