@@ -14,8 +14,8 @@ import { MindFullStarter } from "@/components/home/beauty-personal/mindful-start
 import { NurtureBanner } from "@/components/home/beauty-personal/nurture-banner";
 import { SkinQuizBanner } from "@/components/home/beauty-personal/skin-quiz";
 import { SkinCareBanner } from "@/components/home/beauty-personal/skincare-banner";
-import { ProductGrid } from "@/components/home/home-and-living/product-grid";
-import { ProductGridNewArrivals } from "@/components/home/home-and-living/product-new-arrival";
+import { ProductGrid } from "@/components/home/beauty-personal/product-grid";
+import { ProductGridNewArrivals } from "@/components/home/beauty-personal/product-new-arrival";
 import { Page as ElavateLooksPage } from "@/components/home/beauty-personal/elavate-looks";
 
 
@@ -41,12 +41,12 @@ export default function Page() {
                 <BeautyCareRoutineFetch />
             </Suspense>
 
-                                      {/* <Suspense>
+                                      <Suspense>
                 <ProductGridFetchTopPicks />
               </Suspense>
                                      <Suspense>
                 <ProductGridFetchNewArrivals />
-              </Suspense> */}
+              </Suspense>
                                                            <Suspense>
                 <NurtureBannerFetch />
             </Suspense>
@@ -153,14 +153,14 @@ async function BeautyCareRoutineFetch() {
     return <BeautyCareSection shopByCategories={brandProducts} />;
 }
 async function ProductGridFetchTopPicks() {
-  const products = await productQueries.getHomeAndLivingTopPicks();
+  const products = await productQueries.getBeautyTopPicks();
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGrid products={products} />;
 }
 
 async function ProductGridFetchNewArrivals() {
-  const products = await productQueries.getHomeAndLivingNewArrivals();
+  const products = await productQueries.getBeautyNewArrivals();
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGridNewArrivals products={products} />;
