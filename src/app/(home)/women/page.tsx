@@ -34,8 +34,26 @@ export default function Page() {
                 }
             >
                 <BannersFetch />
+                <ShopByNewCategoriesFetch />
+                <ElevateYourLooksFetch />
+                <MiddleAnimationSectionFetch />
+                <StyleDirectoryFetch />
+                <MoodBoardFetch />
+                <DiscountPage />
+        <StyleWithSubstanceFetch />
+                <TopCollectionFetch />
+                <NewCollectionDiscountFetch />
+                <SpecialOfferFetch />
+                <GetReadyFetch />
+                <SuggestedLookFetch />
+                <NewCollectionMiddleFetch />
+                <BrandStoryTellingFetch />
+                <FindYourStyleFetch />
+                <BrandProductsFetch />
+                <WomenSkincareFetch />
+
             </Suspense>
-            <Suspense>
+            {/* <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
                         <Suspense>
@@ -65,7 +83,6 @@ export default function Page() {
             </Suspense>
 
                         <Suspense>
-                            {/* festive styl;e */}
                 <SpecialOfferFetch />
             </Suspense>
                                     <Suspense>
@@ -90,7 +107,7 @@ export default function Page() {
             </Suspense>
             <Suspense>
                 <WomenSkincareFetch />
-            </Suspense>
+            </Suspense> */}
 <div className="block md:hidden"> {/* Hidden on md and larger screens */}
   <Suspense>
     <ProductGridFetch />

@@ -26,8 +26,18 @@ export default function Page() {
                 }
             >
                 <BannersFetch />
+                <ExploreCategoryFetch />
+                <NewCollectionSection />
+                <CurateSectionFetch />
+                <SustanableBatchFetch />
+                <ProductGridFetchTopPicks />
+                <ProductGridFetchNewArrivals />
+                <MiddleBannerFetch />
+                    <EcoBannerSection />
+                    <BrandSectionFetch />
+
             </Suspense>
-                        <Suspense>
+                        {/* <Suspense>
                 <ExploreCategoryFetch />
             </Suspense>
 
@@ -59,7 +69,7 @@ export default function Page() {
                                                 <Suspense>
                     <BrandSectionFetch />
                   </Suspense>
-                  </div>
+                  </div> */}
                        {/* <Suspense>
                 <TopCollectionBannerFecth />
             </Suspense> */}

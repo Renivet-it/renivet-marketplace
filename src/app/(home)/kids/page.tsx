@@ -23,8 +23,20 @@ export default function Page() {
                 }
             >
                 <BannersFetch />
+                <ExploreCategoryFetch />
+                <SpecialCareSection />
+                <SustanableBatchFetch />
+                    <DollBannerSection />
+                <DiscountOfferSectionFetch />
+                <ProductGridFetch />
+                    <KidTwiningFetch />
+
+
+
+
+
             </Suspense>
-                        <Suspense>
+                        {/* <Suspense>
                 <ExploreCategoryFetch />
             </Suspense>
 
@@ -46,7 +58,7 @@ export default function Page() {
 
                                                 <Suspense>
                     <KidTwiningFetch />
-                  </Suspense>
+                  </Suspense> */}
 
         </>
     );

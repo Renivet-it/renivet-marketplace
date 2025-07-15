@@ -28,12 +28,22 @@ export default function Page() {
                 }
             >
                 <BannersFetch />
-            </Suspense>
-                        <Suspense>
                 <ExploreCategoryFetch />
-            </Suspense>
+                <BeautySkinCareBanner />
+                <BeautyCareRoutineFetch />
+                <NurtureBannerFetch />
+                    <BeautyDiscountFetch />
+                <BestSellerBannnerFetch />
+                <BeautyMindFulFetch />
+                            <SustanableBatchFetch />
+                <BeautySkinQuizFetch />
 
-                        <Suspense>
+            </Suspense>
+                        {/* <Suspense>
+                <ExploreCategoryFetch />
+            </Suspense> */}
+
+                        {/* <Suspense>
                 <BeautySkinCareBanner />
             </Suspense>
 
@@ -41,12 +51,6 @@ export default function Page() {
                 <BeautyCareRoutineFetch />
             </Suspense>
 
-                                      {/* <Suspense>
-                <ProductGridFetchTopPicks />
-              </Suspense>
-                                     <Suspense>
-                <ProductGridFetchNewArrivals />
-              </Suspense> */}
                                                            <Suspense>
                 <NurtureBannerFetch />
             </Suspense>
@@ -64,7 +68,7 @@ export default function Page() {
                         </Suspense>
                        <Suspense>
                 <BeautySkinQuizFetch />
-            </Suspense>
+            </Suspense> */}
         </>
     );
 }
