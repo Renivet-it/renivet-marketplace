@@ -562,6 +562,60 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     ]
 },
 
+
+{
+    title: "Beauty and Personal Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Banners Section",
+            url: "/dashboard/general/beauty-personal/banners",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Explore Categories Section",
+            url: "/dashboard/general/beauty-personal/explore-category",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Skincare Banner Section",
+            url: "/dashboard/general/beauty-personal/skincare-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Beauty care Routine Section",
+            url: "/dashboard/general/beauty-personal/beauty-routine",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Nurture Section",
+            url: "/dashboard/general/beauty-personal/nurture-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+                {
+            title: "Discount Banner Section",
+            url: "/dashboard/general/beauty-personal/discount-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Best Seller Banner",
+            url: "/dashboard/general/beauty-personal/best-seller",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Mindful starter Banner",
+            url: "/dashboard/general/beauty-personal/mindful-starter",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Skin quiz banner",
+            url: "/dashboard/general/beauty-personal/skin-quiz",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+    ]
+},
+
 {
     title: "Ui / Ux Page Section",
     url: "#",

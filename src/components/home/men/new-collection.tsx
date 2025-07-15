@@ -38,7 +38,7 @@ export function NewCollection({ className, banners, ...props }: PageProps) {
           {banners.map((item, index) => (
             <CarouselItem key={index} className="h-full p-0">
               <div className="relative w-full h-full min-h-[400px] md:min-h-[500px] lg:min-h-[600px] overflow-hidden rounded-2xl">
-                <Link href="/shop" className="block size-full">
+                <Link href={item.imageUrl || "/shop"} className="block size-full">
                   <Image
                     src={item.imageUrl}
                     alt={item.title}

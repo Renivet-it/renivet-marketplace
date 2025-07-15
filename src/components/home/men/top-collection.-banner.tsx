@@ -31,7 +31,7 @@ export function TopCollectionBanner({ className, advertisements }: PageProps) {
           {advertisements.map((item, index) => (
             <CarouselItem key={index} className="p-0 w-full">
               <div className="relative w-full aspect-[2.4/1]"> {/* 1440/600 = 2.4 */}
-                <Link href="/shop" className="block size-full">
+                <Link href={item.imageUrl || "/shop"} className="block size-full">
                   <Image
                     src={item.imageUrl}
                     alt={item.title}
