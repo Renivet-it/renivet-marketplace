@@ -78,7 +78,14 @@ import {
     beautyDiscountSection,
     beautBestSellerSection,
     beautMindFulSection,
-    beautySkinQuizSection
+    beautySkinQuizSection,
+    homePageAboutUsTrsutedBanner,
+    homeNewInstaBannerSection,
+    homeNewArtisanSection,
+    homeSwapBannerSection,
+    homeMakeFirstClick,
+    homeMatchingBanner,
+    homeBrandIntroductionBanner,
 
 } from "../schema";
 
@@ -5255,6 +5262,624 @@ console.log("test");
         return data;
     }
 
+
+//new-home-page
+
+
+       async getHomePageTrustedSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homePageAboutUsTrsutedBanner.findMany({
+            orderBy: [asc(homePageAboutUsTrsutedBanner.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageTrustedSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homePageAboutUsTrsutedBanner.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homePageAboutUsTrsutedBanner.createdAt)],
+            extras: {
+                count: db
+                    .$count(homePageAboutUsTrsutedBanner)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageTrustedSection(id: string) {
+        const data = await db.query.homePageAboutUsTrsutedBanner.findFirst({
+            where: eq(homePageAboutUsTrsutedBanner.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageTrustedSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homePageAboutUsTrsutedBanner)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageTrustedSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homePageAboutUsTrsutedBanner)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homePageAboutUsTrsutedBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageTrustedSection(id: string) {
+        const data = await db
+            .delete(homePageAboutUsTrsutedBanner)
+            .where(eq(homePageAboutUsTrsutedBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+           async getHomePageBrandIntroductionSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeBrandIntroductionBanner.findMany({
+            orderBy: [asc(homeBrandIntroductionBanner.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageBrandIntroductionSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeBrandIntroductionBanner.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeBrandIntroductionBanner.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeBrandIntroductionBanner)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageBrandIntroductionSection(id: string) {
+        const data = await db.query.homeBrandIntroductionBanner.findFirst({
+            where: eq(homeBrandIntroductionBanner.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageBrandIntroductionSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeBrandIntroductionBanner)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageBrandIntroductionSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeBrandIntroductionBanner)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeBrandIntroductionBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageBrandIntroductionSection(id: string) {
+        const data = await db
+            .delete(homeBrandIntroductionBanner)
+            .where(eq(homeBrandIntroductionBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+    //
+       async getHomePageMatchingSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeMatchingBanner.findMany({
+            orderBy: [asc(homeMatchingBanner.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageMatchingSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeMatchingBanner.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeMatchingBanner.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeMatchingBanner)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageMatchingSection(id: string) {
+        const data = await db.query.homeMatchingBanner.findFirst({
+            where: eq(homeMatchingBanner.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageMatchingSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeMatchingBanner)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageMatchingSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeMatchingBanner)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeMatchingBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageMatchingSection(id: string) {
+        const data = await db
+            .delete(homeMatchingBanner)
+            .where(eq(homeMatchingBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+         async getHomePageFirstConciousClickSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeMakeFirstClick.findMany({
+            orderBy: [asc(homeMakeFirstClick.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageFirstConciousClickSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeMakeFirstClick.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeMakeFirstClick.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeMakeFirstClick)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageFirstConciousClickSection(id: string) {
+        const data = await db.query.homeMakeFirstClick.findFirst({
+            where: eq(homeMakeFirstClick.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageFirstConciousClickSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeMakeFirstClick)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageFirstConciousClickSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeMakeFirstClick)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeMakeFirstClick.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageFirstConciousClickSection(id: string) {
+        const data = await db
+            .delete(homeMakeFirstClick)
+            .where(eq(homeMakeFirstClick.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+
+         async getHomePageSwapBannerSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeSwapBannerSection.findMany({
+            orderBy: [asc(homeSwapBannerSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageSwapBannerSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeSwapBannerSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeSwapBannerSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeSwapBannerSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageSwapBannerSection(id: string) {
+        const data = await db.query.homeSwapBannerSection.findFirst({
+            where: eq(homeSwapBannerSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageSwapBannerSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeSwapBannerSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageSwapBannerSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeSwapBannerSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeSwapBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageSwapBannerSection(id: string) {
+        const data = await db
+            .delete(homeSwapBannerSection)
+            .where(eq(homeSwapBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+
+
+
+async getHomePageNewArtisanSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeNewArtisanSection.findMany({
+            orderBy: [asc(homeNewArtisanSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageNewArtisanSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeNewArtisanSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeNewArtisanSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeNewArtisanSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageNewArtisanSection(id: string) {
+        const data = await db.query.homeNewArtisanSection.findFirst({
+            where: eq(homeNewArtisanSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageNewArtisanSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeNewArtisanSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageNewArtisanSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeNewArtisanSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeNewArtisanSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageNewArtisanSection(id: string) {
+        const data = await db
+            .delete(homeNewArtisanSection)
+            .where(eq(homeNewArtisanSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+    async getHomePageInsaBannerSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeNewInstaBannerSection.findMany({
+            orderBy: [asc(homeNewInstaBannerSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageInsaBannerSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeNewInstaBannerSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeNewInstaBannerSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeNewInstaBannerSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageInsaBannerSection(id: string) {
+        const data = await db.query.homeNewInstaBannerSection.findFirst({
+            where: eq(homeNewInstaBannerSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageInsaBannerSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeNewInstaBannerSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageInsaBannerSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeNewInstaBannerSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeNewInstaBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageInsaBannerSection(id: string) {
+        const data = await db
+            .delete(homeNewInstaBannerSection)
+            .where(eq(homeNewInstaBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 
 }
 

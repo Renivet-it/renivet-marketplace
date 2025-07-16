@@ -562,3 +562,68 @@ export const beautySkinQuizSection = pgTable("beauty_skin_quiz_section", {
     url: text("url"),
     ...timestamps,
 });
+
+
+export const homePageAboutUsTrsutedBanner = pgTable("home_page_trust_banner", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+
+export const homeBrandIntroductionBanner = pgTable("home_brand_introduction_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const homeMatchingBanner = pgTable("home_matching_banner", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const homeMakeFirstClick = pgTable("home_make_first_concious_click_banner", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const homeSwapBannerSection = pgTable("home_swap_banner_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const homeNewArtisanSection = pgTable("home_artisan_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const homeNewInstaBannerSection = pgTable("home_insta_banner_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
