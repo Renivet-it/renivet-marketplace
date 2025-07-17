@@ -26,7 +26,7 @@ export function MarketingStrip({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-5 pt-10 md:px-8 md:py-10 md:pt-20",
+                "bg-[#F4F0EC] flex w-full justify-center py-5 pt-10 md:px-8 md:py-10 md:pt-20",
                 className
             )}
             {...props}

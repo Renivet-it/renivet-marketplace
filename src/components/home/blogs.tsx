@@ -27,7 +27,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
     return (
         <section
             className={cn(
-                "flex justify-center bg-muted px-4 py-5 md:px-8 md:py-10",
+                "bg-[#F4F0EC] flex justify-center px-4 py-5 md:px-8 md:py-10",
                 className
             )}
             {...props}

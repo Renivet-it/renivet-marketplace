@@ -25,7 +25,7 @@ export function BrandProducts({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-5 md:px-8 md:py-10",
+                "flex w-full bg-[#F4F0EC] justify-center py-5 md:px-8 md:py-10",
                 className
             )}
             {...props}

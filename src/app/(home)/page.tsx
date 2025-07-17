@@ -7,6 +7,7 @@ import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
 import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
+import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
 
 
 export default function Page() {
@@ -25,15 +26,18 @@ export default function Page() {
                             <Suspense>
                 <BrandCollaborateFetch />
             </Suspense>
-            <Suspense>
-                <ShopByNewCategoriesFetch />
+                               <Suspense>
+                <ShopCategoryFetch />
             </Suspense>
+            {/* <Suspense>
+                <ShopByNewCategoriesFetch />
+            </Suspense> */}
             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
-                        <Suspense>
+                        {/* <Suspense>
                 <NewAdvertisementsFetch />
-            </Suspense>
+            </Suspense> */}
             <Suspense>
                 <MarketingStripFetch />
             </Suspense>
@@ -71,7 +75,11 @@ async function SustanableBatchFetch() {
 
     return <ElavateLooksPage />;
 }
+async function ShopCategoryFetch() {
+    //@ts-ignore
 
+    return <ShopCategories />;
+}
 async function BrandCollaborateFetch() {
     //@ts-ignore
 

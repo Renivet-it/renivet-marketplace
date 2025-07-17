@@ -89,7 +89,7 @@ export function DealofTheMonthStrip({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-5 md:py-10 bg-white shadow-lg rounded-lg",
+                "bg-[#F4F0EC] flex w-full justify-center py-5 md:py-10 shadow-lg rounded-lg",
                 className
             )}
             {...props}
