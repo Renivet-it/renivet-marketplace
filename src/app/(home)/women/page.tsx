@@ -69,7 +69,6 @@ export default function Page() {
             </Suspense>
 
                         <Suspense>
-                            {/* festive styl;e */}
                 <SpecialOfferFetch />
             </Suspense>
                                     <Suspense>
