@@ -1,3 +1,6 @@
+export const revalidate = 60;
+
+
 import { AdvertisementPage, Blogs, MarketingStrip, ShopByCategories } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
@@ -13,7 +16,6 @@ import { DollBanner } from "@/components/home/kids/doll-banner";
 import { TwiningSection } from "@/components/home/kids/twining-section";
 import { ProductGrid } from "@/components/home/kids/product-grid";
 import { Page as ElavateLooksPage } from "@/components/home/kids/elavate-looks";
-
 export default function Page() {
     return (
         <>
@@ -71,7 +73,7 @@ async function ExploreCategoryFetch() {
     const [sbc, sbcT] = await Promise.all([
         // homeShopByCategoryQueries.getAllHomeShopByCategories(),
     //@ts-ignore
-        await WomenHomeSectionQueries.getKidsExploreCategorySections()
+       WomenHomeSectionQueries.getKidsExploreCategorySections()
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
@@ -121,7 +123,7 @@ async function ShopByNewCategoriesFetch() {
     const [sbc, sbcT] = await Promise.all([
         // homeShopByCategoryQueries.getAllHomeShopByCategories(),
     //@ts-ignore
-        await WomenHomeSectionQueries.getMenExploreCategorySections()
+       WomenHomeSectionQueries.getMenExploreCategorySections()
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;

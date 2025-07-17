@@ -1,3 +1,6 @@
+export const revalidate = 60;
+
+
 import { AdvertisementPage, Blogs, MarketingStrip } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
@@ -25,6 +28,7 @@ import { ProductGrid } from "@/components/home/women/product-grid";
 import { StyleWithSubstance } from "@/components/home/women/style-with-substance";
 import { GetReadySection } from "@/components/home/women/get-ready-style";
 import { GetNewDiscountCollection } from "@/components/home/women/new-discount-collection";
+
 export default function Page() {
     return (
         <>
@@ -138,7 +142,7 @@ async function ShopByNewCategoriesFetch() {
         // homeShopByCategoryQueries.getAllHomeShopByCategories(),
     //@ts-ignore
 
-        await WomenHomeSectionQueries.getAllexploreCategories()
+       WomenHomeSectionQueries.getAllexploreCategories()
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;

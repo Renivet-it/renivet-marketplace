@@ -1,3 +1,6 @@
+export const revalidate = 60;
+
+
 import { AdvertisementPage, Blogs, MarketingStrip, ShopByCategories } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
@@ -138,7 +141,7 @@ async function ShopByNewCategoriesFetch() {
     const [sbc, sbcT] = await Promise.all([
         // homeShopByCategoryQueries.getAllHomeShopByCategories(),
     //@ts-ignore
-        await WomenHomeSectionQueries.getMenExploreCategorySections()
+    WomenHomeSectionQueries.getMenExploreCategorySections()
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;

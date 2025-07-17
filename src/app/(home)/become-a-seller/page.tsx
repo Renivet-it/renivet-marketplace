@@ -1,3 +1,6 @@
+
+export const revalidate = 60;
+
 import { ExistBrandRequestPage } from "@/components/brand-request";
 import { BrandRequestForm } from "@/components/globals/forms";
 import { GeneralShell } from "@/components/globals/layouts";
@@ -24,7 +27,6 @@ export const metadata: Metadata = {
     title: "Become a Seller",
     description: "Register your brand with us.",
 };
-
 export default function Page() {
     return (
         <GeneralShell
