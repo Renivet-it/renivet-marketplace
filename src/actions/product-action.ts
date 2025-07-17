@@ -2,7 +2,7 @@
 
 import { productQueries } from "@/lib/db/queries";
 import { db } from "@/lib/db";
-import { womenPageFeaturedProducts, products, menPageFeaturedProducts, womenStyleWithSubstanceMiddlePageSection, menCuratedHerEssence, homeandlivingNewArrival, homeandlivingTopPicks, kidsFreshCollectionSection } from "@/lib/db/schema";
+import { womenPageFeaturedProducts, products, menPageFeaturedProducts, womenStyleWithSubstanceMiddlePageSection, menCuratedHerEssence, homeandlivingNewArrival, homeandlivingTopPicks, kidsFreshCollectionSection, beautyTopPicks, beautyNewArrivals } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -499,6 +499,168 @@ export async function toggleHomeAndLivingTopPicksSection(productId: string, isFe
             await db
                 .update(products)
                 .set({ isHomeAndLivingSectionTopPicks: true })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product added to Style With Substance list" };
+        }
+    } catch (error) {
+        console.error("Error toggling Style With Substance status:", error);
+        return { success: false, error: "Failed to update Style With Substance status" };
+    }
+}
+
+
+
+
+
+
+export async function toggleBeautyNewArrivalSection(productId: string, isFeatured: boolean) {
+    try {
+        // Check if product exists in products table
+        const existingProduct = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        if (isFeatured) {
+            // Remove from featured products (soft delete)
+            const result = await db
+                .update(beautyNewArrivals)
+                .set({
+                    isDeleted: true,
+                    deletedAt: new Date()
+                })
+                .where(eq(beautyNewArrivals.productId, productId));
+
+            if (!result) {
+                return { success: false, error: "Featured product not found" };
+            }
+
+            // Update isStyleWithSubstanceMen to false in products table
+            await db
+                .update(products)
+                .set({ isBeautyNewArrival: false })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product removed from Style With Substance list" };
+        } else {
+            // Check if product already exists and is not deleted
+            const existing = await db
+                .select()
+                .from(beautyNewArrivals)
+                .where(eq(beautyNewArrivals.productId, productId))
+                .then((res) => res[0]);
+
+            if (existing && !existing.isDeleted) {
+                return { success: false, error: "Product is already in Style With Substance" };
+            }
+
+            if (existing) {
+                // Restore if previously soft deleted
+                await db
+                    .update(beautyNewArrivals)
+                    .set({
+                        isDeleted: false,
+                        deletedAt: null
+                    })
+                    .where(eq(beautyNewArrivals.productId, productId));
+            } else {
+                // Add new entry
+                await db.insert(beautyNewArrivals)
+                    .values({ productId });
+            }
+
+            // Update isBeautyNewArrival to true in products table
+            await db
+                .update(products)
+                .set({ isBeautyNewArrival: true })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product added to Style With Substance list" };
+        }
+    } catch (error) {
+        console.error("Error toggling Style With Substance status:", error);
+        return { success: false, error: "Failed to update Style With Substance status" };
+    }
+}
+
+
+
+
+export async function toggleBeautyTopPickSection(productId: string, isFeatured: boolean) {
+    try {
+        // Check if product exists in products table
+        const existingProduct = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        if (isFeatured) {
+            // Remove from featured products (soft delete)
+            const result = await db
+                .update(beautyTopPicks)
+                .set({
+                    isDeleted: true,
+                    deletedAt: new Date()
+                })
+                .where(eq(beautyTopPicks.productId, productId));
+
+            if (!result) {
+                return { success: false, error: "Featured product not found" };
+            }
+
+            // Update isStyleWithSubstanceMen to false in products table
+            await db
+                .update(products)
+                .set({ isBeautyTopPicks: false })
+                .where(eq(products.id, productId));
+
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Product removed from Style With Substance list" };
+        } else {
+            // Check if product already exists and is not deleted
+            const existing = await db
+                .select()
+                .from(beautyTopPicks)
+                .where(eq(beautyTopPicks.productId, productId))
+                .then((res) => res[0]);
+
+            if (existing && !existing.isDeleted) {
+                return { success: false, error: "Product is already in Style With Substance" };
+            }
+
+            if (existing) {
+                // Restore if previously soft deleted
+                await db
+                    .update(beautyTopPicks)
+                    .set({
+                        isDeleted: false,
+                        deletedAt: null
+                    })
+                    .where(eq(beautyTopPicks.productId, productId));
+            } else {
+                // Add new entry
+                await db.insert(beautyTopPicks)
+                    .values({ productId });
+            }
+
+            // Update isBeautyTopPicks to true in products table
+            await db
+                .update(products)
+                .set({ isBeautyTopPicks: true })
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
