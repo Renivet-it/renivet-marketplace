@@ -565,21 +565,6 @@ export default function Page() {
           {productGrid && <ProductGrid products={productGrid} />}
         </Suspense>
       </div>
-      <Suspense>
-        {blogs && <Blogs blogs={blogs} />}
-      </Suspense>
-      <Suspense>
-        {marketingStrip && <MarketingStrip marketingStrip={marketingStrip} />}
-      </Suspense>
-      <Suspense>
-        {dealMarketingStrip && <DealofTheMonthStrip marketingStrip={dealMarketingStrip} />}
-      </Suspense>
-      <Suspense>
-        {advertisements && <AdvertisementPage advertisements={advertisements} />}
-      </Suspense>
-      <Suspense>
-        {newAdvertisements && <AdvertisementDiscountPage advertisements={newAdvertisements} />}
-      </Suspense>
     </>
   );
 }

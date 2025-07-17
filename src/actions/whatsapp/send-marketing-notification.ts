@@ -10,7 +10,7 @@ export async function sendSingleWhatsAppMessage(recipient: {
   try {
     const result = await sendPromoOfferMessage({
       recipientPhoneNumber: recipient.phone_number,
-      templateName: "intro_message1_2025",
+      templateName: "consciuos_click",
       languageCode: "en_US",
       parameters: [recipient.full_name],
     });

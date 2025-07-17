@@ -84,7 +84,7 @@ export async function sendWhatsAppMessage({
 
 export async function sendPromoOfferMessage({
   recipientPhoneNumber,
-  templateName = "intro_message1_2025",
+  templateName = "consciuos_click",
   languageCode = "en",
   parameters = [],
 }: {
@@ -102,8 +102,8 @@ export async function sendPromoOfferMessage({
   }
 
   const templates = {
-    intro_message1_2025: {
-      contentSid: "HXc574320a4c1dc75f2f86b0edfc24a73c",
+    consciuos_click: {
+      contentSid: "HXccde2ac426a9787bc2a8a04900bb7bd7",
       parameterCount: 1,
     },
   };

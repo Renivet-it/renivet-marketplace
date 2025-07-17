@@ -12,7 +12,7 @@ export function AdvertisementPage({ advertisements }: PageProps) {
     if (!advertisements.length) return null;
 
     return (
-        <div className="relative w-full">
+        <div className="bg-[#F4F0EC] relative w-full">
             {advertisements.map((ad) => (
                 <div
                     key={ad.id}
