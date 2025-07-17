@@ -84,7 +84,7 @@ export async function sendWhatsAppMessage({
 
 export async function sendPromoOfferMessage({
   recipientPhoneNumber,
-  templateName = "promo_offer_2025",
+  templateName = "intro_message1_2025",
   languageCode = "en",
   parameters = [],
 }: {
@@ -102,9 +102,9 @@ export async function sendPromoOfferMessage({
   }
 
   const templates = {
-    promo_offer_2025: {
-      contentSid: "HX52281c1e1a2200a99396b76177fff81c",
-      parameterCount: 3,
+    intro_message1_2025: {
+      contentSid: "HXc574320a4c1dc75f2f86b0edfc24a73c",
+      parameterCount: 1,
     },
   };
     // @ts-ignore
