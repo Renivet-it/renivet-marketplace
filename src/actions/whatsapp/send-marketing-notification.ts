@@ -5,15 +5,14 @@ import { sendPromoOfferMessage } from "@/lib/whatsapp/index";
 export async function sendSingleWhatsAppMessage(recipient: {
   full_name: string;
   phone_number: string;
-  discount: string;
-  expiry_date: string;
+
 }) {
   try {
     const result = await sendPromoOfferMessage({
       recipientPhoneNumber: recipient.phone_number,
-      templateName: "promo_offer_2025",
+      templateName: "intro_message1_2025",
       languageCode: "en_US",
-      parameters: [recipient.full_name, recipient.discount, recipient.expiry_date],
+      parameters: [recipient.full_name],
     });
 
     const messageStatus = result.data.status || "unknown";

@@ -11,8 +11,6 @@ import * as XLSX from "xlsx";
 type Recipient = {
   full_name: string;
   phone_number: string;
-  discount: string;
-  expiry_date: string;
 };
 
 export function MarketingWhatsAppForm() {
@@ -27,7 +25,7 @@ export function MarketingWhatsAppForm() {
 
   const { register, handleSubmit } = useForm();
 
-  const expectedHeaders = ["full_name", "phone_number", "discount", "expiry_date"];
+  const expectedHeaders = ["full_name", "phone_number"];
 
   const normalizeHeader = (header: string) => {
     const headerMap: { [key: string]: string } = {
@@ -36,11 +34,6 @@ export function MarketingWhatsAppForm() {
       phonenumber: "phone_number",
       "phone number": "phone_number",
       phone: "phone_number",
-      discountpercentage: "discount",
-      "discount(%)": "discount",
-      discountpercent: "discount",
-      expirydate: "expiry_date",
-      "expiry date": "expiry_date",
     };
     return headerMap[header.trim().toLowerCase()] || header.trim().toLowerCase();
   };
@@ -50,18 +43,11 @@ export function MarketingWhatsAppForm() {
     return phoneRegex.test(phone);
   };
 
-  const validateDiscount = (discount: string) => {
-    return /^[0-9]+(%?)$/.test(discount);
-  };
-
   const transformPhoneNumber = (phone: string) => {
-    // Remove spaces, quotes, and other non-digit characters except the leading +
     phone = phone.replace(/[^+\d]/g, "");
-    // If the number doesn't start with +, assume it's a 10-digit Indian number
     if (!phone.startsWith("+") && /^\d{10}$/.test(phone)) {
       return `+91${phone}`;
     }
-    // If it starts with +, assume it's already in E.164 format
     return phone;
   };
 
@@ -110,8 +96,6 @@ export function MarketingWhatsAppForm() {
             const transformedRow = {
               full_name: row.full_name?.trim().replace(/^"|"$/g, "") || "",
               phone_number: transformPhoneNumber(row.phone_number || ""),
-              discount: row.discount?.trim().replace(/^"|"$/g, "") || "",
-              expiry_date: row.expiry_date?.trim().replace(/^"|"$/g, "") || "",
             };
 
             const errors: string[] = [];
@@ -119,10 +103,6 @@ export function MarketingWhatsAppForm() {
             if (!transformedRow.phone_number || !validatePhoneNumber(transformedRow.phone_number)) {
               errors.push(`Invalid phone_number: ${transformedRow.phone_number}`);
             }
-            if (!transformedRow.discount || !validateDiscount(transformedRow.discount)) {
-              errors.push(`Invalid discount: ${transformedRow.discount}`);
-            }
-            if (!transformedRow.expiry_date) errors.push("Missing expiry_date");
 
             if (errors.length > 0) {
               invalidRows.push(`Row ${index + 2}: ${errors.join(", ")}`);
@@ -177,7 +157,7 @@ export function MarketingWhatsAppForm() {
 
   const downloadTemplate = () => {
     console.log("Step 16: downloadTemplate called");
-    const csvContent = "full_name,phone_number,discount,expiry_date\nJohn Doe,9876543210,20,2025-06-30\nJane Smith,8765432109,15,2025-06-30";
+    const csvContent = "full_name,phone_number\nJohn Doe,9876543210\nJane Smith,8765432109";
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -188,96 +168,91 @@ export function MarketingWhatsAppForm() {
     console.log("Step 17: Template downloaded");
   };
 
-const onSubmit = async () => {
-  console.log("Step 18: onSubmit called", { recipients });
-  if (recipients.length === 0) {
-    console.log("Step 19: No recipients found");
-    toast.error("Please upload a valid CSV file with recipient data.");
-    return;
-  }
-
-  setIsLoading(true);
-  setProgress(0);
-  console.log("Step 20: Set loading and progress", { isLoading: true, progress: 0 });
-
-  let successCount = 0;
-  const errors: string[] = [];
-  const logEntries: Array<{ phone_number: string; full_name: string; status: string }> = [];
-  const totalRecipients = recipients.length;
-
-  // Process each recipient one by one and update progress
-  for (let i = 0; i < totalRecipients; i++) {
-    const recipient = recipients[i];
-    console.log(`Step 21.${i + 1}: Processing recipient ${i + 1}/${totalRecipients}`, { recipient });
-
-    const result = await sendSingleWhatsAppMessage(recipient);
-    console.log(`Step 22.${i + 1}: sendSingleWhatsAppMessage result`, { result });
-
-    logEntries.push({
-      phone_number: recipient.phone_number,
-      full_name: recipient.full_name,
-      status: result.status,
-    });
-
-    if (result.success) {
-      successCount++;
-    } else if (result.error) {
-      errors.push(result.error);
+  const onSubmit = async () => {
+    console.log("Step 18: onSubmit called", { recipients });
+    if (recipients.length === 0) {
+      console.log("Step 19: No recipients found");
+      toast.error("Please upload a valid CSV file with recipient data.");
+      return;
     }
 
-    // Calculate and update progress
-    const currentProgress = ((i + 1) / totalRecipients) * 100;
-    setProgress(currentProgress);
-    console.log(`Step 23.${i + 1}: Updated progress`, { progress: currentProgress });
-  }
+    setIsLoading(true);
+    setProgress(0);
+    console.log("Step 20: Set loading and progress", { isLoading: true, progress: 0 });
 
-  // Generate Excel file client-side
-  if (logEntries.length > 0) {
-    console.log("Step 24: Generating Excel file", { logEntries });
-    const worksheetData = logEntries.map((entry) => ({
-      "Phone Number": entry.phone_number,
-      "Full Name": entry.full_name,
-      Status: entry.status,
-    }));
+    let successCount = 0;
+    const errors: string[] = [];
+    const logEntries: Array<{ phone_number: string; full_name: string; status: string }> = [];
+    const totalRecipients = recipients.length;
 
-    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Message Log");
+    for (let i = 0; i < totalRecipients; i++) {
+      const recipient = recipients[i];
+      console.log(`Step 21.${i + 1}: Processing recipient ${i + 1}/${totalRecipients}`, { recipient });
 
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `whatsapp_message_log_${new Date().toISOString().split("T")[0]}.xlsx`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    console.log("Step 25: Excel file downloaded");
-  } else {
-    console.log("Step 24: No log entries to generate Excel file");
-    toast.warning("No log entries available to generate Excel file.");
-  }
+      const result = await sendSingleWhatsAppMessage(recipient);
+      console.log(`Step 22.${i + 1}: sendSingleWhatsAppMessage result`, { result });
 
-  // Display toast based on result
-  if (successCount > 0) {
-    console.log("Step 26: WhatsApp sending successful", { successCount });
-    toast.success(`Successfully sent ${successCount} WhatsApp messages`);
-  } else {
-    console.log("Step 28: WhatsApp sending failed", { errors });
-    toast.error(errors.join("; ") || "Failed to send WhatsApp messages");
-  }
+      logEntries.push({
+        phone_number: recipient.phone_number,
+        full_name: recipient.full_name,
+        status: result.status,
+      });
 
-  // Reset state regardless of success or failure
-  setRecipients([]);
-  setShowPreview(false);
-  setConfirmSend(false);
-  if (fileInputRef.current) fileInputRef.current.value = "";
-  console.log("Step 27: Reset state", { recipients: [], showPreview: false, confirmSend: false });
+      if (result.success) {
+        successCount++;
+      } else if (result.error) {
+        errors.push(result.error);
+      }
 
-  setIsLoading(false);
-  setProgress(100);
-  console.log("Step 29: Set loading to false", { isLoading: false, progress: 100 });
-};
+      const currentProgress = ((i + 1) / totalRecipients) * 100;
+      setProgress(currentProgress);
+      console.log(`Step 23.${i + 1}: Updated progress`, { progress: currentProgress });
+    }
+
+    if (logEntries.length > 0) {
+      console.log("Step 24: Generating Excel file", { logEntries });
+      const worksheetData = logEntries.map((entry) => ({
+        "Phone Number": entry.phone_number,
+        "Full Name": entry.full_name,
+        Status: entry.status,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Message Log");
+
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `whatsapp_message_log_${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      console.log("Step 25: Excel file downloaded");
+    } else {
+      console.log("Step 24: No log entries to generate Excel file");
+      toast.warning("No log entries available to generate Excel file.");
+    }
+
+    if (successCount > 0) {
+      console.log("Step 26: WhatsApp sending successful", { successCount });
+      toast.success(`Successfully sent ${successCount} WhatsApp messages`);
+    } else {
+      console.log("Step 28: WhatsApp sending failed", { errors });
+      toast.error(errors.join("; ") || "Failed to send WhatsApp messages");
+    }
+
+    setRecipients([]);
+    setShowPreview(false);
+    setConfirmSend(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    console.log("Step 27: Reset state", { recipients: [], showPreview: false, confirmSend: false });
+
+    setIsLoading(false);
+    setProgress(100);
+    console.log("Step 29: Set loading to false", { isLoading: false, progress: 100 });
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-8 bg-gray-50 rounded-xl shadow-lg">
@@ -322,7 +297,7 @@ const onSubmit = async () => {
             <p className="text-red-500 text-sm mt-2">{fileError}</p>
           )}
           <p className="text-xs text-gray-400 mt-2">
-            Required columns: full_name, phone_number, discount, expiry_date
+            Required columns: full_name, phone_number
           </p>
         </div>
 
@@ -351,12 +326,6 @@ const onSubmit = async () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Phone Number
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Discount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Expiry Date
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -364,8 +333,6 @@ const onSubmit = async () => {
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="px-6 py-4 text-sm text-gray-900">{recipient.full_name}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{recipient.phone_number}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{recipient.discount}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{recipient.expiry_date}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -399,37 +366,37 @@ const onSubmit = async () => {
         </button>
       </form>
 
-{confirmSend && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-    <div className="bg-white rounded-lg p-6 max-w-md w-full">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
-        Confirm Bulk WhatsApp Send
-      </h3>
-      <p className="text-sm text-gray-600 mb-6">
-        You are about to send WhatsApp messages to {recipients.length} recipients. Are you sure?
-      </p>
-      <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => setConfirmSend(false)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm font-semibold"
-        >
-          <X className="w-4 h-4" />
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit(onSubmit)}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-semibold"
-        >
-          <Send className="w-4 h-4" />
-          {isLoading ? "Sending..." : "Confirm Send"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+      {confirmSend && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Confirm Bulk WhatsApp Send
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              You are about to send WhatsApp messages to {recipients.length} recipients. Are you sure?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmSend(false)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm font-semibold"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit(onSubmit)}
+                disabled={isLoading}
+                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 text-sm font-semibold"
+              >
+                <Send className="w-4 h-4" />
+                {isLoading ? "Sending..." : "Confirm Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
