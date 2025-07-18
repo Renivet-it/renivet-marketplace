@@ -101,7 +101,7 @@ function CategoryCard({
             "relative group overflow-hidden bg-white rounded-lg shadow-sm hover:shadow-md transition-all",
             className
         )}>
-            <Link href={banner.imageUrl || "/shop"} className="block w-full h-full">
+            <Link href={banner.url || "/shop"} className="block w-full h-full">
                 <Image
                     src={banner?.imageUrl || "/fallback-image.jpg"}
                     alt={banner?.title || "Category image"}

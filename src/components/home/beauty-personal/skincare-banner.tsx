@@ -31,7 +31,7 @@ export function SkinCareBanner({ className, banners, ...props }: PageProps) {
                         {banners.map((item, index) => (
                             <CarouselItem key={index} className="p-0">
                                 <div className="relative w-full aspect-[1440/530] md:h-[530px]">
-                                    <Link href={item.imageUrl || "/shop"} className="block w-full h-full">
+                                    <Link href={item.url || "/shop"} className="block w-full h-full">
                                         <Image
                                             src={item.imageUrl}
                                             alt={item.title}

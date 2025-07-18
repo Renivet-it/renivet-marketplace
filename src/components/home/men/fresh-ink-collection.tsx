@@ -36,7 +36,7 @@ export function FreshInkCollection({ className, banners, ...props }: PageProps) 
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative size-full">
-                                <Link href={item.imageUrl || "/shop"}>
+                                <Link href={item.url || "/shop"}>
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}

@@ -73,7 +73,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     alt={item.title}
                                     width={1440}
                                     height={550}
-                                    className="absolute inset-0 w-full h-full object-cover brightness-75"
+                                    className="absolute inset-0 w-full h-full"
                                     priority={index === 0}
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center p-6">
@@ -82,7 +82,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-6"
                                         asChild
                                     >
-                                        <Link href={item.imageUrl || "/shop"}>Shop Now</Link>
+                                        <Link href={item.url || "/shop"}>Shop Now</Link>
                                     </Button>
                                 </div>
                             </div>

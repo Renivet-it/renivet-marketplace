@@ -54,7 +54,7 @@ export function WomenSkincare({ className, banners }: PageProps) {
                                         className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-6"
                                         asChild
                                     >
-                                        <Link href="/shop">Discover More</Link>
+                                        <Link href={item.url || "/shop"}>Discover More</Link>
                                     </Button>
                                 </div>
                             </div>

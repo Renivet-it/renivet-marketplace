@@ -36,7 +36,7 @@ export function GetReadySection({ className, banners, ...props }: PageProps) {
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
                             <div className="relative w-full h-[50vw] md:h-[600px] md:aspect-[1380/600]">
-                                <Link href={item.imageUrl || "/shop"} className="block w-full h-full">
+                                <Link href={item.url || "/shop"} className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
