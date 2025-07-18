@@ -19,7 +19,7 @@ export function ShopCategories() {
       href: "/men"
     },
     {
-      name: "Little Renivet",
+      name: "Kids",
       imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN37iwsJl64McafQHoWsZUzihAkJ3DF5EGgPpY",
       href: "/kids"
     },
@@ -37,10 +37,9 @@ export function ShopCategories() {
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const [imagesPerSlide, setImagesPerSlide] = useState(1); // Start with 1 for mobile
+  const [imagesPerSlide, setImagesPerSlide] = useState(1);
 
   useEffect(() => {
-    // Responsive image count
     const handleResize = () => {
       if (window.innerWidth < 640) {
         setImagesPerSlide(1);
@@ -56,7 +55,6 @@ export function ShopCategories() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Auto-advance carousel
   useEffect(() => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
@@ -76,7 +74,6 @@ export function ShopCategories() {
     );
   };
 
-  // Get current set of images to display
   const getCurrentImages = () => {
     const startIndex = currentSlide * imagesPerSlide;
     const images = [];
@@ -90,35 +87,36 @@ export function ShopCategories() {
   const currentImages = getCurrentImages();
 
   return (
-    <section className="w-full bg-[#F4F0EC] py-8 md:py-12">
-      <div className="max-w-screen-xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-12">
+    <section className="bg-[#F4F0EC]w-full bg-[#F4F0EC] py-12 md:py-16">
+      <div className="max-w-screen-xl mx-auto px-6">
+        <div className="flex flex-col md:flex-row gap-12">
           {/* Left Side - Text Content */}
-          <div className="md:w-1/2 flex flex-col justify-center text-center md:text-left">
-            <h2 className="text-xl md:text-3xl font-light mb-3 md:mb-4">SHOP BY CATEGORY</h2>
-            <p className="text-xs md:text-base text-gray-600 mb-4 md:mb-6">
-              Shop the latest fashion trends from the top luxury designers.
-            </p>
-
-            <div className="mb-6 md:mb-8 flex justify-center md:justify-start">
-              <Button
-                asChild
-                variant="outline"
-                className="border-black text-black hover:bg-gray-100 text-xs md:text-base"
-              >
-                <Link href="/new-arrivals">
-                  SHOP NEW IN
-                </Link>
-              </Button>
+          <div className="md:w-2/5 flex flex-col justify-center text-center md:text-left">
+            <div className="space-y-6">
+              <h2 className="text-3xl md:text-4xl font-light tracking-wide">SHOP BY CATEGORY</h2>
+              <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+                Shop the latest fashion trends from the top luxury designers.
+              </p>
+              <div className="pt-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-black text-black hover:bg-gray-100 text-base px-8 py-3 rounded-none"
+                >
+                  <Link href="/shop">
+                    SHOP NEW IN
+                  </Link>
+                </Button>
+              </div>
             </div>
 
             {/* Category Links - Hidden on mobile, shown on desktop */}
-            <div className="hidden md:flex flex-col gap-2">
+            <div className="hidden md:flex flex-col space-y-3 pt-8">
               {categories.slice(0, 5).map((category, index) => (
                 <Link
                   key={index}
                   href={category.href}
-                  className="text-sm md:text-base font-medium hover:text-gray-600 transition-colors py-1"
+                  className="text-lg font-medium hover:text-gray-600 transition-colors py-1"
                 >
                   {category.name}
                 </Link>
@@ -127,18 +125,18 @@ export function ShopCategories() {
           </div>
 
           {/* Right Side - Category Carousel */}
-          <div className="md:w-1/2 relative">
+          <div className="md:w-3/5 relative">
             <div className="relative w-full">
               {/* Carousel Images */}
-              <div className={`grid ${imagesPerSlide === 1 ? "grid-cols-1" : imagesPerSlide === 2 ? "grid-cols-2" : "grid-cols-3"} gap-3 md:gap-[10px]`}>
+              <div className={`grid ${imagesPerSlide === 1 ? "grid-cols-1" : imagesPerSlide === 2 ? "grid-cols-2" : "grid-cols-3"} gap-4`}>
                 {currentImages.map((category, index) => (
                   <Link
                     key={index}
                     href={category.href}
-                    className="group relative overflow-hidden rounded-md hover:shadow-lg transition-all duration-300 mx-auto"
+                    className="group relative overflow-hidden hover:shadow-md transition-all duration-300 mx-auto"
                     style={{
-                      width: imagesPerSlide === 1 ? "100%" : "207px",
-                      height: imagesPerSlide === 1 ? "200px" : "304px"
+                      width: imagesPerSlide === 1 ? "100%" : "240px",
+                      height: imagesPerSlide === 1 ? "320px" : "360px"
                     }}
                     onMouseEnter={() => setIsAutoPlaying(false)}
                     onMouseLeave={() => setIsAutoPlaying(true)}
@@ -148,9 +146,10 @@ export function ShopCategories() {
                       alt={category.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
-                    <div className="absolute inset-0 flex items-end p-3 md:p-4 bg-gradient-to-t from-black/50 to-transparent">
-                      <h3 className="text-white font-medium text-base md:text-lg">
+                    <div className="absolute inset-0 flex items-end p-4 bg-gradient-to-t from-black/40 to-transparent">
+                      <h3 className="text-white font-medium text-lg">
                         {category.name}
                       </h3>
                     </div>
@@ -159,23 +158,23 @@ export function ShopCategories() {
               </div>
             </div>
 
-            {/* Carousel Navigation - Mobile version */}
-            <div className="flex justify-center mt-3 md:mt-4 gap-3 md:gap-4">
+            {/* Carousel Navigation */}
+            <div className="flex justify-center mt-6 gap-4">
               <button
                 onClick={prevSlide}
-                className="p-1 md:p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                 aria-label="Previous slide"
               >
-                <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
 
               {/* Dots indicator */}
-              <div className="flex items-center gap-1 md:gap-2">
+              <div className="flex items-center gap-2">
                 {Array.from({ length: Math.ceil(categories.length / imagesPerSlide) }).map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
-                    className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-colors ${currentSlide === index ? "bg-black" : "bg-gray-300"}`}
+                    className={`w-2 h-2 rounded-full transition-colors ${currentSlide === index ? "bg-black" : "bg-gray-300"}`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
                 ))}
@@ -183,21 +182,21 @@ export function ShopCategories() {
 
               <button
                 onClick={nextSlide}
-                className="p-1 md:p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                 aria-label="Next slide"
               >
-                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+                <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Mobile Category Links - Only shown on mobile */}
-          <div className="md:hidden flex flex-wrap justify-center gap-3 mt-4">
+          {/* Mobile Category Links */}
+          <div className="md:hidden flex flex-wrap justify-center gap-3 mt-8">
             {categories.slice(0, 5).map((category, index) => (
               <Link
                 key={index}
                 href={category.href}
-                className="text-xs font-medium hover:text-gray-600 transition-colors px-3 py-1 bg-white rounded-full shadow-sm"
+                className="text-sm font-medium hover:text-gray-600 transition-colors px-4 py-2 bg-white rounded-none border border-gray-200"
               >
                 {category.name}
               </Link>

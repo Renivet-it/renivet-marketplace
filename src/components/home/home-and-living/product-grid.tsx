@@ -66,10 +66,10 @@ export function ProductGrid({ className, products, title = "top picks for you", 
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-medium text-gray-900 mb-4">{title}</h2>
-          <p className="text-sm text-gray-500 max-w-2xl mx-auto">
+          {/* <p className="text-sm text-gray-500 max-w-2xl mx-auto">
             Bibendum quis facilisi aliquet massa in pharetra nisi etiam ornare. Tellus
             feugiat egestas nulla sem vel mi dictum nisi.Vivamus sem eget vestibul...
-          </p>
+          </p> */}
         </div>
 
         {/* Carousel Container */}

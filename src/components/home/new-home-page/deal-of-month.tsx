@@ -101,9 +101,8 @@ export function DealofTheMonthStrip({
                         Deals of the Month
                     </h2>
                     <p className="text-gray-500 text-[10px] md:text-base">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sclerisque
-                        duis ultricies sollicitudin aliquam sem. Sclerisque duis ultricies
-                        sollicitudin.
+                       Two conscious choices. One stylish deal.
+Thoughtfully made and effortlessly stylish—this month’s featured picks are all about looking good and feeling even better. Everyday essentials with a little extra meaning.
                     </p>
                     <Button
                         asChild
@@ -157,8 +156,8 @@ export function DealofTheMonthStrip({
                                 />
                             </div>
                             <div className="absolute bottom-8 md:bottom-16 left-2 md:left-4 bg-white p-1 md:p-3 rounded-md shadow-md">
-                                <p className="text-[8px] md:text-sm text-gray-500">01 — Spring Sale</p>
-                                <p className="text-sm md:text-lg font-bold text-gray-800">25% OFF</p>
+                                <p className="text-[8px] md:text-sm text-gray-500">The Conscious Click</p>
+                                {/* <p className="text-sm md:text-lg font-bold text-gray-800">25% OFF</p> */}
                             </div>
                         </div>
 
