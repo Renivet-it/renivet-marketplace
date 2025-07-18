@@ -40,7 +40,7 @@ export function BrandProducts({
                             "pb-4"
                         )}
                     >
-                        Our Women&apos;s Store
+                        Our&apos;s Store
                     </h2>
                 </div>
                 <div className="scrollbar-hide flex flex-col gap-4 overflow-x-auto px-1">
@@ -60,7 +60,7 @@ export function BrandProducts({
                             "capitalize"
                         )}
                     >
-                        Our Women&apos;s Store
+                        Our&apos;s Store
                     </h2>
                 </div>
                 <Carousel

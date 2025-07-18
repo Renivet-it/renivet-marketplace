@@ -30,7 +30,7 @@ export function MoodboardItemMen({
         {/* Title & Subtitle */}
         <div className="text-center mb-4 md:mb-10 pt-6 md:pt-8 px-4 sm:px-6 lg:px-8">
           <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">
-            Curated Her Essence
+            Curated His Essence
           </h2>
         </div>
 
