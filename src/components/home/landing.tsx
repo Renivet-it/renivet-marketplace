@@ -51,7 +51,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     alt={item.title}
                                     width={1440}
                                     height={550}
-                                    className="absolute inset-0 w-full h-full object-cover brightness-75"
+                                    className="absolute inset-0 w-full h-full object-cover"
                                     priority={index === 0}
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center p-6">
