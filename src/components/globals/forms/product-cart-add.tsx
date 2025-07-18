@@ -221,7 +221,7 @@ export function ProductCartAddForm({
                         )}
                     </p>
 
-                    {productCompareAtPrice && (
+                    {productCompareAtPrice && productCompareAtPrice > productPrice && (
                         <div className="flex items-center gap-2 text-xs font-semibold md:text-sm">
                             <p className="text-red-800 line-through">
                                 {formatPriceTag(
@@ -234,17 +234,28 @@ export function ProductCartAddForm({
                                 )}
                             </p>
 
-                            <p className="text-accent/80">
-                                (
-                                {formatPriceTag(
-                                    parseFloat(
-                                        convertPaiseToRupees(
-                                            productCompareAtPrice - productPrice
-                                        )
-                                    )
-                                )}{" "}
-                                OFF)
-                            </p>
+        {/* <p className="text-accent/80">
+            (
+            {formatPriceTag(
+                parseFloat(
+                    convertPaiseToRupees(
+                        productCompareAtPrice - productPrice
+                    )
+                )
+            )}{" "}
+            OFF)
+        </p>
+         */}
+
+        <p className="text-accent/80">
+            ({Math.round(
+                (
+                    (parseFloat(convertPaiseToRupees(productCompareAtPrice)) -
+                        parseFloat(convertPaiseToRupees(productPrice))) /
+                    parseFloat(convertPaiseToRupees(productCompareAtPrice))
+                ) * 100
+            )}% OFF)
+        </p>
                         </div>
                     )}
                 </div>
