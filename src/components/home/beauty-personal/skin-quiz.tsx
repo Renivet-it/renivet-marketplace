@@ -48,7 +48,7 @@ export function SkinQuizBanner({ className, banners, ...props }: PageProps) {
                                             asChild
                                             className="bg-white text-black hover:bg-gray-100 px-10 py-4 text-lg font-medium rounded-none"
                                         >
-                                            <Link href={item.imageUrl || "/shop"}>
+                                            <Link href={item.url || "/shop"}>
                                                 Explore More
                                             </Link>
                                         </Button>

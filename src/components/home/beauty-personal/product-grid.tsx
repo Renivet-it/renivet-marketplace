@@ -121,6 +121,7 @@ function ProductCard({ product }: { product: Product }) {
             </h3>
             {/* Price */}
             <div className="text-lg font-bold text-gray-900 text-center mb-6">
+              {/* @ts-ignore */}
               {typeof price === "number" ? price.toFixed(2) : price}
             </div>
           </div>

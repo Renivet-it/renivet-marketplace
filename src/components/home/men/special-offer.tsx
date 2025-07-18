@@ -35,7 +35,7 @@ export function SpecialOffer({ className, banners, ...props }: PageProps) {
           {banners.map((item, index) => (
             <CarouselItem key={index} className="h-full p-0">
               <div className="relative size-full overflow-hidden rounded-2xl"> {/* Added rounded-2xl and overflow-hidden */}
-                <Link href={item.imageUrl || "/shop"} className="block size-full">
+                <Link href={item.url || "/shop"} className="block size-full">
                   <Image
                     src={item.imageUrl}
                     alt={item.title}

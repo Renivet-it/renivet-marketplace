@@ -25,6 +25,8 @@ export const bannerSchema = z.object({
             invalid_type_error: "Image URL must be a string",
         })
         .url("Image URL is invalid"),
+           url: z
+        .string().optional(),
     isActive: z.boolean({
         required_error: "Is Active is required",
         invalid_type_error: "Is Active must be a boolean",

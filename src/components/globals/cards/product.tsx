@@ -192,12 +192,30 @@ export function ProductCard({
                     </p>
                 </div>
 
-                <p className="text-sm font-semibold">
+                {/* <p className="text-sm font-semibold">
                     {formatPriceTag(
                         parseFloat(convertPaiseToRupees(productPrice)),
                         true
                     )}
-                </p>
+                       -  {parseFloat(convertPaiseToRupees(product.compareAtPrice))}
+
+                </p> */}
+
+<p className="text-sm font-semibold">
+    <span className="text-gray-900">Rs.{formatPriceTag(parseFloat(convertPaiseToRupees(productPrice)))}</span>
+    {product.compareAtPrice ? (
+        <>
+            {" "}
+            <span className="text-gray-400 line-through">Rs.{formatPriceTag(parseFloat(convertPaiseToRupees(product.compareAtPrice)))}</span>
+            {" "}
+            <span className="text-red-600">({Math.round(
+                ((parseFloat(convertPaiseToRupees(product.compareAtPrice)) -
+                 parseFloat(convertPaiseToRupees(productPrice))) /
+                (parseFloat(convertPaiseToRupees(product.compareAtPrice)) || 1) * 100
+            ))}% OFF)</span>
+        </>
+    ) : null}
+</p>
             </div>
         </div>
     );
