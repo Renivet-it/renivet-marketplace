@@ -626,7 +626,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     items: [
         {
             title: "Trusted Curated Banner",
-            url: "/dashboard/general/home-page/curated-banners",
+            url: "/dashboard/general/home-page/curated-banner",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
         },
         {
