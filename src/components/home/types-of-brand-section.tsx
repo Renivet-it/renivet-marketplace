@@ -23,11 +23,6 @@ export function BrandCollaboration() {
                 style={{ objectPosition: 'center' }}
               />
             </div>
-            <p className="text-sm md:text-base italic leading-snug">
-              'Born from local roots<br />
-              made with love that<br />
-              stays close to home'
-            </p>
           </div>
 
           {/* Card 2 */}
@@ -41,10 +36,6 @@ export function BrandCollaboration() {
                 style={{ objectPosition: 'center' }}
               />
             </div>
-            <p className="text-sm md:text-base leading-snug">
-              Designed to tread lighter<br />
-              — on you and on the planet
-            </p>
           </div>
 
           {/* Card 3 */}
@@ -58,11 +49,6 @@ export function BrandCollaboration() {
                 style={{ objectPosition: 'center' }}
               />
             </div>
-            <p className="text-sm md:text-base leading-snug">
-              Crafted by hands<br />
-              that carry generations<br />
-              of skill and soul
-            </p>
           </div>
 
           {/* Card 4 */}
@@ -76,12 +62,6 @@ export function BrandCollaboration() {
                 style={{ objectPosition: "center" }}
               />
             </div>
-            <p className="text-sm md:text-base leading-snug">
-              Thoughtful pieces<br />
-              released slow<br />
-              — because good things take<br />
-              time
-            </p>
           </div>
         </div>
 
