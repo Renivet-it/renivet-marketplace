@@ -1,6 +1,6 @@
 import {
     ShopByCategoriesTable,
-} from "@/components/dashboard/general/home-living/banners/shop-by-categories-table";
+} from "@/components/dashboard/general/home/new-insta-banner/shop-by-categories-table";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { Icons } from "@/components/icons";
@@ -41,7 +41,7 @@ export default function Page({ searchParams }: PageProps) {
                     asChild
                     className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm"
                 >
-                    <Link href="/dashboard/general/home-living/banners/new">
+                    <Link href="/dashboard/general/home-page/new-insta-banner/new">
                         <Icons.PlusCircle className="size-5" />
                         New Home and Living Banne
                     </Link>
@@ -63,7 +63,7 @@ async function ShopByCategoriesFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
 
     const [data] = await Promise.all([
-        WomenHomeSectionQueries.gethomeAndLivingSections({
+        WomenHomeSectionQueries.getHomePageInsaBannerSections({
             limit,
             page,
         }),

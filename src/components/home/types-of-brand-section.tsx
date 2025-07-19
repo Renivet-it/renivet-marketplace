@@ -73,7 +73,7 @@ export function BrandCollaboration() {
                 alt="Thoughtful pieces"
                 fill
                 className="object-cover"
-                style={{ objectPosition: 'center' }}
+                style={{ objectPosition: "center" }}
               />
             </div>
             <p className="text-sm md:text-base leading-snug">
