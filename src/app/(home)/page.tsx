@@ -2,12 +2,13 @@ import { AdvertisementPage, Blogs, BrandProducts, Landing, MarketingStrip, ShopB
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
 import { AdvertisementDiscountPage } from "@/components/home/new-home-page/discount-section";
-import { advertisementQueries, blogQueries, homeBrandProductQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
+import { advertisementQueries, blogQueries, homeBrandProductQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries, WomenHomeSectionQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
 import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
 import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
+import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
 
 
 export default function Page() {
@@ -28,6 +29,9 @@ export default function Page() {
             </Suspense>
                                <Suspense>
                 <ShopCategoryFetch />
+            </Suspense>
+                               <Suspense>
+                <CuratedBannerFetch />
             </Suspense>
             {/* <Suspense>
                 <ShopByNewCategoriesFetch />
@@ -69,6 +73,16 @@ async function BrandProductsFetch() {
 
     return <BrandProducts brandProducts={brandProducts} />;
 }
+
+
+async function CuratedBannerFetch() {
+    const brandProducts =
+        await WomenHomeSectionQueries.getHomePageTrustedSections();
+    if (!brandProducts.length) return null;
+
+    return <CuratedBanner banners={brandProducts} />;
+}
+
 
 async function SustanableBatchFetch() {
     //@ts-ignore
