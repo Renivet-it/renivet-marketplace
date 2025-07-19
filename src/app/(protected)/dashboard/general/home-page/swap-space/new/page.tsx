@@ -1,4 +1,4 @@
-import { ShopByCategoryManageForm } from "@/components/globals/forms/home-living/banner";
+import { ShopByCategoryManageForm } from "@/components/globals/forms/home/swap-space-banner";
 import { DashShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
 

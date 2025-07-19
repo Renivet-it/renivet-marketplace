@@ -1,4 +1,4 @@
-import { ShopByCategoryManageForm } from "@/components/globals/forms/home-living/banner";
+import { ShopByCategoryManageForm } from "@/components/globals/forms/home/make-first-click";
 import { DashShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
 
