@@ -9,6 +9,8 @@ import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
 import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
 import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
+import { BrandPromotion } from "@/components/home/new-home-page/brand-promotion";
+import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
 
 
 export default function Page() {
@@ -32,6 +34,12 @@ export default function Page() {
             </Suspense>
                                <Suspense>
                 <CuratedBannerFetch />
+            </Suspense>
+                           <Suspense>
+                <BrandPromotionFetch />
+            </Suspense>
+                                       <Suspense>
+                <MatchaBagFetch />
             </Suspense>
             {/* <Suspense>
                 <ShopByNewCategoriesFetch />
@@ -82,7 +90,35 @@ async function CuratedBannerFetch() {
 
     return <CuratedBanner banners={brandProducts} />;
 }
+async function BrandPromotionFetch() {
+    const [sbc, sbcT] = await Promise.all([
+    //@ts-ignore
 
+        WomenHomeSectionQueries.getHomePageBrandIntroductionSections(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+
+    return <BrandPromotion moodboardItems={sbc} titleData={sbcT} />;
+}
+
+async function MatchaBagFetch() {
+    const [sbc, sbcT] = await Promise.all([
+    //@ts-ignore
+
+        WomenHomeSectionQueries.getHomePageMatchingSections(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+
+    return <MatchaBag moodboardItems={sbc} titleData={sbcT} />;
+}
 
 async function SustanableBatchFetch() {
     //@ts-ignore
