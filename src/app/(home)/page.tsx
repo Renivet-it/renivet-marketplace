@@ -1,7 +1,7 @@
 import { AdvertisementPage, Blogs, BrandProducts, Landing, MarketingStrip, ShopByCategories } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
-import { AdvertisementDiscountPage } from "@/components/home/new-home-page/discount-section";
+import { HomeAndLivingectionAdvertisement } from "@/components/home/new-home-page/discount-section";
 import { advertisementQueries, blogQueries, homeBrandProductQueries, productQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries, WomenHomeSectionQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
@@ -42,10 +42,6 @@ export default function Page() {
                 <DealMarketingStripFetch />
             </Suspense>
 
-                                    <Suspense>
-                <ProductNewArrivalsGridFetch />
-            </Suspense>
-
                                <Suspense>
                 <CuratedBannerFetch />
             </Suspense>
@@ -54,6 +50,12 @@ export default function Page() {
             </Suspense>
                            <Suspense>
                 <BrandPromotionFetch />
+            </Suspense>
+                                    <Suspense>
+                <ProductNewArrivalsGridFetch />
+            </Suspense>
+                                 <Suspense>
+                <NewAdvertisementsFetch />
             </Suspense>
                                   <Suspense>
                 <ProductGridFetch />
@@ -79,12 +81,10 @@ export default function Page() {
                 <ShopByNewCategoriesFetch />
             </Suspense> */}
 
-                        {/* <Suspense>
-                <NewAdvertisementsFetch />
-            </Suspense> */}
-            <Suspense>
+   
+            {/* <Suspense>
                 <MarketingStripFetch />
-            </Suspense>
+            </Suspense> */}
             {/* <Suspense>
                 <BlogsFetch />
             </Suspense> */}
@@ -286,7 +286,7 @@ async function NewAdvertisementsFetch() {
     });
     if (!advertisements.length) return null;
 
-    return <AdvertisementDiscountPage advertisements={advertisements} />;
+    return <HomeAndLivingectionAdvertisement banners={advertisements} />;
 }
 
 // import {
