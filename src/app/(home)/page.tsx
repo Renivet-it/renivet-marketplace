@@ -1,14 +1,23 @@
 import { AdvertisementPage, Blogs, BrandProducts, Landing, MarketingStrip, ShopByCategories } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
-import { AdvertisementDiscountPage } from "@/components/home/new-home-page/discount-section";
-import { advertisementQueries, blogQueries, homeBrandProductQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
+import { HomeAndLivingectionAdvertisement } from "@/components/home/new-home-page/discount-section";
+import { advertisementQueries, blogQueries, homeBrandProductQueries, productQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries, WomenHomeSectionQueries } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { Suspense } from "react";
 import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
 import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
+import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
+import { BrandPromotion } from "@/components/home/new-home-page/brand-promotion";
+import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
+import { ConciousClick } from "@/components/home/new-home-page/concious-click";
+import { SwapSpace } from "@/components/home/new-home-page/swap-space";
+import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
+import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 
+import { ProductGrid } from "@/components/home/new-home-page/kids-product-grid";
+import { ProductGridNewArrivals } from "@/components/home/new-home-page/new-arrivals";
 
 export default function Page() {
     return (
@@ -23,41 +32,62 @@ export default function Page() {
                 <Suspense>
                 <SustanableBatchFetch />
             </Suspense>
+                                           <Suspense>
+                <ShopCategoryFetch />
+            </Suspense>
                             <Suspense>
                 <BrandCollaborateFetch />
             </Suspense>
+                            <Suspense>
+                <DealMarketingStripFetch />
+            </Suspense>
+
                                <Suspense>
-                <ShopCategoryFetch />
+                <CuratedBannerFetch />
+            </Suspense>
+                        <Suspense>
+                <BrandProductsFetch />
+            </Suspense>
+                           <Suspense>
+                <BrandPromotionFetch />
+            </Suspense>
+                                    <Suspense>
+                <ProductNewArrivalsGridFetch />
+            </Suspense>
+                                 <Suspense>
+                <NewAdvertisementsFetch />
+            </Suspense>
+                                  <Suspense>
+                <ProductGridFetch />
+            </Suspense>
+                                       <Suspense>
+                <MatchaBagFetch />
+            </Suspense>
+                                                  <Suspense>
+                <ConciousClickBannerFetch />
+            </Suspense>
+                                                  <Suspense>
+                <SwapSpaceBannerFetch />
+            </Suspense>
+
+                                                          <Suspense>
+                <ArtisanCollectionFetch />
+            </Suspense>
+
+                                                          <Suspense>
+                <InstaBannerFetch />
             </Suspense>
             {/* <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense> */}
-            <Suspense>
-                <DealMarketingStripFetch />
-            </Suspense>
-                        {/* <Suspense>
-                <NewAdvertisementsFetch />
-            </Suspense> */}
-            <Suspense>
+
+   
+            {/* <Suspense>
                 <MarketingStripFetch />
-            </Suspense>
-            <Suspense>
-                <AdvertisementsFetch />
-            </Suspense>
-            <Suspense>
-                <BrandProductsFetch />
-            </Suspense>
-            <Suspense>
-                <ShopByCategoriesFetch />
-            </Suspense>
-            {/* <Offer /> */}
-            {/* <Expectations /> */}
-            {/* <Popular title="Best Sellers" /> */}
-            {/* <Theme /> */}
-            {/* <Arrivals title="New Arrivals" /> */}
-            <Suspense>
+            </Suspense> */}
+            {/* <Suspense>
                 <BlogsFetch />
-            </Suspense>
+            </Suspense> */}
         </>
     );
 }
@@ -68,6 +98,92 @@ async function BrandProductsFetch() {
     if (!brandProducts.length) return null;
 
     return <BrandProducts brandProducts={brandProducts} />;
+}
+
+
+async function ProductNewArrivalsGridFetch() {
+  const products = await productQueries.getHomePageFeaturedProducts();
+  if (!products.length) return null;
+    //@ts-ignore
+  return <ProductGridNewArrivals products={products} />;
+}
+
+
+async function ProductGridFetch() {
+  const products = await productQueries.getKidsPageFeaturedProducts();
+  if (!products.length) return null;
+    //@ts-ignore
+  return <ProductGrid products={products} />;
+}
+
+async function CuratedBannerFetch() {
+    const brandProducts =
+        await WomenHomeSectionQueries.getHomePageTrustedSections();
+    if (!brandProducts.length) return null;
+
+    return <CuratedBanner banners={brandProducts} />;
+}
+
+async function SwapSpaceBannerFetch() {
+    const brandProducts =
+        await WomenHomeSectionQueries.getHomePageSwapBannerSections();
+    if (!brandProducts.length) return null;
+
+    return <SwapSpace banners={brandProducts} />;
+}
+
+async function ArtisanCollectionFetch() {
+    const brandProducts =
+        await WomenHomeSectionQueries.getHomePageNewArtisanSections();
+    if (!brandProducts.length) return null;
+
+    return <ArtisanCollection shopByCategories={brandProducts} />;
+}
+
+async function InstaBannerFetch() {
+    const brandProducts =
+        await WomenHomeSectionQueries.getHomePageInsaBannerSections();
+    if (!brandProducts.length) return null;
+
+    return <InstaBanner banners={brandProducts} />;
+}
+
+async function ConciousClickBannerFetch() {
+    const brandProducts =
+        await WomenHomeSectionQueries.getHomePageFirstConciousClickSections();
+    if (!brandProducts.length) return null;
+
+    return <ConciousClick banners={brandProducts} />;
+}
+
+async function BrandPromotionFetch() {
+    const [sbc, sbcT] = await Promise.all([
+    //@ts-ignore
+
+        WomenHomeSectionQueries.getHomePageBrandIntroductionSections(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+
+    return <BrandPromotion moodboardItems={sbc} titleData={sbcT} />;
+}
+
+async function MatchaBagFetch() {
+    const [sbc, sbcT] = await Promise.all([
+    //@ts-ignore
+
+        WomenHomeSectionQueries.getHomePageMatchingSections(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+
+    return <MatchaBag moodboardItems={sbc} titleData={sbcT} />;
 }
 
 async function SustanableBatchFetch() {
@@ -170,7 +286,7 @@ async function NewAdvertisementsFetch() {
     });
     if (!advertisements.length) return null;
 
-    return <AdvertisementDiscountPage advertisements={advertisements} />;
+    return <HomeAndLivingectionAdvertisement banners={advertisements} />;
 }
 
 // import {

@@ -25,33 +25,29 @@ export function BrandProducts({
     return (
         <section
             className={cn(
-                "flex w-full bg-[#F4F0EC] justify-center py-5 md:px-8 md:py-10",
+                "flex w-full flex-col items-center bg-[#c8bcc0] py-5 md:px-8 md:py-10",
                 className
             )}
             {...props}
         >
-            <div className="container md:hidden">
-                <div className="flex justify-center gap-2">
-                    <h2
-                        className={cn(
-                            "text-xl sm:text-3xl",
-                            "text-center",
-                            "capitalize",
-                            "pb-4"
-                        )}
-                    >
-                        top-rated brand products
-                    </h2>
-                </div>
-                <div className="scrollbar-hide flex flex-col gap-4 overflow-x-auto px-1">
-                    <div className="flex gap-4">
-                        {brandProducts.map((item, index) => (
-                            <BrandCard key={index} product={item} />
-                        ))}
-                    </div>
+            <div className="mb-8 w-full text-center">
+                <h2 className="text-2xl font-bold md:text-3xl lg:text-4xl">
+                    Explore Our Top Brands
+                </h2>
+                <p className="mt-2 text-sm text-gray-700 md:text-base">
+                    Discover quality products from trusted brands
+                </p>
+            </div>
+
+            <div className="w-full px-4 md:hidden">
+                <div className="flex gap-6 overflow-x-auto pb-4">
+                    {brandProducts.map((item, index) => (
+                        <BrandCard key={index} product={item} />
+                    ))}
                 </div>
             </div>
-            <div className="hidden w-full max-w-5xl md:block xl:max-w-[100rem]">
+
+            <div className="hidden w-full max-w-[1600px] md:block">
                 <Carousel
                     plugins={[
                         Autoplay({
@@ -63,32 +59,36 @@ export function BrandProducts({
                         align: "start",
                     }}
                 >
-                    <CarouselContent className="-ml-2 md:-ml-4">
+                    <CarouselContent className="-ml-2">
                         {brandProducts.map((item, index) => (
                             <CarouselItem
                                 key={index}
-                                className="pl-2 md:basis-1/3 md:pl-4 lg:basis-1/6"
+                                className="basis-1/2 pl-2 sm:basis-1/3 md:basis-1/4 lg:basis-1/6"
                             >
-                                <Link
-                                    href={item.url || "/shop"}
-                                    className="block"
-                                >
-                                    <div className="aspect-[3/4] overflow-hidden">
-                                        <Image
-                                            src={item.imageUrl}
-                                            alt={`Brand Product ${index + 1}`}
-                                            width={300}
-                                            height={400}
-                                            quality={90}
-                                            className="size-full object-cover"
-                                        />
-                                    </div>
-                                </Link>
+                                <div className="flex h-full flex-col items-center gap-3">
+                                    <Link
+                                        href={item.url || "/shop"}
+                                        className="block w-full"
+                                    >
+                                        <div className="aspect-[3/4] w-full overflow-hidden rounded-lg border-2 border-white">
+                                            <Image
+                                                src={item.imageUrl}
+                                                alt={item.title}
+                                                width={300}
+                                                height={400}
+                                                quality={90}
+                                                className="size-full object-cover"
+                                            />
+                                        </div>
+                                    </Link>
+                                    <p className="w-full text-center text-sm font-medium">
+                                        {item.title}
+                                    </p>
+                                </div>
                             </CarouselItem>
                         ))}
                     </CarouselContent>
 
-                    <CarouselPrevious className="left-0 h-full rounded-none border-none bg-gradient-to-r from-background to-transparent hover:from-background hover:to-transparent" />
                     <CarouselNext className="right-0 h-full rounded-none border-none bg-gradient-to-l from-background to-transparent" />
                 </Carousel>
             </div>
@@ -98,20 +98,22 @@ export function BrandProducts({
 
 function BrandCard({ product }: { product: HomeBrandProduct }) {
     return (
-        <Link
-            href={product.url || "/shop"}
-            className="relative w-[200px] flex-shrink-0 md:w-auto"
-        >
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[8px] shadow-sm">
-                <Image
-                    src={product.imageUrl}
-                    alt={"product.title"}
-                    width={300}
-                    height={400}
-                    quality={90}
-                    className="object-cover transition-transform duration-300 hover:scale-105"
-                />
-            </div>
-        </Link>
+        <div className="flex w-[150px] shrink-0 flex-col items-center gap-3">
+            <Link href={product.url || "/shop"} className="block w-full">
+                <div className="aspect-[3/4] w-full overflow-hidden rounded-lg border-2 border-white">
+                    <Image
+                        src={product.imageUrl}
+                        alt={product.title}
+                        width={300}
+                        height={400}
+                        quality={90}
+                        className="size-full object-cover"
+                    />
+                </div>
+            </Link>
+            <p className="w-full text-center text-sm font-medium">
+                {product.title}
+            </p>
+        </div>
     );
 }

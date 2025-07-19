@@ -32,7 +32,8 @@ import {
     toggleHomeAndLivingNewArrivalsSection,
     toggleHomeAndLivingTopPicksSection,
         toggleBeautyNewArrivalSection,
-    toggleBeautyTopPickSection
+    toggleBeautyTopPickSection,
+    toggleHomeNewArrivalsProduct
 } from "@/actions/product-action";
 import { trpc } from "@/lib/trpc/client";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -50,6 +51,7 @@ interface PageProps {
         isHomeAndLivingSectionTopPicks?: boolean;
         isBeautyNewArrival?: boolean;
         isBeautyTopPicks?: boolean;
+        isHomeNewArrival?: boolean;
     };
 }
 
@@ -227,6 +229,24 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
+
+                      const handletoggleHomeNewArrivalsProduct = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleHomeNewArrivalsProduct(product.id, product.isBeautyTopPicks ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <>
             <DropdownMenu>
@@ -343,6 +363,11 @@ export function ProductAction({ product }: PageProps) {
                         <DropdownMenuItem onClick={handletoggleBeautyTopPickSection} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
                             <span>{product.isBeautyTopPicks ? "Remove from Top Picks(Beauty Personal)" : "Add to Top Picks(Beauty Personal)"}</span>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem onClick={handletoggleHomeNewArrivalsProduct} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isHomeNewArrival ? "Remove from New Arrivals(Home Page)" : "Add to New Arrivals(Home Page)"}</span>
                         </DropdownMenuItem>
                         {product.isPublished && (
                             <>

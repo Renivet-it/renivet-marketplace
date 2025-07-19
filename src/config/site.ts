@@ -616,6 +616,53 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     ]
 },
 
+
+
+
+{
+    title: "Updated Home Page Section",
+    url: "#",
+    icon: "Megaphone",
+    items: [
+        {
+            title: "Trusted Curated Banner",
+            url: "/dashboard/general/home-page/curated-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+        {
+            title: "Brand Introduction Banner",
+            url: "/dashboard/general/home-page/brand-introduction",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Home Matching Banner",
+            url: "/dashboard/general/home-page/home-matching",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Make First Click Banner",
+            url: "/dashboard/general/home-page/make-first-click",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "Swap Space Banner",
+            url: "/dashboard/general/home-page/swap-space",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "New Artisan Section",
+            url: "/dashboard/general/home-page/new-artisan-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+        {
+            title: "New Insta Bannner",
+            url: "/dashboard/general/home-page/new-insta-banner",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+    ]
+},
+
+
 {
     title: "Ui / Ux Page Section",
     url: "#",
