@@ -1777,6 +1777,16 @@ async getProducts({
     }
 
 
+           async removeStyleWithSubstanceWomenProduct(productId: string) {
+        const data = await db
+            .update(menPageFeaturedProducts)
+            .set({ isDeleted: true, deletedAt: new Date() })
+            .where(eq(menPageFeaturedProducts.productId, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
             async createKidsFeaturedProduct(values: CreateKidsFeaturedProduct) {
             const data = await db
                 .insert(kidsFreshCollectionSection)

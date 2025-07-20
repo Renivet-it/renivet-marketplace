@@ -1219,6 +1219,13 @@
       "when": 1752953456136,
       "tag": "0173_true_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 174,
+      "version": "7",
+      "when": 1753028662717,
+      "tag": "0174_bright_frank_castle",
+      "breakpoints": true
     }
   ]
 }

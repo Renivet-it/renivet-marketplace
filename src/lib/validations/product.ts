@@ -433,6 +433,14 @@ export const productSchema = z.object({
         exchangeDescription: z.string().nullable().optional(),
         isFeaturedWomen: z.boolean().optional().default(false),
         isFeaturedMen: z.boolean().optional().default(false),
+        isStyleWithSubstanceWoMen: z.boolean().optional().default(false),
+        isStyleWithSubstanceMen: z.boolean().optional().default(false),
+        iskidsFetchSection: z.boolean().optional().default(false),
+        isHomeAndLivingSectionNewArrival: z.boolean().optional().default(false),
+        isHomeAndLivingSectionTopPicks: z.boolean().optional().default(false),
+        isBeautyNewArrival: z.boolean().optional().default(false),
+        isBeautyTopPicks: z.boolean().optional().default(false),
+        isHomeNewArrival: z.boolean().optional().default(false),
 });
 
 export const productOptionSchema = z.object({

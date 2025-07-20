@@ -37,6 +37,33 @@ import { z } from "zod";
 import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
 import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
 
+
+
+
+async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const srOrder = await sr.requestCreateOrder(srOrderRequest);
+      console.log(`Shiprocket response for attempt ${attempt}:`, JSON.stringify(srOrder, null, 2));
+      if (srOrder.status && srOrder.data) {
+        return srOrder;
+      }
+      console.warn(`Shiprocket attempt ${attempt} failed: ${JSON.stringify(srOrder)}`);
+    } catch (error: any) {
+      console.warn(`Shiprocket attempt ${attempt} error: ${error.message}`);
+    }
+    if (attempt < retries) {
+      console.log(`Retrying Shiprocket order creation after ${delay}ms...`);
+    // @ts-ignore
+      setTimeout(delay);
+    }
+  }
+  throw new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Failed to create Shiprocket order after retries",
+  });
+}
+
 export const ordersRouter = createTRPCRouter({
     getOrders: protectedProcedure
         .input(
@@ -325,7 +352,8 @@ export const ordersRouter = createTRPCRouter({
               console.log(`Shiprocket order request for brand ${brand.name}:`, srOrderRequest);
 
               try {
-                const srOrder = await sr.requestCreateOrder(srOrderRequest);
+                // const srOrder = await sr.requestCreateOrder(srOrderRequest);
+                const srOrder = await createShiprocketOrderWithRetry(sr, srOrderRequest);
                 console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
 
                 if (srOrder.status && srOrder.data) {
@@ -371,7 +399,11 @@ export const ordersRouter = createTRPCRouter({
                   }
                 }
               } catch (shiprocketError) {
-                console.error(`Error creating Shiprocket order for brand ${brand.name}:`, shiprocketError);
+                console.error(`Failed to create Shiprocket order for brand ${brand.name}:`, shiprocketError);
+                    throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: `Failed to create Shiprocket order for brand ${brand.name}`,
+                    });
               }
                     // NEW: Logic 1 - Validate and Deduct Stock
                     console.log(`Validating stock for order ${newOrder.id}`);

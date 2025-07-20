@@ -86,6 +86,8 @@ import {
     homeMakeFirstClick,
     homeMatchingBanner,
     homeBrandIntroductionBanner,
+    kidGentleCareOthers,
+    kidForstGiraffeOthers
 
 } from "../schema";
 
@@ -3449,6 +3451,179 @@ console.log("test");
 
 
 
+      async getkidGentleCareSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidGentleCareOthers.findMany({
+            orderBy: [asc(kidGentleCareOthers.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllkidGentleCareSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidGentleCareOthers.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidGentleCareOthers.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidGentleCareOthers)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getkidGentleCareSection(id: string) {
+        const data = await db.query.kidGentleCareOthers.findFirst({
+            where: eq(kidGentleCareOthers.id, id),
+        });
+
+        return data;
+    }
+
+    async createkidGentleCareSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidGentleCareOthers)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatekidGentleCareSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidGentleCareOthers)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidGentleCareOthers.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletekidGentleCareSection(id: string) {
+        const data = await db
+            .delete(kidGentleCareOthers)
+            .where(eq(kidGentleCareOthers.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+
+          async getkidFrostyFormalShirtSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.kidForstGiraffeOthers.findMany({
+            orderBy: [asc(kidForstGiraffeOthers.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllkidFrostyFormalShirtSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.kidForstGiraffeOthers.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(kidForstGiraffeOthers.createdAt)],
+            extras: {
+                count: db
+                    .$count(kidForstGiraffeOthers)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getkidFrostyFormalShirtSection(id: string) {
+        const data = await db.query.kidForstGiraffeOthers.findFirst({
+            where: eq(kidForstGiraffeOthers.id, id),
+        });
+
+        return data;
+    }
+
+    async createkidFrostyFormalShirtSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(kidForstGiraffeOthers)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updatekidFrostyFormalShirtSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(kidForstGiraffeOthers)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(kidForstGiraffeOthers.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deletekidFrostyFormalShirtSection(id: string) {
+        const data = await db
+            .delete(kidForstGiraffeOthers)
+            .where(eq(kidForstGiraffeOthers.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 
 
 

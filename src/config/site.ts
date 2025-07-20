@@ -516,6 +516,16 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/kids/twining-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
+                {
+            title: "Kids Gentle Care Section ",
+            url: "/dashboard/general/kids/gentle-care",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
+         {
+            title: "Frosty Formal Shirt Section ",
+            url: "/dashboard/general/kids/frosty-formal",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
     ]
 },
 
