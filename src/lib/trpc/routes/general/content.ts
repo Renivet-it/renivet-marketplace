@@ -8536,7 +8536,7 @@ export const kidDollBannerSectionRouter = createTRPCRouter({
             const existingKey = getUploadThingFileKey(existingImageUrl);
 
             await Promise.all([
-                queries.womenhomebanner.deletekidElevateSection(id),
+                queries.womenhomebanner.deletekidDollBuyingSection(id),
                 utApi.deleteFiles([existingKey]),
             ]);
 
