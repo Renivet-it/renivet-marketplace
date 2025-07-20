@@ -12212,6 +12212,7 @@ export const contentRouter = createTRPCRouter({
     newHomePageFirstConciousRouter: newHomePageFirstConciousRouter,
     newHomePageSwapBannerRouter: newHomePageSwapBannerRouter,
     newHomePageArtisanRouter: newHomePageArtisanRouter,
-    newHomePagInstaRouter: newHomePagInstaRouter
-
+    newHomePagInstaRouter: newHomePagInstaRouter,
+    kidsGentleCareSection: kidsGentleCareSection,
+    kidsFrostyFormalSection: kidsFrostyFormalSection
 });
