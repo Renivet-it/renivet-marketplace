@@ -60,6 +60,21 @@ const menuItems = {
             queryKey: "getTwiningSection", // Replace with actual query key
 
         },
+         {
+            title: "Kids Gentle Care Section ",
+            url: "/dashboard/general/kids/gentle-care",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getGentleCare", // Replace with actual query key
+
+        },
+         {
+            title: "Frosty Formal Shirt Section ",
+            url: "/dashboard/general/kids/frosty-formal",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getFrostyShirt", // Replace with actual query key
+
+        },
+
     ]
 };
 
@@ -71,6 +86,8 @@ const queryMap: Record<string, (params: { limit: number; page: number }) => Prom
     getKidsSpecialCareSection: WomenHomeSectionQueries.getKidsCareSections,
     getKidDollBannerSection: WomenHomeSectionQueries.getkidDollBuyingSections,
     getTwiningSection: WomenHomeSectionQueries.getkidDolllTwiningSections,
+    getGentleCare: WomenHomeSectionQueries.getkidGentleCareSections,
+    getFrostyShirt: WomenHomeSectionQueries.getkidFrostyFormalShirtSections,
 
 };
 
