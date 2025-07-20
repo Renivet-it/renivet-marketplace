@@ -382,6 +382,24 @@ export const kidsDiscountOfferSection = pgTable("kids_discount_offer_section", {
     ...timestamps,
 });
 
+export const kidGentleCareOthers = pgTable("kids_gentle_care_others", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
+export const kidForstGiraffeOthers = pgTable("kids_formal_giraffe_others", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
 export const menFreshInkCollectionSection = pgTable("men_fresh_ink_collection", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),
