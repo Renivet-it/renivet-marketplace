@@ -121,7 +121,95 @@ revalidatePath("/dashboard/general/products");
 }
 
 
-export async function toggleWomenStyleWithSubstance(productId: string, isFeatured: boolean) {
+// export async function toggleWomenStyleWithSubstance(productId: string, isStyleWithSubstanceWoMen: boolean) {
+//     try {
+//         // Check if product exists in products table
+//         const existingProduct = await db
+//             .select()
+//             .from(products)
+//             .where(eq(products.id, productId))
+//             .then((res) => res[0]);
+
+//         if (!existingProduct) {
+//             return { success: false, error: "Product not found" };
+//         }
+
+//         if (isStyleWithSubstanceWoMen) {
+//             // Remove from featured products (soft delete)
+
+
+//                     const result = await db
+//                         .update(womenStyleWithSubstanceMiddlePageSection)
+//                         .set({ isDeleted: true, deletedAt: new Date() })
+//                         .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId))
+//                         .returning()
+//                         .then((res) => res[0]);
+
+//             //         return data;
+//             // const result = await db
+//             //     .update(womenStyleWithSubstanceMiddlePageSection)
+//             //     .set({
+//             //         isDeleted: true,
+//             //         deletedAt: new Date()
+//             //     })
+//             //     .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId));
+
+//             if (!result) {
+//                 return { success: false, error: "Featured product not found" };
+//             }
+
+//             // Update isStyleWithSubstanceWoMen to false in products table
+//             await db
+//                 .update(products)
+//                 .set({ isStyleWithSubstanceWoMen: false })
+//                 .where(eq(products.id, productId));
+
+//             revalidatePath("/dashboard/general/products");
+//             return { success: true, message: "Product removed from Style With Substance list" };
+//         } else {
+//             // Check if product already exists and is not deleted
+//             const existing = await db
+//                 .select()
+//                 .from(womenStyleWithSubstanceMiddlePageSection)
+//                 .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId))
+//                 .then((res) => res[0]);
+
+//             if (existing && !existing.isDeleted) {
+//                 return { success: false, error: "Product is already in Style With Substance" };
+//             }
+
+//             if (existing) {
+//                 // Restore if previously soft deleted
+//                 await db
+//                     .update(womenStyleWithSubstanceMiddlePageSection)
+//                     .set({
+//                         isDeleted: false,
+//                         deletedAt: null
+//                     })
+//                     .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId));
+//             } else {
+//                 // Add new entry
+//                 await db.insert(womenStyleWithSubstanceMiddlePageSection)
+//                     .values({ productId });
+//             }
+
+//             // Update isStyleWithSubstanceWoMen to true in products table
+//             await db
+//                 .update(products)
+//                 .set({ isStyleWithSubstanceWoMen: true })
+//                 .where(eq(products.id, productId));
+
+//             revalidatePath("/dashboard/general/products");
+//             return { success: true, message: "Product added to Style With Substance list" };
+//         }
+//     } catch (error) {
+//         console.error("Error toggling Style With Substance status:", error);
+//         return { success: false, error: "Failed to update Style With Substance status" };
+//     }
+// }
+
+
+export async function toggleWomenStyleWithSubstance(productId: string, isStyleWithSubstanceWoMen: boolean) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -134,18 +222,18 @@ export async function toggleWomenStyleWithSubstance(productId: string, isFeature
             return { success: false, error: "Product not found" };
         }
 
-        if (isFeatured) {
+        if (isStyleWithSubstanceWoMen) {
             // Remove from featured products (soft delete)
             const result = await db
                 .update(womenStyleWithSubstanceMiddlePageSection)
-                .set({
-                    isDeleted: true,
-                    deletedAt: new Date()
-                })
-                .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId));
+                .set({ isDeleted: true, deletedAt: new Date() })
+                .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId))
+                .returning()
+                .then((res) => res[0]);
 
+            // Check if the update affected any rows
             if (!result) {
-                return { success: false, error: "Featured product not found" };
+                return { success: false, error: "Product not found in Style With Substance section" };
             }
 
             // Update isStyleWithSubstanceWoMen to false in products table
@@ -157,7 +245,7 @@ export async function toggleWomenStyleWithSubstance(productId: string, isFeature
             revalidatePath("/dashboard/general/products");
             return { success: true, message: "Product removed from Style With Substance list" };
         } else {
-            // Check if product already exists and is not deleted
+            // Check if product already exists in womenStyleWithSubstanceMiddlePageSection
             const existing = await db
                 .select()
                 .from(womenStyleWithSubstanceMiddlePageSection)
@@ -174,12 +262,13 @@ export async function toggleWomenStyleWithSubstance(productId: string, isFeature
                     .update(womenStyleWithSubstanceMiddlePageSection)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(womenStyleWithSubstanceMiddlePageSection)
+                await db
+                    .insert(womenStyleWithSubstanceMiddlePageSection)
                     .values({ productId });
             }
 
@@ -197,6 +286,7 @@ export async function toggleWomenStyleWithSubstance(productId: string, isFeature
         return { success: false, error: "Failed to update Style With Substance status" };
     }
 }
+
 
 export async function toggleMenStyleWithSubstance(productId: string, isFeatured: boolean) {
     try {

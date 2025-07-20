@@ -329,11 +329,18 @@ export function ProductAction({ product }: PageProps) {
                         </DropdownMenuItem>
 
                         {/* Style With Substance Section */}
-                        <DropdownMenuItem onClick={handleToggleWomenStyleWithSubstance} disabled={isLoading}>
+                        {/* <DropdownMenuItem onClick={handleToggleWomenStyleWithSubstance} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
                             <span>{product.isStyleWithSubstanceWoMen ? "Remove from Style With Substance (Women)" : "Add to Style With Substance (Women)"}</span>
-                        </DropdownMenuItem>
-
+                        </DropdownMenuItem> */}
+<DropdownMenuItem onClick={handleToggleWomenStyleWithSubstance} disabled={isLoading}>
+    <Icons.Layers className="size-4" />
+    <span>
+        {product.isStyleWithSubstanceWoMen
+            ? "Remove from Style With Substance (Women)"
+            : "Add to Style With Substance (Women)"}
+    </span>
+</DropdownMenuItem>
                         <DropdownMenuItem onClick={handleToggleMenStyleWithSubstance} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
                             <span>{product.isStyleWithSubstanceMen ? "Remove from Style With Substance (Men)" : "Add to Style With Substance (Men)"}</span>
