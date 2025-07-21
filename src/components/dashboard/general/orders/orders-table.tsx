@@ -45,11 +45,11 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
     //     header: "Customer ID",
     // },
     {
-        accessorKey: "fullName",
+        accessorKey: "firstName",
         header: "Customer Name",
         cell: ({ row }) => {
             const data = row.original;
-            return data?.address?.fullName;
+            return `${data?.user?.firstName} ${data?.user?.lastName}`;
         },
     },
     {

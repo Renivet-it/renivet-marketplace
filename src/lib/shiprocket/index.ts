@@ -201,6 +201,7 @@ class ShipRocket {
                 "/courier/assign/awb",
                 values
             );
+            console.log(res, "respspsppsspsp");
             if (res.status !== 200)
                 throw new AppError(
                     "Unable to generate AWB",

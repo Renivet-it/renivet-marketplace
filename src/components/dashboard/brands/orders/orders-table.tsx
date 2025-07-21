@@ -98,35 +98,32 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
 interface PageProps {
     initialData: Order[];
     brandId: string;
+    totalCount: number;
 }
 
-export function OrdersTable({ initialData, brandId }: PageProps) {
+export function OrdersTable({ initialData, brandId, totalCount }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-        {}
-    );
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = useState({});
 
-    const { data: dataRaw, refetch: refetchOrderData } = trpc.brands.orders.getOrdersByBrandId.useQuery(
-        { brandId },
-        { initialData }
+    const { data, refetch } = trpc.brands.orders.getOrdersByBrandId.useQuery(
+        { brandId, page, limit },
+        {
+            initialData: page === 1 ? { data: initialData, total: totalCount } : undefined,
+        }
     );
 
-    const data = useMemo(
-        () => dataRaw.map((x) => x).slice((page - 1) * limit, page * limit),
-        [dataRaw, page, limit]
-    );
-
-    const count = data.length;
+    const tableData = useMemo(() => data?.data ?? [], [data]);
+    const count = data?.total ?? 0;
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
-        data,
-        columns: columns(refetchOrderData),
+        data: tableData,
+        columns: columns(refetch),
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
@@ -166,7 +163,7 @@ export function OrdersTable({ initialData, brandId }: PageProps) {
             </div>
 
             <DataTable
-                columns={columns(refetchOrderData)}
+                columns={columns(refetch)}
                 table={table}
                 pages={pages}
                 count={count}

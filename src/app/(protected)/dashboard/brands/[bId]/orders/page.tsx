@@ -35,9 +35,11 @@ export default function Page(props: PageProps) {
 }
 
 async function OrdersFetch({ params }: PageProps) {
-    const { bId } = await params;
+  const { bId } = await params;
 
-    const data = await orderQueries.getOrdersByBrandId(bId);
-    const parsedData = z.array(orderSchema).parse(data); // Parse to match orderSch
-    return <OrdersTable initialData={parsedData} brandId={bId} />;
+  const { data, total } = await orderQueries.getOrdersByBrandId(bId);
+
+  const parsedData = z.array(orderSchema).parse(data); // Match orderSchema
+  return <OrdersTable initialData={parsedData} brandId={bId} totalCount={total} />;
 }
+

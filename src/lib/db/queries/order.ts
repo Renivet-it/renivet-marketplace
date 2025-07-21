@@ -119,6 +119,7 @@ class OrderQuery {
             with: {
                 address: true,
                 shipments: true,
+                user: true,
                 items: {
                     with: {
                         product: {
@@ -224,76 +225,99 @@ class OrderQuery {
     //     const data = await ordersForBrand;
     //     return data;
     // }
-    async getOrdersByBrandId(brandId: string) {
-        const filteredProducts = db
-            .select({ id: products.id })
-            .from(products)
-            .where(eq(products.brandId, brandId))
-            .as("filtered_products");
+async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10) {
+  try {
+    const offset = (page - 1) * limit;
 
-        const filteredOrderItems = db
-            .select({ orderId: orderItems.orderId })
-            .from(orderItems)
-            .where(
-                sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
-            )
-            .as("filtered_order_items");
-        const ordersForBrand = db
-            .with(filteredProducts, filteredOrderItems)
-            .select({
-                id: orders.id,
-                userId: orders.userId,
-                firstName: users.firstName, // Reference users table
-                lastName: users.lastName, // Reference users table
-                shiprocketOrderId: orderShipments?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-                shiprocketShipmentId: orderShipments?.shiprocketShipmentId ?? undefined,
-                receiptId: orders.receiptId,
-                paymentId: orders.paymentId,
-                paymentMethod: orders.paymentMethod,
-                paymentStatus: orders.paymentStatus,
-                status: orders.status,
-                addressId: orders.addressId,
-                totalItems: orders.totalItems,
-                taxAmount: orders.taxAmount,
-                deliveryAmount: orders.deliveryAmount,
-                discountAmount: orders.discountAmount,
-                totalAmount: orders.totalAmount,
-                createdAt: orders.createdAt,
-                updatedAt: orders.updatedAt,
-            })
-            .from(orders)
-            .leftJoin(users, eq(orders.userId, users.id)) // Join with users table
-            .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
-            .where(
-                sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
-            );
+    // Step 1: Get all products for this brand
+    const filteredProducts = db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.brandId, brandId))
+      .as("filtered_products");
 
-        const data = await ordersForBrand;
+    // Step 2: Get all order items that contain these products
+    const filteredOrderItems = db
+      .select({ orderId: orderItems.orderId })
+      .from(orderItems)
+      .where(
+        sql`${orderItems.productId} IN (SELECT id FROM filtered_products)`
+      )
+      .as("filtered_order_items");
 
-        // Map the data to a cleaner format if needed
-        const formattedData = data.map((item) => ({
-                 id: item.id,
-                userId: item.userId,
-                firstName: item.firstName, // Reference item table
-                lastName: item.lastName, // Reference users table
-                shiprocketOrderId: item?.shiprocketOrderId ?? undefined, // Select only shiprocketOrderId
-                shiprocketShipmentId: item?.shiprocketShipmentId ?? undefined,
-                receiptId: item.receiptId,
-                paymentId: item.paymentId,
-                paymentMethod: item.paymentMethod,
-                paymentStatus: item.paymentStatus,
-                status: item.status,
-                addressId: item.addressId,
-                totalItems: item.totalItems,
-                taxAmount: item.taxAmount,
-                deliveryAmount: item.deliveryAmount,
-                discountAmount: item.discountAmount,
-                totalAmount: item.totalAmount,
-                createdAt: item.createdAt,
-                updatedAt: item.updatedAt,
-        }));
-        return formattedData;
-    }
+    // Step 3: Count total matching orders
+  const totalResult = await db
+    .with(filteredProducts, filteredOrderItems)
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(orders)
+    .where(
+      sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
+    );
+  // Convert count to number explicitly
+  const total = Number(totalResult[0]?.count) || 0;
+console.log(total, "toitalsc");
+    // Step 4: Get paginated orders
+    const ordersForBrand = await db
+      .with(filteredProducts, filteredOrderItems)
+      .select({
+        id: orders.id,
+        userId: orders.userId,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        shiprocketOrderId: orderShipments.shiprocketOrderId,
+        shiprocketShipmentId: orderShipments.shiprocketShipmentId,
+        receiptId: orders.receiptId,
+        paymentId: orders.paymentId,
+        paymentMethod: orders.paymentMethod,
+        paymentStatus: orders.paymentStatus,
+        status: orders.status,
+        addressId: orders.addressId,
+        totalItems: orders.totalItems,
+        taxAmount: orders.taxAmount,
+        deliveryAmount: orders.deliveryAmount,
+        discountAmount: orders.discountAmount,
+        totalAmount: orders.totalAmount,
+        createdAt: orders.createdAt,
+        updatedAt: orders.updatedAt,
+      })
+      .from(orders)
+      .leftJoin(users, eq(orders.userId, users.id))
+      .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
+      .where(
+        sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
+      )
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data: ordersForBrand.map((item) => ({
+        id: item.id,
+        userId: item.userId,
+        firstName: item.firstName,
+        lastName: item.lastName,
+        shiprocketOrderId: item.shiprocketOrderId ?? undefined,
+        shiprocketShipmentId: item.shiprocketShipmentId ?? undefined,
+        receiptId: item.receiptId,
+        paymentId: item.paymentId,
+        paymentMethod: item.paymentMethod,
+        paymentStatus: item.paymentStatus,
+        status: item.status,
+        addressId: item.addressId,
+        totalItems: item.totalItems,
+        taxAmount: item.taxAmount,
+        deliveryAmount: item.deliveryAmount,
+        discountAmount: item.discountAmount,
+        totalAmount: item.totalAmount,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })),
+      total,
+    };
+  } catch (error) {
+    console.error("Error in getOrdersByBrandId:", error);
+    throw error;
+  }
+}
 
     async getOrdersByIds(orderIds: string[], year?: number) {
         const data = await db.query.orders.findMany({

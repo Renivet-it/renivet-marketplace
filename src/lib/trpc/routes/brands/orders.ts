@@ -8,21 +8,31 @@ import { z } from "zod";
 import { orderSchema } from "../../../../lib/validations";
 
 export const ordersRouter = createTRPCRouter({
-    getOrdersByBrandId: protectedProcedure
-        .input(
-            z.object({
-                brandId: z.string(),
-            })
-        )
-        .output(z.array(orderSchema)) // Defines output as array of orderSchema
-        .use(
-            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
-        )
-        .query(async ({ input, ctx }) => {
-            const { queries } = ctx;
-            const data = await queries.orders.getOrdersByBrandId(input.brandId);
-            return z.array(orderSchema).parse(data); // Parse data to match orderSchema
-        }),
+getOrdersByBrandId: protectedProcedure
+  .input(
+    z.object({
+      brandId: z.string(),
+      page: z.number().min(1).default(1),
+      limit: z.number().min(1).default(10),
+    })
+  )
+  .output(
+    z.object({
+      data: z.array(orderSchema), // ✅ Make sure this matches the returned array shape
+      total: z.number(), // ✅ Total count of matching orders
+    })
+  )
+  .use(isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand"))
+//@ts-ignore
+  .query(async ({ input, ctx }) => {
+    const { queries } = ctx;
+    const { data, total } = await queries.orders.getOrdersByBrandId(
+      input.brandId,
+      input.page,
+      input.limit
+    );
+    return { data, total };
+  }),
     getOrderShipmentDetailsByShipmentId: protectedProcedure
         .input(
             z.object({
