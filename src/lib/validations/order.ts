@@ -3,6 +3,7 @@ import { orderItemSchema } from "./order-item";
 import { orderShipmentSchema } from "./order-shipment";
 import { productVariantSchema, productWithBrandSchema, returnExchangePolicySchema } from "./product";
 import { addressSchema } from "./address";
+import { userSchema } from "./user";
 
 export const orderSchema = z.object({
     id: z
@@ -115,6 +116,7 @@ export const orderWithItemAndBrandSchema = orderSchema.extend({
     ),
     shipments: z.array(orderShipmentSchema),
     address: addressSchema,
+    user: userSchema.optional(),
     serverNow: z.date().optional(),
 });
 
