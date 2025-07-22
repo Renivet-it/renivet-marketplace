@@ -22,6 +22,7 @@ import {
     products,
     returnShipments,
     users,
+    ordersIntent
 } from "../schema";
 import {
     returnAddressDetails,
@@ -782,6 +783,167 @@ console.log(total, "toitalsc");
             .where(eq(orderShipments.orderId, orderId));
         return result;
     }
+
+    //order-intent query
+
+      /**
+   * Create a new order intent
+   */
+  async createIntent(
+    userId: string,
+    productId: string,
+    values: {
+      variantId?: string;
+      totalItems?: number;
+      totalAmount: number;
+    }
+  ) {
+    const data = await db
+      .insert(ordersIntent)
+      .values({
+        id: crypto.randomUUID(),
+        userId,
+        productId,
+        variantId: values.variantId,
+        totalItems: values.totalItems || 1,
+        totalAmount: values.totalAmount,
+        paymentStatus: "pending",
+        status: "pending",
+      })
+      .returning()
+      .then((res) => res[0]);
+
+    return data;
+  }
+
+  /**
+   * Get order intent by ID
+   */
+  async getIntentById(id: string) {
+    const data = await db.query.ordersIntent.findFirst({
+      where: eq(ordersIntent.id, id),
+      with: {
+        product: true,
+        variant: true,
+        user: true,
+      },
+    });
+
+    return data;
+  }
+
+  /**
+   * Get all intents for a user
+   */
+  async getUserIntents(userId: string) {
+    const data = await db.query.ordersIntent.findMany({
+      where: eq(ordersIntent.userId, userId),
+      with: {
+        product: true,
+        variant: true,
+      },
+      orderBy: (intent, { desc }) => [desc(intent.createdAt)],
+    });
+
+    return data;
+  }
+
+  /**
+   * Get pending intents for a user
+   */
+  async getPendingUserIntents(userId: string) {
+    const data = await db.query.ordersIntent.findMany({
+      where: and(
+        eq(ordersIntent.userId, userId),
+        eq(ordersIntent.paymentStatus, "pending")
+      ),
+      with: {
+        product: true,
+        variant: true,
+      },
+    });
+
+    return data;
+  }
+
+  /**
+   * Update payment status of an intent
+   */
+  async updatePaymentStatus(
+    intentId: string,
+    status: "pending" | "paid" | "failed",
+    paymentData?: {
+      paymentId?: string;
+      paymentMethod?: string;
+    }
+  ) {
+    const updateValues = {
+      paymentStatus: status,
+      ...(paymentData?.paymentId && { paymentId: paymentData.paymentId }),
+      ...(paymentData?.paymentMethod && { 
+        paymentMethod: paymentData.paymentMethod 
+      }),
+    };
+
+    const data = await db
+      .update(ordersIntent)
+      .set(updateValues)
+      .where(eq(ordersIntent.id, intentId))
+      .returning()
+      .then((res) => res[0]);
+
+    return data;
+  }
+
+  /**
+   * Link an intent to an order after successful payment
+   */
+  async linkToOrder(intentId: string, orderId: string) {
+    const data = await db
+      .update(ordersIntent)
+      .set({
+        orderId,
+        status: "completed",
+      })
+      .where(eq(ordersIntent.id, intentId))
+      .returning()
+      .then((res) => res[0]);
+
+    return data;
+  }
+
+  /**
+   * Delete an intent
+   */
+  async deleteIntent(intentId: string) {
+    const data = await db
+      .delete(ordersIntent)
+      .where(eq(ordersIntent.id, intentId))
+      .returning()
+      .then((res) => res[0]);
+
+    return data;
+  }
+
+  /**
+   * Clean up expired intents (older than 7 days)
+   */
+  async cleanupExpiredIntents() {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 7);
+
+    const data = await db
+      .delete(ordersIntent)
+      .where(
+        and(
+          eq(ordersIntent.paymentStatus, "pending"),
+          lt(ordersIntent.createdAt, cutoffDate)
+        )
+      )
+      .returning();
+
+    return data;
+  }
 }
 
 export const orderQueries = new OrderQuery();

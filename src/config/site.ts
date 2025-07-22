@@ -295,6 +295,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 url: "/dashboard/general/orders",
                 permissions: BitFieldSitePermission.MANAGE_BRANDS,
             },
+            {
+                title: "Orders Intent Table",
+                url: "/dashboard/general/order-intent",
+                permissions: BitFieldSitePermission.MANAGE_BRANDS,
+            },
         ],
     },
 {

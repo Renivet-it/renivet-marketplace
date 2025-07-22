@@ -1226,6 +1226,13 @@
       "when": 1753028662717,
       "tag": "0174_bright_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 175,
+      "version": "7",
+      "when": 1753209116220,
+      "tag": "0175_loving_cyclops",
+      "breakpoints": true
     }
   ]
 }
