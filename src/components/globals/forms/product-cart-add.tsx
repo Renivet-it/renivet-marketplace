@@ -201,9 +201,29 @@ export function ProductCartAddForm({
                   }
                 );
               },
-            onSuccess: () => {
+            onSuccess: (_, variables) => {
                 setIsAddedToCart(true);
                 refetch();
+
+    // Calculate total amount (price * quantity)
+    const totalAmount = selectedVariant
+      ? selectedVariant.price * variables.quantity
+      : product.price * variables.quantity;
+    // Create order intent - ADD THIS
+    try {
+      const createOrderIntent = trpc.general.orderIntent.createIntent.useMutation();
+      createOrderIntent.mutate({
+        userId: variables.userId,
+        productId: variables.productId,
+        variantId: variables.variantId || undefined,
+        totalItems: variables.quantity,
+        totalAmount: totalAmount
+      });
+    } catch (error) {
+      console.error("Failed to create order intent:", error);
+      // Optional: show toast error if you want
+      toast.error("Couldn't create order reservation");
+    }
             },
             onError: (err) => {
                 toast.error(err.message);

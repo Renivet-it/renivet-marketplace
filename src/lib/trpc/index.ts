@@ -49,7 +49,7 @@ export const appRouter = createTRPCRouter({
         legal: legalRouter,
         newsletterSubscribers: newsletterSubscriberRouter,
         orders: ordersRouter,
-        orderIntentRouter: orderIntentRouter,
+        orderIntent: orderIntentRouter,
         plans: plansRouter,
         productReviews: productReviewsRouter,
         productTypes: productTypesRouter,

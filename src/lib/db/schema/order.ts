@@ -7,6 +7,7 @@ import {
     text,
     uniqueIndex,
     uuid,
+    jsonb
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
@@ -103,6 +104,7 @@ export const ordersIntent = pgTable(
             }),
         totalItems: integer("total_items"),
         totalAmount: integer("total_amount"),
+        logDetails: jsonb("log_details"),
         ...timestamps,
     },
 
