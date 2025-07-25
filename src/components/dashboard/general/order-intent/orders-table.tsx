@@ -33,7 +33,7 @@ export type TableOrder = OrderWithItemAndBrand;
 const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
     {
         accessorKey: "id",
-        header: "Order ID",
+        header: "Order Intent ID",
         enableHiding: false,
         cell: ({ row }) => {
             const data = row.original;
@@ -49,7 +49,18 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
         header: "Customer Name",
         cell: ({ row }) => {
             const data = row.original;
-            return `${data?.userId}`;
+         return `${data?.user?.firstName} ${data?.user?.lastName}`;
+
+        },
+    },
+    {
+        accessorKey: "title",
+        header: "Product Name",
+        cell: ({ row }) => {
+            const data = row.original;
+            // @ts-ignore
+         return `${data?.product?.title}`;
+
         },
     },
     // {
@@ -75,14 +86,14 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
     //         return <Badge>{convertValueToLabel(data.status)}</Badge>;
     //     },
     // },
-    // {
-    //     accessorKey: "createdAt",
-    //     header: "Created At",
-    //     cell: ({ row }) => {
-    //         const data = row.original;
-    //         return format(new Date(data.createdAt), "MMM dd, yyyy");
-    //     },
-    // },
+    {
+        accessorKey: "createdAt",
+        header: "Intended Time",
+        cell: ({ row }) => {
+            const data = row.original;
+           return format(new Date(data.createdAt), "MMM dd, yyyy 'at' h:mm a");
+        },
+    },
     {
         id: "actions",
         cell: ({ row }) => {
@@ -114,11 +125,12 @@ export function OrdersTable({ initialData }: PageProps) {
     const {
         data: { data: dataRaw, count },
         refetch: refetchOrderData,
+        //@ts-ignore
     } = trpc.general.orders.getAllIntents.useQuery(
         { page, limit, search },
         { initialData }
     );
-
+        //@ts-ignore
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);

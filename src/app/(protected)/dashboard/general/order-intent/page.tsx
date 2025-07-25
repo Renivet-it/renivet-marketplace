@@ -9,8 +9,8 @@ import { Metadata } from "next";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-    title: "Orders",
-    description: "View all the orders placed by the customers",
+    title: "Orders Intent Table",
+    description: "View all the orders intented by the customers",
 };
 
 interface PageProps {
@@ -26,9 +26,9 @@ export default function Page(props: PageProps) {
         <DashShell>
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
-                    <h1 className="text-2xl font-bold">Orders</h1>
+                    <h1 className="text-2xl font-bold">Order Intent Table</h1>
                     <p className="text-balance text-sm text-muted-foreground">
-                        View all the orders placed by the customers
+                        View all the orders intented by the customers
                     </p>
                 </div>
 
@@ -61,8 +61,7 @@ async function OrdersFetch({ searchParams }: PageProps) {
         limit,
         search,
     });
-    console.log(data, "datadatadatadata");
-
+// @ts-ignore
     return <OrdersTable initialData={data} />;
 }
 

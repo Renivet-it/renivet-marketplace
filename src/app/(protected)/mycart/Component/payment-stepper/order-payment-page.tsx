@@ -166,6 +166,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
             console.log("Initiating payment with total amount (in paise):", priceList.total);
 
             // Prepare product details for order intent
+            // @ts-ignore
             const productsForIntent = availableItems.map(item => ({
                 productId: item.product.id,
                 variantId: item.variantId || undefined,
@@ -173,7 +174,6 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                 price: item.variantId
                     ? (item.product.variants?.find((v) => v.id === item.variantId)?.price ?? item.product.price ?? 0)
                     : (item.product.price ?? 0),
-                name: item.product.name, // Assuming product has a name property
                 sku: item.variant?.nativeSku ?? item.product.nativeSku,
             }));
             console.log("Order intent processed:", productsForIntent);
@@ -182,6 +182,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
             // Create order intent before initiating payment using tRPC mutation
             const orderIntent = await createOrderIntent({
                 userId: user.id,
+                //@ts-ignore
                 products: productsForIntent,
                 totalAmount: priceList.total,
             });
@@ -275,7 +276,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                             });
                             console.log(`Intent ${orderIntent.id} linked to order ${createdOrder.id}`);
                         }
-                    } catch (error) {
+                    } catch (error: any) {
                         console.error("Failed to create order after retries:", error);
                         throw new Error(`Order creation failed after ${MAX_RETRIES} attempts: ${error.message}`);
                     }

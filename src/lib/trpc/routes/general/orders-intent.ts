@@ -311,7 +311,7 @@ createIntent: protectedProcedure
     .use(({ ctx, input, next }) => {
       const { user } = ctx;
       const { userId } = input;
-
+// @ts-ignore
       const isAdmin = user.role === "admin";
       if (!isAdmin)
         throw new TRPCError({
