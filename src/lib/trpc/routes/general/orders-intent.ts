@@ -4,15 +4,23 @@ import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { orderQueries } from "@/lib/db/queries";
 
+// Define a schema for a single product within the intent
+const productIntentSchema = z.object({
+  productId: z.string(),
+  variantId: z.string().optional(),
+  quantity: z.number().int().positive(),
+  price: z.number().positive(),
+  name: z.string().optional(),
+  sku: z.string().optional(),
+});
+
 export const orderIntentRouter = createTRPCRouter({
-  createIntent: protectedProcedure
+createIntent: protectedProcedure
     .input(
       z.object({
         userId: z.string(),
-        productId: z.string(),
-        variantId: z.string().optional(),
-        totalItems: z.number().optional(),
-        totalAmount: z.number().positive(),
+        products: z.array(productIntentSchema), // Still accepts an array of products from frontend
+        totalAmount: z.number().positive(), // This totalAmount might be for the entire cart, but individual intents will have their own totalAmount
       })
     )
     .use(({ ctx, input, next }) => {
@@ -29,52 +37,71 @@ export const orderIntentRouter = createTRPCRouter({
       return next({ ctx, input });
     })
     .mutation(async ({ ctx, input }) => {
-      const { userId, productId, variantId, totalItems, totalAmount } = input;
+      const { userId, products } = input; // Removed totalAmount from destructuring as it's not directly used for individual intents
 
-      // Verify product exists and is available
-      const product = await ctx.db.query.products.findFirst({
-        where: and(
-          eq(ctx.schemas.products.id, productId),
-          eq(ctx.schemas.products.isAvailable, true),
-          eq(ctx.schemas.products.isActive, true),
-          eq(ctx.schemas.products.isDeleted, false),
-          eq(ctx.schemas.products.verificationStatus, "approved"),
-          eq(ctx.schemas.products.isPublished, true)
-        ),
-      });
+      // Verify each product and variant in the array
+      for (const productInput of products) {
+        const { productId, variantId } = productInput;
 
-      if (!product) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Product not available",
-        });
-      }
-
-      // Verify variant if provided
-      if (variantId) {
-        const variant = await ctx.db.query.productVariants.findFirst({
+        const product = await ctx.db.query.products.findFirst({
           where: and(
-            eq(ctx.schemas.productVariants.id, variantId),
-            eq(ctx.schemas.productVariants.productId, productId),
-            eq(ctx.schemas.productVariants.isDeleted, false)
+            eq(ctx.schemas.products.id, productId),
+            eq(ctx.schemas.products.isAvailable, true),
+            eq(ctx.schemas.products.isActive, true),
+            eq(ctx.schemas.products.isDeleted, false),
+            eq(ctx.schemas.products.verificationStatus, "approved"),
+            eq(ctx.schemas.products.isPublished, true)
           ),
         });
 
-        if (!variant) {
+        if (!product) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Variant not available",
+            message: `Product with ID ${productId} not available`,
           });
+        }
+
+        if (variantId) {
+          const variant = await ctx.db.query.productVariants.findFirst({
+            where: and(
+              eq(ctx.schemas.productVariants.id, variantId),
+              eq(ctx.schemas.productVariants.productId, productId),
+              eq(ctx.schemas.productVariants.isDeleted, false)
+            ),
+          });
+
+          if (!variant) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Variant with ID ${variantId} for product ${productId} not available`,
+            });
+          }
         }
       }
 
-      return orderQueries.createIntent(userId, productId, {
-        variantId,
-        totalItems,
-        totalAmount,
-      });
-    }),
+      // Instead of passing the whole array, iterate and create an intent for each product
+      // This assumes orderQueries.createIntent expects single product details
+      const createdIntents = [];
+      for (const productInput of products) {
+        const { productId, variantId, quantity, price } = productInput;
+        // Log before calling orderQueries.createIntent for each product
+        console.log("Calling orderQueries.createIntent for product:", { userId, productId, variantId, quantity, price });
+        const intent = await orderQueries.createIntent(
+          userId,
+          productId,
+          { variantId, totalItems: quantity, totalAmount: price * quantity },
+          // You might want to pass metadata from the original request if available
+          // For now, leaving it as undefined or passing a default
+          undefined
+        );
+        createdIntents.push(intent);
+      }
 
+      // Return the first intent or an array of intents, depending on what the frontend expects
+      // For now, returning the first intent as the primary intent for the payment process
+      // You might need to adjust this based on how your payment gateway handles multiple intents
+      return createdIntents[0];
+    }),
   getIntentById: protectedProcedure
     .input(
       z.object({
@@ -298,3 +325,4 @@ export const orderIntentRouter = createTRPCRouter({
       return orderQueries.cleanupExpiredIntents();
     }),
 });
+
