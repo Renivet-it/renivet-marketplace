@@ -32,7 +32,8 @@ import {
     ticketRouter,
     usersRouter,
     OrderReturnRouter,
-    ReasonRouter
+    ReasonRouter,
+    orderIntentRouter
 } from "./routes/general";
 import { addressesRouter } from "./routes/general/address";
 import { createTRPCRouter } from "./trpc";
@@ -48,6 +49,7 @@ export const appRouter = createTRPCRouter({
         legal: legalRouter,
         newsletterSubscribers: newsletterSubscriberRouter,
         orders: ordersRouter,
+        orderIntent: orderIntentRouter,
         plans: plansRouter,
         productReviews: productReviewsRouter,
         productTypes: productTypesRouter,

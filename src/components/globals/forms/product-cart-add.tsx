@@ -201,9 +201,10 @@ export function ProductCartAddForm({
                   }
                 );
               },
-            onSuccess: () => {
+            onSuccess: (_, variables) => {
                 setIsAddedToCart(true);
                 refetch();
+
             },
             onError: (err) => {
                 toast.error(err.message);

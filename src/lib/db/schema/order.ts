@@ -7,6 +7,7 @@ import {
     text,
     uniqueIndex,
     uuid,
+    jsonb
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
@@ -77,6 +78,43 @@ export const orders = pgTable(
     })
 );
 
+export const ordersIntent = pgTable(
+    "orders_intent",
+    {
+        id: text("id").primaryKey().notNull().unique(),
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, {
+                onDelete: "cascade",
+            }),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, {
+                onDelete: "cascade",
+            }),
+        variantId: uuid("variant_id").references(() => productVariants.id, {
+            onDelete: "cascade",
+        }),
+        paymentId: text("payment_id"),
+        paymentStatus: text("payment_status"),
+        status: text("status"),
+        orderId: text("order_id")
+            .references(() => orders.id, {
+                onDelete: "cascade",
+            }),
+        totalItems: integer("total_items"),
+        totalAmount: integer("total_amount"),
+        logDetails: jsonb("log_details"),
+        ...timestamps,
+    },
+
+    (table) => ({
+        orderIntentUserIdIdx: index("order_intent_user_id_idx").on(table.userId),
+        orderIntentOrderIdIdx: index("order_intent_order_id_idx").on(table.orderId),
+    })
+);
+
+
 export const orderItems = pgTable(
     "order_items",
     {
@@ -124,6 +162,7 @@ export const orderRelations = relations(orders, ({ one, many }) => ({
     }),
     refunds: many(refunds),
     shipments: many(orderShipments),
+    intent: many(ordersIntent),
     item: one(orderItems, {
         fields: [orders.id],
         references: [orderItems.orderId]
@@ -146,5 +185,25 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     returnExchangePolicy: one(returnExchangePolicy, {
         fields: [orderItems.productId],
         references: [returnExchangePolicy.productId],
+    }),
+}));
+
+
+export const orderIntentRelations = relations(ordersIntent, ({ one }) => ({
+    order: one(orders, {
+        fields: [ordersIntent.orderId],
+        references: [orders.id],
+    }),
+    product: one(products, {
+        fields: [ordersIntent.productId],
+        references: [products.id],
+    }),
+    variant: one(productVariants, {
+        fields: [ordersIntent.variantId],
+        references: [productVariants.id],
+    }),
+        user: one(users, {
+        fields: [ordersIntent.userId],
+        references: [users.id],
     }),
 }));

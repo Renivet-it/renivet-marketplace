@@ -13,7 +13,7 @@ import {
     returnShipmentPayment,
     returnShipmentReason,
 } from "@/lib/validations/order-return";
-import { and, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lt, lte, sql } from "drizzle-orm";
 import { db } from "..";
 import {
     orderItems,
@@ -22,6 +22,7 @@ import {
     products,
     returnShipments,
     users,
+    ordersIntent
 } from "../schema";
 import {
     returnAddressDetails,
@@ -782,6 +783,339 @@ console.log(total, "toitalsc");
             .where(eq(orderShipments.orderId, orderId));
         return result;
     }
+
+    //order-intent query
+
+      /**
+   * Create a new order intent
+   */
+  async createIntent(
+    userId: string,
+    productId: string,
+    values: {
+      variantId?: string;
+      totalItems?: number;
+      totalAmount: number;
+    },
+    metadata?: {
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ) {
+    try {
+      const data = await db
+        .insert(ordersIntent)
+        .values({
+          id: crypto.randomUUID(),
+          userId,
+          productId,
+          variantId: values.variantId,
+          totalItems: values.totalItems || 1,
+          totalAmount: values.totalAmount,
+          paymentStatus: "pending",
+          status: "pending",
+          logDetails: {
+            created: new Date().toISOString(),
+            status: "initiated",
+            metadata,
+            events: [
+              {
+                type: "creation",
+                timestamp: new Date().toISOString(),
+                message: "Intent created successfully"
+              }
+            ]
+          }
+        })
+        .returning()
+        .then((res) => res[0]);
+
+      return data;
+    } catch (error: any) {
+      const errorId = crypto.randomUUID();
+      console.error(`[${errorId}] Failed to create intent:`, error);
+
+      // Log the error to the database if needed
+      await db.insert(ordersIntent).values({
+        id: errorId,
+        userId,
+        productId,
+        totalAmount: 0,
+        paymentStatus: "failed",
+        status: "error",
+        logDetails: {
+          error: {
+            message: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+          },
+          metadata
+        }
+      });
+
+      throw new Error(`Order intent creation failed. Reference: ${errorId}`);
+    }
+  }
+
+
+  /**
+   * Get order intent by ID
+   */
+  async getIntentById(id: string) {
+    try {
+      const data = await db.query.ordersIntent.findFirst({
+        where: eq(ordersIntent.id, id),
+        with: {
+          product: true,
+          variant: true,
+          user: true,
+        },
+      });
+
+      if (!data) {
+        throw new Error(`Intent ${id} not found`);
+      }
+
+      // Update access log
+      await db.update(ordersIntent)
+        .set({
+          logDetails: sql`
+            jsonb_set(
+              COALESCE(log_details, '{}'::jsonb),
+              '{accessLogs}',
+              COALESCE(log_details->'accessLogs', '[]'::jsonb) || 
+              jsonb_build_object(
+                'timestamp', ${new Date().toISOString()},
+                'action', 'fetched'
+              )
+            )
+          `
+        })
+        .where(eq(ordersIntent.id, id));
+
+      return data;
+    } catch (error) {
+      console.error(`Failed to fetch intent ${id}:`, error);
+      throw error;
+    }
+  }
+
+
+
+async getAllIntents({
+  limit,
+  page,
+  search,
+}: {
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const data = await db.query.ordersIntent.findMany({
+      where: search ? ilike(ordersIntent.id, `%${search}%`) : undefined,
+      with: {
+        product: true,
+        variant: true,
+        user: true,
+      },
+      limit,
+      offset: (page - 1) * limit,
+      orderBy: [desc(ordersIntent.createdAt)],
+      extras: {
+        count: db
+          .$count(
+            ordersIntent,
+            search ? ilike(ordersIntent.id, `%${search}%`) : undefined
+          )
+          .as("intent_count"),
+      },
+    });
+
+    return {
+      data,
+      count: +data?.[0]?.count || 0,
+    };
+  } catch (error) {
+    console.error("Failed to fetch all intents:", error);
+    throw error;
+  }
+}
+
+  /**
+   * Get all intents for a user
+   */
+  async getUserIntents(userId: string) {
+    const data = await db.query.ordersIntent.findMany({
+      where: eq(ordersIntent.userId, userId),
+      with: {
+        product: true,
+        variant: true,
+      },
+      orderBy: (intent, { desc }) => [desc(intent.createdAt)],
+    });
+
+    return data;
+  }
+
+  /**
+   * Get pending intents for a user
+   */
+  async getPendingUserIntents(userId: string) {
+    const data = await db.query.ordersIntent.findMany({
+      where: and(
+        eq(ordersIntent.userId, userId),
+        eq(ordersIntent.paymentStatus, "pending")
+      ),
+      with: {
+        product: true,
+        variant: true,
+      },
+    });
+
+    return data;
+  }
+
+  /**
+   * Update payment status of an intent
+   */
+  async updatePaymentStatus(
+    intentId: string,
+    status: "pending" | "paid" | "failed",
+    paymentData?: {
+      paymentId?: string;
+      paymentMethod?: string;
+      gatewayResponse?: any;
+    }
+  ) {
+    try {
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        status,
+        paymentData,
+        message: `Payment status updated to ${status}`
+      };
+
+      const data = await db
+        .update(ordersIntent)
+        .set({
+          paymentStatus: status,
+          ...(paymentData?.paymentId && { paymentId: paymentData.paymentId }),
+          ...(paymentData?.paymentMethod && { 
+            paymentMethod: paymentData.paymentMethod 
+          }),
+          logDetails: sql`
+            jsonb_set(
+              COALESCE(log_details, '{}'::jsonb),
+              '{events}',
+              COALESCE(log_details->'events', '[]'::jsonb) || 
+              ${JSON.stringify(logEntry)}::jsonb
+            )
+          `
+        })
+        .where(eq(ordersIntent.id, intentId))
+        .returning()
+        .then((res) => res[0]);
+
+      return data;
+    } catch (error: any) {
+      console.error(`Failed to update payment status for intent ${intentId}:`, error);
+
+      // Log the failure
+      await db.update(ordersIntent)
+        .set({
+          logDetails: sql`
+            jsonb_set(
+              COALESCE(log_details, '{}'::jsonb),
+              '{errors}',
+              COALESCE(log_details->'errors', '[]'::jsonb) || 
+              jsonb_build_object(
+                'timestamp', ${new Date().toISOString()},
+                'error', ${error.message},
+                'statusAttempt', ${status}
+              )
+            )
+          `
+        })
+        .where(eq(ordersIntent.id, intentId));
+
+      throw error;
+    }
+  }
+
+  /**
+   * Link an intent to an order after successful payment
+   */
+  async linkToOrder(intentId: string, orderId: string) {
+    const intent = await this.getIntentById(intentId);
+
+    if (intent.paymentStatus !== "paid") {
+      throw new Error("Only paid intents can be linked to orders");
+    }
+
+    try {
+      const data = await db
+        .update(ordersIntent)
+        .set({
+          orderId,
+          status: "completed",
+          logDetails: sql`
+            jsonb_set(
+              COALESCE(log_details, '{}'::jsonb),
+              '{events}',
+              COALESCE(log_details->'events', '[]'::jsonb) || 
+              jsonb_build_object(
+                'timestamp', ${new Date().toISOString()},
+                'orderId', ${orderId},
+                'message', 'Linked to order'
+              )
+            )
+          `
+        })
+        .where(eq(ordersIntent.id, intentId))
+        .returning()
+        .then((res) => res[0]);
+
+      return data;
+    } catch (error) {
+      console.error(`Failed to link intent ${intentId} to order ${orderId}:`, error);
+      throw error;
+    }
+  }
+
+
+  /**
+   * Delete an intent
+   */
+  async deleteIntent(intentId: string) {
+    const data = await db
+      .delete(ordersIntent)
+      .where(eq(ordersIntent.id, intentId))
+      .returning()
+      .then((res) => res[0]);
+
+    return data;
+  }
+
+  /**
+   * Clean up expired intents (older than 7 days)
+   */
+  async cleanupExpiredIntents() {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 7);
+
+    const data = await db
+      .delete(ordersIntent)
+      .where(
+        and(
+          eq(ordersIntent.paymentStatus, "pending"),
+          lt(ordersIntent.createdAt, cutoffDate)
+        )
+      )
+      .returning();
+
+    return data;
+  }
 }
 
 export const orderQueries = new OrderQuery();
