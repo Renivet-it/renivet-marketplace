@@ -86,6 +86,16 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
     //         return <Badge>{convertValueToLabel(data.status)}</Badge>;
     //     },
     // },
+        {
+        accessorKey: "payment_status",
+        header: "Payment Status",
+        cell: ({ row }) => {
+            const data = row.original;
+            // @ts-ignore
+         return `${data?.paymentStatus}`;
+
+        },
+    },
     {
         accessorKey: "createdAt",
         header: "Intended Time",
