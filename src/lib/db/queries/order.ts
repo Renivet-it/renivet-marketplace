@@ -900,6 +900,48 @@ console.log(total, "toitalsc");
     }
   }
 
+
+
+async getAllIntents({
+  limit,
+  page,
+  search,
+}: {
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const data = await db.query.ordersIntent.findMany({
+      where: search ? ilike(ordersIntent.id, `%${search}%`) : undefined,
+      with: {
+        product: true,
+        variant: true,
+        user: true,
+      },
+      limit,
+      offset: (page - 1) * limit,
+      orderBy: [desc(ordersIntent.createdAt)],
+      extras: {
+        count: db
+          .$count(
+            ordersIntent,
+            search ? ilike(ordersIntent.id, `%${search}%`) : undefined
+          )
+          .as("intent_count"),
+      },
+    });
+
+    return {
+      data,
+      count: +data?.[0]?.count || 0,
+    };
+  } catch (error) {
+    console.error("Failed to fetch all intents:", error);
+    throw error;
+  }
+}
+
   /**
    * Get all intents for a user
    */

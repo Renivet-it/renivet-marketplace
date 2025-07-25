@@ -1,7 +1,7 @@
 import {
     OrdersDownload,
     OrdersTable,
-} from "@/components/dashboard/general/orders";
+} from "@/components/dashboard/general/order-intent";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { orderQueries } from "@/lib/db/queries";
@@ -32,9 +32,9 @@ export default function Page(props: PageProps) {
                     </p>
                 </div>
 
-                <Suspense>
+                {/* <Suspense>
                     <OrdersDownloadFetch />
-                </Suspense>
+                </Suspense> */}
             </div>
 
             <Suspense fallback={<TableSkeleton />}>
@@ -56,17 +56,18 @@ async function OrdersFetch({ searchParams }: PageProps) {
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const search = searchRaw?.length ? searchRaw : undefined;
 
-    const data = await orderQueries.getOrders({
+    const data = await orderQueries.getAllIntents({
         page,
         limit,
         search,
     });
+    console.log(data, "datadatadatadata");
 
     return <OrdersTable initialData={data} />;
 }
 
-async function OrdersDownloadFetch() {
-    const data = await orderQueries.getAllOrders();
-    // console.log("Fetched orders for download:", data);
-    return <OrdersDownload orders={data} />;
-}
+// async function OrdersDownloadFetch() {
+//     const data = await orderQueries.getAllOrders();
+//     // console.log("Fetched orders for download:", data);
+//     return <OrdersDownload orders={data} />;
+// }
