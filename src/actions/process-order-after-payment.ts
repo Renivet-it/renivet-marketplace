@@ -24,19 +24,19 @@ export async function processOrderAfterPayment({
     try {
         // Logic 1: Minus the stock
         console.log(`Checking and updating stock for order ${orderDetails.razorpayOrderId}`);
-        const stockUpdates = orderDetails.items.map((item) => ({
-            productId: item.productId,
-            variantId: item.variantId ?? undefined, // Convert null to undefined
-            quantity: item.quantity, // Amount to deduct
-        }));
+        // const stockUpdates = orderDetails.items.map((item) => ({
+        //     productId: item.productId,
+        //     variantId: item.variantId ?? undefined, // Convert null to undefined
+        //     quantity: item.quantity, // Amount to deduct
+        // }));
 
-        try {
-            await productQueries.updateProductStock(stockUpdates);
-            console.log(`Stock updated successfully for order ${orderDetails.razorpayOrderId}`);
-        } catch (stockError) {
-            console.error(`Failed to update stock for order ${orderDetails.razorpayOrderId}:`, stockError);
-            throw new Error("Failed to update product stock");
-        }
+        // try {
+        //     await productQueries.updateProductStock(stockUpdates);
+        //     console.log(`Stock updated successfully for order ${orderDetails.razorpayOrderId}`);
+        // } catch (stockError) {
+        //     console.error(`Failed to update stock for order ${orderDetails.razorpayOrderId}:`, stockError);
+        //     throw new Error("Failed to update product stock");
+        // }
 
         // Logic 2: Mark as paid
         console.log(`Updating order status to paid for order ${orderDetails.razorpayOrderId}`);
