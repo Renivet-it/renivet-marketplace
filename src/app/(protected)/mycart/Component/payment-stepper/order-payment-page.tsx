@@ -283,6 +283,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                 },
                 orderDetailsByBrand,
                 deleteItemFromCart,
+                orderIntentId: orderIntent.id,
             });
 
             initializeRazorpayPayment(options);
