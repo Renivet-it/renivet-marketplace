@@ -428,18 +428,19 @@ export const ordersRouter = createTRPCRouter({
                     productId: item.productId,
                     variantId: item.variantId ?? undefined, // Convert null to undefined
                     // @ts-ignore
-                    quantity: variant ? variant.quantity - item.quantity : product.quantity - item.quantity,
+                    quantity: item.quantity,
                     }];
+console.log(stockUpdate, "stockUpdatestockUpdate");
 
                     try {
                     await queries.products.updateProductStock(stockUpdate);
                     console.log(`Stock updated successfully for order ${newOrder.id}`);
                     } catch (stockError) {
                     console.error(`Failed to update stock for order ${newOrder.id}:`, stockError);
-                    throw new TRPCError({
-                        code: "INTERNAL_SERVER_ERROR",
-                        message: "Failed to update product stock",
-                    });
+                    // throw new TRPCError({
+                    //     code: "INTERNAL_SERVER_ERROR",
+                    //     message: "Failed to update product stock",
+                    // });
                     }
 
                     // NEW: Logic 2 - Mark as Paid

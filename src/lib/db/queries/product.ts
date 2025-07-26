@@ -14,7 +14,7 @@ import {
     UpdateProductValue,
     UpdateProductMediaInput
 } from "@/lib/validations";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "..";
 import {
     brands,
@@ -1583,53 +1583,121 @@ async getProducts({
         return data;
     }
 
-    async updateProductStock(
-        data: {
-            productId: string;
-            variantId?: string;
-            quantity: number;
-        }[]
-    ) {
-        const updatedData = await db.transaction(async (tx) => {
-            const updated = await Promise.all(
-                data.map(async (item) => {
-                    if (item.variantId) {
-                        const res = await tx
-                            .update(productVariants)
-                            .set({
-                                quantity: item.quantity,
-                                updatedAt: new Date(),
-                            })
-                            .where(
-                                and(
-                                    eq(
-                                        productVariants.productId,
-                                        item.productId
-                                    ),
-                                    eq(productVariants.id, item.variantId)
-                                )
-                            )
-                            .returning();
-                        return res[0];
-                    }
+    // async updateProductStock(
+    //     data: {
+    //         productId: string;
+    //         variantId?: string;
+    //         quantity: number;
+    //     }[]
+    // ) {
+    //     const updatedData = await db.transaction(async (tx) => {
+    //         const updated = await Promise.all(
+    //             data.map(async (item) => {
+    //                 if (item.variantId) {
+    //                     const res = await tx
+    //                         .update(productVariants)
+    //                         .set({
+    //                             quantity: item.quantity,
+    //                             updatedAt: new Date(),
+    //                         })
+    //                         .where(
+    //                             and(
+    //                                 eq(
+    //                                     productVariants.productId,
+    //                                     item.productId
+    //                                 ),
+    //                                 eq(productVariants.id, item.variantId)
+    //                             )
+    //                         )
+    //                         .returning();
+    //                     return res[0];
+    //                 }
 
-                    const res = await tx
-                        .update(products)
-                        .set({
-                            quantity: item.quantity,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(products.id, item.productId))
-                        .returning();
-                    return res[0];
+    //                 const res = await tx
+    //                     .update(products)
+    //                     .set({
+    //                         quantity: item.quantity,
+    //                         updatedAt: new Date(),
+    //                     })
+    //                     .where(eq(products.id, item.productId))
+    //                     .returning();
+    //                 return res[0];
+    //             })
+    //         );
+
+    //         return updated;
+    //     });
+
+    //     return updatedData;
+    // }
+
+async updateProductStock(
+    data: {
+        productId: string;
+        variantId?: string;
+        quantity: number;
+    }[]
+) {
+    try {
+        const updatedData = await db.transaction(async (tx) => {
+            const results = await Promise.all(
+                data.map(async (item) => {
+                    try {
+                        if (item.variantId) {
+                            const [result] = await tx
+                                .update(productVariants)
+                                .set({
+                                    quantity: sql`${productVariants.quantity} - ${item.quantity}`,
+                                    updatedAt: new Date(),
+                                })
+                                .where(
+                                    and(
+                                        eq(productVariants.productId, item.productId),
+                                        eq(productVariants.id, item.variantId)
+                                    )
+                                )
+                                .returning();
+                            return { success: true, data: result };
+                        } else {
+                            const [result] = await tx
+                                .update(products)
+                                .set({
+                                    quantity: sql`${products.quantity} - ${item.quantity}`,
+                                    updatedAt: new Date(),
+                                })
+                                .where(eq(products.id, item.productId))
+                                .returning();
+                            return { success: true, data: result };
+                        }
+                    } catch (error) {
+                        return {
+                            success: false,
+                            productId: item.productId,
+                            variantId: item.variantId,
+                            error: "Update failed (silenced)"
+                        };
+                    }
                 })
             );
-
-            return updated;
+            return results;
         });
 
-        return updatedData;
+        return {
+            updated: updatedData.filter((x) => x.success),
+            failed: updatedData.filter((x) => !x.success)
+        };
+
+    } catch (error) {
+        return {
+            updated: [],
+            failed: data.map((item) => ({
+                productId: item.productId,
+                variantId: item.variantId,
+                error: "Transaction failed (silenced)"
+            }))
+        };
     }
+}
 
     async sendProductForReview(productId: string) {
         const data = await db

@@ -104,13 +104,13 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
            return format(new Date(data.createdAt), "MMM dd, yyyy 'at' h:mm a");
         },
     },
-    {
-        id: "actions",
-        cell: ({ row }) => {
-            const data = row.original;
-            return <OrderAction order={data} onAction={onAction}/>;
-        },
-    },
+    // {
+    //     id: "actions",
+    //     cell: ({ row }) => {
+    //         const data = row.original;
+    //         return <OrderAction order={data} onAction={onAction}/>;
+    //     },
+    // },
 ];
 interface PageProps {
     initialData: {

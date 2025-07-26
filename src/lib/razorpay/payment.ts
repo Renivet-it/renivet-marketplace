@@ -7,9 +7,11 @@ import { Dispatch, SetStateAction } from "react";
 import { wait } from "../utils";
 import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 import { processOrderAfterPayment } from "@/actions/process-order-after-payment";
+import { updatePaymentStatusAction } from "@/actions/update-payment-status";
 import { toast } from "sonner";
 import { handleClientError } from "@/lib/utils";
 import { orderQueries, productQueries } from "@/lib/db/queries";
+import { trpc } from "../trpc/client";
 
 export function createRazorpayPaymentOptions({
     orderId,
@@ -25,6 +27,7 @@ export function createRazorpayPaymentOptions({
     createOrder,
     orderDetailsByBrand,
     deleteItemFromCart,
+    orderIntentId,
 }: {
     orderId: string;
     deliveryAddress: any;
@@ -93,6 +96,7 @@ export function createRazorpayPaymentOptions({
         razorpayOrderId: string;
     }>;
     deleteItemFromCart: (input: { userId: string }) => void;
+    orderIntentId: string;
 }) {
     const options: RazorpayPaymentOptions = {
         key: env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
@@ -134,6 +138,16 @@ export function createRazorpayPaymentOptions({
                 await verifyPayment(payload);
                 console.log("Payment verified successfully");
 
+//                 console.log("Updating payment status to 'paid'...");
+// await updatePaymentStatusAction({
+//                     userId: user.id,
+//                     intentId: orderIntentId,
+//                     status: "paid",
+//                     paymentId: payload.razorpay_payment_id,
+//                     paymentMethod: "razorpay",
+//                 });
+                console.log(orderIntentId, "Updating payment status to 'paid'...");
+
 // Step 2: Validate order details
                 if (!orderDetailsByBrand || orderDetailsByBrand.length === 0) {
                     throw new Error("No order details found to create orders");
@@ -156,6 +170,7 @@ export function createRazorpayPaymentOptions({
                         await processOrderAfterPayment({
                             orderDetails,
                             paymentId: payload.razorpay_payment_id,
+                            orderIntentId: orderIntentId
                         });
                         console.log(`Order ${orderDetails.razorpayOrderId} processed successfully`);
 

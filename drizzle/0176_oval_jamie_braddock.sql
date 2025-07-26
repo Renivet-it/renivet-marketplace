@@ -1,0 +1,1 @@
+ALTER TABLE "orders_intent" ADD COLUMN "log_details" jsonb;
