@@ -30,7 +30,7 @@ export function CuratedBanner({ className, banners, ...props }: PageProps) {
                 <CarouselContent className="ml-0">
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="p-0">
-                            <div className="relative w-full" style={{ aspectRatio: "1440/570" }}>
+                            <div className="relative w-full" style={{ aspectRatio: "1440/300" }}>
                                 <Link href={item.url || "/shop"} className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}

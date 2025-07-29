@@ -27,7 +27,6 @@ export function DealofTheMonthStrip({
             const newScrollLeft = direction === 'left' 
                 ? scrollRef.current.scrollLeft - scrollAmount
                 : scrollRef.current.scrollLeft + scrollAmount;
-            
             scrollRef.current.scrollTo({
                 left: newScrollLeft,
                 behavior: 'smooth'
@@ -94,13 +93,13 @@ export function DealofTheMonthStrip({
                         ref={scrollRef}
                         onScroll={handleScroll}
                         className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                     >
                         {marketingStrip.map((item, index) => (
                             <div
                                 key={index}
                                 className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
-                                style={{ width: '398px', height: '393px' }}
+                                style={{ width: "398px", height: "393px" }}
                             >
                                 {/* Background Image */}
                                 <div className="absolute inset-0">
