@@ -51,6 +51,8 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
         defaultValues: {
             imageUrl: shopByCategory?.imageUrl ?? "",
             url: shopByCategory?.url ?? null,
+            //@ts-ignore
+            title: shopByCategory?.title ?? "",
         },
     });
 
@@ -81,11 +83,12 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
     const { mutateAsync: createAdAsync } =
         trpc.general.content.newHomePageBrandIntroRouter.createWomenBanner.useMutation();
     const { mutateAsync: updateAdAsync } =
-        trpc.general.content.newHomePageBrandIntroRouter.updateWomenBanner.useMutation();
+    // @ts-ignore
+        trpc.general.content.newHomePageBrandIntroRouter.updateHomeShopByCategory.useMutation();
 
     const { mutate: createBrandProduct, isPending: isCreating } = useMutation({
         onMutate: () => {
-            const toastId = toast.loading("Creating Men banner...");
+            const toastId = toast.loading("Creating Explore category...");
             return { toastId };
         },
         mutationFn: async (values: CreateHomeShopByCategory) => {
@@ -100,10 +103,10 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
             await createAdAsync(values);
         },
         onSuccess: (_, __, { toastId }) => {
-            toast.success("Men banner created successfully", {
+            toast.success("Explore category created successfully", {
                 id: toastId,
             });
-            router.push("/dashboard/general/women-section/men-banner");
+            router.push("/dashboard/general/women-section/explore-category");
 
             setPreview(null);
             setFile(null);
@@ -220,6 +223,27 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                                     </div>
                                 )}
                             </div>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Title</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    {...field}
+                                    placeholder="Enter Title"
+                                    value={field.value ?? ""}
+                                    disabled={isPending}
+                                />
+                            </FormControl>
 
                             <FormMessage />
                         </FormItem>

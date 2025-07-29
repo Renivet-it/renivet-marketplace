@@ -7350,7 +7350,7 @@ export const newHomePageBrandIntroRouter = createTRPCRouter({
                 await queries.womenhomebanner.createHomePageBrandIntroductionSection({
                     ...input,
                     imageUrl: input.imageUrl,
-                    title: "",
+                    title: input.title ?? null,
                     isActive: false
                 });
 
