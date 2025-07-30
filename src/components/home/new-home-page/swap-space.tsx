@@ -29,7 +29,7 @@ export function SwapSpace({ className, banners, ...props }: PageProps) {
         key={index}
         className="basis-[calc(100%/3-16px)] max-w-[calc(100%/3-16px)] flex-shrink-0"
       >
-        <div className="relative w-[422px] h-[524px] group">
+        <div className="relative w-[500px] h-[624px] group">
           <Link href={item.url || "/shop"} className="block w-full h-full">
             <Image
               src={item.imageUrl}
