@@ -39,9 +39,9 @@ export function ShopByNewCategories({
         >
             <div className="w-full space-y-8 max-w-screen-2xl mx-auto px-4">
                 {/* Title */}
-                <h2 className="text-center text-2xl md:text-3xl font-bold uppercase tracking-wide text-gray-800">
-                    {titleData?.title || "Shop by Category"}
-                </h2>
+  <h2 className="text-2xl md:text-3xl font-bold uppercase text-gray-800 inline-block border-b-2 border-gray-300 pb-2 px-4">
+    {titleData?.title || "Shop by Category"}
+  </h2>
 
                 {/* Mobile View (3 full cards) */}
                 <div className="md:hidden grid auto-cols-[calc(33.333%-8px)] grid-flow-col gap-3 overflow-x-auto px-2 scrollbar-hide">

@@ -74,6 +74,9 @@ export default function Page() {
                                                   <Suspense>
                 <SwapSpaceBannerFetch />
             </Suspense>
+                 <Suspense>
+                <ShopByNewCategoriesFetch />
+            </Suspense>
 
                                                           <Suspense>
                 <ArtisanCollectionFetch />
@@ -82,10 +85,6 @@ export default function Page() {
                                                           <Suspense>
                 <InstaBannerFetch />
             </Suspense>
-        <Suspense>
-                <ShopByNewCategoriesFetch />
-            </Suspense>
-
             {/* <Suspense>
                 <MarketingStripFetch />
             </Suspense> */}
