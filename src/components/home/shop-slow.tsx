@@ -24,14 +24,14 @@ const SustainableBadges = () => {
           <div className="col-span-12 lg:col-span-5 relative">
             <div
               className="relative overflow-hidden rounded-lg border-4 border-blue-400"
-              style={{ width: '665px', height: '500px', maxWidth: '100%' }}
+              style={{ width: "665px", height: "500px", maxWidth: "100%" }}
             >
               <Image
                 src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSx4iy4Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF"
                 alt="Woman in beige dress"
                 fill
                 className="object-cover"
-                style={{ objectPosition: 'center' }}
+                style={{ objectPosition: "center" }}
               />
               {/* Overlay Content */}
               <div className="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -48,16 +48,16 @@ const SustainableBadges = () => {
           <div className="col-span-12 lg:col-span-3 space-y-4">
             {/* Top Middle Image - Bag (391x319) */}
             <div className="relative">
-              <div 
+              <div
                 className="relative overflow-hidden rounded-lg"
-                style={{ width: '391px', height: '319px', maxWidth: '100%' }}
+                style={{ width: "391px", height: "319px", maxWidth: "100%" }}
               >
                 <Image
                   src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg8OTqX2ENPRLZdGUpA0elOxytCDfJibYIko7"
                   alt="Sustainable bag"
                   fill
                   className="object-cover"
-                  style={{ objectPosition: 'center' }}
+                  style={{ objectPosition: "center" }}
                 />
                 {/* Overlay Content */}
                 <div className="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -72,16 +72,16 @@ const SustainableBadges = () => {
 
             {/* Bottom Middle Image - Green bowls (317x166) */}
             <div className="relative">
-              <div 
+              <div
                 className="relative overflow-hidden rounded-lg"
-                style={{ width: '317px', height: '166px', maxWidth: '100%' }}
+                style={{ width: "317px", height: "166px", maxWidth: "100%" }}
               >
                 <Image
                   src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN379xwG5l64McafQHoWsZUzihAkJ3DF5EGgPp"
                   alt="Green sustainable bowls"
                   fill
                   className="object-cover"
-                  style={{ objectPosition: 'center' }}
+                  style={{ objectPosition: "center" }}
                 />
                 {/* Overlay Content */}
                 <div className="absolute inset-0 bg-black bg-opacity-30"></div>
@@ -97,16 +97,16 @@ const SustainableBadges = () => {
 
           {/* Right Large Image - Man in blue shirt (665x470) */}
           <div className="col-span-12 lg:col-span-4 relative">
-            <div 
+            <div
               className="relative overflow-hidden rounded-lg"
-              style={{ width: '665px', height: '500px', maxWidth: '100%' }}
+              style={{ width: "665px", height: "500px", maxWidth: "100%" }}
             >
               <Image
                 src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNpRrGXftYoKFqlYMSWzhgNZG6Cm5OtIUjre39"
                 alt="Man in blue shirt"
                 fill
                 className="object-cover"
-                style={{ objectPosition: 'center' }}
+                style={{ objectPosition: "center" }}
               />
               {/* Overlay Content */}
               <div className="absolute inset-0 bg-black bg-opacity-30"></div>

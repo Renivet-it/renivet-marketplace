@@ -15,6 +15,7 @@ import { ConciousClick } from "@/components/home/new-home-page/concious-click";
 import { SwapSpace } from "@/components/home/new-home-page/swap-space";
 import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
 import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
+import { Page as EveryDayEssential } from "@/components/home/new-home-page/everyday-essential";
 
 import { ProductGrid } from "@/components/home/new-home-page/kids-product-grid";
 import { ProductGridNewArrivals } from "@/components/home/new-home-page/new-arrivals";
@@ -58,6 +59,9 @@ export default function Page() {
                                  <Suspense>
                 <NewAdvertisementsFetch />
             </Suspense>
+            <Suspense>
+                <EveryDayEssentialFetch />
+            </Suspense>
                                   <Suspense>
                 <ProductGridFetch />
             </Suspense>
@@ -78,11 +82,10 @@ export default function Page() {
                                                           <Suspense>
                 <InstaBannerFetch />
             </Suspense>
-            {/* <Suspense>
+        <Suspense>
                 <ShopByNewCategoriesFetch />
-            </Suspense> */}
+            </Suspense>
 
-   
             {/* <Suspense>
                 <MarketingStripFetch />
             </Suspense> */}
@@ -192,6 +195,12 @@ async function SustanableBatchFetch() {
 
     return <ElavateLooksPage />;
 }
+async function EveryDayEssentialFetch() {
+    //@ts-ignore
+
+    return <EveryDayEssential />;
+}
+
 async function ShopCategoryFetch() {
     //@ts-ignore
 
