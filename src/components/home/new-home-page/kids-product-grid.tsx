@@ -67,7 +67,7 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
                             alt={product.title}
                             fill
                             className="object-cover"
-                            style={{ objectFit: 'cover' }}
+                            style={{ objectFit: "cover" }}
                           />
                         </Link>
                       </div>
@@ -79,11 +79,6 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
                         {product.title}
                       </h3>
                       <span className="text-xs text-gray-500 mb-2">{product.brand.name}</span>
-                      
-                      <div className="flex items-center mb-2">
-                        <div className="flex mr-2">{renderStars(5)}</div>
-                        <span className="text-xs text-gray-500">(524 Feedback)</span>
-                      </div>
 
                       <div className="mt-auto">
                         <span className="text-lg font-semibold text-gray-800">₹{price}</span>
@@ -105,9 +100,9 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
 
             return (
               <div key={product.id} className="w-full">
-                <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
+                <div className="bg-[#dcddd7] rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
                   {/* Product Image Container - Fills inner container */}
-                  <div className="w-full h-64 bg-white p-4">
+                  <div className="w-full h-64 bg-[#dcddd7] p-4">
                     <div className="border border-gray-200 w-full h-full relative">
                       <Link href={`/products/${product.slug}`} className="block w-full h-full">
                         <Image
@@ -115,7 +110,7 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
                           alt={product.title}
                           fill
                           className="object-cover"
-                          style={{ objectFit: 'cover' }}
+                          style={{ objectFit: "cover" }}
                         />
                       </Link>
                     </div>
@@ -127,11 +122,6 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
                       {product.title}
                     </h3>
                     <span className="text-xs text-gray-500 mb-2">{product.brand.name}</span>
-                    
-                    <div className="flex items-center mb-2">
-                      <div className="flex mr-2">{renderStars(5)}</div>
-                      <span className="text-xs text-gray-500">(524 Feedback)</span>
-                    </div>
 
                     <div className="mt-auto">
                       <span className="text-lg font-semibold text-gray-800">₹{price}</span>
