@@ -3,7 +3,6 @@
 import { cn, convertPaiseToRupees } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button-general";
 
 interface Product {
   slug: any;
@@ -24,56 +23,71 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
 }
 
-export function ProductGrid({ className, products, title = "Little Renivet", ...props }: ProductGridProps) {
+export function ProductGrid({ className, products, title = "Kids", ...props }: ProductGridProps) {
   if (!products || !Array.isArray(products)) return null;
 
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, index) => (
+      <span
+        key={index}
+        className={`text-sm ${index < rating ? "text-orange-400" : "text-gray-300"}`}
+      >
+        ★
+      </span>
+    ));
+  };
+
   return (
-    <section className={cn("w-full px-4 py-6 bg-[#F4F0EC]", className)} {...props}>
-      <div className="max-w-[1280px] mx-auto">
-        <div className="flex justify-between items-center mb-6 px-1">
-          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-          <Link href="/products" className="text-sm font-medium text-gray-600 hover:text-gray-900 underline">
-            Show all
-          </Link>
+    <div className={cn("bg-[#F4F0EC] py-8", className)} {...props}>
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="border-b-2 border-blue-500 inline-block">
+            <h1 className="text-2xl font-semibold text-gray-800 pb-2">{title}</h1>
+          </div>
         </div>
 
-        {/* Mobile: Horizontal scroll */}
+        {/* Horizontal scroll for mobile */}
         <div className="md:hidden overflow-x-auto pb-2 -mx-2 px-2">
           <div className="flex space-x-4 w-max">
-            {products.slice(0, 3).map(({ product }) => {
+            {products.slice(0, 5).map(({ product }, index) => {
               const price = convertPaiseToRupees(product.variants?.[0]?.price || product.price || 0);
               const originalPrice = product.variants?.[0]?.compareAtPrice || product.compareAtPrice;
               const convertedOriginalPrice = originalPrice ? convertPaiseToRupees(originalPrice) : null;
 
               return (
-                <div key={product.id} className="w-[160px] flex-shrink-0">
-                  <div className="border border-gray-200 rounded-lg bg-white h-full flex flex-col hover:bg-[#d9d9d2] transition-colors">
-                    <div className="relative aspect-square">
-                      <Link href={`/products/${product.slug}`} className="block h-full">
-                        <Image
-                          src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
-                          alt={product.title}
-                          fill
-                          className="object-cover rounded-t-lg"
-                          sizes="160px"
-                        />
-                      </Link>
+                <div key={product.id} className="w-[253px] flex-shrink-0">
+                  <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
+                    {/* Product Image Container - Fills inner container */}
+                    <div className="w-full h-64 bg-white p-4">
+                      <div className="border border-gray-200 w-full h-full relative">
+                        <Link href={`/products/${product.slug}`} className="block w-full h-full">
+                          <Image
+                            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                            alt={product.title}
+                            fill
+                            className="object-cover"
+                            style={{ objectFit: 'cover' }}
+                          />
+                        </Link>
+                      </div>
                     </div>
 
-                    <div className="p-3 flex-grow flex flex-col">
-                      <p className="text-xs text-gray-500 mb-1">{product.brand.name}</p>
-                      <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
+                    {/* Product Info */}
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="text-sm font-medium text-gray-800 mb-1">
                         {product.title}
                       </h3>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-bold">₹{price}</span>
-                        {convertedOriginalPrice && (
-                          <span className="text-xs text-gray-500 line-through">₹{convertedOriginalPrice}</span>
-                        )}
+                      <span className="text-xs text-gray-500 mb-2">{product.brand.name}</span>
+                      
+                      <div className="flex items-center mb-2">
+                        <div className="flex mr-2">{renderStars(5)}</div>
+                        <span className="text-xs text-gray-500">(524 Feedback)</span>
                       </div>
-                      <Button className="w-full bg-black text-white rounded-md py-2 text-xs font-medium">
-                        Add to Cart
-                      </Button>
+
+                      <div className="mt-auto">
+                        <span className="text-lg font-semibold text-gray-800">₹{price}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -82,42 +96,46 @@ export function ProductGrid({ className, products, title = "Little Renivet", ...
           </div>
         </div>
 
-        {/* Desktop: Grid */}
-        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.slice(0, 3).map(({ product }) => {
+        {/* Desktop Grid - 5 columns */}
+        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+          {products.slice(0, 5).map(({ product }, index) => {
             const price = convertPaiseToRupees(product.variants?.[0]?.price || product.price || 0);
             const originalPrice = product.variants?.[0]?.compareAtPrice || product.compareAtPrice;
             const convertedOriginalPrice = originalPrice ? convertPaiseToRupees(originalPrice) : null;
 
             return (
               <div key={product.id} className="w-full">
-                <div className="border border-gray-200 rounded-lg bg-white h-full flex flex-col hover:bg-[#d9d9d2] transition-colors">
-                  <div className="relative aspect-square">
-                    <Link href={`/products/${product.slug}`} className="block h-full">
-                      <Image
-                        src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
-                        alt={product.title}
-                        fill
-                        className="object-cover rounded-t-lg"
-                        sizes="(max-width: 1024px) 50vw, 33vw"
-                      />
-                    </Link>
+                <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300 h-full flex flex-col">
+                  {/* Product Image Container - Fills inner container */}
+                  <div className="w-full h-64 bg-white p-4">
+                    <div className="border border-gray-200 w-full h-full relative">
+                      <Link href={`/products/${product.slug}`} className="block w-full h-full">
+                        <Image
+                          src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                          alt={product.title}
+                          fill
+                          className="object-cover"
+                          style={{ objectFit: 'cover' }}
+                        />
+                      </Link>
+                    </div>
                   </div>
 
-                  <div className="p-4 flex-grow flex flex-col">
-                    <p className="text-xs text-gray-500 mb-1">{product.brand.name}</p>
-                    <h3 className="text-base font-medium text-gray-900 mb-2">
+                  {/* Product Info */}
+                  <div className="p-4 flex-1 flex flex-col">
+                    <h3 className="text-sm font-medium text-gray-800 mb-1">
                       {product.title}
                     </h3>
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-base font-bold">₹{price}</span>
-                      {convertedOriginalPrice && (
-                        <span className="text-sm text-gray-500 line-through">₹{convertedOriginalPrice}</span>
-                      )}
+                    <span className="text-xs text-gray-500 mb-2">{product.brand.name}</span>
+                    
+                    <div className="flex items-center mb-2">
+                      <div className="flex mr-2">{renderStars(5)}</div>
+                      <span className="text-xs text-gray-500">(524 Feedback)</span>
                     </div>
-                    <Button className="w-full bg-black hover:bg-gray-800 text-white rounded-md py-2 text-sm font-medium">
-                      Add to Cart
-                    </Button>
+
+                    <div className="mt-auto">
+                      <span className="text-lg font-semibold text-gray-800">₹{price}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -125,6 +143,6 @@ export function ProductGrid({ className, products, title = "Little Renivet", ...
           })}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -29,9 +29,7 @@ export default function Page() {
             >
                 <BannersFetch />
             </Suspense>
-                {/* <Suspense>
-                <SustanableBatchFetch />
-            </Suspense> */}
+
                                            <Suspense>
                 <ShopCategoryFetch />
             </Suspense>
@@ -53,6 +51,9 @@ export default function Page() {
             </Suspense>
                                     <Suspense>
                 <ProductNewArrivalsGridFetch />
+            </Suspense>
+                            <Suspense>
+                <SustanableBatchFetch />
             </Suspense>
                                  <Suspense>
                 <NewAdvertisementsFetch />
