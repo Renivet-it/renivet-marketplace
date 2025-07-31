@@ -44,9 +44,7 @@ export default function Page() {
                                <Suspense>
                 <CuratedBannerFetch />
             </Suspense>
-                        <Suspense>
-                <BrandProductsFetch />
-            </Suspense>
+
                            <Suspense>
                 <BrandPromotionFetch />
             </Suspense>
@@ -56,23 +54,23 @@ export default function Page() {
                             <Suspense>
                 <SustanableBatchFetch />
             </Suspense>
-                                 <Suspense>
+                                                              <Suspense>
+                <ConciousClickBannerFetch />
+            </Suspense>
+                                 {/* <Suspense>
                 <NewAdvertisementsFetch />
+            </Suspense> */}
+                                     <Suspense>
+                <MatchaBagFetch />
             </Suspense>
             <Suspense>
                 <EveryDayEssentialFetch />
             </Suspense>
-                                  <Suspense>
-                <ProductGridFetch />
-            </Suspense>
-                                       <Suspense>
-                <MatchaBagFetch />
-            </Suspense>
-                                                  <Suspense>
-                <ConciousClickBannerFetch />
-            </Suspense>
                                                   <Suspense>
                 <SwapSpaceBannerFetch />
+            </Suspense>
+                                            <Suspense>
+                <ProductGridFetch />
             </Suspense>
                  <Suspense>
                 <ShopByNewCategoriesFetch />
