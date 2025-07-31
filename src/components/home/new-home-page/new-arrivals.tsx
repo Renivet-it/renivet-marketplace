@@ -1,12 +1,10 @@
 "use client";
 
 import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
-import { Star } from "lucide-react";
+import { useState, useRef } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Product {
   slug: any;
@@ -27,132 +25,162 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
 }
 
-export function ProductGridNewArrivals({ className, products, title = "New Arrival", ...props }: ProductGridProps) {
+export function ProductGridNewArrivals({ 
+  className, 
+  products, 
+  title = "Renivet Favorites", 
+  ...props 
+}: ProductGridProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   if (!products || !Array.isArray(products) || products.length === 0) {
     return null;
   }
 
-  const productRows = [];
-  for (let i = 0; i < products.length; i += 3) {
-    productRows.push(products.slice(i, i + 3));
-  }
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = 280; // Card width + gap
+      const newScrollLeft = direction === 'left' 
+        ? scrollRef.current.scrollLeft - scrollAmount
+        : scrollRef.current.scrollLeft + scrollAmount;
+      
+      scrollRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+
+      // Update current slide for dots
+      const newSlide = direction === 'left' 
+        ? Math.max(0, currentSlide - 1)
+        : Math.min(products.length - 1, currentSlide + 1);
+      setCurrentSlide(newSlide);
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
 
   return (
-    <section className={cn("w-full px-4 py-12 bg-[#F4F0EC]", className)} {...props}>
-      <div className="max-w-[1360px] mx-auto">
+    <section className={cn("w-full py-16 bg-[#F4F0EC]", className)} {...props}>
+      <div className="max-w-screen-2xl mx-auto px-6">
+        {/* Section Header */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-medium text-gray-900 mb-2">{title}</h1>
-          <p className="text-sm text-gray-500">iam ornare. Tellus m eget vestibulum e.</p>
+          <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-4">
+            {title}
+          </h2>
+          <p className="text-base text-gray-600">
+            Beautifully Functional. Purposefully Designed. Consciously Crafted.
+          </p>
         </div>
 
-        <div className="md:hidden">
-          <Carousel
-            opts={{ align: "start", loop: true }}
-            plugins={[Autoplay({ delay: 5000 })]}
-            className="w-full"
+        {/* Carousel Container */}
+        <div className="relative">
+          {/* Left Arrow */}
+          <button
+            onClick={() => scroll('left')}
+            disabled={!canScrollLeft}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
+              canScrollLeft 
+                ? 'hover:bg-gray-50 cursor-pointer' 
+                : 'opacity-50 cursor-not-allowed'
+            }`}
+            style={{ marginLeft: '-24px' }}
           >
-            <CarouselContent>
-              {products.map(({ product }) => (
-                <CarouselItem key={product.id}>
-                  <MobileProductCard product={product} />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        </div>
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
+          </button>
 
-        <div className="hidden md:block">
-          {productRows.map((row, rowIndex) => (
-            <div key={rowIndex} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {row.map(({ product }) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          ))}
+          {/* Right Arrow */}
+          <button
+            onClick={() => scroll('right')}
+            disabled={!canScrollRight}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
+              canScrollRight 
+                ? 'hover:bg-gray-50 cursor-pointer' 
+                : 'opacity-50 cursor-not-allowed'
+            }`}
+            style={{ marginRight: '-24px' }}
+          >
+            <ChevronRight className="w-6 h-6 text-gray-600" />
+          </button>
+
+          {/* Scrollable Products Container */}
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {products.map(({ product }) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+
+          {/* Dots Indicator */}
+          <div className="flex justify-center mt-8 gap-2">
+            {Array.from({ length: Math.min(products.length, 5) }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentSlide % 5 ? "bg-gray-800" : "bg-gray-300"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   );
 }
 
 function ProductCard({ product }: { product: Product }) {
   const price = convertPaiseToRupees(product.variants?.[0]?.price || product.price || 0);
-  const rating = product.rating || 4.1;
-  const reviewCount = product.reviewCount || 4100;
-  const stockStatus = product.stockStatus || "Almost Sold Out";
 
   return (
-    <div className="w-full group">
-      <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 p-0 bg-white rounded-lg overflow-hidden">
-        <CardHeader className="p-0 relative">
-          <div className="relative w-full h-[320px] bg-[#F4F0EC] flex items-center justify-center">
-            <Link href={`/products/${product.slug}`} className="block w-full h-full">
-              <Image
-                src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
-                alt={product.title}
-                width={385}
-                height={320}
-                className="object-contain w-full h-full p-3 transition-transform duration-300 group-hover:scale-[1.02]"
-                priority
-              />
-            </Link>
-          </div>
-        </CardHeader>
+    <div className="flex-shrink-0 group cursor-pointer" style={{ width: '262px' }}>
+      <Link href={`/products/${product.slug}`} className="block">
+        {/* Product Image */}
+        <div
+          className="relative bg-gray-50 rounded-lg overflow-hidden mb-4 group-hover:shadow-md transition-shadow duration-300"
+          style={{ width: '262px', height: '421px' }}
+        >
+          <Image
+            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+            alt={product.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="262px"
+          />
+        </div>
 
-        <CardContent className="p-4 pt-3">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">{product.title}</h3>
-          <div className="flex items-center mb-1">
-          </div>
-          <div className="flex justify-between items-end mt-2">
-            <div className="text-lg font-semibold text-gray-900">
-              ₹{typeof price === "number" ? price.toFixed(2) : price}
-            </div>
-            <div className="text-sm text-red-500">{stockStatus}</div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function MobileProductCard({ product }: { product: Product }) {
-  const price = convertPaiseToRupees(product.variants?.[0]?.price || product.price || 0);
-  const rating = product.rating || 4.1;
-  const reviewCount = product.reviewCount || 4100;
-  const stockStatus = product.stockStatus || "Almost Sold Out";
-
-  return (
-    <div className="w-full px-2">
-      <Card className="border-0 shadow-none p-0 bg-transparent">
-        <CardHeader className="p-0 relative group">
-          <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-[#F4F0EC] flex items-center justify-center">
-            <Link href={`/products/${product.slug}`} className="block w-full h-full">
-              <Image
-                src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
-                alt={product.title}
-                width={320}
-                height={320}
-                className="object-contain w-full h-full p-2"
-                priority
-              />
-            </Link>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0 pt-2">
-          <h3 className="text-base font-semibold text-gray-900 mb-1">{product.title}</h3>
-          <div className="flex items-center mb-1">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-            <span className="text-xs text-gray-500 ml-1">({(reviewCount / 1000).toFixed(1)}k) Reviews</span>
-          </div>
-          <div className="flex justify-between items-end">
-            <div className="text-base font-semibold text-gray-900">
-              ₹{typeof price === "number" ? price.toFixed(2) : price}
-            </div>
-            <div className="text-xs text-red-500">{stockStatus}</div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Product Info */}
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
+            {product.title}
+          </h3>
+          <p className="text-xs text-gray-500">
+            {product.stockStatus || "Available"}
+          </p>
+          <p className="text-lg font-semibold text-gray-900">
+            {typeof price === "number" ? price.toFixed(0) : price}
+          </p>
+        </div>
+      </Link>
     </div>
   );
 }

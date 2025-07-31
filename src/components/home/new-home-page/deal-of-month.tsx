@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button-general";
 import { MarketingStrip as TypeMarketingStrip } from "@/lib/validations";
@@ -17,202 +17,129 @@ export function DealofTheMonthStrip({
     marketingStrip,
     ...props
 }: PageProps) {
-    const [timeLeft, setTimeLeft] = useState({
-        days: 2,
-        hours: 6,
-        minutes: 3,
-        seconds: 25,
-    });
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(true);
 
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                let { days, hours, minutes, seconds } = prev;
-
-                if (seconds > 0) seconds--;
-                else {
-                    seconds = 59;
-                    if (minutes > 0) minutes--;
-                    else {
-                        minutes = 59;
-                        if (hours > 0) hours--;
-                        else {
-                            hours = 23;
-                            if (days > 0) days--;
-                            else return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-                        }
-                    }
-                }
-
-                return { days, hours, minutes, seconds };
+    const scroll = (direction: 'left' | 'right') => {
+        if (scrollRef.current) {
+            const scrollAmount = 420; // Card width + gap
+            const newScrollLeft = direction === 'left' 
+                ? scrollRef.current.scrollLeft - scrollAmount
+                : scrollRef.current.scrollLeft + scrollAmount;
+            scrollRef.current.scrollTo({
+                left: newScrollLeft,
+                behavior: 'smooth'
             });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, []);
-
-    useEffect(() => {
-        const slideInterval = setInterval(() => {
-            setCurrentIndex((prev) =>
-                prev === marketingStrip.length - 1 ? 0 : prev + 1
-            );
-        }, 5000);
-
-        return () => clearInterval(slideInterval);
-    }, [marketingStrip.length]);
-
-    const itemsPerView = 2;
-    let displayItems = marketingStrip.slice(
-        currentIndex,
-        currentIndex + itemsPerView
-    );
-
-    if (displayItems.length < itemsPerView) {
-        const remainingItems = marketingStrip.slice(0, itemsPerView - displayItems.length);
-        displayItems = [...displayItems, ...remainingItems];
-    }
-
-    const handlePrev = () => {
-        setCurrentIndex((prev) =>
-            prev === 0 ? marketingStrip.length - 1 : prev - 1
-        );
+        }
     };
 
-    const handleNext = () => {
-        setCurrentIndex((prev) =>
-            prev === marketingStrip.length - 1 ? 0 : prev + 1
-        );
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            setCanScrollLeft(scrollLeft > 0);
+            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+        }
     };
 
     return (
         <section
             className={cn(
-                "bg-[#F4F0EC] flex w-full justify-center py-5 md:py-10 shadow-lg rounded-lg",
+                "w-full bg-[#F4F0EC] py-16",
                 className
             )}
             {...props}
         >
-            <div className="w-full max-w-screen-xl mx-auto flex flex-row items-center gap-4 px-4">
-                {/* Left Side - Text and Timer */}
-                <div className="w-1/2 space-y-4">
-                    <h2 className="text-lg md:text-3xl font-semibold text-gray-800 uppercase">
-                        Deals of the Month
+            <div className="max-w-screen-2xl mx-auto px-6">
+                {/* Section Title */}
+                <div className="mb-12">
+                    <h2 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide">
+                        Mindfully Curated Home Essentials
                     </h2>
-                    <p className="text-gray-500 text-[10px] md:text-base">
-                       Two conscious choices. One stylish deal.
-Thoughtfully made and effortlessly stylish—this month’s featured picks are all about looking good and feeling even better. Everyday essentials with a little extra meaning.
-                    </p>
-                    <Button
-                        asChild
-                        className="inline-block bg-[#FFF3E3] text-gray-800 font-semibold py-1 px-2 md:py-3 md:px-6 rounded-md hover:bg-[#FFE0B2] transition-colors text-xs md:text-base"
-                    >
-                        <Link href="/shop">
-                            Buy Now
-                        </Link>
-                    </Button>
-
-                    {/* Countdown Timer */}
-                    <div className="space-y-2">
-                        <p className="text-xs md:text-lg font-semibold text-gray-800 uppercase">
-                            Hurry, Before It’s Too Late!
-                        </p>
-                        <div className="flex gap-1 md:gap-3">
-                            {["days", "hours", "minutes", "seconds"].map((unit, index) => (
-                                <div
-                                    key={index}
-                                    className="flex flex-col items-center bg-white rounded-md p-1 md:p-3 shadow-sm border border-gray-200"
-                                >
-                                    <span className="text-base md:text-xl font-bold text-gray-800">
-                                        {/* @ts-ignore */}
-                                        {timeLeft[unit].toString().padStart(2, "0")}
-                                    </span>
-                                    <span className="text-[8px] md:text-xs text-gray-500 uppercase">
-                                        {unit.slice(0, unit.length - 1)}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
                 </div>
 
-                {/* Right Side - Images (Carousel) */}
-                <div className="w-1/2 flex flex-col items-center gap-2 md:gap-4">
-                    {/* Images */}
-                    <div className="flex items-center gap-2 md:gap-4 w-full">
-                        {/* Left Image */}
-                        <div
-                            className="relative flex flex-col items-center bg-white rounded-md p-1 md:p-2 hover:shadow-md transition-shadow duration-200 w-[55%]"
-                        >
-                            <div className="overflow-hidden rounded-md w-full">
-                                <Image
-                                    src={displayItems[0].imageUrl}
-                                    alt={displayItems[0].title}
-                                    width={180}
-                                    height={300}
-                                    quality={85}
-                                    className="h-[200px] md:h-[400px] w-full object-cover"
-                                />
+                {/* Carousel Container */}
+                <div className="relative">
+                    {/* Left Arrow */}
+                    <button
+                        onClick={() => scroll('left')}
+                        disabled={!canScrollLeft}
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
+                            canScrollLeft 
+                                ? 'hover:bg-gray-50 cursor-pointer' 
+                                : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{ marginLeft: '-24px' }}
+                    >
+                        <ChevronLeft className="w-6 h-6 text-gray-600" />
+                    </button>
+
+                    {/* Right Arrow */}
+                    <button
+                        onClick={() => scroll('right')}
+                        disabled={!canScrollRight}
+                        className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
+                            canScrollRight 
+                                ? 'hover:bg-gray-50 cursor-pointer' 
+                                : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        style={{ marginRight: '-24px' }}
+                    >
+                        <ChevronRight className="w-6 h-6 text-gray-600" />
+                    </button>
+
+                    {/* Scrollable Cards Container */}
+                    <div
+                        ref={scrollRef}
+                        onScroll={handleScroll}
+                        className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                    >
+                        {marketingStrip.map((item, index) => (
+                            <div
+                                key={index}
+                                className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
+                                style={{ width: "398px", height: "393px" }}
+                            >
+                                {/* Background Image */}
+                                <div className="absolute inset-0">
+                                    <Image
+                                        src={item.imageUrl}
+                                        alt={item.title}
+                                        fill
+                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                        sizes="398px"
+                                    />
+                                </div>
+                                {/* Overlay Gradient */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+
+                                {/* Content */}
+                                <div className="relative h-full flex flex-col justify-end p-8">
+                                    {/* Bottom Button - Moved to right */}
+                                    <div className="self-end">
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            className="border-white/60 text-white hover:bg-white/10 hover:border-white text-sm px-6 py-2 rounded-none font-normal backdrop-blur-sm bg-black/20"
+                                        >
+                                            <Link href={item.href || "/shop"}>
+                                                → EXPLORE NOW
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="absolute bottom-8 md:bottom-16 left-2 md:left-4 bg-white p-1 md:p-3 rounded-md shadow-md">
-                                <p className="text-[8px] md:text-sm text-gray-500">The Conscious Click</p>
-                                {/* <p className="text-sm md:text-lg font-bold text-gray-800">25% OFF</p> */}
-                            </div>
-                        </div>
-
-                        {/* Right Image */}
-                        <div
-                            className="relative flex flex-col items-center bg-white rounded-md p-1 md:p-2 hover:shadow-md transition-shadow duration-200 w-[45%]"
-                        >
-                            <div className="overflow-hidden rounded-md w-full">
-                                <Image
-                                    src={displayItems[1].imageUrl}
-                                    alt={displayItems[1].title}
-                                    width={150}
-                                    height={300}
-                                    quality={85}
-                                    className="h-[200px] md:h-[400px] w-full object-cover"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Carousel Navigation (Arrows and Dots Below Images) */}
-                    <div className="flex items-center justify-center gap-4 mt-2">
-                        {/* Navigation Arrows */}
-                        <button
-                            onClick={handlePrev}
-                            className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-300 hover:bg-gray-800 transition-colors duration-300 flex items-center justify-center"
-                        >
-                            <ChevronLeft className="w-3 h-3 md:w-4 md:h-4 text-gray-600 hover:text-white transition-colors duration-300" />
-                        </button>
-
-                        {/* Carousel Dots */}
-                        <div className="flex gap-1 md:gap-2">
-                            {marketingStrip.map((_, index) => (
-                                <span
-                                    key={index}
-                                    className={cn(
-                                        "w-2 h-2 md:w-3 md:h-3 rounded-full cursor-pointer",
-                                        index === currentIndex ? "bg-gray-800" : "bg-gray-300",
-                                        "hover:bg-gray-600 transition-colors duration-300"
-                                    )}
-                                    onClick={() => setCurrentIndex(index)}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Right Arrow */}
-                        <button
-                            onClick={handleNext}
-                            className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gray-300 hover:bg-gray-800 transition-colors duration-300 flex items-center justify-center"
-                        >
-                            <ChevronRight className="w-3 h-3 md:w-4 md:h-4 text-gray-600 hover:text-white transition-colors duration-300" />
-                        </button>
+                        ))}
                     </div>
                 </div>
             </div>
+
+            <style jsx>{`
+                .scrollbar-hide::-webkit-scrollbar {
+                    display: none;
+                }
+            `}</style>
         </section>
     );
 }

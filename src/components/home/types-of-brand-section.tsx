@@ -1,88 +1,76 @@
-import Image from "next/image";
-import Link from "next/link";
+"use client";
 
-export function BrandCollaboration() {
+import { Hourglass, Leaf, Clock, Recycle } from "lucide-react";
+
+export function BrandsCollaboration() {
+  const brands = [
+    {
+      icon: Hourglass,
+      title: "Homegrown",
+      description: "Locally crafted, authentic."
+    },
+    {
+      icon: Leaf,
+      title: "Sustainable",
+      description: "Eco-friendly, conscious."
+    },
+    {
+      icon: Clock,
+      title: "Artisans-led",
+      description: "Crafted by artisans."
+    },
+    {
+      icon: Recycle,
+      title: "Sustainable Drops",
+      description: "Limited, eco-focused releases"
+    }
+  ];
+
   return (
-    <div className="w-full bg-[#F4F0EC] py-12 md:py-16 px-4 md:px-0">
-      <div className="max-w-[1400px] mx-auto">
-        {/* Section Header */}
-        <p className="text-xs md:text-sm uppercase tracking-widest text-gray-600 text-center mb-8 md:mb-12">
-          THE TYPE OF BRAND THAT WE ARE COLLABORATING WITH
-        </p>
-
-        {/* Grid Layout */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 px-4 md:px-8">
-          {/* Card 1 */}
-          <div className="flex flex-col items-center text-center">
-            <div className="w-full aspect-[250/160] max-w-[250px] relative mb-3 md:mb-4">
-              <Image
-                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLR9K2TUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW"
-                alt="Local roots"
-                fill
-                className="object-cover"
-                style={{ objectPosition: 'center' }}
-              />
-            </div>
-          </div>
-
-          {/* Card 2 */}
-          <div className="flex flex-col items-center text-center">
-            <div className="w-full aspect-[250/160] max-w-[250px] relative mb-3 md:mb-4">
-              <Image
-                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNgSrQNt2ENPRLZdGUpA0elOxytCDfJibYIko7"
-                alt="Sustainable design"
-                fill
-                className="object-cover"
-                style={{ objectPosition: 'center' }}
-              />
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="flex flex-col items-center text-center">
-            <div className="w-full aspect-[250/160] max-w-[250px] relative mb-3 md:mb-4">
-              <Image
-                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbUgPwmuZc50VbmLPHAdU9KwxEkCINyqDWJRr"
-                alt="Handcrafted"
-                fill
-                className="object-cover"
-                style={{ objectPosition: 'center' }}
-              />
-            </div>
-          </div>
-
-          {/* Card 4 */}
-          <div className="flex flex-col items-center text-center">
-            <div className="w-full aspect-[250/160] max-w-[250px] relative mb-3 md:mb-4">
-              <Image
-                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvurZjy5dPZsh5fuDbkAelMyqICmp3NU7X4nH"
-                alt="Thoughtful pieces"
-                fill
-                className="object-cover"
-                style={{ objectPosition: "center" }}
-              />
-            </div>
-          </div>
+    <section className="w-full bg-[#F4F0EC]">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+        {/* Section Title */}
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-normal text-gray-800 tracking-tight">
+            Brands We Collaborate With
+          </h2>
         </div>
 
-        {/* CTA Button */}
-        <div className="text-center mt-8 md:mt-12">
-          <Link
-            href="/collaborations"
-            className="inline-block border border-black px-6 py-2 uppercase tracking-widest text-xs md:text-sm font-medium hover:bg-black hover:text-white transition-colors"
-          >
-            Explore Collaborations
-          </Link>
+        {/* Brands Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+          {brands.map((brand, index) => (
+            <div key={index} className="text-center group px-4">
+              {/* Icon */}
+              <div className="flex justify-center mb-5">
+                <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                  <brand.icon 
+                    className="w-6 h-6 text-gray-600 group-hover:text-gray-800 transition-colors duration-300" 
+                    strokeWidth={1.5}
+                  />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-lg font-medium text-gray-800 mb-2 tracking-tight">
+                {brand.title}
+              </h3>
+
+              {/* Description */}
+              <p className="text-sm text-gray-600 leading-snug">
+                {brand.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
 export function Page() {
   return (
     <div className="bg-[#F4F0EC]">
-      <BrandCollaboration />
+      <BrandsCollaboration />
     </div>
   );
 }

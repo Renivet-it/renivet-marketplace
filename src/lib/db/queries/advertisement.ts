@@ -5574,6 +5574,7 @@ console.log("test");
     async createHomePageBrandIntroductionSection(
         values: createWomenBrandProduct & {
             imageUrl: string;
+           title: string | null; // Make title nullable
         }
     ) {
         const data = await db
