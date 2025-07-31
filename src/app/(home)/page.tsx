@@ -19,6 +19,7 @@ import { Page as EveryDayEssential } from "@/components/home/new-home-page/every
 
 import { ProductGrid } from "@/components/home/new-home-page/kids-product-grid";
 import { ProductGridNewArrivals } from "@/components/home/new-home-page/new-arrivals";
+import { EcoIcons } from "@/components/home/new-home-page/eco-icons";
 
 export default function Page() {
     return (
@@ -54,6 +55,12 @@ export default function Page() {
                             <Suspense>
                 <SustanableBatchFetch />
             </Suspense>
+                           <Suspense>
+                <EcoIconsFetch />
+            </Suspense>
+                      <Suspense>
+                <BrandProductsFetch />
+            </Suspense>
                                                               <Suspense>
                 <ConciousClickBannerFetch />
             </Suspense>
@@ -83,9 +90,7 @@ export default function Page() {
                                                           <Suspense>
                 <InstaBannerFetch />
             </Suspense>
-            {/* <Suspense>
-                <MarketingStripFetch />
-            </Suspense> */}
+
             {/* <Suspense>
                 <BlogsFetch />
             </Suspense> */}
@@ -98,7 +103,7 @@ async function BrandProductsFetch() {
         await homeBrandProductQueries.getAllHomeBrandProducts();
     if (!brandProducts.length) return null;
 
-    return <BrandProducts brandProducts={brandProducts} />;
+    return <BrandProducts marketingStrip={brandProducts} />;
 }
 
 
@@ -207,6 +212,12 @@ async function BrandCollaborateFetch() {
     //@ts-ignore
 
     return <BrandCollaborate />;
+}
+
+async function EcoIconsFetch() {
+    //@ts-ignore
+
+    return <EcoIcons />;
 }
 async function ShopByCategoriesFetch() {
     const [sbc, sbcT] = await Promise.all([
