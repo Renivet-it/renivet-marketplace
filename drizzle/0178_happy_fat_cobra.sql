@@ -1,0 +1,1 @@
+ALTER TABLE "home_shop_by_categories" ADD COLUMN "title" text;

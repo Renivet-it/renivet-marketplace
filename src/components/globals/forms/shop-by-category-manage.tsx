@@ -51,6 +51,7 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
         defaultValues: {
             imageUrl: shopByCategory?.imageUrl ?? "",
             url: shopByCategory?.url ?? null,
+            title: shopByCategory?.title ?? "", // Added default title
         },
     });
 
@@ -155,6 +156,25 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                         : createBrandProduct(values)
                 )}
             >
+                <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Title</FormLabel>
+                            <FormControl>
+                                <Input
+                                    {...field}
+                                    placeholder="Enter title"
+                                    value={field.value ?? ""}
+                                    disabled={isPending}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
                 <FormField
                     control={form.control}
                     name="imageUrl"

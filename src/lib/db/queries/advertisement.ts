@@ -6192,6 +6192,7 @@ class HomeShopByCategoriesQuery {
     async createHomeShopByCategory(
         values: CreateHomeShopByCategory & {
             imageUrl: string;
+            title: string | null;
         }
     ) {
         const data = await db

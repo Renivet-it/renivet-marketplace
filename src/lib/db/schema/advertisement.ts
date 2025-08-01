@@ -48,6 +48,7 @@ export const homeShopByCategories = pgTable("home_shop_by_categories", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     imageUrl: text("image_url").notNull(),
     url: text("url"),
+    title: text("title"),
     ...timestamps,
 });
 
