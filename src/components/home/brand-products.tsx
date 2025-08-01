@@ -65,7 +65,7 @@ export function BrandProducts({
                             variant="outline"
                             className="mt-4 border-gray-900 text-gray-900 hover:bg-gray-100 text-xs px-4 py-2 rounded-none font-normal"
                         >
-                            <Link href="/browse">BROWSE INSPIRATIONS</Link>
+                            <Link href="/shop">BROWSE INSPIRATIONS</Link>
                         </Button>
                     </div>
 
@@ -114,7 +114,7 @@ export function BrandProducts({
 
                 {/* Desktop: Original layout (unchanged) */}
                 <div className="hidden md:flex items-center gap-8">
-                    <div className="w-1/3">
+                    <div className="w-1/4 px-4">
                         <h2 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide">
                             Casual Inspirations
                         </h2>
@@ -126,17 +126,17 @@ export function BrandProducts({
                             variant="outline"
                             className="mt-6 border-gray-900 text-gray-900 hover:bg-gray-100 text-sm px-6 py-2 rounded-none font-normal"
                         >
-                            <Link href="/browse">BROWSE INSPIRATIONS</Link>
+                            <Link href="/shop">BROWSE INSPIRATIONS</Link>
                         </Button>
                     </div>
 
-                    <div className="w-2/3 relative">
+                    <div className="w-3/4 relative">
                         <button
                             onClick={() => scroll('left')}
                             disabled={!canScrollLeft}
                             className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
                                 canScrollLeft 
-                                    ? 'hover:bg-gray-50 cursor-pointer' 
+                                    ? "hover:bg-gray-50 cursor-pointer" 
                                     : 'opacity-50 cursor-not-allowed'
                             }`}
                             style={{ marginLeft: '-24px' }}
@@ -179,19 +179,14 @@ export function BrandProducts({
                                         />
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
-                                    <div className="relative h-full flex flex-col justify-end p-8">
-                                        <div className="self-end">
-                                            <Button
-                                                asChild
-                                                variant="outline"
-                                                className="border-white/60 text-white hover:bg-white/10 hover:border-white text-sm px-6 py-2 rounded-none font-normal backdrop-blur-sm bg-black/20"
-                                            >
-                                                <Link href={item.href || "/shop"}>
-                                                    → EXPLORE NOW
-                                                </Link>
-                                            </Button>
-                                        </div>
-                                    </div>
+       <div className="relative h-full flex flex-col justify-end p-8">
+    <div className="flex justify-between items-end w-full">
+        <p className="text-white text-sm">{item.title}</p>
+        <Button asChild variant="outline" className="border-white/60 text-white hover:bg-white/10 hover:border-white text-sm px-6 py-2 rounded-none font-normal backdrop-blur-sm bg-black/20">
+            <Link href={item.href || "/shop"}>→ EXPLORE NOW</Link>
+        </Button>
+    </div>
+</div>
                                 </div>
                             ))}
                         </div>

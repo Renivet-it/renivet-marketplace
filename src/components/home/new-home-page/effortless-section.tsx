@@ -91,13 +91,13 @@ export function EffortlessElegance({
             </Carousel>
           </div>
 
-          <div className="absolute left-8 top-1/2 transform -translate-y-1/2 max-w-[400px] z-10">
-            <div className="bg-white bg-opacity-90 p-8 text-left rounded-lg shadow-sm">
-              <h3 className="text-3xl font-light text-gray-900 mb-4 leading-tight tracking-wide">
+          <div className="absolute left-[-20px] top-1/2 transform -translate-y-1/2 max-w-[265px] z-10">
+            <div className="bg-white bg-opacity-20 backdrop-blur-md p-4 text-left rounded-lg shadow-md border-2 border-white/30" style={{ height: "335px" }}>
+              <h3 className="text-2xl font-light text-gray-900 mb-3 leading-tight tracking-wide">
                 Effortless Elegance,<br />
                 Naturally Woven
               </h3>
-              <p className="text-gray-600 text-base leading-relaxed mb-6">
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">
                 Explore our latest collections of co-accuracy crafted sarees—based in tradition, refined for today.
               </p>
               <Link href="/shop">

@@ -469,6 +469,7 @@ export const homeShopByCategoryRouter = createTRPCRouter({
             const newHomeShopByCategory =
                 await queries.homeShopByCategories.createHomeShopByCategory({
                     ...input,
+                    title: input.title ?? null,
                     imageUrl: input.imageUrl,
                 });
 

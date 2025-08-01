@@ -8,10 +8,10 @@ const SustainableBadges = () => {
       {/* Header Section */}
       <div className="text-center py-6 md:py-8 bg-[#F4F0EC]">
         <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-gray-800 mb-3 md:mb-4 tracking-tight">
-          Everyday Essential Ethically made.
+          Conscious. Effortless. Everyday.
         </h1>
         <div className="text-sm md:text-base text-gray-600 max-w-sm mx-auto leading-relaxed">
-          <p>From clean Skincare to thoughtful homeware - discover the cool stuff</p>
+          <p>explore fashion and living essentials that feel as good as they look</p>
         </div>
       </div>
 
