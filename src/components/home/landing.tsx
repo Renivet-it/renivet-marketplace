@@ -15,7 +15,7 @@ interface PageProps extends GenericProps {
 }
 
 export function Landing({ className, banners, ...props }: PageProps) {
-    const aspectRatio = 1440 / 600; // Calculate the aspect ratio
+    const aspectRatio = 1440 / 500; // Calculate the aspect ratio
 
     return (
         <section className={cn("bg-[#F4F0EC]", className)} {...props}>

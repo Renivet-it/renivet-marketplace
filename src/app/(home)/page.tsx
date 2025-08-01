@@ -11,12 +11,12 @@ import { ShopCategories } from "@/components/home/new-home-page/shop-by-category
 import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
 import { BrandPromotion } from "@/components/home/new-home-page/brand-promotion";
 import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
+import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
 import { ConciousClick } from "@/components/home/new-home-page/concious-click";
 import { SwapSpace } from "@/components/home/new-home-page/swap-space";
 import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
 import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 import { Page as EveryDayEssential } from "@/components/home/new-home-page/everyday-essential";
-
 import { ProductGrid } from "@/components/home/new-home-page/kids-product-grid";
 import { ProductGridNewArrivals } from "@/components/home/new-home-page/new-arrivals";
 import { EcoIcons } from "@/components/home/new-home-page/eco-icons";
@@ -41,13 +41,15 @@ export default function Page() {
                             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
-
                                <Suspense>
                 <CuratedBannerFetch />
             </Suspense>
 
                            <Suspense>
                 <BrandPromotionFetch />
+            </Suspense>
+                                               <Suspense>
+                <EffortlessEleganceFetch />
             </Suspense>
                                     <Suspense>
                 <ProductNewArrivalsGridFetch />
@@ -192,6 +194,22 @@ async function MatchaBagFetch() {
     return <MatchaBag moodboardItems={sbc} titleData={sbcT} />;
 }
 
+
+
+async function EffortlessEleganceFetch() {
+    const [sbc, sbcT] = await Promise.all([
+    //@ts-ignore
+
+        WomenHomeSectionQueries.getHomePageEffortlessEleganceSections(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+
+    return <EffortlessElegance moodboardItems={sbc} titleData={sbcT} />;
+}
 async function SustanableBatchFetch() {
     //@ts-ignore
 

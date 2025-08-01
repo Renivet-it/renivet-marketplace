@@ -18,7 +18,7 @@ interface PageProps {
   className?: string;
 }
 
-export function MatchaBag({
+export function EffortlessElegance({
   moodboardItems,
   title = "Moodboard for Her",
   className,
@@ -45,8 +45,8 @@ export function MatchaBag({
                     <Image
                       src={item.imageUrl}
                       alt={item.title ?? "Moodboard item"}
-                      width={1200}
-                      height={600}
+                      width={1200}  // Set your image's actual width
+                      height={600}  // Set your image's actual height
                       className="w-full h-auto object-contain"
                       quality={100}
                       priority
@@ -91,8 +91,7 @@ export function MatchaBag({
             </Carousel>
           </div>
 
-          {/* Changed from left-8 to right-8 to position on the right */}
-          <div className="absolute right-8 top-1/2 transform -translate-y-1/2 max-w-[400px] z-10">
+          <div className="absolute left-8 top-1/2 transform -translate-y-1/2 max-w-[400px] z-10">
             <div className="bg-white bg-opacity-90 p-8 text-left rounded-lg shadow-sm">
               <h3 className="text-3xl font-light text-gray-900 mb-4 leading-tight tracking-wide">
                 Effortless Elegance,<br />
