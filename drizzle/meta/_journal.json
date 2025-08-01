@@ -1240,6 +1240,13 @@
       "when": 1753478612410,
       "tag": "0176_oval_jamie_braddock",
       "breakpoints": true
+    },
+    {
+      "idx": 177,
+      "version": "7",
+      "when": 1754032107636,
+      "tag": "0177_friendly_zuras",
+      "breakpoints": true
     }
   ]
 }

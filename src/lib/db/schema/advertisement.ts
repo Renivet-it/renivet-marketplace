@@ -645,3 +645,12 @@ export const homeNewInstaBannerSection = pgTable("home_insta_banner_section", {
     url: text("url"),
     ...timestamps,
 });
+
+export const homeEffortlessEleganceSection = pgTable("home_efforless_elegance", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});

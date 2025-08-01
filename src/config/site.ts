@@ -674,6 +674,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/home-page/new-insta-banner",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
+                {
+            title: "Elegance section Bannner",
+            url: "/dashboard/general/home-page/effortless-elegance-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
     ]
 },
 

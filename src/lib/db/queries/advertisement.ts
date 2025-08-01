@@ -87,7 +87,8 @@ import {
     homeMatchingBanner,
     homeBrandIntroductionBanner,
     kidGentleCareOthers,
-    kidForstGiraffeOthers
+    kidForstGiraffeOthers,
+    homeEffortlessEleganceSection
 
 } from "../schema";
 
@@ -6051,6 +6052,90 @@ async getHomePageNewArtisanSections(p0: { limit: number; page: number; }) {
         const data = await db
             .delete(homeNewInstaBannerSection)
             .where(eq(homeNewInstaBannerSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+        async getHomePageEffortlessEleganceSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeEffortlessEleganceSection.findMany({
+            orderBy: [asc(homeEffortlessEleganceSection.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageEffortlessEleganceSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeEffortlessEleganceSection.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeEffortlessEleganceSection.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeEffortlessEleganceSection)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageEffortlessEleganceSection(id: string) {
+        const data = await db.query.homeEffortlessEleganceSection.findFirst({
+            where: eq(homeEffortlessEleganceSection.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageEffortlessEleganceSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeEffortlessEleganceSection)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageEffortlessEleganceSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeEffortlessEleganceSection)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeEffortlessEleganceSection.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageEffortlessEleganceSection(id: string) {
+        const data = await db
+            .delete(homeEffortlessEleganceSection)
+            .where(eq(homeEffortlessEleganceSection.id, id))
             .returning()
             .then((res) => res[0]);
 
