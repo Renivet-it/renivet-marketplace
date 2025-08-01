@@ -8,27 +8,27 @@ export function ShopCategories() {
   const categories = [
     {
       name: "Men",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcrArNTeO4H8MeNYoyJQSarWCqgVpRxP5lDBu",
+      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcdSN8FeO4H8MeNYoyJQSarWCqgVpRxP5lDBu",
       href: "/men"
     },
     {
       name: "Women",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2opW8fQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
+      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPKE1D2O9kwm36pdODjHU0ryYqC2xJehFZ5Q7",
       href: "/women"
     },
     {
       name: "Kids",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN37iwsJl64McafQHoWsZUzihAkJ3DF5EGgPpY",
+      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
       href: "/kids"
     },
     {
       name: "Home And Living",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNJn6u9AyxafbXy0opEDB8VMuLNYvt9OQnIkzd",
+      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
       href: "/home-living"
     },
     {
       name: "Beauty And Care",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRKSk5izxCX9qouDwr5d6fTcizLeZ0I4snJvS",
+      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
       href: "/beauty-personal"
     }
   ];
