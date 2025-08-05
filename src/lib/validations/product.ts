@@ -743,7 +743,7 @@ export const productVariantGroupSchema = z.object({
 export const productWithBrandSchema = productSchema.extend({
     // brand: z.lazy(() => brandSchema),
         brand: z.lazy(() => brandSchema.extend({
-        confidential: brandConfidentialSchema.optional() // ← Add this line
+        confidential: brandConfidentialSchema.nullable().optional()
     })),
     options: z.array(productOptionSchema),
     variants: z.array(enhancedProductVariantSchema),
