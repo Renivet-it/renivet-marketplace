@@ -154,6 +154,9 @@ export function OrdersDownload({ orders }: PageProps) {
                 { header: "SUM of TOTAL_MRP", key: "SUM of TOTAL_MRP", width: 15 },
                 // { header: "SUM of DISCOUNT_AMOUNT", key: "SUM of DISCOUNT_AMOUNT", width: 20 },
                 { header: "Shipping Fee", key: "Shipping Fee", width: 15 },
+                { header: "Payment Fee", key: "Payment Fee", width: 15 },
+                { header: "Total Deductions", key: "Total Deductions", width: 20 },
+                { header: "Final Payable to Brand", key: "Final Payable to Brand", width: 20 },
                 { header: "SUM of Payment to Seller", key: "SUM of Payment to Seller", width: 20 }
             ];
 
@@ -182,7 +185,10 @@ export function OrdersDownload({ orders }: PageProps) {
                 const netMRP = totalMRP - (totalMRP * 0.18);
                 const commissionAmount = (order.items[0]?.product?.category?.commissionRate || 0) / 100 * totalMRP;
                 const gstOnCommission = commissionAmount * 0.18;
-
+                const paymentFee = totalPrice * 0.02; // Assuming a 2% payment fee for simplicity
+                const totalDeductions = commissionAmount + gstOnCommission + (netMRP * 0.01) + 
+                        (order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0) + 
+                        (totalPrice * 0.02);
                 worksheet.addRow({
                     "Name": order.id || "",
                     "Order Status": order.status || "",
@@ -213,6 +219,9 @@ export function OrdersDownload({ orders }: PageProps) {
                     // "SUM of TOTAL_MRP": convertPaiseToRupees(totalMRP),
                     // "SUM of DISCOUNT_AMOUNT": convertPaiseToRupees(order.discountAmount || 0),
                     "Shipping Fee": order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0,
+                    "Payment Fee": convertPaiseToRupees(paymentFee),
+                    "Total Deductions": convertPaiseToRupees(totalDeductions),
+                    "Final Payable to Brand": convertPaiseToRupees(totalPrice - totalDeductions),
                     "SUM of Payment to Seller": convertPaiseToRupees(
                         (totalMRP ?? 0) === 0
                             ? 0
