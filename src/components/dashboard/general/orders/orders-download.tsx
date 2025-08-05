@@ -146,12 +146,10 @@ export function OrdersDownload({ orders }: PageProps) {
                 // { header: "Beneficiary Name", key: "Beneficiary Name", width: 20 },
                 { header: "Commission % (Category Based)", key: "Commission % (Category Based)", width: 15 },
                 { header: "Commission Amount", key: "Commission Amount", width: 15 },
-                { header: "GST on COmmission @18%", key: "GST on COmmission @18%", width: 20 },
+                { header: "GST on Commission @18%", key: "GST on Commission @18%", width: 20 },
                 { header: "TCS @1% on Net MRP", key: "TCS @1% on Net MRP", width: 15 },
                 // { header: "SUM of TDS 1%", key: "SUM of TDS 1%", width: 15 },
                 // { header: "SUM of LINEITEM_QUANTITY", key: "SUM of LINEITEM_QUANTITY", width: 20 },
-
-                { header: "SUM of TOTAL_MRP", key: "SUM of TOTAL_MRP", width: 15 },
                 // { header: "SUM of DISCOUNT_AMOUNT", key: "SUM of DISCOUNT_AMOUNT", width: 20 },
                 { header: "Shipping Fee", key: "Shipping Fee", width: 15 },
                 { header: "Payment Fee", key: "Payment Fee", width: 15 },
@@ -186,9 +184,14 @@ export function OrdersDownload({ orders }: PageProps) {
                 const commissionAmount = (order.items[0]?.product?.category?.commissionRate || 0) / 100 * totalMRP;
                 const gstOnCommission = commissionAmount * 0.18;
                 const paymentFee = totalPrice * 0.02; // Assuming a 2% payment fee for simplicity
-                const totalDeductions = commissionAmount + gstOnCommission + (netMRP * 0.01) + 
-                        (order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0) + 
-                        (totalPrice * 0.02);
+                // const totalDeductions = commissionAmount + gstOnCommission + (netMRP * 0.01) +
+                //         (order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0) +
+                //         (totalPrice * 0.02);
+                            // Get shipping fee in rupees (as it comes from API)
+    const shippingFeeInRupees = order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0;
+    // Convert shipping fee to paise for calculations
+    const shippingFeeInPaise = shippingFeeInRupees * 100;
+    const totalDeductions = commissionAmount + gstOnCommission + (netMRP * 0.01) + shippingFeeInPaise + paymentFee;
                 worksheet.addRow({
                     "Name": order.id || "",
                     "Order Status": order.status || "",
@@ -196,7 +199,7 @@ export function OrdersDownload({ orders }: PageProps) {
                     "Customer Name": order.address?.fullName || "",
                     "City": order.address?.city || "",
                     "ZIP": order.address?.zip || "",
-                    "Net MRP": convertPaiseToRupees(netMRP),
+                    "Net MRP(Excl. GST)": convertPaiseToRupees(netMRP),
                     // "HSN": order.items[0]?.product?.hsCode || "",
                     "Product Name": order.items[0]?.product?.title || "",
                     "Product Sku": order.items[0]?.product?.sku || "",
@@ -212,16 +215,22 @@ export function OrdersDownload({ orders }: PageProps) {
                     "Gross Sale(Inc GST)": convertPaiseToRupees(totalPrice),
                     "Commission % (Category Based)": order.items[0]?.product?.category.commissionRate || "",
                     "Commission Amount": convertPaiseToRupees(commissionAmount),
-                    "GST on COmmission @18%": convertPaiseToRupees(gstOnCommission),
-                    "TCS @ 1% on Net MRP": convertPaiseToRupees(netMRP * 0.01),
+                    "GST on Commission @18%": convertPaiseToRupees(gstOnCommission),
+                    "TCS @1% on Net MRP": convertPaiseToRupees(netMRP * 0.01),
                     // "SUM of TDS 1%": convertPaiseToRupees(totalMRP * 0.01),
                     // "SUM of LINEITEM_QUANTITY": totalItems,
                     // "SUM of TOTAL_MRP": convertPaiseToRupees(totalMRP),
                     // "SUM of DISCOUNT_AMOUNT": convertPaiseToRupees(order.discountAmount || 0),
                     "Shipping Fee": order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0,
                     "Payment Fee": convertPaiseToRupees(paymentFee),
-                    "Total Deductions": convertPaiseToRupees(totalDeductions),
-                    "Final Payable to Brand": convertPaiseToRupees(totalPrice - totalDeductions),
+                    "Total Deductions": convertPaiseToRupees(commissionAmount + gstOnCommission + (netMRP * 0.01) +
+                        shippingFeeInPaise +
+                        (totalPrice * 0.02)),
+"Final Payable to Brand": convertPaiseToRupees(
+            (totalMRP ?? 0) === 0
+                ? 0
+                : (order?.totalAmount ?? 0) - totalDeductions
+        ),
                     "SUM of Payment to Seller": convertPaiseToRupees(
                         (totalMRP ?? 0) === 0
                             ? 0
@@ -235,8 +244,8 @@ export function OrdersDownload({ orders }: PageProps) {
             // Auto-fit columns
             worksheet.columns.forEach((column) => {
                 if (column.values) {
-                    const lengths = column.values.map(v => v ? v.toString().length : 0);
-                    const maxLength = Math.max(...lengths.filter(v => typeof v === "number"));
+                    const lengths = column.values.map((v) => v ? v.toString().length : 0);
+                    const maxLength = Math.max(...lengths.filter((v) => typeof v === "number"));
                     column.width = Math.min(Math.max(maxLength + 2, 10), 50); // Set min width 10, max 50
                 }
             });
