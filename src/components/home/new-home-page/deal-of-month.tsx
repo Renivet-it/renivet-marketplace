@@ -48,12 +48,16 @@ export function DealofTheMonthStrip({
                 "w-full bg-[#F4F0EC] py-16",
                 className
             )}
+              style={{
+    backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjwVl3bmPpnZoHc5f2E4rFNLugdK3ty9ObjYx')",
+  }}
             {...props}
         >
-            <div className="max-w-screen-2xl mx-auto px-6">
+             <div className="absolute inset-0 bg-white/10 pointer-events-none"></div>
+            <div className="max-w-screen-2xl mx-auto px-6 ">
                 {/* Section Title */}
                 <div className="mb-12">
-                    <h2 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide">
+                    <h2 className="text-3xl md:text-4xl font-light text-white tracking-wide">
                         Mindfully Curated Home Essentials
                     </h2>
                 </div>
