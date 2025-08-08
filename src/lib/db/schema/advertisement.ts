@@ -655,3 +655,12 @@ export const homeEffortlessEleganceSection = pgTable("home_efforless_elegance", 
     url: text("url"),
     ...timestamps,
 });
+
+export const homeEventBannerSectionOne = pgTable("home_event_banner_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
