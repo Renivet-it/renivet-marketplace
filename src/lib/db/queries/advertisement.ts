@@ -88,7 +88,8 @@ import {
     homeBrandIntroductionBanner,
     kidGentleCareOthers,
     kidForstGiraffeOthers,
-    homeEffortlessEleganceSection
+    homeEffortlessEleganceSection,
+    homeEventBannerSectionOne
 
 } from "../schema";
 
@@ -6142,6 +6143,92 @@ async getHomePageNewArtisanSections(p0: { limit: number; page: number; }) {
         return data;
     }
 
+
+//event-section
+      async getHomePageEventOneSections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeEventBannerSectionOne.findMany({
+            orderBy: [asc(homeEventBannerSectionOne.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageEventOneSection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeEventBannerSectionOne.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeEventBannerSectionOne.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeEventBannerSectionOne)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageEventOneSection(id: string) {
+        const data = await db.query.homeEventBannerSectionOne.findFirst({
+            where: eq(homeEventBannerSectionOne.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageEventOneSection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .insert(homeEventBannerSectionOne)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageEventOneSection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeEventBannerSectionOne)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeEventBannerSectionOne.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageEventOneSection(id: string) {
+        const data = await db
+            .delete(homeEventBannerSectionOne)
+            .where(eq(homeEventBannerSectionOne.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
 }
 
 
