@@ -68,10 +68,10 @@ export function ShopByNewCategories({
                                     <p
                                         className={cn(
                                             "text-xs hover:underline",
-                                            index === 0 ? "text-blue-600 font-semibold" : "text-gray-500"
+                                            index === 0 ? "text-gray-500" : "text-gray-500"
                                         )}
                                     >
-                                        {index === 0 ? "Shop Now!" : "Shop"}
+                                        {index === 0 ? "Shop" : "Shop"}
                                     </p>
                                 </div>
                             </div>
@@ -106,10 +106,10 @@ export function ShopByNewCategories({
                                             <p
                                                 className={cn(
                                                     "text-xs hover:underline",
-                                                    index === 0 && chunkIndex === 0 ? "text-blue-600 font-semibold" : "text-gray-500"
+                                                    index === 0 && chunkIndex === 0 ? "text-gray-500" : "text-gray-500"
                                                 )}
                                             >
-                                                {index === 0 && chunkIndex === 0 ? "Shop Now!" : "Shop"}
+                                                {index === 0 && chunkIndex === 0 ? "Shop" : "Shop"}
                                             </p>
                                         </div>
                                     </div>
