@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button-general";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
@@ -27,10 +28,32 @@ import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { OrderAction } from "./order-action";
 import { OrderSingle } from "./order-single";
-
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 export type TableOrder = OrderWithItemAndBrand;
 
-const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
+const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
+    {
+        id: "select",
+        header: ({ table }) => (
+            <input
+                type="checkbox"
+                checked={table.getIsAllPageRowsSelected()}
+                onChange={(e) => table.toggleAllPageRowsSelected(e.target.checked)}
+                className="cursor-pointer"
+            />
+        ),
+        cell: ({ row }) => (
+            <input
+                type="checkbox"
+                checked={row.getIsSelected()}
+                onChange={(e) => row.toggleSelected(e.target.checked)}
+                className="cursor-pointer"
+            />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+    },
     {
         accessorKey: "id",
         header: "Order ID",
@@ -40,10 +63,6 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
             return <OrderSingle order={data} />;
         },
     },
-    // {
-    //     accessorKey: "userId",
-    //     header: "Customer ID",
-    // },
     {
         accessorKey: "firstName",
         header: "Customer Name",
@@ -87,10 +106,11 @@ const columns= (onAction: () => void): ColumnDef<TableOrder>[] => [
         id: "actions",
         cell: ({ row }) => {
             const data = row.original;
-            return <OrderAction order={data} onAction={onAction}/>;
+            return <OrderAction order={data} onAction={onAction} />;
         },
     },
 ];
+
 interface PageProps {
     initialData: {
         data: OrderWithItemAndBrand[];
@@ -107,21 +127,20 @@ export function OrdersTable({ initialData }: PageProps) {
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-        {}
-    );
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = useState({});
 
     const {
         data: { data: dataRaw, count },
         refetch: refetchOrderData,
+        isLoading,
+        error,
     } = trpc.general.orders.getOrders.useQuery(
         { page, limit, search },
         { initialData }
     );
 
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
-
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
@@ -143,6 +162,229 @@ export function OrdersTable({ initialData }: PageProps) {
         },
     });
 
+const handleDownloadPDF = () => {
+    const selectedRows = table.getSelectedRowModel().rows;
+    console.log( "Selected rows for PDF download:", selectedRows);
+    if (selectedRows.length === 0) {
+        alert("Please select at least one order to download as PDF.");
+        return;
+    }
+
+    // Totals
+    const totalGrossSale = selectedRows.reduce(
+        (sum, row) => sum + +convertPaiseToRupees(row.original.totalAmount),
+        0
+    );
+    const commissionRate = 0.25;
+    const gstRate = 0.18;
+    const tcsRate = 0.01;
+    const paymentGatewayFee = 500.0;
+    const shippingFee = 600.0;
+
+    const commission = totalGrossSale * commissionRate;
+    const gstOnCommission = commission * gstRate;
+    const tcs = totalGrossSale * tcsRate;
+    const totalDeductions =
+        commission + gstOnCommission + tcs + paymentGatewayFee + shippingFee;
+    const finalPayable = totalGrossSale - totalDeductions;
+
+    // Create PDF
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Renivet Commission Invoice", 105, 15, { align: "center" });
+
+    // Seller details
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text("Renivet Sustainable Marketplace", 14, 30);
+    doc.text("GSTIN: 29ABCDE1234F1Z5", 14, 36);
+    doc.text("Email: finance@renivet.com", 14, 42);
+
+    // Buyer details
+    doc.text("Invoice To: EGAICRAFT", 140, 30);
+    doc.text("GSTIN: 33XYZAB1234F1Z2", 140, 36);
+    doc.text("Period: 01-Jul-2025 to 31-Jul-2025", 140, 42);
+
+autoTable(doc, {
+    startY: 55,
+    styles: {
+        fontSize: 11,
+        cellPadding: 3,
+        overflow: "linebreak",
+        halign: "left"
+    },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+    body: [
+        ["Gross Sale Value (Incl. GST)", totalGrossSale],
+        ["Commission @25%", commission],
+        ["GST on Commission @18%", gstOnCommission],
+        ["TCS @1% on Net MRP", tcs],
+        ["Payment Gateway Fee", paymentGatewayFee],
+        ["Shipping Fee", shippingFee],
+        ["Total Deductions", totalDeductions],
+        ["Final Payable to Brand", finalPayable],
+        ["UTR Number", "XXXXXXXXXXXX"],
+        ["Payment Date", "01-Aug-2025"],
+    ],
+    theme: "grid",
+    columnStyles: {
+        0: { cellWidth: 100, halign: "left" }, // Label column
+        1: { cellWidth: 80, halign: "right" } // Amount column - more space now
+    },
+    didParseCell: (data) => {
+        if (data.row.index === 6) {
+            data.cell.styles.fillColor = [240, 240, 240];
+        }
+    },
+});
+
+    doc.save(`consolidated_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
+};
+
+const handleDownloadBrandPDF = () => {
+  const selectedRows = table.getSelectedRowModel().rows;
+  if (selectedRows.length === 0) {
+    alert("Please select at least one order to download as Brand PDF.");
+    return;
+  }
+
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // --- Header ---
+  doc.setFont("helvetica", "bold").setFontSize(14);
+  doc.text("INVOICE", pageWidth / 2, 40, { align: "center" });
+
+  // Company Info (Right)
+  doc.setFontSize(10).setFont("helvetica", "normal");
+  doc.text("P-593, Purna Das Road", pageWidth - 200, 60);
+  doc.text("Kolkata - 700029", pageWidth - 200, 75);
+  doc.text("Email: example@email.com", pageWidth - 200, 90);
+  doc.text("ph: 9999999999", pageWidth - 200, 105);
+
+  // --- Customer & Invoice Details Box ---
+  const leftBoxX = 40;
+  const topBoxY = 130;
+  doc.setDrawColor(0);
+  doc.rect(leftBoxX, topBoxY, pageWidth - 80, 70);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Customer Name:", leftBoxX + 5, topBoxY + 15);
+  doc.setFont("helvetica", "normal");
+  doc.text("Chara Ventures LLP", leftBoxX + 110, topBoxY + 15);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Address:", leftBoxX + 5, topBoxY + 30);
+  doc.setFont("helvetica", "normal");
+  doc.text("P-593, Purna Das Road, Suite - 302,", leftBoxX + 110, topBoxY + 30);
+  doc.text("Kolkata - 700029", leftBoxX + 110, topBoxY + 45);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Phone Number:", leftBoxX + 5, topBoxY + 60);
+  doc.setFont("helvetica", "normal");
+  doc.text("9836922522", leftBoxX + 110, topBoxY + 60);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("GSTIN No.:", leftBoxX + 5, topBoxY + 75);
+  doc.setFont("helvetica", "normal");
+  doc.text("19AAPCC5623A1ZL", leftBoxX + 110, topBoxY + 75);
+
+  // Invoice Info (right side inside box)
+  doc.setFont("helvetica", "bold");
+  doc.text("Invoice No.:", pageWidth - 200, topBoxY + 15);
+  doc.setFont("helvetica", "normal");
+  doc.text("003", pageWidth - 110, topBoxY + 15);
+
+  doc.setFont("helvetica", "bold");
+  doc.text("Date:", pageWidth - 200, topBoxY + 30);
+  doc.setFont("helvetica", "normal");
+  doc.text("03-Oct-23", pageWidth - 110, topBoxY + 30);
+
+  // --- Items Table ---
+  const tableData = selectedRows.map((row, i) => [
+    i + 1,
+    row.original.sku || "",
+    row.original.productName || "",
+    row.original.id,
+    row.original.quantity || 1,
+   row.original.price || 0,
+   row.original.price || 0,
+  ]);
+
+  autoTable(doc, {
+    startY: topBoxY + 90,
+    head: [["S. No.", "SKU", "Product Description", "Order No", "Qty", "Price", "Total"]],
+    body: tableData,
+    theme: "grid",
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
+    styles: { fontSize: 9, cellPadding: 3, valign: "middle" },
+    columnStyles: {
+      0: { cellWidth: 30 },
+      1: { cellWidth: 80 },
+      2: { cellWidth: 180 },
+      3: { cellWidth: 70 },
+      4: { cellWidth: 40 },
+      5: { cellWidth: 60, halign: "right" },
+      6: { cellWidth: 60, halign: "right" },
+    },
+  });
+
+  // --- Totals ---
+  const totalAmount = tableData.reduce((sum, r) => sum + parseFloat(r[6]), 0);
+  let y = doc.lastAutoTable.finalY + 10;
+  doc.setFont("helvetica", "bold");
+  doc.text("Total", pageWidth - 120, y);
+  doc.text(totalAmount.toFixed(2), pageWidth - 50, y, { align: "right" });
+  y += 15;
+  doc.text("Discount", pageWidth - 120, y);
+  doc.text("-", pageWidth - 50, y, { align: "right" });
+  y += 15;
+  doc.text("Round Off", pageWidth - 120, y);
+  doc.text("-", pageWidth - 50, y, { align: "right" });
+  y += 15;
+  doc.text("Grand Total", pageWidth - 120, y);
+  doc.text(totalAmount.toFixed(2), pageWidth - 50, y, { align: "right" });
+
+  // --- Bank Details ---
+  y += 40;
+  doc.setFont("helvetica", "bold");
+  doc.text(`Rs. In Words: ${totalAmount.toFixed(2)} only`, leftBoxX, y);
+  y += 15;
+  doc.text("Bank Details:", leftBoxX, y);
+  doc.setFont("helvetica", "normal");
+  doc.text("A/c Name: Example Brand", leftBoxX, y + 15);
+  doc.text("A/c Number: 0000000000", leftBoxX, y + 30);
+  doc.text("Bank Name: ICICI Bank Ltd", leftBoxX, y + 45);
+  doc.text("IFSC Code: ICIC000000", leftBoxX, y + 60);
+
+  // --- Signature ---
+  doc.setFont("helvetica", "bold");
+  doc.text("For Example Brand", pageWidth - 180, y);
+  doc.setFont("helvetica", "normal");
+  doc.text("Authorised Signatory", pageWidth - 180, y + 60);
+
+  // --- Footer ---
+  doc.setTextColor(255, 0, 0).setFontSize(10);
+  doc.text("Thank you for shopping with us!", pageWidth / 2, 800, { align: "center" });
+
+  doc.save(`brand_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
+};
+
+    if (isLoading) {
+        return <div className="p-4">Loading orders...</div>;
+    }
+
+    if (error) {
+        return (
+            <div className="text-red-500 p-4">
+                Error loading orders: {error.message}
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -162,6 +404,20 @@ export function OrdersTable({ initialData }: PageProps) {
                         }}
                     />
                 </div>
+                <Button
+                    onClick={handleDownloadPDF}
+                    disabled={Object.keys(rowSelection).length === 0}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                    Download Selected Invoices
+                </Button>
+                <Button
+  onClick={handleDownloadBrandPDF}
+  disabled={Object.keys(rowSelection).length === 0}
+  className="bg-green-500 hover:bg-green-600 text-white"
+>
+  Download Brand Invoice
+</Button>
                 <DataTableViewOptions table={table} />
             </div>
 
