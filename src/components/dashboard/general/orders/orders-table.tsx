@@ -40,7 +40,8 @@ import {
     parseAsString,
     parseAsStringLiteral,
     useQueryState,
-    parseAsArrayOf
+    parseAsArrayOf,
+    parseAsIsoDate
 } from "nuqs";
 import { Button } from "@/components/ui/button-dash";
 import { CachedBrand, ProductWithBrand } from "@/lib/validations";
@@ -154,6 +155,16 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
         "brandIds",
         parseAsArrayOf(parseAsString).withDefault([])
     );
+
+     // NEW: Date range filters
+    const [startDate, setStartDate] = useQueryState(
+        "startDate",
+        parseAsIsoDate.withDefault(null)
+    );
+    const [endDate, setEndDate] = useQueryState(
+        "endDate",
+        parseAsIsoDate.withDefault(null)
+    );
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -165,7 +176,8 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
         isLoading,
         error,
     } = trpc.general.orders.getOrders.useQuery(
-        { page, limit, search, brandIds: brandIds.length > 0 ? brandIds : undefined },
+        { page, limit, search, brandIds: brandIds.length > 0 ? brandIds : undefined, startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+            endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined, },
         { initialData }
     );
     const { data: brandsData } = trpc.general.brands.getBrands.useQuery(
@@ -441,6 +453,20 @@ const handleDownloadBrandPDF = () => {
                             setSearch(event.target.value);
                         }}
                     />
+                      {/* Date range filter */}
+                               <Input
+                    type="date"
+                    value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+                    onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : null)}
+                    className="border rounded px-2 py-1"
+                />
+                <span>to</span>
+                <Input
+                    type="date"
+                    value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+                    onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : null)}
+                    className="border rounded px-2 py-1"
+                />
 
                                         <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -504,6 +530,7 @@ const handleDownloadBrandPDF = () => {
 >
   Download Brand Invoice
 </Button>
+
                 <DataTableViewOptions table={table} />
             </div>
 

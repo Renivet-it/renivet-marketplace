@@ -72,6 +72,8 @@ export const ordersRouter = createTRPCRouter({
                 page: z.number().int().positive().default(1),
                 search: z.string().optional(),
                 brandIds: z.array(productSchema.shape.brandId).optional(),
+               startDate: z.string().optional(),
+              endDate: z.string().optional(),
             })
         )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))

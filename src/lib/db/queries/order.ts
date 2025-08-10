@@ -112,11 +112,15 @@ async getOrders({
     page,
     search,
     brandIds,
+    startDate,
+    endDate,
 }: {
     limit: number;
     page: number;
     search?: string;
     brandIds?: string[];
+    startDate?: string;
+    endDate?: string;
 }) {
     const whereConditions = [];
 
@@ -136,6 +140,20 @@ if (brandIds?.length) {
         )
     );
 }
+
+    if (startDate && endDate) {
+        whereConditions.push(
+            and(
+                gte(orders.createdAt, new Date(startDate)),
+                lte(orders.createdAt, new Date(endDate))
+            )
+        );
+    } else if (startDate) {
+        whereConditions.push(gte(orders.createdAt, new Date(startDate)));
+    } else if (endDate) {
+        whereConditions.push(lte(orders.createdAt, new Date(endDate)));
+    }
+
         const data = await db.query.orders.findMany({
             where: whereConditions.length ? and(...whereConditions) : undefined,
             with: {
