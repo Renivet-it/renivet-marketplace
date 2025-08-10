@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button-general";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
@@ -24,12 +23,31 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { OrderAction } from "./order-action";
 import { OrderSingle } from "./order-single";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    parseAsInteger,
+    parseAsString,
+    parseAsStringLiteral,
+    useQueryState,
+    parseAsArrayOf
+} from "nuqs";
+import { Button } from "@/components/ui/button-dash";
+import { CachedBrand, ProductWithBrand } from "@/lib/validations";
+
+
+
+
 export type TableOrder = OrderWithItemAndBrand;
 
 const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
@@ -116,15 +134,26 @@ interface PageProps {
         data: OrderWithItemAndBrand[];
         count: number;
     };
+        brandData?: {
+            data: CachedBrand[];
+            count: number;
+        };
 }
 
-export function OrdersTable({ initialData }: PageProps) {
+export function OrdersTable({ initialData, brandData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
-
+  const [brandFilter, setBrandFilter] = useQueryState(
+        "brand",
+        parseAsString.withDefault("all")
+    );
+    const [brandIds, setBrandIds] = useQueryState(
+        "brandIds",
+        parseAsArrayOf(parseAsString).withDefault([])
+    );
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -136,10 +165,19 @@ export function OrdersTable({ initialData }: PageProps) {
         isLoading,
         error,
     } = trpc.general.orders.getOrders.useQuery(
-        { page, limit, search },
+        { page, limit, search, brandIds: brandIds.length > 0 ? brandIds : undefined },
         { initialData }
     );
-
+    const { data: brandsData } = trpc.general.brands.getBrands.useQuery(
+        {
+            page: 1, // Always fetch from first page
+            limit: 150, // Use total count to fetch all brandData
+            search,
+        },
+        {
+            initialData: brandData, // Use brandData prop
+        }
+    );
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
@@ -403,6 +441,54 @@ const handleDownloadBrandPDF = () => {
                             setSearch(event.target.value);
                         }}
                     />
+
+                                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full md:w-48">
+                                {brandIds.length > 0
+                                    ? `${brandIds.length} brand(s) selected`
+                                    : "Filter by brands..."}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="max-h-80 w-60 overflow-y-auto">
+                            {brandsData?.data?.map((brand) => (
+                                <DropdownMenuItem
+                                    key={brand.id}
+                                    asChild
+                                    onSelect={(e) => e.preventDefault()}
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            checked={brandIds.includes(brand.id)}
+                                            onCheckedChange={(checked) => {
+                                                const newBrandIds = checked
+                                                    ? [...brandIds, brand.id]
+                                                    : brandIds.filter((id) => id !== brand.id);
+                                                setBrandIds(newBrandIds);
+                                                if (newBrandIds.length > 0) {
+                                                    setBrandFilter("all");
+                                                }
+                                            }}
+                                        />
+                                        <span
+                                            className="cursor-pointer"
+                                            onClick={() => {
+                                                const newBrandIds = brandIds.includes(brand.id)
+                                                    ? brandIds.filter((id) => id !== brand.id)
+                                                    : [...brandIds, brand.id];
+                                                setBrandIds(newBrandIds);
+                                                if (newBrandIds.length > 0) {
+                                                    setBrandFilter("all");
+                                                }
+                                            }}
+                                        >
+                                            {brand.name}
+                                        </span>
+                                    </div>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <Button
                     onClick={handleDownloadPDF}

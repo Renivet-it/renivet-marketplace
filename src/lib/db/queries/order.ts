@@ -22,7 +22,8 @@ import {
     products,
     returnShipments,
     users,
-    ordersIntent
+    ordersIntent,
+    products as productTable,
 } from "../schema";
 import {
     returnAddressDetails,
@@ -106,17 +107,37 @@ class OrderQuery {
         return parsed;
     }
 
-    async getOrders({
-        limit,
-        page,
-        search,
-    }: {
-        limit: number;
-        page: number;
-        search?: string;
-    }) {
+async getOrders({
+    limit,
+    page,
+    search,
+    brandIds,
+}: {
+    limit: number;
+    page: number;
+    search?: string;
+    brandIds?: string[];
+}) {
+    const whereConditions = [];
+
+    if (search) {
+        whereConditions.push(ilike(orders.id, `%${search}%`));
+    }
+
+if (brandIds?.length) {
+    whereConditions.push(
+        inArray(
+            orders.id,
+            db
+                .select({ id: orderItems.orderId })
+                .from(orderItems)
+                .innerJoin(productTable, eq(orderItems.productId, productTable.id))
+                .where(inArray(productTable.brandId, brandIds))
+        )
+    );
+}
         const data = await db.query.orders.findMany({
-            where: !!search ? ilike(orders.id, `%${search}%`) : undefined,
+            where: whereConditions.length ? and(...whereConditions) : undefined,
             with: {
                 address: true,
                 shipments: true,
@@ -140,14 +161,14 @@ class OrderQuery {
             limit,
             offset: (page - 1) * limit,
             orderBy: [desc(orders.createdAt)],
-            extras: {
-                count: db
-                    .$count(
-                        orders,
-                        !!search ? ilike(orders.id, `%${search}%`) : undefined
-                    )
-                    .as("order_count"),
-            },
+extras: {
+    count: db
+        .$count(
+            orders,
+            whereConditions.length ? and(...whereConditions) : undefined
+        )
+        .as("order_count"),
+}
         });
 
         const products = data.flatMap((d) => d.items.map((i) => i.product));
