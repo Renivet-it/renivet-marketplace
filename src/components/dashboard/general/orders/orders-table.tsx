@@ -48,7 +48,7 @@ import { CachedBrand, ProductWithBrand } from "@/lib/validations";
 import { ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog-dash";
 import { Label } from "@/components/ui/label";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select-dash";
 
 
 export type TableOrder = OrderWithItemAndBrand;
@@ -192,6 +192,7 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
             initialData: brandData, // Use brandData prop
         }
     );
+    console.log(brandsData, "brandDatabrandDatabrandDatabrandData");
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
@@ -213,12 +214,12 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
             rowSelection,
         },
     });
+// State declarations
 const [isModalOpen, setIsModalOpen] = useState(false);
 const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
 const [utrNumber, setUtrNumber] = useState("");
 const [paymentDate, setPaymentDate] = useState("");
-
-
+const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID from dialog
 
 const handleDownloadPDF = () => {
   const selectedRows = table.getSelectedRowModel().rows;
@@ -229,9 +230,23 @@ const handleDownloadPDF = () => {
   }
   setIsModalOpen(true); // Open the payment details modal
 };
-
+ const formatDate = (date) => {
+      if (!date) return "N/A";
+      return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    };
 const generatePDF = () => {
   const selectedRows = table.getSelectedRowModel().rows;
+
+  // Find the selected brand from the dialog
+  const selectedBrand = brandsData?.data?.find((brand) => brand.id === selectedBrandId);
+  if (!selectedBrand) {
+    setIsErrorModalOpen(true);
+    return;
+  }
 
   // Totals
   const totalGrossSale = selectedRows.reduce(
@@ -259,17 +274,17 @@ const generatePDF = () => {
   doc.setFont("helvetica", "bold");
   doc.text("Renivet Commission Invoice", 105, 15, { align: "center" });
 
-  // Seller details
+  // Seller details (Renivet)
   doc.setFontSize(11);
   doc.setFont("helvetica", "normal");
   doc.text("Renivet Sustainable Marketplace", 14, 30);
   doc.text("GSTIN: 29ABCDE1234F1Z5", 14, 36);
   doc.text("Email: finance@renivet.com", 14, 42);
 
-  // Buyer details
-  doc.text("Invoice To: EGAICRAFT", 140, 30);
-  doc.text("GSTIN: 33XYZAB1234F1Z2", 140, 36);
-  doc.text("Period: 01-Jul-2025 to 31-Jul-2025", 140, 42);
+  // Buyer details (Selected Brand)
+  doc.text(`Invoice To: ${selectedBrand.name}`, 140, 30);
+  doc.text(`GSTIN: ${selectedBrand.confidential?.gstin ?? "N/A"}`, 140, 36);
+  doc.text(`Period:  ${formatDate(startDate)} to  ${formatDate(endDate)}`, 140, 42);
 
   autoTable(doc, {
     startY: 55,
@@ -308,8 +323,10 @@ const generatePDF = () => {
   setIsModalOpen(false); // Close modal after PDF generation
   setUtrNumber("");
   setPaymentDate("");
+  setSelectedBrandId(""); // Reset brand selection
 };
 
+// Assuming handleDownloadBrandPDF is defined elsewhere
 const handleDownloadBrandPDF = () => {
   const selectedRows = table.getSelectedRowModel().rows;
   if (selectedRows.length === 0) {
@@ -446,18 +463,6 @@ const handleDownloadBrandPDF = () => {
   doc.save(`brand_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
 };
 
-    if (isLoading) {
-        return <div className="p-4">Loading orders...</div>;
-    }
-
-    if (error) {
-        return (
-            <div className="text-red-500 p-4">
-                Error loading orders: {error.message}
-            </div>
-        );
-    }
-
 return (
   <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-6">
     {/* Filter & Actions Section */}
@@ -571,6 +576,27 @@ return (
       <DialogTitle>Enter Payment Details</DialogTitle>
     </DialogHeader>
     <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="brand" className="text-right">
+          Brand:
+        </Label>
+        <Select
+          value={selectedBrandId}
+          onValueChange={setSelectedBrandId}
+          className="col-span-3"
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a brand" />
+          </SelectTrigger>
+          <SelectContent>
+            {brandsData?.data?.map((brand) => (
+              <SelectItem key={brand.id} value={brand.id}>
+                {brand.name} (GSTIN: {brand.gstId})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="utr" className="text-right">
           UTR Number:
