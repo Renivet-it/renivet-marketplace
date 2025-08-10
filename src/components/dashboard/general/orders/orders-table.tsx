@@ -45,6 +45,7 @@ import {
 } from "nuqs";
 import { Button } from "@/components/ui/button-dash";
 import { CachedBrand, ProductWithBrand } from "@/lib/validations";
+import { ChevronDown } from "lucide-react";
 
 
 
@@ -435,111 +436,127 @@ const handleDownloadBrandPDF = () => {
         );
     }
 
-    return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <div className="w-full md:w-auto">
-                    <Input
-                        placeholder="Search by order id..."
-                        value={
-                            (table
-                                .getColumn("id")
-                                ?.getFilterValue() as string) ?? search
-                        }
-                        onChange={(event) => {
-                            table
-                                .getColumn("id")
-                                ?.setFilterValue(event.target.value);
-                            setSearch(event.target.value);
-                        }}
-                    />
-                      {/* Date range filter */}
-                               <Input
-                    type="date"
-                    value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
-                    onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : null)}
-                    className="border rounded px-2 py-1"
-                />
-                <span>to</span>
-                <Input
-                    type="date"
-                    value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
-                    onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : null)}
-                    className="border rounded px-2 py-1"
-                />
-
-                                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-full md:w-48">
-                                {brandIds.length > 0
-                                    ? `${brandIds.length} brand(s) selected`
-                                    : "Filter by brands..."}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="max-h-80 w-60 overflow-y-auto">
-                            {brandsData?.data?.map((brand) => (
-                                <DropdownMenuItem
-                                    key={brand.id}
-                                    asChild
-                                    onSelect={(e) => e.preventDefault()}
-                                >
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                            checked={brandIds.includes(brand.id)}
-                                            onCheckedChange={(checked) => {
-                                                const newBrandIds = checked
-                                                    ? [...brandIds, brand.id]
-                                                    : brandIds.filter((id) => id !== brand.id);
-                                                setBrandIds(newBrandIds);
-                                                if (newBrandIds.length > 0) {
-                                                    setBrandFilter("all");
-                                                }
-                                            }}
-                                        />
-                                        <span
-                                            className="cursor-pointer"
-                                            onClick={() => {
-                                                const newBrandIds = brandIds.includes(brand.id)
-                                                    ? brandIds.filter((id) => id !== brand.id)
-                                                    : [...brandIds, brand.id];
-                                                setBrandIds(newBrandIds);
-                                                if (newBrandIds.length > 0) {
-                                                    setBrandFilter("all");
-                                                }
-                                            }}
-                                        >
-                                            {brand.name}
-                                        </span>
-                                    </div>
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-                <Button
-                    onClick={handleDownloadPDF}
-                    disabled={Object.keys(rowSelection).length === 0}
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
-                >
-                    Download Selected Invoices
-                </Button>
-                <Button
-  onClick={handleDownloadBrandPDF}
-  disabled={Object.keys(rowSelection).length === 0}
-  className="bg-green-500 hover:bg-green-600 text-white"
->
-  Download Brand Invoice
-</Button>
-
-                <DataTableViewOptions table={table} />
-            </div>
-
-            <DataTable
-                columns={columns(refetchOrderData)}
-                table={table}
-                pages={pages}
-                count={count}
-            />
+return (
+  <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-6">
+    {/* Filter & Actions Section */}
+    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      {/* Filters Group */}
+      <div className="flex flex-wrap items-end gap-4">
+        {/* Search Input */}
+        <div className="min-w-[240px]">
+          <Input
+            placeholder="Search by order ID..."
+            className="w-full"
+            value={search}
+            onChange={(e) => {
+              table.getColumn("id")?.setFilterValue(e.target.value);
+              setSearch(e.target.value);
+            }}
+          />
         </div>
-    );
+        
+        {/* Date Range */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-[160px]">
+              <div htmlFor="start-date" className="text-sm font-medium text-gray-600">
+                Start Date
+              </div>
+              <Input
+                id="start-date"
+                type="date"
+                className="w-full mt-1"
+                value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : null)}
+              />
+            </div>
+            <span className="text-gray-400 mb-1 hidden sm:block">-</span>
+          </div>
+          <div className="w-[160px]">
+            <div htmlFor="end-date" className="text-sm font-medium text-gray-600">
+              End Date
+            </div>
+            <Input
+              id="end-date"
+              type="date"
+              className="w-full mt-1"
+              value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+              onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : null)}
+            />
+          </div>
+        </div>
+        
+        {/* Brand Filter */}
+        <div className="min-w-[240px]">
+          <div className="text-sm font-medium text-gray-600 mb-1 block">
+            Brand Filter
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {brandIds.length > 0
+                  ? `${brandIds.length} brand(s) selected`
+                  : "Select brands"}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="max-h-[280px] w-[240px] overflow-y-auto">
+              {brandsData?.data?.map((brand) => (
+                <DropdownMenuItem
+                  key={brand.id}
+                  onSelect={(e) => e.preventDefault()}
+                  className="flex items-center gap-3"
+                >
+                  <Checkbox
+                    checked={brandIds.includes(brand.id)}
+                    onCheckedChange={(checked) => {
+                      const updated = checked
+                        ? [...brandIds, brand.id]
+                        : brandIds.filter((id) => id !== brand.id);
+                      setBrandIds(updated);
+                      if (updated.length > 0) setBrandFilter("all");
+                    }}
+                  />
+                  <span className="text-sm">{brand.name}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Actions Group */}
+      <div className="flex flex-wrap gap-3">
+        <Button
+          variant="primary"
+          disabled={Object.keys(rowSelection).length === 0}
+          onClick={handleDownloadPDF}
+          className="min-w-[180px]"
+        >
+          Download Selected
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={Object.keys(rowSelection).length === 0}
+          onClick={handleDownloadBrandPDF}
+          className="min-w-[180px]"
+        >
+          Download Brand Invoice
+        </Button>
+        <DataTableViewOptions table={table} />
+      </div>
+    </div>
+
+    {/* Table Section */}
+    <div className="border rounded-lg overflow-hidden">
+      <DataTable
+        columns={columns(refetchOrderData)}
+        table={table}
+        pages={pages}
+        count={count}
+      />
+    </div>
+  </div>
+);
+
 }
