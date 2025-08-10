@@ -46,7 +46,8 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { CachedBrand, ProductWithBrand } from "@/lib/validations";
 import { ChevronDown } from "lucide-react";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog-dash";
+import { Label } from "@/components/ui/label";
 
 
 
@@ -212,14 +213,25 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
             rowSelection,
         },
     });
+const [isModalOpen, setIsModalOpen] = useState(false);
+const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+const [utrNumber, setUtrNumber] = useState("");
+const [paymentDate, setPaymentDate] = useState("");
+
+
 
 const handleDownloadPDF = () => {
   const selectedRows = table.getSelectedRowModel().rows;
   console.log("Selected rows for PDF download:", selectedRows);
   if (selectedRows.length === 0) {
-    alert("Please select at least one order to download as PDF.");
+    setIsErrorModalOpen(true);
     return;
   }
+  setIsModalOpen(true); // Open the payment details modal
+};
+
+const generatePDF = () => {
+  const selectedRows = table.getSelectedRowModel().rows;
 
   // Totals
   const totalGrossSale = selectedRows.reduce(
@@ -238,10 +250,6 @@ const handleDownloadPDF = () => {
   const totalDeductions =
     commission + gstOnCommission + tcs + paymentGatewayFee + shippingFee;
   const finalPayable = totalGrossSale - totalDeductions;
-
-  // Prompt for UTR Number and Payment Date
-  const utrNumber = prompt("Enter UTR Number:");
-  const paymentDate = prompt("Enter Payment Date (e.g., DD-MMM-YYYY):");
 
   // Create PDF
   const doc = new jsPDF();
@@ -286,8 +294,8 @@ const handleDownloadPDF = () => {
     ],
     theme: "grid",
     columnStyles: {
-      0: { cellWidth: 100, halign: "left" }, // Label column
-      1: { cellWidth: 80, halign: "right" } // Amount column - more space now
+      0: { cellWidth: 100, halign: "left" },
+      1: { cellWidth: 80, halign: "right" }
     },
     didParseCell: (data) => {
       if (data.row.index === 6) {
@@ -297,6 +305,9 @@ const handleDownloadPDF = () => {
   });
 
   doc.save(`consolidated_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
+  setIsModalOpen(false); // Close modal after PDF generation
+  setUtrNumber("");
+  setPaymentDate("");
 };
 
 const handleDownloadBrandPDF = () => {
@@ -554,7 +565,40 @@ return (
         <DataTableViewOptions table={table} />
       </div>
     </div>
-
+<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Enter Payment Details</DialogTitle>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="utr" className="text-right">
+          UTR Number:
+        </Label>
+        <Input
+          id="utr"
+          value={utrNumber}
+          onChange={(e) => setUtrNumber(e.target.value)}
+          className="col-span-3"
+        />
+      </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="paymentDate" className="text-right">
+          Payment Date (e.g., DD-MMM-YYYY):
+        </Label>
+        <Input
+          id="paymentDate"
+          value={paymentDate}
+          onChange={(e) => setPaymentDate(e.target.value)}
+          className="col-span-3"
+        />
+      </div>
+    </div>
+    <DialogFooter>
+      <Button onClick={generatePDF}>Submit</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
     {/* Table Section */}
     <div className="border rounded-lg overflow-hidden">
       <DataTable
