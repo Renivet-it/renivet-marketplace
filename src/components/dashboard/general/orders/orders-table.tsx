@@ -171,7 +171,21 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = useState({});
-
+ // Add a new query specifically for PDF generation
+  const { data: allFilteredOrders } = trpc.general.orders.getOrders.useQuery(
+    {
+      page: 1,
+      limit: 1000000, // Large enough to get all filtered records
+      search,
+      brandIds: brandIds.length > 0 ? brandIds : undefined, 
+      startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+      endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+    },
+    {
+      enabled: false, // Don't fetch by default, only when needed
+      refetchOnWindowFocus: false 
+    }
+  );
     const {
         data: { data: dataRaw, count },
         refetch: refetchOrderData,
@@ -220,16 +234,26 @@ const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
 const [utrNumber, setUtrNumber] = useState("");
 const [paymentDate, setPaymentDate] = useState("");
 const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID from dialog
+  const [allFilteredData, setAllFilteredData] = useState<TableOrder[]>([]);
 
-const handleDownloadPDF = () => {
-  const selectedRows = table.getSelectedRowModel().rows;
-  console.log("Selected rows for PDF download:", selectedRows);
-  if (selectedRows.length === 0) {
-    setIsErrorModalOpen(true);
-    return;
-  }
-  setIsModalOpen(true); // Open the payment details modal
-};
+
+  // Modified handleDownloadPDF function
+  const handleDownloadPDF = async () => {
+    // Fetch ALL filtered data (not just current page)
+    const { data: allData } = await refetchOrderData({
+      page: 1,
+      limit: 1000, // Get all records that match current filters
+      search,
+      brandIds: brandIds.length > 0 ? brandIds : undefined,
+      startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+      endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+    });
+
+    // Now use allData instead of selectedRows for PDF generation
+    setIsModalOpen(true);
+    // Store allData for PDF generation
+    setAllFilteredData(allData.data);
+  };
  const formatDate = (date) => {
       if (!date) return "N/A";
       return date.toLocaleDateString("en-GB", {
@@ -240,7 +264,7 @@ const handleDownloadPDF = () => {
     };
 const generatePDF = () => {
   const selectedRows = table.getSelectedRowModel().rows;
-
+const dataToUse = allFilteredData || data;
   // Find the selected brand from the dialog
   const selectedBrand = brandsData?.data?.find((brand) => brand.id === selectedBrandId);
   if (!selectedBrand) {
@@ -249,10 +273,10 @@ const generatePDF = () => {
   }
 
   // Totals
-  const totalGrossSale = selectedRows.reduce(
-    (sum, row) => sum + +convertPaiseToRupees(row.original.totalAmount),
-    0
-  );
+   const totalGrossSale = dataToUse.reduce(
+      (sum, order) => sum + +convertPaiseToRupees(order.totalAmount),
+      0
+    );
   const commissionRate = 0.25;
   const gstRate = 0.18;
   const tcsRate = 0.01;
@@ -553,7 +577,6 @@ return (
       {/* Actions Group */}
       <div className="flex flex-wrap gap-3">
         <Button
-          disabled={Object.keys(rowSelection).length === 0}
           onClick={handleDownloadPDF}
           className="min-w-[180px]"
         >
