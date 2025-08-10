@@ -214,85 +214,89 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
     });
 
 const handleDownloadPDF = () => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    console.log( "Selected rows for PDF download:", selectedRows);
-    if (selectedRows.length === 0) {
-        alert("Please select at least one order to download as PDF.");
-        return;
-    }
+  const selectedRows = table.getSelectedRowModel().rows;
+  console.log("Selected rows for PDF download:", selectedRows);
+  if (selectedRows.length === 0) {
+    alert("Please select at least one order to download as PDF.");
+    return;
+  }
 
-    // Totals
-    const totalGrossSale = selectedRows.reduce(
-        (sum, row) => sum + +convertPaiseToRupees(row.original.totalAmount),
-        0
-    );
-    const commissionRate = 0.25;
-    const gstRate = 0.18;
-    const tcsRate = 0.01;
-    const paymentGatewayFee = 500.0;
-    const shippingFee = 600.0;
+  // Totals
+  const totalGrossSale = selectedRows.reduce(
+    (sum, row) => sum + +convertPaiseToRupees(row.original.totalAmount),
+    0
+  );
+  const commissionRate = 0.25;
+  const gstRate = 0.18;
+  const tcsRate = 0.01;
+  const paymentGatewayFee = 500.0;
+  const shippingFee = 600.0;
 
-    const commission = totalGrossSale * commissionRate;
-    const gstOnCommission = commission * gstRate;
-    const tcs = totalGrossSale * tcsRate;
-    const totalDeductions =
-        commission + gstOnCommission + tcs + paymentGatewayFee + shippingFee;
-    const finalPayable = totalGrossSale - totalDeductions;
+  const commission = totalGrossSale * commissionRate;
+  const gstOnCommission = commission * gstRate;
+  const tcs = totalGrossSale * tcsRate;
+  const totalDeductions =
+    commission + gstOnCommission + tcs + paymentGatewayFee + shippingFee;
+  const finalPayable = totalGrossSale - totalDeductions;
 
-    // Create PDF
-    const doc = new jsPDF();
+  // Prompt for UTR Number and Payment Date
+  const utrNumber = prompt("Enter UTR Number:");
+  const paymentDate = prompt("Enter Payment Date (e.g., DD-MMM-YYYY):");
 
-    // Title
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("Renivet Commission Invoice", 105, 15, { align: "center" });
+  // Create PDF
+  const doc = new jsPDF();
 
-    // Seller details
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text("Renivet Sustainable Marketplace", 14, 30);
-    doc.text("GSTIN: 29ABCDE1234F1Z5", 14, 36);
-    doc.text("Email: finance@renivet.com", 14, 42);
+  // Title
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text("Renivet Commission Invoice", 105, 15, { align: "center" });
 
-    // Buyer details
-    doc.text("Invoice To: EGAICRAFT", 140, 30);
-    doc.text("GSTIN: 33XYZAB1234F1Z2", 140, 36);
-    doc.text("Period: 01-Jul-2025 to 31-Jul-2025", 140, 42);
+  // Seller details
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text("Renivet Sustainable Marketplace", 14, 30);
+  doc.text("GSTIN: 29ABCDE1234F1Z5", 14, 36);
+  doc.text("Email: finance@renivet.com", 14, 42);
 
-autoTable(doc, {
+  // Buyer details
+  doc.text("Invoice To: EGAICRAFT", 140, 30);
+  doc.text("GSTIN: 33XYZAB1234F1Z2", 140, 36);
+  doc.text("Period: 01-Jul-2025 to 31-Jul-2025", 140, 42);
+
+  autoTable(doc, {
     startY: 55,
     styles: {
-        fontSize: 11,
-        cellPadding: 3,
-        overflow: "linebreak",
-        halign: "left"
+      fontSize: 11,
+      cellPadding: 3,
+      overflow: "linebreak",
+      halign: "left"
     },
     headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
     body: [
-        ["Gross Sale Value (Incl. GST)", totalGrossSale],
-        ["Commission @25%", commission],
-        ["GST on Commission @18%", gstOnCommission],
-        ["TCS @1% on Net MRP", tcs],
-        ["Payment Gateway Fee", paymentGatewayFee],
-        ["Shipping Fee", shippingFee],
-        ["Total Deductions", totalDeductions],
-        ["Final Payable to Brand", finalPayable],
-        ["UTR Number", "XXXXXXXXXXXX"],
-        ["Payment Date", "01-Aug-2025"],
+      ["Gross Sale Value (Incl. GST)", totalGrossSale],
+      ["Commission @25%", commission],
+      ["GST on Commission @18%", gstOnCommission],
+      ["TCS @1% on Net MRP", tcs],
+      ["Payment Gateway Fee", paymentGatewayFee],
+      ["Shipping Fee", shippingFee],
+      ["Total Deductions", totalDeductions],
+      ["Final Payable to Brand", finalPayable],
+      ["UTR Number", utrNumber || "N/A"],
+      ["Payment Date", paymentDate || "N/A"],
     ],
     theme: "grid",
     columnStyles: {
-        0: { cellWidth: 100, halign: "left" }, // Label column
-        1: { cellWidth: 80, halign: "right" } // Amount column - more space now
+      0: { cellWidth: 100, halign: "left" }, // Label column
+      1: { cellWidth: 80, halign: "right" } // Amount column - more space now
     },
     didParseCell: (data) => {
-        if (data.row.index === 6) {
-            data.cell.styles.fillColor = [240, 240, 240];
-        }
+      if (data.row.index === 6) {
+        data.cell.styles.fillColor = [240, 240, 240];
+      }
     },
-});
+  });
 
-    doc.save(`consolidated_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
+  doc.save(`consolidated_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
 };
 
 const handleDownloadBrandPDF = () => {
@@ -304,23 +308,29 @@ const handleDownloadBrandPDF = () => {
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
 
-  // --- Header ---
-  doc.setFont("helvetica", "bold").setFontSize(14);
-  doc.text("INVOICE", pageWidth / 2, 40, { align: "center" });
+  // --- Header with Logo Placeholder ---
+  doc.setFont("helvetica", "bold").setFontSize(20);
+  doc.setTextColor(255, 0, 0); // Red color for "nanhey"
+  doc.text("nanhey", pageWidth / 2, 30, { align: "center" });
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0); // Black for "INVOICE"
+  doc.text("INVOICE", pageWidth / 2, 50, { align: "center" });
 
   // Company Info (Right)
   doc.setFontSize(10).setFont("helvetica", "normal");
-  doc.text("P-593, Purna Das Road", pageWidth - 200, 60);
-  doc.text("Kolkata - 700029", pageWidth - 200, 75);
-  doc.text("Email: example@email.com", pageWidth - 200, 90);
-  doc.text("ph: 9999999999", pageWidth - 200, 105);
+  doc.text("Nanhey Das", pageWidth - 200, 70);
+  doc.text("P-593, Purna Das Road", pageWidth - 200, 85);
+  doc.text("Kolkata - 700029", pageWidth - 200, 100);
+  doc.text("Email: nanhey.com", pageWidth - 200, 115);
+  doc.text("ph: 9836922622", pageWidth - 200, 130);
 
   // --- Customer & Invoice Details Box ---
   const leftBoxX = 40;
-  const topBoxY = 130;
+  const topBoxY = 150;
   doc.setDrawColor(0);
-  doc.rect(leftBoxX, topBoxY, pageWidth - 80, 70);
+  doc.rect(leftBoxX, topBoxY, pageWidth - 80, 80);
 
   doc.setFont("helvetica", "bold");
   doc.text("Customer Name:", leftBoxX + 5, topBoxY + 15);
@@ -361,17 +371,17 @@ const handleDownloadBrandPDF = () => {
     row.original.productName || "",
     row.original.id,
     row.original.quantity || 1,
-   row.original.price || 0,
-   row.original.price || 0,
+    row.original.price || 0,
+    row.original.price || 0,
   ]);
 
   autoTable(doc, {
-    startY: topBoxY + 90,
+    startY: topBoxY + 100,
     head: [["S. No.", "SKU", "Product Description", "Order No", "Qty", "Price", "Total"]],
     body: tableData,
     theme: "grid",
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-    styles: { fontSize: 9, cellPadding: 3, valign: "middle" },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontSize: 10 },
+    styles: { fontSize: 9, cellPadding: 5, valign: "middle" },
     columnStyles: {
       0: { cellWidth: 30 },
       1: { cellWidth: 80 },
@@ -385,7 +395,7 @@ const handleDownloadBrandPDF = () => {
 
   // --- Totals ---
   const totalAmount = tableData.reduce((sum, r) => sum + parseFloat(r[6]), 0);
-  let y = doc.lastAutoTable.finalY + 10;
+  let y = doc.lastAutoTable.finalY + 20;
   doc.setFont("helvetica", "bold");
   doc.text("Total", pageWidth - 120, y);
   doc.text(totalAmount.toFixed(2), pageWidth - 50, y, { align: "right" });
@@ -406,20 +416,21 @@ const handleDownloadBrandPDF = () => {
   y += 15;
   doc.text("Bank Details:", leftBoxX, y);
   doc.setFont("helvetica", "normal");
-  doc.text("A/c Name: Example Brand", leftBoxX, y + 15);
-  doc.text("A/c Number: 0000000000", leftBoxX, y + 30);
+  doc.text("A/c Name: Nanhey", leftBoxX, y + 15);
+  doc.text("A/c Number: 03720500561", leftBoxX, y + 30);
   doc.text("Bank Name: ICICI Bank Ltd", leftBoxX, y + 45);
-  doc.text("IFSC Code: ICIC000000", leftBoxX, y + 60);
+  doc.text("IFSC Code: ICIC0000372", leftBoxX, y + 60);
 
   // --- Signature ---
   doc.setFont("helvetica", "bold");
-  doc.text("For Example Brand", pageWidth - 180, y);
+  doc.text("For Nanhey", pageWidth - 180, y);
+  doc.line(pageWidth - 180, y + 10, pageWidth - 100, y + 10); // Signature line
   doc.setFont("helvetica", "normal");
-  doc.text("Authorised Signatory", pageWidth - 180, y + 60);
+  doc.text("Authorised Signatory", pageWidth - 180, y + 30);
 
   // --- Footer ---
   doc.setTextColor(255, 0, 0).setFontSize(10);
-  doc.text("Thank you for shopping with us!", pageWidth / 2, 800, { align: "center" });
+  doc.text("Thank you for shopping with us!", pageWidth / 2, pageHeight - 40, { align: "center" });
 
   doc.save(`brand_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
 };
@@ -454,7 +465,6 @@ return (
             }}
           />
         </div>
-        
         {/* Date Range */}
         <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
           <div className="flex items-center gap-2">
@@ -485,7 +495,6 @@ return (
             />
           </div>
         </div>
-        
         {/* Brand Filter */}
         <div className="min-w-[240px]">
           <div className="text-sm font-medium text-gray-600 mb-1 block">
@@ -528,12 +537,11 @@ return (
       {/* Actions Group */}
       <div className="flex flex-wrap gap-3">
         <Button
-          variant="primary"
           disabled={Object.keys(rowSelection).length === 0}
           onClick={handleDownloadPDF}
           className="min-w-[180px]"
         >
-          Download Selected
+          Download Consolidated Report
         </Button>
         <Button
           variant="secondary"
