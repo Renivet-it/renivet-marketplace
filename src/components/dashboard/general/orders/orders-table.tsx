@@ -403,10 +403,10 @@ doc.addImage(logoUrl, "PNG", 40, 40, 120, 120);
   // --- Company Info ---
   doc.setFontSize(10).setFont("helvetica", "normal");
   doc.text("Renivet Solution", pageWidth - 200, 70);
-  doc.text("P-593, Purna Das Road", pageWidth - 200, 85);
-  doc.text("Kolkata - 700029", pageWidth - 200, 100);
-  doc.text("Email: nanhey.com", pageWidth - 200, 115);
-  doc.text("ph: 9836922622", pageWidth - 200, 130);
+  doc.text("Kolte Patil Itowers,", pageWidth - 200, 85);
+  doc.text("Karnataka - 560100.", pageWidth - 200, 100);
+  doc.text("Email: support@renivet.com", pageWidth - 200, 115);
+  doc.text("ph: 8983676772", pageWidth - 200, 130);
 
   // --- Customer & Invoice Details Box ---
   const leftBoxX = 40;
@@ -544,7 +544,7 @@ autoTable(doc, {
   // --- Bank Details ---
   y += 25;
   doc.setFont("helvetica", "bold");
-  doc.text(`Rs. In Words: ${totals[3][1]} only`, leftBoxX, y);
+  // doc.text(`Rs. In Words: ${totals[3][1]}`, leftBoxX, y);
   y += 15;
   // doc.text("Bank Details:", leftBoxX, y);
   // doc.setFont("helvetica", "normal");
