@@ -68,8 +68,8 @@ export const ordersRouter = createTRPCRouter({
     getOrders: protectedProcedure
         .input(
             z.object({
-                limit: z.number().int().positive().default(10),
-                page: z.number().int().positive().default(1),
+                limit: z.number().int().positive().optional(),
+                page: z.number().int().positive().optional(),
                 search: z.string().optional(),
                 brandIds: z.array(productSchema.shape.brandId).optional(),
                startDate: z.string().optional(),

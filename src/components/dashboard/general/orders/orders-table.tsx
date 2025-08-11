@@ -144,7 +144,7 @@ interface PageProps {
 }
 
 export function OrdersTable({ initialData, brandData }: PageProps) {
-    const [page] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
@@ -157,7 +157,7 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
         "brandIds",
         parseAsArrayOf(parseAsString).withDefault([])
     );
-
+const [perPage, setPerPage] = useQueryState("perPage", parseAsInteger.withDefault(10));
      // NEW: Date range filters
     const [startDate, setStartDate] = useQueryState(
         "startDate",
@@ -186,16 +186,25 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
       refetchOnWindowFocus: false
     }
   );
-    const {
-        data: { data: dataRaw, count },
-        refetch: refetchOrderData,
-        isLoading,
-        error,
-    } = trpc.general.orders.getOrders.useQuery(
-        { page, limit, search, brandIds: brandIds.length > 0 ? brandIds : undefined, startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
-            endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined, },
-        { initialData }
-    );
+const { data: { data: dataRaw, count }, refetch: refetchOrderData, isLoading,
+        error, } = trpc.general.orders.getOrders.useQuery(
+    {
+        page,
+        limit: perPage,
+        search,
+        brandIds: brandIds.length > 0 ? brandIds : undefined,
+        startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+        endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+    },
+    {
+        initialData,
+        keepPreviousData: true, // Smoother transitions
+        // Disable automatic refetching
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+    }
+);
     const { data: brandsData } = trpc.general.brands.getBrands.useQuery(
         {
             page: 1, // Always fetch from first page
@@ -206,7 +215,6 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
             initialData: brandData, // Use brandData prop
         }
     );
-    console.log(brandsData, "brandDatabrandDatabrandDatabrandData");
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
@@ -214,18 +222,24 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
         data,
         columns: columns(refetchOrderData),
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
+        // getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
         getSortedRowModel: getSortedRowModel(),
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
+        pageCount: pages,
+         manualPagination: true, // Enable manual pagination
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
+          pagination: {
+            pageIndex: page - 1, // Convert to 0-based index
+            pageSize: perPage,
+        },
         },
     });
 // State declarations
@@ -702,6 +716,11 @@ return (
         table={table}
         pages={pages}
         count={count}
+         perPage={perPage}
+ onPerPageChange={(value) => {
+        setPerPage(value);
+        setPage(1); // Reset to first page when changing page size
+    }}
       />
     </div>
   </div>
