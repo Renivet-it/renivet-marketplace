@@ -164,7 +164,11 @@ if (brandIds?.length) {
                     with: {
                         product: {
                             with: {
-                                brand: true,
+                                brand: {
+                                    with: {
+                                        confidential: true, // Loads all confidential data
+                                    },
+                                },
                                 variants: true,
                                 category: true,
                                 subcategory: true,
@@ -228,11 +232,9 @@ extras: {
                 product: enhancedProducts.find((p) => p.id === i.productId),
             })),
         }));
-
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
             .parse(enhancedData);
-
         return {
             data: parsed,
             count: +data?.[0]?.count || 0,

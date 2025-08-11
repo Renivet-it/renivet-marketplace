@@ -366,8 +366,7 @@ const dataToUse = allFilteredData || data;
 
 const handleDownloadBrandPDF = async () => {
   // Fetch ALL filtered data if no rows are selected
-  let dataToUse = table.getSelectedRowModel().rows.map(row => row.original);
-
+  let dataToUse = table.getSelectedRowModel().rows.map((row) => row.original);
   if (dataToUse.length === 0) {
     const { data: allData } = await refetchOrderData({
       page: 1,
@@ -379,6 +378,7 @@ const handleDownloadBrandPDF = async () => {
     });
     dataToUse = allData?.data ?? [];
   }
+
 console.log(dataToUse, "allDataallDataallDataallDataallData");
   const logoUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQAASEtvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT";
 
@@ -392,6 +392,9 @@ const formattedDate = today.toLocaleDateString("en-GB", {
   month: "short",
   year: "2-digit"
 }).replace(/ /g, "-");
+
+const firstOrder = dataToUse[0];
+console.log(firstOrder, "firstOrderfirstOrderfirstOrderfirstOrderfirstOrder");
   // --- Header ---
 doc.addImage(logoUrl, "PNG", 40, 40, 120, 120);
   doc.setFont("helvetica", "bold").setFontSize(14);
@@ -399,7 +402,7 @@ doc.addImage(logoUrl, "PNG", 40, 40, 120, 120);
 
   // --- Company Info ---
   doc.setFontSize(10).setFont("helvetica", "normal");
-  doc.text("Nanhey Das", pageWidth - 200, 70);
+  doc.text("Renivet Solution", pageWidth - 200, 70);
   doc.text("P-593, Purna Das Road", pageWidth - 200, 85);
   doc.text("Kolkata - 700029", pageWidth - 200, 100);
   doc.text("Email: nanhey.com", pageWidth - 200, 115);
@@ -409,27 +412,44 @@ doc.addImage(logoUrl, "PNG", 40, 40, 120, 120);
   const leftBoxX = 40;
   const topBoxY = 150;
   doc.rect(leftBoxX, topBoxY, pageWidth - 80, 80);
-
   doc.setFont("helvetica", "bold");
   doc.text("Customer Name:", leftBoxX + 5, topBoxY + 15);
   doc.setFont("helvetica", "normal");
-  doc.text("Chara Ventures LLP", leftBoxX + 110, topBoxY + 15);
+  doc.text(
+   firstOrder?.items?.[0]?.product?.brand?.confidential?.authorizedSignatoryName ?? "N/A",
+    leftBoxX + 110,
+    topBoxY + 15
+  );
+const warehouseAddress = {
+  line1: firstOrder?.items?.[0]?.product?.brand?.confidential?.warehouseAddressLine1 || "",
+  line2: firstOrder?.items?.[0]?.product?.brand?.confidential?.warehouseAddressLine2 || "",
+  zip: firstOrder?.items?.[0]?.product?.brand?.confidential?.warehousePostalCode || ""
+};
+
+// Combine all address parts with proper formatting
+const formattedAddress = [
+  warehouseAddress.line1,
+  warehouseAddress.line2,
+  warehouseAddress.zip ? `ZIP: ${warehouseAddress.zip}` : ""
+]
+  .filter(Boolean) // Remove empty strings
+  .join(", ") // Join with comma separator
+  .trim() || "N/A"; // Fallback if empty
 
   doc.setFont("helvetica", "bold");
   doc.text("Address:", leftBoxX + 5, topBoxY + 30);
   doc.setFont("helvetica", "normal");
-  doc.text("P-593, Purna Das Road, Suite - 302,", leftBoxX + 110, topBoxY + 30);
-  doc.text("Kolkata - 700029", leftBoxX + 110, topBoxY + 45);
+  doc.text(formattedAddress, leftBoxX + 110, topBoxY + 30);
 
   doc.setFont("helvetica", "bold");
   doc.text("Phone Number:", leftBoxX + 5, topBoxY + 60);
   doc.setFont("helvetica", "normal");
-  doc.text("9836922522", leftBoxX + 110, topBoxY + 60);
+  doc.text(firstOrder?.items?.[0]?.product?.brand?.phone, leftBoxX + 110, topBoxY + 60);
 
   doc.setFont("helvetica", "bold");
   doc.text("GSTIN No.:", leftBoxX + 5, topBoxY + 75);
   doc.setFont("helvetica", "normal");
-  doc.text("19AAPCC5623A1ZL", leftBoxX + 110, topBoxY + 75);
+  doc.text(firstOrder?.items?.[0]?.product?.brand?.confidential?.gstin ?? "N/A", leftBoxX + 110, topBoxY + 75);
 
   // Invoice Info (right)
   doc.setFont("helvetica", "bold");
@@ -506,10 +526,10 @@ autoTable(doc, {
   // --- Totals Section ---
   let y = doc.lastAutoTable.finalY + 20;
   const totals = [
-    ["Total", tableData.reduce((sum, r) => sum + parseFloat(r[6] || 0), 0).toFixed(2)],
+    ["Total", tableData.reduce((sum, r) => sum + parseFloat(r[14] || 0), 0).toFixed(2)],
     ["Discount", "-"],
     ["Round Off", "-"],
-    ["Grand Total", tableData.reduce((sum, r) => sum + parseFloat(r[6] || 0), 0).toFixed(2)]
+    ["Grand Total", tableData.reduce((sum, r) => sum + parseFloat(r[14] || 0), 0).toFixed(2)]
   ];
 
   totals.forEach(([label, value], index) => {
@@ -528,16 +548,16 @@ autoTable(doc, {
   doc.setFont("helvetica", "bold");
   doc.text(`Rs. In Words: ${totals[3][1]} only`, leftBoxX, y);
   y += 15;
-  doc.text("Bank Details:", leftBoxX, y);
-  doc.setFont("helvetica", "normal");
-  doc.text("A/c Name: Nanhey", leftBoxX, y + 15);
-  doc.text("A/c Number: 03720500561", leftBoxX, y + 30);
-  doc.text("Bank Name: ICICI Bank Ltd", leftBoxX, y + 45);
-  doc.text("IFSC Code: ICIC0000372", leftBoxX, y + 60);
+  // doc.text("Bank Details:", leftBoxX, y);
+  // doc.setFont("helvetica", "normal");
+  // doc.text("A/c Name: Nanhey", leftBoxX, y + 15);
+  // doc.text("A/c Number: 03720500561", leftBoxX, y + 30);
+  // doc.text("Bank Name: ICICI Bank Ltd", leftBoxX, y + 45);
+  // doc.text("IFSC Code: ICIC0000372", leftBoxX, y + 60);
 
   // --- Signature ---
   doc.setFont("helvetica", "bold");
-  doc.text("For Nanhey", pageWidth - 180, y);
+  doc.text("", pageWidth - 180, y);
   doc.line(pageWidth - 180, y + 10, pageWidth - 100, y + 10);
   doc.setFont("helvetica", "normal");
   doc.text("Authorised Signatory", pageWidth - 180, y + 30);
