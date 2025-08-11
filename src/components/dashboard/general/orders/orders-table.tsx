@@ -294,10 +294,21 @@ const dataToUse = allFilteredData || data;
   const commissionRate = 0.25;
   const gstRate = 0.18;
   const tcsRate = 0.01;
-  const paymentGatewayFee = 500.0;
-  const shippingFee = 600.0;
+  const paymentGatewayFee = dataToUse.reduce(
+      (sum, order) => sum + +convertPaiseToRupees(order.totalAmount * 0.02),
+      0
+    );
 
-  const commission = totalGrossSale * commissionRate;
+    const shippingFee = dataToUse.reduce(
+      (sum, order) => sum + +(order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0),
+      0
+    );
+    const shippingFeeInPaise = shippingFee * 100;
+  const commission = dataToUse.reduce(
+      (sum, order) => sum + +convertPaiseToRupees((order.items[0]?.product?.category?.commissionRate || 0) / 100 *
+    order.totalAmount),
+      0
+    );
   const gstOnCommission = commission * gstRate;
   const tcs = totalGrossSale * tcsRate;
   const totalDeductions =
@@ -335,7 +346,7 @@ const dataToUse = allFilteredData || data;
     headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
     body: [
       ["Gross Sale Value (Incl. GST)", totalGrossSale],
-      ["Commission @25%", commission],
+      ["Commission Amount", commission],
       ["GST on Commission @18%", gstOnCommission],
       ["TCS @1% on Net MRP", tcs],
       ["Payment Gateway Fee", paymentGatewayFee],
