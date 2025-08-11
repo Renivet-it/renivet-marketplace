@@ -350,7 +350,6 @@ const dataToUse = allFilteredData || data;
   setSelectedBrandId(""); // Reset brand selection
 };
 
-// Assuming handleDownloadBrandPDF is defined elsewhere
 const handleDownloadBrandPDF = () => {
   const selectedRows = table.getSelectedRowModel().rows;
   if (selectedRows.length === 0) {
@@ -362,15 +361,11 @@ const handleDownloadBrandPDF = () => {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  // --- Header with Logo Placeholder ---
-  doc.setFont("helvetica", "bold").setFontSize(20);
-  doc.setTextColor(255, 0, 0); // Red color for "nanhey"
-  doc.text("nanhey", pageWidth / 2, 30, { align: "center" });
-  doc.setFontSize(14);
-  doc.setTextColor(0, 0, 0); // Black for "INVOICE"
+  // --- Header ---
+  doc.setFont("helvetica", "bold").setFontSize(14);
   doc.text("INVOICE", pageWidth / 2, 50, { align: "center" });
 
-  // Company Info (Right)
+  // --- Company Info ---
   doc.setFontSize(10).setFont("helvetica", "normal");
   doc.text("Nanhey Das", pageWidth - 200, 70);
   doc.text("P-593, Purna Das Road", pageWidth - 200, 85);
@@ -381,7 +376,6 @@ const handleDownloadBrandPDF = () => {
   // --- Customer & Invoice Details Box ---
   const leftBoxX = 40;
   const topBoxY = 150;
-  doc.setDrawColor(0);
   doc.rect(leftBoxX, topBoxY, pageWidth - 80, 80);
 
   doc.setFont("helvetica", "bold");
@@ -405,7 +399,7 @@ const handleDownloadBrandPDF = () => {
   doc.setFont("helvetica", "normal");
   doc.text("19AAPCC5623A1ZL", leftBoxX + 110, topBoxY + 75);
 
-  // Invoice Info (right side inside box)
+  // Invoice Info (right)
   doc.setFont("helvetica", "bold");
   doc.text("Invoice No.:", pageWidth - 200, topBoxY + 15);
   doc.setFont("helvetica", "normal");
@@ -417,54 +411,88 @@ const handleDownloadBrandPDF = () => {
   doc.text("03-Oct-23", pageWidth - 110, topBoxY + 30);
 
   // --- Items Table ---
-  const tableData = selectedRows.map((row, i) => [
-    i + 1,
-    row.original.sku || "",
-    row.original.productName || "",
-    row.original.id,
-    row.original.quantity || 1,
-    row.original.price || 0,
-    row.original.price || 0,
-  ]);
+const tableData = selectedRows.map((row, i) => {
+  const commissionRateValue =
+    (row.original.items[0]?.product?.category?.commissionRate || 0) / 100 *
+    row.original.totalAmount;
+    const shippingFeeInRupees = row.original?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
+    const shippingFeeInPaise = shippingFeeInRupees * 100;
 
-  autoTable(doc, {
-    startY: topBoxY + 100,
-    head: [["S. No.", "SKU", "Product Description", "Order No", "Qty", "Price", "Total"]],
-    body: tableData,
-    theme: "grid",
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontSize: 10 },
-    styles: { fontSize: 9, cellPadding: 5, valign: "middle" },
-    columnStyles: {
-      0: { cellWidth: 30 },
-      1: { cellWidth: 80 },
-      2: { cellWidth: 180 },
-      3: { cellWidth: 70 },
-      4: { cellWidth: 40 },
-      5: { cellWidth: 60, halign: "right" },
-      6: { cellWidth: 60, halign: "right" },
-    },
+const totaldeduction = convertPaiseToRupees(commissionRateValue + (commissionRateValue * 0.18) + (row.original.totalAmount * 0.01) +
+                        shippingFeeInPaise +
+                        (row.original.totalAmount * 0.02));
+  return [
+    i + 1,
+    row.original.items[0].product.sku || "",
+    row.original.items[0].product.title || "",
+    row.original.id,
+    row.original.totalItems || 1,
+    convertPaiseToRupees(row.original.totalAmount * 0.18 || 0),
+    convertPaiseToRupees(row.original.totalAmount || 0),
+    row.original.items[0]?.product?.category.commissionRate || 0,
+    convertPaiseToRupees(commissionRateValue),
+    convertPaiseToRupees(commissionRateValue * 0.18), // Commission GST
+    convertPaiseToRupees(row.original.totalAmount * 0.01), // TCS
+    row.original?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0, // Shipping Fee
+    convertPaiseToRupees(row.original.totalAmount * 0.02), // paygateway Deduction
+    totaldeduction, // Total Deduction
+    (row.original.totalAmount) - (totaldeduction || 0) // Final Payable
+  ];
+});
+
+autoTable(doc, {
+  startY: topBoxY + 100,
+  head: [[
+    "S.No", "SKU", "Product", "Order No", "Qty",
+    "Gross", "Net", "Comm %", "Comm amt",
+    "Comm GST", "TCS", "Ship amt", "Gateway fee", "Total ded", "Final Pay",
+  ]],
+  body: tableData,
+  theme: "grid",
+  headStyles: { fillColor: [100, 100, 100], textColor: 255, fontSize: 7, halign: "center" },
+  styles: { fontSize: 7, cellPadding: 2, overflow: "hidden" },
+  columnStyles: {
+    0:  { cellWidth: 18, halign: "center" },
+    1:  { cellWidth: 45, halign: "center" },
+    2:  { cellWidth: 60, halign: "left" },
+    3:  { cellWidth: 60, halign: "center" },
+    4:  { cellWidth: 18, halign: "center" },
+    5:  { cellWidth: 35, halign: "right" },
+    6:  { cellWidth: 35, halign: "right" },
+    7:  { cellWidth: 28, halign: "center" },
+    8:  { cellWidth: 42, halign: "center" },
+    9:  { cellWidth: 43, halign: "center" },
+    10: { cellWidth: 25, halign: "right" },
+    11: { cellWidth: 40, halign: "right" },
+    12: { cellWidth: 45, halign: "right" },
+    13: { cellWidth: 40, halign: "right" }
+  },
+  tableWidth: "auto" // lets it spread a bit wider than wrap
+});
+  // --- Totals Section ---
+  let y = doc.lastAutoTable.finalY + 20;
+  const totals = [
+    ["Total", tableData.reduce((sum, r) => sum + parseFloat(r[6] || 0), 0).toFixed(2)],
+    ["Discount", "-"],
+    ["Round Off", "-"],
+    ["Grand Total", tableData.reduce((sum, r) => sum + parseFloat(r[6] || 0), 0).toFixed(2)]
+  ];
+
+  totals.forEach(([label, value], index) => {
+    doc.setFont("helvetica", index === totals.length - 1 ? "bold" : "normal");
+    if (index === totals.length - 1) {
+      doc.setFillColor(230, 230, 230);
+      doc.rect(pageWidth - 180, y - 10, 140, 18, "F");
+    }
+    doc.text(label, pageWidth - 180, y);
+    doc.text(value.toString(), pageWidth - 50, y, { align: "right" });
+    y += 15;
   });
 
-  // --- Totals ---
-  const totalAmount = tableData.reduce((sum, r) => sum + parseFloat(r[6]), 0);
-  let y = doc.lastAutoTable.finalY + 20;
-  doc.setFont("helvetica", "bold");
-  doc.text("Total", pageWidth - 120, y);
-  doc.text(totalAmount.toFixed(2), pageWidth - 50, y, { align: "right" });
-  y += 15;
-  doc.text("Discount", pageWidth - 120, y);
-  doc.text("-", pageWidth - 50, y, { align: "right" });
-  y += 15;
-  doc.text("Round Off", pageWidth - 120, y);
-  doc.text("-", pageWidth - 50, y, { align: "right" });
-  y += 15;
-  doc.text("Grand Total", pageWidth - 120, y);
-  doc.text(totalAmount.toFixed(2), pageWidth - 50, y, { align: "right" });
-
   // --- Bank Details ---
-  y += 40;
+  y += 25;
   doc.setFont("helvetica", "bold");
-  doc.text(`Rs. In Words: ${totalAmount.toFixed(2)} only`, leftBoxX, y);
+  doc.text(`Rs. In Words: ${totals[3][1]} only`, leftBoxX, y);
   y += 15;
   doc.text("Bank Details:", leftBoxX, y);
   doc.setFont("helvetica", "normal");
@@ -476,7 +504,7 @@ const handleDownloadBrandPDF = () => {
   // --- Signature ---
   doc.setFont("helvetica", "bold");
   doc.text("For Nanhey", pageWidth - 180, y);
-  doc.line(pageWidth - 180, y + 10, pageWidth - 100, y + 10); // Signature line
+  doc.line(pageWidth - 180, y + 10, pageWidth - 100, y + 10);
   doc.setFont("helvetica", "normal");
   doc.text("Authorised Signatory", pageWidth - 180, y + 30);
 
