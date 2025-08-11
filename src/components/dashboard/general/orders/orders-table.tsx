@@ -427,7 +427,7 @@ const totaldeduction = convertPaiseToRupees(commissionRateValue + (commissionRat
     row.original.items[0].product.title || "",
     row.original.id,
     row.original.totalItems || 1,
-    convertPaiseToRupees(row.original.totalAmount * 0.18 || 0),
+    convertPaiseToRupees(row.original.totalAmount * 1.18 || 0),
     convertPaiseToRupees(row.original.totalAmount || 0),
     row.original.items[0]?.product?.category.commissionRate || 0,
     convertPaiseToRupees(commissionRateValue),
@@ -443,32 +443,34 @@ const totaldeduction = convertPaiseToRupees(commissionRateValue + (commissionRat
 autoTable(doc, {
   startY: topBoxY + 100,
   head: [[
-    "S.No", "SKU", "Product", "Order No", "Qty",
-    "Gross", "Net", "Comm %", "Comm amt",
-    "Comm GST", "TCS", "Ship amt", "Gateway fee", "Total ded", "Final Pay",
+    "S. No", "SKU", "Product", "Order No", "Qty",
+    "Gross", "Net", "Comm %", "Comm Amt",
+    "Comm GST", "TCS", "Ship Amt", "Gateway Fee", "Total Ded", "Final Pay",
   ]],
   body: tableData,
   theme: "grid",
-  headStyles: { fillColor: [100, 100, 100], textColor: 255, fontSize: 7, halign: "center" },
-  styles: { fontSize: 7, cellPadding: 2, overflow: "hidden" },
+  headStyles: { fillColor: [80, 80, 80], textColor: 255, fontSize: 8, halign: "center" },
+  styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
   columnStyles: {
-    0:  { cellWidth: 18, halign: "center" },
-    1:  { cellWidth: 45, halign: "center" },
-    2:  { cellWidth: 60, halign: "left" },
-    3:  { cellWidth: 60, halign: "center" },
-    4:  { cellWidth: 18, halign: "center" },
-    5:  { cellWidth: 35, halign: "right" },
-    6:  { cellWidth: 35, halign: "right" },
-    7:  { cellWidth: 28, halign: "center" },
-    8:  { cellWidth: 42, halign: "center" },
-    9:  { cellWidth: 43, halign: "center" },
-    10: { cellWidth: 25, halign: "right" },
-    11: { cellWidth: 40, halign: "right" },
-    12: { cellWidth: 45, halign: "right" },
-    13: { cellWidth: 40, halign: "right" }
+    0:  { cellWidth: 18, halign: "center" },  // S.No
+    1:  { cellWidth: 40, halign: "center" },  // SKU
+    2:  { cellWidth: 70, halign: "left" },    // Product
+    3:  { cellWidth: 50, halign: "center" },  // Order No
+    4:  { cellWidth: 18, halign: "center" },  // Qty
+    5:  { cellWidth: 35, halign: "right" },   // Gross
+    6:  { cellWidth: 35, halign: "right" },   // Net
+    7:  { cellWidth: 22, halign: "center" },  // Comm %
+    8:  { cellWidth: 35, halign: "right" },   // Comm Amt
+    9:  { cellWidth: 35, halign: "right" },   // Comm GST
+    10: { cellWidth: 28, halign: "right" },   // TCS
+    11: { cellWidth: 35, halign: "right" },   // Ship Amt
+    12: { cellWidth: 38, halign: "right" },   // Gateway Fee
+    13: { cellWidth: 35, halign: "right" },   // Total Ded
+    14: { cellWidth: 35, halign: "right" }    // Final Pay
   },
-  tableWidth: "auto" // lets it spread a bit wider than wrap
+  tableWidth: "auto", // use full available width
 });
+
   // --- Totals Section ---
   let y = doc.lastAutoTable.finalY + 20;
   const totals = [
