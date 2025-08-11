@@ -183,7 +183,7 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
     },
     {
       enabled: false, // Don't fetch by default, only when needed
-      refetchOnWindowFocus: false 
+      refetchOnWindowFocus: false
     }
   );
     const {
@@ -262,7 +262,7 @@ const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID
         year: "numeric"
       });
     };
-const generatePDF = () => {
+const generatePDF = (logoBase64: string | ArrayBuffer | null) => {
   const selectedRows = table.getSelectedRowModel().rows;
 const dataToUse = allFilteredData || data;
   // Find the selected brand from the dialog
@@ -350,18 +350,36 @@ const dataToUse = allFilteredData || data;
   setSelectedBrandId(""); // Reset brand selection
 };
 
-const handleDownloadBrandPDF = () => {
-  const selectedRows = table.getSelectedRowModel().rows;
-  if (selectedRows.length === 0) {
-    alert("Please select at least one order to download as Brand PDF.");
-    return;
-  }
+const handleDownloadBrandPDF = async () => {
+  // Fetch ALL filtered data if no rows are selected
+  let dataToUse = table.getSelectedRowModel().rows.map(row => row.original);
 
+  if (dataToUse.length === 0) {
+    const { data: allData } = await refetchOrderData({
+      page: 1,
+      limit: 1000, // Get all records that match current filters
+      search,
+      brandIds: brandIds.length > 0 ? brandIds : undefined,
+      startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+      endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+    });
+    dataToUse = allData?.data ?? [];
+  }
+console.log(dataToUse, "allDataallDataallDataallDataallData");
+  const logoUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQAASEtvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT";
+
+  // Add logo (x=40, y=40, width=60, height=60)
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-
+const today = new Date();
+const formattedDate = today.toLocaleDateString("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "2-digit"
+}).replace(/ /g, "-");
   // --- Header ---
+doc.addImage(logoUrl, "PNG", 40, 40, 120, 120);
   doc.setFont("helvetica", "bold").setFontSize(14);
   doc.text("INVOICE", pageWidth / 2, 50, { align: "center" });
 
@@ -403,40 +421,40 @@ const handleDownloadBrandPDF = () => {
   doc.setFont("helvetica", "bold");
   doc.text("Invoice No.:", pageWidth - 200, topBoxY + 15);
   doc.setFont("helvetica", "normal");
-  doc.text("003", pageWidth - 110, topBoxY + 15);
+  doc.text("01", pageWidth - 110, topBoxY + 15);
 
   doc.setFont("helvetica", "bold");
   doc.text("Date:", pageWidth - 200, topBoxY + 30);
   doc.setFont("helvetica", "normal");
-  doc.text("03-Oct-23", pageWidth - 110, topBoxY + 30);
+  doc.text(formattedDate, pageWidth - 110, topBoxY + 30);
 
   // --- Items Table ---
-const tableData = selectedRows.map((row, i) => {
+const tableData = dataToUse.map((row, i) => {
   const commissionRateValue =
-    (row.original.items[0]?.product?.category?.commissionRate || 0) / 100 *
-    row.original.totalAmount;
-    const shippingFeeInRupees = row.original?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
+    (row.items[0]?.product?.category?.commissionRate || 0) / 100 *
+    row.totalAmount;
+    const shippingFeeInRupees = row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
     const shippingFeeInPaise = shippingFeeInRupees * 100;
 
-const totaldeduction = convertPaiseToRupees(commissionRateValue + (commissionRateValue * 0.18) + (row.original.totalAmount * 0.01) +
+const totaldeduction = convertPaiseToRupees(commissionRateValue + (commissionRateValue * 0.18) + (row.totalAmount * 0.01) +
                         shippingFeeInPaise +
-                        (row.original.totalAmount * 0.02));
+                        (row.totalAmount * 0.02));
   return [
     i + 1,
-    row.original.items[0].product.sku || "",
-    row.original.items[0].product.title || "",
-    row.original.id,
-    row.original.totalItems || 1,
-    convertPaiseToRupees(row.original.totalAmount * 1.18 || 0),
-    convertPaiseToRupees(row.original.totalAmount || 0),
-    row.original.items[0]?.product?.category.commissionRate || 0,
+    row.items[0].product.sku || "",
+    row.items[0].product.title || "",
+    row.id,
+    row.totalItems || 1,
+    convertPaiseToRupees(row.totalAmount * 0.82 || 0),
+    convertPaiseToRupees(row.totalAmount || 0),
+    row.items[0]?.product?.category.commissionRate || 0,
     convertPaiseToRupees(commissionRateValue),
     convertPaiseToRupees(commissionRateValue * 0.18), // Commission GST
-    convertPaiseToRupees(row.original.totalAmount * 0.01), // TCS
-    row.original?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0, // Shipping Fee
-    convertPaiseToRupees(row.original.totalAmount * 0.02), // paygateway Deduction
+    convertPaiseToRupees(row.totalAmount * 0.01), // TCS
+    row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0, // Shipping Fee
+    convertPaiseToRupees(row.totalAmount * 0.02), // paygateway Deduction
     totaldeduction, // Total Deduction
-    (row.original.totalAmount) - (totaldeduction || 0) // Final Payable
+    Number(convertPaiseToRupees(row.totalAmount)) - Number(totaldeduction || 0) // Final Payable
   ];
 });
 
@@ -614,7 +632,6 @@ return (
         </Button>
         <Button
           variant="secondary"
-          disabled={Object.keys(rowSelection).length === 0}
           onClick={handleDownloadBrandPDF}
           className="min-w-[180px]"
         >
