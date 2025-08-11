@@ -427,19 +427,17 @@ const warehouseAddress = {
 };
 
 // Combine all address parts with proper formatting
-const formattedAddress = [
+const addressLines = [
   warehouseAddress.line1,
   warehouseAddress.line2,
   warehouseAddress.zip ? `ZIP: ${warehouseAddress.zip}` : ""
-]
-  .filter(Boolean) // Remove empty strings
-  .join(", ") // Join with comma separator
-  .trim() || "N/A"; // Fallback if empty
+].filter(line => line.trim().length > 0);
+
 
   doc.setFont("helvetica", "bold");
   doc.text("Address:", leftBoxX + 5, topBoxY + 30);
   doc.setFont("helvetica", "normal");
-  doc.text(formattedAddress, leftBoxX + 110, topBoxY + 30);
+  doc.text(firstOrder?.items?.[0]?.product?.brand?.confidential?.warehouseAddressLine1 || "", leftBoxX + 110, topBoxY + 30);
 
   doc.setFont("helvetica", "bold");
   doc.text("Phone Number:", leftBoxX + 5, topBoxY + 60);
