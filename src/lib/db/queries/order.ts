@@ -22,7 +22,8 @@ import {
     products,
     returnShipments,
     users,
-    ordersIntent
+    ordersIntent,
+    products as productTable,
 } from "../schema";
 import {
     returnAddressDetails,
@@ -106,17 +107,55 @@ class OrderQuery {
         return parsed;
     }
 
-    async getOrders({
-        limit,
-        page,
-        search,
-    }: {
-        limit: number;
-        page: number;
-        search?: string;
-    }) {
+async getOrders({
+    limit,
+    page,
+    search,
+    brandIds,
+    startDate,
+    endDate,
+}: {
+    limit: number;
+    page: number;
+    search?: string;
+    brandIds?: string[];
+    startDate?: string;
+    endDate?: string;
+}) {
+    const whereConditions = [];
+
+    if (search) {
+        whereConditions.push(ilike(orders.id, `%${search}%`));
+    }
+
+if (brandIds?.length) {
+    whereConditions.push(
+        inArray(
+            orders.id,
+            db
+                .select({ id: orderItems.orderId })
+                .from(orderItems)
+                .innerJoin(productTable, eq(orderItems.productId, productTable.id))
+                .where(inArray(productTable.brandId, brandIds))
+        )
+    );
+}
+
+    if (startDate && endDate) {
+        whereConditions.push(
+            and(
+                gte(orders.createdAt, new Date(startDate)),
+                lte(orders.createdAt, new Date(endDate))
+            )
+        );
+    } else if (startDate) {
+        whereConditions.push(gte(orders.createdAt, new Date(startDate)));
+    } else if (endDate) {
+        whereConditions.push(lte(orders.createdAt, new Date(endDate)));
+    }
+
         const data = await db.query.orders.findMany({
-            where: !!search ? ilike(orders.id, `%${search}%`) : undefined,
+            where: whereConditions.length ? and(...whereConditions) : undefined,
             with: {
                 address: true,
                 shipments: true,
@@ -125,7 +164,11 @@ class OrderQuery {
                     with: {
                         product: {
                             with: {
-                                brand: true,
+                                brand: {
+                                    with: {
+                                        confidential: true, // Loads all confidential data
+                                    },
+                                },
                                 variants: true,
                                 category: true,
                                 subcategory: true,
@@ -140,14 +183,14 @@ class OrderQuery {
             limit,
             offset: (page - 1) * limit,
             orderBy: [desc(orders.createdAt)],
-            extras: {
-                count: db
-                    .$count(
-                        orders,
-                        !!search ? ilike(orders.id, `%${search}%`) : undefined
-                    )
-                    .as("order_count"),
-            },
+extras: {
+    count: db
+        .$count(
+            orders,
+            whereConditions.length ? and(...whereConditions) : undefined
+        )
+        .as("order_count"),
+}
         });
 
         const products = data.flatMap((d) => d.items.map((i) => i.product));
@@ -189,11 +232,9 @@ class OrderQuery {
                 product: enhancedProducts.find((p) => p.id === i.productId),
             })),
         }));
-
         const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
             .array()
             .parse(enhancedData);
-
         return {
             data: parsed,
             count: +data?.[0]?.count || 0,

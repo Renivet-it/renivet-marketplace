@@ -191,6 +191,7 @@ export const cachedBrandSchema = z.lazy(() =>
                 isSiteRole: true,
             })
         ),
+        confidential: brandConfidentialSchema.nullable().optional(),
         invites: brandInviteSchema.array(),
         bannedMembers: bannedBrandMemberSchema.array(),
         subscriptions: brandSubscriptionSchema

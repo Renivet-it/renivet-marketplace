@@ -126,6 +126,7 @@ class BrandQuery {
         const data = await db.query.brands.findMany({
             with: {
                 owner: true,
+                confidential: true,
                 members: {
                     with: {
                         member: true,
