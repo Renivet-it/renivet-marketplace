@@ -216,6 +216,7 @@ const { data: { data: dataRaw, count }, refetch: refetchOrderData, isLoading,
         }
     );
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
+    const isBrandSelected = brandIds.length > 0;
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
     const table = useReactTable({
@@ -255,12 +256,12 @@ const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID
 const handleDownloadPDF = async () => {
   // Check if any rows are selected
   const selectedRows = table.getSelectedRowModel().rows;
-  
+
   let dataToUse: TableOrder[];
-  
+
   if (selectedRows.length > 0) {
     // Use selected rows
-    dataToUse = selectedRows.map(row => row.original);
+    dataToUse = selectedRows.map((row) => row.original);
   } else {
     // Fetch ALL filtered data (not just current page)
     const { data: allData } = await refetchOrderData({
@@ -291,7 +292,21 @@ const generatePDF = (logoBase64: string | ArrayBuffer | null) => {
   const selectedRows = table.getSelectedRowModel().rows;
     const dataToUse = allFilteredData || data;
   // Find the selected brand from the dialog
-  const selectedBrand = brandsData?.data?.find((brand) => brand.id === selectedBrandId);
+  // const selectedBrand = brandsData?.data?.find((brand) => brand.id === selectedBrandId);
+  let selectedBrand: CachedBrand | undefined;
+
+  if (brandIds.length === 1) {
+    // Use the brand from the main filter
+    selectedBrand = brandsData?.data?.find((brand) => brand.id === brandIds[0]);
+  } else {
+    // Fall back to dialog selection
+    selectedBrand = brandsData?.data?.find((brand) => brand.id === selectedBrandId);
+  }
+
+  if (!selectedBrand) {
+    setIsErrorModalOpen(true);
+    return;
+  }
   if (!selectedBrand) {
     setIsErrorModalOpen(true);
     return;
@@ -356,14 +371,14 @@ const generatePDF = (logoBase64: string | ArrayBuffer | null) => {
     },
     headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
     body: [
-      ["Gross Sale Value (Incl. GST)", totalGrossSale],
-      ["Commission Amount", commission],
-      ["GST on Commission @18%", gstOnCommission],
-      ["TCS @1% on Net MRP", tcs],
-      ["Payment Gateway Fee", paymentGatewayFee],
-      ["Shipping Fee", shippingFee],
-      ["Total Deductions", totalDeductions],
-      ["Final Payable to Brand", finalPayable],
+      ["Gross Sale Value (Incl. GST)", totalGrossSale.toFixed(2)],
+      ["Commission Amount", commission.toFixed(2)],
+      ["GST on Commission @18%", gstOnCommission.toFixed(2)],
+      ["TCS @1% on Net MRP", tcs.toFixed(2)],
+      ["Payment Gateway Fee", paymentGatewayFee.toFixed(2)],
+      ["Shipping Fee", shippingFee.toFixed(2)],
+      ["Total Deductions", totalDeductions.toFixed(2)],
+      ["Final Payable to Brand", finalPayable.toFixed(2)],
       ["UTR Number", utrNumber || "N/A"],
       ["Payment Date", paymentDate || "N/A"],
     ],
@@ -508,7 +523,8 @@ const totaldeduction = convertPaiseToRupees(commissionRateValue + (commissionRat
     row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0, // Shipping Fee
     convertPaiseToRupees(row.totalAmount * 0.02), // paygateway Deduction
     totaldeduction, // Total Deduction
-    Number(convertPaiseToRupees(row.totalAmount)) - Number(totaldeduction || 0) // Final Payable
+    // Number(convertPaiseToRupees(row.totalAmount)) - Number(totaldeduction || 0) // Final Payable
+    (Number(convertPaiseToRupees(row.totalAmount)) - Number(totaldeduction || 0)).toFixed(2)
   ];
 });
 
@@ -681,6 +697,7 @@ return (
         <Button
           onClick={handleDownloadPDF}
           className="min-w-[180px]"
+          disabled={!isBrandSelected}
         >
           Download Consolidated Report
         </Button>
@@ -688,6 +705,7 @@ return (
           variant="secondary"
           onClick={handleDownloadBrandPDF}
           className="min-w-[180px]"
+          disabled={!isBrandSelected}
         >
           Download Brand Invoice
         </Button>
@@ -700,7 +718,7 @@ return (
       <DialogTitle>Enter Payment Details</DialogTitle>
     </DialogHeader>
     <div className="grid gap-4 py-4">
-      <div className="grid grid-cols-4 items-center gap-4">
+      {/* <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="brand" className="text-right">
           Brand:
         </Label>
@@ -720,7 +738,7 @@ return (
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="utr" className="text-right">
           UTR Number:
