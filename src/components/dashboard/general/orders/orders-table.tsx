@@ -252,7 +252,16 @@ const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID
 
 
   // Modified handleDownloadPDF function
-  const handleDownloadPDF = async () => {
+const handleDownloadPDF = async () => {
+  // Check if any rows are selected
+  const selectedRows = table.getSelectedRowModel().rows;
+  
+  let dataToUse: TableOrder[];
+  
+  if (selectedRows.length > 0) {
+    // Use selected rows
+    dataToUse = selectedRows.map(row => row.original);
+  } else {
     // Fetch ALL filtered data (not just current page)
     const { data: allData } = await refetchOrderData({
       page: 1,
@@ -262,12 +271,14 @@ const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID
       startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
       endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
     });
+    dataToUse = allData.data;
+  }
 
-    // Now use allData instead of selectedRows for PDF generation
-    setIsModalOpen(true);
-    // Store allData for PDF generation
-    setAllFilteredData(allData.data);
-  };
+  // Now use dataToUse for PDF generation
+  setIsModalOpen(true);
+  // Store data for PDF generation
+  setAllFilteredData(dataToUse);
+};
  const formatDate = (date) => {
       if (!date) return "N/A";
       return date.toLocaleDateString("en-GB", {
@@ -278,7 +289,7 @@ const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID
     };
 const generatePDF = (logoBase64: string | ArrayBuffer | null) => {
   const selectedRows = table.getSelectedRowModel().rows;
-const dataToUse = allFilteredData || data;
+    const dataToUse = allFilteredData || data;
   // Find the selected brand from the dialog
   const selectedBrand = brandsData?.data?.find((brand) => brand.id === selectedBrandId);
   if (!selectedBrand) {
