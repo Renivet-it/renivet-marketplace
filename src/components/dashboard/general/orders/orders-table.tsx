@@ -250,7 +250,7 @@ const [utrNumber, setUtrNumber] = useState("");
 const [paymentDate, setPaymentDate] = useState("");
 const [selectedBrandId, setSelectedBrandId] = useState(""); // Selected brand ID from dialog
   const [allFilteredData, setAllFilteredData] = useState<TableOrder[]>([]);
-
+const [applyShipmentFlag, setApplyShipmentFlag] = useState(false);
 
   // Modified handleDownloadPDF function
 const handleDownloadPDF = async () => {
@@ -401,209 +401,7 @@ const generatePDF = (logoBase64: string | ArrayBuffer | null) => {
   setSelectedBrandId(""); // Reset brand selection
 };
 
-// const handleDownloadBrandPDF = async () => {
-//   // Fetch ALL filtered data if no rows are selected
-//   let dataToUse = table.getSelectedRowModel().rows.map((row) => row.original);
-//   if (dataToUse.length === 0) {
-//     const { data: allData } = await refetchOrderData({
-//       page: 1,
-//       limit: 1000, // Get all records that match current filters
-//       search,
-//       brandIds: brandIds.length > 0 ? brandIds : undefined,
-//       startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
-//       endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
-//     });
-//     dataToUse = allData?.data ?? [];
-//   }
 
-// console.log(dataToUse, "allDataallDataallDataallDataallData");
-//   const logoUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQAASEtvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT";
-
-//   // Add logo (x=40, y=40, width=60, height=60)
-//   const doc = new jsPDF({ unit: "pt", format: "a4" });
-//   const pageWidth = doc.internal.pageSize.getWidth();
-//   const pageHeight = doc.internal.pageSize.getHeight();
-// const today = new Date();
-// const formattedDate = today.toLocaleDateString("en-GB", {
-//   day: "2-digit",
-//   month: "short",
-//   year: "2-digit"
-// }).replace(/ /g, "-");
-
-// const firstOrder = dataToUse[0];
-// console.log(firstOrder, "firstOrderfirstOrderfirstOrderfirstOrderfirstOrder");
-//   // --- Header ---
-// doc.addImage(logoUrl, "PNG", 40, 40, 120, 120);
-//   doc.setFont("helvetica", "bold").setFontSize(14);
-//   doc.text("INVOICE", pageWidth / 2, 50, { align: "center" });
-
-//   // --- Company Info ---
-//   doc.setFontSize(10).setFont("helvetica", "normal");
-//   doc.text("Renivet Solution", pageWidth - 200, 70);
-//   doc.text("Kolte Patil Itowers,", pageWidth - 200, 85);
-//   doc.text("Karnataka - 560100.", pageWidth - 200, 100);
-//   doc.text("Email: support@renivet.com", pageWidth - 200, 115);
-//   doc.text("ph: 8983676772", pageWidth - 200, 130);
-
-//   // --- Customer & Invoice Details Box ---
-//   const leftBoxX = 40;
-//   const topBoxY = 150;
-//   doc.rect(leftBoxX, topBoxY, pageWidth - 80, 80);
-//   doc.setFont("helvetica", "bold");
-//   doc.text("Customer Name:", leftBoxX + 5, topBoxY + 15);
-//   doc.setFont("helvetica", "normal");
-//   doc.text(
-//    firstOrder?.items?.[0]?.product?.brand?.confidential?.authorizedSignatoryName ?? "N/A",
-//     leftBoxX + 110,
-//     topBoxY + 15
-//   );
-// const warehouseAddress = {
-//   line1: firstOrder?.items?.[0]?.product?.brand?.confidential?.warehouseAddressLine1 || "",
-//   line2: firstOrder?.items?.[0]?.product?.brand?.confidential?.warehouseAddressLine2 || "",
-//   zip: firstOrder?.items?.[0]?.product?.brand?.confidential?.warehousePostalCode || ""
-// };
-
-// // Combine all address parts with proper formatting
-// const addressLines = [
-//   warehouseAddress.line1,
-//   warehouseAddress.line2,
-//   warehouseAddress.zip ? `ZIP: ${warehouseAddress.zip}` : ""
-// ].filter(line => line.trim().length > 0);
-
-
-//   doc.setFont("helvetica", "bold");
-//   doc.text("Address:", leftBoxX + 5, topBoxY + 30);
-//   doc.setFont("helvetica", "normal");
-//   doc.text(firstOrder?.items?.[0]?.product?.brand?.confidential?.warehouseAddressLine1 || "", leftBoxX + 110, topBoxY + 30);
-
-//   doc.setFont("helvetica", "bold");
-//   doc.text("Phone Number:", leftBoxX + 5, topBoxY + 60);
-//   doc.setFont("helvetica", "normal");
-//   doc.text(firstOrder?.items?.[0]?.product?.brand?.phone, leftBoxX + 110, topBoxY + 60);
-
-//   doc.setFont("helvetica", "bold");
-//   doc.text("GSTIN No.:", leftBoxX + 5, topBoxY + 75);
-//   doc.setFont("helvetica", "normal");
-//   doc.text(firstOrder?.items?.[0]?.product?.brand?.confidential?.gstin ?? "N/A", leftBoxX + 110, topBoxY + 75);
-
-//   // Invoice Info (right)
-//   doc.setFont("helvetica", "bold");
-//   doc.text("Invoice No.:", pageWidth - 200, topBoxY + 15);
-//   doc.setFont("helvetica", "normal");
-//   doc.text("01", pageWidth - 110, topBoxY + 15);
-
-//   doc.setFont("helvetica", "bold");
-//   doc.text("Date:", pageWidth - 200, topBoxY + 30);
-//   doc.setFont("helvetica", "normal");
-//   doc.text(formattedDate, pageWidth - 110, topBoxY + 30);
-
-//   // --- Items Table ---
-// const tableData = dataToUse.map((row, i) => {
-//   const commissionRateValue =
-//     (row.items[0]?.product?.category?.commissionRate || 0) / 100 *
-//     row.totalAmount;
-//     const shippingFeeInRupees = row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
-//     const shippingFeeInPaise = shippingFeeInRupees * 100;
-
-// const totaldeduction = convertPaiseToRupees(commissionRateValue + (commissionRateValue * 0.18) + (row.totalAmount * 0.01) +
-//                         shippingFeeInPaise +
-//                         (row.totalAmount * 0.02));
-//   return [
-//     i + 1,
-//     row.items[0].product.sku || "",
-//     row.items[0].product.title || "",
-//     row.id,
-//     row.totalItems || 1,
-//     convertPaiseToRupees(row.totalAmount * 0.82 || 0),
-//     convertPaiseToRupees(row.totalAmount || 0),
-//     row.items[0]?.product?.category.commissionRate || 0,
-//     convertPaiseToRupees(commissionRateValue),
-//     convertPaiseToRupees(commissionRateValue * 0.18), // Commission GST
-//     convertPaiseToRupees(row.totalAmount * 0.01), // TCS
-//     row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0, // Shipping Fee
-//     convertPaiseToRupees(row.totalAmount * 0.02), // paygateway Deduction
-//     totaldeduction, // Total Deduction
-//     // Number(convertPaiseToRupees(row.totalAmount)) - Number(totaldeduction || 0) // Final Payable
-//     (Number(convertPaiseToRupees(row.totalAmount)) - Number(totaldeduction || 0)).toFixed(2)
-//   ];
-// });
-
-// autoTable(doc, {
-//   startY: topBoxY + 100,
-//   head: [[
-//     "S. No", "SKU", "Product", "Order No", "Qty",
-//     "Gross", "Net", "Comm %", "Comm Amt",
-//     "Comm GST", "TCS", "Ship Amt", "Gateway Fee", "Total Ded", "Final Pay",
-//   ]],
-//   body: tableData,
-//   theme: "grid",
-//   headStyles: { fillColor: [80, 80, 80], textColor: 255, fontSize: 8, halign: "center" },
-//   styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak" },
-//   columnStyles: {
-//     0:  { cellWidth: 18, halign: "center" },  // S.No
-//     1:  { cellWidth: 40, halign: "center" },  // SKU
-//     2:  { cellWidth: 70, halign: "left" },    // Product
-//     3:  { cellWidth: 50, halign: "center" },  // Order No
-//     4:  { cellWidth: 18, halign: "center" },  // Qty
-//     5:  { cellWidth: 35, halign: "right" },   // Gross
-//     6:  { cellWidth: 35, halign: "right" },   // Net
-//     7:  { cellWidth: 22, halign: "center" },  // Comm %
-//     8:  { cellWidth: 35, halign: "right" },   // Comm Amt
-//     9:  { cellWidth: 35, halign: "right" },   // Comm GST
-//     10: { cellWidth: 28, halign: "right" },   // TCS
-//     11: { cellWidth: 35, halign: "right" },   // Ship Amt
-//     12: { cellWidth: 38, halign: "right" },   // Gateway Fee
-//     13: { cellWidth: 35, halign: "right" },   // Total Ded
-//     14: { cellWidth: 35, halign: "right" }    // Final Pay
-//   },
-//   tableWidth: "auto", // use full available width
-// });
-
-//   // --- Totals Section ---
-//   let y = doc.lastAutoTable.finalY + 20;
-//   const totals = [
-//     ["Total", tableData.reduce((sum, r) => sum + parseFloat(r[14] || 0), 0).toFixed(2)],
-//     ["Discount", "-"],
-//     ["Round Off", "-"],
-//     ["Grand Total", tableData.reduce((sum, r) => sum + parseFloat(r[14] || 0), 0).toFixed(2)]
-//   ];
-
-//   totals.forEach(([label, value], index) => {
-//     doc.setFont("helvetica", index === totals.length - 1 ? "bold" : "normal");
-//     if (index === totals.length - 1) {
-//       doc.setFillColor(230, 230, 230);
-//       doc.rect(pageWidth - 180, y - 10, 140, 18, "F");
-//     }
-//     doc.text(label, pageWidth - 180, y);
-//     doc.text(value.toString(), pageWidth - 50, y, { align: "right" });
-//     y += 15;
-//   });
-
-//   // --- Bank Details ---
-//   y += 25;
-//   doc.setFont("helvetica", "bold");
-//   // doc.text(`Rs. In Words: ${totals[3][1]}`, leftBoxX, y);
-//   y += 15;
-//   // doc.text("Bank Details:", leftBoxX, y);
-//   // doc.setFont("helvetica", "normal");
-//   // doc.text("A/c Name: Nanhey", leftBoxX, y + 15);
-//   // doc.text("A/c Number: 03720500561", leftBoxX, y + 30);
-//   // doc.text("Bank Name: ICICI Bank Ltd", leftBoxX, y + 45);
-//   // doc.text("IFSC Code: ICIC0000372", leftBoxX, y + 60);
-
-//   // --- Signature ---
-//   doc.setFont("helvetica", "bold");
-//   doc.text("", pageWidth - 180, y);
-//   doc.line(pageWidth - 180, y + 10, pageWidth - 100, y + 10);
-//   doc.setFont("helvetica", "normal");
-//   doc.text("Authorised Signatory", pageWidth - 180, y + 30);
-
-//   // --- Footer ---
-//   doc.setTextColor(255, 0, 0).setFontSize(10);
-//   doc.text("Thank you for shopping with us!", pageWidth / 2, pageHeight - 40, { align: "center" });
-
-//   doc.save(`brand_invoice_${new Date().toISOString().split("T")[0]}.pdf`);
-// };
 const handleDownloadBrandPDF = async () => {
   // Fetch ALL filtered data if no rows are selected
   let dataToUse = table.getSelectedRowModel().rows.map((row) => row.original);
@@ -716,16 +514,28 @@ const handleDownloadBrandPDF = async () => {
 
   // --- Items Table ---
   const tableData = dataToUse.map((row, i) => {
-    const commissionRateValue = (row.items[0]?.product?.category?.commissionRate || 0) / 100 * row.totalAmount;
-    const shippingFeeInRupees = row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
+
+let commissionRate = row.items[0]?.product?.category?.commissionRate || 0;
+  // Apply 5% adjustment if flag is set
+    if (applyShipmentFlag) {
+      commissionRate += 5; // Increase commission by 5%
+    }
+
+
+    // const commissionRateValue = (row.items[0]?.product?.category?.commissionRate || 0) / 100 * row.totalAmount;
+     const commissionRateValue = commissionRate / 100 * row.totalAmount;
+    // const shippingFeeInRupees = row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
+     const shippingFeeInRupees = applyShipmentFlag
+      ? 0
+      : row?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
     const totaldeduction = convertPaiseToRupees(
-      commissionRateValue + 
-      (commissionRateValue * 0.18) + 
+      commissionRateValue +
+      (commissionRateValue * 0.18) +
       (row.totalAmount * 0.01) +
       (shippingFeeInRupees * 100) +
       (row.totalAmount * 0.02)
     );
-    
+
     return [
       (i + 1).toString(),
       row.items[0].product.sku || "",
@@ -734,7 +544,7 @@ const handleDownloadBrandPDF = async () => {
       (row.totalItems || 1).toString(),
       convertPaiseToRupees(row.totalAmount * 0.82 || 0),
       convertPaiseToRupees(row.totalAmount || 0),
-      (row.items[0]?.product?.category.commissionRate || 0),
+      commissionRate,
       convertPaiseToRupees(commissionRateValue),
       convertPaiseToRupees(commissionRateValue * 0.18),
       convertPaiseToRupees(row.totalAmount * 0.01),
@@ -915,6 +725,16 @@ return (
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <div className="flex items-center gap-2 pb-2">
+  <Checkbox
+    id="shipment-flag"
+    checked={applyShipmentFlag}
+    onCheckedChange={(checked) => setApplyShipmentFlag(Boolean(checked))}
+  />
+  <Label htmlFor="shipment-flag" className="text-sm font-medium">
+    Apply 5% Shipment Adjustment
+  </Label>
+</div>
       </div>
 
       {/* Actions Group */}
