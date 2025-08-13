@@ -664,3 +664,11 @@ export const homeEventBannerSectionOne = pgTable("home_event_banner_section", {
     url: text("url"),
     ...timestamps,
 });
+export const homeEventBannerSectionTwo = pgTable("home_event_banner_section_two", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title").notNull(),
+    imageUrl: text("video_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
