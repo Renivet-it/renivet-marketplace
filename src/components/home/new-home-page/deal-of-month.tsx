@@ -49,7 +49,7 @@ export function DealofTheMonthStrip({
                 className
             )}
               style={{
-    backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjwVl3bmPpnZoHc5f2E4rFNLugdK3ty9ObjYx')",
+    backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIahoXCLrApCnKbtW0hkXs6adUVPBQFlvOi2M')",
   }}
             {...props}
         >
@@ -57,7 +57,7 @@ export function DealofTheMonthStrip({
             <div className="max-w-screen-2xl mx-auto px-6 ">
                 {/* Section Title */}
                 <div className="mb-12">
-                    <h2 className="text-3xl md:text-4xl font-light text-white tracking-wide">
+                    <h2 className="text-3xl md:text-4xl font-light text-black tracking-wide">
                         Mindfully Curated Home Essentials
                     </h2>
                 </div>

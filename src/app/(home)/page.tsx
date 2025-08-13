@@ -10,6 +10,7 @@ import { Page as BrandCollaborate } from "@/components/home/types-of-brand-secti
 import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
 import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
 import { EventSectionOneBanner } from "@/components/home/new-home-page/event-section-one";
+import { EventSectionTwoBanner } from "@/components/home/new-home-page/event-section-two";
 import { BrandPromotion } from "@/components/home/new-home-page/brand-promotion";
 import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
 import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
@@ -47,6 +48,9 @@ export default function Page() {
             </Suspense>
                                            <Suspense>
                 <EventSectionBannerOneFetch />
+            </Suspense>
+                                                   <Suspense>
+                <EventSectionTwoBannerFetch />
             </Suspense>
 
                            <Suspense>
@@ -134,6 +138,14 @@ async function EventSectionBannerOneFetch() {
     if (!brandProducts.length) return null;
 
     return <EventSectionOneBanner banners={brandProducts} />;
+}
+
+async function EventSectionTwoBannerFetch() {
+    const brandProducts =
+        await WomenHomeSectionQueries.getHomePageEventTwoSections();
+    if (!brandProducts.length) return null;
+
+    return <EventSectionTwoBanner banners={brandProducts} />;
 }
 
 async function CuratedBannerFetch() {

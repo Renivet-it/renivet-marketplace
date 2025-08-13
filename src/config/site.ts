@@ -684,6 +684,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/home-page/event-section-one",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
+        {
+            title: "Event Banner Two(Video)",
+            url: "/dashboard/general/home-page/event-section-two",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
     ]
 },
 

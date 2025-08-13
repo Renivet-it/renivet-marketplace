@@ -27,7 +27,7 @@ export function BrandsCollaboration() {
   ];
 
   return (
-    <section className="w-full bg-[#F4F0EC]">
+    <section className="w-full bg-[#F4F0EC] mb-10">
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
         {/* Section Title */}
         <div className="text-center mb-10">

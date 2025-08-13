@@ -59,7 +59,11 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
-    contentUploader: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
+    contentUploader: f({
+    "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
+    "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
+    "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
+})
         .middleware(async () => {
             const auth = await clerkAuth();
             if (!auth.userId)
@@ -144,6 +148,7 @@ export const uploadRouter = {
     brandRequestLogoUploader: f({
         "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
         "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
+         "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -233,6 +238,7 @@ export const uploadRouter = {
     brandLogoUploader: f({
         "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
         "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
+        "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
@@ -274,6 +280,7 @@ export const uploadRouter = {
     brandCoverUploader: f({
         "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
         "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
+            "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })
         .middleware(async () => {
             const auth = await clerkAuth();
