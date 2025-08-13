@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
-import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
 import { useEffect, useState } from "react";
@@ -48,13 +47,13 @@ export function EventSectionTwoBanner({ className, banners, ...props }: PageProp
                     index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
                   )}
                 >
-                  <Image
+                  <video
                     src={item.imageUrl}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                    priority={index === 0}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1440px"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
                   />
                 </Link>
               ))}

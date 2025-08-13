@@ -22,15 +22,10 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useDropzone } from "@uploadthing/react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import {
-    generateClientDropzoneAccept,
-    generatePermittedFileTypes,
-} from "uploadthing/client";
 
 interface PageProps {
     shopByCategory?: HomeShopByCategory;
@@ -44,7 +39,7 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
     );
     const [file, setFile] = useState<File | null>(null);
 
-    const { startUpload, routeConfig } = useUploadThing("contentUploader");
+    const { startUpload } = useUploadThing("contentUploader");
 
     const form = useForm<CreateHomeShopByCategory>({
         resolver: zodResolver(createHomeShopByCategorySchema),
@@ -63,7 +58,7 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
         }
     }, []);
 
-    const removeImage = () => {
+    const removeVideo = () => {
         setPreview(null);
         setFile(null);
         form.setValue("imageUrl", "");
@@ -71,11 +66,9 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
-        accept: generateClientDropzoneAccept(
-            generatePermittedFileTypes(routeConfig).fileTypes
-        ),
+        accept: { "video/mp4": [".mp4"] },
         maxFiles: 1,
-        maxSize: 4 * 1024 * 1024,
+        maxSize: 50 * 1024 * 1024, // 50 MB
     });
 
     const { mutateAsync: createAdAsync } =
@@ -89,13 +82,15 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: CreateHomeShopByCategory) => {
-            if (!file) throw new Error("Image is required");
+            if (!file) throw new Error("Video is required");
 
             const res = await startUpload([file]);
-            if (!res?.length) throw new Error("Failed to upload image");
+            console.log("Upload result:", res); // Debug
 
-            const image = res[0];
-            values.imageUrl = image.appUrl;
+            if (!res?.length) throw new Error("Failed to upload video");
+
+            const video = res[0];
+            values.imageUrl = video.url ?? video.appUrl;
 
             await createAdAsync(values);
         },
@@ -104,7 +99,6 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                 id: toastId,
             });
             router.push("/dashboard/general/women-section/men-banner");
-
             setPreview(null);
             setFile(null);
         },
@@ -123,10 +117,11 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
 
             if (file) {
                 const res = await startUpload([file]);
-                if (!res?.length) throw new Error("Failed to upload image");
+                console.log("Upload result:", res); // Debug
+                if (!res?.length) throw new Error("Failed to upload video");
 
-                const image = res[0];
-                values.imageUrl = image.appUrl;
+                const video = res[0];
+                values.imageUrl = video.url ?? video.appUrl;
             }
 
             await updateAdAsync({ id: shopByCategory.id, values });
@@ -161,7 +156,7 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                     name="imageUrl"
                     render={() => (
                         <FormItem>
-                            <FormLabel>Image</FormLabel>
+                            <FormLabel>Video (MP4)</FormLabel>
 
                             <div
                                 {...getRootProps()}
@@ -179,14 +174,11 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
 
                                 {preview ? (
                                     <div className="relative aspect-video w-full overflow-hidden rounded-md">
-                                        <Image
+                                        <video
                                             src={preview}
-                                            alt="Image preview"
-                                            width={1000}
-                                            height={1000}
+                                            controls
                                             className="size-full object-cover"
                                         />
-
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -194,12 +186,12 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                                             className="absolute right-2 top-2 size-5 rounded-full bg-white/20 text-background backdrop-blur-md"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                removeImage();
+                                                removeVideo();
                                             }}
                                         >
                                             <Icons.X className="size-4" />
                                             <span className="sr-only">
-                                                Remove image
+                                                Remove video
                                             </span>
                                         </Button>
                                     </div>
@@ -208,13 +200,12 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                                         <div className="flex justify-center">
                                             <Icons.CloudUpload className="size-10 md:size-12" />
                                         </div>
-
                                         <div className="space-y-1 md:space-y-0">
                                             <p className="text-sm md:text-base">
-                                                Choose a file or Drag and Drop
+                                                Choose an MP4 file or Drag and Drop
                                             </p>
                                             <p className="text-xs text-muted-foreground md:text-sm">
-                                                Image (4 MB | 4:5)
+                                                MP4 Video (Max 50 MB)
                                             </p>
                                         </div>
                                     </div>
@@ -232,7 +223,6 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>URL</FormLabel>
-
                             <FormControl>
                                 <Input
                                     {...field}
@@ -241,7 +231,6 @@ export function ShopByCategoryManageForm({ shopByCategory }: PageProps) {
                                     disabled={isPending}
                                 />
                             </FormControl>
-
                             <FormMessage />
                         </FormItem>
                     )}

@@ -49,6 +49,9 @@ export default function Page() {
                                            <Suspense>
                 <EventSectionBannerOneFetch />
             </Suspense>
+                                                   <Suspense>
+                <EventSectionTwoBannerFetch />
+            </Suspense>
 
                            <Suspense>
                 <BrandPromotionFetch />
