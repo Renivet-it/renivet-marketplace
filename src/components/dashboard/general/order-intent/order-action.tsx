@@ -104,11 +104,23 @@ export function OrderAction({ order, onAction }: PageProps) {
                 toast.success("Manifest download started");
             }
         } catch (error: any) {
-            console.error(`Error downloading ${type}:`, error);
-            toast.error(
-                error.message || `Failed to download ${type}. Please try again.`
-            );
+        console.error(`Error downloading ${type}:`, error);
+        let errorMessage = `Failed to download ${type}. Please try again.`;
+        // Check for specific manifest already generated error
+        if (type === "manifest" &&
+            (error.message?.includes("already generated") ||
+             error.message?.includes("already downloaded") ||
+             error.response?.data?.message?.includes("already generated"))) {
+            errorMessage = "Manifest has already been generated and can only be downloaded once.";
         }
+        // Otherwise show the server error if available
+        else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        toast.error(errorMessage);
+    }
     };
 
     return (
