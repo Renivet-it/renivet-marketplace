@@ -342,7 +342,7 @@ export const ordersRouter = createTRPCRouter({
                 billing_state: existingAddress.state,
                 billing_country: "India",
                 billing_email: user.email,
-                billing_phone: +getRawNumberFromPhone(existingAddress.phone),
+                billing_phone: getRawNumberFromPhone(existingAddress.phone),
                 shipping_is_billing: true,
                 order_items: orderItemsForShiprocket,
                 payment_method: (input.paymentMethod === "COD" ? "COD" : "Prepaid") as "COD" | "Prepaid",
