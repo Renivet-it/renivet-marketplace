@@ -586,6 +586,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     title: "Beauty and Personal Page Section",
     url: "#",
     icon: "Megaphone",
+    hidden: true,
     items: [
         {
             title: "Banners Section",
@@ -683,7 +684,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/home-page/effortless-elegance-section",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
-                        {
+    {
             title: "Event Banner One",
             url: "/dashboard/general/home-page/event-section-one",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
@@ -724,7 +725,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         },
         {
             title: "Beauty Products",
-            url: "/dashboard/general/beauty-products/beauty-products-main-page",
+            url: "/dashboard/general/beauty-personal/beauty-products-main-page",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
     ]
