@@ -90,18 +90,26 @@ export function OrderAction({ order, onAction }: PageProps) {
                 link.click();
                 document.body.removeChild(link);
                 toast.success("Label download started");
-            } else if (type === "manifest") {
-                const response = await generateManifest(
-                    order.shiprocketShipmentId
-                );
+        } else if (type === "manifest") {
+            const response = await generateManifest(order.shiprocketShipmentId);
+
+            // Log the API response to check actual keys
+            console.log("Manifest API Response:", response);
+            // Handle both camelCase and snake_case keys
+            const manifestUrl = response?.manifestUrl || response?.manifest_url;
+
+            if (manifestUrl) {
                 const link = document.createElement("a");
-                link.href = response.manifestUrl;
+                link.href = manifestUrl;
                 link.download = `manifest_${order.shiprocketShipmentId}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 toast.success("Manifest download started");
+            } else {
+                toast.error("Manifest alrerady downloaded");
             }
+        }
         } catch (error: any) {
             console.error(`Error downloading ${type}:`, error);
             toast.error(
