@@ -323,6 +323,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     title: "Women Home Page Section",
     url: "#",
     icon: "Megaphone",
+    hidden: true,
     items: [
         {
             title: "Women Banners Section",
@@ -411,6 +412,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     title: "Men Home Page Section",
     url: "#",
     icon: "Megaphone",
+    hidden: true,
     items: [
         {
             title: "Mens Banners Section",
@@ -490,6 +492,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     title: "Kids Home Page Section",
     url: "#",
     icon: "Megaphone",
+    hidden: true,
     items: [
         {
             title: "Kids Banners Section",
@@ -538,6 +541,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     title: "Home and Living  Page Section",
     url: "#",
     icon: "Megaphone",
+    hidden: true,
     items: [
         {
             title: "Banners Section",
