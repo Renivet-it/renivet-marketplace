@@ -34,21 +34,20 @@ interface PageProps {
 }
 
 export function OrderAction({ order, onAction }: PageProps) {
-    const { data: orderShipmentDetails } =
-        // trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery({
-        //     // shipmentId: order.shipments[0].shiprocketShipmentId!,
-        //     shipmentId: order.shipments?.[0]?.shiprocketShipmentId ?? "",
-        // });
-        trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery(
-            {
-              shipmentId: order.shipments?.[0]?.shiprocketShipmentId
+    const {
+        data: orderShipmentDetails,
+        refetch: refetchOrderShipmentDetails
+    } = trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery(
+        {
+            shipmentId: order.shipments?.[0]?.shiprocketShipmentId
                 ? Number(order.shipments[0].shiprocketShipmentId)
                 : 0,
-            },
-            {
-              enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
-            }
-          );
+        },
+        {
+            enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
+        }
+    );
+
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
@@ -69,78 +68,48 @@ export function OrderAction({ order, onAction }: PageProps) {
         }
     }, [orderShipmentDetails]);
 
-const handleDownload = async (type: "invoice" | "label" | "manifest") => {
-    try {
-        if (type === "invoice") {
-            const response = await generateInvoice(order.shipments[0].shiprocketOrderId);
-            const link = document.createElement("a");
-            link.href = response.invoiceUrl;
-            link.download = `invoice_${order.shipments[0].shiprocketOrderId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            toast.success("Invoice download started");
-
-        } else if (type === "label") {
-            const response = await generateLabel(order.shipments[0].shiprocketShipmentId);
-            const link = document.createElement("a");
-            link.href = response.labelUrl;
-            link.download = `label_${order.shipments[0].shiprocketShipmentId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            toast.success("Label download started");
-
-        } else if (type === "manifest") {
-            const response = await generateManifest(order.shipments[0].shiprocketShipmentId);
-
-            // Log the API response to check actual keys
-            console.log("Manifest API Response:", response);
-
-            // Handle both camelCase and snake_case keys
-            const manifestUrl = response?.manifestUrl || response?.manifest_url;
-
-            if (manifestUrl) {
-                const link = document.createElement("a");
-                link.href = manifestUrl;
-                link.download = `manifest_${order.shipments[0].shiprocketShipmentId}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+    const handleDownload = async (type: "invoice" | "label" | "manifest") => {
+        try {
+            if (type === "invoice") {
+                const response = await generateInvoice(order.shipments[0].shiprocketOrderId);
+                downloadFile(response.invoiceUrl, `invoice_${order.shipments[0].shiprocketOrderId}.pdf`);
+                toast.success("Invoice download started");
+            } else if (type === "label") {
+                const response = await generateLabel(order.shipments[0].shiprocketShipmentId);
+                downloadFile(response.labelUrl, `label_${order.shipments[0].shiprocketShipmentId}.pdf`);
+                toast.success("Label download started");
+            } else if (type === "manifest") {
+                const response = await generateManifest(order.shipments[0].shiprocketShipmentId);
+                downloadFile(response.manifestUrl, `manifest_${order.shipments[0].shiprocketShipmentId}.pdf`);
                 toast.success("Manifest download started");
-            } else {
-                toast.error("Manifest alrerady downloaded");
             }
+        } catch (error: any) {
+            console.error(`Error downloading ${type}:`, error);
+            let errorMessage = `Failed to download ${type}. Please try again.`;
+            if (
+                type === "manifest" &&
+                (error.message?.includes("already generated") ||
+                    error.message?.includes("already downloaded") ||
+                    error.response?.data?.message?.includes("already generated"))
+            ) {
+                errorMessage = "Manifest has already been generated and can only be downloaded once.";
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            toast.error(errorMessage);
         }
+    };
 
-    } catch (error: any) {
-        console.error(`Error downloading ${type}:`, error);
-
-        let errorMessage = `Failed to download ${type}. Please try again.`;
-
-        // Special case: manifest already generated error from Shiprocket
-        if (
-            type === "manifest" &&
-            (
-                error.message?.toLowerCase().includes("already generated") ||
-                error.message?.toLowerCase().includes("already downloaded") ||
-                error.response?.data?.message?.toLowerCase().includes("already generated")
-            )
-        ) {
-            errorMessage = "Manifest has already been generated and can only be downloaded once.";
-        }
-        // Use API-provided error if available
-        else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        }
-        // Otherwise use the JS error message
-        else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        toast.error(errorMessage);
-    }
-};
+    const downloadFile = (url: string, filename: string) => {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <>
@@ -154,73 +123,52 @@ const handleDownload = async (type: "invoice" | "label" | "manifest") => {
 
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
                     <DropdownMenuGroup>
-                        <>
-                            {!isShipmentGenerated && (
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        // TODO: Implement ship products logic
-                                        setIsSheetOpen(true);
-                                    }}
-                                >
-                                    <Icons.Truck className="size-4" />
-                                    <span>Ship Now</span>
-                                </DropdownMenuItem>
-                            )}
-                        </>
-
+                        {!isShipmentGenerated && (
+                            <DropdownMenuItem
+                                onClick={() => setIsSheetOpen(true)}
+                            >
+                                <Icons.Truck className="size-4" />
+                                <span>Ship Now</span>
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                             onClick={() => setIsInvoiceModalOpen(true)}
                         >
                             <Icons.FileText className="size-4" />
                             <span>Download Invoice</span>
                         </DropdownMenuItem>
-
-                        <>
-                            {isAwbGenerated && (
-                                <DropdownMenuItem
-                                    onClick={() => setIsLabelModalOpen(true)}
-                                >
-                                    <Icons.Tag className="size-4" />
-                                    <span>Download Label</span>
-                                </DropdownMenuItem>
-                            )}
-                        </>
-
-                        <>
-                            {isAwbGenerated && (
-                                <DropdownMenuItem
-                                    onClick={() => setIsManifestModalOpen(true)}
-                                >
-                                    <Icons.ClipboardList className="size-4" />
-                                    <span>Download Manifest</span>
-                                </DropdownMenuItem>
-                            )}
-                        </>
+                        {isAwbGenerated && (
+                            <DropdownMenuItem
+                                onClick={() => setIsLabelModalOpen(true)}
+                            >
+                                <Icons.Tag className="size-4" />
+                                <span>Download Label</span>
+                            </DropdownMenuItem>
+                        )}
+                        {isAwbGenerated && (
+                            <DropdownMenuItem
+                                onClick={() => setIsManifestModalOpen(true)}
+                            >
+                                <Icons.ClipboardList className="size-4" />
+                                <span>Download Manifest</span>
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuGroup>
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <Dialog
-                open={isInvoiceModalOpen}
-                onOpenChange={setIsInvoiceModalOpen}
-            >
+            {/* Invoice Modal */}
+            <Dialog open={isInvoiceModalOpen} onOpenChange={setIsInvoiceModalOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Download Invoice</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to download the invoice for
-                            this order?
+                            Are you sure you want to download the invoice for this order?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsInvoiceModalOpen(false)}
-                        >
-                            Cancel
-                        </Button>
+                        <Button variant="outline" onClick={() => setIsInvoiceModalOpen(false)}>Cancel</Button>
                         <Button
                             onClick={async () => {
                                 await handleDownload("invoice");
@@ -233,22 +181,17 @@ const handleDownload = async (type: "invoice" | "label" | "manifest") => {
                 </DialogContent>
             </Dialog>
 
+            {/* Label Modal */}
             <Dialog open={isLabelModalOpen} onOpenChange={setIsLabelModalOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Download Label</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to download the label for this
-                            order?
+                            Are you sure you want to download the label for this order?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsLabelModalOpen(false)}
-                        >
-                            Cancel
-                        </Button>
+                        <Button variant="outline" onClick={() => setIsLabelModalOpen(false)}>Cancel</Button>
                         <Button
                             onClick={async () => {
                                 await handleDownload("label");
@@ -261,31 +204,20 @@ const handleDownload = async (type: "invoice" | "label" | "manifest") => {
                 </DialogContent>
             </Dialog>
 
-            <Dialog
-                open={isManifestModalOpen}
-                onOpenChange={setIsManifestModalOpen}
-            >
+            {/* Manifest Modal */}
+            <Dialog open={isManifestModalOpen} onOpenChange={setIsManifestModalOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Download Manifest</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to download the manifest for
-                            this order?
+                            Are you sure you want to download the manifest for this order?
                         </DialogDescription>
                     </DialogHeader>
-                    <div>
-                        <p className={cn("text-[#FF5733]", "font-bold")}>
-                            Note: You can download only once for this download
-                            label.
-                        </p>
-                    </div>
+                    <p className={cn("text-[#FF5733]", "font-bold")}>
+                        Note: You can download only once for this label.
+                    </p>
                     <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsManifestModalOpen(false)}
-                        >
-                            Cancel
-                        </Button>
+                        <Button variant="outline" onClick={() => setIsManifestModalOpen(false)}>Cancel</Button>
                         <Button
                             onClick={async () => {
                                 await handleDownload("manifest");
@@ -297,14 +229,19 @@ const handleDownload = async (type: "invoice" | "label" | "manifest") => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            {/* shipment component */}
+
+            {/* Shipment Component */}
             <OrderShipment
                 isSheetOpen={isSheetOpen}
                 setIsSheetOpen={setIsSheetOpen}
-                onShipmentSuccessRefetchOrder={onAction}
+                onShipmentSuccessRefetchOrder={async () => {
+                    await refetchOrderShipmentDetails();
+                    setIsSheetOpen(false); // ✅ Close after success
+                    onAction(); // parent refresh
+                }}
                 side="bottom"
                 order={order}
-            ></OrderShipment>
+            />
         </>
     );
 }
