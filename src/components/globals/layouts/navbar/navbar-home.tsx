@@ -50,12 +50,12 @@ export function NavbarHome() {
 
     const { scrollY } = useScroll();
 
-    useMotionValueEvent(scrollY, "change", (latest) => {
-        const previous = scrollY.getPrevious() ?? 0;
+    // useMotionValueEvent(scrollY, "change", (latest) => {
+    //     const previous = scrollY.getPrevious() ?? 0;
 
-        if (latest > previous && latest > 150) setIsMenuHidden(true);
-        else setIsMenuHidden(false);
-    });
+    //     if (latest > previous && latest > 150) setIsMenuHidden(true);
+    //     else setIsMenuHidden(false);
+    // });
 
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
