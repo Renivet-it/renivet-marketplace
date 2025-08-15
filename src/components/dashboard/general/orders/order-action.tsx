@@ -69,47 +69,78 @@ export function OrderAction({ order, onAction }: PageProps) {
         }
     }, [orderShipmentDetails]);
 
-    const handleDownload = async (type: "invoice" | "label" | "manifest") => {
-        try {
-            if (type === "invoice") {
-                const response = await generateInvoice(order.shipments[0].shiprocketOrderId);
+const handleDownload = async (type: "invoice" | "label" | "manifest") => {
+    try {
+        if (type === "invoice") {
+            const response = await generateInvoice(order.shipments[0].shiprocketOrderId);
+            const link = document.createElement("a");
+            link.href = response.invoiceUrl;
+            link.download = `invoice_${order.shipments[0].shiprocketOrderId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("Invoice download started");
+
+        } else if (type === "label") {
+            const response = await generateLabel(order.shipments[0].shiprocketShipmentId);
+            const link = document.createElement("a");
+            link.href = response.labelUrl;
+            link.download = `label_${order.shipments[0].shiprocketShipmentId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("Label download started");
+
+        } else if (type === "manifest") {
+            const response = await generateManifest(order.shipments[0].shiprocketShipmentId);
+
+            // Log the API response to check actual keys
+            console.log("Manifest API Response:", response);
+
+            // Handle both camelCase and snake_case keys
+            const manifestUrl = response?.manifestUrl || response?.manifest_url;
+
+            if (manifestUrl) {
                 const link = document.createElement("a");
-                link.href = response.invoiceUrl;
-                link.download = `invoice_${order.shipments[0].shiprocketOrderId}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                toast.success("Invoice download started");
-            } else if (type === "label") {
-                const response = await generateLabel(
-                    order.shipments[0].shiprocketShipmentId
-                );
-                const link = document.createElement("a");
-                link.href = response.labelUrl;
-                link.download = `label_${order.shipments[0].shiprocketShipmentId}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                toast.success("Label download started");
-            } else if (type === "manifest") {
-                const response = await generateManifest(
-                    order.shipments[0].shiprocketShipmentId
-                );
-                const link = document.createElement("a");
-                link.href = response.manifestUrl;
+                link.href = manifestUrl;
                 link.download = `manifest_${order.shipments[0].shiprocketShipmentId}.pdf`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 toast.success("Manifest download started");
+            } else {
+                toast.error("Manifest alrerady downloaded");
             }
-        } catch (error: any) {
-            console.error(`Error downloading ${type}:`, error);
-            toast.error(
-                error.message || `Failed to download ${type}. Please try again.`
-            );
         }
-    };
+
+    } catch (error: any) {
+        console.error(`Error downloading ${type}:`, error);
+
+        let errorMessage = `Failed to download ${type}. Please try again.`;
+
+        // Special case: manifest already generated error from Shiprocket
+        if (
+            type === "manifest" &&
+            (
+                error.message?.toLowerCase().includes("already generated") ||
+                error.message?.toLowerCase().includes("already downloaded") ||
+                error.response?.data?.message?.toLowerCase().includes("already generated")
+            )
+        ) {
+            errorMessage = "Manifest has already been generated and can only be downloaded once.";
+        }
+        // Use API-provided error if available
+        else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        }
+        // Otherwise use the JS error message
+        else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        toast.error(errorMessage);
+    }
+};
 
     return (
         <>
