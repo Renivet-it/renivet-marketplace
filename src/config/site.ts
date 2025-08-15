@@ -643,6 +643,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     title: "Updated Home Page Section",
     url: "#",
     icon: "Megaphone",
+    hidden: true,
     items: [
         {
             title: "Trusted Curated Banner",
@@ -694,6 +695,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/home-page/event-section-two",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
+
     ]
 },
 
@@ -703,6 +705,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     url: "#",
     icon: "Megaphone",
     items: [
+    {
+            title: "New home Main Page",
+            url: "/dashboard/general/home-page/new-home-main-page",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
         {
             title: "Mens Section",
             url: "/dashboard/general/men-section/men-main-page",
