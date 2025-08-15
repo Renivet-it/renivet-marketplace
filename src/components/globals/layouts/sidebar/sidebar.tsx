@@ -40,7 +40,7 @@ const data: Sidebar = {
         email: "m@example.com",
         avatar: "/avatars/shadcn.jpg",
     },
-    navMain: generalSidebarConfig,
+    navMain: generalSidebarConfig.filter((section) => !section.hidden), // <-- filter hidden sections
     legal: [
         {
             name: "Terms of Services",

@@ -16,6 +16,7 @@ declare global {
     type GeneralSidebarConfig = {
         title: string;
         url: string;
+        hidden?: boolean; // Optional property to hide the section
         icon: keyof typeof Icons;
         isActive?: boolean;
         items: {
