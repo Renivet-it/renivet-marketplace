@@ -33,6 +33,6 @@ export async function generateManifest(shipmentId: any) {
             stack: error.stack,
             shipmentId,
         });
-        throw new Error(error.message || "Failed to generate manifest");
+        // throw new Error("Mna");
     }
 }
