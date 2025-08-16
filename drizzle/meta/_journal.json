@@ -1268,6 +1268,13 @@
       "when": 1755092239746,
       "tag": "0180_graceful_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 181,
+      "version": "7",
+      "when": 1755369588865,
+      "tag": "0181_talented_amazoness",
+      "breakpoints": true
     }
   ]
 }

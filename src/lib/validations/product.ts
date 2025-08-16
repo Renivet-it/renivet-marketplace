@@ -337,6 +337,20 @@ export const productSchema = z.object({
             .nullable()
     ),
 
+ // SHIPPING WEIGHT for shiprocket
+    shippingWeight: z
+        .union([z.string(), z.number()]).optional()
+        .nullable(),
+    shippingLength: z
+        .union([z.string(), z.number()]).optional()
+        .nullable(),
+    shippingWidth: z
+        .union([z.string(), z.number()]).optional()
+        .nullable(),
+    shippingHeight: z
+        .union([z.string(), z.number()]).optional()
+        .nullable(),
+
     // SEO
     metaTitle: z.preprocess(
         convertEmptyStringToNull,

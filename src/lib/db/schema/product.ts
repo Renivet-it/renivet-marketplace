@@ -72,6 +72,14 @@ export const products = pgTable(
         originCountry: text("origin_country"),
         hsCode: text("hs_code"),
 
+
+
+        // SHIPPING weight for shiprocket
+        shippingWeight: integer("shipping_weight"),
+        shippingLength: integer("shipping_length"),
+        shippingWidth: integer("shipping_width"),
+        shippingHeight: integer("shipping_height"),
+
         // SEO
         metaTitle: text("meta_title"),
         metaDescription: text("meta_description"),

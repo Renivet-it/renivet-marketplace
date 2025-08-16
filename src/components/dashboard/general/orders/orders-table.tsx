@@ -421,7 +421,7 @@ const handleDownloadBrandPDF = async () => {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  
+
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -458,7 +458,7 @@ const handleDownloadBrandPDF = async () => {
   doc.setFont("helvetica", "normal");
   doc.text(
     firstOrder?.items?.[0]?.product?.brand?.confidential?.authorizedSignatoryName ?? "N/A",
-    leftBoxX + 110, 
+    leftBoxX + 110,
     topBoxY + 15
   );
 
