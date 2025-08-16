@@ -39,9 +39,8 @@ export function EventSectionTwoBanner({ className, banners, ...props }: PageProp
               style={{ aspectRatio: "1440/400" }}
             >
               {banners.map((item, index) => (
-                <Link
+                <div
                   key={index}
-                  href={item.url || "/shop"}
                   className={cn(
                     "absolute top-0 left-0 w-full h-full transition-opacity duration-700 ease-in-out",
                     index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
@@ -55,7 +54,16 @@ export function EventSectionTwoBanner({ className, banners, ...props }: PageProp
                     loop
                     playsInline
                   />
-                </Link>
+                  {/* Shop Now Button */}
+                  <Link
+                    href={item.url || "/shop"}
+                    className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
+                  >
+                    <button className="bg-white text-black px-8 py-3 rounded-full font-medium text-lg hover:bg-gray-100 transition-colors duration-300 shadow-lg">
+                      Shop Now
+                    </button>
+                  </Link>
+                </div>
               ))}
             </div>
           </CarouselItem>

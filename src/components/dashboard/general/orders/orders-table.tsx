@@ -311,7 +311,6 @@ const generatePDF = (logoBase64: string | ArrayBuffer | null) => {
     setIsErrorModalOpen(true);
     return;
   }
-
   // Totals
    const totalGrossSale = dataToUse.reduce(
       (sum, order) => sum + +convertPaiseToRupees(order.totalAmount),
@@ -321,7 +320,7 @@ const generatePDF = (logoBase64: string | ArrayBuffer | null) => {
   const gstRate = 0.18;
   const tcsRate = 0.01;
   const paymentGatewayFee = dataToUse.reduce(
-      (sum, order) => sum + +convertPaiseToRupees(order.totalAmount * 0.02),
+      (sum, order) => sum + +convertPaiseToRupees(order.totalAmount * 0.02 > 2000 ? order.totalAmount * 0.02 : 2000),
       0
     );
 
@@ -421,7 +420,7 @@ const handleDownloadBrandPDF = async () => {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  
+
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -458,7 +457,7 @@ const handleDownloadBrandPDF = async () => {
   doc.setFont("helvetica", "normal");
   doc.text(
     firstOrder?.items?.[0]?.product?.brand?.confidential?.authorizedSignatoryName ?? "N/A",
-    leftBoxX + 110, 
+    leftBoxX + 110,
     topBoxY + 15
   );
 
@@ -473,7 +472,7 @@ const handleDownloadBrandPDF = async () => {
     firstOrder?.items?.[0]?.product?.brand?.confidential?.warehousePostalCode 
       ? `ZIP: ${firstOrder.items[0].product.brand.confidential.warehousePostalCode}` 
       : ""
-  ].filter(line => line.trim().length > 0);
+  ].filter((line) => line.trim().length > 0);
 
   // Print each address part on a new line
   addressParts.forEach((part, index) => {
@@ -533,7 +532,7 @@ let commissionRate = row.items[0]?.product?.category?.commissionRate || 0;
       (commissionRateValue * 0.18) +
       (row.totalAmount * 0.01) +
       (shippingFeeInRupees * 100) +
-      (row.totalAmount * 0.02)
+      (row.totalAmount * 0.02 > 2000 ? row.totalAmount * 0.02 : 2000)
     );
 
     return [
@@ -549,7 +548,7 @@ let commissionRate = row.items[0]?.product?.category?.commissionRate || 0;
       convertPaiseToRupees(commissionRateValue * 0.18),
       convertPaiseToRupees(row.totalAmount * 0.01),
       shippingFeeInRupees,
-      convertPaiseToRupees(row.totalAmount * 0.02),
+      convertPaiseToRupees(row.totalAmount * 0.02 > 2000 ? row.totalAmount * 0.02 : 2000),
       totaldeduction,
       (Number(convertPaiseToRupees(row.totalAmount)) - Number(totaldeduction || 0)).toFixed(2)
     ];

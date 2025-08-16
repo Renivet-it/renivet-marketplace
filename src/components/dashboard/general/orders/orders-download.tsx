@@ -183,7 +183,7 @@ export function OrdersDownload({ orders }: PageProps) {
                 const netMRP = totalMRP - (totalMRP * 0.18);
                 const commissionAmount = (order.items[0]?.product?.category?.commissionRate || 0) / 100 * totalMRP;
                 const gstOnCommission = commissionAmount * 0.18;
-                const paymentFee = totalPrice * 0.02; // Assuming a 2% payment fee for simplicity
+                const paymentFee = totalPrice * 0.02 > 2000 ? order.totalAmount * 0.02 : 2000; // Assuming a 2% payment fee for simplicity
                 // const totalDeductions = commissionAmount + gstOnCommission + (netMRP * 0.01) +
                 //         (order?.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges ?? 0) +
                 //         (totalPrice * 0.02);
@@ -225,7 +225,7 @@ export function OrdersDownload({ orders }: PageProps) {
                     "Payment Fee": convertPaiseToRupees(paymentFee),
                     "Total Deductions": convertPaiseToRupees(commissionAmount + gstOnCommission + (netMRP * 0.01) +
                         shippingFeeInPaise +
-                        (totalPrice * 0.02)),
+                        (paymentFee)),
 "Final Payable to Brand": convertPaiseToRupees(
             (totalMRP ?? 0) === 0
                 ? 0

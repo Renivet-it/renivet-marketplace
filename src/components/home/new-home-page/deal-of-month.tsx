@@ -45,16 +45,18 @@ export function DealofTheMonthStrip({
     return (
         <section
             className={cn(
-                "w-full bg-[#F4F0EC] py-16",
+                "w-full bg-[#F4F0EC] py-16 relative",
                 className
             )}
               style={{
-    backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIahoXCLrApCnKbtW0hkXs6adUVPBQFlvOi2M')",
-  }}
+        backgroundImage: "linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIahoXCLrApCnKbtW0hkXs6adUVPBQFlvOi2M')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+    }}
             {...props}
         >
-             <div className="absolute inset-0 bg-white/10 pointer-events-none"></div>
-            <div className="max-w-screen-2xl mx-auto px-6 ">
+            <div className="max-w-screen-2xl mx-auto bg-white/10  px-6 ">
                 {/* Section Title */}
                 <div className="mb-12">
                     <h2 className="text-3xl md:text-4xl font-light text-black tracking-wide">
