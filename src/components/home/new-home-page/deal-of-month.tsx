@@ -53,7 +53,7 @@ export function DealofTheMonthStrip({
   }}
             {...props}
         >
-             <div className="absolute inset-0 bg-white/10 pointer-events-none"></div>
+             <div className="absolute inset-0 bg-white/50 pointer-events-none"></div>
             <div className="max-w-screen-2xl mx-auto px-6 ">
                 {/* Section Title */}
                 <div className="mb-12">
