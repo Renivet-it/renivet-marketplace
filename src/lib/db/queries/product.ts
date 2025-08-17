@@ -264,58 +264,23 @@ async getProducts({
     productImage?: Product["productImageFilter"];
     productVisiblity?: Product["productVisiblityFilter"];
 }) {
-    // Price conversions remain the same
-    minPrice = !!minPrice
-        ? minPrice < 0
-            ? 0
-            : convertPriceToPaise(minPrice)
-        : null;
-    maxPrice = !!maxPrice
-        ? maxPrice > 10000
-            ? null
-            : convertPriceToPaise(maxPrice)
-        : null;
+    // Price conversions
+    minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
+    maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
 
     let searchQuery;
-    // if (search?.length) {
-    //     // Get embedding for the search query
-    //     const searchEmbedding = await getEmbedding(search);
-
-    //     // Use cosine similarity with pgvector
-    //     searchQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < 0.8`;
-    // }
-        if (search?.length) {
-        // Get embedding for the search query
+    if (search?.length) {
         const searchEmbedding = await getEmbedding(search);
-
-        // Create two tiers of relevance
-        const highRelevanceThreshold = 0.6; // Strong matches (adjust as needed)
-        const lowRelevanceThreshold = 0.8; // Weaker but still relevant matches
-
-        // Tier 1: Strong matches (high relevance)
+        const highRelevanceThreshold = 0.6;
+        const lowRelevanceThreshold = 0.8;
         const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
-
-        // Tier 2: Weaker matches (still relevant)
         const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-
-        // Combine with OR but order by tier first, then similarity
         searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
-
-        // // Order by tier first (high relevance comes first), then by similarity
-        // orderBy.push(
-        //     sql`CASE
-        //         WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0
-        //         ELSE 1
-        //     END ASC`,
-        //     sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
-        // );
     }
 
     const filters = [
         searchQuery,
-        !!brandIds?.length
-            ? inArray(products.brandId, brandIds)
-            : undefined,
+        !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
         !!minPrice
             ? sql`(
                 COALESCE(${products.price}, 0) >= ${minPrice} 
@@ -338,28 +303,14 @@ async getProducts({
                 )
             )`
             : undefined,
-        isActive !== undefined
-            ? eq(products.isActive, isActive)
-            : undefined,
-        isAvailable !== undefined
-            ? eq(products.isAvailable, isAvailable)
-            : undefined,
-        isPublished !== undefined
-            ? eq(products.isPublished, isPublished)
-            : undefined,
-        isDeleted !== undefined
-            ? eq(products.isDeleted, isDeleted)
-            : undefined,
+        isActive !== undefined ? eq(products.isActive, isActive) : undefined,
+        isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
+        isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
+        isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
         categoryId ? eq(products.categoryId, categoryId) : undefined,
-        subcategoryId
-            ? eq(products.subcategoryId, subcategoryId)
-            : undefined,
-        productTypeId
-            ? eq(products.productTypeId, productTypeId)
-            : undefined,
-        verificationStatus
-            ? eq(products.verificationStatus, verificationStatus)
-            : undefined,
+        subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
+        productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
+        verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
         productImage
             ? productImage === "with"
                 ? hasMedia(products, "media")
@@ -379,9 +330,8 @@ async getProducts({
     const orderBy = [];
 
     if (search?.length) {
-        // Order by cosine similarity (1 - distance)
         const searchEmbedding = await getEmbedding(search);
-                 const highRelevanceThreshold = 0.6; // Strong matches (adjust as needed)
+        const highRelevanceThreshold = 0.6;
         orderBy.push(
             sql`CASE 
                 WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0 
@@ -389,15 +339,27 @@ async getProducts({
             END ASC`,
             sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
         );
-        // orderBy.push(sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`);
     }
 
-    // Add the regular sort order
-    orderBy.push(
-        sortOrder === "asc"
-            ? asc(products[sortBy])
-            : desc(products[sortBy])
-    );
+    if (sortBy && sortOrder) {
+        orderBy.push(
+            sortBy === "price"
+                ? sql`
+                    (
+                        SELECT COALESCE(
+                            MIN(COALESCE(pv.price, ${products.price}, 0)),
+                            COALESCE(${products.price}, 0)
+                        )
+                        FROM ${productVariants} pv
+                        WHERE pv.product_id = ${products.id}
+                        AND pv.is_deleted = false
+                    ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
+                `
+                : sortOrder === "asc"
+                  ? asc(products[sortBy])
+                  : desc(products[sortBy])
+        );
+    }
 
     const data = await db.query.products.findMany({
         with: {
@@ -426,7 +388,7 @@ async getProducts({
         },
     });
 
-    // Rest of your media handling remains the same
+    // Media handling remains the same
     const mediaIds = new Set<string>();
     for (const product of data) {
         product.media.forEach((media) => mediaIds.add(media.id));
