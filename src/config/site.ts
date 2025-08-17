@@ -325,7 +325,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     icon: "Megaphone",
     items: [
         {
-            title: "Monthly Compliance Report",
+            title: "Compliance Report",
             url: "/dashboard/general/monthly-compliance",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
         },

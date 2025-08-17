@@ -32,9 +32,9 @@ export default function Page(props: PageProps) {
                     </p>
                 </div>
 
-                <Suspense>
+                {/* <Suspense>
                     <OrdersDownloadFetch />
-                </Suspense>
+                </Suspense> */}
             </div>
 
             <Suspense fallback={<TableSkeleton />}>
@@ -65,8 +65,8 @@ async function OrdersFetch({ searchParams }: PageProps) {
     return <OrdersTable initialData={data} />;
 }
 
-async function OrdersDownloadFetch() {
-    const data = await orderQueries.getAllOrders();
-    // console.log("Fetched orders for download:", data);
-    return <OrdersDownload orders={data} />;
-}
+// async function OrdersDownloadFetch() {
+//     const data = await orderQueries.getAllOrders();
+//     // console.log("Fetched orders for download:", data);
+//     return <OrdersDownload orders={data} />;
+// }

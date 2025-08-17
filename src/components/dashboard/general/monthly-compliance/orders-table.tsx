@@ -289,124 +289,139 @@ const exportData = dataToUse.flatMap((order) =>
         XLSX.writeFile(wb, `order-details-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
     };
 
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-6">
-            {/* Filter & Actions Section */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-                {/* Filters Group */}
-                <div className="flex flex-wrap items-end gap-4">
-                    {/* Search Input */}
-                    <div className="min-w-[240px]">
-                        <Input
-                            placeholder="Search by order ID..."
-                            className="w-full"
-                            value={search}
-                            onChange={(e) => {
-                                table.getColumn("id")?.setFilterValue(e.target.value);
-                                setSearch(e.target.value);
-                            }}
-                        />
-                    </div>
-                    {/* Date Range */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-end gap-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-[160px]">
-                                <Label htmlFor="start-date" className="text-sm font-medium text-gray-600">
-                                    Start Date
-                                </Label>
-                                <Input
-                                    id="start-date"
-                                    type="date"
-                                    className="w-full mt-1"
-                                    value={startDate ? format(startDate, "yyyy-MM-dd") : format(defaultStartDate, "yyyy-MM-dd")}
-                                    onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : defaultStartDate)}
-                                />
-                            </div>
-                            <span className="text-gray-400 mb-1 hidden sm:block">-</span>
-                        </div>
-                        <div className="w-[160px]">
-                            <Label htmlFor="end-date" className="text-sm font-medium text-gray-600">
-                                End Date
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 space-y-8">
+        {/* Filter & Actions Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* Filters Group */}
+            <div className="flex flex-wrap items-center gap-6">
+                {/* Search Input */}
+                <div className="min-w-[260px]">
+                    <Label htmlFor="search" className="text-sm font-semibold text-gray-700 mb-2 block">
+                        Search Orders
+                    </Label>
+                    <Input
+                        id="search"
+                        placeholder="Search by order ID..."
+                        className="w-full rounded-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                        value={search}
+                        onChange={(e) => {
+                            table.getColumn("id")?.setFilterValue(e.target.value);
+                            setSearch(e.target.value);
+                        }}
+                    />
+                </div>
+                {/* Date Range */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-[180px]">
+                            <Label htmlFor="start-date" className="text-sm font-semibold text-gray-700 mb-2 block">
+                                Start Date
                             </Label>
                             <Input
-                                id="end-date"
+                                id="start-date"
                                 type="date"
-                                className="w-full mt-1"
-                                value={endDate ? format(endDate, "yyyy-MM-dd") : format(defaultEndDate, "yyyy-MM-dd")}
-                                onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : defaultEndDate)}
+                                className="w-full rounded-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                value={startDate ? format(startDate, "yyyy-MM-dd") : format(defaultStartDate, "yyyy-MM-dd")}
+                                onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : defaultStartDate)}
                             />
                         </div>
+                        <span className="text-gray-500 font-medium hidden sm:block">–</span>
                     </div>
-                    {/* Brand Filter */}
-                    <div className="min-w-[240px]">
-                        <div className="text-sm font-medium text-gray-600 mb-1 block">
-                            Brand Filter
-                        </div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="w-full justify-between">
-                                    {brandIds.length > 0
-                                        ? `${brandIds.length} brand(s) selected`
-                                        : "Select brands"}
-                                    <ChevronDown className="ml-2 h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="max-h-[280px] w-[240px] overflow-y-auto">
-                                {brandsData?.data?.map((brand) => (
-                                    <DropdownMenuItem
-                                        key={brand.id}
-                                        onSelect={(e) => e.preventDefault()}
-                                        className="flex items-center gap-3"
-                                    >
-                                        <Checkbox
-                                            checked={brandIds.includes(brand.id)}
-                                            onCheckedChange={(checked) => {
-                                                const updated = checked
-                                                    ? [...brandIds, brand.id]
-                                                    : brandIds.filter((id) => id !== brand.id);
-                                                setBrandIds(updated);
-                                                if (updated.length > 0) setBrandFilter("all");
-                                            }}
-                                        />
-                                        <span className="text-sm">{brand.name}</span>
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                    <div className="w-[180px]">
+                        <Label htmlFor="end-date" className="text-sm font-semibold text-gray-700 mb-2 block">
+                            End Date
+                        </Label>
+                        <Input
+                            id="end-date"
+                            type="date"
+                            className="w-full rounded-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            value={endDate ? format(endDate, "yyyy-MM-dd") : format(defaultEndDate, "yyyy-MM-dd")}
+                            onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : defaultEndDate)}
+                        />
                     </div>
-                            <div className="flex items-center gap-2 pb-2">
-                      <Checkbox
+                </div>
+                {/* Brand Filter */}
+                <div className="min-w-[260px]">
+                    <Label htmlFor="brand-filter" className="text-sm font-semibold text-gray-700 mb-2 block">
+                        Brand Filter
+                    </Label>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="w-full justify-between rounded-md border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 transition"
+                            >
+                                {brandIds.length > 0
+                                    ? `${brandIds.length} brand(s) selected`
+                                    : "Select brands"}
+                                <ChevronDown className="ml-2 h-5 w-5 text-gray-500" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="max-h-[320px] w-[260px] overflow-y-auto bg-white rounded-md shadow-lg border border-gray-200">
+                            {brandsData?.data?.map((brand) => (
+                                <DropdownMenuItem
+                                    key={brand.id}
+                                    onSelect={(e) => e.preventDefault()}
+                                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
+                                >
+                                    <Checkbox
+                                        checked={brandIds.includes(brand.id)}
+                                        onCheckedChange={(checked) => {
+                                            const updated = checked
+                                                ? [...brandIds, brand.id]
+                                                : brandIds.filter((id) => id !== brand.id);
+                                            setBrandIds(updated);
+                                            if (updated.length > 0) setBrandFilter("all");
+                                        }}
+                                        className="border-gray-300 focus:ring-blue-500"
+                                    />
+                                    <span className="text-sm font-medium text-gray-800">{brand.name}</span>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                {/* Shipment Adjustment Checkbox */}
+                <div className="flex items-center pt-5 gap-3">
+                    <Checkbox
                         id="shipment-flag"
                         checked={applyShipmentFlag}
                         onCheckedChange={(checked) => setApplyShipmentFlag(Boolean(checked))}
-                      />
-                      <Label htmlFor="shipment-flag" className="text-sm font-medium">
+                        className="border-gray-300 focus:ring-blue-500"
+                    />
+                    <Label htmlFor="shipment-flag" className="text-sm font-semibold text-gray-700">
                         Apply 5% Shipment Adjustment
-                      </Label>
-                    </div>
+                    </Label>
                 </div>
-
-                {/* Actions Group */}
-                <div className="flex flex-wrap gap-3">
-                    <DataTableViewOptions table={table} />
-                    <Button onClick={handleExport}>Download Report</Button>
+                                    <div className="flex items-center pt-5 gap-3">
+     <Button
+                    onClick={handleExport}
+                    className="text-white rounded-md px-6 py-2 font-semibold transition"
+                >
+                    Download Compliance Report
+                </Button>
                 </div>
             </div>
 
-            {/* Table Section */}
-            <div className="border rounded-lg overflow-hidden">
-                <DataTable
-                    columns={columns(refetchOrderData)}
-                    table={table}
-                    pages={pages}
-                    count={count}
-                    perPage={perPage}
-                    onPerPageChange={(value) => {
-                        setPerPage(value);
-                        setPage(1);
-                    }}
-                />
-            </div>
+
+
         </div>
-    );
+
+        {/* Table Section */}
+        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+            <DataTable
+                columns={columns(refetchOrderData)}
+                table={table}
+                pages={pages}
+                count={count}
+                perPage={perPage}
+                onPerPageChange={(value) => {
+                    setPerPage(value);
+                    setPage(1);
+                }}
+            />
+        </div>
+    </div>
+);
 }
