@@ -320,6 +320,19 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
     ]
 },
 {
+    title: "Accounts",
+    url: "#",
+    icon: "DollarSign",
+    items: [
+        {
+            title: "Compliance Report",
+            url: "/dashboard/general/monthly-compliance",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+
+    ]
+},
+{
     title: "Women Home Page Section",
     url: "#",
     icon: "Megaphone",
