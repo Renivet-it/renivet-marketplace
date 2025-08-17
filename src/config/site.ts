@@ -322,7 +322,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
 {
     title: "Accounts",
     url: "#",
-    icon: "Megaphone",
+    icon: "DollarSign",
     items: [
         {
             title: "Compliance Report",
