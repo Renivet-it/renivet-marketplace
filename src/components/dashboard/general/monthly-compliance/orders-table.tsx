@@ -39,12 +39,12 @@ import {
     parseAsArrayOf,
     parseAsIsoDate,
     useQueryState,
-
 } from "nuqs";
 import { Button } from "@/components/ui/button-dash";
 import { CachedBrand } from "@/lib/validations";
 import { ChevronDown } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import * as XLSX from "xlsx";
 
 export type TableOrder = OrderWithItemAndBrand;
 
@@ -162,6 +162,7 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = useState({});
+const [applyShipmentFlag, setApplyShipmentFlag] = useState(false);
 
     // Ensure default dates are set on initial load
     useEffect(() => {
@@ -186,7 +187,7 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
             initialData,
             keepPreviousData: true,
             refetchOnWindowFocus: false,
-            refetchOnMount: true, // Changed to true to ensure fresh data on mount
+            refetchOnMount: true,
             refetchOnReconnect: false,
         }
     );
@@ -229,6 +230,64 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
             },
         },
     });
+
+    const handleExport = async () => {
+        // Fetch selected rows or all filtered data
+        let dataToUse = table.getSelectedRowModel().rows.map((row) => row.original);
+        if (dataToUse.length === 0) {
+            const { data: allData } = await refetchOrderData({
+                    page: 1,
+                    limit: count,
+                    search,
+                    brandIds: brandIds.length > 0 ? brandIds : undefined,
+                    startDate: startDate ? format(startDate, "yyyy-MM-dd") : format(defaultStartDate, "yyyy-MM-dd"),
+                    endDate: endDate ? format(endDate, "yyyy-MM-dd") : format(defaultEndDate, "yyyy-MM-dd"),
+            });
+            dataToUse = allData?.data ?? [];
+        }
+// Prepare data for Excel export
+// Prepare data for Excel export
+const exportData = dataToUse.flatMap((order) =>
+    order.items.map((item) => {
+        const grossSale = Number(convertPaiseToRupees(order.totalAmount));
+        let commissionRate = item.product.category?.commissionRate || 0;
+        // Apply 5% adjustment if flag is set
+        if (applyShipmentFlag) {
+            commissionRate += 5; // Increase commission by 5%
+        }
+        const commissionAmount = (commissionRate / 100) * grossSale;
+        const gstOnCommission = (18 / 100) * commissionAmount;
+        const netTaxableValue = grossSale * 0.82; // Assuming 18% GST included
+        const gstCollected = grossSale - netTaxableValue;
+        const tcs = (1 / 100) * netTaxableValue;
+        const shippingFee = applyShipmentFlag
+            ? 0
+            : order.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
+        const paymentGatewayFee = order.totalAmount * 0.02 > 2000 ? order.totalAmount * 0.02 : 2000;
+
+        return {
+            "Order ID": order.id,
+            "Order Date": format(new Date(order.createdAt), "yyyy-MM-dd"),
+            "Product SKU": item.product.sku || "N/A",
+            "Product Name": item.product.title || "N/A",
+            "Gross Sale (Incl. GST)": formatPriceTag(grossSale, true),
+            "Net Taxable Value": formatPriceTag(netTaxableValue, true),
+            "GST Collected (18%)": formatPriceTag(gstCollected, true),
+            "Commission %": `${commissionRate}%`,
+            "Commission Amount": formatPriceTag(commissionAmount, true),
+            "GST on Commission @18%": formatPriceTag(gstOnCommission, true),
+            "TCS @1% on Net Taxable Value": formatPriceTag(tcs, true),
+            "Shipping Fee (if charged separately)": formatPriceTag(shippingFee),
+            "Payment Gateway Fee": formatPriceTag(Number(convertPaiseToRupees(paymentGatewayFee)), true),
+        };
+    })
+);
+        // Create Excel file
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Order Details");
+        XLSX.writeFile(wb, `order-details-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+    };
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-6">
@@ -315,11 +374,22 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
+                            <div className="flex items-center gap-2 pb-2">
+                      <Checkbox
+                        id="shipment-flag"
+                        checked={applyShipmentFlag}
+                        onCheckedChange={(checked) => setApplyShipmentFlag(Boolean(checked))}
+                      />
+                      <Label htmlFor="shipment-flag" className="text-sm font-medium">
+                        Apply 5% Shipment Adjustment
+                      </Label>
+                    </div>
                 </div>
 
                 {/* Actions Group */}
                 <div className="flex flex-wrap gap-3">
                     <DataTableViewOptions table={table} />
+                    <Button onClick={handleExport}>Download Report</Button>
                 </div>
             </div>
 
