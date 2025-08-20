@@ -169,6 +169,19 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         ],
     },
     {
+    title: "Analytics",
+    url: "#",
+    icon: "ChartNoAxesColumn",
+    items: [
+        {
+            title: "Product Reports",
+            url: "/dashboard/general/product-reports-analytics",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+        },
+
+    ]
+},
+    {
         title: "Management",
         url: "#",
         icon: "Settings2",

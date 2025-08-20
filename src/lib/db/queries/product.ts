@@ -14,7 +14,7 @@ import {
     UpdateProductValue,
     UpdateProductMediaInput
 } from "@/lib/validations";
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "..";
 import {
     brands,
@@ -32,7 +32,8 @@ import {
     homeandlivingNewArrival,
     beautyNewArrivals,
     beautyTopPicks,
-    homeNewArrivals
+    homeNewArrivals,
+    productEvents
 
 } from "../schema";
 import { categoryQueries } from "./category";
@@ -2333,6 +2334,32 @@ async getBeautyTopPicks() {
   }));
 
   return enhancedData;
+}
+
+
+
+ async getProductClicks() {
+  return db
+    .select({
+      productId: productEvents.productId,
+      clicks: count(productEvents.id).as("clicks"),
+    })
+    .from(productEvents)
+    .where(eq(productEvents.event, "click"))
+    .groupBy(productEvents.productId)
+    .orderBy(desc(count(productEvents.id)));
+}
+
+// ✅ Get clicks per brand
+async getBrandClicks() {
+  return db
+    .select({
+      brandId: productEvents.brandId,
+      clicks: count(productEvents.id).as("clicks"),
+    })
+    .from(productEvents)
+    .where(eq(productEvents.event, "click"))
+    .groupBy(productEvents.brandId);
 }
 
     async updateProductValue(id: string, values: UpdateProductValue) {

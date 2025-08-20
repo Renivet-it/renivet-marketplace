@@ -1,25 +1,12 @@
-import {
-    ProductJourneyData,
-    ProductMedia,
-    ProductOptionValue,
-    ProductValueData,
-} from "@/lib/validations";
+import { ProductJourneyData, ProductMedia, ProductOptionValue, ProductValueData } from "@/lib/validations";
 import { relations, sql } from "drizzle-orm";
-import {
-    boolean,
-    index,
-    integer,
-    jsonb,
-    pgTable,
-    text,
-    timestamp,
-    uuid,
-    vector
-} from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uuid, vector } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { categories, productTypes, subCategories } from "./category";
 import { orderItems } from "./order";
+import { users } from "./user";
+
 
 export const products = pgTable(
     "products",
@@ -123,7 +110,33 @@ isHomeNewArrival: boolean("is_home_new_Arrivals").default(false),
     })
     })
 );
-
+export const productEvents = pgTable(
+    "product_events",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "cascade" }),
+        userId: text("user_id"),
+        event: text("event", { enum: ["click", "view"] }).notNull(), // we track clicks; 'view' optional
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (t) => ({
+        idxEvent: index("product_events_event_idx").on(t.event),
+        idxProdEvent: index("product_events_product_event_idx").on(
+            t.productId,
+            t.event
+        ),
+        idxBrandEvent: index("product_events_brand_event_idx").on(
+            t.brandId,
+            t.event
+        ),
+        idxCreatedAt: index("product_events_created_at_idx").on(t.createdAt),
+    })
+);
 export const womenPageFeaturedProducts = pgTable(
     "women_page_featured_products",
     {
@@ -134,7 +147,7 @@ export const womenPageFeaturedProducts = pgTable(
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,
-    },
+    }
 );
 
 export const menPageFeaturedProducts = pgTable(
