@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button-general";
 import { MarketingStrip as TypeMarketingStrip } from "@/lib/validations";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
 
 interface PageProps extends GenericProps {
     marketingStrip: TypeMarketingStrip[];
@@ -20,16 +20,20 @@ export function BrandProducts({
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(true);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
-    const scroll = (direction: 'left' | 'right') => {
+    // Clone items for infinite loop
+    const clonedItems = [...marketingStrip, ...marketingStrip, ...marketingStrip];
+
+    const scroll = (direction: "left" | "right") => {
         if (scrollRef.current) {
-            const scrollAmount = window.innerWidth < 768 ? 300 : 420; // Responsive scroll amount
-            const newScrollLeft = direction === 'left' 
+            const scrollAmount = window.innerWidth < 768 ? 300 : 420;
+            const newScrollLeft = direction === "left"
                 ? scrollRef.current.scrollLeft - scrollAmount
                 : scrollRef.current.scrollLeft + scrollAmount;
             scrollRef.current.scrollTo({
                 left: newScrollLeft,
-                behavior: 'smooth'
+                behavior: "smooth"
             });
         }
     };
@@ -39,8 +43,29 @@ export function BrandProducts({
             const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
             setCanScrollLeft(scrollLeft > 0);
             setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+            // Calculate current index for infinite loop
+            const itemWidth = window.innerWidth < 768 ? 300 : 398;
+            const newIndex = Math.round(scrollLeft / itemWidth) % marketingStrip.length;
+            setCurrentIndex(newIndex);
         }
     };
+
+    // Auto-scroll for infinite loop effect
+    useEffect(() => {
+        const timer = setInterval(() => {
+            if (scrollRef.current && canScrollRight) {
+                scroll("right");
+            } else if (scrollRef.current) {
+                // Reset to beginning for infinite loop
+                scrollRef.current.scrollTo({
+                    left: 0,
+                    behavior: "smooth"
+                });
+            }
+        }, 4000); // Change slide every 4 seconds
+
+        return () => clearInterval(timer);
+    }, [canScrollRight]);
 
     return (
         <section
@@ -77,7 +102,7 @@ export function BrandProducts({
                             className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth"
                             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                         >
-                            {marketingStrip.map((item, index) => (
+                            {clonedItems.map((item, index) => (
                                 <div
                                     key={index}
                                     className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
@@ -98,10 +123,10 @@ export function BrandProducts({
                                             <Button
                                                 asChild
                                                 variant="outline"
-                                                className="border-white/60 text-white hover:bg-white/10 hover:border-white text-xs px-4 py-2 rounded-none font-normal backdrop-blur-sm bg-black/20"
+                                                className="border-white/60 text-white hover:bg-white/10 hover:border-white text-xs p-3 rounded-none font-normal backdrop-blur-sm bg-black/20"
                                             >
                                                 <Link href={item.href || "/shop"}>
-                                                    → EXPLORE NOW
+                                                    <ArrowUpRight className="w-4 h-4" />
                                                 </Link>
                                             </Button>
                                         </div>
@@ -112,7 +137,7 @@ export function BrandProducts({
                     </div>
                 </div>
 
-                {/* Desktop: Original layout (unchanged) */}
+                {/* Desktop: Original layout */}
                 <div className="hidden md:flex items-center gap-8">
                     <div className="w-1/4 px-4">
                         <h2 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide">
@@ -132,27 +157,27 @@ export function BrandProducts({
 
                     <div className="w-3/4 relative">
                         <button
-                            onClick={() => scroll('left')}
+                            onClick={() => scroll("left")}
                             disabled={!canScrollLeft}
                             className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
                                 canScrollLeft 
                                     ? "hover:bg-gray-50 cursor-pointer" 
-                                    : 'opacity-50 cursor-not-allowed'
+                                    : "opacity-50 cursor-not-allowed"
                             }`}
-                            style={{ marginLeft: '-24px' }}
+                            style={{ marginLeft: "-24px" }}
                         >
                             <ChevronLeft className="w-6 h-6 text-gray-600" />
                         </button>
 
                         <button
-                            onClick={() => scroll('right')}
+                            onClick={() => scroll("right")}
                             disabled={!canScrollRight}
                             className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
-                                canScrollRight 
-                                    ? 'hover:bg-gray-50 cursor-pointer' 
-                                    : 'opacity-50 cursor-not-allowed'
+                                canScrollRight
+                                    ? "hover:bg-gray-50 cursor-pointer" 
+                                    : "opacity-50 cursor-not-allowed"
                             }`}
-                            style={{ marginRight: '-24px' }}
+                            style={{ marginRight: "-24px" }}
                         >
                             <ChevronRight className="w-6 h-6 text-gray-600" />
                         </button>
@@ -163,7 +188,7 @@ export function BrandProducts({
                             className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
                             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                         >
-                            {marketingStrip.map((item, index) => (
+                            {clonedItems.map((item, index) => (
                                 <div
                                     key={index}
                                     className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
@@ -179,14 +204,16 @@ export function BrandProducts({
                                         />
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
-       <div className="relative h-full flex flex-col justify-end p-8">
-    <div className="flex justify-between items-end w-full">
-        <p className="text-white text-sm">{item.title}</p>
-        <Button asChild variant="outline" className="border-white/60 text-white hover:bg-white/10 hover:border-white text-sm px-6 py-2 rounded-none font-normal backdrop-blur-sm bg-black/20">
-            <Link href={item.href || "/shop"}>→ EXPLORE NOW</Link>
-        </Button>
-    </div>
-</div>
+                                    <div className="relative h-full flex flex-col justify-end p-8">
+                                        <div className="flex justify-between items-end w-full">
+                                            <p className="text-white text-sm">{item.title}</p>
+                                            <Button asChild variant="outline" className="border-white/60 text-white hover:bg-white/10 hover:border-white text-sm p-3 rounded-none font-normal backdrop-blur-sm bg-black/20">
+                                                <Link href={item.href || "/shop"}>
+                                                    <ArrowUpRight className="w-5 h-5" />
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
