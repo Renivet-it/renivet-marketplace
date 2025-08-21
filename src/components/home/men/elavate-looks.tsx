@@ -54,16 +54,18 @@ export function ElevateYourLooks({
                                         href={category.url || "/shop"}
                                         className="group flex flex-col items-center w-full px-1"
                                     >
-                                        <div className="rounded-full overflow-hidden w-full aspect-square mb-4 border border-gray-200 group-hover:border-gray-400 transition-colors">
-                                            <Image
-                                                src={category.imageUrl}
-                                                alt={category.title || "Category"} // Fixed alt text
-                                                width={176}
-                                                height={176}
-                                                sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
-                                                quality={100}
-                                                className="h-full w-full object-cover"
-                                            />
+                                    <div className="rounded-full overflow-hidden w-full aspect-square mb-4">
+                                            <div className="rounded-full overflow-hidden w-full h-full">
+                                                <Image
+                                                    src={category.imageUrl}
+                                                    alt={category.title || "Category"}
+                                                    width={176}
+                                                    height={176}
+                                                    sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
+                                                    quality={100}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
                                         </div>
                                         <p className="text-lg font-medium uppercase text-gray-800 sm:text-sm text-center">
                                             {category.title || "Category"} {/* Fixed category title */}
