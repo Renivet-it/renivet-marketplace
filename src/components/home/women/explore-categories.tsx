@@ -89,7 +89,7 @@ export function ExploreCategories({
             >
               <div className="w-[240px] h-[300px] flex flex-col bg-[#F4F0EC] border border-gray-300">
                 {/* Image Container */}
-                <div className="relative h-[240px] w-full overflow-hidden border-b border-gray-300">
+                <div className="relative h-[240px] w-full overflow-hidden border-b border-black-300">
                   <Image
                     src={category.imageUrl}
                     alt={category.title || "Category"}

@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icons } from "../../icons";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
+import { Button } from "../../ui/button-general"; // Assuming a Button component exists
 
 interface PageProps extends GenericProps {
     banners: Banner[];
@@ -25,7 +26,7 @@ export function MiddleAnimationSection({ className, banners, ...props }: PagePro
                         delay: 5000,
                     }),
                 ]}
-                className="w-full aspect-[3/1] bg-[#F4F0EC]" // Corrected to match the image's 4:1 aspect ratio
+                className="w-full aspect-[3/1] bg-[#F4F0EC]"
             >
                 <CarouselContent
                     classNames={{
@@ -40,12 +41,19 @@ export function MiddleAnimationSection({ className, banners, ...props }: PagePro
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
-                                        width={1200} // Image's actual width
-                                        height={300} // Image's actual height
+                                        width={1200}
+                                        height={300}
                                         className="size-full object-contain brightness-100"
                                         priority={index === 0}
                                     />
                                 </Link>
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                    <Button className="bg-[#F4F0EC] text-black font-semibold px-6 py-3 rounded-md shadow hover:bg-gray-200 transition" asChild variant="default" size="lg">
+                                        <Link href={item.url || "/shop"}>
+                                            Explore Now
+                                        </Link>
+                                    </Button>
+                                </div>
                             </div>
                         </CarouselItem>
                     ))}

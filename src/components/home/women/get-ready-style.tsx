@@ -25,7 +25,7 @@ export function GetReadySection({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-auto md:h-[600px] max-w-[1380px] mx-auto"
+                className="max-w-screen-3xl mx-auto  h-auto md:h-[700px]"
             >
                 <CarouselContent
                     classNames={{
@@ -35,7 +35,7 @@ export function GetReadySection({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full h-[50vw] md:h-[600px] md:aspect-[1380/600]">
+                            <div className="relative w-full h-[60vw] md:h-[700px] md:aspect-[1380/600]">
                                 <Link href={item.url || "/shop"} className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}
