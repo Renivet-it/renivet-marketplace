@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
+import { useEffect, useState } from "react";
 
 interface MoodboardItem {
   id: string;
@@ -23,72 +24,73 @@ export function MatchaBag({
   title = "Moodboard for Her",
   className,
 }: PageProps) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const AUTOPLAY_DELAY = 3000; // 3 seconds
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % moodboardItems.length);
+    }, AUTOPLAY_DELAY);
+    return () => clearInterval(interval);
+  }, [moodboardItems.length]);
+
   if (!moodboardItems.length) return null;
 
   return (
     <section className={cn("w-full bg-[#F4F0EC]", className)}>
       {/* Mobile View - Full Width Banner */}
       <div className="lg:hidden w-full">
-        <Carousel
-          opts={{
-            align: "start",
-            loop: true,
-          }}
-          className="w-full"
-        >
-          <CarouselContent className="ml-0">
-            {moodboardItems.map((item) => (
-              <CarouselItem key={item.id} className="pl-0">
-                <Link href={item.url ?? "/shop"} className="block w-full">
-                  {/* Natural height container */}
-                  <div className="w-full" style={{ height: 'auto' }}>
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.title ?? "Moodboard item"}
-                      width={1200}
-                      height={600}
-                      className="w-full h-auto object-contain"
-                      quality={100}
-                      priority
-                    />
-                  </div>
-                </Link>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
+        <div className="relative w-full overflow-hidden">
+          {moodboardItems.map((item, index) => (
+            <Link
+              key={item.id}
+              href={item.url ?? "/shop"}
+              className={cn(
+                "block w-full transition-opacity duration-700 ease-in-out",
+                index === activeIndex ? "opacity-100" : "opacity-0 absolute top-0"
+              )}
+            >
+              <div className="w-full" style={{ height: 'auto' }}>
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title ?? "Moodboard item"}
+                  width={1200}
+                  height={600}
+                  className="w-full h-auto object-contain"
+                  quality={100}
+                  priority={index === 0}
+                />
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Desktop View */}
       <div className="hidden lg:block max-w-screen-2xl mx-auto py-12 px-8 relative">
         <div className="flex flex-row gap-8 items-start">
           <div className="flex-1 w-full">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-                slidesToScroll: 1,
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-2">
-                {moodboardItems.map((item) => (
-                  <CarouselItem key={item.id} className="pl-2 basis-full">
-                    <div className="relative w-full" style={{ height: "530px" }}>
-                      <Link href={item.url ?? "/shop"} className="block w-full h-full">
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.title ?? "Moodboard item"}
-                          fill
-                          className="object-cover rounded-lg"
-                          quality={100}
-                        />
-                      </Link>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
+            <div className="relative w-full" style={{ height: "530px" }}>
+              {moodboardItems.map((item, index) => (
+                <Link
+                  key={item.id}
+                  href={item.url ?? "/shop"}
+                  className={cn(
+                    "absolute top-0 left-0 w-full h-full transition-opacity duration-700 ease-in-out rounded-lg",
+                    index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+                  )}
+                >
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title ?? "Moodboard item"}
+                    fill
+                    className="object-cover rounded-lg"
+                    quality={100}
+                    priority={index === 0}
+                  />
+                </Link>
+              ))}
+            </div>
           </div>
           {/* Positioned on the right, half inside/half outside */}
           <div className="absolute right-[-20px] top-1/2 transform -translate-y-1/2 max-w-[265px] z-10">

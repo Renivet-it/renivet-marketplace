@@ -39,7 +39,7 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
 
   return (
     <div className={cn("bg-[#F4F0EC] py-8", className)} {...props}>
-      <div className="max-w-screen-xl mx-auto px-4">
+      <div className="max-w-screen-2xl mx-10 px-14">
         {/* Header */}
         <div className="mb-8">
           <div className="border-b-2 border-blue-500 inline-block">

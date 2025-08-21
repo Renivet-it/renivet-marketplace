@@ -29,7 +29,7 @@ export function BrandPromotion({
 
   return (
     <section className={cn("w-full bg-[#F4F0EC] py-16", className)}>
-      <div className="max-w-screen-xl mx-auto px-6">
+      <div className="max-w-screen-2xl mx-auto px-6">
         {/* Section Title */}
         <div className="mb-12">
           <h2 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide">

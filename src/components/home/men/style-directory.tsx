@@ -88,7 +88,7 @@ export function StyleDirectory({
                                 <CarouselItem key={index} className="pl-6 basis-[200px]">
                                     <Link href={category.url || "/shop"} className="block">
                                         <div className="flex flex-col items-center p-2 transition-shadow duration-200">
-                                            <div className="overflow-hidden w-full bg-gray-100 rounded-t-[53.542px]">
+                                            <div className="overflow-hidden w-full border-2  rounded-t-[53.542px]">
                                                 <Image
                                                     src={category.imageUrl}
                                                     alt={"Category"}
