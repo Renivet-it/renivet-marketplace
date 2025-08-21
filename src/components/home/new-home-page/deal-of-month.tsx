@@ -49,7 +49,7 @@ export function DealofTheMonthStrip({
                 className
             )}
               style={{
-        backgroundImage: "linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIahoXCLrApCnKbtW0hkXs6adUVPBQFlvOi2M')",
+        // backgroundImage: "linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIahoXCLrApCnKbtW0hkXs6adUVPBQFlvOi2M')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat"
