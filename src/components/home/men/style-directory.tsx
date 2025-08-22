@@ -49,7 +49,7 @@ export function StyleDirectory({
                                 <CarouselItem key={index} className="pl-1 basis-[20%] min-w-[80px]">
                                     <Link href={category.url || "/shop"} className="block">
                                         <div className="flex flex-col items-center p-1">
-                                            <div className="overflow-hidden w-full bg-gray-100 rounded-t-lg">
+                                            <div className="overflow-hidden w-full  rounded-t-lg">
                                                 <Image
                                                     src={category.imageUrl}
       // @ts-ignore
