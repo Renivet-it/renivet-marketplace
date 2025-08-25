@@ -1,4 +1,4 @@
-// "use client";
+"use client";
 // import React, { useState, useEffect, useMemo } from "react";
 // import { motion, AnimatePresence } from "framer-motion";
 // import {
@@ -21,7 +21,7 @@
 // import { Switch } from "@/components/ui/switch";
 // import { Progress } from "@/components/ui/progress";
 
-// // Enhanced data structures with more realistic data
+// Enhanced data structures with more realistic data
 // const generateProducts = () => [
 //   { id: "1", name: "iPhone 15 Pro Max", brand: "Apple", clicks: 15420, sales: 1890000, price: 1199, category: "Smartphones", inventory: 245, rating: 4.8, reviews: 1250 },
 //   { id: "2", name: "Galaxy S24 Ultra", brand: "Samsung", clicks: 12890, sales: 1456000, price: 1299, category: "Smartphones", inventory: 189, rating: 4.7, reviews: 980 },
@@ -134,39 +134,39 @@
 //   }, [products, selectedBrand, customerSegments]);
 
 //   // Brand metrics
-//   const brandMetrics = useMemo(() => {
-//     const brandMap = new Map();
-//     products.forEach(product => {
-//       const existing = brandMap.get(product.brand);
-//       if (existing) {
-//         existing.clicks += product.clicks;
-//         existing.sales += product.sales;
-//         existing.products += 1;
-//         existing.avgRating = (existing.avgRating * (existing.products - 1) + product.rating) / existing.products;
-//       } else {
-//         brandMap.set(product.brand, {
-//           brand: product.brand,
-//           clicks: product.clicks,
-//           sales: product.sales,
-//           products: 1,
-//           avgRating: product.rating
-//         });
-//       }
-//     });
-//     return Array.from(brandMap.values()).sort((a, b) => b.sales - a.sales);
-//   }, [products]);
+  // const brandMetrics = useMemo(() => {
+  //   const brandMap = new Map();
+  //   products.forEach(product => {
+  //     const existing = brandMap.get(product.brand);
+  //     if (existing) {
+  //       existing.clicks += product.clicks;
+  //       existing.sales += product.sales;
+  //       existing.products += 1;
+  //       existing.avgRating = (existing.avgRating * (existing.products - 1) + product.rating) / existing.products;
+  //     } else {
+  //       brandMap.set(product.brand, {
+  //         brand: product.brand,
+  //         clicks: product.clicks,
+  //         sales: product.sales,
+  //         products: 1,
+  //         avgRating: product.rating
+  //       });
+  //     }
+  //   });
+  //   return Array.from(brandMap.values()).sort((a, b) => b.sales - a.sales);
+  // }, [products]);
 
-//   const formatCurrency = (value) => {
-//     return new Intl.NumberFormat("en-US", {
-//       style: "currency",
-//       currency: "USD",
-//       minimumFractionDigits: 0
-//     }).format(value);
-//   };
+  // const formatCurrency = (value) => {
+  //   return new Intl.NumberFormat("en-US", {
+  //     style: "currency",
+  //     currency: "USD",
+  //     minimumFractionDigits: 0
+  //   }).format(value);
+  // };
 
-//   const formatNumber = (value) => {
-//     return new Intl.NumberFormat("en-US").format(value);
-//   };
+  // const formatNumber = (value) => {
+  //   return new Intl.NumberFormat("en-US").format(value);
+  // };
 
 //   const MetricCard = ({ title, value, icon: Icon, trend, color, subtitle }) => (
 //     <motion.div
@@ -441,71 +441,71 @@
 //             </Card>
 //           </TabsContent>
 
-//           <TabsContent value="products" className="space-y-6">
-//             <div className="flex items-center justify-between">
-//               <h2 className="text-2xl font-bold">Product Analytics</h2>
-//               <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-//                 <SelectTrigger className="w-48">
-//                   <SelectValue placeholder="Filter by brand" />
-//                 </SelectTrigger>
-//                 <SelectContent>
-//                   <SelectItem value="all">All Brands</SelectItem>
-//                   {Array.from(new Set(products.map(p => p.brand))).map(brand => (
-//                     <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-//                   ))}
-//                 </SelectContent>
-//               </Select>
-//             </div>
+          // <TabsContent value="products" className="space-y-6">
+          //   <div className="flex items-center justify-between">
+          //     <h2 className="text-2xl font-bold">Product Analytics</h2>
+          //     <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+          //       <SelectTrigger className="w-48">
+          //         <SelectValue placeholder="Filter by brand" />
+          //       </SelectTrigger>
+          //       <SelectContent>
+          //         <SelectItem value="all">All Brands</SelectItem>
+          //         {Array.from(new Set(products.map(p => p.brand))).map(brand => (
+          //           <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+          //         ))}
+          //       </SelectContent>
+          //     </Select>
+          //   </div>
 
-//             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//               <Card>
-//                 <CardHeader>
-//                   <CardTitle>Product Clicks vs Sales</CardTitle>
-//                 </CardHeader>
-//                 <CardContent>
-//                   <ResponsiveContainer width="100%" height={400}>
-//                     <ScatterChart data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)}>
-//                       <CartesianGrid strokeDasharray="3 3" />
-//                       <XAxis dataKey="clicks" name="Clicks" />
-//                       <YAxis dataKey="sales" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
-//                       <Tooltip
-//                         formatter={(value, name) => {
-//                           if (name === "Sales") return [formatCurrency(Number(value)), name];
-//                           return [formatNumber(Number(value)), name];
-//                         }}
-//                         labelFormatter={() => ""}
-//                       />
-//                       <Scatter dataKey="sales" fill="#8b5cf6" />
-//                     </ScatterChart>
-//                   </ResponsiveContainer>
-//                 </CardContent>
-//               </Card>
+          //   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          //     <Card>
+          //       <CardHeader>
+          //         <CardTitle>Product Clicks vs Sales</CardTitle>
+          //       </CardHeader>
+          //       <CardContent>
+          //         <ResponsiveContainer width="100%" height={400}>
+          //           <ScatterChart data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)}>
+          //             <CartesianGrid strokeDasharray="3 3" />
+          //             <XAxis dataKey="clicks" name="Clicks" />
+          //             <YAxis dataKey="sales" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
+          //             <Tooltip
+          //               formatter={(value, name) => {
+          //                 if (name === "Sales") return [formatCurrency(Number(value)), name];
+          //                 return [formatNumber(Number(value)), name];
+          //               }}
+          //               labelFormatter={() => ""}
+          //             />
+          //             <Scatter dataKey="sales" fill="#8b5cf6" />
+          //           </ScatterChart>
+          //         </ResponsiveContainer>
+          //       </CardContent>
+          //     </Card>
 
-//               <Card>
-//                 <CardHeader>
-//                   <CardTitle>Category Performance</CardTitle>
-//                 </CardHeader>
-//                 <CardContent>
-//                   <ResponsiveContainer width="100%" height={400}>
-//                     <BarChart data={
-//                       Object.entries(
-//                         products.reduce((acc, p) => {
-//                           acc[p.category] = (acc[p.category] || 0) + p.sales;
-//                           return acc;
-//                         }, {})
-//                       ).map(([category, sales]) => ({ category, sales }))
-//                     }>
-//                       <CartesianGrid strokeDasharray="3 3" />
-//                       <XAxis dataKey="category" />
-//                       <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
-//                       <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
-//                       <Bar dataKey="sales" fill="#06b6d4" />
-//                     </BarChart>
-//                   </ResponsiveContainer>
-//                 </CardContent>
-//               </Card>
-//             </div>
-//           </TabsContent>
+          //     <Card>
+          //       <CardHeader>
+          //         <CardTitle>Category Performance</CardTitle>
+          //       </CardHeader>
+          //       <CardContent>
+          //         <ResponsiveContainer width="100%" height={400}>
+          //           <BarChart data={
+          //             Object.entries(
+          //               products.reduce((acc, p) => {
+          //                 acc[p.category] = (acc[p.category] || 0) + p.sales;
+          //                 return acc;
+          //               }, {})
+          //             ).map(([category, sales]) => ({ category, sales }))
+          //           }>
+          //             <CartesianGrid strokeDasharray="3 3" />
+          //             <XAxis dataKey="category" />
+          //             <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
+          //             <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
+          //             <Bar dataKey="sales" fill="#06b6d4" />
+          //           </BarChart>
+          //         </ResponsiveContainer>
+          //       </CardContent>
+          //     </Card>
+          //   </div>
+          // </TabsContent>
 
 //           <TabsContent value="customers" className="space-y-6">
 //             <h2 className="text-2xl font-bold">Customer Analytics</h2>
@@ -696,7 +696,7 @@
 // export default EcommerceDashboard;
 
 
-"use client";
+
 import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
@@ -721,7 +721,61 @@ import { Progress } from "@/components/ui/progress";
 import { getOverviewMetrics, getRevenueTrend, getBrandPerformance, getTopProducts } from "@/actions/analytics";
 
 // Remove the static data generation functions since we'll use real data
+const generateProducts = () => [
+  { id: "1", name: "iPhone 15 Pro Max", brand: "Apple", clicks: 15420, sales: 1890000, price: 1199, category: "Smartphones", inventory: 245, rating: 4.8, reviews: 1250 },
+  { id: "2", name: "Galaxy S24 Ultra", brand: "Samsung", clicks: 12890, sales: 1456000, price: 1299, category: "Smartphones", inventory: 189, rating: 4.7, reviews: 980 },
+  { id: "3", name: "MacBook Pro M3", brand: "Apple", clicks: 8950, sales: 2125000, price: 1999, category: "Laptops", inventory: 67, rating: 4.9, reviews: 567 },
+  { id: "4", name: "Dell XPS 15", brand: "Dell", clicks: 6720, sales: 945000, price: 1599, category: "Laptops", inventory: 123, rating: 4.5, reviews: 423 },
+  { id: "5", name: "AirPods Pro 2", brand: "Apple", clicks: 18450, sales: 695000, price: 249, category: "Audio", inventory: 456, rating: 4.6, reviews: 2100 },
+  { id: "6", name: "Surface Studio", brand: "Microsoft", clicks: 4560, sales: 1238000, price: 3499, category: "Desktops", inventory: 23, rating: 4.4, reviews: 156 },
+  { id: "7", name: "iPad Pro 12.9", brand: "Apple", clicks: 9780, sales: 1167000, price: 1099, category: "Tablets", inventory: 234, rating: 4.7, reviews: 789 },
+  { id: "8", name: "Galaxy Buds Pro", brand: "Samsung", clicks: 7890, sales: 428000, price: 199, category: "Audio", inventory: 567, rating: 4.3, reviews: 890 },
+  { id: "9", name: "ThinkPad X1 Carbon", brand: "Lenovo", clicks: 5420, sales: 832000, price: 1899, category: "Laptops", inventory: 89, rating: 4.6, reviews: 345 },
+  { id: "10", name: "Pixel 8 Pro", brand: "Google", clicks: 6380, sales: 522000, price: 999, category: "Smartphones", inventory: 178, rating: 4.5, reviews: 567 }
+];
 
+const generateTimeSeriesData = () => {
+  const brands = ["Apple", "Samsung", "Dell", "Microsoft", "Lenovo", "Google"];
+  const data = [];
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const entry = {
+      date: date.toISOString().split("T")[0],
+      timestamp: date.getTime(),
+    };
+    brands.forEach((brand) => {
+      const baseValue = Math.random() * 50000 + 10000;
+      const trend = Math.sin((29 - i) * 0.2) * 5000;
+      entry[brand] = Math.floor(baseValue + trend + (Math.random() - 0.5) * 10000);
+    });
+    data.push(entry);
+  }
+  return data;
+};
+
+const generateCustomerSegments = () => [
+  { segment: "Premium", customers: 15420, revenue: 2890000, avgOrderValue: 187.5, color: "#8b5cf6" },
+  { segment: "Regular", customers: 45680, revenue: 3456000, avgOrderValue: 75.6, color: "#06b6d4" },
+  { segment: "Budget", customers: 78920, revenue: 1890000, avgOrderValue: 23.9, color: "#10b981" },
+  { segment: "New", customers: 23450, revenue: 567000, avgOrderValue: 24.2, color: "#f59e0b" }
+];
+
+const generateTrafficSources = () => [
+  { source: "Organic Search", visitors: 45680, conversions: 3456, rate: 7.57, color: "#8b5cf6" },
+  { source: "Paid Ads", visitors: 23450, conversions: 2890, rate: 12.33, color: "#06b6d4" },
+  { source: "Social Media", visitors: 18920, conversions: 1234, rate: 6.52, color: "#10b981" },
+  { source: "Direct", visitors: 15670, conversions: 1890, rate: 12.06, color: "#f59e0b" },
+  { source: "Email", visitors: 8950, conversions: 1567, rate: 17.51, color: "#ef4444" }
+];
+
+const generateConversionFunnel = () => [
+  { stage: "Visitors", value: 125000, color: "#8b5cf6" },
+  { stage: "Product Views", value: 89000, color: "#06b6d4" },
+  { stage: "Add to Cart", value: 34500, color: "#10b981" },
+  { stage: "Checkout", value: 18900, color: "#f59e0b" },
+  { stage: "Purchase", value: 12340, color: "#ef4444" }
+];
 function EcommerceDashboard() {
   const [darkMode, setDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -730,13 +784,17 @@ function EcommerceDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isRealTime, setIsRealTime] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  
+    const timeSeriesData = useMemo(() => generateTimeSeriesData(), []);
+  const customerSegments = useMemo(() => generateCustomerSegments(), []);
+  const trafficSources = useMemo(() => generateTrafficSources(), []);
+  const conversionFunnel = useMemo(() => generateConversionFunnel(), []);
   // State for real data
   const [overviewData, setOverviewData] = useState<any>(null);
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [brandData, setBrandData] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const products = useMemo(() => generateProducts(), []);
 
   // Fetch data function
   const fetchData = async () => {
@@ -786,7 +844,29 @@ function EcommerceDashboard() {
     }
   }, [darkMode]);
 
-  const formatCurrency = (value: number) => {
+  const brandMetrics = useMemo(() => {
+    const brandMap = new Map();
+    products.forEach(product => {
+      const existing = brandMap.get(product.brand);
+      if (existing) {
+        existing.clicks += product.clicks;
+        existing.sales += product.sales;
+        existing.products += 1;
+        existing.avgRating = (existing.avgRating * (existing.products - 1) + product.rating) / existing.products;
+      } else {
+        brandMap.set(product.brand, {
+          brand: product.brand,
+          clicks: product.clicks,
+          sales: product.sales,
+          products: 1,
+          avgRating: product.rating
+        });
+      }
+    });
+    return Array.from(brandMap.values()).sort((a, b) => b.sales - a.sales);
+  }, [products]);
+
+  const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -794,7 +874,7 @@ function EcommerceDashboard() {
     }).format(value);
   };
 
-  const formatNumber = (value: number) => {
+  const formatNumber = (value) => {
     return new Intl.NumberFormat("en-US").format(value);
   };
 
@@ -1080,7 +1160,7 @@ function EcommerceDashboard() {
           </TabsContent>
 
           {/* Other tabs remain similar but would need similar data integration */}
-          <TabsContent value="products" className="space-y-6">
+   <TabsContent value="products" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Product Analytics</h2>
               <Select value={selectedBrand} onValueChange={setSelectedBrand}>
@@ -1089,41 +1169,235 @@ function EcommerceDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Brands</SelectItem>
-                  {/* You would fetch brands from your database here */}
+                  {Array.from(new Set(products.map(p => p.brand))).map(brand => (
+                    <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Product analytics coming soon...</p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Product Clicks vs Sales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="clicks" name="Clicks" />
+                      <YAxis dataKey="sales" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <Tooltip
+                        formatter={(value, name) => {
+                          if (name === "Sales") return [formatCurrency(Number(value)), name];
+                          return [formatNumber(Number(value)), name];
+                        }}
+                        labelFormatter={() => ""}
+                      />
+                      <Scatter dataKey="sales" fill="#8b5cf6" />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Category Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={
+                      Object.entries(
+                        products.reduce((acc, p) => {
+                          acc[p.category] = (acc[p.category] || 0) + p.sales;
+                          return acc;
+                        }, {})
+                      ).map(([category, sales]) => ({ category, sales }))
+                    }>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="category" />
+                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
+                      <Bar dataKey="sales" fill="#06b6d4" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
           {/* Other tabs... */}
-          <TabsContent value="customers" className="space-y-6">
+  <TabsContent value="customers" className="space-y-6">
             <h2 className="text-2xl font-bold">Customer Analytics</h2>
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Customer analytics coming soon...</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customer Segments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={customerSegments}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        dataKey="customers"
+                        label={({ segment, percent }) => `${segment} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {customerSegments.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [formatNumber(Number(value)), "Customers"]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue by Segment</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={customerSegments}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="segment" />
+                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
+                      <Bar dataKey="revenue" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
-
           <TabsContent value="traffic" className="space-y-6">
             <h2 className="text-2xl font-bold">Traffic Analytics</h2>
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Traffic analytics coming soon...</p>
+         
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Traffic Sources</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={trafficSources}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        dataKey="visitors"
+                        label={({ source, percent }) => `${source} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {trafficSources.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [formatNumber(Number(value)), "Visitors"]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Conversion Rates by Source</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={trafficSources}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="source" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`${value}%`, "Conversion Rate"]} />
+                      <Bar dataKey="rate" fill="#f59e0b" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
-
           <TabsContent value="conversion" className="space-y-6">
             <h2 className="text-2xl font-bold">Conversion Analytics</h2>
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Conversion analytics coming soon...</p>
-            </div>
+         
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales Funnel</CardTitle>
+                <CardDescription>Customer journey from visitor to purchase</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <FunnelChart>
+                    <Tooltip formatter={(value) => [formatNumber(Number(value)), ""]} />
+                    <Funnel
+                      dataKey="value"
+                      data={conversionFunnel}
+                      isAnimationActive
+                    >
+                      <LabelList position="center" fill="#fff" stroke="none" />
+                    </Funnel>
+                  </FunnelChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </TabsContent>
-
           <TabsContent value="analytics" className="space-y-6">
             <h2 className="text-2xl font-bold">Advanced Analytics</h2>
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Advanced analytics coming soon...</p>
+         
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Brand Performance Radar</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RadarChart data={brandMetrics.slice(0, 5).map(brand => ({
+                      brand: brand.brand,
+                      sales: brand.sales / 100000,
+                      clicks: brand.clicks / 1000,
+                      products: brand.products * 2,
+                      rating: brand.avgRating
+                    }))}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="brand" />
+                      <PolarRadiusAxis />
+                      <Radar name="Performance" dataKey="sales" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.6} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Real-time Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { action: "New order placed", time: "2 minutes ago", value: "$1,299" },
+                      { action: "Product viewed", time: "5 minutes ago", value: "iPhone 15 Pro" },
+                      { action: "Cart abandoned", time: "8 minutes ago", value: "$456" },
+                      { action: "New customer signup", time: "12 minutes ago", value: "Premium" },
+                      { action: "Review submitted", time: "15 minutes ago", value: "5 stars" }
+                    ].map((activity, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">{activity.action}</p>
+                          <p className="text-sm text-muted-foreground">{activity.time}</p>
+                        </div>
+                        <Badge variant="secondary">{activity.value}</Badge>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
