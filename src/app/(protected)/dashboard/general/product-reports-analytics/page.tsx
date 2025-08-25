@@ -1,117 +1,164 @@
 "use client";
-import React, { useState, useMemo, use } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Area, AreaChart
+  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, RadarChart, PolarGrid,
+  PolarAngleAxis, PolarRadiusAxis, Radar, ScatterChart, Scatter, FunnelChart, Funnel, LabelList
 } from "recharts";
-import { ArrowUp, ArrowDown, TrendingUp, ShoppingCart, Eye, DollarSign, Calendar } from "lucide-react";
+import {
+  ArrowUp, ArrowDown, TrendingUp, ShoppingCart, Eye, DollarSign, Calendar,
+  Users, Target, Globe, Zap, Filter, Download, RefreshCw, Moon, Sun,
+  BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
+  Settings, Bell, Search, ChevronDown, Activity, Percent, MapPin
+} from "lucide-react";
+import { Button } from "@/components/ui/button-general";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input-general";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select-general";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 
-// TypeScript interfaces
-interface Product {
-  id: string;
-  name: string;
-  brand: string;
-  clicks: number;
-  sales: number;
-  price: number;
-}
+// Enhanced data structures with more realistic data
+const generateProducts = () => [
+  { id: "1", name: "iPhone 15 Pro Max", brand: "Apple", clicks: 15420, sales: 1890000, price: 1199, category: "Smartphones", inventory: 245, rating: 4.8, reviews: 1250 },
+  { id: "2", name: "Galaxy S24 Ultra", brand: "Samsung", clicks: 12890, sales: 1456000, price: 1299, category: "Smartphones", inventory: 189, rating: 4.7, reviews: 980 },
+  { id: "3", name: "MacBook Pro M3", brand: "Apple", clicks: 8950, sales: 2125000, price: 1999, category: "Laptops", inventory: 67, rating: 4.9, reviews: 567 },
+  { id: "4", name: "Dell XPS 15", brand: "Dell", clicks: 6720, sales: 945000, price: 1599, category: "Laptops", inventory: 123, rating: 4.5, reviews: 423 },
+  { id: "5", name: "AirPods Pro 2", brand: "Apple", clicks: 18450, sales: 695000, price: 249, category: "Audio", inventory: 456, rating: 4.6, reviews: 2100 },
+  { id: "6", name: "Surface Studio", brand: "Microsoft", clicks: 4560, sales: 1238000, price: 3499, category: "Desktops", inventory: 23, rating: 4.4, reviews: 156 },
+  { id: "7", name: "iPad Pro 12.9", brand: "Apple", clicks: 9780, sales: 1167000, price: 1099, category: "Tablets", inventory: 234, rating: 4.7, reviews: 789 },
+  { id: "8", name: "Galaxy Buds Pro", brand: "Samsung", clicks: 7890, sales: 428000, price: 199, category: "Audio", inventory: 567, rating: 4.3, reviews: 890 },
+  { id: "9", name: "ThinkPad X1 Carbon", brand: "Lenovo", clicks: 5420, sales: 832000, price: 1899, category: "Laptops", inventory: 89, rating: 4.6, reviews: 345 },
+  { id: "10", name: "Pixel 8 Pro", brand: "Google", clicks: 6380, sales: 522000, price: 999, category: "Smartphones", inventory: 178, rating: 4.5, reviews: 567 }
+];
 
-interface BrandMetrics {
-  brand: string;
-  clicks: number;
-  sales: number;
-  avgSaleValue: number;
-  products: number;
-}
+const generateTimeSeriesData = () => {
+  const brands = ["Apple", "Samsung", "Dell", "Microsoft", "Lenovo", "Google"];
+  const data = [];
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const entry = {
+      date: date.toISOString().split("T")[0],
+      timestamp: date.getTime(),
+    };
+    brands.forEach((brand) => {
+      const baseValue = Math.random() * 50000 + 10000;
+      const trend = Math.sin((29 - i) * 0.2) * 5000;
+      entry[brand] = Math.floor(baseValue + trend + (Math.random() - 0.5) * 10000);
+    });
+    data.push(entry);
+  }
+  return data;
+};
 
-interface TimeSeriesData {
-  date: string;
-  [key: string]: string | number;
-}
+const generateCustomerSegments = () => [
+  { segment: "Premium", customers: 15420, revenue: 2890000, avgOrderValue: 187.5, color: "#8b5cf6" },
+  { segment: "Regular", customers: 45680, revenue: 3456000, avgOrderValue: 75.6, color: "#06b6d4" },
+  { segment: "Budget", customers: 78920, revenue: 1890000, avgOrderValue: 23.9, color: "#10b981" },
+  { segment: "New", customers: 23450, revenue: 567000, avgOrderValue: 24.2, color: "#f59e0b" }
+];
 
-interface SalesMetrics {
-  totalSales: number;
-  monthlySales: number;
-  weeklySales: number;
-  yearlyGrowth: number;
-}
+const generateTrafficSources = () => [
+  { source: "Organic Search", visitors: 45680, conversions: 3456, rate: 7.57, color: "#8b5cf6" },
+  { source: "Paid Ads", visitors: 23450, conversions: 2890, rate: 12.33, color: "#06b6d4" },
+  { source: "Social Media", visitors: 18920, conversions: 1234, rate: 6.52, color: "#10b981" },
+  { source: "Direct", visitors: 15670, conversions: 1890, rate: 12.06, color: "#f59e0b" },
+  { source: "Email", visitors: 8950, conversions: 1567, rate: 17.51, color: "#ef4444" }
+];
 
-const EcommerceDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "brands" | "trends">("overview");
+const generateConversionFunnel = () => [
+  { stage: "Visitors", value: 125000, color: "#8b5cf6" },
+  { stage: "Product Views", value: 89000, color: "#06b6d4" },
+  { stage: "Add to Cart", value: 34500, color: "#10b981" },
+  { stage: "Checkout", value: 18900, color: "#f59e0b" },
+  { stage: "Purchase", value: 12340, color: "#ef4444" }
+];
 
-  // Static data - in a real app, this would come from an API
-  const products: Product[] = [
-    { id: "1", name: "iPhone 15 Pro", brand: "Apple", clicks: 1250, sales: 89000, price: 1099 },
-    { id: "2", name: "Galaxy S24", brand: "Samsung", clicks: 980, sales: 65000, price: 899 },
-    { id: "3", name: "MacBook Air M3", brand: "Apple", clicks: 850, sales: 125000, price: 1299 },
-    { id: "4", name: "Dell XPS 13", brand: "Dell", clicks: 620, sales: 45000, price: 999 },
-    { id: "5", name: "AirPods Pro", brand: "Apple", clicks: 1450, sales: 35000, price: 249 },
-    { id: "6", name: "Surface Laptop", brand: "Microsoft", clicks: 540, sales: 38000, price: 1199 },
-    { id: "7", name: "iPad Pro", brand: "Apple", clicks: 780, sales: 67000, price: 799 },
-    { id: "8", name: "Galaxy Buds", brand: "Samsung", clicks: 690, sales: 28000, price: 179 },
-    { id: "9", name: "ThinkPad X1", brand: "Lenovo", clicks: 420, sales: 32000, price: 1399 },
-    { id: "10", name: "Pixel 8", brand: "Google", clicks: 380, sales: 22000, price: 699 }
-  ];
+function EcommerceDashboard() {
+  const [darkMode, setDarkMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [dateRange, setDateRange] = useState("30d");
+  const [selectedBrand, setSelectedBrand] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isRealTime, setIsRealTime] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Generate time series data for the last 30 days
-  const generateTimeSeriesData = (): TimeSeriesData[] => {
-    const brands = ["Apple", "Samsung", "Dell", "Microsoft", "Lenovo", "Google"];
-    const data: TimeSeriesData[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const entry: TimeSeriesData = {
-        date: date.toISOString().split("T")[0],
-      };
-      brands.forEach((brand) => {
-        entry[brand] = Math.floor(Math.random() * 5000) + 1000;
-      });
-      data.push(entry);
-    }
-    return data;
-  };
-
+  const products = useMemo(() => generateProducts(), []);
   const timeSeriesData = useMemo(() => generateTimeSeriesData(), []);
+  const customerSegments = useMemo(() => generateCustomerSegments(), []);
+  const trafficSources = useMemo(() => generateTrafficSources(), []);
+  const conversionFunnel = useMemo(() => generateConversionFunnel(), []);
 
-  // Calculate brand metrics
-  const brandMetrics: BrandMetrics[] = useMemo(() => {
-    const brandMap = new Map<string, BrandMetrics>();
+  // Real-time data simulation
+  useEffect(() => {
+    if (!isRealTime) return;
+    
+    const interval = setInterval(() => {
+      // Simulate real-time updates
+      setRefreshing(true);
+      setTimeout(() => setRefreshing(false), 1000);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isRealTime]);
+
+  // Toggle dark mode
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
+
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const filteredProducts = products.filter(p => 
+      selectedBrand === "all" || p.brand === selectedBrand
+    );
+    
+    const totalSales = filteredProducts.reduce((sum, p) => sum + p.sales, 0);
+    const totalClicks = filteredProducts.reduce((sum, p) => sum + p.clicks, 0);
+    const avgConversion = (totalSales / 1000) / totalClicks * 100;
+    
+    return {
+      totalSales,
+      totalClicks,
+      avgConversion,
+      totalProducts: filteredProducts.length,
+      totalCustomers: customerSegments.reduce((sum, s) => sum + s.customers, 0),
+      totalRevenue: customerSegments.reduce((sum, s) => sum + s.revenue, 0)
+    };
+  }, [products, selectedBrand, customerSegments]);
+
+  // Brand metrics
+  const brandMetrics = useMemo(() => {
+    const brandMap = new Map();
     products.forEach(product => {
       const existing = brandMap.get(product.brand);
       if (existing) {
         existing.clicks += product.clicks;
         existing.sales += product.sales;
         existing.products += 1;
-        existing.avgSaleValue = existing.sales / existing.products;
+        existing.avgRating = (existing.avgRating * (existing.products - 1) + product.rating) / existing.products;
       } else {
         brandMap.set(product.brand, {
           brand: product.brand,
           clicks: product.clicks,
           sales: product.sales,
-          avgSaleValue: product.sales,
-          products: 1
+          products: 1,
+          avgRating: product.rating
         });
       }
     });
-    return Array.from(brandMap.values()).sort((a, b) => b.clicks - a.clicks);
+    return Array.from(brandMap.values()).sort((a, b) => b.sales - a.sales);
   }, [products]);
 
-  // Calculate overall metrics
-  const salesMetrics: SalesMetrics = useMemo(() => {
-    const totalSales = products.reduce((sum, p) => sum + p.sales, 0);
-    return {
-      totalSales,
-      monthlySales: totalSales * 0.85, // Assuming 85% of total is monthly
-      weeklySales: totalSales * 0.25,  // Assuming 25% of total is weekly
-      yearlyGrowth: 23.5 // Static growth percentage
-    };
-  }, [products]);
-
-  // Colors for charts
-  const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7c7c", "#8dd1e1", "#d084d0", "#ffb366"];
-
-  // Utility function to format currency
-  const formatCurrency = (value: number): string => {
+  const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -119,404 +166,533 @@ const EcommerceDashboard: React.FC = () => {
     }).format(value);
   };
 
-  // Utility function to format numbers
-  const formatNumber = (value: number): string => {
+  const formatNumber = (value) => {
     return new Intl.NumberFormat("en-US").format(value);
   };
 
-  const MetricCard: React.FC<{
-    title: string;
-    value: string;
-    icon: React.ElementType;
-    trend?: number;
-    color: string;
-  }> = ({ title, value, icon: Icon, trend, color }) => (
-    <div className="bg-white rounded-lg p-6 shadow-sm border">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+  const MetricCard = ({ title, value, icon: Icon, trend, color, subtitle }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="relative overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <div className={`p-2 rounded-full ${color}`}>
+            <Icon className="w-4 h-4 text-white" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{value}</div>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           {trend !== undefined && (
             <div className={`flex items-center mt-2 text-sm ${trend >= 0 ? "text-green-600" : "text-red-600"}`}>
               {trend >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-              <span className="ml-1">{Math.abs(trend)}%</span>
+              <span className="ml-1">{Math.abs(trend).toFixed(1)}%</span>
+              <span className="ml-1 text-muted-foreground">vs last period</span>
             </div>
           )}
-        </div>
-        <div className={`p-3 rounded-full ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 
-  const renderOverview = () => (
-    <div className="space-y-6">
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Total Sales"
-          value={formatCurrency(salesMetrics.totalSales)}
-          icon={DollarSign}
-          trend={salesMetrics.yearlyGrowth}
-          color="bg-blue-500"
-        />
-        <MetricCard
-          title="Monthly Sales"
-          value={formatCurrency(salesMetrics.monthlySales)}
-          icon={TrendingUp}
-          trend={15.2}
-          color="bg-green-500"
-        />
-        <MetricCard
-          title="Weekly Sales"
-          value={formatCurrency(salesMetrics.weeklySales)}
-          icon={Calendar}
-          trend={8.1}
-          color="bg-purple-500"
-        />
-        <MetricCard
-          title="Total Products"
-          value={products.length.toString()}
-          icon={ShoppingCart}
-          color="bg-orange-500"
-        />
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="text-lg font-semibold mb-4">Brand Distribution (Clicks)</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={brandMetrics}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={120}
-                paddingAngle={5}
-                dataKey="clicks"
-                label={({ brand, percent }) => `${brand} ${(percent * 100).toFixed(0)}%`}
-              >
-                {brandMetrics.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => [formatNumber(Number(value)), "Clicks"]} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="text-lg font-semibold mb-4">Sales Trend (Last 30 Days)</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={timeSeriesData.slice(-7)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              />
-              <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
-              <Tooltip
-                formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                labelFormatter={(label) => new Date(label).toLocaleDateString()}
-              />
-              <Area
-                type="monotone"
-                dataKey="Apple"
-                stackId="1"
-                stroke="#8884d8"
-                fill="#8884d8"
-                fillOpacity={0.6}
-              />
-              <Area
-                type="monotone"
-                dataKey="Samsung"
-                stackId="1"
-                stroke="#82ca9d"
-                fill="#82ca9d"
-                fillOpacity={0.6}
-              />
-              <Area
-                type="monotone"
-                dataKey="Dell"
-                stackId="1"
-                stroke="#ffc658"
-                fill="#ffc658"
-                fillOpacity={0.6}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderProducts = () => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold mb-4">Product Clicks</h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={products.sort((a, b) => b.clicks - a.clicks)}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              dataKey="name" 
-              angle={-45}
-              textAnchor="end"
-              height={100}
-              fontSize={12}
-            />
-            <YAxis />
-            <Tooltip formatter={(value) => [formatNumber(Number(value)), "Clicks"]} />
-            <Bar dataKey="clicks" fill="#8884d8">
-              {products.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Product Performance Table</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clicks</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CTR</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products
-                .sort((a, b) => b.clicks - a.clicks)
-                .map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {product.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.brand}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center">
-                        <Eye className="w-4 h-4 mr-2 text-blue-500" />
-                        {formatNumber(product.clicks)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(product.sales)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(product.price)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {((product.sales / product.price) / product.clicks * 100).toFixed(2)}%
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderBrands = () => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold mb-4">Brand Sales Performance</h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={brandMetrics}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="brand" />
-            <YAxis yAxisId="left" orientation="left" tickFormatter={(value) => `$${(value / 1000)}k`} />
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip 
-              formatter={(value, name) => {
-                if (name === "Sales") return [formatCurrency(Number(value)), name];
-                return [formatNumber(Number(value)), name];
-              }}
-            />
-            <Legend />
-            <Bar yAxisId="left" dataKey="sales" fill="#8884d8" name="Sales" />
-            <Bar yAxisId="right" dataKey="clicks" fill="#82ca9d" name="Clicks" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Brand Analytics Table</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Clicks</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Sales</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Sale Value</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {brandMetrics.map((brand) => (
-                <tr key={brand.brand} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {brand.brand}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatNumber(brand.clicks)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(brand.sales)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(brand.avgSaleValue)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {brand.products}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {((brand.sales / 1000) / brand.clicks * 100).toFixed(2)}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderTrends = () => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold mb-4">30-Day Sales Trend by Brand</h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={timeSeriesData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(value) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            />
-            <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
-            <Tooltip
-              formatter={(value, name) => [formatCurrency(Number(value)), name]}
-              labelFormatter={(label) => new Date(label).toLocaleDateString()}
-            />
-            <Legend />
-            <Line type="monotone" dataKey="Apple" stroke="#8884d8" strokeWidth={2} />
-            <Line type="monotone" dataKey="Samsung" stroke="#82ca9d" strokeWidth={2} />
-            <Line type="monotone" dataKey="Dell" stroke="#ffc658" strokeWidth={2} />
-            <Line type="monotone" dataKey="Microsoft" stroke="#ff7c7c" strokeWidth={2} />
-            <Line type="monotone" dataKey="Lenovo" stroke="#8dd1e1" strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="text-lg font-semibold mb-4">Weekly Sales Comparison</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={timeSeriesData.slice(-7)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => new Date(value).toLocaleDateString("en-US", { weekday: "short" })}
-              />
-              <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
-              <Tooltip
-                formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                labelFormatter={(label) => new Date(label).toLocaleDateString()}
-              />
-              <Bar dataKey="Apple" stackId="a" fill="#8884d8" />
-              <Bar dataKey="Samsung" stackId="a" fill="#82ca9d" />
-              <Bar dataKey="Dell" stackId="a" fill="#ffc658" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h3 className="text-lg font-semibold mb-4">Monthly Growth Indicators</h3>
-          <div className="space-y-4">
-            {brandMetrics.slice(0, 5).map((brand, index) => (
-              <div key={brand.brand} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center">
-                  <div
-                    className="w-4 h-4 rounded-full mr-3"
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  />
-                  <span className="font-medium">{brand.brand}</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold">{formatCurrency(brand.sales)}</div>
-                  <div className="text-sm text-green-600 flex items-center">
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    +{(Math.random() * 20 + 5).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1500);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">E-commerce Analytics Dashboard</h1>
-          <p className="text-gray-600">Comprehensive insights into your product performance and sales metrics</p>
-        </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Advanced Dashboard
+              </h1>
+              <Badge variant="secondary" className="animate-pulse">
+                {isRealTime ? "Live" : "Static"}
+              </Badge>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-64"
+                />
+              </div>
+              
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">7 days</SelectItem>
+                  <SelectItem value="30d">30 days</SelectItem>
+                  <SelectItem value="90d">90 days</SelectItem>
+                  <SelectItem value="1y">1 year</SelectItem>
+                </SelectContent>
+              </Select>
 
-        {/* Navigation Tabs */}
-        <div className="mb-6">
-          <nav className="flex space-x-8 border-b border-gray-200">
-            {[
-              { key: "overview", label: "Overview", icon: TrendingUp },
-              { key: "products", label: "Products", icon: ShoppingCart },
-              { key: "brands", label: "Brands", icon: Eye },
-              { key: "trends", label: "Trends", icon: Calendar }
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key as any)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === key
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm">Real-time</span>
+                <Switch checked={isRealTime} onCheckedChange={setIsRealTime} />
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
               >
-                <Icon className="w-4 h-4 mr-2" />
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
+                <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              </Button>
 
-        {/* Content */}
-        <div className="space-y-6">
-          {activeTab === "overview" && renderOverview()}
-          {activeTab === "products" && renderProducts()}
-          {activeTab === "brands" && renderBrands()}
-          {activeTab === "trends" && renderTrends()}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDarkMode(!darkMode)}
+              >
+                {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+
+              <Button variant="outline" size="sm">
+                <Bell className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
         </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="overview" className="flex items-center space-x-2">
+              <BarChart3 className="w-4 h-4" />
+              <span>Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center space-x-2">
+              <ShoppingCart className="w-4 h-4" />
+              <span>Products</span>
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="flex items-center space-x-2">
+              <Users className="w-4 h-4" />
+              <span>Customers</span>
+            </TabsTrigger>
+            <TabsTrigger value="traffic" className="flex items-center space-x-2">
+              <Globe className="w-4 h-4" />
+              <span>Traffic</span>
+            </TabsTrigger>
+            <TabsTrigger value="conversion" className="flex items-center space-x-2">
+              <Target className="w-4 h-4" />
+              <span>Conversion</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+              <Activity className="w-4 h-4" />
+              <span>Analytics</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <MetricCard
+                title="Total Revenue"
+                value={formatCurrency(metrics.totalRevenue)}
+                icon={DollarSign}
+                trend={23.5}
+                color="bg-green-500"
+                subtitle="All time revenue"
+              />
+              <MetricCard
+                title="Total Sales"
+                value={formatCurrency(metrics.totalSales)}
+                icon={TrendingUp}
+                trend={15.2}
+                color="bg-blue-500"
+                subtitle="Product sales value"
+              />
+              <MetricCard
+                title="Total Customers"
+                value={formatNumber(metrics.totalCustomers)}
+                icon={Users}
+                trend={8.1}
+                color="bg-purple-500"
+                subtitle="Active customers"
+              />
+              <MetricCard
+                title="Conversion Rate"
+                value={`${metrics.avgConversion.toFixed(2)}%`}
+                icon={Percent}
+                trend={-2.3}
+                color="bg-orange-500"
+                subtitle="Click to purchase"
+              />
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Revenue Trend */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Trend (30 Days)</CardTitle>
+                  <CardDescription>Daily revenue by brand</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={timeSeriesData.slice(-7)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(value) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      />
+                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <Tooltip
+                        formatter={(value, name) => [formatCurrency(Number(value)), name]}
+                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                      />
+                      <Area type="monotone" dataKey="Apple" stackId="1" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.6} />
+                      <Area type="monotone" dataKey="Samsung" stackId="1" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.6} />
+                      <Area type="monotone" dataKey="Dell" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* Brand Performance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Brand Performance</CardTitle>
+                  <CardDescription>Sales distribution by brand</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={brandMetrics}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={120}
+                        paddingAngle={5}
+                        dataKey="sales"
+                        label={({ brand, percent }) => `${brand} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {brandMetrics.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`hsl(${index * 60}, 70%, 60%)`} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Performance Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Performing Products</CardTitle>
+                <CardDescription>Best selling products this period</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Product</th>
+                        <th className="text-left p-2">Brand</th>
+                        <th className="text-left p-2">Sales</th>
+                        <th className="text-left p-2">Rating</th>
+                        <th className="text-left p-2">Stock</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products
+                        .sort((a, b) => b.sales - a.sales)
+                        .slice(0, 5)
+                        .map((product) => (
+                          <tr key={product.id} className="border-b hover:bg-muted/50">
+                            <td className="p-2 font-medium">{product.name}</td>
+                            <td className="p-2">
+                              <Badge variant="outline">{product.brand}</Badge>
+                            </td>
+                            <td className="p-2">{formatCurrency(product.sales)}</td>
+                            <td className="p-2">
+                              <div className="flex items-center">
+                                <span className="mr-1">⭐</span>
+                                {product.rating}
+                              </div>
+                            </td>
+                            <td className="p-2">
+                              <Progress value={(product.inventory / 500) * 100} className="w-20" />
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="products" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Product Analytics</h2>
+              <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Brands</SelectItem>
+                  {Array.from(new Set(products.map(p => p.brand))).map(brand => (
+                    <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Product Clicks vs Sales</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="clicks" name="Clicks" />
+                      <YAxis dataKey="sales" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <Tooltip
+                        formatter={(value, name) => {
+                          if (name === "Sales") return [formatCurrency(Number(value)), name];
+                          return [formatNumber(Number(value)), name];
+                        }}
+                        labelFormatter={() => ""}
+                      />
+                      <Scatter dataKey="sales" fill="#8b5cf6" />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Category Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart data={
+                      Object.entries(
+                        products.reduce((acc, p) => {
+                          acc[p.category] = (acc[p.category] || 0) + p.sales;
+                          return acc;
+                        }, {})
+                      ).map(([category, sales]) => ({ category, sales }))
+                    }>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="category" />
+                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
+                      <Bar dataKey="sales" fill="#06b6d4" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="customers" className="space-y-6">
+            <h2 className="text-2xl font-bold">Customer Analytics</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customer Segments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={customerSegments}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        dataKey="customers"
+                        label={({ segment, percent }) => `${segment} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {customerSegments.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [formatNumber(Number(value)), "Customers"]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue by Segment</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={customerSegments}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="segment" />
+                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
+                      <Bar dataKey="revenue" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="traffic" className="space-y-6">
+            <h2 className="text-2xl font-bold">Traffic Analytics</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Traffic Sources</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={trafficSources}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        dataKey="visitors"
+                        label={({ source, percent }) => `${source} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {trafficSources.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [formatNumber(Number(value)), "Visitors"]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Conversion Rates by Source</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={trafficSources}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="source" />
+                      <YAxis />
+                      <Tooltip formatter={(value) => [`${value}%`, "Conversion Rate"]} />
+                      <Bar dataKey="rate" fill="#f59e0b" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="conversion" className="space-y-6">
+            <h2 className="text-2xl font-bold">Conversion Analytics</h2>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales Funnel</CardTitle>
+                <CardDescription>Customer journey from visitor to purchase</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <FunnelChart>
+                    <Tooltip formatter={(value) => [formatNumber(Number(value)), ""]} />
+                    <Funnel
+                      dataKey="value"
+                      data={conversionFunnel}
+                      isAnimationActive
+                    >
+                      <LabelList position="center" fill="#fff" stroke="none" />
+                    </Funnel>
+                  </FunnelChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <h2 className="text-2xl font-bold">Advanced Analytics</h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Brand Performance Radar</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RadarChart data={brandMetrics.slice(0, 5).map(brand => ({
+                      brand: brand.brand,
+                      sales: brand.sales / 100000,
+                      clicks: brand.clicks / 1000,
+                      products: brand.products * 2,
+                      rating: brand.avgRating
+                    }))}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="brand" />
+                      <PolarRadiusAxis />
+                      <Radar name="Performance" dataKey="sales" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.6} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Real-time Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { action: "New order placed", time: "2 minutes ago", value: "$1,299" },
+                      { action: "Product viewed", time: "5 minutes ago", value: "iPhone 15 Pro" },
+                      { action: "Cart abandoned", time: "8 minutes ago", value: "$456" },
+                      { action: "New customer signup", time: "12 minutes ago", value: "Premium" },
+                      { action: "Review submitted", time: "15 minutes ago", value: "5 stars" }
+                    ].map((activity, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">{activity.action}</p>
+                          <p className="text-sm text-muted-foreground">{activity.time}</p>
+                        </div>
+                        <Badge variant="secondary">{activity.value}</Badge>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
-};
+}
 
 export default EcommerceDashboard;
