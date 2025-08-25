@@ -2350,6 +2350,20 @@ async getBeautyTopPicks() {
     .orderBy(desc(count(productEvents.id)));
 }
 
+async trackProductClick(productId: string, brandId: string, userId?: string) {
+    return db
+        .insert(productEvents)
+        .values({
+            productId,
+            brandId,
+            userId: userId ?? null,
+            event: "click",
+            createdAt: new Date(),
+        })
+        .returning()
+        .then((res) => res[0]);
+}
+
 // ✅ Get clicks per brand
 async getBrandClicks() {
   return db

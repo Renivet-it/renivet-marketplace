@@ -23,6 +23,7 @@ import {
     EmptyPlaceholderTitle,
 } from "../ui/empty-placeholder-general";
 import { Separator } from "../ui/separator";
+import { trackProductClick } from "@/actions/track-product";
 
 interface PageProps extends GenericProps {
     initialData: {
@@ -40,6 +41,17 @@ export function ShopProducts({
     userId,
     ...props
 }: PageProps) {
+
+        const handleProductClick = async (productId: string, brandId: string) => {
+        try {
+            // Track the click
+            await trackProductClick(productId, brandId);
+            // You can also navigate to product page or perform other actions
+            // window.location.href = `/product/${productId}`;
+        } catch (error) {
+            console.error("Failed to track click:", error);
+        }
+    };
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(30));
     const [search] = useQueryState("search", { defaultValue: "" });
@@ -120,12 +132,18 @@ export function ShopProducts({
                             ) ?? false;
 
                         return (
+                            <div
+                    key={product.id}
+                    onClick={() => handleProductClick(product.id, product.brandId)}
+                    className="cursor-pointer"
+                >
                             <ProductCard
                                 key={product.id}
                                 product={product}
                                 isWishlisted={isWishlisted}
                                 userId={userId}
                             />
+                            </div>
                         );
                     })
                 ) : (
