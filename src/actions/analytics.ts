@@ -38,3 +38,46 @@ export async function getTopProducts(limit: number = 5, dateRange: string = "30d
     throw new Error("Failed to fetch top products");
   }
 }
+
+
+export async function getTopProductsbySales(limit: number = 5, dateRange: string = "30d") {
+  try {
+    return await productQueries.getTopProductsbySales(limit, dateRange);
+  } catch (error) {
+    console.error("Error fetching top products:", error);
+    throw new Error("Failed to fetch top products");
+  }
+}
+
+export async function getProductsByCategory(dateRange: string = "30d") {
+  try {
+    return await productQueries.getProductsByCategory(dateRange);
+  } catch (error) {
+    console.error("Error fetching top products:", error);
+    throw new Error("Failed to fetch top products");
+  }
+}
+
+
+
+// ✅ Get Products for Conversion Chart
+export async function getProductsForConversion(limit: number = 10, dateRange: string = "30d") {
+  try {
+    return await productQueries.getProductsForConversion(limit, dateRange);
+  } catch (error) {
+    console.error("Error fetching products for conversion:", error);
+    throw new Error("Failed to fetch conversion data");
+  }
+}
+
+// ✅ Get Products for Funnel Analysis
+export async function getProductsForFunnel(limit: number = 15, dateRange: string = "30d") {
+  try {
+    return await productQueries.getProductsForFunnel(limit, dateRange);
+  } catch (error) {
+    console.error("Error fetching products for funnel:", error);
+    throw new Error("Failed to fetch funnel data");
+  }
+}
+
+

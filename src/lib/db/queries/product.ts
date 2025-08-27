@@ -35,7 +35,8 @@ import {
     homeNewArrivals,
     productEvents,
     orders,
-    orderItems
+    orderItems,
+    categories
 
 } from "../schema";
 import { categoryQueries } from "./category";
@@ -2552,6 +2553,47 @@ async getTopProducts(limit: number = 5, dateRange: string = "30d") {
         .limit(limit);
 }
 
+async getTopProductsbySales(limit: number = 10, dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  return db
+    .select({
+      id: products.id,
+      name: products.title,
+      brand: brands.name,
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      inventory: products.quantity,
+      price: products.price
+    })
+    .from(products)
+    .innerJoin(brands, eq(products.brandId, brands.id))
+    .innerJoin(orderItems, eq(orderItems.productId, products.id))
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(orders.createdAt, startDate))
+    .groupBy(products.id, products.title, brands.name, products.quantity, products.price)
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+    .limit(limit);
+}
+
+
+async getProductsByCategory(dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  return db
+    .select({
+      category: categories.name, // Get category name instead of ID
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      productsCount: sql`COUNT(DISTINCT ${products.id})`.as("products_count")
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id)) // Join with categories table
+    .innerJoin(orderItems, eq(orderItems.productId, products.id))
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(orders.createdAt, startDate))
+    .groupBy(categories.name) // Group by category name instead of ID
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)));
+}
+
     // ✅ Get Total Clicks (your existing method)
     async getProductClicks() {
         return db
@@ -2576,6 +2618,105 @@ async getTopProducts(limit: number = 5, dateRange: string = "30d") {
             .where(eq(productEvents.event, "click"))
             .groupBy(productEvents.brandId);
     }
+
+async getProductsForConversion(limit: number = 10, dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  const conversionData = await db
+    .select({
+      id: products.id,
+      name: products.title,
+      brand: brands.name,
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      price: products.price,
+      // Count of purchase events
+      purchases: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'purchase' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("purchases"),
+      // Count of click/view events
+      clicks: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} IN ('click', 'view') 
+          THEN ${productEvents.id} 
+        END)
+      `.as("clicks")
+    })
+    .from(products)
+    .innerJoin(brands, eq(products.brandId, brands.id))
+    .innerJoin(productEvents, eq(productEvents.productId, products.id))
+    .leftJoin(orderItems, eq(orderItems.productId, products.id))
+    .leftJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(productEvents.createdAt, startDate))
+    .groupBy(products.id, products.title, brands.name, products.price)
+    .having(sql`COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END) > 0`)
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+    .limit(limit);
+
+  return conversionData.map((product) => ({
+    ...product,
+    sales: Number(product.sales),
+    price: Number(product.price),
+    purchases: Number(product.purchases),
+    clicks: Number(product.clicks),
+    conversionRate: product.clicks > 0 ? (product.purchases / product.clicks) * 100 : 0
+  }));
+}
+
+
+async getProductsForFunnel(limit: number = 15, dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  const funnelData = await db
+    .select({
+      id: products.id,
+      name: products.title,
+      brand: brands.name,
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      price: products.price,
+      // Count of each event type
+      clicks: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} IN ('click', 'view') 
+          THEN ${productEvents.id} 
+        END)
+      `.as("clicks"),
+      addToCart: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'add_to_cart' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("add_to_cart"),
+      purchases: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'purchase' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("purchases")
+    })
+    .from(products)
+    .innerJoin(brands, eq(products.brandId, brands.id))
+    .innerJoin(productEvents, eq(productEvents.productId, products.id))
+    .leftJoin(orderItems, eq(orderItems.productId, products.id))
+    .leftJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(productEvents.createdAt, startDate))
+    .groupBy(products.id, products.title, brands.name, products.price)
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+    .limit(limit);
+
+  return funnelData.map((product) => ({
+    ...product,
+    sales: Number(product.sales),
+    price: Number(product.price),
+    clicks: Number(product.clicks),
+    addToCart: Number(product.addToCart),
+    purchases: Number(product.purchases),
+    ctcRate: product.clicks > 0 ? (product.addToCart / product.clicks) * 100 : 0,
+    ctpRate: product.addToCart > 0 ? (product.purchases / product.addToCart) * 100 : 0
+  }));
+}
 
     // ✅ Helper: Get Start Date based on range
     private getStartDate(dateRange: string): Date {

@@ -708,7 +708,8 @@ import {
   ArrowUp, ArrowDown, TrendingUp, ShoppingCart, Eye, DollarSign, Calendar,
   Users, Target, Globe, Zap, Filter, Download, RefreshCw, Moon, Sun,
   BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
-  Settings, Bell, Search, ChevronDown, Activity, Percent, MapPin
+  Settings, Bell, Search, ChevronDown, Activity, Percent, MapPin,
+  ArrowDownUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button-general";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -718,7 +719,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { getOverviewMetrics, getRevenueTrend, getBrandPerformance, getTopProducts } from "@/actions/analytics";
+import { getOverviewMetrics, getRevenueTrend, getBrandPerformance, getTopProducts, getTopProductsbySales, getProductsByCategory,getProductsForFunnel, getProductsForConversion} from "@/actions/analytics";
 
 // Remove the static data generation functions since we'll use real data
 const generateProducts = () => [
@@ -768,6 +769,96 @@ const generateTrafficSources = () => [
   { source: "Direct", visitors: 15670, conversions: 1890, rate: 12.06, color: "#f59e0b" },
   { source: "Email", visitors: 8950, conversions: 1567, rate: 17.51, color: "#ef4444" }
 ];
+const ProductFunnelTable = ({ products, formatCurrency, formatNumber }) => {
+  const [sortConfig, setSortConfig] = useState({ key: "purchases", direction: "desc" });
+
+  const sortedProducts = useMemo(() => {
+    // Use the real funnel data that already has clicks, addToCart, purchases, etc.
+    const funnelData = products.map(p => ({
+      ...p,
+      // These should already be calculated in the API response
+      ctcRate: p.clicks > 0 ? (p.addToCart / p.clicks) * 100 : 0,
+      ctpRate: p.addToCart > 0 ? (p.purchases / p.addToCart) * 100 : 0,
+    }));
+
+    funnelData.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === "asc" ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return funnelData.slice(0, 15);
+  }, [products, sortConfig]);
+  // Function to handle sorting when a column header is clicked
+  const requestSort = (key) => {
+    let direction = "desc";
+    if (sortConfig.key === key && sortConfig.direction === "desc") {
+      direction = "asc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowDownUp className="h-4 w-4 inline-block ml-1 opacity-20" />;
+    if (sortConfig.direction === 'desc') return <ArrowDown className="h-4 w-4 inline-block ml-1" />;
+    return <ArrowUp className="h-4 w-4 inline-block ml-1" />;
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b">
+            <th className="text-left p-2 cursor-pointer" onClick={() => requestSort('name')}>
+              Product {getSortIcon('name')}
+            </th>
+            <th className="text-right p-2 cursor-pointer" onClick={() => requestSort('clicks')}>
+              Clicks {getSortIcon('clicks')}
+            </th>
+            <th className="text-right p-2 cursor-pointer" onClick={() => requestSort('addToCart')}>
+              Adds to Cart {getSortIcon('addToCart')}
+            </th>
+            <th className="text-right p-2 cursor-pointer" onClick={() => requestSort('purchases')}>
+              Purchases {getSortIcon('purchases')}
+            </th>
+            <th className="text-left p-2 cursor-pointer" onClick={() => requestSort('ctcRate')}>
+              Click → Cart % {getSortIcon('ctcRate')}
+            </th>
+            <th className="text-left p-2 cursor-pointer" onClick={() => requestSort('ctpRate')}>
+              Cart → Purchase % {getSortIcon('ctpRate')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedProducts.map((product) => (
+            <tr key={product.id} className="border-b hover:bg-muted/50">
+              <td className="p-2 font-medium">{product.name}</td>
+              <td className="text-right p-2">{formatNumber(product.clicks)}</td>
+              <td className="text-right p-2">{formatNumber(product.addToCart)}</td>
+              <td className="text-right p-2 font-bold">{formatNumber(product.purchases)}</td>
+              <td className="p-2">
+                <div className="flex items-center">
+                  <span className="w-12">{product.ctcRate.toFixed(1)}%</span>
+                  <Progress value={product.ctcRate} className="w-24" />
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="flex items-center">
+                  <span className="w-12">{product.ctpRate.toFixed(1)}%</span>
+                  <Progress value={product.ctpRate} className="w-24" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 const generateConversionFunnel = () => [
   { stage: "Visitors", value: 125000, color: "#8b5cf6" },
@@ -793,6 +884,11 @@ function EcommerceDashboard() {
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [brandData, setBrandData] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
+  // In your component state
+const [productsByCategory, setProductsByCategory] = useState<any[]>([]);
+const [productTopBySales, setTopProductsBySales] = useState<any[]>([]);
+const [productsForConversion, setProductsForConversion] = useState<any[]>([]);
+const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const products = useMemo(() => generateProducts(), []);
 
@@ -800,11 +896,16 @@ function EcommerceDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [overview, revenue, brands, products] = await Promise.all([
+      const [overview, revenue, brands, products, topProductsBySales, categoryData, conversionData, funnelData] = await Promise.all([
         getOverviewMetrics(dateRange),
         getRevenueTrend(dateRange),
         getBrandPerformance(dateRange),
-        getTopProducts(5, dateRange)
+        getTopProducts(5, dateRange),
+        getTopProductsbySales(10, dateRange),
+        getProductsByCategory(dateRange),
+        getProductsForConversion(10, dateRange),
+        getProductsForFunnel(15, dateRange),
+
       ]);
   const transformedData = brands.map((item: any) => ({
           ...item,
@@ -814,6 +915,10 @@ function EcommerceDashboard() {
       setOverviewData(overview);
       setRevenueData(revenue);
       setTopProducts(products);
+      setProductsByCategory(categoryData);
+      setProductsForConversion(conversionData);
+      setProductsForFunnel(funnelData);
+      setTopProductsBySales(topProductsBySales);
       console.log(revenue, "revenue");
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -830,7 +935,6 @@ function EcommerceDashboard() {
   // Real-time data simulation
   useEffect(() => {
     if (!isRealTime) return;
-    
     const interval = setInterval(() => {
       setRefreshing(true);
       fetchData().then(() => setRefreshing(false));
@@ -1184,21 +1288,21 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
 <TabsContent value="products" className="space-y-6">
   <div className="flex items-center justify-between">
     <h2 className="text-2xl font-bold">Product Analytics</h2>
-    <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-      <SelectTrigger className="w-48">
-        <SelectValue placeholder="Filter by brand" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All Brands</SelectItem>
-        {Array.from(new Set(products.map(p => p.brand))).map(brand => (
-          <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+<Select value={selectedBrand} onValueChange={setSelectedBrand}>
+  <SelectTrigger className="w-48">
+    <SelectValue placeholder="Filter by brand" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">All Brands</SelectItem>
+    {Array.from(new Set(productTopBySales.map(p => p.brand))).map((brand) => (
+      <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+    ))}
+  </SelectContent>
+</Select>
   </div>
 
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    {/* Chart 1: Top 10 Products by Sales */}
+    {/* Chart 1: Top 10 Products by Sales (Kept as requested) */}
     <Card>
       <CardHeader>
         <CardTitle>Top 10 Products by Sales</CardTitle>
@@ -1208,7 +1312,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
         <ResponsiveContainer width="100%" height={400}>
           <BarChart
             layout="vertical"
-            data={products.sort((a, b) => b.sales - a.sales).slice(0, 10).reverse()}
+            data={productTopBySales.sort((a, b) => b.sales - a.sales).slice(0, 10).reverse()}
             margin={{ top: 5, right: 20, left: 100, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
@@ -1216,119 +1320,105 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
             <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
             <Tooltip
               formatter={(value) => [formatCurrency(Number(value)), "Sales"]}
-              labelStyle={{ color: 'black' }}
+              labelStyle={{ color: "black" }}
             />
-            <Legend />
             <Bar dataKey="sales" fill="#8b5cf6" name="Total Sales" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
 
-    {/* Chart 2: Inventory vs. Sales */}
-    <Card>
-      <CardHeader>
-        <CardTitle>Inventory vs. Sales Analysis</CardTitle>
-        <CardDescription>Identify overstocked or fast-moving products.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
-          <ScatterChart>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="inventory" type="number" name="Inventory" unit=" units" />
-            <YAxis dataKey="sales" type="number" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
-            <Tooltip
-              cursor={{ strokeDasharray: '3 3' }}
-              formatter={(value, name, props) => {
-                const { payload } = props;
-                return (
-                  <div style={{ background: 'white', padding: '10px', border: '1px solid #ccc' }}>
-                    <p><strong>{payload.name}</strong></p>
-                    <p>Sales: {formatCurrency(payload.sales)}</p>
-                    <p>Inventory: {formatNumber(payload.inventory)} units</p>
-                  </div>
-                );
-              }}
-            />
-            <Scatter name="Products" data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)} fill="#06b6d4" />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    {/* Chart 2: Sales Distribution by Category (Kept as requested) */}
+  <Card>
+  <CardHeader>
+    <CardTitle>Sales Distribution by Category</CardTitle>
+    <CardDescription>Which product categories are most popular?</CardDescription>
+  </CardHeader>
+  <CardContent>
+    {productsByCategory.length > 0 ? (
+      <ResponsiveContainer width="100%" height={400}>
+        <PieChart>
+          <Pie
+            data={productsByCategory}
+            cx="50%"
+            cy="50%"
+            outerRadius={120}
+            innerRadius={60}
+            dataKey="sales"
+            label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
+          >
+            {productsByCategory.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={`hsl(${index * 60}, 70%, 60%)`} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        No category data available
+      </div>
+    )}
+  </CardContent>
+</Card>
 
-    {/* Chart 3: Sales Distribution by Category */}
-    <Card>
-      <CardHeader>
-        <CardTitle>Sales Distribution by Category</CardTitle>
-        <CardDescription>Which product categories are most popular?</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
-          <PieChart>
-            <Pie
-              data={
-                Object.entries(
-                  products.reduce((acc, p) => {
-                    acc[p.category] = (acc[p.category] || 0) + p.sales;
-                    return acc;
-                  }, {})
-                ).map(([name, value]) => ({ name, value }))
-              }
-              cx="50%"
-              cy="50%"
-              outerRadius={120}
-              innerRadius={60}
-              dataKey="value"
-              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-            >
-              {
-                Object.entries(
-                  products.reduce((acc, p) => {
-                    acc[p.category] = (acc[p.category] || 0) + p.sales;
-                    return acc;
-                  }, {})
-                ).map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={`hsl(${index * 60}, 70%, 60%)`} />
-                ))
-              }
-            </Pie>
-            <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-
-    {/* Chart 4: Product Performance Quadrant (Clicks vs. Sales) */}
-    <Card>
-      <CardHeader>
-        <CardTitle>Product Performance Quadrant</CardTitle>
-        <CardDescription>Clicks vs. Sales to identify stars and opportunities.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={400}>
-          <ScatterChart>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="clicks" type="number" name="Clicks" tickFormatter={(value) => `${(value / 1000)}k`} />
-            <YAxis dataKey="sales" type="number" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
-            <Tooltip
-              cursor={{ strokeDasharray: '3 3' }}
-              formatter={(value, name, props) => {
-                const { payload } = props;
-                return (
-                  <div style={{ background: 'white', padding: '10px', border: '1px solid #ccc' }}>
-                    <p><strong>{payload.name}</strong></p>
-                    <p>Clicks: {formatNumber(payload.clicks)}</p>
-                    <p>Sales: {formatCurrency(payload.sales)}</p>
-                  </div>
-                );
-              }}
-            />
-            <Scatter name="Products" data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)} fill="#10b981" />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    {/* Chart 3: Top Products by Click-to-Sale Rate */}
+<Card>
+  <CardHeader>
+    <CardTitle>Top Products by Conversion Rate</CardTitle>
+    <CardDescription>Which products are most effective at converting clicks to sales?</CardDescription>
+  </CardHeader>
+  <CardContent>
+    {productsForConversion.length > 0 ? (
+      <ResponsiveContainer width="100%" height={400}>
+        <BarChart
+          data={productsForConversion
+            .map((p) => ({
+              name: p.name, // Use the actual name from the data
+              conversionRate: p.conversionRate || 0, // Use the calculated conversion rate
+            }))
+            .sort((a, b) => b.conversionRate - a.conversionRate)
+            .slice(0, 10)
+          }
+          margin={{ top: 5, right: 20, left: 20, bottom: 120 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" angle={-60} textAnchor="end" interval={0} tick={{ fontSize: 12 }} />
+          <YAxis tickFormatter={(value) => `${value.toFixed(1)}%`} />
+          <Tooltip
+            formatter={(value) => [`${Number(value).toFixed(2)}%`, "Conversion Rate"]}
+          />
+          <Bar dataKey="conversionRate" name="Conversion Rate" fill="#ef4444" />
+        </BarChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        No conversion data available
+      </div>
+    )}
+  </CardContent>
+</Card>
+    {/* Chart 4: Product Conversion Funnel (Clicks -> Add to Cart -> Purchase) */}
+<Card>
+  <CardHeader>
+    <CardTitle>Product Conversion Funnel Analysis</CardTitle>
+    <CardDescription>From click to purchase for top products. Click headers to sort.</CardDescription>
+  </CardHeader>
+  <CardContent>
+    {productsForFunnel.length > 0 ? (
+      <ProductFunnelTable
+        products={productsForFunnel} 
+        formatCurrency={formatCurrency} 
+        formatNumber={formatNumber} 
+      />
+    ) : (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        No funnel data available
+      </div>
+    )}
+  </CardContent>
+</Card>
   </div>
 </TabsContent>
 
