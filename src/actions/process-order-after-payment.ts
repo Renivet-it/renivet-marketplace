@@ -2,6 +2,7 @@
 "use server";
 
 import { orderQueries, productQueries } from "@/lib/db/queries";
+import { auth } from "@clerk/nextjs/server";
 
 export async function processOrderAfterPayment({
     orderDetails,
@@ -24,13 +25,20 @@ export async function processOrderAfterPayment({
     orderIntentId: string;
 }) {
     try {
+        const { userId } = await auth();
 
         // Update payment status in intent
         await orderQueries.updatePaymentStatus(orderIntentId, "paid", {
             paymentId: paymentId,
             paymentMethod: "razorpay", // Fixed typo from "razerpay"
         });
-
+for (const item of orderDetails.items) {
+    await productQueries.trackPurchase(
+        item.productId,
+        item.brandId,
+        userId ?? undefined // Make sure you pass the actual userId from order
+    );
+}
         // Logic 2: Mark as paid
         console.log(`Updating order status to paid for order ${orderDetails.razorpayOrderId}`);
         try {

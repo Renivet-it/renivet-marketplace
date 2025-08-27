@@ -2365,7 +2365,33 @@ async trackProductClick(productId: string, brandId: string, userId?: string) {
         .returning()
         .then((res) => res[0]);
 }
+async trackAddToCart(productId: string, brandId: string, userId?: string) {
+    return db
+        .insert(productEvents)
+        .values({
+            productId,
+            brandId,
+            userId: userId ?? null,
+            event: "add_to_cart",
+            createdAt: new Date(),
+        })
+        .returning()
+        .then((res) => res[0]);
+}
 
+async trackPurchase(productId: string, brandId: string, userId?: string) {
+    return db
+        .insert(productEvents)
+        .values({
+            productId,
+            brandId,
+            userId: userId ?? null,
+            event: "purchase",
+            createdAt: new Date(),
+        })
+        .returning()
+        .then((res) => res[0]);
+}
 
 // ✅ Get clicks per brand
 // async getBrandClicks() {

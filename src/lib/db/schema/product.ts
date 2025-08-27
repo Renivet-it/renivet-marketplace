@@ -121,7 +121,7 @@ export const productEvents = pgTable(
             .notNull()
             .references(() => brands.id, { onDelete: "cascade" }),
         userId: text("user_id"),
-        event: text("event", { enum: ["click", "view"] }).notNull(), // we track clicks; 'view' optional
+        event: text("event", { enum: ["click", "view", "purchase", "add_to_cart"] }).notNull(),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
     (t) => ({

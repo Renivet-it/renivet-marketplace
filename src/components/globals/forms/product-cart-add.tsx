@@ -29,6 +29,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { WishlistButton } from "../buttons";
 import { Spinner } from "@/components/ui/spinner";
+import { trackAddToCart } from "@/actions/track-product";
 
 interface PageProps {
     initialCart?: CachedCart[];
@@ -44,6 +45,16 @@ export function ProductCartAddForm({
     userId,
 }: PageProps) {
     // const router = useRouter();
+     const handleAddProductCart = async (productId: string, brandId: string) => {
+            try {
+                // Track the click
+                await trackAddToCart(productId, brandId);
+                // You can also navigate to product page or perform other actions
+                // window.location.href = `/product/${productId}`;
+            } catch (error) {
+                console.error("Failed to track click:", error);
+            }
+        };
     const [isProductWishlisted, setIsProductWishlisted] =
         useState(isWishlisted);
     const [selectedSku, setSelectedSku] = useQueryState("sku", {
@@ -454,6 +465,7 @@ export function ProductCartAddForm({
                                           e.preventDefault(); // Prevent form submission
                                           redirect("/mycart");
                                       }
+                                      handleAddProductCart(product.id, product.brandId);
                                       // Default form submission handles addToCart
                                   }}
                             >

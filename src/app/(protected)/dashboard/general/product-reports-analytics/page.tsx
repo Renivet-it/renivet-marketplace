@@ -1181,71 +1181,156 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
           </TabsContent>
 
           {/* Other tabs remain similar but would need similar data integration */}
-   <TabsContent value="products" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Product Analytics</h2>
-              <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Brands</SelectItem>
-                  {Array.from(new Set(products.map(p => p.brand))).map(brand => (
-                    <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+<TabsContent value="products" className="space-y-6">
+  <div className="flex items-center justify-between">
+    <h2 className="text-2xl font-bold">Product Analytics</h2>
+    <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+      <SelectTrigger className="w-48">
+        <SelectValue placeholder="Filter by brand" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All Brands</SelectItem>
+        {Array.from(new Set(products.map(p => p.brand))).map(brand => (
+          <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Product Clicks vs Sales</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <ScatterChart data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="clicks" name="Clicks" />
-                      <YAxis dataKey="sales" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
-                      <Tooltip
-                        formatter={(value, name) => {
-                          if (name === "Sales") return [formatCurrency(Number(value)), name];
-                          return [formatNumber(Number(value)), name];
-                        }}
-                        labelFormatter={() => ""}
-                      />
-                      <Scatter dataKey="sales" fill="#8b5cf6" />
-                    </ScatterChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {/* Chart 1: Top 10 Products by Sales */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Top 10 Products by Sales</CardTitle>
+        <CardDescription>Highest revenue-generating products.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart
+            layout="vertical"
+            data={products.sort((a, b) => b.sales - a.sales).slice(0, 10).reverse()}
+            margin={{ top: 5, right: 20, left: 100, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" tickFormatter={(value) => `$${(value / 1000)}k`} />
+            <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
+            <Tooltip
+              formatter={(value) => [formatCurrency(Number(value)), "Sales"]}
+              labelStyle={{ color: 'black' }}
+            />
+            <Legend />
+            <Bar dataKey="sales" fill="#8b5cf6" name="Total Sales" />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Category Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={
-                      Object.entries(
-                        products.reduce((acc, p) => {
-                          acc[p.category] = (acc[p.category] || 0) + p.sales;
-                          return acc;
-                        }, {})
-                      ).map(([category, sales]) => ({ category, sales }))
-                    }>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="category" />
-                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
-                      <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
-                      <Bar dataKey="sales" fill="#06b6d4" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
+    {/* Chart 2: Inventory vs. Sales */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Inventory vs. Sales Analysis</CardTitle>
+        <CardDescription>Identify overstocked or fast-moving products.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={400}>
+          <ScatterChart>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="inventory" type="number" name="Inventory" unit=" units" />
+            <YAxis dataKey="sales" type="number" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
+            <Tooltip
+              cursor={{ strokeDasharray: '3 3' }}
+              formatter={(value, name, props) => {
+                const { payload } = props;
+                return (
+                  <div style={{ background: 'white', padding: '10px', border: '1px solid #ccc' }}>
+                    <p><strong>{payload.name}</strong></p>
+                    <p>Sales: {formatCurrency(payload.sales)}</p>
+                    <p>Inventory: {formatNumber(payload.inventory)} units</p>
+                  </div>
+                );
+              }}
+            />
+            <Scatter name="Products" data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)} fill="#06b6d4" />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+
+    {/* Chart 3: Sales Distribution by Category */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Sales Distribution by Category</CardTitle>
+        <CardDescription>Which product categories are most popular?</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={400}>
+          <PieChart>
+            <Pie
+              data={
+                Object.entries(
+                  products.reduce((acc, p) => {
+                    acc[p.category] = (acc[p.category] || 0) + p.sales;
+                    return acc;
+                  }, {})
+                ).map(([name, value]) => ({ name, value }))
+              }
+              cx="50%"
+              cy="50%"
+              outerRadius={120}
+              innerRadius={60}
+              dataKey="value"
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            >
+              {
+                Object.entries(
+                  products.reduce((acc, p) => {
+                    acc[p.category] = (acc[p.category] || 0) + p.sales;
+                    return acc;
+                  }, {})
+                ).map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={`hsl(${index * 60}, 70%, 60%)`} />
+                ))
+              }
+            </Pie>
+            <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+
+    {/* Chart 4: Product Performance Quadrant (Clicks vs. Sales) */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Product Performance Quadrant</CardTitle>
+        <CardDescription>Clicks vs. Sales to identify stars and opportunities.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={400}>
+          <ScatterChart>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="clicks" type="number" name="Clicks" tickFormatter={(value) => `${(value / 1000)}k`} />
+            <YAxis dataKey="sales" type="number" name="Sales" tickFormatter={(value) => `$${(value / 1000)}k`} />
+            <Tooltip
+              cursor={{ strokeDasharray: '3 3' }}
+              formatter={(value, name, props) => {
+                const { payload } = props;
+                return (
+                  <div style={{ background: 'white', padding: '10px', border: '1px solid #ccc' }}>
+                    <p><strong>{payload.name}</strong></p>
+                    <p>Clicks: {formatNumber(payload.clicks)}</p>
+                    <p>Sales: {formatCurrency(payload.sales)}</p>
+                  </div>
+                );
+              }}
+            />
+            <Scatter name="Products" data={products.filter(p => selectedBrand === "all" || p.brand === selectedBrand)} fill="#10b981" />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  </div>
+</TabsContent>
 
           {/* Other tabs... */}
   <TabsContent value="customers" className="space-y-6">

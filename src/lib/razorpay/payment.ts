@@ -138,14 +138,6 @@ export function createRazorpayPaymentOptions({
                 await verifyPayment(payload);
                 console.log("Payment verified successfully");
 
-//                 console.log("Updating payment status to 'paid'...");
-// await updatePaymentStatusAction({
-//                     userId: user.id,
-//                     intentId: orderIntentId,
-//                     status: "paid",
-//                     paymentId: payload.razorpay_payment_id,
-//                     paymentMethod: "razorpay",
-//                 });
                 console.log(orderIntentId, "Updating payment status to 'paid'...");
 
 // Step 2: Validate order details
