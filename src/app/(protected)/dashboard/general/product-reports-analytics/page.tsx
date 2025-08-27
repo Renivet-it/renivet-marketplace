@@ -802,15 +802,19 @@ function EcommerceDashboard() {
     try {
       const [overview, revenue, brands, products] = await Promise.all([
         getOverviewMetrics(dateRange),
-        getRevenueTrend(7),
+        getRevenueTrend(dateRange),
         getBrandPerformance(dateRange),
         getTopProducts(5, dateRange)
       ]);
-
+  const transformedData = brands.map((item: any) => ({
+          ...item,
+          sales: Number(item.sales), // Convert to number
+        }));
+        setBrandData(transformedData);
       setOverviewData(overview);
       setRevenueData(revenue);
-      setBrandData(brands);
       setTopProducts(products);
+      console.log(revenue, "revenue");
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -877,6 +881,7 @@ function EcommerceDashboard() {
   const formatNumber = (value) => {
     return new Intl.NumberFormat("en-US").format(value);
   };
+const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((key) => key !== "date") : [];
 
   const MetricCard = ({ title, value, icon: Icon, trend, color, subtitle }: any) => (
     <motion.div
@@ -936,7 +941,7 @@ function EcommerceDashboard() {
                 {isRealTime ? "Live" : "Static"}
               </Badge>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Search className="w-4 h-4 text-muted-foreground" />
@@ -1059,31 +1064,47 @@ function EcommerceDashboard() {
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Revenue Trend */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revenue Trend (7 Days)</CardTitle>
-                  <CardDescription>Daily revenue by brand</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={revenueData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(value) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      />
-                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
-                      <Tooltip
-                        formatter={(value: number, name: string) => [formatCurrency(Number(value)), name]}
-                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                      />
-                      <Area type="monotone" dataKey="Apple" stackId="1" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.6} />
-                      <Area type="monotone" dataKey="Samsung" stackId="1" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.6} />
-                      <Area type="monotone" dataKey="Dell" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+<Card>
+  <CardHeader>
+    <CardTitle>Revenue Trend</CardTitle>
+    <CardDescription>Daily revenue by brand</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <ResponsiveContainer width="100%" height={300}>
+      <AreaChart data={revenueData}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis
+          dataKey="date"
+          tickFormatter={(value) =>
+            new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+          }
+        />
+        <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(1)}k`} />
+        <Tooltip
+          formatter={(value: number, name: string) => [formatCurrency(Number(value)), name]}
+          labelFormatter={(label) => new Date(label).toLocaleDateString()}
+        />
+
+        {/* ✅ Dynamic Area components */}
+        {brandKeys.map((brand, index) => {
+          const colors = ["#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"]; // Extend as needed
+          const color = colors[index % colors.length];
+          return (
+            <Area
+              key={brand}
+              type="monotone"
+              dataKey={brand}
+              stackId="1"
+              stroke={color}
+              fill={color}
+              fillOpacity={0.6}
+            />
+          );
+        })}
+      </AreaChart>
+    </ResponsiveContainer>
+  </CardContent>
+</Card>
 
               {/* Brand Performance */}
               <Card>
@@ -1118,7 +1139,7 @@ function EcommerceDashboard() {
             {/* Performance Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Top Performing Products</CardTitle>
+                <CardTitle>Top 5 Performing Products</CardTitle>
                 <CardDescription>Best selling products this period</CardDescription>
               </CardHeader>
               <CardContent>
@@ -1129,8 +1150,8 @@ function EcommerceDashboard() {
                         <th className="text-left p-2">Product</th>
                         <th className="text-left p-2">Brand</th>
                         <th className="text-left p-2">Sales</th>
-                        <th className="text-left p-2">Rating</th>
-                        <th className="text-left p-2">Stock</th>
+                        {/* <th className="text-left p-2">Rating</th>
+                        <th className="text-left p-2">Stock</th> */}
                       </tr>
                     </thead>
                     <tbody>
@@ -1141,7 +1162,7 @@ function EcommerceDashboard() {
                             <Badge variant="outline">{product.brand}</Badge>
                           </td>
                           <td className="p-2">{formatCurrency(product.sales)}</td>
-                          <td className="p-2">
+                          {/* <td className="p-2">
                             <div className="flex items-center">
                               <span className="mr-1">⭐</span>
                               {product.rating || "N/A"}
@@ -1149,7 +1170,7 @@ function EcommerceDashboard() {
                           </td>
                           <td className="p-2">
                             <Progress value={(product.inventory / 500) * 100} className="w-20" />
-                          </td>
+                          </td> */}
                         </tr>
                       ))}
                     </tbody>

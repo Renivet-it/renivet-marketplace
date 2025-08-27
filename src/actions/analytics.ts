@@ -12,9 +12,9 @@ export async function getOverviewMetrics(dateRange: string = "30d") {
   }
 }
 
-export async function getRevenueTrend(days: number = 7) {
+export async function getRevenueTrend(dateRange: string = "30d") {
   try {
-    return await productQueries.getRevenueTrend(days);
+    return await productQueries.getRevenueTrend(dateRange);
   } catch (error) {
     console.error("Error fetching revenue trend:", error);
     throw new Error("Failed to fetch revenue trend");

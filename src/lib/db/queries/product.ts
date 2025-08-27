@@ -2392,50 +2392,50 @@ async trackProductClick(productId: string, brandId: string, userId?: string) {
 
 
       async getOverviewMetrics(dateRange: string = "30d") {
-        const startDate = this.getStartDate(dateRange);
-        const [totalRevenue, totalSales, totalCustomers, conversionData] = await Promise.all([
-            // Total Revenue
-            db
-                .select({ total: sum(orders.totalAmount) })
-                .from(orders)
-                .where(gte(orders.createdAt, startDate))
-                .then((res) => Number(res[0]?.total || 0)),
+         const startDate = this.getStartDate(dateRange);
+    const [totalRevenue, totalSales, totalCustomers, conversionData] = await Promise.all([
+        // Total Revenue (convert from paise to rupees)
+        db
+            .select({ total: sum(orders.totalAmount) })
+            .from(orders)
+            .where(gte(orders.createdAt, startDate))
+            .then((res) => Number(res[0]?.total || 0) / 100), // Convert paise to rupees
 
-            // Total Sales (product sales value)
-            db
-                .select({ total: sum(orders.totalAmount) })
-                .from(orders)
-                .where(gte(orders.createdAt, startDate))
-                .then((res) => Number(res[0]?.total || 0)),
+        // Total Sales (product sales value, convert from paise to rupees)
+        db
+            .select({ total: sum(orders.totalAmount) })
+            .from(orders)
+            .where(gte(orders.createdAt, startDate))
+            .then((res) => Number(res[0]?.total || 0) / 100), // Convert paise to rupees
 
-            // Total Customers
+        // Total Customers
+        db
+            .select({ count: count() })
+            .from(orders)
+            .where(gte(orders.createdAt, startDate))
+            .then((res) => res[0]?.count || 0),
+
+        // Conversion Data (clicks and purchases)
+        Promise.all([
+            db
+                .select({ count: count() })
+                .from(productEvents)
+                .where(and(
+                    eq(productEvents.event, "click"),
+                    gte(productEvents.createdAt, startDate)
+                ))
+                .then((res) => res[0]?.count || 0),
             db
                 .select({ count: count() })
                 .from(orders)
                 .where(gte(orders.createdAt, startDate))
-                .then((res) => res[0]?.count || 0),
+                .then((res) => res[0]?.count || 0)
+        ])
+    ]);
 
-            // Conversion Data (clicks and purchases)
-            Promise.all([
-                db
-                    .select({ count: count() })
-                    .from(productEvents)
-                    .where(and(
-                        eq(productEvents.event, "click"),
-                        gte(productEvents.createdAt, startDate)
-                    ))
-                    .then((res) => res[0]?.count || 0),
-                db
-                    .select({ count: count() })
-                    .from(orders)
-                    .where(gte(orders.createdAt, startDate))
-                    .then((res) => res[0]?.count || 0)
-            ])
-        ]);
-
-        const [totalClicks, totalPurchases] = conversionData;
-        const conversionRate = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
-        console.log("Conversion Rate:", conversionRate);
+    const [totalClicks, totalPurchases] = conversionData;
+    const conversionRate = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
+    console.log("Conversion Rate:", conversionRate);
         // Get growth data (you might want to store historical data)
         // const previousData = await this.getPreviousPeriodData(startDate, dateRange);
 
@@ -2454,25 +2454,27 @@ async trackProductClick(productId: string, brandId: string, userId?: string) {
     }
 
     // ✅ Get Revenue Trend Data
-async getRevenueTrend(days: number = 7) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+async getRevenueTrend(dateRange: string = "7d") {
+    const startDate = this.getStartDate(dateRange);
 
     const revenueData = await db
         .select({
             date: sql<string>`DATE(${orders.createdAt})`,
             brand: brands.name,
-            revenue: sum(orders.totalAmount)
+            revenue: sum(sql`${orders.totalAmount} / 100`)
         })
         .from(orders)
-        .innerJoin(orderItems, eq(orders.id, orderItems.orderId)) // Join through order_items
-        .innerJoin(products, eq(orderItems.productId, products.id)) // Join products via order_items
-        .innerJoin(brands, eq(products.brandId, brands.id))
+        .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(brands, eq(products.brandId, brands.id))
         .where(gte(orders.createdAt, startDate))
         .groupBy(sql`DATE(${orders.createdAt})`, brands.name)
         .orderBy(sql`DATE(${orders.createdAt})`);
 
-    return this.formatRevenueData(revenueData, days);
+    console.log("Raw SQL data:", revenueData);
+    const formattedData = this.formatRevenueData(revenueData, dateRange);
+    console.log("Formatted data:", formattedData);
+    return formattedData;
 }
 
     // ✅ Get Brand Performance
@@ -2483,7 +2485,7 @@ async getBrandPerformance(dateRange: string = "30d") {
         .select({
             brand: brands.name,
             clicks: count(productEvents.id),
-            sales: sum(orders.totalAmount),
+            sales: sum(sql`${orders.totalAmount} / 100`),
             products: count(products.id),
             totalOrders: count(orders.id) // Added total orders count
         })
@@ -2510,7 +2512,7 @@ async getTopProducts(limit: number = 5, dateRange: string = "30d") {
             id: products.id,
             name: products.title,
             brand: brands.name,
-            sales: sum(orders.totalAmount), // Use the order total amount
+            sales: sum(sql`${orders.totalAmount} / 100`), // Use the order total amount
             inventory: products.quantity,
             price: products.price
         })
@@ -2520,7 +2522,7 @@ async getTopProducts(limit: number = 5, dateRange: string = "30d") {
         .innerJoin(orders, eq(orders.id, orderItems.orderId))
         .where(gte(orders.createdAt, startDate))
         .groupBy(products.id, products.title, brands.name, products.quantity, products.price)
-        .orderBy(desc(sum(orders.totalAmount)))
+        .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
         .limit(limit);
 }
 
@@ -2572,28 +2574,35 @@ async getTopProducts(limit: number = 5, dateRange: string = "30d") {
     }
 
     // ✅ Helper: Format Revenue Data
-    private formatRevenueData(data: any[], days: number) {
-        const result: any[] = [];
-        const brands = new Set(data.map((item) => item.brand));
-        const dates = Array.from({ length: days }, (_, i) => {
-            const date = new Date();
-            date.setDate(date.getDate() - (days - i - 1));
-            return date.toISOString().split("T")[0];
-        });
+private formatRevenueData(data: any[], dateRange: string) {
+    const result: any[] = [];
 
-        dates.forEach((date) => {
-            const entry: any = { date };
-            brands.forEach((brand) => {
-                const brandData = data.find((d) =>
-                    d.date === date && d.brand === brand
-                );
-                entry[brand] = brandData ? Number(brandData.revenue) : 0;
-            });
-            result.push(entry);
-        });
+    // ✅ Extract number of days from dateRange (e.g., "7d" -> 7)
+    const days = parseInt(dateRange.replace("d", ""), 10);
+    const brands = new Set(data.map((item) => item.brand));
+    const dates = Array.from({ length: days }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (days - i - 1));
+        return date.toISOString().split("T")[0];
+    });
 
-        return result;
-    }
+    console.log("Available brands:", Array.from(brands)); // Debug brands
+    console.log("Date range:", dates); // Debug generated dates
+
+    dates.forEach((date) => {
+        const entry: any = { date };
+        brands.forEach((brand) => {
+            const brandData = data.find((d) =>
+                d.date === date && d.brand === brand
+            );
+            entry[brand as string] = brandData ? Number(brandData.revenue) : 0;
+        });
+        result.push(entry);
+    });
+
+    return result;
+}
+
 
     // ✅ Helper: Calculate Growth Percentage
     private calculateGrowth(current: number, previous: number): number {
