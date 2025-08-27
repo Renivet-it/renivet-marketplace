@@ -2575,33 +2575,45 @@ async getTopProducts(limit: number = 5, dateRange: string = "30d") {
 
     // ✅ Helper: Format Revenue Data
 private formatRevenueData(data: any[], dateRange: string) {
-    const result: any[] = [];
+  const result: any[] = [];
 
-    // ✅ Extract number of days from dateRange (e.g., "7d" -> 7)
-    const days = parseInt(dateRange.replace("d", ""), 10);
-    const brands = new Set(data.map((item) => item.brand));
-    const dates = Array.from({ length: days }, (_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - (days - i - 1));
-        return date.toISOString().split("T")[0];
+  // ✅ Convert dateRange into days
+  let days = 7; // default
+  if (dateRange.endsWith("d")) {
+    days = parseInt(dateRange.replace("d", ""), 10);
+  } else if (dateRange.endsWith("m")) {
+    const months = parseInt(dateRange.replace("m", ""), 10);
+    days = months * 30; // Approximate for now
+  } else if (dateRange.endsWith("y")) {
+    const years = parseInt(dateRange.replace("y", ""), 10);
+    days = years * 365; // Approximate for now
+  }
+
+  // ✅ Extract all unique brands
+  const brands = new Set(data.map((item) => item.brand));
+
+  // ✅ Generate list of dates for the range
+  const dates = Array.from({ length: days }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - i - 1));
+    return date.toISOString().split("T")[0];
+  });
+
+  console.log("Available brands:", Array.from(brands)); // Debug brands
+  console.log("Date range:", dates); // Debug generated dates
+
+  dates.forEach((date) => {
+    const entry: any = { date };
+    brands.forEach((brand) => {
+      const brandData = data.find((d) => d.date === date && d.brand === brand);
+      entry[brand as string] = brandData ? Number(brandData.revenue) : 0;
     });
+    result.push(entry);
+  });
 
-    console.log("Available brands:", Array.from(brands)); // Debug brands
-    console.log("Date range:", dates); // Debug generated dates
-
-    dates.forEach((date) => {
-        const entry: any = { date };
-        brands.forEach((brand) => {
-            const brandData = data.find((d) =>
-                d.date === date && d.brand === brand
-            );
-            entry[brand as string] = brandData ? Number(brandData.revenue) : 0;
-        });
-        result.push(entry);
-    });
-
-    return result;
+  return result;
 }
+
 
 
     // ✅ Helper: Calculate Growth Percentage
