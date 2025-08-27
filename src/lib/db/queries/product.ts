@@ -2417,68 +2417,74 @@ async trackPurchase(productId: string, brandId: string, userId?: string) {
         return data;
     }
 
+async getOverviewMetrics(dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+  const [totalRevenue, totalSales, totalCustomers, conversionData] = await Promise.all([
+    // Total Revenue (convert from paise to rupees)
+    db
+      .select({ total: sum(orders.totalAmount) })
+      .from(orders)
+      .where(gte(orders.createdAt, startDate))
+      .then((res) => Number(res[0]?.total || 0) / 100),
 
-      async getOverviewMetrics(dateRange: string = "30d") {
-         const startDate = this.getStartDate(dateRange);
-    const [totalRevenue, totalSales, totalCustomers, conversionData] = await Promise.all([
-        // Total Revenue (convert from paise to rupees)
-        db
-            .select({ total: sum(orders.totalAmount) })
-            .from(orders)
-            .where(gte(orders.createdAt, startDate))
-            .then((res) => Number(res[0]?.total || 0) / 100), // Convert paise to rupees
+    // Total Sales (product sales value, convert from paise to rupees)
+    db
+      .select({ total: sum(orders.totalAmount) })
+      .from(orders)
+      .where(gte(orders.createdAt, startDate))
+      .then((res) => Number(res[0]?.total || 0) / 100),
 
-        // Total Sales (product sales value, convert from paise to rupees)
-        db
-            .select({ total: sum(orders.totalAmount) })
-            .from(orders)
-            .where(gte(orders.createdAt, startDate))
-            .then((res) => Number(res[0]?.total || 0) / 100), // Convert paise to rupees
+    // Total Customers
+    db
+      .select({ count: count() })
+      .from(orders)
+      .where(gte(orders.createdAt, startDate))
+      .then((res) => res[0]?.count || 0),
 
-        // Total Customers
-        db
-            .select({ count: count() })
-            .from(orders)
-            .where(gte(orders.createdAt, startDate))
-            .then((res) => res[0]?.count || 0),
+    // Conversion Data (clicks/views and purchases)
+    Promise.all([
+      // Total clicks/views
+      db
+        .select({ count: count() })
+        .from(productEvents)
+        .where(and(
+          inArray(productEvents.event, ["click", "view"]),
+          gte(productEvents.createdAt, startDate)
+        ))
+        .then((res) => res[0]?.count || 0),
+      // Total purchases (from product_events table)
+      db
+        .select({ count: count() })
+        .from(productEvents)
+        .where(and(
+          eq(productEvents.event, "purchase"),
+          gte(productEvents.createdAt, startDate)
+        ))
+        .then((res) => res[0]?.count || 0)
+    ])
+  ]);
 
-        // Conversion Data (clicks and purchases)
-        Promise.all([
-            db
-                .select({ count: count() })
-                .from(productEvents)
-                .where(and(
-                    eq(productEvents.event, "click"),
-                    gte(productEvents.createdAt, startDate)
-                ))
-                .then((res) => res[0]?.count || 0),
-            db
-                .select({ count: count() })
-                .from(orders)
-                .where(gte(orders.createdAt, startDate))
-                .then((res) => res[0]?.count || 0)
-        ])
-    ]);
+  const [totalClicks, totalPurchases] = conversionData;
+  const conversionRate = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
+  console.log("Conversion Metrics:", {
+    totalClicks,
+    totalPurchases,
+    conversionRate
+  });
 
-    const [totalClicks, totalPurchases] = conversionData;
-    const conversionRate = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
-    console.log("Conversion Rate:", conversionRate);
-        // Get growth data (you might want to store historical data)
-        // const previousData = await this.getPreviousPeriodData(startDate, dateRange);
-
-        return {
-            totalRevenue,
-            totalSales,
-            totalCustomers,
-            conversionRate: Number(conversionRate.toFixed(2)),
-            // trends: {
-            //     revenue: this.calculateGrowth(totalRevenue, previousData.revenue),
-            //     sales: this.calculateGrowth(totalSales, previousData.sales),
-            //     customers: this.calculateGrowth(totalCustomers, previousData.customers),
-            //     conversion: this.calculateGrowth(conversionRate, previousData.conversion)
-            // }
-        };
-    }
+  return {
+    totalRevenue,
+    totalSales,
+    totalCustomers,
+    conversionRate: Number(conversionRate.toFixed(2)),
+    // trends: {
+    //     revenue: this.calculateGrowth(totalRevenue, previousData.revenue),
+    //     sales: this.calculateGrowth(totalSales, previousData.sales),
+    //     customers: this.calculateGrowth(totalCustomers, previousData.customers),
+    //     conversion: this.calculateGrowth(conversionRate, previousData.conversion)
+    // }
+  };
+}
 
     // ✅ Get Revenue Trend Data
 async getRevenueTrend(dateRange: string = "7d") {
