@@ -954,7 +954,7 @@ const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
 
   const brandMetrics = useMemo(() => {
     const brandMap = new Map();
-    products.forEach(product => {
+    products.forEach((product) => {
       const existing = brandMap.get(product.brand);
       if (existing) {
         existing.clicks += product.clicks;
@@ -977,7 +977,7 @@ const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
       minimumFractionDigits: 0
     }).format(value);
   };
@@ -1131,14 +1131,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
           <TabsContent value="overview" className="space-y-6">
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Total Revenue"
-                value={formatCurrency(overviewData?.totalRevenue || 0)}
-                icon={DollarSign}
-                trend={overviewData?.trends?.revenue || 0}
-                color="bg-green-500"
-                subtitle="All time revenue"
-              />
+
               <MetricCard
                 title="Total Sales"
                 value={formatCurrency(overviewData?.totalSales || 0)}
@@ -1183,7 +1176,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
             new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })
           }
         />
-        <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(1)}k`} />
+        <YAxis tickFormatter={(value) => `₹${(value / 1000).toFixed(1)}k`} />
         <Tooltip
           formatter={(value: number, name: string) => [formatCurrency(Number(value)), name]}
           labelFormatter={(label) => new Date(label).toLocaleDateString()}
@@ -1316,7 +1309,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
             margin={{ top: 5, right: 20, left: 100, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" tickFormatter={(value) => `$${(value / 1000)}k`} />
+            <XAxis type="number" tickFormatter={(value) => `₹${(value / 1000)}k`} />
             <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
             <Tooltip
               formatter={(value) => [formatCurrency(Number(value)), "Sales"]}
@@ -1483,7 +1476,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
                     <BarChart data={customerSegments}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="segment" />
-                      <YAxis tickFormatter={(value) => `$${(value / 1000)}k`} />
+                      <YAxis tickFormatter={(value) => `₹${(value / 1000)}k`} />
                       <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
                       <Bar dataKey="revenue" fill="#10b981" />
                     </BarChart>
