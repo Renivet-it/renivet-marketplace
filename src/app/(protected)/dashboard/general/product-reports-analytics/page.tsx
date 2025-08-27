@@ -919,7 +919,7 @@ const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
       setProductsForConversion(conversionData);
       setProductsForFunnel(funnelData);
       setTopProductsBySales(topProductsBySales);
-      console.log(revenue, "revenue");
+      console.log(productsByCategory, "productsByCategory");
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -1329,32 +1329,56 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
     </Card>
 
     {/* Chart 2: Sales Distribution by Category (Kept as requested) */}
-  <Card>
+<Card>
   <CardHeader>
     <CardTitle>Sales Distribution by Category</CardTitle>
     <CardDescription>Which product categories are most popular?</CardDescription>
   </CardHeader>
   <CardContent>
     {productsByCategory.length > 0 ? (
-      <ResponsiveContainer width="100%" height={400}>
-        <PieChart>
-          <Pie
-            data={productsByCategory}
-            cx="50%"
-            cy="50%"
-            outerRadius={120}
-            innerRadius={60}
-            dataKey="sales"
-            label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
-          >
-            {productsByCategory.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={`hsl(${index * 60}, 70%, 60%)`} />
-            ))}
-          </Pie>
-          <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Sales"]} />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
+      <div>
+        {/* Debug info - remove after fixing */}
+        <div className="text-xs text-muted-foreground mb-2">
+          Data preview: {productsByCategory.length} categories, 
+          Total sales: {formatCurrency(productsByCategory.reduce((sum, item) => sum + Number(item.sales), 0))}
+        </div>
+        <ResponsiveContainer width="100%" height={400}>
+          <PieChart>
+            <Pie
+              data={productsByCategory.map(item => ({
+                name: item.category,
+                value: Number(item.sales), // Ensure it's a number
+                productsCount: item.productsCount
+              }))}
+              cx="50%"
+              cy="50%"
+              outerRadius={120}
+              innerRadius={60}
+              dataKey="value"
+              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            >
+              {productsByCategory.map((_, index) => (
+                <Cell key={`cell-${index}`} fill={`hsl(${index * 60}, 70%, 60%)`} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value, name, props) => {
+                if (name === 'value') {
+                  return [formatCurrency(Number(value)), "Sales"];
+                }
+                return [value, name];
+              }}
+              labelFormatter={(label, payload) => {
+                if (payload && payload[0]) {
+                  return payload[0].payload.name;
+                }
+                return label;
+              }}
+            />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     ) : (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
         No category data available
