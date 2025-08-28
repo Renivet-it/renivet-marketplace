@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
 import { calculateTotalPriceWithCoupon } from "@/lib/utils";
 // import { orderQueries } from "@/lib/db/queries"; // No longer needed directly for client-side intent creation
+import { fbEvent } from "@/lib/fbpixel";
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -276,6 +277,18 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                             });
                             console.log(`Intent ${orderIntent.id} linked to order ${createdOrder.id}`);
                         }
+                         // ✅ Fire Facebook Pixel Purchase Event here
+                    fbEvent("Purchase", {
+                        value: orderDetails.totalAmount, // Pass actual total amount
+                        currency: "INR",
+                        contents: orderDetails.items.map((item: any) => ({
+                            id: item.product.id,
+                            name: item.product.title, // ✅ Include product title
+                            quantity: item.quantity,
+                            price: item.price
+                        })),
+                        content_type: "product",
+                    });
                     } catch (error: any) {
                         console.error("Failed to create order after retries:", error);
                         throw new Error(`Order creation failed after ${MAX_RETRIES} attempts: ${error.message}`);
