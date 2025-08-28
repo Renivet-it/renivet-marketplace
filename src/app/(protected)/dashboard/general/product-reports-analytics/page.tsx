@@ -1006,8 +1006,8 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
           {trend !== undefined && (
             <div className={`flex items-center mt-2 text-sm ${trend >= 0 ? "text-green-600" : "text-red-600"}`}>
               {trend >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-              <span className="ml-1">{Math.abs(trend).toFixed(1)}%</span>
-              <span className="ml-1 text-muted-foreground">vs last period</span>
+              {/* <span className="ml-1">{Math.abs(trend).toFixed(1)}%</span> */}
+              {/* <span className="ml-1 text-muted-foreground">vs last period</span> */}
             </div>
           )}
         </CardContent>
@@ -1052,7 +1052,7 @@ const truncateText = (text, maxLength) => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <Search className="w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search products..."
@@ -1060,7 +1060,7 @@ const truncateText = (text, maxLength) => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-64"
                 />
-              </div>
+              </div> */}
               
               <Select value={dateRange} onValueChange={setDateRange}>
                 <SelectTrigger className="w-32">
@@ -1074,10 +1074,10 @@ const truncateText = (text, maxLength) => {
                 </SelectContent>
               </Select>
 
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <span className="text-sm">Real-time</span>
                 <Switch checked={isRealTime} onCheckedChange={setIsRealTime} />
-              </div>
+              </div> */}
 
               <Button
                 variant="outline"
@@ -1096,9 +1096,9 @@ const truncateText = (text, maxLength) => {
                 {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
 
-              <Button variant="outline" size="sm">
+              {/* <Button variant="outline" size="sm">
                 <Bell className="w-4 h-4" />
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>
