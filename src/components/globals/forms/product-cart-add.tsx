@@ -30,7 +30,7 @@ import { toast } from "sonner";
 import { WishlistButton } from "../buttons";
 import { Spinner } from "@/components/ui/spinner";
 import { trackAddToCart } from "@/actions/track-product";
-import { fbEvent } from "@/lib/facebook-pixel";
+import { fbEvent } from "@/lib/fbpixel";
 
 interface PageProps {
     initialCart?: CachedCart[];
