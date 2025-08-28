@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { WishlistButton } from "../buttons";
 import { Spinner } from "@/components/ui/spinner";
 import { trackAddToCart } from "@/actions/track-product";
+import { fbEvent } from "@/lib/facebook-pixel";
 
 interface PageProps {
     initialCart?: CachedCart[];
@@ -51,6 +52,16 @@ export function ProductCartAddForm({
                 await trackAddToCart(productId, brandId);
                 // You can also navigate to product page or perform other actions
                 // window.location.href = `/product/${productId}`;
+                     fbEvent("AddToCart", {
+                    content_ids: [productId], // Product ID array
+                    content_name: product.title, // Product name
+                    content_category: product.brand?.name || "Unknown Brand", // Brand name
+                    content_type: "product",
+                    value: parseFloat(convertPaiseToRupees(productPrice)),
+                    currency: "INR",
+                    brand_id: brandId,
+                    quantity: 1
+                });
             } catch (error) {
                 console.error("Failed to track click:", error);
             }
