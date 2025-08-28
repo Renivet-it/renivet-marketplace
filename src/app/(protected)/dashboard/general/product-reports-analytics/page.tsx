@@ -1110,7 +1110,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
               <ShoppingCart className="w-4 h-4" />
               <span>Products</span>
             </TabsTrigger>
-            <TabsTrigger value="customers" className="flex items-center space-x-2">
+            {/* <TabsTrigger value="customers" className="flex items-center space-x-2">
               <Users className="w-4 h-4" />
               <span>Customers</span>
             </TabsTrigger>
@@ -1125,7 +1125,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
             <TabsTrigger value="analytics" className="flex items-center space-x-2">
               <Activity className="w-4 h-4" />
               <span>Analytics</span>
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -1281,7 +1281,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
 <TabsContent value="products" className="space-y-6">
   <div className="flex items-center justify-between">
     <h2 className="text-2xl font-bold">Product Analytics</h2>
-<Select value={selectedBrand} onValueChange={setSelectedBrand}>
+{/* <Select value={selectedBrand} onValueChange={setSelectedBrand}>
   <SelectTrigger className="w-48">
     <SelectValue placeholder="Filter by brand" />
   </SelectTrigger>
@@ -1291,7 +1291,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
       <SelectItem key={brand} value={brand}>{brand}</SelectItem>
     ))}
   </SelectContent>
-</Select>
+</Select> */}
   </div>
 
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1485,7 +1485,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
               </Card>
             </div>
           </TabsContent>
-          <TabsContent value="traffic" className="space-y-6">
+          {/* <TabsContent value="traffic" className="space-y-6">
             <h2 className="text-2xl font-bold">Traffic Analytics</h2>
          
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1612,7 +1612,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
     </div>
