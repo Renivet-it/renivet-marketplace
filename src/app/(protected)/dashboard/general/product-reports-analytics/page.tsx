@@ -1014,7 +1014,12 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
       </Card>
     </motion.div>
   );
-
+const truncateText = (text, maxLength) => {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.substring(0, maxLength)}...`;
+};
   const handleRefresh = () => {
     setRefreshing(true);
     fetchData().then(() => setRefreshing(false));
@@ -1296,7 +1301,7 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
 
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {/* Chart 1: Top 10 Products by Sales (Kept as requested) */}
-    <Card>
+ <Card>
       <CardHeader>
         <CardTitle>Top 10 Products by Sales</CardTitle>
         <CardDescription>Highest revenue-generating products.</CardDescription>
@@ -1305,15 +1310,23 @@ const brandKeys = revenueData.length > 0 ? Object.keys(revenueData[0]).filter((k
         <ResponsiveContainer width="100%" height={400}>
           <BarChart
             layout="vertical"
-            data={productTopBySales.sort((a, b) => b.sales - a.sales).slice(0, 10).reverse()}
-            margin={{ top: 5, right: 20, left: 100, bottom: 5 }}
+           data={productTopBySales.sort((a, b) => b.sales - a.sales).slice(0, 10).reverse()}
+            margin={{ top: 5, right: 20, left: 120, bottom: 5 }} // Increased left margin for more space
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" tickFormatter={(value) => `₹${(value / 1000)}k`} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
+            <XAxis type="number" tickFormatter={(value) => `₹${value / 1000}k`} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fontSize: 12 }}
+              // Apply the custom formatter here
+              tickFormatter={(value) => truncateText(value, 15)} // Truncate to 15 characters
+              width={110} // Explicitly set the width of the Y-axis
+            />
             <Tooltip
               formatter={(value) => [formatCurrency(Number(value)), "Sales"]}
               labelStyle={{ color: "black" }}
+              // The tooltip will still show the full, untruncated name
             />
             <Bar dataKey="sales" fill="#8b5cf6" name="Total Sales" />
           </BarChart>
