@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
+import { trackProductClick } from "@/app/actions/track-product";
 
 interface PageProps {
     searchParams: Promise<{

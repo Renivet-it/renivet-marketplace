@@ -115,6 +115,7 @@ import {
     Venus,
     House,
     Users,
+    ChartNoAxesColumn,
     Layers,
     type LucideIcon,
     type LucideProps,
@@ -240,6 +241,7 @@ export const Icons = {
     ShoppingBag,
     Home,
     Megaphone,
+    ChartNoAxesColumn,
     X_Twitter: (props: LucideProps) => (
         <svg
             aria-hidden="true"

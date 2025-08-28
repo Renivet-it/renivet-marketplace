@@ -14,7 +14,7 @@ import {
     UpdateProductValue,
     UpdateProductMediaInput
 } from "@/lib/validations";
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, sql, sum } from "drizzle-orm";
 import { db } from "..";
 import {
     brands,
@@ -32,7 +32,11 @@ import {
     homeandlivingNewArrival,
     beautyNewArrivals,
     beautyTopPicks,
-    homeNewArrivals
+    homeNewArrivals,
+    productEvents,
+    orders,
+    orderItems,
+    categories
 
 } from "../schema";
 import { categoryQueries } from "./category";
@@ -2335,6 +2339,73 @@ async getBeautyTopPicks() {
   return enhancedData;
 }
 
+
+
+//  async getProductClicks() {
+//   return db
+//     .select({
+//       productId: productEvents.productId,
+//       clicks: count(productEvents.id).as("clicks"),
+//     })
+//     .from(productEvents)
+//     .where(eq(productEvents.event, "click"))
+//     .groupBy(productEvents.productId)
+//     .orderBy(desc(count(productEvents.id)));
+// }
+
+async trackProductClick(productId: string, brandId: string, userId?: string) {
+    return db
+        .insert(productEvents)
+        .values({
+            productId,
+            brandId,
+            userId: userId ?? null,
+            event: "click",
+            createdAt: new Date(),
+        })
+        .returning()
+        .then((res) => res[0]);
+}
+async trackAddToCart(productId: string, brandId: string, userId?: string) {
+    return db
+        .insert(productEvents)
+        .values({
+            productId,
+            brandId,
+            userId: userId ?? null,
+            event: "add_to_cart",
+            createdAt: new Date(),
+        })
+        .returning()
+        .then((res) => res[0]);
+}
+
+async trackPurchase(productId: string, brandId: string, userId?: string) {
+    return db
+        .insert(productEvents)
+        .values({
+            productId,
+            brandId,
+            userId: userId ?? null,
+            event: "purchase",
+            createdAt: new Date(),
+        })
+        .returning()
+        .then((res) => res[0]);
+}
+
+// ✅ Get clicks per brand
+// async getBrandClicks() {
+//   return db
+//     .select({
+//       brandId: productEvents.brandId,
+//       clicks: count(productEvents.id).as("clicks"),
+//     })
+//     .from(productEvents)
+//     .where(eq(productEvents.event, "click"))
+//     .groupBy(productEvents.brandId);
+// }
+
     async updateProductValue(id: string, values: UpdateProductValue) {
         const data = await db
             .update(productValues)
@@ -2346,7 +2417,425 @@ async getBeautyTopPicks() {
         return data;
     }
 
+async getOverviewMetrics(dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+  const [totalRevenue, totalSales, totalCustomers, conversionData] = await Promise.all([
+    // Total Revenue (convert from paise to rupees)
+    db
+      .select({ total: sum(orders.totalAmount) })
+      .from(orders)
+      .where(gte(orders.createdAt, startDate))
+      .then((res) => Number(res[0]?.total || 0) / 100),
+
+    // Total Sales (product sales value, convert from paise to rupees)
+    db
+      .select({ total: sum(orders.totalAmount) })
+      .from(orders)
+      .where(gte(orders.createdAt, startDate))
+      .then((res) => Number(res[0]?.total || 0) / 100),
+
+    // Total Customers
+    db
+      .select({ count: count() })
+      .from(orders)
+      .where(gte(orders.createdAt, startDate))
+      .then((res) => res[0]?.count || 0),
+
+    // Conversion Data (clicks/views and purchases)
+    Promise.all([
+      // Total clicks/views
+      db
+        .select({ count: count() })
+        .from(productEvents)
+        .where(and(
+          inArray(productEvents.event, ["click", "view"]),
+          gte(productEvents.createdAt, startDate)
+        ))
+        .then((res) => res[0]?.count || 0),
+      // Total purchases (from product_events table)
+      db
+        .select({ count: count() })
+        .from(productEvents)
+        .where(and(
+          eq(productEvents.event, "purchase"),
+          gte(productEvents.createdAt, startDate)
+        ))
+        .then((res) => res[0]?.count || 0)
+    ])
+  ]);
+
+  const [totalClicks, totalPurchases] = conversionData;
+  const conversionRate = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
+  console.log("Conversion Metrics:", {
+    totalClicks,
+    totalPurchases,
+    conversionRate
+  });
+
+  return {
+    totalRevenue,
+    totalSales,
+    totalCustomers,
+    conversionRate: Number(conversionRate.toFixed(2)),
+    // trends: {
+    //     revenue: this.calculateGrowth(totalRevenue, previousData.revenue),
+    //     sales: this.calculateGrowth(totalSales, previousData.sales),
+    //     customers: this.calculateGrowth(totalCustomers, previousData.customers),
+    //     conversion: this.calculateGrowth(conversionRate, previousData.conversion)
+    // }
+  };
+}
+
+    // ✅ Get Revenue Trend Data
+async getRevenueTrend(dateRange: string = "7d") {
+    const startDate = this.getStartDate(dateRange);
+
+    const revenueData = await db
+        .select({
+            date: sql<string>`DATE(${orders.createdAt})`,
+            brand: brands.name,
+            revenue: sum(sql`${orders.totalAmount} / 100`)
+        })
+        .from(orders)
+        .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .where(gte(orders.createdAt, startDate))
+        .groupBy(sql`DATE(${orders.createdAt})`, brands.name)
+        .orderBy(sql`DATE(${orders.createdAt})`);
+
+    console.log("Raw SQL data:", revenueData);
+    const formattedData = this.formatRevenueData(revenueData, dateRange);
+    console.log("Formatted data:", formattedData);
+    return formattedData;
+}
+
+    // ✅ Get Brand Performance
+async getBrandPerformance(dateRange: string = "30d") {
+    const startDate = this.getStartDate(dateRange);
+
+    return db
+        .select({
+            brand: brands.name,
+            clicks: count(productEvents.id),
+            sales: sum(sql`${orders.totalAmount} / 100`),
+            products: count(products.id),
+            totalOrders: count(orders.id) // Added total orders count
+        })
+        .from(brands)
+        .leftJoin(products, eq(products.brandId, brands.id))
+        .leftJoin(orderItems, eq(orderItems.productId, products.id)) // Join through order_items
+        .leftJoin(orders, eq(orders.id, orderItems.orderId)) // Join orders via order_items
+        .leftJoin(productEvents, and(
+            eq(productEvents.productId, products.id),
+            eq(productEvents.event, "click"),
+            gte(productEvents.createdAt, startDate)
+        ))
+        .where(gte(orders.createdAt, startDate))
+        .groupBy(brands.id, brands.name)
+        .orderBy(desc(sum(orders.totalAmount)));
+}
+
+    // ✅ Get Top Products
+async getTopProducts(limit: number = 5, dateRange: string = "30d") {
+    const startDate = this.getStartDate(dateRange);
+
+    return db
+        .select({
+            id: products.id,
+            name: products.title,
+            brand: brands.name,
+            sales: sum(sql`${orders.totalAmount} / 100`), // Use the order total amount
+            inventory: products.quantity,
+            price: products.price
+        })
+        .from(products)
+        .innerJoin(brands, eq(products.brandId, brands.id))
+        .innerJoin(orderItems, eq(orderItems.productId, products.id))
+        .innerJoin(orders, eq(orders.id, orderItems.orderId))
+        .where(gte(orders.createdAt, startDate))
+        .groupBy(products.id, products.title, brands.name, products.quantity, products.price)
+        .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+        .limit(limit);
+}
+
+async getTopProductsbySales(limit: number = 10, dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  return db
+    .select({
+      id: products.id,
+      name: products.title,
+      brand: brands.name,
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      inventory: products.quantity,
+      price: products.price
+    })
+    .from(products)
+    .innerJoin(brands, eq(products.brandId, brands.id))
+    .innerJoin(orderItems, eq(orderItems.productId, products.id))
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(orders.createdAt, startDate))
+    .groupBy(products.id, products.title, brands.name, products.quantity, products.price)
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+    .limit(limit);
+}
+
+
+async getProductsByCategory(dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  return db
+    .select({
+      category: categories.name, // Get category name instead of ID
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      productsCount: sql`COUNT(DISTINCT ${products.id})`.as("products_count")
+    })
+    .from(products)
+    .innerJoin(categories, eq(products.categoryId, categories.id)) // Join with categories table
+    .innerJoin(orderItems, eq(orderItems.productId, products.id))
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(orders.createdAt, startDate))
+    .groupBy(categories.name) // Group by category name instead of ID
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)));
+}
+
+    // ✅ Get Total Clicks (your existing method)
+    async getProductClicks() {
+        return db
+            .select({
+                productId: productEvents.productId,
+                clicks: count(productEvents.id).as("clicks"),
+            })
+            .from(productEvents)
+            .where(eq(productEvents.event, "click"))
+            .groupBy(productEvents.productId)
+            .orderBy(desc(count(productEvents.id)));
+    }
+
+    // ✅ Get Brand Clicks (your existing method)
+    async getBrandClicks() {
+        return db
+            .select({
+                brandId: productEvents.brandId,
+                clicks: count(productEvents.id).as("clicks"),
+            })
+            .from(productEvents)
+            .where(eq(productEvents.event, "click"))
+            .groupBy(productEvents.brandId);
+    }
+
+async getProductsForConversion(limit: number = 10, dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  const conversionData = await db
+    .select({
+      id: products.id,
+      name: products.title,
+      brand: brands.name,
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      price: products.price,
+      // Count of purchase events
+      purchases: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'purchase' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("purchases"),
+      // Count of click/view events
+      clicks: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} IN ('click', 'view') 
+          THEN ${productEvents.id} 
+        END)
+      `.as("clicks")
+    })
+    .from(products)
+    .innerJoin(brands, eq(products.brandId, brands.id))
+    .innerJoin(productEvents, eq(productEvents.productId, products.id))
+    .leftJoin(orderItems, eq(orderItems.productId, products.id))
+    .leftJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(productEvents.createdAt, startDate))
+    .groupBy(products.id, products.title, brands.name, products.price)
+    .having(sql`COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END) > 0`)
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+    .limit(limit);
+
+  return conversionData.map((product) => ({
+    ...product,
+    sales: Number(product.sales),
+    price: Number(product.price),
+    purchases: Number(product.purchases),
+    clicks: Number(product.clicks),
+    conversionRate: product.clicks > 0 ? (product.purchases / product.clicks) * 100 : 0
+  }));
+}
+
+
+async getProductsForFunnel(limit: number = 15, dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  const funnelData = await db
+    .select({
+      id: products.id,
+      name: products.title,
+      brand: brands.name,
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      price: products.price,
+      // Count of each event type
+      clicks: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} IN ('click', 'view') 
+          THEN ${productEvents.id} 
+        END)
+      `.as("clicks"),
+      addToCart: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'add_to_cart' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("add_to_cart"),
+      purchases: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'purchase' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("purchases")
+    })
+    .from(products)
+    .innerJoin(brands, eq(products.brandId, brands.id))
+    .innerJoin(productEvents, eq(productEvents.productId, products.id))
+    .leftJoin(orderItems, eq(orderItems.productId, products.id))
+    .leftJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(productEvents.createdAt, startDate))
+    .groupBy(products.id, products.title, brands.name, products.price)
+    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+    .limit(limit);
+
+  return funnelData.map((product) => ({
+    ...product,
+    sales: Number(product.sales),
+    price: Number(product.price),
+    clicks: Number(product.clicks),
+    addToCart: Number(product.addToCart),
+    purchases: Number(product.purchases),
+    ctcRate: product.clicks > 0 ? (product.addToCart / product.clicks) * 100 : 0,
+    ctpRate: product.addToCart > 0 ? (product.purchases / product.addToCart) * 100 : 0
+  }));
+}
+
+    // ✅ Helper: Get Start Date based on range
+    private getStartDate(dateRange: string): Date {
+        const startDate = new Date();
+        switch (dateRange) {
+            case "7d":
+                startDate.setDate(startDate.getDate() - 7);
+                break;
+            case "30d":
+                startDate.setDate(startDate.getDate() - 30);
+                break;
+            case "90d":
+                startDate.setDate(startDate.getDate() - 90);
+                break;
+            case "1y":
+                startDate.setFullYear(startDate.getFullYear() - 1);
+                break;
+            default:
+                startDate.setDate(startDate.getDate() - 30);
+        }
+        return startDate;
+    }
+
+    // ✅ Helper: Format Revenue Data
+private formatRevenueData(data: any[], dateRange: string) {
+  const result: any[] = [];
+
+  // ✅ Convert dateRange into days
+  let days = 7; // default
+  if (dateRange.endsWith("d")) {
+    days = parseInt(dateRange.replace("d", ""), 10);
+  } else if (dateRange.endsWith("m")) {
+    const months = parseInt(dateRange.replace("m", ""), 10);
+    days = months * 30; // Approximate for now
+  } else if (dateRange.endsWith("y")) {
+    const years = parseInt(dateRange.replace("y", ""), 10);
+    days = years * 365; // Approximate for now
+  }
+
+  // ✅ Extract all unique brands
+  const brands = new Set(data.map((item) => item.brand));
+
+  // ✅ Generate list of dates for the range
+  const dates = Array.from({ length: days }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (days - i - 1));
+    return date.toISOString().split("T")[0];
+  });
+
+  console.log("Available brands:", Array.from(brands)); // Debug brands
+  console.log("Date range:", dates); // Debug generated dates
+
+  dates.forEach((date) => {
+    const entry: any = { date };
+    brands.forEach((brand) => {
+      const brandData = data.find((d) => d.date === date && d.brand === brand);
+      entry[brand as string] = brandData ? Number(brandData.revenue) : 0;
+    });
+    result.push(entry);
+  });
+
+  return result;
+}
+
+
+
+    // ✅ Helper: Calculate Growth Percentage
+    private calculateGrowth(current: number, previous: number): number {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return Number((((current - previous) / previous) * 100).toFixed(1));
+    }
+
+    // ✅ Helper: Get Previous Period Data (simplified)
+    private async getPreviousPeriodData(startDate: Date, dateRange: string) {
+        // This is a simplified version - you might want to store historical data
+        const previousStart = new Date(startDate);
+        previousStart.setDate(previousStart.getDate() - (dateRange === "7d" ? 7 : 30));
+        const previousEnd = new Date(startDate);
+        const [revenue, sales, customers, conversion] = await Promise.all([
+            db
+                .select({ total: sum(orders.totalAmount) })
+                .from(orders)
+                .where(and(
+                    gte(orders.createdAt, previousStart),
+                    gte(previousEnd, orders.createdAt)
+                ))
+                .then(res => Number(res[0]?.total || 0)),
+            db
+                .select({ total: sum(orders.totalAmount) })
+                .from(orders)
+                .where(and(
+                    gte(orders.createdAt, previousStart),
+                    gte(previousEnd, orders.createdAt)
+                ))
+                .then(res => Number(res[0]?.total || 0)),
+            db
+                .select({ count: count() })
+                .from(orders)
+                .where(and(
+                    gte(orders.createdAt, previousStart),
+                    gte(previousEnd, orders.createdAt)
+                ))
+                .then(res => res[0]?.count || 0),
+            Promise.resolve(0) // Simplified conversion rate
+        ]);
+
+        return { revenue, sales, customers, conversion };
+    }
+
     async getProcuctReturnExchangePolicyByProductId(){}
 }
+
+
+
 
 export const productQueries = new ProductQuery();
