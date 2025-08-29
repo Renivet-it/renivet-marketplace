@@ -2672,6 +2672,54 @@ async getProductsForConversion(limit: number = 10, dateRange: string = "30d") {
 }
 
 
+async getTopProductsByClicks(limit: number = 10, dateRange: string = "30d") {
+  const startDate = this.getStartDate(dateRange);
+
+  const clickData = await db
+    .select({
+      id: products.id,
+      name: products.title,
+      brand: brands.name,
+      sales: sum(sql`${orders.totalAmount} / 100`),
+      price: products.price,
+      purchases: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'purchase' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("purchases"),
+      clicks: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} IN ('click', 'view') 
+          THEN ${productEvents.id} 
+        END)
+      `.as("clicks")
+    })
+    .from(products)
+    .innerJoin(brands, eq(products.brandId, brands.id))
+    .innerJoin(productEvents, eq(productEvents.productId, products.id))
+    .leftJoin(orderItems, eq(orderItems.productId, products.id))
+    .leftJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(gte(productEvents.createdAt, startDate))
+    .groupBy(products.id, products.title, brands.name, products.price)
+    .having(sql`
+      COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END) > 0
+    `)
+    .orderBy(desc(sql`
+      COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END)
+    `)) // ✅ Order by clicks instead of sales
+    .limit(limit);
+
+  return clickData.map((product) => ({
+    ...product,
+    sales: Number(product.sales),
+    price: Number(product.price),
+    purchases: Number(product.purchases),
+    clicks: Number(product.clicks),
+    conversionRate: product.clicks > 0 ? (product.purchases / product.clicks) * 100 : 0
+  }));
+}
+
 async getProductsForFunnel(limit: number = 15, dateRange: string = "30d") {
   const startDate = this.getStartDate(dateRange);
 

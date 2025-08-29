@@ -719,7 +719,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { getOverviewMetrics, getRevenueTrend, getBrandPerformance, getTopProducts, getTopProductsbySales, getProductsByCategory,getProductsForFunnel, getProductsForConversion} from "@/actions/analytics";
+import { getOverviewMetrics, getRevenueTrend, getBrandPerformance, getTopProducts, getTopProductsbySales, getProductsByCategory, getProductsForFunnel, getProductsForConversion, getProductTopByClicks} from "@/actions/analytics";
 
 // Remove the static data generation functions since we'll use real data
 const generateProducts = () => [
@@ -889,6 +889,7 @@ const [productsByCategory, setProductsByCategory] = useState<any[]>([]);
 const [productTopBySales, setTopProductsBySales] = useState<any[]>([]);
 const [productsForConversion, setProductsForConversion] = useState<any[]>([]);
 const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
+const [productsTopClicks, setProductsTopClicks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const products = useMemo(() => generateProducts(), []);
 
@@ -896,7 +897,7 @@ const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [overview, revenue, brands, products, topProductsBySales, categoryData, conversionData, funnelData] = await Promise.all([
+      const [overview, revenue, brands, products, topProductsBySales, categoryData, conversionData, funnelData, topProductClicks] = await Promise.all([
         getOverviewMetrics(dateRange),
         getRevenueTrend(dateRange),
         getBrandPerformance(dateRange),
@@ -905,6 +906,7 @@ const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
         getProductsByCategory(dateRange),
         getProductsForConversion(10, dateRange),
         getProductsForFunnel(15, dateRange),
+        getProductTopByClicks(10, dateRange),
 
       ]);
   const transformedData = brands.map((item: any) => ({
@@ -919,6 +921,7 @@ const [productsForFunnel, setProductsForFunnel] = useState<any[]>([]);
       setProductsForConversion(conversionData);
       setProductsForFunnel(funnelData);
       setTopProductsBySales(topProductsBySales);
+      setProductsTopClicks(topProductClicks);
       console.log(productsByCategory, "productsByCategory");
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -1430,7 +1433,63 @@ const truncateText = (text, maxLength) => {
   </CardContent>
 </Card>
     {/* Chart 4: Product Conversion Funnel (Clicks -> Add to Cart -> Purchase) */}
-<Card>
+    <Card>
+          <CardHeader>
+            <CardTitle>Top 10 Products by Clicks</CardTitle>
+            <CardDescription>Most frequently viewed products.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {productsTopClicks && productsTopClicks.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  layout="vertical"
+                  data={productsTopClicks.sort((a, b) => b.clicks - a.clicks).slice(0, 10).reverse()}
+                  margin={{ top: 5, right: 20, left: 120, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" tickFormatter={(value) => formatNumber(value)} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => truncateText(value, 15)}
+                    width={110}
+                  />
+                  <Tooltip
+                    formatter={(value) => [formatNumber(Number(value)), "Clicks"]}
+                    labelStyle={{ color: "black" }}
+                  />
+                  <Bar dataKey="clicks" name="Total Clicks" fill="#22c55e" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                No click data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+{/* <Card>
+  <CardHeader>
+    <CardTitle>Product Conversion Funnel Analysis</CardTitle>
+    <CardDescription>From click to purchase for top products. Click headers to sort.</CardDescription>
+  </CardHeader>
+  <CardContent>
+    {productsForFunnel.length > 0 ? (
+      <ProductFunnelTable
+        products={productsForFunnel} 
+        formatCurrency={formatCurrency} 
+        formatNumber={formatNumber} 
+      />
+    ) : (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        No funnel data available
+      </div>
+    )}
+  </CardContent>
+</Card> */}
+  </div>
+  <Card>
   <CardHeader>
     <CardTitle>Product Conversion Funnel Analysis</CardTitle>
     <CardDescription>From click to purchase for top products. Click headers to sort.</CardDescription>
@@ -1449,7 +1508,6 @@ const truncateText = (text, maxLength) => {
     )}
   </CardContent>
 </Card>
-  </div>
 </TabsContent>
 
           {/* Other tabs... */}
