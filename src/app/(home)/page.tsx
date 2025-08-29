@@ -276,7 +276,6 @@ async function ShopByNewCategoriesFetch() {
         homeShopByCategoryQueries.getAllHomeShopByCategories(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
     ]);
-    console.log("ShopByNewCategoriesFetch - sbc:", sbc); // Debug log
     if (!Array.isArray(sbc) || !sbc.length) {
         console.warn("ShopByNewCategoriesFetch: No categories found or invalid data", sbc);
         return null;

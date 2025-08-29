@@ -325,6 +325,21 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
             toast.error("Cart or address missing");
             return;
         }
+           // ✅ Fire Facebook Pixel InitiateCheckout Event
+    fbEvent("InitiateCheckout", {
+        value: convertPaiseToRupees(priceList.total), // Convert paise to rupees
+        currency: "INR",
+        contents: availableItems.map((item) => ({
+            id: item.product.id,
+            name: item.product.title,
+            quantity: item.quantity,
+            price: (item.variantId
+                ? (item.product.variants?.find((v) => v.id === item.variantId)?.price ?? item.product.price ?? 0)
+                : (item.product.price ?? 0)) / 100, // convert to rupees
+        })),
+        content_type: "product",
+        num_items: totalQuantity, // Number of items
+    });
         initPayment();
     };
 
