@@ -81,3 +81,12 @@ export async function getProductsForFunnel(limit: number = 15, dateRange: string
 }
 
 
+// ✅ Get Products for Conversion Chart
+export async function getProductTopByClicks(limit: number = 10, dateRange: string = "30d") {
+  try {
+    return await productQueries.getTopProductsByClicks(limit, dateRange);
+  } catch (error) {
+    console.error("Error fetching products for conversion:", error);
+    throw new Error("Failed to fetch conversion data");
+  }
+}
