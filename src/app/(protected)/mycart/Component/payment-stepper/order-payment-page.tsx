@@ -277,13 +277,15 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                             });
                             console.log(`Intent ${orderIntent.id} linked to order ${createdOrder.id}`);
                         }
+                        console.log(orderDetails, "orderDetails for fb");
+
                          // ✅ Fire Facebook Pixel Purchase Event here
                     fbEvent("Purchase", {
                         value: orderDetails.totalAmount, // Pass actual total amount
                         currency: "INR",
                         contents: orderDetails.items.map((item: any) => ({
-                            id: item.product.id,
-                            name: item.product.title, // ✅ Include product title
+                            id: item.id,
+                            // name: item.product.title, // ✅ Include product title
                             quantity: item.quantity,
                             price: item.price
                         })),
