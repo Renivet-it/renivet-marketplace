@@ -90,6 +90,7 @@ isHomeAndLivingSectionNewArrival: boolean("is_home_living_new_Arrivals").default
 isBeautyTopPicks: boolean("is_beauty_top_picks").default(false),
 isBeautyNewArrival: boolean("is_beauty_new_Arrivals").default(false),
 isHomeNewArrival: boolean("is_home_new_Arrivals").default(false),
+isAddedInEventProductPage: boolean("is_added_in_event_product_page").default(false),
         embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
@@ -267,6 +268,18 @@ export const beautyTopPicks = pgTable(
     },
 );
 
+export const newProductEventPage = pgTable(
+    "new_product_event_page",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
 export const productOptions = pgTable(
     "product_options",
     {
@@ -496,7 +509,12 @@ export const beautyTopPicksRelation = relations(beautyTopPicks, ({ one }) => ({
     references: [products.id],
   }),
 }));
-
+export const newProductEventPageRelation = relations(newProductEventPage, ({ one }) => ({
+  product: one(products, {
+    fields: [newProductEventPage.productId],
+    references: [products.id],
+  }),
+}));
 
 export const womenStyleWithSubstanceMiddlePageSectionRelations = relations(womenStyleWithSubstanceMiddlePageSection, ({ one }) => ({
   product: one(products, {

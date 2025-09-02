@@ -33,7 +33,8 @@ import {
     toggleHomeAndLivingTopPicksSection,
         toggleBeautyNewArrivalSection,
     toggleBeautyTopPickSection,
-    toggleHomeNewArrivalsProduct
+    toggleHomeNewArrivalsProduct,
+    newEventPageSection,
 } from "@/actions/product-action";
 import { trpc } from "@/lib/trpc/client";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -52,6 +53,7 @@ interface PageProps {
         isBeautyNewArrival?: boolean;
         isBeautyTopPicks?: boolean;
         isHomeNewArrival?: boolean;
+        isEventPageSection?: boolean;
     };
 }
 
@@ -247,6 +249,24 @@ export function ProductAction({ product }: PageProps) {
         }
     };
 
+
+ const handlenewEventPageSectionProduct = async () => {
+        setIsLoading(true);
+        try {
+            const result = await newEventPageSection(product.id, product.isBeautyTopPicks ?? false);
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <>
             <DropdownMenu>
@@ -375,6 +395,10 @@ export function ProductAction({ product }: PageProps) {
                         <DropdownMenuItem onClick={handletoggleHomeNewArrivalsProduct} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
                             <span>{product.isHomeNewArrival ? "Remove from New Arrivals(Home Page)" : "Add to New Arrivals(Home Page)"}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handlenewEventPageSectionProduct} disabled={isLoading}>
+                            <Icons.Layers className="size-4" />
+                            <span>{product.isHomeNewArrival ? "Remove from Event Exibition Page" : "Add to Event Exibition Page"}</span>
                         </DropdownMenuItem>
                         {product.isPublished && (
                             <>
