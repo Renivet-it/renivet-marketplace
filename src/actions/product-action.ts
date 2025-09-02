@@ -876,7 +876,7 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return { success: true, message: "Product removed from Event Exibition list" };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -886,7 +886,7 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return { success: false, error: "Product is already in Event Exibition" };
             }
 
             if (existing) {
@@ -911,10 +911,10 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return { success: true, message: "Product added to Event Exibition list" };
         }
     } catch (error) {
-        console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        console.error("Error toggling Event Exibition status:", error);
+        return { success: false, error: "Failed to update Event Exibition status" };
     }
 }

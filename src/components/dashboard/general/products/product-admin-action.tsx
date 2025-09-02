@@ -53,7 +53,7 @@ interface PageProps {
         isBeautyNewArrival?: boolean;
         isBeautyTopPicks?: boolean;
         isHomeNewArrival?: boolean;
-        isEventPageSection?: boolean;
+        isAddedInEventProductPage?: boolean;
     };
 }
 
@@ -253,7 +253,7 @@ export function ProductAction({ product }: PageProps) {
  const handlenewEventPageSectionProduct = async () => {
         setIsLoading(true);
         try {
-            const result = await newEventPageSection(product.id, product.isBeautyTopPicks ?? false);
+            const result = await newEventPageSection(product.id, product.isAddedInEventProductPage ?? false);
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -398,7 +398,7 @@ export function ProductAction({ product }: PageProps) {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handlenewEventPageSectionProduct} disabled={isLoading}>
                             <Icons.Layers className="size-4" />
-                            <span>{product.isHomeNewArrival ? "Remove from Event Exibition Page" : "Add to Event Exibition Page"}</span>
+                            <span>{product.isAddedInEventProductPage ? "Remove from Event Exibition Page" : "Add to Event Exibition Page"}</span>
                         </DropdownMenuItem>
                         {product.isPublished && (
                             <>
