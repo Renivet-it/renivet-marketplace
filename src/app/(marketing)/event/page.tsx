@@ -17,24 +17,40 @@ import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 
-interface PageProps {
-  searchParams: Promise<{
-    page?: string;
-    limit?: string;
-    search?: string;
-    brandIds?: string;
-    colors?: string;
-    minPrice?: string;
-    maxPrice?: string;
-    categoryId?: string;
-    subCategoryId?: string;
-    productTypeId?: string;
-    sortBy?: "price" | "createdAt";
-    sortOrder?: "asc" | "desc";
-  }>;
-}
+type SearchParamsShape = {
+  page?: string;
+  limit?: string;
+  search?: string;
+  brandIds?: string; // comma separated ids from nuqs
+  colors?: string; // comma separated values
+  minPrice?: string;
+  maxPrice?: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  productTypeId?: string;
+  sortBy?: "price" | "createdAt";
+  sortOrder?: "asc" | "desc";
+};
 
-export default function Page({ searchParams }: PageProps) {
+type EventFilters = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  brandIds?: string[];
+  colors?: string[];
+  minPrice?: number | undefined;
+  maxPrice?: number | undefined;
+  categoryId?: string | undefined;
+  subCategoryId?: string | undefined;
+  productTypeId?: string | undefined;
+  sortBy?: "price" | "createdAt" | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
+};
+
+// pages/your-event-page-file.tsx  (or wherever the Page component lives)
+export default async function Page({ searchParams }: PageProps) {
+  const resolvedParams = await searchParams;
+
   return (
     <GeneralShell>
       <div className="flex flex-col gap-5 md:flex-row">
@@ -45,11 +61,6 @@ export default function Page({ searchParams }: PageProps) {
         <div className="hidden w-px bg-border md:inline-block" />
 
         <div className="w-full basis-5/6 space-y-5">
-          {/* <SearchInput
-              type="search"
-              placeholder="Search for a product..."
-              className="h-12 text-base"
-          /> */}
           <div className="flex justify-end">
             <ShopSortBy />
           </div>
@@ -57,13 +68,15 @@ export default function Page({ searchParams }: PageProps) {
           <Separator />
 
           <Suspense fallback={<ShopProductsSkeleton />}>
-            <ShopProductsFetch />
+            {/* pass resolved params here */}
+            <ShopProductsFetch searchParams={resolvedParams} />
           </Suspense>
         </div>
       </div>
     </GeneralShell>
   );
 }
+
 
 async function ShopFiltersFetch(props: GenericProps) {
   const [categories, subCategories, productTypes, allBrands] =
@@ -80,7 +93,6 @@ async function ShopFiltersFetch(props: GenericProps) {
     <ShopEventFilters
       categories={categories}
       subCategories={subCategories}
-      productTypes={productTypes}
       brandsMeta={brandsMeta}
       {...props}
     />
@@ -88,17 +100,33 @@ async function ShopFiltersFetch(props: GenericProps) {
 }
 
 // 🔹 NEW: Using your new event page data model
-async function ShopProductsFetch() {
+async function ShopProductsFetch({ searchParams }: { searchParams?: SearchParamsShape }) {
   const { userId } = await auth();
 
+  // build a simple filters object from query params
+  const filters: EventFilters = {
+    page: searchParams?.page ? Number(searchParams.page) : 1,
+    limit: searchParams?.limit ? Number(searchParams.limit) : 24,
+    search: searchParams?.search?.trim() || undefined,
+    brandIds: searchParams?.brandIds ? searchParams.brandIds.split(",").filter(Boolean) : [],
+    colors: searchParams?.colors ? searchParams.colors.split(",").filter(Boolean) : [],
+    minPrice: searchParams?.minPrice ? Number(searchParams.minPrice) : undefined,
+    maxPrice: searchParams?.maxPrice ? Number(searchParams.maxPrice) : undefined,
+    categoryId: searchParams?.categoryId || undefined,
+    subCategoryId: searchParams?.subCategoryId || undefined,
+    productTypeId: searchParams?.productTypeId || undefined,
+    sortBy: (searchParams?.sortBy as EventFilters["sortBy"]) || "createdAt",
+    sortOrder: (searchParams?.sortOrder as EventFilters["sortOrder"]) || "desc",
+  };
+
   const [data, userWishlist] = await Promise.all([
-    productQueries.getNewEventPage(),
+    productQueries.getNewEventPage(filters),
     userId ? userWishlistCache.get(userId) : undefined,
   ]);
 
   return (
     <ShopEventProducts
-      initialData={data} // Already enriched with media, variants, brand, etc.
+      initialData={data}
       initialWishlist={userWishlist}
       userId={userId ?? undefined}
     />

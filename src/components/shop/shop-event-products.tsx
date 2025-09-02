@@ -91,7 +91,7 @@ function NoProductCard() {
         <EmptyPlaceholderContent>
           <EmptyPlaceholderTitle>No products found</EmptyPlaceholderTitle>
           <EmptyPlaceholderDescription>
-            We couldn&apos;t find any event products. Try again later.
+            We couldn&apos;t find any event products. Try adjusting your filters.
           </EmptyPlaceholderDescription>
         </EmptyPlaceholderContent>
 
