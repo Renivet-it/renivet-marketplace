@@ -4,7 +4,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: {
-        default: "Events",
+        default: "Shop",
         template: "%s | " + siteConfig.name,
     },
 };
