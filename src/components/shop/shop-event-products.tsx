@@ -22,7 +22,7 @@ import {
   parseAsString,
   parseAsStringLiteral,
 } from "nuqs";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { getEventProducts } from "@/actions/event-page";
 
 interface ShopEventProductsProps extends GenericProps {
@@ -44,48 +44,38 @@ export function ShopEventProducts({
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [brandIds] = useQueryState("brandIds", parseAsArrayOf(parseAsString, ",").withDefault([]));
   const [categoryId] = useQueryState("categoryId", parseAsString.withDefault(""));
-  const [subCategoryId] = useQueryState("subcategoryId", parseAsString.withDefault(""));
-  const [productTypeId] = useQueryState("productTypeId", parseAsString.withDefault(""));
-  const [minPrice] = useQueryState("minPrice", parseAsInteger.withDefault(0));
-  const [maxPrice] = useQueryState("maxPrice", parseAsInteger.withDefault(10000));
+  const [subCategoryId] = useQueryState("subCategoryId", parseAsString.withDefault(""));
+  const [minPrice] = useQueryState("minPrice", parseAsInteger);
+  const [maxPrice] = useQueryState("maxPrice", parseAsInteger);
   const [sortBy] = useQueryState("sortBy", parseAsStringLiteral(["price", "createdAt"] as const).withDefault("createdAt"));
   const [sortOrder] = useQueryState("sortOrder", parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc"));
 
   const [products, setProducts] = useState(initialData);
   const [isPending, startTransition] = useTransition();
 
-  // 🔹 Refetch whenever filters or page change
-useEffect(() => {
-  startTransition(async () => {
-    // build clean payload
-    const filters: Record<string, any> = {
-      page,
-      limit: 24,
-      sortBy,
-      sortOrder,
-    };
+  // 🔹 Fetch products whenever filters change
+  useEffect(() => {
+    startTransition(async () => {
+      const filters = {
+        page: page,
+        limit: 24,
+        brandIds: brandIds,
+        categoryId: categoryId || undefined,
+        subCategoryId: subCategoryId || undefined,
+        minPrice: minPrice || undefined,
+        maxPrice: maxPrice || undefined,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+      };
 
-    if (brandIds.length > 0) filters.brandIds = brandIds;
-    if (categoryId) filters.categoryId = categoryId;
-    if (subCategoryId) filters.subCategoryId = subCategoryId;
-    if (productTypeId) filters.productTypeId = productTypeId;
-    if (minPrice > 0) filters.minPrice = minPrice;
-    if (maxPrice < 10000) filters.maxPrice = maxPrice;
+      const data = await getEventProducts(filters);
+      setProducts(data);
+    });
+  }, [page, brandIds, categoryId, subCategoryId, minPrice, maxPrice, sortBy, sortOrder]);
 
-    const data = await getEventProducts(filters);
-    setProducts(data);
-  });
-}, [
-  page,
-  brandIds,
-  categoryId,
-  subCategoryId,
-  productTypeId,
-  minPrice,
-  maxPrice,
-  sortBy,
-  sortOrder,
-]);
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
 
   const handleProductClick = async (productId: string, brandId: string) => {
     try {
@@ -134,12 +124,15 @@ useEffect(() => {
       <div className="flex justify-center gap-2 mt-6">
         <Button
           disabled={page <= 1 || isPending}
-          onClick={() => setPage(page - 1)}
+          onClick={() => handlePageChange(page - 1)}
         >
           Prev
         </Button>
         <span className="px-4 py-2">{page}</span>
-        <Button disabled={isPending} onClick={() => setPage(page + 1)}>
+        <Button
+          disabled={isPending || products.length < 24}
+          onClick={() => handlePageChange(page + 1)}
+        >
           Next
         </Button>
       </div>

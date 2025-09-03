@@ -1,5 +1,5 @@
 "use client";
-
+import { useRouter } from "next/navigation";
 import { cn, formatPriceTag } from "@/lib/utils";
 import { BrandMeta, Category, SubCategory } from "@/lib/validations";
 import { useMediaQuery } from "@mantine/hooks";
@@ -9,8 +9,9 @@ import {
   parseAsString,
   parseAsStringLiteral,
   useQueryState,
+  useQueryStates,
 } from "nuqs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
 import { Label } from "../ui/label";
@@ -113,47 +114,83 @@ function ShopEventFiltersSection({
   subCategories,
   ...props
 }: EventFilterProps) {
-  const [brandIds, setBrandIds] = useQueryState(
-    "brandIds",
-    parseAsArrayOf(parseAsString, ",").withDefault([])
-  );
-  const [categoryId, setCategoryId] = useQueryState(
-    "categoryId",
-    parseAsString.withDefault("")
-  );
-  const [subCategoryId, setSubCategoryId] = useQueryState(
-    "subCategoryId",
-    parseAsString.withDefault("")
-  );
-  const [minPrice, setMinPrice] = useQueryState(
-    "minPrice",
-    parseAsInteger.withDefault(0)
-  );
-  const [maxPrice, setMaxPrice] = useQueryState(
-    "maxPrice",
-    parseAsInteger.withDefault(10000)
-  );
-  const [sortBy, setSortBy] = useQueryState(
-    "sortBy",
-    parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
-      "createdAt"
-    )
-  );
-  const [sortOrder, setSortOrder] = useQueryState(
-    "sortOrder",
-    parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
-  );
+  const router = useRouter();
+
+  // Use useQueryStates to manage multiple query states together
+  const [queryStates, setQueryStates] = useQueryStates({
+    brandIds: parseAsArrayOf(parseAsString, ",").withDefault([]),
+    categoryId: parseAsString.withDefault(""),
+    subCategoryId: parseAsString.withDefault(""),
+    minPrice: parseAsInteger,
+    maxPrice: parseAsInteger,
+    sortBy: parseAsStringLiteral(["price", "createdAt"] as const).withDefault("createdAt"),
+    sortOrder: parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc"),
+    page: parseAsInteger.withDefault(1), // Reset to page 1 when filters change
+  });
 
   const [priceRange, setPriceRange] = useState<number[]>([
-    minPrice ? (minPrice < 0 ? 0 : minPrice) : 0,
-    maxPrice ? (maxPrice > 10000 ? 10000 : maxPrice) : 10000,
+    queryStates.minPrice || 0,
+    queryStates.maxPrice || 10000,
   ]);
 
+  // Sync priceRange with query states
+  useEffect(() => {
+    setPriceRange([
+      queryStates.minPrice || 0,
+      queryStates.maxPrice || 10000,
+    ]);
+  }, [queryStates.minPrice, queryStates.maxPrice]);
+
   const handleSort = (value: string) => {
-    const [sBy, sOrder] = value.split(":");
-    setSortBy(sBy as "price" | "createdAt");
-    setSortOrder(sOrder as "asc" | "desc");
+    const [sortBy, sortOrder] = value.split(":");
+    setQueryStates({
+      sortBy: sortBy as "price" | "createdAt",
+      sortOrder: sortOrder as "asc" | "desc",
+      page: 1, // Reset to page 1 when sorting changes
+    });
   };
+
+  const handlePriceChange = (values: number[]) => {
+    setPriceRange(values);
+  };
+
+  const handlePriceCommit = (values: number[]) => {
+    setQueryStates({
+      minPrice: values[0],
+      maxPrice: values[1],
+      page: 1, // Reset to page 1 when price changes
+    });
+  };
+
+  const handleBrandChange = (options: any[]) => {
+    const newBrandIds = options.map(
+      (option) => brandsMeta.find((b) => b.slug === option.value)?.id ?? ""
+    ).filter(Boolean);
+    
+    setQueryStates({
+      brandIds: newBrandIds,
+      page: 1, // Reset to page 1 when brands change
+    });
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setQueryStates({
+      categoryId: value,
+      subCategoryId: "", // Reset subcategory
+      page: 1, // Reset to page 1 when category changes
+    });
+  };
+
+  const handleSubCategoryChange = (value: string) => {
+    setQueryStates({
+      subCategoryId: value,
+      page: 1, // Reset to page 1 when subcategory changes
+    });
+  };
+
+  // No need for apply button - changes are immediate
+  // The parent component (ShopProductsFetch) will automatically re-fetch
+  // when query params change due to the Suspense boundary
 
   return (
     <div className={cn("", className)} {...props}>
@@ -172,11 +209,8 @@ function ShopEventFiltersSection({
       <div className="space-y-1">
         <Label className="font-semibold uppercase">Category</Label>
         <Select
-          value={categoryId}
-          onValueChange={(val) => {
-            setCategoryId(val);
-            setSubCategoryId(""); // reset subcategory if category changes
-          }}
+          value={queryStates.categoryId}
+          onValueChange={handleCategoryChange}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select category" />
@@ -192,21 +226,21 @@ function ShopEventFiltersSection({
       </div>
 
       {/* SubCategory Filter */}
-      {categoryId && (
+      {queryStates.categoryId && (
         <>
           <Separator />
           <div className="space-y-1">
             <Label className="font-semibold uppercase">Sub Category</Label>
             <Select
-              value={subCategoryId}
-              onValueChange={setSubCategoryId}
+              value={queryStates.subCategoryId}
+              onValueChange={handleSubCategoryChange}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select sub category" />
               </SelectTrigger>
               <SelectContent>
                 {subCategories
-                  .filter((sub) => sub.categoryId === categoryId)
+                  .filter((sub) => sub.categoryId === queryStates.categoryId)
                   .map((sub) => (
                     <SelectItem key={sub.id} value={sub.id}>
                       {sub.name}
@@ -237,19 +271,12 @@ function ShopEventFiltersSection({
             <p className="text-center text-sm">No results found</p>
           }
           value={brandsMeta
-            .filter((brand) => brandIds.includes(brand.id))
+            .filter((brand) => queryStates.brandIds.includes(brand.id))
             .map((brand) => ({
               label: brand.name,
               value: brand.slug,
             }))}
-          onChange={(options) =>
-            setBrandIds(
-              options.map(
-                (option) =>
-                  brandsMeta.find((b) => b.slug === option.value)?.id ?? ""
-              )
-            )
-          }
+          onChange={handleBrandChange}
         />
       </div>
 
@@ -266,11 +293,8 @@ function ShopEventFiltersSection({
             id="price_slider"
             value={priceRange}
             step={100}
-            onValueChange={setPriceRange}
-            onValueCommit={(values) => {
-              setMinPrice(values[0]);
-              setMaxPrice(values[1]);
-            }}
+            onValueChange={handlePriceChange}
+            onValueCommit={handlePriceCommit}
             min={0}
             max={10000}
             minStepsBetweenThumbs={1}
@@ -295,7 +319,7 @@ function ShopEventFiltersSection({
         </Label>
 
         <Select
-          value={`${sortBy}:${sortOrder}`}
+          value={`${queryStates.sortBy}:${queryStates.sortOrder}`}
           onValueChange={handleSort}
         >
           <SelectTrigger className="w-full" id="sort_select">
