@@ -1,5 +1,4 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { cn, formatPriceTag } from "@/lib/utils";
 import { BrandMeta, Category, SubCategory } from "@/lib/validations";
 import { useMediaQuery } from "@mantine/hooks";
@@ -11,7 +10,7 @@ import {
   useQueryState,
   useQueryStates,
 } from "nuqs";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
 import { Label } from "../ui/label";
@@ -114,9 +113,7 @@ function ShopEventFiltersSection({
   subCategories,
   ...props
 }: EventFilterProps) {
-  const router = useRouter();
-
-  // Use useQueryStates to manage multiple query states together
+  // Use useQueryStates to manage all filter states together
   const [queryStates, setQueryStates] = useQueryStates({
     brandIds: parseAsArrayOf(parseAsString, ",").withDefault([]),
     categoryId: parseAsString.withDefault(""),
@@ -125,21 +122,13 @@ function ShopEventFiltersSection({
     maxPrice: parseAsInteger,
     sortBy: parseAsStringLiteral(["price", "createdAt"] as const).withDefault("createdAt"),
     sortOrder: parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc"),
-    page: parseAsInteger.withDefault(1), // Reset to page 1 when filters change
+    page: parseAsInteger.withDefault(1),
   });
 
   const [priceRange, setPriceRange] = useState<number[]>([
     queryStates.minPrice || 0,
     queryStates.maxPrice || 10000,
   ]);
-
-  // Sync priceRange with query states
-  useEffect(() => {
-    setPriceRange([
-      queryStates.minPrice || 0,
-      queryStates.maxPrice || 10000,
-    ]);
-  }, [queryStates.minPrice, queryStates.maxPrice]);
 
   const handleSort = (value: string) => {
     const [sortBy, sortOrder] = value.split(":");
@@ -187,10 +176,6 @@ function ShopEventFiltersSection({
       page: 1, // Reset to page 1 when subcategory changes
     });
   };
-
-  // No need for apply button - changes are immediate
-  // The parent component (ShopProductsFetch) will automatically re-fetch
-  // when query params change due to the Suspense boundary
 
   return (
     <div className={cn("", className)} {...props}>

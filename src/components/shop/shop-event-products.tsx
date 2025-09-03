@@ -22,7 +22,7 @@ import {
   parseAsString,
   parseAsStringLiteral,
 } from "nuqs";
-import { useState, useTransition, useEffect } from "react";
+import { useActionState, useOptimistic, useState, useTransition } from "react";
 import { getEventProducts } from "@/actions/event-page";
 
 interface ShopEventProductsProps extends GenericProps {
@@ -53,11 +53,11 @@ export function ShopEventProducts({
   const [products, setProducts] = useState(initialData);
   const [isPending, startTransition] = useTransition();
 
-  // 🔹 Fetch products whenever filters change
-  useEffect(() => {
+  // 🔹 Fetch products when page changes
+  const handlePageChange = (newPage: number) => {
     startTransition(async () => {
       const filters = {
-        page: page,
+        page: newPage,
         limit: 24,
         brandIds: brandIds,
         categoryId: categoryId || undefined,
@@ -70,11 +70,30 @@ export function ShopEventProducts({
 
       const data = await getEventProducts(filters);
       setProducts(data);
+      setPage(newPage);
     });
-  }, [page, brandIds, categoryId, subCategoryId, minPrice, maxPrice, sortBy, sortOrder]);
+  };
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
+  // 🔹 Refetch products when filters change (via URL params)
+  // This will be triggered automatically when URL params change
+  const refetchProducts = () => {
+    startTransition(async () => {
+      const filters = {
+        page: 1, // Always reset to page 1 when filters change
+        limit: 24,
+        brandIds: brandIds,
+        categoryId: categoryId || undefined,
+        subCategoryId: subCategoryId || undefined,
+        minPrice: minPrice || undefined,
+        maxPrice: maxPrice || undefined,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+      };
+
+      const data = await getEventProducts(filters);
+      setProducts(data);
+      setPage(1); // Reset page to 1
+    });
   };
 
   const handleProductClick = async (productId: string, brandId: string) => {
