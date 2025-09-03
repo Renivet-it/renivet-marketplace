@@ -56,24 +56,23 @@ export function ShopEventProducts({
 
   // 🔹 Refetch whenever filters or page change
 useEffect(() => {
-  // ✅ On first load, just use initialData
-  if (page === 1 && products === initialData) return;
-
   startTransition(async () => {
-    const data = await getEventProducts({
+    // build clean payload
+    const filters: Record<string, any> = {
       page,
       limit: 24,
-      brandIds: brandIds.length ? brandIds : undefined,
-      categoryId: categoryId || undefined,
-      subCategoryId: subCategoryId || undefined,
-      productTypeId: productTypeId || undefined,
-      // ✅ Only send if user actually set them
-      minPrice: minPrice > 0 ? minPrice : undefined,
-      maxPrice: maxPrice < 10000 ? maxPrice : undefined,
       sortBy,
       sortOrder,
-    });
+    };
 
+    if (brandIds.length > 0) filters.brandIds = brandIds;
+    if (categoryId) filters.categoryId = categoryId;
+    if (subCategoryId) filters.subCategoryId = subCategoryId;
+    if (productTypeId) filters.productTypeId = productTypeId;
+    if (minPrice > 0) filters.minPrice = minPrice;
+    if (maxPrice < 10000) filters.maxPrice = maxPrice;
+
+    const data = await getEventProducts(filters);
     setProducts(data);
   });
 }, [
