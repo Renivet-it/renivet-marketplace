@@ -22,10 +22,11 @@ import {
   parseAsString,
   parseAsStringLiteral,
 } from "nuqs";
-import { useActionState, useOptimistic, useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { getEventProducts } from "@/actions/event-page";
 
-interface ShopEventProductsProps extends GenericProps {
+interface ShopEventProductsProps {
+  className?: string;
   initialData: any[];
   initialWishlist?: CachedWishlist[];
   userId?: string;
@@ -36,11 +37,10 @@ export function ShopEventProducts({
   initialData,
   initialWishlist,
   userId,
-  ...props
 }: ShopEventProductsProps) {
   const wishlist = initialWishlist ?? [];
 
-  // 🔹 Query states (sync with ShopFilters)
+  // Query states
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [brandIds] = useQueryState("brandIds", parseAsArrayOf(parseAsString, ",").withDefault([]));
   const [categoryId] = useQueryState("categoryId", parseAsString.withDefault(""));
@@ -51,13 +51,25 @@ export function ShopEventProducts({
   const [sortOrder] = useQueryState("sortOrder", parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc"));
 
   const [products, setProducts] = useState(initialData);
+  const [hasMore, setHasMore] = useState(initialData.length === 24);
   const [isPending, startTransition] = useTransition();
+  
+  // Use refs to track previous filter values
+  const prevFilters = useRef({
+    brandIds: brandIds.join(','),
+    categoryId,
+    subCategoryId,
+    minPrice,
+    maxPrice,
+    sortBy,
+    sortOrder
+  });
 
-  // 🔹 Fetch products when page changes
-  const handlePageChange = (newPage: number) => {
+  // Fetch products function
+  const fetchProducts = (targetPage: number = page) => {
     startTransition(async () => {
       const filters = {
-        page: newPage,
+        page: targetPage,
         limit: 24,
         brandIds: brandIds,
         categoryId: categoryId || undefined,
@@ -70,30 +82,36 @@ export function ShopEventProducts({
 
       const data = await getEventProducts(filters);
       setProducts(data);
-      setPage(newPage);
+      setHasMore(data.length === 24);
     });
   };
 
-  // 🔹 Refetch products when filters change (via URL params)
-  // This will be triggered automatically when URL params change
-  const refetchProducts = () => {
-    startTransition(async () => {
-      const filters = {
-        page: 1, // Always reset to page 1 when filters change
-        limit: 24,
-        brandIds: brandIds,
-        categoryId: categoryId || undefined,
-        subCategoryId: subCategoryId || undefined,
-        minPrice: minPrice || undefined,
-        maxPrice: maxPrice || undefined,
-        sortBy: sortBy,
-        sortOrder: sortOrder,
-      };
+  // Automatically refetch ONLY when filters change (not page)
+  useEffect(() => {
+    const currentFilters = {
+      brandIds: brandIds.join(","),
+      categoryId,
+      subCategoryId,
+      minPrice,
+      maxPrice,
+      sortBy,
+      sortOrder
+    };
 
-      const data = await getEventProducts(filters);
-      setProducts(data);
-      setPage(1); // Reset page to 1
-    });
+    // Check if filters actually changed
+    const filtersChanged = JSON.stringify(currentFilters) !== JSON.stringify(prevFilters.current);
+
+    if (filtersChanged) {
+      fetchProducts(1);
+      setPage(1);
+      prevFilters.current = currentFilters;
+    }
+  }, [brandIds, categoryId, subCategoryId, minPrice, maxPrice, sortBy, sortOrder]);
+
+  // Handle page changes
+  const handlePageChange = (newPage: number) => {
+    fetchProducts(newPage);
+    setPage(newPage);
   };
 
   const handleProductClick = async (productId: string, brandId: string) => {
@@ -108,18 +126,15 @@ export function ShopEventProducts({
 
   return (
     <>
-      {/* 🔹 Products */}
       <div
         className={cn(
           "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4",
           className
         )}
-        {...props}
       >
         {products.map((eventItem) => {
           const product = eventItem.product;
-          const isWishlisted =
-            wishlist?.some((item) => item.productId === product.id) ?? false;
+          const isWishlisted = wishlist?.some((item) => item.productId === product.id) ?? false;
 
           return (
             <div
@@ -139,7 +154,6 @@ export function ShopEventProducts({
 
       <Separator />
 
-      {/* 🔹 Pagination */}
       <div className="flex justify-center gap-2 mt-6">
         <Button
           disabled={page <= 1 || isPending}
@@ -149,7 +163,7 @@ export function ShopEventProducts({
         </Button>
         <span className="px-4 py-2">{page}</span>
         <Button
-          disabled={isPending || products.length < 24}
+          disabled={isPending || !hasMore}
           onClick={() => handlePageChange(page + 1)}
         >
           Next

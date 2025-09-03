@@ -1,7 +1,6 @@
 import { GeneralShell } from "@/components/globals/layouts";
 import { ShopEventProducts, ShopEventFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { Label } from "@/components/ui/label";
-// import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries } from "@/lib/db/queries";
@@ -21,8 +20,8 @@ type SearchParamsShape = {
   page?: string;
   limit?: string;
   search?: string;
-  brandIds?: string; // comma separated ids from nuqs
-  colors?: string; // comma separated values
+  brandIds?: string;
+  colors?: string;
   minPrice?: string;
   maxPrice?: string;
   categoryId?: string;
@@ -47,8 +46,7 @@ type EventFilters = {
   sortOrder?: "asc" | "desc" | undefined;
 };
 
-// pages/your-event-page-file.tsx  (or wherever the Page component lives)
-export default async function Page({ searchParams }: PageProps) {
+export default async function Page({ searchParams }: { searchParams: Promise<SearchParamsShape> }) {
   const resolvedParams = await searchParams;
 
   return (
@@ -68,7 +66,6 @@ export default async function Page({ searchParams }: PageProps) {
           <Separator />
 
           <Suspense fallback={<ShopProductsSkeleton />}>
-            {/* pass resolved params here */}
             <ShopProductsFetch searchParams={resolvedParams} />
           </Suspense>
         </div>
@@ -77,8 +74,7 @@ export default async function Page({ searchParams }: PageProps) {
   );
 }
 
-
-async function ShopFiltersFetch(props: GenericProps) {
+async function ShopFiltersFetch(props: { className?: string }) {
   const [categories, subCategories, productTypes, allBrands] =
     await Promise.all([
       categoryCache.getAll(),
@@ -99,11 +95,9 @@ async function ShopFiltersFetch(props: GenericProps) {
   );
 }
 
-// 🔹 NEW: Using your new event page data model
 async function ShopProductsFetch({ searchParams }: { searchParams?: SearchParamsShape }) {
   const { userId } = await auth();
 
-  // build a simple filters object from query params
   const filters: EventFilters = {
     page: searchParams?.page ? Number(searchParams.page) : 1,
     limit: searchParams?.limit ? Number(searchParams.limit) : 24,
@@ -137,41 +131,30 @@ function ShopFiltersSkeleton() {
   return (
     <div className="w-full basis-1/6 space-y-4">
       <h4 className="text-lg">Filters</h4>
-
       <Separator />
-
       <div className="space-y-1">
         <Label className="font-semibold uppercase">Category</Label>
         <Skeleton className="h-10" />
       </div>
-
       <Separator />
-
       <div className="space-y-1">
         <Label className="font-semibold uppercase">Brand</Label>
         <Skeleton className="h-10" />
       </div>
-
       <Separator />
-
       <div className="space-y-1">
         <div className="space-y-2">
           <Label className="font-semibold uppercase">Price</Label>
           <Skeleton className="h-6" />
         </div>
-
         <Skeleton className="h-4 w-1/2" />
       </div>
-
       <Separator />
-
       <div className="space-y-1">
         <Label className="font-semibold uppercase">Colors</Label>
         <Skeleton className="h-10" />
       </div>
-
       <Separator />
-
       <div className="space-y-1">
         <Label className="font-semibold uppercase">Sort By</Label>
         <Skeleton className="h-10" />
@@ -189,21 +172,17 @@ function ShopProductsSkeleton() {
             <div>
               <Skeleton className="aspect-[3/4] size-full" />
             </div>
-
             <div className="space-y-2 py-2">
               <div className="space-y-1">
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-3 w-1/2" />
               </div>
-
               <Skeleton className="h-5 w-1/3" />
             </div>
           </div>
         ))}
       </div>
-
       <Separator />
-
       <div className="flex w-full items-center justify-center gap-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton
