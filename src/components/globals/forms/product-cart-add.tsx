@@ -319,7 +319,7 @@ export function ProductCartAddForm({
                             <Button
                                 type="submit"
                                 size="lg"
-                                className="flex-1 rounded-full bg-black text-white hover:bg-gray-900 font-semibold text-lg"
+                                className="flex-1 rounded-full bg-[#E0E2E1] text-black hover:bg-[#E0E2E1] font-semibold text-lg"
                                 disabled={
                                     !product.isAvailable ||
                                     (!!selectedVariant && (selectedVariant.isDeleted || selectedVariant?.quantity === 0)) ||

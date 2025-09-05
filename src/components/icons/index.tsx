@@ -118,6 +118,8 @@ import {
     ChartNoAxesColumn,
     Layers,
     StarHalf,
+        Recycle,
+    RotateCw,
     type LucideIcon,
     type LucideProps,
 } from "lucide-react";
@@ -126,6 +128,8 @@ export type Icon = LucideIcon;
 
 export const Icons = {
     MapPin,
+    Recycle,
+    RotateCw,
     AlertCircle,
     PiggyBank,
     Info,
