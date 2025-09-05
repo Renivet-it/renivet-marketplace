@@ -43,6 +43,7 @@ export function ProductPage({
 }: PageProps) {
     const [selectedSku] = useQueryState("sku");
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(0);
 
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
         { userId: userId! },
@@ -110,57 +111,93 @@ export function ProductPage({
         selectedVariant?.mediaItem,
         product.title,
     ]);
-    /**
-     * Helper function
-     */
+
     function isEmptyArray(arr: Array<any>): boolean {
         return arr.length === 0;
     }
+
     return (
         <>
             <div
                 className={cn("flex flex-col gap-5 lg:flex-row", className)}
                 {...props}
             >
-                <div className="hidden h-min basis-3/6 grid-cols-1 gap-2 md:grid md:grid-cols-4">
-                    {isEmptyArray(sortedImages) && (
-                        <div
-                            className={cn(
-                                "cursor-pointer overflow-hidden",
-                                "col-span-4 aspect-[4/3]"
+                {/* Desktop Layout */}
+                <div className="hidden lg:block w-1/2">
+                    <div className="border border-gray-300 rounded-md p-4 flex bg-[#f4f0ec]">
+                        {/* Thumbnails */}
+                        <div className="flex flex-col gap-3 w-24 items-center">
+                            {isEmptyArray(sortedImages) ? (
+                                <div className="border border-gray-300 rounded-md overflow-hidden">
+                                    <Image
+                                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                        alt="Default Thumbnail"
+                                        width={80}
+                                        height={80}
+                                        className="w-full h-24 object-contain"
+                                    />
+                                </div>
+                            ) : (
+                                sortedImages.map((image, i) => (
+                                    <div
+                                        key={image.id}
+                                        className={cn(
+                                            "cursor-pointer overflow-hidden rounded-md border transition-all duration-200",
+                                            i === selectedImage
+                                                ? "border-black ring-2 ring-gray-400"
+                                                : "border-gray-300 hover:border-gray-500"
+                                        )}
+                                        onClick={() => setSelectedImage(i)}
+                                    >
+                                        <Image
+                                            src={image.url}
+                                            alt={image.alt || `Thumbnail ${i + 1}`}
+                                            width={80}
+                                            height={80}
+                                            className="w-full h-24 object-contain"
+                                        />
+                                    </div>
+                                ))
                             )}
-                            onClick={() => setIsImageModalOpen(true)}
-                        >
-                            <Image
-                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                                alt="Default Product image"
-                                width={1000}
-                                height={1000}
-                                className="size-full object-cover"
-                            />
                         </div>
-                    )}
-                    {sortedImages.length > 0 &&
-                        sortedImages?.map((image, i) => (
+
+                        {/* Main Image */}
+                        <div
+                            className="ml-4 flex items-center justify-center border border-gray-300 rounded-md bg-[#f4f0ec]"
+                            style={{ width: "485px", height: "485px" }}
+                        >
                             <div
-                                className={cn(
-                                    "aspect-square cursor-pointer overflow-hidden",
-                                    i === 0 && "col-span-4 aspect-[3/3.5]"
-                                )}
-                                key={image.id}
+                                className="cursor-pointer relative"
                                 onClick={() => setIsImageModalOpen(true)}
+                                style={{ width: "100%", height: "100%" }}
                             >
                                 <Image
-                                    src={image.url}
-                                    alt={image.alt || `Product image ${i + 1}`}
-                                    width={1000}
-                                    height={1000}
-                                    className="size-full object-cover"
+                                    src={
+                                        isEmptyArray(sortedImages)
+                                            ? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                            : sortedImages[selectedImage]?.url
+                                    }
+                                    alt={
+                                        isEmptyArray(sortedImages)
+                                            ? "Default Product Image"
+                                            : sortedImages[selectedImage]?.alt || "Product image"
+                                    }
+                                    fill
+                                    className="object-contain bg-[#F8F8F8]"
                                 />
                             </div>
-                        ))}
+                        </div>
+                    </div>
+
+                    {/* Bottom Info Strip */}
+                    <div className="border-t border-gray-300 bg-[#F8F8F8] text-sm text-gray-700 flex justify-around py-3 mt-3 rounded-b-md">
+                        <span>100% Genuine Products</span>
+                        <span>Easy Return Policy</span>
+                        <span>Mindful Materials</span>
+                    </div>
                 </div>
 
+                {/* Mobile Carousel */}
                 <Carousel
                     plugins={[
                         Autoplay({
@@ -182,13 +219,10 @@ export function ProductPage({
                                 <div className="aspect-[3/4] size-full overflow-hidden">
                                     <Image
                                         src={image.url}
-                                        alt={
-                                            image.alt ||
-                                            `Product image ${i + 1}`
-                                        }
+                                        alt={image.alt || `Product image ${i + 1}`}
                                         width={1000}
                                         height={1000}
-                                        className="size-full object-cover"
+                                        className="size-full object-contain bg-[#f4f0ec]"
                                     />
                                 </div>
                             </CarouselItem>
@@ -207,6 +241,7 @@ export function ProductPage({
                 />
             </div>
 
+            {/* Modal */}
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogContent className="p-0">
                     <DialogHeader className="hidden">
@@ -233,13 +268,10 @@ export function ProductPage({
                                     <div className="aspect-[3/4] size-full overflow-hidden">
                                         <Image
                                             src={image.url}
-                                            alt={
-                                                image.alt ||
-                                                `Product image ${i + 1}`
-                                            }
+                                            alt={image.alt || `Product image ${i + 1}`}
                                             width={1000}
                                             height={1000}
-                                            className="size-full object-cover"
+                                            className="size-full object-contain bg-[#F8F8F8]"
                                         />
                                     </div>
                                 </CarouselItem>
