@@ -1,4 +1,4 @@
-import { GeneralShell } from "@/components/globals/layouts";
+import { GeneralShellEvent } from "@/components/globals/layouts";
 import { ShopEventProducts, ShopEventFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -50,7 +50,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const resolvedParams = await searchParams;
 
   return (
-    <GeneralShell>
+    <GeneralShellEvent>
       <div className="flex flex-col gap-5 md:flex-row">
         {/* ✅ Filters - Desktop Only */}
         <Suspense fallback={<ShopFiltersSkeleton />}>
@@ -79,7 +79,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           </Suspense>
         </div>
       </div>
-    </GeneralShell>
+    </GeneralShellEvent>
   );
 }
 
