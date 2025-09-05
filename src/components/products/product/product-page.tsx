@@ -162,35 +162,35 @@ export function ProductPage({
                         </div>
 
                         {/* Main Image */}
-                        <div
-                            className="ml-4 flex items-center justify-center border border-gray-300 rounded-md bg-[#f4f0ec]"
-                            style={{ width: "485px", height: "485px" }}
-                        >
-                            <div
-                                className="cursor-pointer relative"
-                                onClick={() => setIsImageModalOpen(true)}
-                                style={{ width: "100%", height: "100%" }}
-                            >
-                                <Image
-                                    src={
-                                        isEmptyArray(sortedImages)
-                                            ? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                                            : sortedImages[selectedImage]?.url
-                                    }
-                                    alt={
-                                        isEmptyArray(sortedImages)
-                                            ? "Default Product Image"
-                                            : sortedImages[selectedImage]?.alt || "Product image"
-                                    }
-                                    fill
-                                    className="object-contain bg-[#F8F8F8]"
-                                />
-                            </div>
-                        </div>
+<div
+    className="ml-4 flex items-center justify-center rounded-md"
+    style={{ width: "485px", height: "485px" }}
+>
+    <div
+        className="cursor-pointer relative"
+        onClick={() => setIsImageModalOpen(true)}
+        style={{ width: "100%", height: "100%" }}
+    >
+        <Image
+            src={
+                isEmptyArray(sortedImages)
+                    ? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                    : sortedImages[selectedImage]?.url
+            }
+            alt={
+                isEmptyArray(sortedImages)
+                    ? "Default Product Image"
+                    : sortedImages[selectedImage]?.alt || "Product image"
+            }
+            fill
+            className="object-contain"
+        />
+    </div>
+</div>
                     </div>
 
                     {/* Bottom Info Strip */}
-                    <div className="border-t border-gray-300 bg-[#F8F8F8] text-sm text-gray-700 flex justify-around py-3 mt-3 rounded-b-md">
+                    <div className="border-t border-gray-300 bg-[#f4f0ec] text-sm text-gray-700 flex justify-around py-3 mt-3 rounded-b-md">
                         <span>100% Genuine Products</span>
                         <span>Easy Return Policy</span>
                         <span>Mindful Materials</span>
@@ -222,7 +222,7 @@ export function ProductPage({
                                         alt={image.alt || `Product image ${i + 1}`}
                                         width={1000}
                                         height={1000}
-                                        className="size-full object-contain bg-[#f4f0ec]"
+                                        className="size-full object-contain"
                                     />
                                 </div>
                             </CarouselItem>
@@ -271,7 +271,7 @@ export function ProductPage({
                                             alt={image.alt || `Product image ${i + 1}`}
                                             width={1000}
                                             height={1000}
-                                            className="size-full object-contain bg-[#F8F8F8]"
+                                            className="size-full object-contain"
                                         />
                                     </div>
                                 </CarouselItem>
