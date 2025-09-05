@@ -31,9 +31,13 @@ export const env = createEnv({
             .string({ required_error: "GOOGLE_ANALYTICS_ID is required" })
             .min(1, "GOOGLE_ANALYTICS_ID is required"),
 
-        RESEND_API_KEY: z
-            .string({ required_error: "RESEND_API_KEY is required" })
-            .min(1, "RESEND_API_KEY is required"),
+       // RESEND_API_KEY: z
+         //   .string({ required_error: "RESEND_API_KEY is required" })
+           // .min(1, "RESEND_API_KEY is required"),
+           
+            RESEND_API_KEY: z.string().optional(),
+           
+           
 
         RAZOR_PAY_KEY_ID: z
             .string({ required_error: "RAZOR_PAY_KEY_ID is required" })
