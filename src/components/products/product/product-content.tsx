@@ -136,6 +136,11 @@ export function ProductContent({
                     isWishlisted={isWishlisted}
                     initialCart={initialCart}
                     userId={userId}
+                    initialZipCode={user?.addresses[0]?.zip}
+                    warehousePincode={brandDetails?.warehousePostalCode}
+                    estimatedDelivery={estimatedDelivery}
+                    setZipCode={setZipCode}
+                    setEstimatedDelivery={setEstimatedDelivery}
                 />
                 <Separator />
                 <DeliveryOption

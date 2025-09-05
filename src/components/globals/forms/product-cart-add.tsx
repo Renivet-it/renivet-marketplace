@@ -31,12 +31,18 @@ import { WishlistButton } from "../buttons";
 import { Spinner } from "@/components/ui/spinner";
 import { trackAddToCart } from "@/actions/track-product";
 import { fbEvent } from "@/lib/fbpixel";
+import { DeliveryOption } from "../../products/product/product-delivery";
 
 interface PageProps {
     initialCart?: CachedCart[];
     product: ProductWithBrand;
     userId?: string;
     isWishlisted: boolean;
+    initialZipCode?: string;
+    warehousePincode: string | null | undefined;
+    estimatedDelivery?: string;
+    setZipCode: (zip: string) => void;
+    setEstimatedDelivery: (date: string) => void;
 }
 
 export function ProductCartAddForm({
@@ -44,6 +50,11 @@ export function ProductCartAddForm({
     isWishlisted,
     initialCart,
     userId,
+    initialZipCode,
+    warehousePincode,
+    estimatedDelivery,
+    setZipCode,
+    setEstimatedDelivery,
 }: PageProps) {
     const handleAddProductCart = async (productId: string, brandId: string) => {
         try {
@@ -295,6 +306,13 @@ export function ProductCartAddForm({
                                     )}
                                 />
                             ))}
+<DeliveryOption
+    initialZipCode={initialZipCode}
+    warehousePincode={warehousePincode}
+    estimatedDelivery={estimatedDelivery || ""}
+    setZipCode={setZipCode}
+    setEstimatedDelivery={setEstimatedDelivery}
+/>
 
                         {/* Buttons */}
                         <div className="flex gap-4">
