@@ -97,28 +97,39 @@ export function ProductContent({
     return (
         <>
             <div className={cn("", className)} {...props}>
-                <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                        <h2 className="text-2xl font-semibold md:text-4xl">
-                            {product.title}
-                        </h2>
-                        <button
-                            className="mt-2"
-                            onClick={() => setIsProductShareModalOpen(true)}
-                        >
-                            <span className="sr-only">Share</span>
-                            <Icons.Share className="size-5" />
-                        </button>
-                    </div>
-                    <p>
-                        <Link
-                            href={`/brands/${product.brand.id}`}
-                            className="bg-accent p-1 px-2 text-xs text-accent-foreground md:text-sm"
-                        >
-                            {product.brand.name}
-                        </Link>
-                    </p>
-                </div>
+               <div className="space-y-3 border-b border-gray-200 pb-4">
+  {/* Title + Share */}
+  <div className="flex items-start justify-between">
+    <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">
+      {product.title}
+    </h2>
+    <button
+      className="text-gray-600 hover:text-gray-900"
+      onClick={() => setIsProductShareModalOpen(true)}
+    >
+      <span className="sr-only">Share</span>
+      <Icons.Share className="w-5 h-5" />
+    </button>
+  </div>
+
+  {/* Rating + Reviews + Brand */}
+  <div className="flex items-center gap-4">
+    {/* Stars */}
+    <div className="flex items-center text-yellow-500">
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.StarHalf className="w-4 h-4 fill-current" />
+    </div>
+    <span className="text-gray-700 text-sm">
+      4.6 • 128 reviews
+    </span>
+    <span className="bg-green-50 text-green-700 text-xs md:text-sm font-medium px-3 py-1 rounded-full border border-green-200">
+      {product.brand.name}
+    </span>
+  </div>
+</div>
                 <Separator />
                 <ProductCartAddForm
                     product={product}

@@ -117,6 +117,7 @@ import {
     Users,
     ChartNoAxesColumn,
     Layers,
+    StarHalf,
     type LucideIcon,
     type LucideProps,
 } from "lucide-react";
@@ -241,6 +242,7 @@ export const Icons = {
     ShoppingBag,
     Home,
     Megaphone,
+    StarHalf,
     ChartNoAxesColumn,
     X_Twitter: (props: LucideProps) => (
         <svg

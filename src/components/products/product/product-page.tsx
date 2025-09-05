@@ -190,7 +190,7 @@ export function ProductPage({
                     </div>
 
                     {/* Bottom Info Strip */}
-                    <div className="border-t border-gray-300 bg-[#f4f0ec] text-sm text-gray-700 flex justify-around py-3 mt-3 rounded-b-md">
+                    <div className="border-t border-gray-300 bg-[#C2CDD0] text-sm text-gray-700 flex justify-around py-3 mt-3 rounded-b-md">
                         <span>100% Genuine Products</span>
                         <span>Easy Return Policy</span>
                         <span>Mindful Materials</span>
