@@ -40,7 +40,6 @@ export function ShopEventProducts({
 }: ShopEventProductsProps) {
   const wishlist = initialWishlist ?? [];
 
-  // Query states
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [brandIds] = useQueryState("brandIds", parseAsArrayOf(parseAsString, ",").withDefault([]));
   const [categoryId] = useQueryState("categoryId", parseAsString.withDefault(""));
@@ -53,8 +52,7 @@ export function ShopEventProducts({
   const [products, setProducts] = useState(initialData);
   const [hasMore, setHasMore] = useState(initialData.length === 24);
   const [isPending, startTransition] = useTransition();
-  
-  // Use refs to track previous filter values
+
   const prevFilters = useRef({
     brandIds: brandIds.join(','),
     categoryId,
@@ -65,7 +63,6 @@ export function ShopEventProducts({
     sortOrder
   });
 
-  // Fetch products function
   const fetchProducts = (targetPage: number = page) => {
     startTransition(async () => {
       const filters = {
@@ -86,7 +83,6 @@ export function ShopEventProducts({
     });
   };
 
-  // Automatically refetch ONLY when filters change (not page)
   useEffect(() => {
     const currentFilters = {
       brandIds: brandIds.join(","),
@@ -98,7 +94,6 @@ export function ShopEventProducts({
       sortOrder
     };
 
-    // Check if filters actually changed
     const filtersChanged = JSON.stringify(currentFilters) !== JSON.stringify(prevFilters.current);
 
     if (filtersChanged) {
@@ -108,7 +103,6 @@ export function ShopEventProducts({
     }
   }, [brandIds, categoryId, subCategoryId, minPrice, maxPrice, sortBy, sortOrder]);
 
-  // Handle page changes
   const handlePageChange = (newPage: number) => {
     fetchProducts(newPage);
     setPage(newPage);
@@ -126,6 +120,17 @@ export function ShopEventProducts({
 
   return (
     <>
+      {/* ✅ Mobile Hero Section */}
+      <div className="block md:hidden bg-gradient-to-tr from-pink-100 via-purple-100 to-yellow-100 rounded-2xl shadow-md p-6 text-center mb-6">
+        <h1 className="text-2xl font-bold mb-2">Hyderabad Exhibition 2025</h1>
+        <p className="text-gray-600 mb-2">September 2025</p>
+        <p className="text-gray-700 text-sm mb-4">
+          Discover Exclusive Handcrafted Pieces, Sustainable Fashion, And Beauty Products Showcased Only At Our Hyderabad Event.
+        </p>
+        <Button variant="outline" className="mx-auto">Join Us</Button>
+      </div>
+
+      {/* ✅ Product Grid */}
       <div
         className={cn(
           "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4",

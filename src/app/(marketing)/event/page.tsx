@@ -52,19 +52,28 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   return (
     <GeneralShell>
       <div className="flex flex-col gap-5 md:flex-row">
+        {/* ✅ Filters - Desktop Only */}
         <Suspense fallback={<ShopFiltersSkeleton />}>
-          <ShopFiltersFetch className="w-full basis-1/6 space-y-4" />
+          <div className="hidden md:block w-full basis-1/6 space-y-4">
+            <ShopFiltersFetch />
+          </div>
         </Suspense>
 
-        <div className="hidden w-px bg-border md:inline-block" />
+        {/* ✅ Divider for Desktop */}
+        <div className="hidden md:inline-block w-px bg-border" />
 
         <div className="w-full basis-5/6 space-y-5">
-          <div className="flex justify-end">
+          {/* ✅ SortBy - Desktop Only */}
+          <div className="hidden md:flex justify-end">
             <ShopSortBy />
           </div>
 
-          <Separator />
+          {/* ✅ Separator - Desktop Only */}
+          <div className="hidden md:block">
+            <Separator />
+          </div>
 
+          {/* ✅ Products */}
           <Suspense fallback={<ShopProductsSkeleton />}>
             <ShopProductsFetch searchParams={resolvedParams} />
           </Suspense>
