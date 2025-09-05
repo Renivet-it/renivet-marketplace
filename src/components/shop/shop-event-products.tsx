@@ -24,6 +24,7 @@ import {
 } from "nuqs";
 import { useState, useTransition, useEffect, useRef } from "react";
 import { getEventProducts } from "@/actions/event-page";
+import { ExhibitionCarousel } from "./carousel-component";
 
 interface ShopEventProductsProps {
   className?: string;
@@ -121,14 +122,31 @@ export function ShopEventProducts({
   return (
     <>
       {/* ✅ Mobile Hero Section */}
-      <div className="block md:hidden bg-gradient-to-tr from-pink-100 via-purple-100 to-yellow-100 rounded-2xl shadow-md p-6 text-center mb-6">
-        <h1 className="text-2xl font-bold mb-2">Hyderabad Exhibition 2025</h1>
-        <p className="text-gray-600 mb-2">September 2025</p>
-        <p className="text-gray-700 text-sm mb-4">
-          Discover Exclusive Handcrafted Pieces, Sustainable Fashion, And Beauty Products Showcased Only At Our Hyderabad Event.
-        </p>
-        <Button variant="outline" className="mx-auto">Join Us</Button>
-      </div>
+<div className="block md:hidden mb-6">
+  <ExhibitionCarousel slides={[
+    {
+      title: "Hyderabad Exhibition 2025",
+      date: "September 2025",
+      description: "Discover Exclusive Handcrafted Pieces, Sustainable Fashion, And Beauty Products Showcased Only At Our Hyderabad Event.",
+      imageUrl: "/images/event1.jpg", // Add your actual path
+      url: "/events/hyderabad",
+    },
+    {
+      title: "New Collection Launch",
+      date: "October 2025",
+      description: "Be the first to explore our latest designs and handcrafted pieces this festive season.",
+      imageUrl: "/images/event2.jpg",
+      url: "/events/launch",
+    },
+    {
+      title: "Special Festive Discounts",
+      date: "November 2025",
+      description: "Enjoy exclusive discounts on curated items for a limited time.",
+      imageUrl: "/images/event3.jpg",
+      url: "/offers/festive",
+    },
+  ]} />
+</div>
 
       {/* ✅ Product Grid */}
       <div
