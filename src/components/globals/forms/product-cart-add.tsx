@@ -176,7 +176,17 @@ export function ProductCartAddForm({
         if (!selectedVariant) return null;
         return productPrice > selectedVariant.price ? null : selectedVariant.compareAtPrice;
     }, [product, selectedVariant, productPrice]);
-
+const sortedOptions = useMemo(() => {
+  return [...product.options].sort((a, b) => {
+    const order = ["color", "size"];
+    const aIndex = order.indexOf(a.name.toLowerCase());
+    const bIndex = order.indexOf(b.name.toLowerCase());
+    if (aIndex === -1 && bIndex === -1) return 0;
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
+}, [product.options]);
     const { mutate: addToCart, isPending } =
         trpc.general.users.cart.addProductToCart.useMutation({
             onMutate: () => {
@@ -245,8 +255,8 @@ export function ProductCartAddForm({
                     })}
                 >
                     <div className="space-y-6">
-                        {product.productHasVariants &&
-                            product.options.map((option) => (
+                       {product.productHasVariants &&
+    sortedOptions.map((option) => (
                                 <FormField
                                     key={option.id}
                                     control={form.control}

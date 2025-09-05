@@ -130,7 +130,6 @@ export function ProductContent({
     </span>
   </div>
 </div>
-                <Separator />
                 <ProductCartAddForm
                     product={product}
                     isWishlisted={isWishlisted}
@@ -157,7 +156,6 @@ export function ProductContent({
     </div>
   ))}
 </div>
-                <Separator />
                 {/* <DeliveryOption
                     initialZipCode={user?.addresses[0]?.zip}
                     warehousePincode={brandDetails?.warehousePostalCode}
