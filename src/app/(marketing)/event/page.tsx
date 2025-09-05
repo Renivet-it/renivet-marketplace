@@ -1,4 +1,3 @@
-import { GeneralShellEvent } from "@/components/globals/layouts";
 import { ShopEventProducts, ShopEventFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -50,36 +49,42 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
   const resolvedParams = await searchParams;
 
   return (
-    <GeneralShellEvent>
-      <div className="flex flex-col gap-5 md:flex-row">
-        {/* ✅ Filters - Desktop Only */}
-        <Suspense fallback={<ShopFiltersSkeleton />}>
-          <div className="hidden md:block w-full basis-1/6 space-y-4">
-            <ShopFiltersFetch />
-          </div>
-        </Suspense>
-
-        {/* ✅ Divider for Desktop */}
-        <div className="hidden md:inline-block w-px bg-border" />
-
-        <div className="w-full basis-5/6 space-y-5">
-          {/* ✅ SortBy - Desktop Only */}
-          <div className="hidden md:flex justify-end">
-            <ShopSortBy />
-          </div>
-
-          {/* ✅ Separator - Desktop Only */}
-          <div className="hidden md:block">
-            <Separator />
-          </div>
-
-          {/* ✅ Products */}
-          <Suspense fallback={<ShopProductsSkeleton />}>
-            <ShopProductsFetch searchParams={resolvedParams} />
+    <section className={cn("flex w-full justify-center")}>
+      <div
+        className={cn(
+          "w-full md:max-w-5xl md:space-y-4 md:p-8 md:py-10 xl:max-w-[100rem]"
+        )}
+      >
+        <div className="flex flex-col gap-5 md:flex-row">
+          {/* ✅ Filters - Desktop Only */}
+          <Suspense fallback={<ShopFiltersSkeleton />}>
+            <div className="hidden md:block w-full basis-1/6 space-y-4">
+              <ShopFiltersFetch />
+            </div>
           </Suspense>
+
+          {/* ✅ Divider for Desktop */}
+          <div className="hidden md:inline-block w-px bg-border" />
+
+          <div className="w-full basis-5/6 space-y-5">
+            {/* ✅ SortBy - Desktop Only */}
+            <div className="hidden md:flex justify-end">
+              <ShopSortBy />
+            </div>
+
+            {/* ✅ Separator - Desktop Only */}
+            <div className="hidden md:block">
+              <Separator />
+            </div>
+
+            {/* ✅ Products */}
+            <Suspense fallback={<ShopProductsSkeleton />}>
+              <ShopProductsFetch searchParams={resolvedParams} />
+            </Suspense>
+          </div>
         </div>
       </div>
-    </GeneralShellEvent>
+    </section>
   );
 }
 
