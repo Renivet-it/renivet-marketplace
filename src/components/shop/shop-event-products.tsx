@@ -154,31 +154,28 @@ export function ShopEventProducts({
  {/* ✅ Category Section (Visible only on mobile) */}
 <div className="flex flex-wrap justify-center gap-4 mb-6 md:hidden">
   {categories.map((cat) => (
-    <button
-      key={cat.id}
-      className={cn(
-        "flex flex-col items-center w-16 focus:outline-none",
-        categoryId === cat.id ? "text-black" : "text-gray-500"
-      )}
-      onClick={() => {
-        setCategoryId(cat.id);
-        setPage(1);
-      }}
-    >
-      <div
-        className={cn(
-          "w-14 h-14 rounded-full overflow-hidden border",
-          categoryId === cat.id ? "border-black" : "border-gray-300"
-        )}
-      >
-        <img
-          src={cat.image || "/images/placeholder.png"} // ✅ Add fallback
-          alt={cat.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      <span className="mt-1 text-xs font-medium text-center">{cat.name}</span>
-    </button>
+<Link
+  key={cat.id}
+  href={`/event/${cat.id}`}
+  className={cn(
+    "flex flex-col items-center w-16 focus:outline-none",
+    categoryId === cat.id ? "text-black" : "text-gray-500"
+  )}
+>
+  <div
+    className={cn(
+      "w-14 h-14 rounded-full overflow-hidden border",
+      categoryId === cat.id ? "border-black" : "border-gray-300"
+    )}
+  >
+    <img
+      src={cat.image || "/images/placeholder.png"}
+      alt={cat.name}
+      className="w-full h-full object-cover"
+    />
+  </div>
+  <span className="mt-1 text-xs font-medium text-center">{cat.name}</span>
+</Link>
   ))}
 </div>
 
