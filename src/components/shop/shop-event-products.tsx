@@ -31,6 +31,14 @@ interface ShopEventProductsProps {
   userId?: string;
 }
 
+const categories = [
+    { id: "08ce51fe-adb8-4086-acfd-759772767ec8", name: "Beauty and Personal Care" },
+    { id: "0b7046fc-6962-4469-81c2-412ed6949c02", name: "Men" },
+    { id: "16d40bb3-3061-4790-b9b7-253cb078dfe1", name: "Women" },
+    { id: "173e1e71-e298-4301-b542-caa29d3950bf", name: "Home and Living" },
+    { id: "22816fa3-d57e-4e3b-bc0e-72edf4635124", name: "Kids" }
+];
+
 export function ShopEventProducts({
   className,
   initialData,
@@ -41,7 +49,7 @@ export function ShopEventProducts({
 
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
   const [brandIds] = useQueryState("brandIds", parseAsArrayOf(parseAsString, ",").withDefault([]));
-  const [categoryId] = useQueryState("categoryId", parseAsString.withDefault(""));
+  const [categoryId, setCategoryId] = useQueryState("categoryId", parseAsString.withDefault(""));
   const [subCategoryId] = useQueryState("subCategoryId", parseAsString.withDefault(""));
   const [minPrice] = useQueryState("minPrice", parseAsInteger);
   const [maxPrice] = useQueryState("maxPrice", parseAsInteger);
@@ -142,6 +150,39 @@ export function ShopEventProducts({
 
   return (
     <div className="min-h-screen bg-[#f4f0ec] p-4">
+      {/* ✅ Category Section */}
+      <div className="flex gap-4 overflow-x-auto no-scrollbar mb-6">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            className={cn(
+              "flex flex-col items-center min-w-[70px] focus:outline-none",
+              categoryId === cat.id ? "text-black" : "text-gray-500"
+            )}
+            onClick={() => {
+              setCategoryId(cat.id);
+              setPage(1);
+            }}
+          >
+            <div
+              className={cn(
+                "w-16 h-16 rounded-full overflow-hidden border",
+                categoryId === cat.id ? "border-black" : "border-gray-300"
+              )}
+            >
+              <img
+                src={cat.image}
+                alt={cat.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="mt-2 text-sm font-medium whitespace-nowrap">
+              {cat.name}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* ✅ Carousel for Mobile */}
       <div className="block md:hidden mb-6">
         <ExhibitionCarousel
