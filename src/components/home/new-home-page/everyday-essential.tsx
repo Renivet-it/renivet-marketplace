@@ -16,100 +16,80 @@ const EveryDayEssential = () => {
           </p>
         </div>
 
-        {/* Product Cards - Responsive Layout */}
-        <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end justify-center">
-          {/* Coconut Oil Card - Large on desktop, full width on mobile */}
-          <div className="relative w-full max-w-sm md:w-96 h-80 md:h-[480px] rounded-3xl overflow-hidden shadow-xl">
-            <Image
-              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNt3tzng0rgXZuWwadPABUqnljV5RbJMFsx1v"
-              alt="Coconut Oil with coconut and palm leaves"
-              fill
-              className="object-cover brightness-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
-            <div className="absolute top-6 left-6 text-white">
-              <h3 className="text-lg font-medium">Coconut Oil</h3>
-            </div>
-            <div className="absolute bottom-6 left-6">
-              <Link 
-                href="/shop"
-                className="border border-white/50 text-white px-4 py-2 text-sm font-medium hover:bg-white/20 transition-colors duration-300 inline-block"
-              >
-                → EXPLORE NOW
-              </Link>
-            </div>
-          </div>
+        {/* Product Cards */}
+        <div
+          className="
+            grid grid-cols-2 gap-4           /* Mobile: 2 per row */
+            md:flex md:flex-row md:gap-8     /* Desktop: original flex row */
+            items-center md:items-end justify-center
+          "
+        >
+          {/* Coconut Oil Card */}
+          <Card
+            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNt3tzng0rgXZuWwadPABUqnljV5RbJMFsx1v"
+            title="Coconut Oil"
+            bigOnDesktop
+          />
 
-          {/* Face & Body Scrub Card - Small on desktop, full width on mobile */}
-          <div className="relative w-full max-w-sm md:w-80 h-80 md:h-96 rounded-3xl overflow-hidden shadow-xl">
-            <Image
-              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRSZG5OzxCX9qouDwr5d6fTcizLeZ0I4snJvS"
-              alt="Green tea and neem scrub jar"
-              fill
-              className="object-cover brightness-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
-            <div className="absolute top-6 left-6 text-white">
-              <h3 className="text-lg font-medium">Face & Body Scrub</h3>
-            </div>
-            <div className="absolute bottom-6 left-6">
-              <Link 
-                href="/shop"
-                className="border border-white/50 text-white px-4 py-2 text-sm font-medium hover:bg-white/20 transition-colors duration-300 inline-block"
-              >
-                → EXPLORE NOW
-              </Link>
-            </div>
-          </div>
+          {/* Face & Body Scrub Card */}
+          <Card
+            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRSZG5OzxCX9qouDwr5d6fTcizLeZ0I4snJvS"
+            title="Face & Body Scrub"
+          />
 
-          {/* Eco Candles Card - Small on desktop, full width on mobile */}
-          <div className="relative w-full max-w-sm md:w-80 h-80 md:h-96 rounded-3xl overflow-hidden shadow-xl">
-            <Image
-              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtw77nUbRj63QywZkxrW40qSphaIEcmUdXDAV"
-              alt="Eco-friendly candles with natural materials"
-              fill
-              className="object-cover brightness-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
-            <div className="absolute top-6 left-6 text-white">
-              <h3 className="text-lg font-medium">Eco Candles</h3>
-            </div>
-            <div className="absolute bottom-6 left-6">
-              <Link 
-                href="/shop"
-                className="border border-white/50 text-white px-4 py-2 text-sm font-medium hover:bg-white/20 transition-colors duration-300 inline-block"
-              >
-                → EXPLORE NOW
-              </Link>
-            </div>
-          </div>
+          {/* Eco Candles Card */}
+          <Card
+            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtw77nUbRj63QywZkxrW40qSphaIEcmUdXDAV"
+            title="Eco Candles"
+          />
 
-          {/* Handmade Mat Card - Large on desktop, full width on mobile */}
-          <div className="relative w-full max-w-sm md:w-96 h-80 md:h-[480px] rounded-3xl overflow-hidden shadow-xl">
-            <Image
-              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbOXb5cvbyYEoZ78eJzNIKWdcxq1Of9wlHtA"
-              alt="Handmade woven mat with natural materials"
-              fill
-              className="object-cover brightness-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
-            <div className="absolute top-6 left-6 md:right-6 md:left-auto text-white">
-              <h3 className="text-lg font-medium">Handmade Mat</h3>
-            </div>
-            <div className="absolute bottom-6 left-6 md:right-6 md:left-auto">
-              <Link 
-                href="/shop"
-                className="border border-white/50 text-white px-4 py-2 text-sm font-medium hover:bg-white/20 transition-colors duration-300 inline-block"
-              >
-                → EXPLORE NOW
-              </Link>
-            </div>
-          </div>
+          {/* Handmade Mat Card */}
+          <Card
+            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbOXb5cvbyYEoZ78eJzNIKWdcxq1Of9wlHtA"
+            title="Handmade Mat"
+            bigOnDesktop
+          />
         </div>
       </div>
     </div>
   );
 };
+
+const Card = ({
+  src,
+  title,
+  bigOnDesktop = false,
+}: {
+  src: string;
+  title: string;
+  bigOnDesktop?: boolean;
+}) => {
+  return (
+    <div
+      className={`
+        relative w-full 
+        h-40                       /* Mobile height only */
+        rounded-2xl overflow-hidden shadow-lg
+        ${bigOnDesktop ? "md:w-96 md:h-[480px]" : "md:w-80 md:h-96"}  /* Desktop sizes only */
+      `}
+    >
+      <Image src={src} alt={title} fill className="object-cover brightness-110" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent"></div>
+      <div className="absolute top-2 md:top-6 left-2 md:left-6 text-white">
+        <h3 className="text-sm md:text-lg font-medium">{title}</h3>
+      </div>
+      <div className="absolute bottom-2 md:bottom-6 left-2 md:left-6">
+        <Link
+          href="/shop"
+          className="border border-white/50 text-white px-2 py-1 md:px-4 md:py-2 text-xs md:text-sm font-medium hover:bg-white/20 transition-colors duration-300 inline-block"
+        >
+          → EXPLORE NOW
+        </Link>
+      </div>
+    </div>
+  );
+};
+
 
 export function Page() {
   return (

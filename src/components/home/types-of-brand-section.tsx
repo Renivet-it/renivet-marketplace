@@ -27,36 +27,37 @@ export function BrandsCollaboration() {
   ];
 
   return (
-    <section className="w-full bg-[#F4F0EC] mb-10">
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6">
+    <section className="w-full bg-[#F4F0EC] py-8 mb-10">
+      <div className="max-w-screen-2xl mx-auto px-2 sm:px-6">
         {/* Section Title */}
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-normal text-gray-800 tracking-tight">
+        <div className="text-center mb-6 sm:mb-10">
+          <h2 className="text-base sm:text-2xl font-normal text-gray-800 tracking-tight">
             Brands We Collaborate With
           </h2>
         </div>
 
-        {/* Brands Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+        {/* Always 4 in one row */}
+        <div className="grid grid-cols-4 gap-2 sm:gap-6">
           {brands.map((brand, index) => (
-            <div key={index} className="text-center group px-4">
+            <div
+              key={index}
+              className="bg-white rounded-md shadow-sm p-2 sm:p-4 text-center hover:shadow-md transition-shadow duration-300"
+            >
               {/* Icon */}
-              <div className="flex justify-center mb-5">
-                <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                  <brand.icon 
-                    className="w-6 h-6 text-gray-600 group-hover:text-gray-800 transition-colors duration-300" 
-                    strokeWidth={1.5}
-                  />
-                </div>
+              <div className="flex justify-center mb-2 sm:mb-4">
+                <brand.icon
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800"
+                  strokeWidth={1.5}
+                />
               </div>
 
               {/* Title */}
-              <h3 className="text-lg font-medium text-gray-800 mb-2 tracking-tight">
+              <h3 className="text-[10px] sm:text-base font-semibold text-gray-800 mb-1 sm:mb-2">
                 {brand.title}
               </h3>
 
               {/* Description */}
-              <p className="text-sm text-gray-600 leading-snug">
+              <p className="text-[9px] sm:text-sm text-gray-600 leading-snug">
                 {brand.description}
               </p>
             </div>

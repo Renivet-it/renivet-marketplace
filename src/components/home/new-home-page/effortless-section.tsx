@@ -111,6 +111,33 @@ export function EffortlessElegance({
           </div>
         </div>
       </div>
+
+   {/* Mobile View */}
+<div className="lg:hidden w-full overflow-x-auto py-4">
+  <div className="flex gap-4 px-4">
+    {moodboardItems.map((item) => (
+      <Link
+        key={item.id}
+        href={item.url ?? "/shop"}
+        className="flex-shrink-0"
+        style={{ width: "140px", height: "180px" }} // small card size
+      >
+        <div className="w-full h-full relative rounded-md overflow-hidden bg-gray-50">
+          <Image
+            src={item.imageUrl}
+            alt={item.title ?? "Moodboard item"}
+            fill
+            className="object-cover"
+            quality={100}
+          />
+        </div>
+      </Link>
+    ))}
+  </div>
+</div>
+
+
+
     </section>
   );
 }

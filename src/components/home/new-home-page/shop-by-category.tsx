@@ -8,29 +8,34 @@ export function ShopCategories() {
   const categories = [
     {
       name: "Men",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcdSN8FeO4H8MeNYoyJQSarWCqgVpRxP5lDBu",
-      href: "/men"
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcdSN8FeO4H8MeNYoyJQSarWCqgVpRxP5lDBu",
+      href: "/men",
     },
     {
       name: "Women",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPKE1D2O9kwm36pdODjHU0ryYqC2xJehFZ5Q7",
-      href: "/women"
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPKE1D2O9kwm36pdODjHU0ryYqC2xJehFZ5Q7",
+      href: "/women",
     },
     {
       name: "Kids",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
-      href: "/kids"
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
+      href: "/kids",
     },
     {
       name: "Home And Living",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
-      href: "/home-living"
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
+      href: "/home-living",
     },
     {
       name: "Beauty And Care",
-      imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
-      href: "/beauty-personal"
-    }
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
+      href: "/beauty-personal",
+    },
   ];
 
   return (
@@ -43,13 +48,17 @@ export function ShopCategories() {
         >
           <div className="flex h-full">
             {/* Left Side - Text Content */}
-            <div className="flex flex-col justify-center px-12" style={{ width: "420px" }}>
+            <div
+              className="flex flex-col justify-center px-12"
+              style={{ width: "420px" }}
+            >
               <div className="space-y-3">
                 <h2 className="text-2xl font-light text-gray-900 leading-tight uppercase">
                   shop by category
                 </h2>
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  More than products — stories, values, and meaning in every category.
+                  More than products — stories, values, and meaning in every
+                  category.
                 </p>
                 <div className="pt-1">
                   <Button
@@ -57,9 +66,7 @@ export function ShopCategories() {
                     variant="outline"
                     className="border-gray-300 text-gray-700 hover:bg-[#F4F0EC] hover:text-black text-xs px-4 py-1.5 rounded-none font-normal"
                   >
-                    <Link href="/shop">
-                      › SHOP NEW IN
-                    </Link>
+                    <Link href="/shop">› SHOP NEW IN</Link>
                   </Button>
                 </div>
               </div>
@@ -103,34 +110,28 @@ export function ShopCategories() {
       </div>
 
       {/* Mobile version */}
-      <div className="xl:hidden flex justify-center">
-        <div
-          className="bg-[#ede6df] rounded-lg shadow-sm border border-gray-200 overflow-hidden mx-4"
-          style={{ maxWidth: "768px", width: "100%" }}
-        >
-          <div className="flex flex-col p-6">
-            {/* Text Content */}
-            <div className="text-center mb-6">
-              <div className="space-y-3">
-                <h2 className="text-xl font-light text-gray-900 leading-tight uppercase">
-                  shop by category
-                </h2>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  More than products — stories, values, and meaning in every category.
-                </p>
-                <div className="pt-2">
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="border-gray-300 text-gray-700 hover:bg-[#F4F0EC] hover:text-black text-xs px-4 py-1.5 rounded-none font-normal"
-                  >
-                    <Link href="/shop">
-                      › SHOP NEW IN
-                    </Link>
-                  </Button>
-                </div>
-              </div>
+      <div className="xl:hidden flex flex-col mx-4">
+        {/* Text Content */}
+        <div className="text-center mb-6">
+          <div className="space-y-3">
+            <h2 className="text-xl font-light text-gray-900 leading-tight uppercase">
+              shop by category
+            </h2>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              More than products — stories, values, and meaning in every
+              category.
+            </p>
+            <div className="pt-2">
+              <Button
+                asChild
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-[#F4F0EC] hover:text-black text-xs px-4 py-1.5 rounded-none font-normal"
+              >
+                <Link href="/shop">› SHOP NEW IN</Link>
+              </Button>
             </div>
+          </div>
+        </div>
 
             {/* Category Grid */}
             <div className="grid grid-cols-2 gap-4">
@@ -161,8 +162,7 @@ export function ShopCategories() {
               ))}
             </div>
           </div>
-        </div>
-      </div>
+   
     </section>
   );
 }
