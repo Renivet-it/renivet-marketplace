@@ -25,7 +25,7 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
             <Accordion type="single" collapsible className="w-full">
                 {/* Product Details */}
                 <AccordionItem value="details">
-                    <AccordionTrigger className="text-16 py-5 font-bold hover:no-underline">
+                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
                         Product Details
                     </AccordionTrigger>
                     <AccordionContent>
@@ -33,11 +33,11 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                             content={product.description ?? "<p></p>"}
                             customClasses={{
                                 orderedList:
-                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
                                 bulletList:
-                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
                                 heading:
-                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
                             }}
                             editorClasses="pt-3"
                         />
@@ -46,7 +46,7 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
 
                 {/* Material & Care */}
                 <AccordionItem value="material-care">
-                    <AccordionTrigger className="text-16 py-5 font-bold hover:no-underline">
+                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
                         Material & Care
                     </AccordionTrigger>
                     <AccordionContent>
@@ -54,11 +54,11 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                             content={product.materialAndCare ?? "<p></p>"}
                             customClasses={{
                                 orderedList:
-                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
                                 bulletList:
-                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
                                 heading:
-                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
                             }}
                             editorClasses="pt-3"
                         />
@@ -67,7 +67,7 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
 
                 {/* Specifications */}
                 <AccordionItem value="specifications">
-                    <AccordionTrigger className="text-16 py-5 font-bold hover:no-underline">
+                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
                         Specifications
                     </AccordionTrigger>
                     <AccordionContent>
@@ -94,7 +94,7 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                                 !showAllSpecifications
                                             )
                                         }
-                                        className="text-15 text-accent cursor-pointer font-bold capitalize"
+                                        className="text-base text-accent cursor-pointer font-bold capitalize"
                                     >
                                         {showAllSpecifications
                                             ? "See Less"
@@ -107,13 +107,15 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
 
                 {/* Return & Exchange */}
                 <AccordionItem value="return-exchange">
-                    <AccordionTrigger className="text-16 py-5 font-bold hover:no-underline">
+                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
                         Return & Exchange
                     </AccordionTrigger>
                     <AccordionContent>
                         <div className="space-y-5">
                             <div>
-                                <span className="font-bold block text-15">Return</span>
+                                <span className="font-bold block text-base">
+                                    Return
+                                </span>
                                 <RichTextViewer
                                     content={
                                         product.returnExchangePolicy?.returnDescription ??
@@ -121,17 +123,19 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                     }
                                     customClasses={{
                                         orderedList:
-                                            "text-15 leading-[1.6] text-[#2F2F2F]",
+                                            "text-base leading-[1.7] text-[#2F2F2F]",
                                         bulletList:
-                                            "text-15 leading-[1.6] text-[#2F2F2F]",
+                                            "text-base leading-[1.7] text-[#2F2F2F]",
                                         heading:
-                                            "text-15 leading-[1.6] text-[#2F2F2F]",
+                                            "text-base leading-[1.7] text-[#2F2F2F]",
                                     }}
                                     editorClasses="pt-2"
                                 />
                             </div>
                             <div>
-                                <span className="font-bold block text-15">Exchange</span>
+                                <span className="font-bold block text-base">
+                                    Exchange
+                                </span>
                                 <RichTextViewer
                                     content={
                                         product.returnExchangePolicy?.exchangeDescription ??
@@ -139,11 +143,11 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                     }
                                     customClasses={{
                                         orderedList:
-                                            "text-15 leading-[1.6] text-[#2F2F2F]",
+                                            "text-base leading-[1.7] text-[#2F2F2F]",
                                         bulletList:
-                                            "text-15 leading-[1.6] text-[#2F2F2F]",
+                                            "text-base leading-[1.7] text-[#2F2F2F]",
                                         heading:
-                                            "text-15 leading-[1.6] text-[#2F2F2F]",
+                                            "text-base leading-[1.7] text-[#2F2F2F]",
                                     }}
                                     editorClasses="pt-2"
                                 />
