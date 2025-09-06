@@ -25,6 +25,7 @@ import Image from "next/image";
 import { useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductContent } from "./product-content";
+import { ProductDetails } from "./product-detais";
 
 interface PageProps extends GenericProps {
     product: ProductWithBrand;
@@ -195,7 +196,10 @@ export function ProductPage({
                         <span>Easy Return Policy</span>
                         <span>Mindful Materials</span>
                     </div>
+                <ProductDetails product={product} />
+
                 </div>
+
 
                 {/* Mobile Carousel */}
                 <Carousel

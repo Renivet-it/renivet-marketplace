@@ -32,6 +32,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { trackAddToCart } from "@/actions/track-product";
 import { fbEvent } from "@/lib/fbpixel";
 import { DeliveryOption } from "../../products/product/product-delivery";
+import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 
 interface PageProps {
     initialCart?: CachedCart[];
@@ -316,6 +317,20 @@ const sortedOptions = useMemo(() => {
                                     )}
                                 />
                             ))}
+                            <div>
+                                <RichTextViewer
+                                                            content={product.sizeAndFit ?? "<p></p>"}
+                                                            customClasses={{
+                                                                orderedList:
+                                                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                                                bulletList:
+                                                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                                                heading:
+                                                                    "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                                            }}
+                                                            editorClasses="pt-3"
+                                                        />
+                            </div>
 <DeliveryOption
     initialZipCode={initialZipCode}
     warehousePincode={warehousePincode}

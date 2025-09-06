@@ -142,20 +142,20 @@ export function ProductContent({
                     setEstimatedDelivery={setEstimatedDelivery}
                 />
                 <div className="space-y-2 mt-4">
-  {[
-    { icon: <Icons.Recycle className="w-4 h-4" />, text: "Plastic-Free Packaging" },
-    { icon: <Icons.Droplet className="w-4 h-4" />, text: "Low-Water Dye" },
-    { icon: <Icons.RotateCw className="w-4 h-4" />, text: "15-Day Returns" },
-  ].map((item, index) => (
-    <div
-      key={index}
-      className="flex items-center gap-2 bg-[#E0E2E1] rounded-full px-4 py-2 text-sm font-medium"
-    >
-      {item.icon}
-      <span>{item.text}</span>
-    </div>
-  ))}
-</div>
+                {[
+                  { icon: <Icons.Recycle className="w-4 h-4" />, text: "Plastic-Free Packaging" },
+                  { icon: <Icons.Droplet className="w-4 h-4" />, text: "Low-Water Dye" },
+                  { icon: <Icons.RotateCw className="w-4 h-4" />, text: "15-Day Returns" },
+                ].map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-[#E0E2E1] rounded-full px-4 py-2 text-sm font-medium"
+                  >
+                    {item.icon}
+                    <span>{item.text}</span>
+                  </div>
+                ))}
+              </div>
                 {/* <DeliveryOption
                     initialZipCode={user?.addresses[0]?.zip}
                     warehousePincode={brandDetails?.warehousePostalCode}
@@ -164,7 +164,7 @@ export function ProductContent({
                     setEstimatedDelivery={setEstimatedDelivery}
                 /> */}
                 <Separator />
-                <ProductDetails product={product} />
+                {/* <ProductDetails product={product} /> */}
             </div>
             <ProductShareModal
                 isOpen={isProductShareModalOpen}
