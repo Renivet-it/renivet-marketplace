@@ -164,7 +164,181 @@ export function ProductContent({
                     setEstimatedDelivery={setEstimatedDelivery}
                 /> */}
                 <Separator />
-                {/* <ProductDetails product={product} /> */}
+               <div className="max-w-4xl mx-auto p-8 rounded-3xl border-4 bg-[#f4f0ec] border-grey-900">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+          <span className="text-white text-lg">🌱</span>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Decodex - Behind The Product
+        </h1>
+      </div>
+      <p className="text-gray-600 mb-8 text-base leading-relaxed">
+        With Total Transparency, We Want To Tell Our Community The Story And The Impact Behind Every Single Product To Help You Make Better And Conscious Decisions.
+      </p>
+
+      {/* Product Values Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 underline decoration-2 underline-offset-4">Product Values</h2>
+          <Icons.ChevronUp className="w-6 h-6 text-gray-600" />
+        </div>
+
+        {/* Two Cards with Circular Progress */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          {/* Water Saved Card */}
+          <div className="bg-[#f4f0ec] rounded-2xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="#e5e7eb"
+                    strokeWidth="8"
+                    fill="none"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="#22c55e"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 40 * 0.64} ${2 * Math.PI * 40}`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-bold text-gray-900">64%</span>
+                  <span className="text-sm text-gray-600">Saved</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Water Saved</h3>
+                <p className="text-gray-700 mb-2">80 L Compared To Fast Fashion</p>
+                <p className="text-gray-400 text-sm">how do we calculate this?</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Fewer Toxic Compounds Card */}
+          <div className="bg-[#f4f0ec] rounded-2xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="#e5e7eb"
+                    strokeWidth="8"
+                    fill="none"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="#22c55e"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 40 * 0.08} ${2 * Math.PI * 40}`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-bold text-gray-900">8%</span>
+                  <span className="text-sm text-gray-600">Saved</span>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Fewer Toxic Compounds</h3>
+                <p className="text-gray-700 mb-2">78.9 Units Vs. Baseline</p>
+                <p className="text-gray-400 text-sm">how do we calculate this?</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tags Row */}
+        <div className="grid grid-cols-6 gap-3 mb-8">
+          <div className="bg-[#f4f0ec] rounded-full px-4 py-3 text-center border border-gray-200">
+            <p className="text-xs text-gray-600 mb-1">water saved</p>
+            <p className="font-semibold text-gray-900">2,500l</p>
+          </div>
+          <div className="bg-[#f4f0ec] rounded-full px-4 py-3 text-center border border-gray-200">
+            <p className="text-xs text-gray-600 mb-1">co₂ avoided</p>
+            <p className="font-semibold text-gray-900">1.2kg</p>
+          </div>
+          <div className="bg-[#f4f0ec] rounded-full px-4 py-3 text-center border border-gray-200">
+            <p className="text-xs text-gray-600 mb-1">plastic</p>
+            <p className="font-semibold text-gray-900">0%</p>
+          </div>
+          <div className="bg-[#f4f0ec] rounded-full px-4 py-3 text-center border border-gray-200">
+            <p className="text-xs text-gray-600 mb-1">water saved</p>
+            <p className="font-semibold text-gray-900">2,500l</p>
+          </div>
+          <div className="bg-[#f4f0ec] rounded-full px-4 py-3 text-center border border-gray-200">
+            <p className="text-xs text-gray-600 mb-1">co₂ avoided</p>
+            <p className="font-semibold text-gray-900">1.2kg</p>
+          </div>
+          <div className="bg-[#f4f0ec] rounded-full px-4 py-3 text-center border border-gray-200">
+            <p className="text-xs text-gray-600 mb-1">plastic</p>
+            <p className="font-semibold text-gray-900">0%</p>
+          </div>
+        </div>
+
+        {/* Progress Bars */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-900 w-24 font-medium">Softness</span>
+            <div className="flex-1 bg-gray-300 rounded-full h-3 relative">
+              <div className="bg-amber-800 h-3 rounded-full" style={{width: '80%'}}></div>
+            </div>
+            <span className="text-sm font-semibold text-gray-900 w-8">4/5</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-900 w-24 font-medium">Breathability</span>
+            <div className="flex-1 bg-gray-300 rounded-full h-3 relative">
+              <div className="bg-amber-800 h-3 rounded-full" style={{width: '100%'}}></div>
+            </div>
+            <span className="text-sm font-semibold text-gray-900 w-8">5/5</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-900 w-24 font-medium">Transparency</span>
+            <div className="flex-1 bg-gray-300 rounded-full h-3 relative">
+              <div className="bg-amber-800 h-3 rounded-full" style={{width: '20%'}}></div>
+            </div>
+            <span className="text-sm font-semibold text-gray-900 w-8"></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Product Journey Section */}
+      <div>
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 underline decoration-2 underline-offset-4">Product Journey</h2>
+          <Icons.ChevronDown className="w-6 h-6 text-gray-600" />
+        </div>
+
+        {/* Vertical Timeline */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center">
+            <div className="w-6 h-6 bg-gray-300 rounded-full border-4 border-white shadow-sm"></div>
+            <div className="ml-4 h-0.5 w-16 bg-gray-300"></div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-6 h-6 bg-gray-300 rounded-full border-4 border-white shadow-sm"></div>
+            <div className="ml-4 h-0.5 w-16 bg-gray-300"></div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-6 h-6 bg-gray-300 rounded-full border-4 border-white shadow-sm"></div>
+          </div>
+        </div>
+      </div>
+    </div>
             </div>
             <ProductShareModal
                 isOpen={isProductShareModalOpen}
