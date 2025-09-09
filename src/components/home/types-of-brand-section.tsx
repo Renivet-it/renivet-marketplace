@@ -27,10 +27,10 @@ export function BrandsCollaboration() {
   ];
 
   return (
-    <section className="w-full bg-[#F4F0EC] py-8 mb-10">
-      <div className="max-w-screen-2xl mx-auto px-2 sm:px-6">
-        {/* Section Title */}
-        <div className="text-center mb-6 sm:mb-10">
+<section className="w-full bg-[#F4F0EC] pt-2 sm:pt-8 pb-4 sm:pb-10">
+    <div className="max-w-screen-2xl mx-auto px-2 sm:px-6">
+      {/* Section Title */}
+      <div className="text-center mb-2 sm:mb-10">
           <h2 className="text-base sm:text-2xl font-normal text-gray-800 tracking-tight">
             Brands We Collaborate With
           </h2>

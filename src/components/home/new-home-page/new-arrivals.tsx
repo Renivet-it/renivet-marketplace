@@ -42,7 +42,7 @@ export function ProductGridNewArrivals({
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
-      const scrollAmount = 280; // Card width + gap
+      const scrollAmount = 280;
       const newScrollLeft =
         direction === "left"
           ? scrollRef.current.scrollLeft - scrollAmount
@@ -70,10 +70,16 @@ export function ProductGridNewArrivals({
   };
 
   return (
-    <section className={cn("w-full py-16 bg-[#F4F0EC]", className)} {...props}>
-      <div className="max-w-screen-2xl mx-auto px-6">
-        {/* Section Header */}
-        <div className="text-center mb-12">
+    <section
+      className={cn(
+        "w-full bg-[#F4F0EC] sm:py-16 py-4 px-2 sm:px-6",
+        className
+      )}
+      {...props}
+    >
+      <div className="max-w-screen-2xl mx-auto">
+        {/* ---------------------------- DESKTOP TITLE ---------------------------- */}
+        <div className="hidden sm:block text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-4">
             {title}
           </h2>
@@ -82,9 +88,18 @@ export function ProductGridNewArrivals({
           </p>
         </div>
 
-        {/* Carousel Container */}
-        <div className="relative">
-          {/* Left Arrow */}
+        {/* ---------------------------- MOBILE TITLE ---------------------------- */}
+        <div className="sm:hidden text-center mb-2">
+          <h2 className="text-lg font-medium text-gray-900 leading-tight">
+            {title}
+          </h2>
+          <p className="text-xs text-gray-600 mt-1">
+            Beautifully Functional. Purposefully Designed. Consciously Crafted.
+          </p>
+        </div>
+
+        {/* ---------------------------- DESKTOP VIEW ---------------------------- */}
+        <div className="hidden sm:block relative">
           <button
             onClick={() => scroll("left")}
             disabled={!canScrollLeft}
@@ -94,7 +109,6 @@ export function ProductGridNewArrivals({
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
 
-          {/* Right Arrow */}
           <button
             onClick={() => scroll("right")}
             disabled={!canScrollRight}
@@ -104,7 +118,6 @@ export function ProductGridNewArrivals({
             <ChevronRight className="w-6 h-6 text-gray-600" />
           </button>
 
-          {/* Scrollable Products Container */}
           <div
             ref={scrollRef}
             onScroll={handleScroll}
@@ -117,7 +130,6 @@ export function ProductGridNewArrivals({
             ))}
           </div>
 
-          {/* Dots Indicator */}
           <div className="flex justify-center mt-8 gap-2">
             {Array.from({ length: Math.min(products.length, 5) }).map(
               (_, index) => (
@@ -133,50 +145,34 @@ export function ProductGridNewArrivals({
             )}
           </div>
         </div>
+
+        {/* ---------------------------- MOBILE GRID ---------------------------- */}
+        <div className="sm:hidden grid grid-cols-2 gap-x-3 gap-y-4">
+          {products.map(({ product }) => (
+            <div key={product.id} className="product-card">
+              <ProductCardMobile product={product} />
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* ---------------------------- MOBILE VIEW CSS ---------------------------- */}
       <style jsx>{`
-  @media (max-width: 640px) {
-    .scrollable-container {
-      gap: 16px; /* space between products */
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      padding-bottom: 8px;
-    }
-
-    .product-card {
-      flex: 0 0 auto;
-      width: 140px;  /* small card width */
-      height: 220px; /* small card height */
-      scroll-snap-align: start;
-    }
-
-    .product-card + .product-card {
-      margin-left: 12px; /* additional spacing between cards */
-    }
-
-    .arrow-button {
-      display: none; /* hide arrows on mobile */
-    }
-
-    .product-card h3 {
-      font-size: 12px;
-    }
-
-    .product-card p {
-      font-size: 10px;
-    }
-
-    .product-card div.relative {
-      height: 140px !important; /* smaller image */
-    }
-  }
-`}</style>
-
+        @media (max-width: 640px) {
+          .product-card h3 {
+            font-size: 11px;
+            line-height: 1.2;
+          }
+          .product-card p {
+            font-size: 9px;
+          }
+        }
+      `}</style>
     </section>
   );
 }
 
+/* ---------------------------- DESKTOP CARD ---------------------------- */
 function ProductCard({ product }: { product: Product }) {
   const price = convertPaiseToRupees(
     product.variants?.[0]?.price || product.price || 0
@@ -184,7 +180,6 @@ function ProductCard({ product }: { product: Product }) {
 
   return (
     <Link href={`/products/${product.slug}`} className="block">
-      {/* Product Image */}
       <div
         className="relative bg-gray-50 rounded-lg overflow-hidden mb-4 group-hover:shadow-md transition-shadow duration-300"
         style={{ width: "262px", height: "421px" }}
@@ -198,7 +193,6 @@ function ProductCard({ product }: { product: Product }) {
         />
       </div>
 
-      {/* Product Info */}
       <div className="space-y-1">
         <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
           {product.title}
@@ -209,6 +203,42 @@ function ProductCard({ product }: { product: Product }) {
         <p className="text-lg font-semibold text-gray-900">
           {typeof price === "number" ? price.toFixed(0) : price}
         </p>
+      </div>
+    </Link>
+  );
+}
+
+/* ---------------------------- MOBILE CARD ---------------------------- */
+function ProductCardMobile({ product }: { product: Product }) {
+  const price = convertPaiseToRupees(
+    product.variants?.[0]?.price || product.price || 0
+  );
+
+  return (
+    <Link href={`/products/${product.slug}`} className="block">
+      <div className="bg-white rounded-lg overflow-hidden flex flex-col items-center p-2 shadow-sm">
+        {/* Square Image */}
+        <div className="relative w-full pt-[100%] rounded-lg overflow-hidden mb-1">
+          <Image
+            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+            alt={product.title}
+            fill
+            className="object-contain p-1"
+          />
+        </div>
+
+        {/* Product Info */}
+        <div className="space-y-0.5 text-center w-full">
+          <h3 className="text-xs font-medium text-gray-900 line-clamp-2">
+            {product.title}
+          </h3>
+          <p className="text-[9px] text-gray-500">
+            {product.stockStatus || "Available"}
+          </p>
+          <p className="text-sm font-semibold text-gray-900">
+            {typeof price === "number" ? price.toFixed(0) : price}
+          </p>
+        </div>
       </div>
     </Link>
   );

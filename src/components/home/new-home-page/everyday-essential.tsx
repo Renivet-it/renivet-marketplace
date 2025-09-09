@@ -5,51 +5,86 @@ import Link from "next/link";
 const EveryDayEssential = () => {
   return (
     <div className="bg-[#F4F0EC] relative overflow-hidden">
-      <div className="w-full px-4 md:px-8 py-8 md:py-16">
+      <div className="w-full px-4 md:px-8 py-4 md:py-16">
         {/* Header */}
         <div className="text-center mb-8 md:mb-12">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-4">
+          <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-4">
             Everyday Essentials, Ethically Made
           </h1>
-          <p className="text-gray-700 text-base md:text-lg px-4">
+          <p className="text-gray-700 text-sm md:text-lg px-4">
             From clean skincare to thoughtful homeware — discover the good stuff.
           </p>
         </div>
 
-        {/* Product Cards */}
-        <div
-          className="
-            grid grid-cols-2 gap-4           /* Mobile: 2 per row */
-            md:flex md:flex-row md:gap-8     /* Desktop: original flex row */
-            items-center md:items-end justify-center
-          "
-        >
-          {/* Coconut Oil Card */}
+        {/* Mobile Layout */}
+        <div className="lg:hidden">
+        <div className="flex space-x-3 overflow-x-auto p-2 scrollbar-hide snap-x snap-mandatory">
+            <MobileCard
+              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNt3tzng0rgXZuWwadPABUqnljV5RbJMFsx1v"
+              title="Coconut Oil"
+            />
+            <MobileCard
+              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRSZG5OzxCX9qouDwr5d6fTcizLeZ0I4snJvS"
+              title="Face & Body Scrub"
+            />
+            <MobileCard
+              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtw77nUbRj63QywZkxrW40qSphaIEcmUdXDAV"
+              title="Eco Candles"
+            />
+            <MobileCard
+              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbOXb5cvbyYEoZ78eJzNIKWdcxq1Of9wlHtA"
+              title="Handmade Mat"
+            />
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden lg:flex md:flex-row md:gap-8 items-center md:items-end justify-center">
           <Card
             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNt3tzng0rgXZuWwadPABUqnljV5RbJMFsx1v"
             title="Coconut Oil"
             bigOnDesktop
           />
-
-          {/* Face & Body Scrub Card */}
           <Card
             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRSZG5OzxCX9qouDwr5d6fTcizLeZ0I4snJvS"
             title="Face & Body Scrub"
           />
-
-          {/* Eco Candles Card */}
           <Card
             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtw77nUbRj63QywZkxrW40qSphaIEcmUdXDAV"
             title="Eco Candles"
           />
-
-          {/* Handmade Mat Card */}
           <Card
             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbOXb5cvbyYEoZ78eJzNIKWdcxq1Of9wlHtA"
             title="Handmade Mat"
             bigOnDesktop
           />
         </div>
+      </div>
+    </div>
+  );
+};
+
+const MobileCard = ({
+  src,
+  title,
+}: {
+  src: string;
+  title: string;
+ }) => {
+  return (
+    <div className="relative flex-shrink-0 w-[45%] h-40 rounded-lg overflow-hidden shadow-sm snap-start">
+            <Image src={src} alt={title} fill className="object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+      <div className="absolute bottom-2 left-2 text-gray-800 font-medium text-xs">
+        {title}
+      </div>
+      <div className="absolute bottom-2 right-2">
+        <Link
+          href="/shop"
+          className="bg-gray-200 text-gray-800 px-2 py-1 text-xs rounded hover:bg-gray-300 transition"
+        >
+          → EXPLORE NOW
+        </Link>
       </div>
     </div>
   );
@@ -68,9 +103,9 @@ const Card = ({
     <div
       className={`
         relative w-full 
-        h-40                       /* Mobile height only */
+        h-40
         rounded-2xl overflow-hidden shadow-lg
-        ${bigOnDesktop ? "md:w-96 md:h-[480px]" : "md:w-80 md:h-96"}  /* Desktop sizes only */
+        ${bigOnDesktop ? "md:w-96 md:h-[480px]" : "md:w-80 md:h-96"}
       `}
     >
       <Image src={src} alt={title} fill className="object-cover brightness-110" />
@@ -90,11 +125,6 @@ const Card = ({
   );
 };
 
-
 export function Page() {
-  return (
-    <div>
-      <EveryDayEssential />
-    </div>
-  );
+  return <EveryDayEssential />;
 }
