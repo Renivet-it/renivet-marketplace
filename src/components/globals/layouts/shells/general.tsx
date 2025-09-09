@@ -18,7 +18,7 @@ export function GeneralShell({ children, classNames }: ShellProps) {
         >
             <div
                 className={cn(
-                    "w-full max-w-5xl space-y-4 p-4 py-5 md:p-8 md:py-10 xl:max-w-[100rem]",
+                    "w-full max-w-6xl space-y-4 p-4 py-5 md:p-8 md:py-10 xl:max-w-[110rem]",
                     classNames?.innerWrapper
                 )}
             >
