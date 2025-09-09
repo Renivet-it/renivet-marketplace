@@ -243,6 +243,8 @@ export function ProductPage({
                     isWishlisted={isWishlisted}
                     userId={userId}
                 />
+                <ProductDetails product={product} />
+
             </div>
 
             {/* Modal */}
