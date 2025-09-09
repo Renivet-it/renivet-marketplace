@@ -29,75 +29,95 @@ export default function Page() {
             <Suspense
                 fallback={
                     <div className="h-[calc(100vh-20vh)] w-full bg-background" />
-                }
-            >
+                }  >
                 <BannersFetch />
             </Suspense>
 
-                                           <Suspense>
+             <Suspense>
                 <ShopCategoryFetch />
             </Suspense>
-                            <Suspense>
+
+            <Suspense>
                 <BrandCollaborateFetch />
             </Suspense>
-                            <Suspense>
+
+            <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
-                               <Suspense>
+
+             <Suspense>
                 <CuratedBannerFetch />
             </Suspense>
-                                           <Suspense>
+
+             <Suspense>
                 <EventSectionBannerOneFetch />
             </Suspense>
-                                                   <Suspense>
+            
+             <Suspense>
                 <EventSectionTwoBannerFetch />
             </Suspense>
 
-                           <Suspense>
+            <Suspense>
                 <BrandPromotionFetch />
             </Suspense>
-                                               <Suspense>
+
+
+             <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
-                                    <Suspense>
+            
+            <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-                            <Suspense>
+
+            <Suspense>
                 <SustanableBatchFetch />
             </Suspense>
-                           <Suspense>
+
+            <Suspense>
                 <EcoIconsFetch />
             </Suspense>
-                      <Suspense>
+
+             <Suspense>
                 <BrandProductsFetch />
             </Suspense>
-                                                              <Suspense>
+
+             <Suspense>
                 <ConciousClickBannerFetch />
             </Suspense>
                                  {/* <Suspense>
                 <NewAdvertisementsFetch />
             </Suspense> */}
-                                     <Suspense>
+
+             <Suspense>
                 <MatchaBagFetch />
             </Suspense>
+
+            
             <Suspense>
                 <EveryDayEssentialFetch />
             </Suspense>
-                                                  <Suspense>
+            
+            
+            <Suspense>
                 <SwapSpaceBannerFetch />
             </Suspense>
-                                            <Suspense>
+            
+            
+              <Suspense>
                 <ProductGridFetch />
             </Suspense>
-                 <Suspense>
+
+
+            <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
 
-                                                          <Suspense>
+             <Suspense>
                 <ArtisanCollectionFetch />
             </Suspense>
 
-                                                          <Suspense>
+             <Suspense>
                 <InstaBannerFetch />
             </Suspense>
 

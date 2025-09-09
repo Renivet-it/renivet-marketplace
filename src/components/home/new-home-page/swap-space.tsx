@@ -13,7 +13,10 @@ interface PageProps extends GenericProps {
 
 export function SwapSpace({ className, banners, ...props }: PageProps) {
   return (
-    <section className={cn("w-full py-6 md:py-12 bg-[#F4F0EC]", className)} {...props}>
+    <section
+      className={cn("w-full py-6 md:py-12 bg-[#F4F0EC]", className)}
+      {...props}
+    >
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <Carousel
           opts={{
@@ -26,19 +29,23 @@ export function SwapSpace({ className, banners, ...props }: PageProps) {
             {banners.map((item, index) => (
               <CarouselItem
                 key={index}
-                className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3 flex-shrink-0"
+                className={cn(
+                  "pl-2 md:pl-4 flex-shrink-0",
+                  // Smaller sizes for mobile, larger sizes for tablet & desktop
+                  "basis-[140px] sm:basis-[200px] md:basis-1/2 lg:basis-1/3"
+                )}
               >
-                <div className="relative w-full aspect-[3/4] group">
+                <div className="relative w-full aspect-[3/4] group rounded-lg overflow-hidden shadow-sm">
                   <Link href={item.url || "/shop"} className="block w-full h-full">
                     <Image
                       src={item.imageUrl}
                       alt={item.title || "New Arrival"}
                       fill
-                      className="object-contain"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover"
+                      sizes="(max-width: 640px) 40vw, (max-width: 1024px) 50vw, 33vw"
                     />
                     <div className="absolute inset-0 flex items-end pb-4 md:pb-8 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="bg-white text-gray-900 px-4 py-2 md:px-6 md:py-3 font-medium uppercase tracking-wide text-xs md:text-sm hover:bg-gray-100 transition-colors">
+                      <button className="bg-white text-gray-900 px-3 py-1.5 md:px-6 md:py-3 font-medium uppercase tracking-wide text-xs md:text-sm hover:bg-gray-100 transition-colors">
                         Shop Now
                       </button>
                     </div>

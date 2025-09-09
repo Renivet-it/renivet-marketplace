@@ -39,7 +39,7 @@ export function ShopCategories() {
   ];
 
   return (
-    <section className="w-full bg-[#F4F0EC] py-8">
+<section className="w-full bg-[#F4F0EC] pt-8 pb-2 sm:pb-8">
       {/* Desktop version */}
       <div className="hidden xl:flex justify-center">
         <div

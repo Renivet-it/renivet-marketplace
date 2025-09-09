@@ -31,14 +31,14 @@ export function CuratedBanner({ className, banners, ...props }: PageProps) {
             <CarouselItem key={index} className="p-0">
               <div
                 className="relative w-full banner-wrapper"
-                style={{ aspectRatio: "1440/300" }} // keep desktop default
+                style={{ aspectRatio: "1440/300" }} // desktop default
               >
                 <Link href={item.url || "/shop"} className="block w-full h-full">
                   <Image
                     src={item.imageUrl}
                     alt={item.title}
                     fill
-                    className="object-cover"
+                    className="banner-image object-cover"
                     priority={index === 0}
                     sizes="100vw"
                   />
@@ -49,14 +49,23 @@ export function CuratedBanner({ className, banners, ...props }: PageProps) {
         </CarouselContent>
       </Carousel>
 
-      {/* Only affect mobile view */}
+      {/* Mobile-specific adjustments */}
       <style jsx>{`
-        @media (max-width: 640px) {
-          .banner-wrapper {
-            aspect-ratio: 390/100; /* taller banners on mobile */
-          }
-        }
-      `}</style>
+  @media (max-width: 640px) {
+    .banner-wrapper {
+      aspect-ratio: 390/100;
+      overflow: hidden;    /* keeps zoomed image clipped inside */
+      margin-bottom: 1.0rem;    
+    }
+    .banner-image {
+      object-fit: cover;
+      object-position: center;
+      transform: scale(1.8);   /* 👈 increase image size inside banner */
+    }
+  }
+`}</style>
+
+
     </section>
   );
 }

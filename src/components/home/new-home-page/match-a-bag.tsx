@@ -37,34 +37,53 @@ export function MatchaBag({
   if (!moodboardItems.length) return null;
 
   return (
-    <section className={cn("w-full bg-[#F4F0EC]", className)}>
-      {/* Mobile View - Full Width Banner */}
-      <div className="lg:hidden w-full">
-        <div className="relative w-full overflow-hidden">
-          {moodboardItems.map((item, index) => (
-            <Link
-              key={item.id}
-              href={item.url ?? "/shop"}
-              className={cn(
-                "block w-full transition-opacity duration-700 ease-in-out",
-                index === activeIndex ? "opacity-100" : "opacity-0 absolute top-0"
-              )}
-            >
-              <div className="w-full" style={{ height: 'auto' }}>
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title ?? "Moodboard item"}
-                  width={1200}
-                  height={600}
-                  className="w-full h-auto object-contain"
-                  quality={100}
-                  priority={index === 0}
-                />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+    <section className={cn("w-full bg-[F4F0EC]", className)}>
+    {/* ---------------------------- Mobile View ---------------------------- */}
+<div className="lg:hidden w-full px-3 py-6">
+  {/* Floating Card ABOVE */}
+  <div className="w-full mb-4">
+    <div className="bg-white bg-opacity-80 backdrop-blur-md p-4 text-center rounded-lg shadow-md border border-gray-200">
+      <h3 className="text-lg font-medium text-gray-900 mb-2 leading-snug">
+        Effortless Elegance,<br />
+        Naturally Woven
+      </h3>
+      <p className="text-gray-600 text-xs leading-relaxed mb-3">
+        Explore our latest collections of co-accuracy crafted sarees —
+        based in tradition, refined for today.
+      </p>
+      <Link href="/shop">
+        <button className="border-b border-gray-400 text-gray-700 px-1 py-1 text-xs font-medium uppercase tracking-wide hover:border-gray-600 transition-colors rounded-none">
+          EXPLORE NOW →
+        </button>
+      </Link>
+    </div>
+  </div>
+
+  {/* Small Image Carousel BELOW */}
+  <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth">
+    {moodboardItems.map((item) => (
+      <Link
+        key={item.id}
+        href={item.url ?? "/shop"}
+        className="flex-shrink-0 w-[140px] h-[180px] relative rounded-lg overflow-hidden shadow-md"
+      >
+        <Image
+          src={item.imageUrl}
+          alt={item.title ?? "Moodboard item"}
+          fill
+          className="object-cover rounded-lg"
+        />
+      </Link>
+    ))}
+  </div>
+</div>
+
+<style jsx>{`
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+`}</style>
+
 
       {/* Desktop View */}
       <div className="hidden lg:block max-w-screen-2xl mx-auto py-12 px-8 relative">
