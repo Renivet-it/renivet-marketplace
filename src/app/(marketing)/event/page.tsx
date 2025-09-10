@@ -66,7 +66,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
           {/* ✅ Divider for Desktop */}
           <div className="hidden md:inline-block w-px bg-border" />
 
-          <div className="w-full basis-5/6 space-y-5">
+          <div className="w-full basis-5/6">
             {/* ✅ SortBy - Desktop Only */}
             <div className="hidden md:flex justify-end">
               <ShopSortBy />

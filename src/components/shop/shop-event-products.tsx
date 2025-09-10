@@ -44,7 +44,7 @@ export function ShopEventProducts({
   initialData,
   initialWishlist,
   userId,
-}: ShopEventProductsProps) {
+}: ShopEventProductsProps  ) {
   const wishlist = initialWishlist ?? [];
 
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
@@ -78,7 +78,7 @@ export function ShopEventProducts({
   });
 
   const fetchProducts = async (targetPage: number, append = false) => {
-    if (!hasMore && append) return; // ✅ Prevent extra calls if no more products
+    if (!hasMore && append) return;
 
     setLoading(true);
     const filters = {
@@ -105,7 +105,6 @@ export function ShopEventProducts({
     setLoading(false);
   };
 
-  // ✅ Reset products when filters change
   useEffect(() => {
     const currentFilters = {
       brandIds: brandIds.join(","),
@@ -126,9 +125,8 @@ export function ShopEventProducts({
     }
   }, [brandIds, categoryId, subCategoryId, minPrice, maxPrice, sortBy, sortOrder]);
 
-  // ✅ Infinite Scroll with observer cleanup when `hasMore` is false
   useEffect(() => {
-    if (!observerRef.current || !hasMore) return; // ✅ Do not observe if no more products
+    if (!observerRef.current || !hasMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -149,53 +147,10 @@ export function ShopEventProducts({
   if (!products.length) return <NoProductCard />;
 
   return (
-    <div className="min-h-screen bg-[#f4f0ec] p-2">
-      {/* ✅ Category Section (Visible only on mobile) - Card Design */}
-      <div className="md:hidden mb-6 mx-1 px-1">
-        <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: '#ece5f1' }}>
-          <div className="grid grid-cols-5 gap-1 w-full">
-            {categories.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/event/${cat.id}`}
-                className="flex flex-col items-center justify-center w-full"
-              >
-                <div
-                  className="rounded-full overflow-hidden mb-1 mx-auto"
-                  style={{
-                    width: '45px', 
-                    height: '43px',
-                    backgroundColor: '#5f3297'
-                  }}
-                >
-                  <img
-                    src={cat.image || "/images/placeholder.png"}
-                    alt={cat.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <span 
-                  className={cn(
-                    "text-center leading-tight w-full",
-                    categoryId === cat.id ? "text-purple-600" : "text-gray-600"
-                  )}
-                  style={{ 
-                    fontSize: '9px', 
-                    lineHeight: '10px',
-                    wordBreak: 'break-word',
-                    hyphens: 'auto'
-                  }}
-                >
-                  {cat.name}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ✅ Carousel for Mobile */}
-      <div className="block md:hidden mb-6">
+    <div className="min-h-screen bg-[#f4f0ec]">
+      {/* Mobile-only container for Carousel and Categories */}
+      <div className="relative block md:hidden">
+        {/* Carousel for Mobile (background layer) */}
         <ExhibitionCarousel
           slides={[
             {
@@ -224,12 +179,56 @@ export function ShopEventProducts({
             },
           ]}
         />
+
+        {/* Category Section (overlay layer) */}
+        <div className="absolute top-0 left-0 right-0 z-10 p-2">
+            <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: '#ece5f1' }}>
+              <div className="grid grid-cols-5 gap-1 w-full">
+                {categories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`/event/${cat.id}`}
+                    className="flex flex-col items-center justify-center w-full"
+                  >
+                    <div
+                      className="rounded-full overflow-hidden mb-1 mx-auto"
+                      style={{
+                        width: '45px',
+                        height: '43px',
+                        backgroundColor: '#5f3297'
+                      }}
+                    >
+                      <img
+                        src={cat.image || "/images/placeholder.png"}
+                        alt={cat.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span
+                      className={cn(
+                        "text-center leading-tight w-full",
+                        categoryId === cat.id ? "text-purple-600" : "text-gray-600"
+                      )}
+                      style={{
+                        fontSize: '9px',
+                        lineHeight: '10px',
+                        wordBreak: 'break-word',
+                        hyphens: 'auto'
+                      }}
+                    >
+                      {cat.name}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+        </div>
       </div>
 
-      {/* ✅ Product Grid */}
+      {/* Product Grid */}
       <div
         className={cn(
-          "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4",
+          "grid grid-cols-2 gap-4 p-2 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4 md:p-2",
           className
         )}
       >
@@ -245,13 +244,13 @@ export function ShopEventProducts({
         })}
       </div>
 
-      {/* ✅ Loading Indicator */}
+      {/* Loading Indicator */}
       {loading && <p className="text-center mt-4 text-gray-600">Loading more products...</p>}
 
-      {/* ✅ Observer only if more products */}
+      {/* Observer only if more products */}
       {hasMore && !loading && <div ref={observerRef} className="h-10"></div>}
 
-      {/* ✅ No More Products Message */}
+      {/* No More Products Message */}
       {!hasMore && !loading && (
         <p className="text-center mt-4 text-gray-500">No more products to show.</p>
       )}
