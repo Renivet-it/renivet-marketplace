@@ -243,7 +243,9 @@ export function ProductPage({
                     isWishlisted={isWishlisted}
                     userId={userId}
                 />
-                <ProductDetails product={product} />
+           <div className="block md:hidden">
+  <ProductDetails product={product} />
+</div>
 
             </div>
 

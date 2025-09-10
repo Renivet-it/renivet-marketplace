@@ -10,6 +10,8 @@ export const ProductCard = () => {
           <h2 className="text-gray-900 text-4xl font-bold mb-2 flex items-center justify-center gap-2">
             Decode X
           </h2>
+                    <h2 className="text-gray-900 text-4xl font-bold mb-2 flex items-center justify-center gap-2">
+Behind The Product          </h2>
           <p className="text-gray-700 text-xl font-medium">Coming Soon</p>
         </div>
       </div>

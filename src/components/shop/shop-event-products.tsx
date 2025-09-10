@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { CachedWishlist } from "@/lib/validations";
 import Link from "next/link";
 import { ProductCard } from "../globals/cards";
-import { Icons } from "../icons";
+import { Icons } from "../icons"; // Assuming Icons.Spinner will be available here
 import { Button } from "../ui/button-general";
 import {
   EmptyPlaceholder,
@@ -23,6 +23,15 @@ import {
   parseAsStringLiteral,
 } from "nuqs";
 import { useState, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react"; // Import the spinner icon
+
+// It's common to add the spinner to your Icons object like this:
+// In your icons.ts file:
+// export const Icons = {
+//   ...
+//   Spinner: Loader2,
+//   ...
+// };
 
 interface ShopEventProductsProps {
   className?: string;
@@ -44,7 +53,7 @@ export function ShopEventProducts({
   initialData,
   initialWishlist,
   userId,
-}: ShopEventProductsProps  ) {
+}: ShopEventProductsProps   ) {
   const wishlist = initialWishlist ?? [];
 
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
@@ -149,8 +158,8 @@ export function ShopEventProducts({
   return (
     <div className="min-h-screen bg-[#f4f0ec]">
       {/* Mobile-only container for Carousel and Categories */}
-      <div className="relative block md:hidden">
-        {/* Carousel for Mobile (background layer) */}
+      <div className="block md:hidden">
+        {/* Carousel for Mobile */}
         <ExhibitionCarousel
           slides={[
             {
@@ -180,8 +189,8 @@ export function ShopEventProducts({
           ]}
         />
 
-        {/* Category Section (overlay layer) */}
-        <div className="absolute top-0 left-0 right-0 z-10 p-2">
+        {/* Category Section (now after the carousel) */}
+        <div className="p-2">
             <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: '#ece5f1' }}>
               <div className="grid grid-cols-5 gap-1 w-full">
                 {categories.map((cat) => (
@@ -225,35 +234,41 @@ export function ShopEventProducts({
         </div>
       </div>
 
-      {/* Product Grid */}
-      <div
-        className={cn(
-          "grid grid-cols-2 gap-4 p-2 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4 md:p-2",
-          className
+      {/* Product Grid Section with new Card Styling */}
+      <div className="mx-2 rounded-3xl p-4 md:mx-0 md:rounded-none md:bg-transparent md:p-0" style={{ backgroundColor: '#e7e0e5' }}>
+        <div
+          className={cn(
+            "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4",
+            className
+          )}
+        >
+          {products.map((eventItem) => {
+            const product = eventItem.product;
+            const isWishlisted = wishlist?.some((item) => item.productId === product.id) ?? false;
+
+            return (
+              <div key={product.id} className="cursor-pointer bg-transparent">
+                <ProductCard product={product} isWishlisted={isWishlisted} userId={userId} />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div className="flex justify-center items-center mt-4">
+            <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+          </div>
         )}
-      >
-        {products.map((eventItem) => {
-          const product = eventItem.product;
-          const isWishlisted = wishlist?.some((item) => item.productId === product.id) ?? false;
 
-          return (
-            <div key={product.id} className="cursor-pointer">
-              <ProductCard product={product} isWishlisted={isWishlisted} userId={userId} />
-            </div>
-          );
-        })}
+        {/* Observer only if more products */}
+        {hasMore && !loading && <div ref={observerRef} className="h-10"></div>}
+
+        {/* No More Products Message */}
+        {!hasMore && !loading && (
+          <p className="text-center mt-4 text-gray-500">No more products to show.</p>
+        )}
       </div>
-
-      {/* Loading Indicator */}
-      {loading && <p className="text-center mt-4 text-gray-600">Loading more products...</p>}
-
-      {/* Observer only if more products */}
-      {hasMore && !loading && <div ref={observerRef} className="h-10"></div>}
-
-      {/* No More Products Message */}
-      {!hasMore && !loading && (
-        <p className="text-center mt-4 text-gray-500">No more products to show.</p>
-      )}
     </div>
   );
 }
