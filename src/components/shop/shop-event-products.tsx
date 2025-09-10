@@ -32,11 +32,11 @@ interface ShopEventProductsProps {
 }
 
 const categories = [
-    { id: "08ce51fe-adb8-4086-acfd-759772767ec8", name: "Beauty and Care" },
-    { id: "0b7046fc-6962-4469-81c2-412ed6949c02", name: "Men" },
-    { id: "16d40bb3-3061-4790-b9b7-253cb078dfe1", name: "Women" },
-    { id: "173e1e71-e298-4301-b542-caa29d3950bf", name: "Home and Living" },
-    { id: "22816fa3-d57e-4e3b-bc0e-72edf4635124", name: "Kids" }
+    { id: "08ce51fe-adb8-4086-acfd-759772767ec8", name: "Beauty and Care", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtkiuyIRj63QywZkxrW40qSphaIEcmUdXDAVl" },
+    { id: "0b7046fc-6962-4469-81c2-412ed6949c02", name: "Men", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbth2WVuZc50VbmLPHAdU9KwxEkCINyqDWJRr"},
+    { id: "16d40bb3-3061-4790-b9b7-253cb078dfe1", name: "Women", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFiqLIFUt5ndSiE7wT2jaklrZXQ6vYpAbfHy" },
+    { id: "173e1e71-e298-4301-b542-caa29d3950bf", name: "Home and Living", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmWeViQNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ" },
+    { id: "22816fa3-d57e-4e3b-bc0e-72edf4635124", name: "Kids", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdshBBwb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG" }
 ];
 
 export function ShopEventProducts({
@@ -149,36 +149,50 @@ export function ShopEventProducts({
   if (!products.length) return <NoProductCard />;
 
   return (
-    <div className="min-h-screen bg-[#f4f0ec] p-4">
-      {/* ✅ Category Section */}
- {/* ✅ Category Section (Visible only on mobile) */}
-<div className="flex flex-wrap justify-center gap-4 mb-6 md:hidden">
-  {categories.map((cat) => (
-<Link
-  key={cat.id}
-  href={`/event/${cat.id}`}
-  className={cn(
-    "flex flex-col items-center w-16 focus:outline-none",
-    categoryId === cat.id ? "text-black" : "text-gray-500"
-  )}
->
-  <div
-    className={cn(
-      "w-14 h-14 rounded-full overflow-hidden border",
-      categoryId === cat.id ? "border-black" : "border-gray-300"
-    )}
-  >
-    <img
-      src={cat.image || "/images/placeholder.png"}
-      alt={cat.name}
-      className="w-full h-full object-cover"
-    />
-  </div>
-  <span className="mt-1 text-xs font-medium text-center">{cat.name}</span>
-</Link>
-  ))}
-</div>
-
+    <div className="min-h-screen bg-[#f4f0ec] p-2">
+      {/* ✅ Category Section (Visible only on mobile) - Card Design */}
+      <div className="md:hidden mb-6 mx-1 px-1">
+        <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: '#ece5f1' }}>
+          <div className="grid grid-cols-5 gap-1 w-full">
+            {categories.map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/event/${cat.id}`}
+                className="flex flex-col items-center justify-center w-full"
+              >
+                <div
+                  className="rounded-full overflow-hidden mb-1 mx-auto"
+                  style={{
+                    width: '45px', 
+                    height: '43px',
+                    backgroundColor: '#5f3297'
+                  }}
+                >
+                  <img
+                    src={cat.image || "/images/placeholder.png"}
+                    alt={cat.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span 
+                  className={cn(
+                    "text-center leading-tight w-full",
+                    categoryId === cat.id ? "text-purple-600" : "text-gray-600"
+                  )}
+                  style={{ 
+                    fontSize: '9px', 
+                    lineHeight: '10px',
+                    wordBreak: 'break-word',
+                    hyphens: 'auto'
+                  }}
+                >
+                  {cat.name}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ✅ Carousel for Mobile */}
       <div className="block md:hidden mb-6">
