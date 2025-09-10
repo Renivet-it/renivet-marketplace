@@ -170,27 +170,11 @@ export function ShopEventProducts({
               imageUrl: "/images/event1.jpg",
               url: "/events/hyderabad",
             },
-            {
-              title: "New Collection Launch",
-              date: "October 2025",
-              description:
-                "Be the first to explore our latest designs and handcrafted pieces this festive season.",
-              imageUrl: "/images/event2.jpg",
-              url: "/events/launch",
-            },
-            {
-              title: "Special Festive Discounts",
-              date: "November 2025",
-              description:
-                "Enjoy exclusive discounts on curated items for a limited time.",
-              imageUrl: "/images/event3.jpg",
-              url: "/offers/festive",
-            },
           ]}
         />
 
         {/* Category Section (now after the carousel) */}
-        <div className="p-2">
+        <div className="p-2 mb-2">
             <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: '#ece5f1' }}>
               <div className="grid grid-cols-5 gap-1 w-full">
                 {categories.map((cat) => (

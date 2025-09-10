@@ -22,7 +22,7 @@ export function ExhibitionCarousel({ className, slides }: ExhibitionCarouselProp
   const aspectRatio = 1440 / 500; // Similar to Landing banner
 
   return (
-    <section className={cn("mb-4", className)}>
+    <section className={cn("mb-2", className)}>
       <Carousel
         opts={{
           align: "start",
