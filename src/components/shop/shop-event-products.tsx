@@ -142,25 +142,6 @@ export function ShopEventProducts({
     return () => observer.disconnect();
   }, [page, hasMore, loading]);
 
-  // 🎉 Celebration effect on first mount
-  useEffect(() => {
-    confetti({
-      particleCount: 200,
-      spread: 100,
-      origin: { y: 0.6 },
-    });
-
-    // small bursts for a few seconds
-    const interval = setInterval(() => {
-      confetti({
-        particleCount: 50,
-        spread: 70,
-        origin: { x: Math.random(), y: Math.random() - 0.2 },
-      });
-    }, 1200);
-
-    setTimeout(() => clearInterval(interval), 4000); // stop after 4s
-  }, []);
 
   if (!products.length) return <NoProductCard />;
   return (
