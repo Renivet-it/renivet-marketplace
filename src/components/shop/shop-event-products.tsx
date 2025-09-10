@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { CachedWishlist } from "@/lib/validations";
 import Link from "next/link";
 import { ProductCard } from "../globals/cards";
-import { Icons } from "../icons";
+import { Icons } from "../icons"; // Make sure to have ChevronRight in your Icons object
 import { Button } from "../ui/button-general";
 import {
   EmptyPlaceholder,
@@ -24,7 +24,60 @@ import {
 } from "nuqs";
 import { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import confetti from "canvas-confetti"; // 🎉 celebration library
+
+// --- 1. Corrected PromoBanner Component with Two Images ---
+const PromoBanner = () => {
+  const imageUrl1 = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoKrKNg0WvnGEidmOVIP6xXt4S7befYUykMJq";
+  const imageUrl2 = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNzE3GE0wvAfHxUCD4uo0de9jTMakKRhw8ctYL";
+
+  return (
+    <div className="relative mx-2 mb-4 flex h-[300px] items-center justify-end overflow-hidden rounded-2xl bg-[#e0d9e6] p-4">
+      {/* Container for the two images */}
+      <div className="absolute left-0 top-0 h-full w-3/5">
+        {/* First Image (Female Model ) */}
+        <img
+          src={imageUrl1}
+          alt="Female model"
+          className="absolute left-0 top-0 h-full w-1/2 object-cover"
+        />
+        {/* Second Image (Male Model) */}
+        <img
+          src={imageUrl2}
+          alt="Male model"
+          className="absolute right-0 top-0 h-full w-1/2 object-cover"
+        />
+      </div>
+
+      {/* Clickable dot on the female model */}
+      <Link href="/buy-now" className="absolute z-20" style={{ top: '48%', left: '23%' }}>
+        <div className="h-4 w-4 cursor-pointer rounded-full bg-white ring-2 ring-black" />
+      </Link>
+
+      {/* Clickable dot on the male model */}
+      <Link href="/buy-now" className="absolute z-20" style={{ top: '65%', left: '35%' }}>
+        <div className="h-4 w-4 cursor-pointer rounded-full bg-white ring-2 ring-black" />
+      </Link>
+
+      {/* Text Content aligned to the right */}
+      <div className="relative z-10 w-1/2 text-right">
+        <h3 className="font-semibold tracking-widest text-gray-800">RENIVET</h3>
+        <h2 className="my-2 text-2xl font-bold text-black">
+          Conscious Looks For Modern Duos
+        </h2>
+        <p className="mb-4 text-xs text-gray-700">
+          Step Into Effortless Style With Co-Ord Sets Designed To Match Your Vibe. Ethically Made For Those Who Care.
+        </p>
+        <Button asChild variant="outline" className="border-gray-600 bg-transparent text-gray-800 hover:bg-gray-200">
+          <Link href="/buy-now">
+             {/* <Icons.ChevronRight className="mr-2 h-4 w-4" />  */}
+            Buy Now
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 
 interface ShopEventProductsProps {
   className?: string;
@@ -48,7 +101,7 @@ export function ShopEventProducts({
   initialWishlist,
   userId,
   showCarousel = true,
-}: ShopEventProductsProps) {
+}: ShopEventProductsProps ) {
   const wishlist = initialWishlist ?? [];
 
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
@@ -148,7 +201,7 @@ export function ShopEventProducts({
     <div className="min-h-screen bg-[#f4f0ec] relative overflow-hidden">
       {/* Mobile-only container for Carousel and Categories */}
       <div className="block md:hidden">
- {showCarousel && ( // 👈 only show if true
+        {showCarousel && (
           <ExhibitionCarousel
             slides={[
               {
@@ -183,6 +236,10 @@ export function ShopEventProducts({
             </div>
           </div>
         </div>
+        
+        {/* --- 2. Corrected PromoBanner is placed here --- */}
+        <PromoBanner />
+
       </div>
 
       {/* Product Grid Section */}
