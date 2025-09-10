@@ -31,6 +31,7 @@ interface ShopEventProductsProps {
   initialData: any[];
   initialWishlist?: CachedWishlist[];
   userId?: string;
+  showCarousel?: boolean;
 }
 
 const categories = [
@@ -46,6 +47,7 @@ export function ShopEventProducts({
   initialData,
   initialWishlist,
   userId,
+  showCarousel = true,
 }: ShopEventProductsProps) {
   const wishlist = initialWishlist ?? [];
 
@@ -161,29 +163,31 @@ export function ShopEventProducts({
   }, []);
 
   if (!products.length) return <NoProductCard />;
-
   return (
     <div className="min-h-screen bg-[#f4f0ec] relative overflow-hidden">
       {/* Mobile-only container for Carousel and Categories */}
       <div className="block md:hidden">
-        <ExhibitionCarousel
-          slides={[
-            {
-              title: "Hyderabad Exhibition 2025",
-              date: "September 2025",
-              description: "Discover Exclusive Handcrafted Pieces, Sustainable Fashion, And Beauty Products Showcased Only At Our Hyderabad Event.",
-              imageUrl: "/images/event1.jpg",
-              url: "/events/hyderabad",
-            },
-          ]}
-        />
+ {showCarousel && ( // 👈 only show if true
+          <ExhibitionCarousel
+            slides={[
+              {
+                title: "Hyderabad Exhibition 2025",
+                date: "September 2025",
+                description:
+                  "Discover Exclusive Handcrafted Pieces, Sustainable Fashion, And Beauty Products Showcased Only At Our Hyderabad Event.",
+                imageUrl: "/images/event1.jpg",
+                url: "/events/hyderabad",
+              },
+            ]}
+          />
+        )}
 
         {/* Category Section */}
         <div className="p-2 mb-2">
           <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: "#ece5f1" }}>
             <div className="grid grid-cols-5 gap-1 w-full">
               {categories.map((cat) => (
-                <Link key={cat.id} href={`/event/${cat.id}`} className="flex flex-col items-center justify-center w-full">
+                <Link key={cat.id} href={`/events/${cat.id}`} className="flex flex-col items-center justify-center w-full">
                   <div className="rounded-full overflow-hidden mb-1 mx-auto" style={{ width: "45px", height: "43px", backgroundColor: "#5f3297" }}>
                     <img src={cat.image || "/images/placeholder.png"} alt={cat.name} className="w-full h-full object-cover" />
                   </div>

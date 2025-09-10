@@ -26,6 +26,8 @@ export default async function CategoryEventPage({
       initialData={data}
       initialWishlist={userWishlist}
       userId={userId ?? undefined}
+       showCarousel={false}
     />
+
   );
 }
