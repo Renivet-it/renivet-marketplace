@@ -217,9 +217,12 @@ export function ShopEventProducts({
 
   if (!products.length) return <NoProductCard />;
   return (
-    <div className="min-h-screen bg-[#f4f0ec] relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden "
+     style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)" }}>
       {/* Mobile-only container for Carousel and Categories */}
-      <div className="block md:hidden bg-[#eaddf7]">
+      <div className="block md:hidden bg-[#eaddf7]"
+     style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)" }}
+      >
         {showCarousel && (
           <ExhibitionCarousel
             slides={[
@@ -236,7 +239,7 @@ export function ShopEventProducts({
         )}
 
         {/* Category Section */}
-        <div className="mt-2 mb-2 bg-[#e2d4ee]">
+        <div className="mt-2 px-2 bg-[#e2d4ee]">
           <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: "#e1d5ea" }}>
             <div className="grid grid-cols-5 gap-1 w-full">
               {categories.map((cat) => (
@@ -255,14 +258,13 @@ export function ShopEventProducts({
             </div>
           </div>
         </div>
-        
         {/* --- 2. Final, Accurate PromoBanner is placed here --- */}
         <PromoBanner />
 
       </div>
 
       {/* Product Grid Section */}
-      <div className="mx-5 rounded-3xl p-6 md:mx-0 md:rounded-none md:bg-transparent md:p-0" style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)", }}>
+      <div className="mx-5 rounded-3xl p-7 md:mx-0 md:rounded-none md:bg-transparent md:p-0" style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)", }}>
         <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4", className)}>
           {products.map((eventItem) => {
             const product = eventItem.product;
