@@ -760,30 +760,52 @@ export function ShopEventProducts({
       </div>
 
       {/* Product Grid Section */}
-      <div className="mx-5 rounded-3xl p-7 md:mx-0 md:rounded-none md:bg-transparent md:p-0" style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)", }}>
-        <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4", className)}>
-          {products.map((eventItem) => {
-            const product = eventItem.product;
-            const isWishlisted = wishlist?.some((item) => item.productId === product.id) ?? false;
+<div className="mx-5 rounded-3xl p-7 md:mx-0 md:rounded-none md:bg-transparent md:p-0 relative overflow-hidden" 
+     style={{ 
+       background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)",
+     }}>
+  {/* Geometric background pattern */}
+  <div className="absolute inset-0 opacity-10">
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="hexagons" x="0" y="0" width="50" height="43.4" patternUnits="userSpaceOnUse">
+          <polygon points="25,2 45,15 45,35 25,48 5,35 5,15" fill="none" stroke="#7C3AED" strokeWidth="1"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#hexagons)" />
+    </svg>
+  </div>
 
-            return (
-              <div key={product.id} className="cursor-pointer bg-transparent">
-                <EventProductCard product={product} isWishlisted={isWishlisted} userId={userId} />
-              </div>
-            );
-          })}
+  {/* Floating elements */}
+  <div className="absolute inset-0 overflow-hidden">
+    <div className="absolute -top-10 -left-10 w-40 h-40 bg-gradient-to-br from-purple-300/20 to-indigo-300/20 rounded-full animate-pulse"></div>
+    <div className="absolute top-1/3 -right-16 w-32 h-32 bg-gradient-to-br from-pink-300/20 to-purple-300/20 rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+    <div className="absolute -bottom-16 left-1/4 w-48 h-48 bg-gradient-to-br from-indigo-300/20 to-purple-300/20 rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
+  </div>
+
+  <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4", className)}>
+    {products.map((eventItem) => {
+      const product = eventItem.product;
+      const isWishlisted = wishlist?.some((item) => item.productId === product.id) ?? false;
+
+      return (
+        <div key={product.id} className="cursor-pointer bg-transparent">
+          <EventProductCard product={product} isWishlisted={isWishlisted} userId={userId} />
         </div>
+      );
+    })}
+  </div>
 
-        {loading && (
-          <div className="flex justify-center items-center mt-4">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
-          </div>
-        )}
+  {loading && (
+    <div className="flex justify-center items-center mt-4">
+      <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+    </div>
+  )}
 
-        {hasMore && !loading && <div ref={observerRef} className="h-10"></div>}
+  {hasMore && !loading && <div ref={observerRef} className="h-10 relative z-10"></div>}
 
-        {!hasMore && !loading && <p className="text-center mt-4 text-gray-500">No more products to show.</p>}
-      </div>
+  {!hasMore && !loading && <p className="text-center mt-4 text-gray-500">No more products to show.</p>}
+</div>
     </div>
   );
 }
