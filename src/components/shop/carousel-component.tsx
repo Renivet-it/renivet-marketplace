@@ -19,7 +19,7 @@ interface ExhibitionCarouselProps {
 
 export function ExhibitionCarousel({ className, slides }: ExhibitionCarouselProps) {
   return (
-    <section className={cn("pb-2 pt-2 px-2", className)}>
+    <section className={cn("pb-2 pt-2", className)}>
       <Carousel
         opts={{ align: "start", loop: true }}
         plugins={[Autoplay({ delay: 4000 })]}
@@ -28,7 +28,7 @@ export function ExhibitionCarousel({ className, slides }: ExhibitionCarouselProp
         <CarouselContent classNames={{ wrapper: "size-full", inner: "size-full ml-0" }}>
           {slides.map((slide, index) => (
             <CarouselItem key={index} className="px-0 py-0">
-              <div className="relative w-[398px] h-[410px] md:w-full md:h-full overflow-hidden rounded-3xl mx-auto">
+              <div className="relative w-[368px] h-[410px] md:w-full md:h-full overflow-hidden rounded-3xl mx-auto">
                 {/* Floating shapes */}
                 {[...Array(8)].map((_, i) => (
                   <span

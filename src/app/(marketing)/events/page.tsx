@@ -54,6 +54,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Sea
         className={cn(
           "w-full md:max-w-5xl md:space-y-4 md:p-8 md:py-10 xl:max-w-[100rem]"
         )}
+
       >
         <div className="flex flex-col gap-5 md:flex-row">
           {/* ✅ Filters - Desktop Only */}
