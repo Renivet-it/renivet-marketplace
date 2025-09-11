@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { CachedWishlist } from "@/lib/validations";
 import Link from "next/link";
-import { ProductCard } from "../globals/cards";
+import { EventProductCard } from "../globals/cards";
 import { Icons } from "../icons"; // Make sure to have ChevronRight in your Icons object
 import { Button } from "../ui/button-general";
 import {
@@ -33,7 +33,7 @@ const PromoBanner = () => {
   return (
     <div className="relative mb-4">
       {/* Main banner container with increased height */}
-      <div className="relative flex h-[250px] items-center overflow-hidden bg-[#c8b5d4] p-4">
+      <div className="relative flex h-[250px] items-center overflow-hidden bg-[#eaddf7] p-4">
         {/* Left side - Images container */}
         <div className="flex w-1/2 h-full">
           {/* Female Model Image */}
@@ -54,7 +54,7 @@ const PromoBanner = () => {
           </div>
           
           {/* Male Model Image */}
-          <div className="relative w-1/2 h-full">
+          <div className="relative w-1/2 h-full ml-[-2px]">
             <img
               src={imageUrl2}
               alt="Male model"
@@ -88,11 +88,11 @@ const PromoBanner = () => {
         </div>
 
         {/* Top right category icon */}
-        <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+        {/* <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
           <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
             <span className="text-white text-xs font-semibold">W</span>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
@@ -219,7 +219,7 @@ export function ShopEventProducts({
   return (
     <div className="min-h-screen bg-[#f4f0ec] relative overflow-hidden">
       {/* Mobile-only container for Carousel and Categories */}
-      <div className="block md:hidden">
+      <div className="block md:hidden bg-[#eaddf7]">
         {showCarousel && (
           <ExhibitionCarousel
             slides={[
@@ -236,12 +236,12 @@ export function ShopEventProducts({
         )}
 
         {/* Category Section */}
-        <div className="p-2 mb-2">
-          <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: "#ece5f1" }}>
+        <div className="mt-2 mb-2 bg-[#e2d4ee]">
+          <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: "#e1d5ea" }}>
             <div className="grid grid-cols-5 gap-1 w-full">
               {categories.map((cat) => (
                 <Link key={cat.id} href={`/events/${cat.id}`} className="flex flex-col items-center justify-center w-full">
-                  <div className="rounded-full overflow-hidden mb-1 mx-auto" style={{ width: "45px", height: "43px", backgroundColor: "#5f3297" }}>
+                  <div className="rounded-full overflow-hidden mb-1 mx-auto" style={{ width: "48px", height: "45px", backgroundColor: "#5f3297" }}>
                     <img src={cat.image || "/images/placeholder.png"} alt={cat.name} className="w-full h-full object-cover" />
                   </div>
                   <span
@@ -270,7 +270,7 @@ export function ShopEventProducts({
 
             return (
               <div key={product.id} className="cursor-pointer bg-transparent">
-                <ProductCard product={product} isWishlisted={isWishlisted} userId={userId} />
+                <EventProductCard product={product} isWishlisted={isWishlisted} userId={userId} />
               </div>
             );
           })}

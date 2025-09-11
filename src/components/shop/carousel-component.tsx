@@ -22,7 +22,7 @@ export function ExhibitionCarousel({ className, slides }: ExhibitionCarouselProp
   const aspectRatio = 1440 / 500;
 
   return (
-    <section className={cn("mb-2 px-2", className)}>
+    <section className={cn("pb-2 pt-2 px-2 bg-[hsla(300, 24%, 78%, 1)]", className)}>
       <Carousel
         opts={{ align: "start", loop: true }}
         plugins={[Autoplay({ delay: 4000 })]}
