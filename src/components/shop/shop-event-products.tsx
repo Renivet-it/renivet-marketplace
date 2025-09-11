@@ -28,72 +28,220 @@ import Image from "next/image";
 
 // --- 1. Final, Accurate PromoBanner Component ---
 const PromoBanner = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [dotPulse, setDotPulse] = useState({ dot1: false, dot2: false });
+
   const imageUrl1 = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoKrKNg0WvnGEidmOVIP6xXt4S7befYUykMJq";
   const imageUrl2 = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNzE3GE0wvAfHxUCD4uo0de9jTMakKRhw8ctYL";
 
+  useEffect(() => {
+    setIsVisible(true);
+    
+    // Staggered dot pulse animation
+    const interval = setInterval(() => {
+      setDotPulse({ dot1: true, dot2: false });
+      setTimeout(() => {
+        setDotPulse({ dot1: false, dot2: true });
+      }, 1500);
+      setTimeout(() => {
+        setDotPulse({ dot1: false, dot2: false });
+      }, 3000);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="relative mb-4" style={{ backgroundImage:
-      "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxfgOi01IezOinSmtdvjDw08UlbRkW2MQqNBX')" }}>
-      {/* Main banner container with increased height */}
-      <div className="relative flex h-[250px] items-center overflow-hidden bg-[#eaddf7] p-4" style={{ backgroundImage:
-      "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxfgOi01IezOinSmtdvjDw08UlbRkW2MQqNBX')" }}>
+    <div className="relative mb-4 overflow-hidden">
+      {/* Animated Background with Gradient Overlay */}
+      <div 
+        className="absolute inset-0 bg-gradient-to-br from-purple-100 via-pink-50 to-orange-100 animate-gradient-shift"
+        style={{ 
+          backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxfgOi01IezOinSmtdvjDw08UlbRkW2MQqNBX')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
+        {/* Floating Elements */}
+        <div className="absolute top-4 left-4 w-3 h-3 bg-purple-300/40 rounded-full animate-float-1"></div>
+        <div className="absolute top-8 right-8 w-2 h-2 bg-pink-300/40 rounded-full animate-float-2"></div>
+        <div className="absolute bottom-6 left-8 w-4 h-4 bg-orange-300/40 rounded-full animate-float-3"></div>
+        <div className="absolute bottom-4 right-6 w-2.5 h-2.5 bg-yellow-300/40 rounded-full animate-float-1"></div>
+      </div>
+
+      {/* Main banner container */}
+      <div className="relative flex h-[250px] items-center overflow-hidden p-4">
         {/* Left side - Images container */}
-        <div className="flex w-1/2 h-full">
+        <div className={`flex w-1/2 h-full transition-all duration-1000 ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'}`}>
           {/* Female Model Image */}
-          <div className="relative w-1/2 h-full">
-            <img
-              src={imageUrl1}
-              alt="Female model"
-              className="w-full h-full object-contain object-center"
-            />
-            {/* Clickable dot on female model */}
+          <div className="relative w-1/2 h-full group">
+            <div className="relative h-full w-full overflow-hidden rounded-lg shadow-lg transform transition-transform duration-500 hover:scale-105">
+              <img
+                src={imageUrl1}
+                alt="Female model"
+                className="w-full h-full object-contain object-center transition-transform duration-700 hover:scale-110"
+              />
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12 group-hover:animate-shine"></div>
+            </div>
+            
+            {/* Enhanced Clickable dot */}
             <Link
               href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf"
-              className="absolute z-10"
+              className="absolute z-20"
               style={{ top: '60%', left: '70%' }}
             >
-              <div className="h-3 w-3 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-md hover:scale-110 transition-transform flex items-center justify-center">
-                <div className="h-1 w-1 rounded-full bg-black"></div>
+              <div className={`relative h-4 w-4 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-xl hover:scale-125 transition-all duration-300 flex items-center justify-center group ${dotPulse.dot1 ? 'animate-pulse-strong' : ''}`}>
+                <div className="h-1.5 w-1.5 rounded-full bg-black group-hover:bg-purple-600 transition-colors"></div>
+                {/* Ripple effect */}
+                <div className="absolute inset-0 rounded-full bg-white animate-ping opacity-20 group-hover:opacity-40"></div>
+                {/* Tooltip */}
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                  Shop Women's
+                </div>
               </div>
             </Link>
           </div>
           
           {/* Male Model Image */}
-          <div className="relative w-1/2 h-full ml-[-2px]">
-            <img
-              src={imageUrl2}
-              alt="Male model"
-              className="w-full h-full object-contain object-center"
-            />
-            {/* Clickable dot on male model */}
+          <div className="relative w-1/2 h-full ml-[-2px] group">
+            <div className="relative h-full w-full overflow-hidden rounded-lg shadow-lg transform transition-transform duration-500 hover:scale-105">
+              <img
+                src={imageUrl2}
+                alt="Male model"
+                className="w-full h-full object-contain object-center transition-transform duration-700 hover:scale-110"
+              />
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12 group-hover:animate-shine"></div>
+            </div>
+            
+            {/* Enhanced Clickable dot */}
             <Link
               href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf"
-              className="absolute z-10"
+              className="absolute z-20"
               style={{ top: '70%', left: '30%' }}
             >
-              <div className="h-3 w-3 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-md hover:scale-110 transition-transform flex items-center justify-center">
-                <div className="h-1 w-1 rounded-full bg-black"></div>
+              <div className={`relative h-4 w-4 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-xl hover:scale-125 transition-all duration-300 flex items-center justify-center group ${dotPulse.dot2 ? 'animate-pulse-strong' : ''}`}>
+                <div className="h-1.5 w-1.5 rounded-full bg-black group-hover:bg-blue-600 transition-colors"></div>
+                {/* Ripple effect */}
+                <div className="absolute inset-0 rounded-full bg-white animate-ping opacity-20 group-hover:opacity-40"></div>
+                {/* Tooltip */}
+                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                  Shop Men's
+                </div>
               </div>
             </Link>
           </div>
         </div>
 
-        {/* Right side - Text content */}
-        <div className="flex flex-col justify-center w-1/2 pl-6 text-left">
-          <h3 className="text-sm font-bold tracking-wider text-black mb-1">RENIVET</h3>
-          <h2 className="text-lg font-bold text-black leading-tight mb-2 italic">
+        {/* Right side - Text content with animations */}
+        <div className={`flex flex-col justify-center w-1/2 pl-6 text-left transition-all duration-1200 delay-300 ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+          {/* Brand name with glow effect */}
+          <h3 className="text-sm font-bold tracking-wider text-black mb-1 relative">
+            <span className="relative z-10">RENIVET</span>
+            <span className="absolute inset-0 text-purple-600 blur-sm opacity-30 animate-pulse">RENIVET</span>
+          </h3>
+          
+          {/* Main heading with gradient animation */}
+          <h2 className="text-lg font-bold leading-tight mb-2 italic bg-gradient-to-r from-black via-purple-800 to-black bg-clip-text text-transparent animate-gradient-text">
             Conscious Looks For Modern Duos
           </h2>
-          <p className="text-xs text-black mb-4 leading-relaxed">
+          
+          {/* Description with typewriter effect simulation */}
+          <p className="text-xs text-black mb-4 leading-relaxed opacity-0 animate-fade-in-up">
             Step Into Effortless Style With Co-Ord Sets Designed To Match Your Vibe. Ethically Made For Those Who Care.
           </p>
+          
+          {/* Enhanced CTA button */}
           <Link href="/collections/renivet">
-            <div className="inline-flex items-center justify-center rounded-md border border-black bg-transparent px-4 py-2 text-xs font-medium text-black hover:bg-black hover:text-white transition-colors cursor-pointer">
-              Buy Now
+            <div className="inline-flex items-center justify-center rounded-md border-2 border-black bg-transparent px-6 py-3 text-xs font-bold text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer relative overflow-hidden group shadow-lg hover:shadow-xl transform hover:scale-105">
+              <span className="relative z-10 tracking-wide">Buy Now</span>
+              {/* Button shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform -skew-x-12 group-hover:animate-shine"></div>
+              {/* Button pulse ring */}
+              <div className="absolute inset-0 rounded-md border-2 border-purple-400 opacity-0 group-hover:opacity-100 animate-pulse"></div>
             </div>
           </Link>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes gradient-shift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes float-1 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          33% { transform: translateY(-20px) rotate(120deg); }
+          66% { transform: translateY(-10px) rotate(240deg); }
+        }
+        
+        @keyframes float-2 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(180deg); }
+        }
+        
+        @keyframes float-3 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          25% { transform: translateY(-8px) rotate(90deg); }
+          75% { transform: translateY(-12px) rotate(270deg); }
+        }
+        
+        @keyframes shine {
+          0% { transform: translateX(-100%) skewX(-12deg); }
+          100% { transform: translateX(200%) skewX(-12deg); }
+        }
+        
+        @keyframes pulse-strong {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+          50% { transform: scale(1.2); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        }
+        
+        @keyframes gradient-text {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        
+        @keyframes fade-in-up {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-gradient-shift {
+          background-size: 200% 200%;
+          animation: gradient-shift 8s ease infinite;
+        }
+        
+        .animate-float-1 {
+          animation: float-1 6s ease-in-out infinite;
+        }
+        
+        .animate-float-2 {
+          animation: float-2 4s ease-in-out infinite;
+        }
+        
+        .animate-float-3 {
+          animation: float-3 5s ease-in-out infinite;
+        }
+        
+        .animate-shine {
+          animation: shine 1s ease-out;
+        }
+        
+        .animate-pulse-strong {
+          animation: pulse-strong 2s infinite;
+        }
+        
+        .animate-gradient-text {
+          background-size: 200% 200%;
+          animation: gradient-text 3s ease infinite;
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 1s ease-out 0.8s forwards;
+        }
+      `}</style>
     </div>
   );
 };
