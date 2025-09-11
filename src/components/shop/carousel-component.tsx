@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button-general";
 import { cn } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
@@ -10,19 +9,17 @@ import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carouse
 interface ExhibitionCarouselProps {
   className?: string;
   slides: {
-    title: string;
-    date: string;
-    description: string;
+    title?: string;
+    date?: string;
+    description?: string;
     imageUrl: string;
     url?: string;
   }[];
 }
 
 export function ExhibitionCarousel({ className, slides }: ExhibitionCarouselProps) {
-  const aspectRatio = 1440 / 500;
-
   return (
-    <section className={cn("pb-2 pt-2 px-2 bg-[hsla(300, 24%, 78%, 1)]", className)}>
+    <section className={cn("pb-2 pt-2 px-2", className)}>
       <Carousel
         opts={{ align: "start", loop: true }}
         plugins={[Autoplay({ delay: 4000 })]}
@@ -31,10 +28,7 @@ export function ExhibitionCarousel({ className, slides }: ExhibitionCarouselProp
         <CarouselContent classNames={{ wrapper: "size-full", inner: "size-full ml-0" }}>
           {slides.map((slide, index) => (
             <CarouselItem key={index} className="px-0 py-0">
-              <div
-                className="relative w-full overflow-hidden bg-gradient-to-tr from-purple-200 via-pink-200 to-yellow-100 rounded-3xl"
-                style={{ paddingBottom: `${(1 / aspectRatio) * 100}%` }}
-              >
+              <div className="relative w-[398px] h-[410px] md:w-full md:h-full overflow-hidden rounded-3xl mx-auto">
                 {/* Floating shapes */}
                 {[...Array(8)].map((_, i) => (
                   <span
@@ -48,29 +42,25 @@ export function ExhibitionCarousel({ className, slides }: ExhibitionCarouselProp
                   />
                 ))}
 
-                {/* Image */}
-                <Image
-                  src={slide.imageUrl}
-                  alt={slide.title}
-                  width={366}
-                  height={300}
-                  className="w-[366px] h-[300px] object-cover md:w-full md:h-full rounded-3xl"
-                  priority={index === 0}
-                />
-
-                {/* Text overlay */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-black/30 rounded-3xl">
-                  <h1 className="text-white text-2xl font-bold mb-2">{slide.title}</h1>
-                  <p className="text-gray-200 mb-2">{slide.date}</p>
-                  <p className="text-gray-100 text-sm mb-4 max-w-lg">{slide.description}</p>
-                  <Button
-                    size="lg"
-                    className="bg-white text-black font-semibold uppercase rounded-full hover:bg-gray-200 py-3 px-6"
-                    asChild
-                  >
-                    <Link href={slide.url || "/shop"}>Join Us</Link>
-                  </Button>
-                </div>
+                {slide.url ? (
+                  <Link href={slide.url} className="absolute inset-0 block w-full h-full">
+                    <Image
+                      src={slide.imageUrl}
+                      alt={slide.title || "Exhibition image"}
+                      fill
+                      className="object-cover rounded-3xl"
+                      priority={index === 0}
+                    />
+                  </Link>
+                ) : (
+                  <Image
+                    src={slide.imageUrl}
+                    alt={slide.title || "Exhibition image"}
+                    fill
+                    className="absolute inset-0 object-cover rounded-3xl"
+                    priority={index === 0}
+                  />
+                )}
               </div>
 
               <style jsx>{`

@@ -244,12 +244,18 @@ export function ShopEventProducts({
           <ExhibitionCarousel
             slides={[
               {
-                title: "Hyderabad Exhibition 2025",
-                date: "September 2025",
-                description:
-                  "Discover Exclusive Handcrafted Pieces, Sustainable Fashion, And Beauty Products Showcased Only At Our Hyderabad Event.",
-                imageUrl: "/images/event1.jpg",
+                imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNI3arTLrApCnKbtW0hkXs6adUVPBQFlvOi2ME",
                 url: "/events/hyderabad",
+                title: "",
+                date: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNv8oVjBdPZsh5fuDbkAelMyqICmp3NU7X4nHY",
+                description: ""
+              },
+                  {
+                imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNv8oVjBdPZsh5fuDbkAelMyqICmp3NU7X4nHY",
+                url: "/events/hyderabad",
+                title: "",
+                date: "",
+                description: ""
               },
             ]}
           />
