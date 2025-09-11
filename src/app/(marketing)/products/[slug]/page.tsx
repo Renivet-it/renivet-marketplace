@@ -144,7 +144,7 @@ async function ProductFetch({ params }: PageProps) {
 
             <Separator />
 
-            <ProductPassport product={existingProduct} />
+            {/* <ProductPassport product={existingProduct} /> */}
         </>
     );
 }

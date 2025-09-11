@@ -52,6 +52,12 @@ export const siteConfig: SiteConfig = {
             icon: "ShoppingBag",
         },
         {
+            name: "Events",
+            description: "Browse our Best selling products",
+            href: "/event",
+            icon: "ShoppingBag",
+        },
+        {
             name: "Blogs",
             description: "Read our latest articles",
             href: "/blogs",

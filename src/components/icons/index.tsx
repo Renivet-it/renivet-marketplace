@@ -117,6 +117,9 @@ import {
     Users,
     ChartNoAxesColumn,
     Layers,
+    StarHalf,
+        Recycle,
+    RotateCw,
     type LucideIcon,
     type LucideProps,
 } from "lucide-react";
@@ -125,6 +128,8 @@ export type Icon = LucideIcon;
 
 export const Icons = {
     MapPin,
+    Recycle,
+    RotateCw,
     AlertCircle,
     PiggyBank,
     Info,
@@ -241,6 +246,7 @@ export const Icons = {
     ShoppingBag,
     Home,
     Megaphone,
+    StarHalf,
     ChartNoAxesColumn,
     X_Twitter: (props: LucideProps) => (
         <svg

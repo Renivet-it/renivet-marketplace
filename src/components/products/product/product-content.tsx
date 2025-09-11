@@ -13,7 +13,7 @@ import { DeliveryOption } from "./product-delivery";
 import { trpc } from "@/lib/trpc/client";
 import { useState, useEffect, useTransition } from "react";
 import { getEstimatedDelivery } from "@/actions/shiprocket/get-estimate-delivery";
-
+import { ProductCard } from "../product/product-static";
 interface PageProps extends GenericProps {
     initialCart?: CachedCart[];
     product: ProductWithBrand;
@@ -97,45 +97,74 @@ export function ProductContent({
     return (
         <>
             <div className={cn("", className)} {...props}>
-                <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-4">
-                        <h2 className="text-2xl font-semibold md:text-4xl">
-                            {product.title}
-                        </h2>
-                        <button
-                            className="mt-2"
-                            onClick={() => setIsProductShareModalOpen(true)}
-                        >
-                            <span className="sr-only">Share</span>
-                            <Icons.Share className="size-5" />
-                        </button>
-                    </div>
-                    <p>
-                        <Link
-                            href={`/brands/${product.brand.id}`}
-                            className="bg-accent p-1 px-2 text-xs text-accent-foreground md:text-sm"
-                        >
-                            {product.brand.name}
-                        </Link>
-                    </p>
-                </div>
-                <Separator />
+               <div className="space-y-3 border-b border-gray-200 pb-4">
+  {/* Title + Share */}
+  <div className="flex items-start justify-between">
+    <h2 className="text-2xl md:text-3xl font-semibold text-gray-900">
+      {product.title}
+    </h2>
+    <button
+      className="text-gray-600 hover:text-gray-900"
+      onClick={() => setIsProductShareModalOpen(true)}
+    >
+      <span className="sr-only">Share</span>
+      <Icons.Share className="w-5 h-5" />
+    </button>
+  </div>
+
+  {/* Rating + Reviews + Brand */}
+  <div className="flex items-center gap-4">
+    {/* Stars */}
+    <div className="flex items-center text-yellow-500">
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.Star className="w-4 h-4 fill-current" />
+      <Icons.StarHalf className="w-4 h-4 fill-current" />
+    </div>
+    <span className="text-gray-700 text-sm">
+      4.6 • 128 reviews
+    </span>
+    <span className="bg-green-50 text-green-700 text-xs md:text-sm font-medium px-3 py-1 rounded-full border border-green-200">
+      {product.brand.name}
+    </span>
+  </div>
+</div>
                 <ProductCartAddForm
                     product={product}
                     isWishlisted={isWishlisted}
                     initialCart={initialCart}
                     userId={userId}
-                />
-                <Separator />
-                <DeliveryOption
                     initialZipCode={user?.addresses[0]?.zip}
                     warehousePincode={brandDetails?.warehousePostalCode}
                     estimatedDelivery={estimatedDelivery}
                     setZipCode={setZipCode}
                     setEstimatedDelivery={setEstimatedDelivery}
                 />
+                <div className="space-y-2 mt-4">
+                {[
+                  { icon: <Icons.Recycle className="w-4 h-4" />, text: "Plastic-Free Packaging" },
+                  { icon: <Icons.Droplet className="w-4 h-4" />, text: "Low-Water Dye" },
+                  { icon: <Icons.RotateCw className="w-4 h-4" />, text: "15-Day Returns" },
+                ].map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-[#E0E2E1] rounded-full px-4 py-2 text-sm font-medium"
+                  >
+                    {item.icon}
+                    <span>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+                {/* <DeliveryOption
+                    initialZipCode={user?.addresses[0]?.zip}
+                    warehousePincode={brandDetails?.warehousePostalCode}
+                    estimatedDelivery={estimatedDelivery}
+                    setZipCode={setZipCode}
+                    setEstimatedDelivery={setEstimatedDelivery}
+                /> */}
                 <Separator />
-                <ProductDetails product={product} />
+    <ProductCard/>
             </div>
             <ProductShareModal
                 isOpen={isProductShareModalOpen}

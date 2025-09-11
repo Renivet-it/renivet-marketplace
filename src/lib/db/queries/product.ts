@@ -14,7 +14,7 @@ import {
     UpdateProductValue,
     UpdateProductMediaInput
 } from "@/lib/validations";
-import { and, asc, count, desc, eq, gte, inArray, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, gte, ilike, inArray, sql, sum } from "drizzle-orm";
 import { db } from "..";
 import {
     brands,
@@ -36,7 +36,8 @@ import {
     productEvents,
     orders,
     orderItems,
-    categories
+    categories,
+    newProductEventPage
 
 } from "../schema";
 import { categoryQueries } from "./category";
@@ -47,6 +48,20 @@ import { InferenceClient } from "@huggingface/inference";
 import { getEmbedding } from "@/lib/python/sematic-search";
 
 const token = process.env.HF_TOKEN;
+type EventFilters = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  brandIds?: string[];
+  colors?: string[];
+  minPrice?: number | undefined;
+  maxPrice?: number | undefined;
+  categoryId?: string | undefined;
+  subCategoryId?: string | undefined;
+  productTypeId?: string | undefined;
+  sortBy?: "price" | "createdAt" | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
+};
 
 const hf = new InferenceClient(token);
 interface CreateWomenPageFeaturedProduct {
@@ -2340,6 +2355,64 @@ async getBeautyTopPicks() {
 }
 
 
+// async getNewEventPage() {
+//   const data = await db.query.newProductEventPage.findMany({
+//     where: eq(newProductEventPage.isDeleted, false),
+//     with: {
+//       product: {
+//         with: {
+//           brand: true,
+//           variants: true,
+//           returnExchangePolicy: true,
+//           specifications: true
+//         }
+//       }
+//     },
+//   });
+
+//   const mediaIds = new Set<string>();
+//   for (const { product } of data) {
+//     product.media.forEach((media) => mediaIds.add(media.id));
+//     product.variants.forEach((variant) => {
+//       if (variant.image) mediaIds.add(variant.image);
+//     });
+//     if (product.sustainabilityCertificate)
+//       mediaIds.add(product.sustainabilityCertificate);
+//   }
+
+//   const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+//   const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+
+//   const enhancedData = data.map(({ product, ...rest }) => ({
+//     ...rest,
+//     product: {
+//       ...product,
+//       media: product.media.map((media) => ({
+//         ...media,
+//         mediaItem: mediaMap.get(media.id),
+//         url: mediaMap.get(media.id)?.url ?? null,
+//       })),
+//       sustainabilityCertificate: product.sustainabilityCertificate
+//         ? mediaMap.get(product.sustainabilityCertificate)
+//         : null,
+//       variants: product.variants.map((variant) => ({
+//         ...variant,
+//         mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+//         url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+//       })),
+//       returnable: product.returnExchangePolicy?.returnable ?? false,
+//       returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+//       exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+//       exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+//       specifications: product.specifications.map((spec) => ({
+//         key: spec.key,
+//         value: spec.value,
+//       })),
+//     },
+//   }));
+
+//   return enhancedData;
+// }
 
 //  async getProductClicks() {
 //   return db
@@ -2352,6 +2425,170 @@ async getBeautyTopPicks() {
 //     .groupBy(productEvents.productId)
 //     .orderBy(desc(count(productEvents.id)));
 // }
+
+
+// @/lib/db/queries.ts (or the file you keep productQueries in)
+
+
+  async getNewEventPage(filters: EventFilters = {}) {
+
+      const data = await db.query.newProductEventPage.findMany({
+    where: eq(newProductEventPage.isDeleted, false),
+    with: {
+      product: {
+        with: {
+          brand: true,
+          variants: true,
+          returnExchangePolicy: true,
+          specifications: true
+        }
+      }
+    },
+  });
+
+    // 2) Collect media IDs
+    const mediaIds = new Set<string>();
+    for (const { product } of data) {
+      product.media?.forEach((m) => mediaIds.add(m.id));
+      product.variants?.forEach((variant: any) => {
+        if (variant.image) mediaIds.add(variant.image);
+      });
+      if (product.sustainabilityCertificate) {
+        mediaIds.add(product.sustainabilityCertificate);
+      }
+    }
+
+    // 3) Resolve media from cache
+    const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+    const mediaMap = new Map(mediaItems.data.map((item: any) => [item.id, item]));
+
+    // 4) Enhance products with media + policies
+    const enhancedData = data.map(({ product, ...rest }: any) => ({
+      ...rest,
+      product: {
+        ...product,
+        media: (product.media || []).map((media: any) => ({
+          ...media,
+          mediaItem: mediaMap.get(media.id),
+          url: mediaMap.get(media.id)?.url ?? null,
+        })),
+        sustainabilityCertificate: product.sustainabilityCertificate
+          ? mediaMap.get(product.sustainabilityCertificate)
+          : null,
+        variants: (product.variants || []).map((variant: any) => ({
+          ...variant,
+          mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+          url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+        })),
+        returnable: product.returnExchangePolicy?.returnable ?? false,
+        returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+        exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+        exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+        specifications: (product.specifications || []).map((spec: any) => ({
+          key: spec.key,
+          value: spec.value,
+        })),
+      },
+    }));
+
+    // helper: compute min/max price for a product
+    const getPriceRange = (product: any) => {
+      const prices = (product.variants || [])
+        .map((v: any) =>
+          Number(v.price ?? v.sellingPrice ?? v.mrp ?? 0)
+        )
+        .filter((p: number) => !isNaN(p) && p > 0);
+      if (!prices.length) return { min: 0, max: 0 };
+      return { min: Math.min(...prices), max: Math.max(...prices) };
+    };
+
+    // 5) Apply in-memory filters
+    const filtered = enhancedData.filter((row) => {
+      const product = row.product;
+
+      // search
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        const hay = [
+          product.name,
+          product.description,
+          product.shortDescription,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+
+      // brand
+      if (filters.brandIds?.length) {
+        if (!filters.brandIds.includes(product.brandId)) return false;
+      }
+
+      // category / subcategory / product type
+      if (filters.categoryId && product.categoryId !== filters.categoryId)
+        return false;
+      if (filters.subCategoryId && product.subCategoryId !== filters.subCategoryId)
+        return false;
+      if (filters.productTypeId && product.productTypeId !== filters.productTypeId)
+        return false;
+
+      // colors
+      if (filters.colors?.length) {
+        const hasColor =
+          (product.variants || []).some((v: any) =>
+            v.color ? filters.colors!.includes(String(v.color)) : false
+          ) ||
+          (product.media || []).some((m: any) =>
+            m.color ? filters.colors!.includes(String(m.color)) : false
+          );
+        if (!hasColor) return false;
+      }
+
+      // price range
+      if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+        const pr = getPriceRange(product);
+        if (
+          filters.minPrice !== undefined &&
+          pr.max < (filters.minPrice ?? 0)
+        ) {
+          return false;
+        }
+        if (
+          filters.maxPrice !== undefined &&
+          pr.min > (filters.maxPrice ?? Number.MAX_SAFE_INTEGER)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // 6) Sorting
+    if (filters.sortBy === "price") {
+      filtered.sort((a: any, b: any) => {
+        const aMin = getPriceRange(a.product).min;
+        const bMin = getPriceRange(b.product).min;
+        return (filters.sortOrder === "asc" ? 1 : -1) * (aMin - bMin);
+      });
+    } else {
+      // default: createdAt
+      filtered.sort((a: any, b: any) => {
+        const aDate = new Date(a.product.createdAt ?? a.createdAt ?? 0).getTime();
+        const bDate = new Date(b.product.createdAt ?? b.createdAt ?? 0).getTime();
+        return (filters.sortOrder === "asc" ? 1 : -1) * (aDate - bDate);
+      });
+    }
+
+    // 7) Pagination
+    const page = filters.page && filters.page > 0 ? filters.page : 1;
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : 24;
+    const start = (page - 1) * limit;
+    const paginated = filtered.slice(start, start + limit);
+
+    return paginated;
+  }
 
 async trackProductClick(productId: string, brandId: string, userId?: string) {
     return db

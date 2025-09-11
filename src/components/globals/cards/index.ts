@@ -9,3 +9,4 @@ export * from "./recent-blog";
 export * from "./role-draggable";
 export * from "./timer";
 export * from "./wishlisted-product";
+export * from "./product-event";

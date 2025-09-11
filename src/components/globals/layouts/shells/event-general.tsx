@@ -8,17 +8,18 @@ interface ShellProps extends LayoutProps {
     };
 }
 
-export function GeneralShell({ children, classNames }: ShellProps) {
+export function GeneralShellEvent({ children, classNames }: ShellProps) {
     return (
         <section
             className={cn(
-                "flex w-full justify-center",
+                "flex w-full justify-center", // Visible on all screens
                 classNames?.mainWrapper
             )}
         >
             <div
                 className={cn(
-                    "w-full max-w-6xl space-y-4 p-4 py-5 md:p-8 md:py-10 xl:max-w-[110rem]",
+                    // ✅ No extra styling on mobile, apply from md+
+                    "w-full md:max-w-5xl md:space-y-4 md:p-8 md:py-10 xl:max-w-[100rem]",
                     classNames?.innerWrapper
                 )}
             >

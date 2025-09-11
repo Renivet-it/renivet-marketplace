@@ -4,14 +4,14 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: {
-        default: "Events",
+        default: "Shop",
         template: "%s | " + siteConfig.name,
     },
 };
 
 export default function Layout({ children }: LayoutProps) {
     return (
-        <div className="relative flex min-h-screen flex-col">
+        <div className="relative flex min-h-screen flex-col bg-[#eaddf7]">
             <NavbarHome />
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer />
