@@ -49,7 +49,9 @@ const PromoBanner = () => {
               className="absolute z-10"
               style={{ top: '60%', left: '70%' }}
             >
-              <div className="h-3 w-3 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-md hover:scale-110 transition-transform" />
+              <div className="h-3 w-3 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-md hover:scale-110 transition-transform flex items-center justify-center">
+                <div className="h-1 w-1 rounded-full bg-black"></div>
+              </div>
             </Link>
           </div>
           
@@ -66,7 +68,9 @@ const PromoBanner = () => {
               className="absolute z-10"
               style={{ top: '70%', left: '30%' }}
             >
-              <div className="h-3 w-3 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-md hover:scale-110 transition-transform" />
+              <div className="h-3 w-3 cursor-pointer rounded-full bg-white ring-2 ring-black shadow-md hover:scale-110 transition-transform flex items-center justify-center">
+                <div className="h-1 w-1 rounded-full bg-black"></div>
+              </div>
             </Link>
           </div>
         </div>
@@ -74,25 +78,18 @@ const PromoBanner = () => {
         {/* Right side - Text content */}
         <div className="flex flex-col justify-center w-1/2 pl-6 text-left">
           <h3 className="text-sm font-bold tracking-wider text-black mb-1">RENIVET</h3>
-          <h2 className="text-lg font-bold text-black leading-tight mb-2" style={{ fontStyle: 'italic' }}>
+          <h2 className="text-lg font-bold text-black leading-tight mb-2 italic">
             Conscious Looks For Modern Duos
           </h2>
           <p className="text-xs text-black mb-4 leading-relaxed">
             Step Into Effortless Style With Co-Ord Sets Designed To Match Your Vibe. Ethically Made For Those Who Care.
           </p>
           <Link href="/collections/renivet">
-            <div className="inline-flex items-center justify-center rounded-md border border-black bg-transparent px-4 py-2 text-xs font-medium text-black hover:bg-black hover:text-white transition-colors">
+            <div className="inline-flex items-center justify-center rounded-md border border-black bg-transparent px-4 py-2 text-xs font-medium text-black hover:bg-black hover:text-white transition-colors cursor-pointer">
               Buy Now
             </div>
           </Link>
         </div>
-
-        {/* Top right category icon */}
-        {/* <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-          <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
-            <span className="text-white text-xs font-semibold">W</span>
-          </div>
-        </div> */}
       </div>
     </div>
   );
@@ -107,11 +104,12 @@ interface ShopEventProductsProps {
 }
 
 const categories = [
-  { id: "08ce51fe-adb8-4086-acfd-759772767ec8", name: "Beauty and Care", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtkiuyIRj63QywZkxrW40qSphaIEcmUdXDAVl" },
-  { id: "0b7046fc-6962-4469-81c2-412ed6949c02", name: "Men", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbth2WVuZc50VbmLPHAdU9KwxEkCINyqDWJRr"},
   { id: "16d40bb3-3061-4790-b9b7-253cb078dfe1", name: "Women", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFiqLIFUt5ndSiE7wT2jaklrZXQ6vYpAbfHy" },
+  { id: "0b7046fc-6962-4469-81c2-412ed6949c02", name: "Men", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbth2WVuZc50VbmLPHAdU9KwxEkCINyqDWJRr"},
+  { id: "22816fa3-d57e-4e3b-bc0e-72edf4635124", name: "Kids", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdshBBwb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG" },
   { id: "173e1e71-e298-4301-b542-caa29d3950bf", name: "Home and Living", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmWeViQNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ" },
-  { id: "22816fa3-d57e-4e3b-bc0e-72edf4635124", name: "Kids", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdshBBwb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG" }
+  { id: "08ce51fe-adb8-4086-acfd-759772767ec8", name: "Beauty", image: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtkiuyIRj63QywZkxrW40qSphaIEcmUdXDAVl" },
+
 ];
 
 export function ShopEventProducts({
@@ -219,6 +217,25 @@ export function ShopEventProducts({
   return (
     <div className="min-h-screen relative overflow-hidden "
      style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)" }}>
+              <div className="px-2 bg-[#e2d4ee]">
+          <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: "#e1d5ea" }}>
+            <div className="grid grid-cols-5 gap-1 w-full">
+              {categories.map((cat) => (
+                <Link key={cat.id} href={`/events/${cat.id}`} className="flex flex-col items-center justify-center w-full">
+                  <div className="rounded-full overflow-hidden mb-1 mx-auto" style={{ width: "48px", height: "45px", backgroundColor: "#5f3297" }}>
+                    <img src={cat.image || "/images/placeholder.png"} alt={cat.name} className="w-full h-full object-cover" />
+                  </div>
+                  <span
+                    className={cn("text-center leading-tight w-full", categoryId === cat.id ? "text-purple-600" : "text-gray-600")}
+                    style={{ fontSize: "9px", lineHeight: "10px", wordBreak: "break-word", hyphens: "auto" }}
+                  >
+                    {cat.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
       {/* Mobile-only container for Carousel and Categories */}
       <div className="block md:hidden bg-[#eaddf7]"
      style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)" }}
@@ -239,7 +256,7 @@ export function ShopEventProducts({
         )}
 
         {/* Category Section */}
-        <div className="mt-2 px-2 bg-[#e2d4ee]">
+        {/* <div className="mt-2 px-2 bg-[#e2d4ee]">
           <div className="rounded-2xl py-4 px-2 shadow-sm w-full overflow-hidden" style={{ backgroundColor: "#e1d5ea" }}>
             <div className="grid grid-cols-5 gap-1 w-full">
               {categories.map((cat) => (
@@ -257,7 +274,7 @@ export function ShopEventProducts({
               ))}
             </div>
           </div>
-        </div>
+        </div> */}
         {/* --- 2. Final, Accurate PromoBanner is placed here --- */}
         <PromoBanner />
 
