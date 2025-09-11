@@ -262,7 +262,7 @@ export function ShopEventProducts({
       </div>
 
       {/* Product Grid Section */}
-      <div className="mx-2 rounded-3xl p-4 md:mx-0 md:rounded-none md:bg-transparent md:p-0" style={{ backgroundColor: "#e7e0e5" }}>
+      <div className="mx-5 rounded-3xl p-6 md:mx-0 md:rounded-none md:bg-transparent md:p-0" style={{ background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)", }}>
         <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4", className)}>
           {products.map((eventItem) => {
             const product = eventItem.product;
