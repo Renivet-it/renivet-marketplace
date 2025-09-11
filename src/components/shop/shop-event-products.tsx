@@ -761,7 +761,7 @@ export function ShopEventProducts({
 
       {/* Product Grid Section */}
 <div className="mx-5 rounded-3xl p-7 md:mx-0 md:rounded-none md:bg-transparent md:p-0 relative overflow-hidden" 
-     style={{ 
+     style={{
        background: "linear-gradient(to bottom, #EDE7F6, #D1C4E9)",
      }}>
   {/* Geometric background pattern */}
