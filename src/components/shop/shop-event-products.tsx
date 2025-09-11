@@ -143,14 +143,14 @@ const PromoBanner = () => {
           </h3>
           
           {/* Main heading with gradient animation */}
-          <h2 className="text-lg font-bold leading-tight mb-2 italic bg-gradient-to-r from-black via-purple-800 to-black bg-clip-text text-transparent animate-gradient-text">
+          <h2 className="text-sm font-bold leading-tight mb-2 italic bg-gradient-to-r from-black via-purple-800 to-black bg-clip-text text-transparent animate-gradient-text">
             Conscious Looks For Modern Duos
           </h2>
           
           {/* Description with typewriter effect simulation */}
-          <p className="text-xs text-black mb-4 leading-relaxed opacity-0 animate-fade-in-up">
-            Step Into Effortless Style With Co-Ord Sets Designed To Match Your Vibe. Ethically Made For Those Who Care.
-          </p>
+      <p className="text-[10px] text-black mb-4 leading-relaxed opacity-0 animate-fade-in-up">
+  Step Into Effortless Style With Co-Ord Sets Designed To Match Your Vibe. Ethically Made For Those Who Care.
+</p>
           
           {/* Enhanced CTA button */}
           <Link href="/collections/renivet">
@@ -251,59 +251,59 @@ const PromoSection = () => {
   const promoCards = [
     {
       id: 1,
-      title: "DREAM DEALS DAY",
-      subtitle: "UP TO 40% OFF",
-      bgColor: "bg-gradient-to-br from-amber-50 via-amber-100 to-orange-200",
-      backBgColor: "bg-gradient-to-br from-amber-800 via-orange-700 to-red-600",
-      textColor: "text-amber-900",
-      borderColor: "border-amber-300",
-      accentColor: "from-amber-400",
-      link: "/events",
-      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFiqLIFUt5ndSiE7wT2jaklrZXQ6vYpAbfHy",
-      imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
-      icon: "⭐"
-    },
-    {
-      id: 2,
-      title: "BEAUTY PARTNER",
-      subtitle: "UP TO 15% OFF",
-      bgColor: "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-200",
-      backBgColor: "bg-gradient-to-br from-pink-800 via-rose-700 to-purple-600",
-      textColor: "text-rose-900",
-      borderColor: "border-rose-300",
-      accentColor: "from-rose-400",
-            link: "/events",
-      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtkiuyIRj63QywZkxrW40qSphaIEcmUdXDAVl",
-      imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
-      icon: "💄"
-    },
-    {
-      id: 3,
-      title: "Fashion Festival",
-      subtitle: "50-90% OFF",
-      bgColor: "bg-gradient-to-br from-purple-50 via-purple-100 to-pink-200",
-      backBgColor: "bg-gradient-to-br from-purple-800 via-indigo-700 to-blue-600",
+      title: "Elegant, Conscious",
+      subtitle: "Flat 10% OFF",
+      bgColor: "bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-200",
+      backBgColor: "bg-gradient-to-br from-purple-800 via-indigo-700 to-violet-600",
       textColor: "text-purple-900",
       borderColor: "border-purple-300",
       accentColor: "from-purple-400",
-                  link: "/events",
-      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbth2WVuZc50VbmLPHAdU9KwxEkCINyqDWJRr",
+      link: "https://renivet.com/events/16d40bb3-3061-4790-b9b7-253cb078dfe1",
+      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFiqLIFUt5ndSiE7wT2jaklrZXQ6vYpAbfHy",
       imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
       icon: "👗"
     },
     {
-      id: 4,
-      title: "EARLY BIRD DEAL",
-      subtitle: "Shop Now",
-      bgColor: "bg-gradient-to-br from-yellow-50 via-yellow-100 to-amber-200",
-      backBgColor: "bg-gradient-to-br from-yellow-800 via-amber-700 to-orange-600",
-      textColor: "text-amber-900",
-      borderColor: "border-yellow-300",
-      accentColor: "from-yellow-400",
-                 link: "/events",
-      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdshBBwb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
+      id: 2,
+      title: "Timeless Styles",
+      subtitle: "Sustainable Picks",
+      bgColor: "bg-gradient-to-br from-violet-50 via-violet-100 to-purple-200",
+      backBgColor: "bg-gradient-to-br from-violet-800 via-purple-700 to-indigo-600",
+      textColor: "text-violet-900",
+      borderColor: "border-violet-300",
+      accentColor: "from-violet-400",
+      link: "https://renivet.com/events/0b7046fc-6962-4469-81c2-412ed6949c02",
+      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbth2WVuZc50VbmLPHAdU9KwxEkCINyqDWJRr",
+      imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
+      icon: "⭐"
+    },
+    {
+      id: 3,
+      title: "Sustainable Livings",
+      subtitle: "Eco-Friendly Deals",
+      bgColor: "bg-gradient-to-br from-indigo-50 via-indigo-100 to-purple-200",
+      backBgColor: "bg-gradient-to-br from-indigo-800 via-purple-700 to-violet-600",
+      textColor: "text-indigo-900",
+      borderColor: "border-indigo-300",
+      accentColor: "from-indigo-400",
+      link: "https://renivet.com/events/173e1e71-e298-4301-b542-caa29d3950bf",
+      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmWeViQNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
       imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
       icon: "🎯"
+    },
+    {
+      id: 4,
+      title: "Playful Comfys",
+      subtitle: "Green Deals",
+      bgColor: "bg-gradient-to-br from-purple-50 via-indigo-100 to-violet-200",
+      backBgColor: "bg-gradient-to-br from-purple-800 via-violet-700 to-indigo-600",
+      textColor: "text-purple-900",
+      borderColor: "border-purple-300",
+      accentColor: "from-purple-400",
+      link: "https://renivet.com/events/22816fa3-d57e-4e3b-bc0e-72edf4635124",
+      imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdshBBwb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
+      imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
+      icon: "💄"
     }
   ];
 
@@ -315,13 +315,13 @@ const PromoSection = () => {
   }, [promoCards.length]);
 
   return (
-    <div className="block md:hidden px-3 py-6 bg-gradient-to-b from-purple-50 via-pink-50 to-orange-50">
+    <div className="block md:hidden px-3 py-6 bg-gradient-to-b from-purple-50 via-violet-50 to-indigo-50">
       {/* Header */}
       <div className="text-center mb-4">
-        <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
           Special Offers
         </h2>
-        <div className="w-16 h-0.5 bg-gradient-to-r from-purple-400 to-pink-400 mx-auto mt-1"></div>
+        <div className="w-16 h-0.5 bg-gradient-to-r from-purple-400 to-violet-400 mx-auto mt-1"></div>
       </div>
 
       {/* Cards Container */}
@@ -347,7 +347,7 @@ const PromoSection = () => {
                 className="absolute inset-0 w-full h-full backface-hidden"
                 style={{ backfaceVisibility: 'hidden' }}
               >
-                <Link href={card.link}>
+                <a href={card.link}>
                   <div className={`
                     relative h-full w-full overflow-hidden rounded-2xl border-2 ${card.borderColor} ${card.bgColor}
                     shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105
@@ -364,9 +364,9 @@ const PromoSection = () => {
                     <div className={`absolute bottom-0 left-0 w-5 h-5 border-l-2 border-b-2 ${card.accentColor.replace('from-', 'border-')} rounded-bl-2xl opacity-70 shadow-sm`}></div>
                     <div className={`absolute bottom-0 right-0 w-5 h-5 border-r-2 border-b-2 ${card.accentColor.replace('from-', 'border-')} rounded-br-2xl opacity-70 shadow-sm`}></div>
 
-                    {/* Centered Image with Glow Effect */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                      <div className={`w-14 h-14 rounded-full overflow-hidden bg-white/40 backdrop-blur-md border-2 border-white/60 shadow-lg ${currentFlipped === index ? 'ring-4 ring-green-300 ring-opacity-50' : ''} transition-all duration-300`}>
+                    {/* Moved Image Higher - positioned at 35% from top instead of center */}
+                    <div className="absolute top-[35%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                      <div className={`w-14 h-14 rounded-full overflow-hidden bg-white/40 backdrop-blur-md border-2 border-white/60 shadow-lg ${currentFlipped === index ? 'ring-4 ring-purple-300 ring-opacity-50' : ''} transition-all duration-300`}>
                         <img
                           src={card.imageFront}
                           alt={card.title}
@@ -393,7 +393,7 @@ const PromoSection = () => {
                     <div className="absolute top-2 left-2">
                       <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
                         currentFlipped === index 
-                          ? 'bg-green-400 shadow-lg shadow-green-400/50 animate-pulse scale-125' 
+                          ? 'bg-purple-400 shadow-lg shadow-purple-400/50 animate-pulse scale-125' 
                           : 'bg-white/40'
                       }`}></div>
                     </div>
@@ -406,7 +406,7 @@ const PromoSection = () => {
                     {/* Gradient Bottom Accent */}
                     <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${card.accentColor} via-transparent to-${card.accentColor.split('-')[1]}-300 rounded-b-2xl`}></div>
                   </div>
-                </Link>
+                </a>
               </div>
 
               {/* BACK FACE */}
@@ -417,7 +417,7 @@ const PromoSection = () => {
                   transform: 'rotateY(180deg)'
                 }}
               >
-                <Link href={card.link}>
+                <a href={card.link}>
                   <div className={`
                     relative h-full w-full overflow-hidden rounded-2xl border-2 border-white/30
                     shadow-xl ${card.backBgColor}
@@ -425,9 +425,9 @@ const PromoSection = () => {
                     {/* Animated Stars Background */}
                     <div className="absolute inset-0 overflow-hidden">
                       <div className="absolute top-2 left-2 w-1 h-1 bg-white rounded-full animate-twinkle"></div>
-                      <div className="absolute top-4 right-3 w-0.5 h-0.5 bg-yellow-300 rounded-full animate-twinkle-delayed"></div>
-                      <div className="absolute bottom-4 left-4 w-0.5 h-0.5 bg-pink-300 rounded-full animate-twinkle"></div>
-                      <div className="absolute bottom-2 right-2 w-1 h-1 bg-purple-300 rounded-full animate-twinkle-delayed"></div>
+                      <div className="absolute top-4 right-3 w-0.5 h-0.5 bg-purple-300 rounded-full animate-twinkle-delayed"></div>
+                      <div className="absolute bottom-4 left-4 w-0.5 h-0.5 bg-violet-300 rounded-full animate-twinkle"></div>
+                      <div className="absolute bottom-2 right-2 w-1 h-1 bg-indigo-300 rounded-full animate-twinkle-delayed"></div>
                     </div>
 
                     {/* Premium Corners */}
@@ -436,8 +436,8 @@ const PromoSection = () => {
                     <div className="absolute bottom-0 left-0 w-5 h-5 border-l-2 border-b-2 border-white/60 rounded-bl-2xl"></div>
                     <div className="absolute bottom-0 right-0 w-5 h-5 border-r-2 border-b-2 border-white/60 rounded-br-2xl"></div>
 
-                    {/* Centered Back Image with Premium Effect */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    {/* Centered Back Image with Premium Effect - Also moved higher */}
+                    <div className="absolute top-[35%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                       <div className="w-14 h-14 rounded-full overflow-hidden bg-white/10 backdrop-blur-md border-2 border-white/30 shadow-2xl ring-2 ring-white/20">
                         <img
                           src={card.imageBack}
@@ -463,7 +463,7 @@ const PromoSection = () => {
 
                     {/* Premium Indicator */}
                     <div className="absolute top-2 left-2">
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full shadow-lg shadow-yellow-400/50 animate-pulse"></div>
+                      <div className="w-2 h-2 bg-purple-400 rounded-full shadow-lg shadow-purple-400/50 animate-pulse"></div>
                     </div>
 
                     {/* Premium Badge */}
@@ -471,10 +471,10 @@ const PromoSection = () => {
                       ✨
                     </div>
 
-                    {/* Rainbow Bottom Accent */}
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 via-pink-400 via-yellow-400 to-green-400 rounded-b-2xl"></div>
+                    {/* Purple Theme Bottom Accent */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 via-violet-400 via-indigo-400 to-purple-400 rounded-b-2xl"></div>
                   </div>
-                </Link>
+                </a>
               </div>
             </div>
           </div>
@@ -488,13 +488,12 @@ const PromoSection = () => {
             key={index}
             className={`transition-all duration-500 rounded-full ${
               currentFlipped === index 
-                ? 'w-6 h-2 bg-gradient-to-r from-purple-500 to-pink-500 shadow-lg' 
-                : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
+                ? 'w-6 h-2 bg-gradient-to-r from-purple-500 to-violet-500 shadow-lg' 
+                : 'w-2 h-2 bg-purple-300 hover:bg-purple-400'
             }`}
           />
         ))}
       </div>
-
 
       <style jsx>{`
         .transform-gpu {
@@ -824,7 +823,7 @@ function NoProductCard() {
         </EmptyPlaceholderContent>
 
         <Button asChild>
-          <Link href="/">Go back</Link>
+          <Link href="https://renivet.com/events">Go back</Link>
         </Button>
       </EmptyPlaceholder>
     </div>

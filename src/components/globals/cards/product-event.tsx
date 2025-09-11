@@ -168,23 +168,23 @@ export function EventProductCard({
                         </p>
 
                         <div className="md:hidden">
-                            <WishlistButton
-                                size="icon"
-                                className={cn(
-                                    "size-8 bg-background hover:bg-background",
-                                    isProductWishlisted && "text-primary",
-                                    !userId && "hidden"
-                                )}
-                                iconClassName={cn("stroke-primary")}
-                                hideText
-                                userId={userId}
-                                productId={product.id}
-                                isProductWishlisted={isProductWishlisted}
-                                setIsProductWishlisted={setIsProductWishlisted}
-                                onMouseEnter={() => setIsWishlistHovered(true)}
-                                onMouseLeave={() => setIsWishlistHovered(false)}
-                            />
-                        </div>
+  <WishlistButton
+    size="icon"
+    className={cn(
+      "size-8 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-600 shadow-sm",
+      isProductWishlisted && "text-primary",
+      !userId && "hidden"
+    )}
+    iconClassName={cn("stroke-current")}
+    hideText
+    userId={userId}
+    productId={product.id}
+    isProductWishlisted={isProductWishlisted}
+    setIsProductWishlisted={setIsProductWishlisted}
+    onMouseEnter={() => setIsWishlistHovered(true)}
+    onMouseLeave={() => setIsWishlistHovered(false)}
+  />
+</div>
                     </div>
 
                     <p className="text-xs text-muted-foreground">
