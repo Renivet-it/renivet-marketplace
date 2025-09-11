@@ -153,7 +153,9 @@ const PromoBanner = () => {
 </p>
           
           {/* Enhanced CTA button */}
-          <Link href="/collections/renivet">
+          {/* <Link href="/collections/renivet"> */}
+
+          <div>
             <div className="inline-flex items-center justify-center rounded-md border-2 border-black bg-transparent px-6 py-3 text-xs font-bold text-black hover:bg-black hover:text-white transition-all duration-300 cursor-pointer relative overflow-hidden group shadow-lg hover:shadow-xl transform hover:scale-105">
               <span className="relative z-10 tracking-wide">Buy Now</span>
               {/* Button shine effect */}
@@ -161,7 +163,7 @@ const PromoBanner = () => {
               {/* Button pulse ring */}
               <div className="absolute inset-0 rounded-md border-2 border-purple-400 opacity-0 group-hover:opacity-100 animate-pulse"></div>
             </div>
-          </Link>
+          </div>
         </div>
       </div>
 
