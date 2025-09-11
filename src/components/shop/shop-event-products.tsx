@@ -258,7 +258,7 @@ const PromoSection = () => {
       textColor: "text-amber-900",
       borderColor: "border-amber-300",
       accentColor: "from-amber-400",
-      link: "/deals/dream-deals",
+      link: "/events",
       imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNLFiqLIFUt5ndSiE7wT2jaklrZXQ6vYpAbfHy",
       imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
       icon: "⭐"
@@ -272,7 +272,7 @@ const PromoSection = () => {
       textColor: "text-rose-900",
       borderColor: "border-rose-300",
       accentColor: "from-rose-400",
-      link: "/deals/beauty-partner",
+            link: "/events",
       imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNtkiuyIRj63QywZkxrW40qSphaIEcmUdXDAVl",
       imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
       icon: "💄"
@@ -286,7 +286,7 @@ const PromoSection = () => {
       textColor: "text-purple-900",
       borderColor: "border-purple-300",
       accentColor: "from-purple-400",
-      link: "/deals/fashion-festival",
+                  link: "/events",
       imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbth2WVuZc50VbmLPHAdU9KwxEkCINyqDWJRr",
       imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
       icon: "👗"
@@ -300,7 +300,7 @@ const PromoSection = () => {
       textColor: "text-amber-900",
       borderColor: "border-yellow-300",
       accentColor: "from-yellow-400",
-      link: "/deals/early-bird",
+                 link: "/events",
       imageFront: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdshBBwb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
       imageBack: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNX0iRyP3We049OUSYNxCLnRIka3FhcqBZlbsP",
       icon: "🎯"
@@ -694,7 +694,7 @@ export function ShopEventProducts({
             <div className="grid grid-cols-5 gap-1 w-full">
               {categories.map((cat) => (
                 <Link key={cat.id} href={`/events/${cat.id}`} className="flex flex-col items-center justify-center w-full">
-                  <div className="rounded-full overflow-hidden mb-1 mx-auto" style={{ width: "48px", height: "45px", backgroundColor: "#5f3297" }}>
+                  <div className="rounded-full overflow-hidden mb-1 mx-auto" style={{ width: "60px", height: "60px", backgroundColor: "#5f3297" }}>
                     <img src={cat.image || "/images/placeholder.png"} alt={cat.name} className="w-full h-full object-cover" />
                   </div>
                   <span
@@ -717,14 +717,14 @@ export function ShopEventProducts({
             slides={[
               {
                 imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNI3arTLrApCnKbtW0hkXs6adUVPBQFlvOi2ME",
-                url: "/events/hyderabad",
+                url: "https://renivet.com/auth/signin",
                 title: "",
                 date: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNv8oVjBdPZsh5fuDbkAelMyqICmp3NU7X4nHY",
                 description: ""
               },
                   {
                 imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNv8oVjBdPZsh5fuDbkAelMyqICmp3NU7X4nHY",
-                url: "/events/hyderabad",
+                url: "https://renivet.com/auth/signin",
                 title: "",
                 date: "",
                 description: ""
