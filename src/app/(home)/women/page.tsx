@@ -497,15 +497,20 @@ export default function Page() {
         {elevateYourLooks && ( <ElevateYourLooks shopByCategories={elevateYourLooks.shopByCategories} titleData={elevateYourLooks.titleData} />
         )}
       </Suspense>
+
+
       <Suspense>
 {/*@ts-ignore*/}
         {middleAnimationSection && <MiddleAnimationSection banners={middleAnimationSection} />}
       </Suspense>
+      
       <Suspense>
 {/*@ts-ignore*/}
         {styleDirectory && ( <StyleDirectory shopByCategories={styleDirectory.shopByCategories} titleData={styleDirectory.titleData} />
         )}
       </Suspense>
+
+      
       <Suspense>
 {/*@ts-ignore*/}
         {moodBoard && ( <MoodboardItem moodboardItems={moodBoard.moodboardItems} titleData={moodBoard.titleData} />
@@ -530,6 +535,8 @@ export default function Page() {
       </Suspense>
       <Suspense>
 {/*@ts-ignore*/}
+
+
         {specialOffer && <SpecialOffer banners={specialOffer} />}
       </Suspense>
       <Suspense>
