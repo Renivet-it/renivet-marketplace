@@ -13,7 +13,7 @@ interface PageProps {
 export function SpecialOffer({ className, banners }: PageProps) {
   return (
     <section
-      className={cn("w-full py-8 md:py-12", className)}
+      className={cn("w-full py-4 md:py-12", className)}
       style={{ backgroundColor: "#f4f0ec" }}
     >
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
@@ -39,7 +39,7 @@ export function SpecialOffer({ className, banners }: PageProps) {
                 {/* Text Overlay */}
                 <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-8 text-white">
                   <div>
-                    <h3 className="text-2xl sm:text-3xl font-bold mb-2">
+                    <h3 className="text-lg sm:text-3xl font-bold mb-2">
                       {item.title}
                     </h3>
                     <p className="text-sm sm:text-base italic">

@@ -25,13 +25,18 @@ export function MoodboardItem({
   if (!moodboardItems.length) return null;
 
   return (
-    <section className={cn("w-full bg-[#F4F0EC] pb-6 md:pb-10", className)}>
+    <section className={cn("w-full bg-white sm:bg-[#F4F0EC] pb-2 md:pb-10", className)}>
       <div className="max-w-screen-2xl mx-auto">
         {/* Title & Subtitle */}
         <div className="text-center mb-4 md:mb-10 pt-6 md:pt-8 px-4 sm:px-6 lg:px-8">
-          <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">
+          <h2 className="text-lg md:text-3xl font-normal sm:font-bold text-gray-900 mb-1 md:mb-2">
             Curated Her Essence
           </h2>
+           {/* Mobile-only subtitle with animated color */}
+           <p className="sm:hidden text-base font-normal text-gray-400 animate-color-flow font-sans">
+           A curated collage of what's trending, timeless
+          </p>
+
         </div>
 
         {/* Responsive image container */}

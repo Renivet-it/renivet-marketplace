@@ -182,3 +182,19 @@ h3.tiptap-heading + h2.tiptap-heading {
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
   }
+
+
+
+  @keyframes colorFlow {
+    0%   { color: #fca5a5; } 
+    25%  { color: #fde68a; } 
+    50%  { color: #6ee7b7; } 
+    75%  { color: #93c5fd; } 
+    100% { color: #fca5a5; } 
+  }
+  
+  .animate-color-flow {
+    animation: colorFlow 5s linear infinite;
+  }
+  
+  

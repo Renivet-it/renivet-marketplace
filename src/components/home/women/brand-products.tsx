@@ -25,7 +25,7 @@ export function WomenBrandProducts({
     return (
         <section
             className={cn(
-                "flex w-full justify-center bg-[#F4F0EC] py-5 md:px-8 md:py-10",
+                "flex w-full justify-center bg-blue-500 py-2 md:px-8 md:py-10",
                 className
             )}
             style={{ backgroundColor: "#f4f0ec" }}
@@ -33,7 +33,7 @@ export function WomenBrandProducts({
             <div className="container md:hidden">
                 {/* Mobile Header */}
                 <div className="flex flex-col items-center gap-2 mb-4">
-                    <h2 className="text-2xl font-bold uppercase tracking-wider">
+                    <h2 className="text-lg sm:text-2xl font-normal sm:font-bold uppercase tracking-wider">
                         OUR&apos;S STORE
                     </h2>
                 </div>

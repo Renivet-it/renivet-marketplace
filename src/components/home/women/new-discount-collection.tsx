@@ -14,7 +14,7 @@ interface PageProps extends GenericProps {
 
 export function GetNewDiscountCollection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("pt-8 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+        <section className={cn("pt-4 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
             <Carousel
                 opts={{
                     align: "start",

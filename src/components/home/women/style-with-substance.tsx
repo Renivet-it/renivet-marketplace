@@ -30,12 +30,10 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function StyleWithSubstance({ className, products, ...props }: ProductGridProps) {
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return null;
-  }
+  if (!products || !Array.isArray(products) || products.length === 0) return null;
 
   const getPricing = (product: Product) => {
-    if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+    if (product.variants && product.variants.length > 0) {
       const variant = product.variants[0];
       const discountedPrice = variant.price || variant.costPerItem;
       const originalPrice = variant.compareAtPrice || variant.costPerItem;
@@ -43,7 +41,7 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
       return {
         discountedPrice: convertPaiseToRupees(discountedPrice),
         originalPrice: convertPaiseToRupees(originalPrice),
-        discount: convertPaiseToRupees(discount)
+        discount: convertPaiseToRupees(discount),
       };
     }
     return {
@@ -56,19 +54,25 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
   const visibleProducts = products.slice(0, 3);
 
   return (
-    <section className={cn("p-8 bg-[#F4F0EC]", className)}
-      style={{ backgroundColor: "#ded6d6" }}
-      {...props}>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-black">Style, With Substance</h2>
+    <section
+      className={cn(
+        "p-2 sm:p-8 bg-white md:bg-[#ded6d6]",
+        className
+      )}
+      {...props}
+    >
+      {/* Header */}
+      <div className="flex justify-between items-center mb-2 sm:mb-6">
+        <h2 className="text-lg sm:text-2xl font-normal sm:font-bold text-black">Style, With Substance</h2>
         <Link href="/products">
-          <Button className="bg-gray-800 text-white px-6 py-2 rounded-md hover:bg-gray-700 text-sm">
+          <Button className="bg-white text-black sm:bg-gray-800 sm:text-white px-6 py-2 rounded-md hover:bg-gray-100 sm:hover:bg-gray-700 text-sm">
             Show all
           </Button>
         </Link>
       </div>
 
-      <div className="flex flex-row gap-4 overflow-x-auto pb-2">
+      {/* Desktop View */}
+      <div className="hidden md:flex flex-row gap-4 overflow-x-auto pb-2">
         {visibleProducts.map((item) => {
           const { discountedPrice } = getPricing(item.product);
           return (
@@ -89,6 +93,34 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
               <div className="flex-1 p-4 flex flex-col justify-center" style={{ backgroundColor: "#ede6df" }}>
                 <h3 className="text-lg font-medium text-gray-800 mb-2">{item.product.title}</h3>
                 <p className="text-xl font-bold text-black">₹{discountedPrice}</p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Mobile View */}
+      <div className="flex md:hidden gap-3 overflow-x-auto pb-2 scrollbar-hide px-2">
+        {visibleProducts.map((item) => {
+          const { discountedPrice } = getPricing(item.product);
+          return (
+            <Link
+              key={item.product.id}
+              href={`/products/${item.product.slug}`}
+              className="min-w-[60%] h-[90px] bg-white rounded-lg shadow-sm flex flex-row flex-shrink-0"
+            >
+              <div className="w-[100px] h-full relative flex-shrink-0">
+                <Image
+                  src={item.product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                  alt={item.product.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw"
+                />
+              </div>
+              <div className="flex-1 p-3 flex flex-col justify-center" style={{ backgroundColor: "#ede6df" }}>
+                <h3 className="text-xs font-normal text-gray-500 mb-1">{item.product.title}</h3>
+                <p className="text-sm font-bold text-black">₹{discountedPrice}</p>
               </div>
             </Link>
           );

@@ -23,14 +23,14 @@ export function StyleDirectory({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-6 bg-[#F4F0EC]",
+                "flex w-full justify-center py-4 sm:py-6 bg-[#F4F0EC]",
                 className
             )}
             {...props}
         >
             <div className="w-full space-y-6 max-w-screen-2xl mx-auto">
                 {/* Title */}
-                <h4 className="text-center text-2xl md:text-3xl font-bold tracking-wide text-gray-800">
+                <h4 className="text-center text-lg md:text-3xl font-normal sm:font-bold tracking-wide text-gray-800 px-4">
                     {titleData?.title || "Style Directory"}
                 </h4>
 
