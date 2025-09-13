@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useSignUp, SignUp } from "@clerk/nextjs";
+import { useRouter } from "next/navigation"; // for Next.js App Router
 
 function CustomPhoneSignUp() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [step, setStep] = useState<"phone" | "otp" | "details">("phone");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const router = useRouter();
 
   if (!isLoaded) return null;
 
@@ -17,9 +17,14 @@ function CustomPhoneSignUp() {
   const formatPhone = (number: string) => {
     let trimmed = number.trim();
     if (!trimmed.startsWith("+")) {
-      trimmed = "+91" + trimmed.replace(/^0+/, ""); // remove leading 0 if present
+      trimmed = "+91" + trimmed.replace(/^0+/, "");
     }
     return trimmed;
+  };
+
+  // Generate 6-digit random number
+  const generateRandom6Digit = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
   // Step 1 → Request OTP
@@ -51,22 +56,25 @@ function CustomPhoneSignUp() {
     }
   };
 
-  // Step 3 → Add name + password + fallback email
+  // Step 3 → Auto-generate name + email + password
   const handleFinish = async () => {
     try {
       const formatted = formatPhone(phoneNumber);
       const defaultPassword = `${formatted}@123`;
+      const rand = generateRandom6Digit();
 
-      // create a dummy email if email is required
-      const dummyEmail = formatted.replace(/\D/g, "") + "@gmail.com";
+      const firstName = "John";
+      const lastName = `Doe${rand}`;
+      const dummyEmail = `johndoe${rand}@gmail.com`;
 
       await signUp.update({
-        firstName: firstName || "User",
-        lastName: lastName || "Test",
+        firstName,
+        lastName,
         emailAddress: dummyEmail,
         password: defaultPassword,
       });
 
+      router.push("/shop");
     } catch (err) {
       console.error("Error finishing signup:", err);
     }
@@ -125,28 +133,9 @@ function CustomPhoneSignUp() {
 
       {step === "details" && (
         <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
-            First Name
-          </label>
-          <input
-            type="text"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            placeholder="Enter your first name"
-            className="w-full p-3 border rounded-lg focus:ring focus:ring-purple-300 focus:border-purple-500"
-          />
-
-          <label className="block text-sm font-medium text-gray-700">
-            Last Name
-          </label>
-          <input
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Enter your last name"
-            className="w-full p-3 border rounded-lg focus:ring focus:ring-purple-300 focus:border-purple-500"
-          />
-
+          <p className="text-gray-600 text-sm">
+            Your account details will be auto-generated.
+          </p>
           <button
             onClick={handleFinish}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-semibold transition"
@@ -163,7 +152,6 @@ function CustomPhoneSignUp() {
 export default function CustomSignUpPage() {
   return (
     <div className="flex flex-col gap-10 items-center justify-center w-full min-h-screen bg-gray-50 py-10">
-      {/* Phone OTP Signup */}
       <CustomPhoneSignUp />
 
       <div className="w-full max-w-md flex items-center gap-2">
@@ -171,10 +159,9 @@ export default function CustomSignUpPage() {
         <span className="text-gray-500 text-sm">OR</span>
         <div className="flex-grow h-px bg-gray-300"></div>
       </div>
-      {/* Google + Email */}
-        <SignUp routing="hash" signInUrl="/auth/signin" />
+
+      {/* Google + Email fallback */}
+      <SignUp routing="hash" signInUrl="/auth/signin" />
     </div>
   );
 }
-
-
