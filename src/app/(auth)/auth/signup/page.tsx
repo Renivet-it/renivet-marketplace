@@ -7,6 +7,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { SignUp } from "@clerk/nextjs";
+import CustomSignUpPage from "./custom-page";
 
 import { Metadata } from "next";
 
@@ -15,16 +16,16 @@ export const metadata: Metadata = {
     description: "Create an account to access all features",
 };
 
+
+
 export default function Page() {
-    return (
-        <GeneralShell
-            classNames={{
-                innerWrapper: "max-w-lg xl:max-w-2xl",
-            }}
-        >
-        <div className="flex items-center justify-center">
-            <SignUp routing="hash" signInUrl="/auth/signin" />
-            </div>
-        </GeneralShell>
-    );
+  return (
+    <GeneralShell
+      classNames={{
+        innerWrapper: "max-w-lg xl:max-w-2xl",
+      }}
+    >
+      <CustomSignUpPage />
+    </GeneralShell>
+  );
 }
