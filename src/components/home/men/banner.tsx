@@ -28,15 +28,15 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     <Icons.Mars className="w-6 h-6" />
                     <span className="text-xs">Men</span>
                 </Link>
-                <Link href="/little" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="kids" className="flex flex-col items-center text-gray-700 hover:text-green-600">
                     <Icons.Users className="w-6 h-6" />
                     <span className="text-xs">Little Renivet</span>
                 </Link>
-                <Link href="/home" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="/home-living" className="flex flex-col items-center text-gray-700 hover:text-green-600">
                     <Icons.House className="w-6 h-6" />
                     <span className="text-xs">Home & Living</span>
                 </Link>
-                <Link href="/beauty" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="/beauty-personal" className="flex flex-col items-center text-gray-700 hover:text-green-600">
                     <Icons.Droplet className="w-6 h-6" />
                     <span className="text-xs">Beauty</span>
                 </Link>
