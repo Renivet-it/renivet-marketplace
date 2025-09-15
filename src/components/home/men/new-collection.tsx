@@ -13,8 +13,8 @@ interface PageProps extends GenericProps {
 
 export function NewCollection({ className, banners, ...props }: PageProps) {
   return (
-    <section className={cn("pt-10 md:pt-16 lg:pt-20 pb-10 md:pb-16 lg:pb-20 bg-[#F4F0EC]", className)} {...props}>
-              <h1 className="text-center text-3xl sm:text-4xl font-bold text-gray-900 mb-10">
+    <section className={cn("pt-2 sm:pt-10 md:pt-16 lg:pt-20 pb-4 md:pb-16 lg:pb-20 bg-[#F4F0EC]", className)} {...props}>
+              <h1 className="text-center text-lg sm:text-4xl font-normal sm:font-bold text-gray-900 mb-10">
           New Collection
         </h1>
       <Carousel

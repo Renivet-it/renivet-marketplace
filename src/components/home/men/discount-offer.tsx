@@ -14,63 +14,99 @@ export function DiscountOffer({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <section className="w-full px-0 py-0 bg-[#F4F0EC]">
-      <Carousel
-        opts={{
-          align: "start",
-          loop: true,
-        }}
-        plugins={[
-          Autoplay({
-            delay: 5000,
-          }),
-        ]}
-        className="w-full aspect-[1440/305]"
-      >
-        <CarouselContent className="ml-0">
-          {advertisements.map((ad, index) => (
-            <CarouselItem key={ad.id} className="p-0">
-              <div className="relative w-full h-full">
-                {ad.url ? (
-                  <Link href={ad.url} target="_blank" className="block size-full">
-                    <Image
-                      src={ad.imageUrl}
-                      alt={ad.title}
-                      width={1440}
-                      height={305}
-                      className="size-full object-cover brightness-100"
-                      priority={index === 0}
-                    />
-                    {/* Centered Shop Now Button */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <button className="bg-white text-gray-900 font-bold py-2 px-6 md:py-3 md:px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-300 text-sm md:text-base">
-                        Shop Now
-                      </button>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="size-full">
-                    <Image
-                      src={ad.imageUrl}
-                      alt={ad.title}
-                      width={1440}
-                      height={305}
-                      className="size-full object-cover brightness-100"
-                      priority={index === 0}
-                    />
-                    {/* Centered Shop Now Button */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <button className="bg-white text-gray-900 font-bold py-2 px-6 md:py-3 md:px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-300 text-sm md:text-base">
-                        Shop Now
-                      </button>
-                    </div>
+    <section className="w-full sm:pb-10 pb-4 bg-[#FAF9F7] sm:bg-[#F4F0EC]">
+      {/* ---------- MOBILE VIEW ---------- */}
+      <div className="sm:hidden px-5 flex justify-center pt-4">
+        <div className="w-full">
+          <Carousel
+            opts={{ align: "start", loop: true }}
+            plugins={[Autoplay({ delay: 5000 })]}
+            className="w-full aspect-[1440/500]"
+          >
+            <CarouselContent className="ml-0">
+              {advertisements.map((ad, index) => (
+                <CarouselItem key={ad.id} className="p-0">
+                  <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-md">
+                    {ad.url ? (
+                      <Link href={ad.url} target="_blank" className="block size-full">
+                        <Image
+                          src={ad.imageUrl}
+                          alt={ad.title}
+                          width={1440}
+                          height={305}
+                          className="size-full object-cover brightness-100"
+                          priority={index === 0}
+                        />
+                      </Link>
+                    ) : (
+                      <Image
+                        src={ad.imageUrl}
+                        alt={ad.title}
+                        width={1440}
+                        height={305}
+                        className="size-full object-cover brightness-100"
+                        priority={index === 0}
+                      />
+                    )}
                   </div>
-                )}
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
+        </div>
+      </div>
+
+      {/* ---------- DESKTOP VIEW ---------- */}
+      <div className="hidden sm:block">
+        <Carousel
+          opts={{ align: "start", loop: true }}
+          plugins={[Autoplay({ delay: 5000 })]}
+          className="w-full aspect-[1440/305] sm:min-h-[305px]"
+        >
+          <CarouselContent className="ml-0">
+            {advertisements.map((ad, index) => (
+              <CarouselItem key={ad.id} className="p-0">
+                <div className="relative w-full h-full">
+                  {ad.url ? (
+                    <Link href={ad.url} target="_blank" className="block size-full">
+                      <Image
+                        src={ad.imageUrl}
+                        alt={ad.title}
+                        width={1440}
+                        height={305}
+                        className="size-full object-cover brightness-100"
+                        priority={index === 0}
+                      />
+                      {/* Desktop-only button */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <button className="bg-white text-gray-900 font-bold py-2 px-6 md:py-3 md:px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-300 text-sm md:text-base">
+                          Shop Now
+                        </button>
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="size-full">
+                      <Image
+                        src={ad.imageUrl}
+                        alt={ad.title}
+                        width={1440}
+                        height={305}
+                        className="size-full object-cover brightness-100"
+                        priority={index === 0}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <button className="bg-white text-gray-900 font-bold py-2 px-6 md:py-3 md:px-8 rounded-full shadow-lg hover:bg-gray-100 transition-colors duration-300 text-sm md:text-base">
+                          Shop Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
     </section>
   );
 }

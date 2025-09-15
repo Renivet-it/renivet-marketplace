@@ -1,12 +1,11 @@
-// components/home/women/ProductGrid.jsx
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn, convertPaiseToRupees } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button-general"; // Assuming Shadcn UI Button component
+import { Button } from "@/components/ui/button-general";
 
 interface Variant {
   id: string;
@@ -17,7 +16,7 @@ interface Variant {
 
 interface Product {
   id: number;
-  media: string;
+  media: { mediaItem: { url: string } }[];
   brand: { name: string };
   title: string;
   variants?: Variant[];
@@ -32,84 +31,107 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function ProductGrid({ className, products, ...props }: ProductGridProps) {
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return null;
-  }
+  if (!products?.length) return null;
 
   const getPricing = (product: Product) => {
-    if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
-      const variant = product.variants[0];
-      const discountedPrice = variant.price || variant.costPerItem;
-      const originalPrice = variant.compareAtPrice || variant.costPerItem;
-      const discount = originalPrice - discountedPrice;
-      return { discountedPrice, originalPrice, discount };
+    if (product.variants?.length) {
+      const v = product.variants[0];
+      const discounted = v.price || v.costPerItem;
+      const original = v.compareAtPrice || v.costPerItem;
+      const discountValue = original - discounted;
+      const discountPercent = Math.round((discountValue / original) * 100);
+      return {
+        discountedPrice: convertPaiseToRupees(discounted),
+        originalPrice: convertPaiseToRupees(original),
+        discountPercent,
+      };
     }
+    const discountValue = product.originalPrice - product.discountedPrice;
+    const discountPercent = Math.round(
+      (discountValue / product.originalPrice) * 100
+    );
     return {
-//@ts-ignore
-      discountedPrice: product.compareAtPrice,
-//@ts-ignore
-      originalPrice: product.price,
-//@ts-ignore
-      discount:  product.price - product.compareAtPrice,
+      discountedPrice: convertPaiseToRupees(product.discountedPrice),
+      originalPrice: convertPaiseToRupees(product.originalPrice),
+      discountPercent,
     };
   };
 
-  const visibleProducts = products.slice(0, 10); // Limit to 10 products
-  const hasMoreProducts = products.length > 10; // Check if there are more than 10 products
+  const visibleProducts = products.slice(0, 10);
+  const hasMoreProducts = products.length > 10;
+
+  // Reusable card renderer
+  const renderCard = (product: Product) => {
+    const { discountedPrice, originalPrice, discountPercent } = getPricing(product);
+    return (
+      <Link key={product.id} href={`/products/${product.slug}`} className="block">
+        <Card className="overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200 hover:shadow-md transition">
+          <CardHeader className="p-0 relative">
+            <div className="relative w-full h-40">
+              <Image
+                src={product.media[0]?.mediaItem?.url || "/placeholder.jpg"}
+                alt={product.title}
+                fill
+                className="object-cover"
+                sizes="(max-width:768px) 100vw, 25vw"
+              />
+            </div>
+            <div className="absolute top-2 left-2">
+              <Badge className="bg-green-100 text-green-800 text-[10px]">🌿</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-2">
+            <div className="text-[11px] font-medium text-gray-700 uppercase mb-1">
+              {product.brand.name}
+            </div>
+            <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
+              {product.title}
+            </h3>
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              <span className="text-red-600 font-semibold text-base leading-none">
+                ₹{discountedPrice}
+              </span>
+              <span className="text-gray-500 text-xs line-through leading-none">
+                ₹{originalPrice}
+              </span>
+              <span className="text-orange-600 text-[11px] font-medium leading-none">
+                {discountPercent}% OFF
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+    );
+  };
 
   return (
-    <section className={cn("pt-4 pb-10 bg-gray-50", className)} {...props}>
-      <h2 className="text-xl font-semibold text-center mb-4 text-gray-900">Featured Products</h2>
-      <div className="grid grid-cols-2 gap-3 px-2">
-        {visibleProducts.map((item) => {
-          const { discountedPrice, originalPrice, discount } = getPricing(item.product);
-          return (
-            <Card
-              key={item.product.id}
-              className="overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200 max-w-[180px]"
-            >
-              <CardHeader className="p-0 relative">
-                <Link href={`/products/${item.product.slug}`} className="block">
-                  <div className="relative w-full h-40 overflow-hidden">
-                    <Image
-                    // @ts-ignore
-                      src={item.product.media[0]?.mediaItem?.url}
-                      fill alt={""}/>
-                  </div>
-                </Link>
-                <div className="absolute top-1 left-1">
-                  <Badge className="bg-green-100 text-green-800 text-[10px]">
-                    🌿 {/* Placeholder for brand logo/icon */}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-2 bg-gray-50">
-                <div className="text-[11px] font-medium text-gray-700 uppercase mb-1">
-                  {item.product.brand.name}
-                </div>
-                <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
-                  {item.product.title}
-                </h3>
-                <div className="flex items-center gap-1 mt-1 flex-wrap">
-                  <span className="text-red-600 font-semibold text-base leading-none">
-                    ₹{discountedPrice}
-                  </span>
-                  <span className="text-gray-500 text-xs line-through leading-none">
-                    ₹{originalPrice}
-                  </span>
-                  <span className="text-orange-600 text-[11px] font-medium leading-none">
-                    {discount} OFF
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+    <section
+      className={cn("py-4 sm:py-10", className)}
+      style={{ backgroundColor: "#f4f0ec" }}
+      {...props}
+    >
+      <h2 className="text-lg sm:text-2xl font-semibold text-center mb-1 sm:mb-4 text-gray-900">
+        Featured Products
+      </h2>
+
+      {/* ---------- MOBILE VIEW: 2-COLUMN GRID ---------- */}
+      <div className="sm:hidden px-4">
+        <div className="grid grid-cols-2 gap-3">
+          {visibleProducts.map(({ product }) => renderCard(product))}
+        </div>
       </div>
+
+      {/* ---------- DESKTOP VIEW: 4-COLUMN GRID ---------- */}
+      <div className="hidden sm:block px-6">
+        <div className="grid grid-cols-4 gap-6 max-w-6xl mx-auto">
+          {visibleProducts.map(({ product }) => renderCard(product))}
+        </div>
+      </div>
+
       {hasMoreProducts && (
         <div className="text-center mt-4">
           <Link href="/products">
-            <Button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+            <Button className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600">
               Explore More Products
             </Button>
           </Link>

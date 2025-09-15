@@ -13,7 +13,7 @@ interface PageProps extends GenericProps {
 
 export function FreshInkCollection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full bg-[#F4F0EC] pb-10 pt-20", className)} {...props}>
+        <section className={cn("w-full bg-[#F4F0EC] sm:pb-10 sm:pt-20 pb-2 pt-4", className)} {...props}>
             <Carousel
                 opts={{
                     align: "start",

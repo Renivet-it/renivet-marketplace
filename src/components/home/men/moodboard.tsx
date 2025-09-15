@@ -19,19 +19,22 @@ interface PageProps {
 
 export function MoodboardItemMen({
   moodboardItems,
-  title = "Moodboard for Her",
+  title = "Moodboard for Him",
   className,
 }: PageProps) {
   if (!moodboardItems.length) return null;
 
   return (
-    <section className={cn("w-full bg-[#F4F0EC] pb-6 md:pb-10", className)}>
+    <section
+      className={cn("w-full bg-white sm:bg-[#F4F0EC] pb-2 md:pb-10", className)}
+    >
       <div className="max-w-screen-2xl mx-auto">
         {/* Title & Subtitle */}
         <div className="text-center mb-4 md:mb-10 pt-6 md:pt-8 px-4 sm:px-6 lg:px-8">
-          <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">
+          <h2 className="text-lg md:text-3xl font-normal sm:font-bold text-gray-900 mb-1 md:mb-2">
             Curated His Essence
           </h2>
+         
         </div>
 
         {/* Responsive image container */}
