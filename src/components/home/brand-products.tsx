@@ -14,12 +14,12 @@ interface PageProps {
   className?: string;
 }
 
-export function BrandProducts({ className, marketingStrip, title }: PageProps) {
+export function BrandProducts({ className, marketingStrip }: PageProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // Clone items for infinite loop
+  // Clone items for infinite loop on desktop
   const clonedItems = [...marketingStrip, ...marketingStrip, ...marketingStrip];
 
   const scroll = (direction: "left" | "right") => {
@@ -46,44 +46,44 @@ export function BrandProducts({ className, marketingStrip, title }: PageProps) {
       if (scrollRef.current && canScrollRight) scroll("right");
       else if (scrollRef.current) scrollRef.current.scrollTo({ left: 0, behavior: "smooth" });
     }, 4000);
-
     return () => clearInterval(timer);
   }, [canScrollRight]);
 
   return (
     <section className={cn("w-full bg-[#F4F0EC] py-2 sm:py-16", className)}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6">
-{/* ----------------- MOBILE VIEW (Carousel with smaller cards) ----------------- */}
-<div className="sm:hidden px-3 pt-4">
-  {/* Title + Subtitle + Button */}
-  <div className="text-center mb-4">
-    <h2 className="text-sm font-semibold text-gray-900">
+
+    {/* ---------------- MOBILE VIEW ---------------- */}
+<div className="sm:hidden flex flex-row items-start">
+  {/* -------- Left: Title + Subtitle + Button -------- */}
+  <div className="w-[40%] flex flex-col px-2">
+    <h2 className="text-sm font-normal pt-2 text-gray-900">
       Casual Inspirations
     </h2>
-    <p className="text-xs text-gray-600 mt-1">
-      Our favorite combinations for casual outfits
+    <p className="text-[8px] text-gray-600 mt-1">
+      Our favorite combinations for casual outfit that can inspire you to apply on your daily activity.
     </p>
     <Button
       asChild
       variant="outline"
-      className="mt-2 border-gray-900 text-gray-900 hover:bg-gray-100 text-xs px-3 py-1 rounded-none font-normal"
+      className="mt-2 border-gray-900 text-gray-900 hover:bg-gray-100 text-[8px] font-normal"
     >
       <Link href="/shop">BROWSE</Link>
     </Button>
   </div>
 
-  {/* Horizontal carousel */}
+  {/* -------- Right: Horizontal scroll images -------- */}
   <div
     ref={scrollRef}
     onScroll={handleScroll}
-    className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth"
+    className="w-[60%] flex overflow-x-auto scrollbar-hide scroll-smooth gap-3"
     style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
   >
     {marketingStrip.map((item) => (
       <div
         key={item.id}
         className="flex-shrink-0 relative rounded-lg overflow-hidden bg-white shadow-md"
-        style={{ width: "180px", height: "220px" }} // 👈 smaller size so 2–3 fit
+        style={{ width: "100%", height: "180px" }} // one full image fits
       >
         <Link href={item.url || "/shop"}>
           <Image
@@ -103,8 +103,10 @@ export function BrandProducts({ className, marketingStrip, title }: PageProps) {
   </div>
 </div>
 
-        {/* ---------------------------- DESKTOP VIEW ---------------------------- */}
-        <div className="hidden md:flex items-center gap-8">
+
+
+        {/* ---------------- DESKTOP VIEW (unchanged) ---------------- */}
+        <div className="hidden sm:flex items-center gap-8">
           <div className="w-1/4 px-4">
             <h2 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide">
               Casual Inspirations

@@ -13,7 +13,7 @@ interface PageProps extends GenericProps {
 
 export function ConciousClick({ className, banners, ...props }: PageProps) {
   return (
-    <section className={cn("w-full py-4 md:py-12 bg-[#F4F0EC]", className)} {...props}>
+    <section className={cn("w-full py-2 md:py-12 bg-[#F4F0EC]", className)} {...props}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-0">
         <Carousel
           opts={{

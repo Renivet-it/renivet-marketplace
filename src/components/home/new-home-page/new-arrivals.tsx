@@ -11,9 +11,7 @@ interface Product {
   id: string;
   media: { mediaItem: { url: string } }[];
   title: string;
-  variants?: {
-    price: number;
-  }[];
+  variants?: { price: number }[];
   price?: number;
   rating?: number;
   reviewCount?: number;
@@ -90,7 +88,7 @@ export function ProductGridNewArrivals({
 
         {/* ---------------------------- MOBILE TITLE ---------------------------- */}
         <div className="sm:hidden text-center mb-2">
-          <h2 className="text-lg font-medium text-gray-900 leading-tight">
+          <h2 className="text-lg font-normal text-gray-900 leading-tight">
             {title}
           </h2>
           <p className="text-xs text-gray-600 mt-1">
@@ -130,6 +128,7 @@ export function ProductGridNewArrivals({
             ))}
           </div>
 
+          {/* Desktop Dots */}
           <div className="flex justify-center mt-8 gap-2">
             {Array.from({ length: Math.min(products.length, 5) }).map(
               (_, index) => (
@@ -146,13 +145,19 @@ export function ProductGridNewArrivals({
           </div>
         </div>
 
-        {/* ---------------------------- MOBILE GRID ---------------------------- */}
-        <div className="sm:hidden grid grid-cols-2 gap-x-3 gap-y-4">
-          {products.map(({ product }) => (
-            <div key={product.id} className="product-card">
-              <ProductCardMobile product={product} />
-            </div>
-          ))}
+        {/* ---------------------------- MOBILE HORIZONTAL SCROLL ---------------------------- */}
+        <div className="sm:hidden relative">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+          >
+            {products.map(({ product }) => (
+              <div key={product.id} className="flex-shrink-0 w-[140px]">
+                <ProductCardMobile product={product} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -208,37 +213,45 @@ function ProductCard({ product }: { product: Product }) {
   );
 }
 
-/* ---------------------------- MOBILE CARD ---------------------------- */
+/* ---------------------------- MOBILE IMAGE + TEXT ---------------------------- */
+
 function ProductCardMobile({ product }: { product: Product }) {
   const price = convertPaiseToRupees(
     product.variants?.[0]?.price || product.price || 0
   );
 
+  const images = product.media?.map((m) => m.mediaItem?.url) || [];
+
   return (
     <Link href={`/products/${product.slug}`} className="block">
-      <div className="bg-white rounded-lg overflow-hidden flex flex-col items-center p-2 shadow-sm">
-        {/* Square Image */}
-        <div className="relative w-full pt-[100%] rounded-lg overflow-hidden mb-1">
-          <Image
-            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
-            alt={product.title}
-            fill
-            className="object-contain p-1"
-          />
-        </div>
+      {/* Horizontal Scroll Images */}
+      <div className="flex overflow-x-auto space-x-2 snap-x snap-mandatory">
+        {images.map((img, idx) => (
+          <div
+            key={idx}
+            className={`relative flex-shrink-0 snap-start rounded-md overflow-hidden ${
+              idx === 0 ? "w-full pt-[130%]" : "w-1/2 pt-[65%]"
+            }`}
+          >
+            <Image
+              src={img || "/placeholder-product.jpg"}
+              alt={product.title}
+              fill
+              className="object-cover"
+            />
+          </div>
+        ))}
+      </div>
 
-        {/* Product Info */}
-        <div className="space-y-0.5 text-center w-full">
-          <h3 className="text-xs font-medium text-gray-900 line-clamp-2">
-            {product.title}
-          </h3>
-          <p className="text-[9px] text-gray-500">
-            {product.stockStatus || "Available"}
-          </p>
-          <p className="text-sm font-semibold text-gray-900">
-            {typeof price === "number" ? price.toFixed(0) : price}
-          </p>
-        </div>
+      {/* Text */}
+      <div className="mt-2 text-center">
+        <h3 className="text-xs font-normal line-clamp-2">{product.title}</h3>
+        <p className="text-[11px] text-gray-500">
+          {product.stockStatus || "Available"}
+        </p>
+        <p className="text-xs font-semibold text-gray-900">
+          {typeof price === "number" ? price.toFixed(0) : price}
+        </p>
       </div>
     </Link>
   );

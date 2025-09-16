@@ -1,13 +1,10 @@
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils";
 import { HomeShopByCategory } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
-import {
-    Carousel,
-    CarouselContent,
-    CarouselItem,
-} from "@/components/ui/carousel";
 
 interface PageProps extends GenericProps {
     shopByCategories: HomeShopByCategory[];
@@ -32,19 +29,19 @@ export function ShopByNewCategories({
     return (
         <section
             className={cn(
-                "flex w-full bg-[#F4F0EC] justify-center py-10",
+                "flex w-full bg-[#F4F0EC] justify-center py-2 sm:py-10",
                 className
             )}
             {...props}
         >
-            <div className="w-full space-y-8 max-w-screen-2xl mx-auto px-4">
+            <div className="w-full space-y-2 sm:space-y-8 max-w-screen-2xl mx-auto px-4">
                 {/* Title */}
-  <h2 className="text-2xl md:text-3xl font-bold text-gray-800  border-gray-300 pb-2 px-4">
-    {titleData?.title || "Shop by Category"}
-  </h2>
+                <h2 className="text-lg md:text-3xl font-normal sm:font-bold text-gray-800 border-gray-300 pb-2 sm:pb-2 px-1 sm:px-4">
+                    {titleData?.title || "Shop by Category"}
+                </h2>
 
-                {/* Mobile View (3 full cards) */}
-                <div className="md:hidden grid auto-cols-[calc(33.333%-8px)] grid-flow-col gap-3 overflow-x-auto px-2 scrollbar-hide">
+                {/* ---------- Mobile View: 3-column grid ---------- */}
+                <div className="grid grid-cols-3 gap-3 md:hidden px-2">
                     {shopByCategories.map((category, index) => (
                         <Link
                             key={index}
@@ -67,11 +64,10 @@ export function ShopByNewCategories({
                                     </p>
                                     <p
                                         className={cn(
-                                            "text-xs hover:underline",
-                                            index === 0 ? "text-gray-500" : "text-gray-500"
+                                            "text-xs text-gray-500 hover:underline"
                                         )}
                                     >
-                                        {index === 0 ? "Shop" : "Shop"}
+                                        Shop
                                     </p>
                                 </div>
                             </div>
@@ -79,10 +75,13 @@ export function ShopByNewCategories({
                     ))}
                 </div>
 
-                {/* Desktop View (Grid with rows of 6 items) */}
+                {/* ---------- Desktop View: 6 per row ---------- */}
                 <div className="hidden md:block">
                     {desktopChunks.map((chunk, chunkIndex) => (
-                        <div key={chunkIndex} className="grid grid-cols-6 gap-4 mb-6 px-2">
+                        <div
+                            key={chunkIndex}
+                            className="grid grid-cols-6 gap-4 mb-6 px-2"
+                        >
                             {chunk.map((category, index) => (
                                 <Link
                                     key={index}
@@ -105,11 +104,10 @@ export function ShopByNewCategories({
                                             </p>
                                             <p
                                                 className={cn(
-                                                    "text-xs hover:underline",
-                                                    index === 0 && chunkIndex === 0 ? "text-gray-500" : "text-gray-500"
+                                                    "text-xs text-gray-500 hover:underline"
                                                 )}
                                             >
-                                                {index === 0 && chunkIndex === 0 ? "Shop" : "Shop"}
+                                                Shop
                                             </p>
                                         </div>
                                     </div>

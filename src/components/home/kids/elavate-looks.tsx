@@ -3,7 +3,7 @@ import { BadgeCheck, Leaf, Sprout, Palette } from "lucide-react";
 
 const SustainableBadges = () => {
   return (
-    <div className="bg-[#F4F0EC] py-12 px-4">
+    <div className="bg-[#F4F0EC]  py-2 sm:py-12 px-2 sm:px-4">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* GOTS Certified */}
