@@ -32,65 +32,67 @@ export function ProductGrid({
   if (!products || !Array.isArray(products)) return null;
 
   return (
-    <div className={cn("bg-[#F4F0EC] py-8", className)} {...props}>
-      {/* ----------------- MOBILE VIEW (Full-Width Grid) ----------------- */}
-      <div className="md:hidden w-full px-3">
-        <h1 className="text-lg font-semibold text-gray-800 mb-4">{title}</h1>
-        <div className="grid grid-cols-2 gap-3">
-          {products.map(({ product }) => {
-            const price = convertPaiseToRupees(
-              product.variants?.[0]?.price || product.price || 0
-            );
-            const originalPrice =
-              product.variants?.[0]?.compareAtPrice || product.compareAtPrice;
-            const convertedOriginalPrice = originalPrice
-              ? convertPaiseToRupees(originalPrice)
-              : null;
+    <div className={cn("bg-[#F4F0EC] py-2 sm:py-8", className)} {...props}>
+     {/* ----------------- MOBILE VIEW : Horizontal scroll with 3 items fitting the screen ----------------- */}
+<div className="md:hidden w-full px-3">
+  <h1 className="text-lg font-normal text-gray-800 mb-4">{title}</h1>
 
-            return (
-              <div
-                key={product.id}
-                className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col"
-              >
-                {/* Product Image */}
-                <div className="relative w-full h-36">
-                  <Link href={`/products/${product.slug}`}>
-                    <Image
-                      src={
-                        product.media[0]?.mediaItem?.url ||
-                        "/placeholder-product.jpg"
-                      }
-                      alt={product.title}
-                      fill
-                      className="object-cover rounded-t-lg"
-                    />
-                  </Link>
-                </div>
+  <div className="flex overflow-x-auto gap-3 scrollbar-hide">
+    {products.map(({ product }) => {
+      const price = convertPaiseToRupees(
+        product.variants?.[0]?.price || product.price || 0
+      );
+      const originalPrice =
+        product.variants?.[0]?.compareAtPrice || product.compareAtPrice;
+      const convertedOriginalPrice = originalPrice
+        ? convertPaiseToRupees(originalPrice)
+        : null;
 
-                {/* Product Info */}
-                <div className="p-2">
-                  <h3 className="text-xs font-medium text-gray-800 truncate">
-                    {product.title}
-                  </h3>
-                  <span className="text-[10px] text-gray-500 block">
-                    {product.brand.name}
-                  </span>
-                  <div className="mt-1">
-                    <span className="text-sm font-semibold text-gray-800">
-                      ₹{price}
-                    </span>
-                    {convertedOriginalPrice && (
-                      <span className="text-xs text-gray-500 line-through ml-1">
-                        ₹{convertedOriginalPrice}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+      return (
+        <div
+          key={product.id}
+          className="bg-white rounded-lg shadow-sm overflow-hidden flex flex-col w-1/3 flex-shrink-0"
+        >
+          {/* Product Image */}
+          <div className="relative w-full h-36">
+            <Link href={`/products/${product.slug}`}>
+              <Image
+                src={
+                  product.media[0]?.mediaItem?.url ||
+                  "/placeholder-product.jpg"
+                }
+                alt={product.title}
+                fill
+                className="object-cover rounded-t-lg"
+              />
+            </Link>
+          </div>
+
+          {/* Product Info */}
+          <div className="p-2">
+            <h3 className="text-xs font-medium text-gray-800 truncate">
+              {product.title}
+            </h3>
+            <span className="text-[10px] text-gray-500 block">
+              {product.brand.name}
+            </span>
+            <div className="mt-1">
+              <span className="text-sm font-semibold text-gray-800">
+                ₹{price}
+              </span>
+              {convertedOriginalPrice && (
+                <span className="text-xs text-gray-500 line-through ml-1">
+                  ₹{convertedOriginalPrice}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      );
+    })}
+  </div>
+</div>
+
 
       {/* ----------------- DESKTOP VIEW (Centered Grid) ----------------- */}
       <div className="hidden md:block max-w-screen-2xl mx-auto px-14">

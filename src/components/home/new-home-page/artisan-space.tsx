@@ -29,7 +29,7 @@ export function ArtisanCollection({
     >
       <div className="w-full space-y-6 max-w-screen-2xl mx-auto px-4">
         {/* Title */}
-        <h2 className="text-xl md:text-3xl font-bold text-gray-800 pb-2 px-4">
+        <h2 className="text-lg md:text-3xl font-normal sm:font-bold text-gray-800 pb-2 px-4">
           {titleData?.title || "Shop By Value"}
         </h2>
 

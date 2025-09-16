@@ -46,23 +46,40 @@ export function EventSectionTwoBanner({ className, banners, ...props }: PageProp
                     index === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0"
                   )}
                 >
-                  <video
-                    src={item.imageUrl}
-                    className="w-full h-full object-cover"
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                  />
-                  {/* Shop Now Button */}
+                  {/* ✅ Mobile: Link wraps the video (no button) */}
                   <Link
                     href={item.url || "/shop"}
-                    className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
+                    className="block md:hidden w-full h-full"
                   >
-                    <button className="bg-white text-black px-8 py-3 rounded-full font-medium text-lg hover:bg-gray-100 transition-colors duration-300 shadow-lg">
-                      Shop Now
-                    </button>
+                    <video
+                      src={item.imageUrl}
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                    />
                   </Link>
+
+                  {/* ✅ Desktop: Show video + button */}
+                  <div className="hidden md:block w-full h-full">
+                    <video
+                      src={item.imageUrl}
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                    />
+                    <Link
+                      href={item.url || "/shop"}
+                      className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
+                    >
+                      <button className="bg-white text-black px-8 py-3 rounded-full font-medium text-lg hover:bg-gray-100 transition-colors duration-300 shadow-lg">
+                        Shop Now
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

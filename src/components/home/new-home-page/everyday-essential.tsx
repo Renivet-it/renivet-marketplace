@@ -8,7 +8,7 @@ const EveryDayEssential = () => {
       <div className="w-full px-4 md:px-8 py-4 md:py-16">
         {/* Header */}
         <div className="text-center mb-8 md:mb-12">
-          <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-4">
+          <h1 className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-normal sm:font-bold text-gray-800 mb-4">
             Everyday Essentials, Ethically Made
           </h1>
           <p className="text-gray-700 text-sm md:text-lg px-4">

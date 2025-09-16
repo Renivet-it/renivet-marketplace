@@ -29,19 +29,23 @@ export function InstaBanner({ className, banners }: PageProps) {
   ];
 
   return (
-    <section className={cn("w-full py-12 bg-[#F4F0EC]", className)}>
+    <section className={cn("w-full py-2 sm:py-12 bg-[#F4F0EC]", className)}>
       <div className="max-w-[1612px] mx-auto px-4">
         {/* Title Section */}
         <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold uppercase text-gray-800 inline-block border-b-2 border-gray-300 pb-2 px-4">
+          <h2 className="text-lg md:text-3xl font-normal sm:font-bold uppercase text-gray-800 inline-block border-b-2 border-gray-300 pb-2 px-4">
             Follow Us On Instagram
           </h2>
         </div>
 
-        {/*  Mobile Layout (hidden on md and up) */}
+        {/* ---------- Mobile Layout ---------- */}
+        {/* smaller card size by using a fixed height */}
         <div className="grid grid-cols-2 gap-2 sm:hidden">
           {banners.slice(0, 8).map((post, index) => (
-            <div key={post.id || index} className="relative w-full aspect-[3/4]">
+            <div
+              key={post.id || index}
+              className="relative w-full h-[160px]" // 👈 adjust height for smaller cards
+            >
               <Link href={post.url || "#"} className="block w-full h-full">
                 <Image
                   src={post.imageUrl}
@@ -55,7 +59,7 @@ export function InstaBanner({ className, banners }: PageProps) {
           ))}
         </div>
 
-        {/* Desktop Layout (hidden on small) */}
+        {/* ---------- Desktop Layout ---------- */}
         <div className="hidden sm:flex flex-wrap justify-center">
           {banners.slice(0, 8).map((post, index) => {
             const dimensions = boxDimensions[index];
