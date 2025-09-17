@@ -19,7 +19,7 @@ const YouMayAlsoLike = ({
   className,
   categoryId,
   excludeProductId,
-  limit = 6,
+  limit = 16,
   ...props
 }: YouMayAlsoLikeProps) => {
   // 🔌 Fetch related products from tRPC
@@ -60,7 +60,7 @@ const YouMayAlsoLike = ({
             {/* Product Image */}
             <div className="aspect-square bg-gray-100 overflow-hidden">
               <Image
-                src={product.media?.[0]?.url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
+                src={product.media[0].url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
                 alt={product.title}
                 width={300}
                 height={300}
