@@ -36,7 +36,7 @@ import {
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { InferenceClient } from "@huggingface/inference";
 import { products, productVariants, returnExchangePolicy, productSpecifications } from "@/lib/db/schema/product";
@@ -1250,4 +1250,35 @@ if (product.variants && product.variants.length > 0) {
             const data = await queries.products.updateProductValue(id, values);
             return data;
         }),
+          getRecommendations: publicProcedure
+    .input(
+      z.object({
+        categoryId: z.string().optional(),
+        excludeProductId: z.string().uuid().optional(),
+        limit: z.number().min(1).default(6),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const { categoryId, excludeProductId, limit } = input;
+
+      const where = excludeProductId
+        ? and(eq(products.categoryId, categoryId), ne(products.id, excludeProductId))
+        : eq(products.categoryId, categoryId);
+
+      // Fetch products in the same category, only active & published
+      const data = await ctx.db
+        .select()
+        .from(products)
+        .where(
+          and(
+            where,
+            eq(products.isActive, true),
+            eq(products.isPublished, true),
+            eq(products.isDeleted, false)
+          )
+        )
+        .limit(limit);
+
+      return data;
+    }),
 });

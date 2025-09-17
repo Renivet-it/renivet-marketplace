@@ -251,7 +251,11 @@ export function ProductPage({
 
             </div>
              <Separator />
- <YouMayAlsoLike className="mt-12" />
+   <YouMayAlsoLike
+        categoryId={product.categoryId}
+        excludeProductId={product.id}
+        className="mt-12"
+      />
             {/* Modal */}
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogContent className="p-0">
