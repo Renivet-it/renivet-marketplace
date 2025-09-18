@@ -20,23 +20,38 @@ export function Landing({ className, banners, ...props }: PageProps) {
     return (
         <section className={cn("", className)} {...props}>
             <nav className="flex justify-around items-center p-4 bg-gray-100 md:hidden">
-                <Link href="/women" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="/women" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
+      e.preventDefault();
+      window.location.href = "/women"; // ✅ full page reload
+    }}>
                     <Icons.Venus className="w-6 h-6" />
                     <span className="text-xs">Women</span>
                 </Link>
-                <Link href="/men" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="/men" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
+      e.preventDefault();
+      window.location.href = "/men"; // ✅ full page reload
+    }}>
                     <Icons.Mars className="w-6 h-6" />
                     <span className="text-xs">Men</span>
                 </Link>
-                <Link href="kids" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="kids" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
+      e.preventDefault();
+      window.location.href = "/kids"; // ✅ full page reload
+    }}>
                     <Icons.Users className="w-6 h-6" />
-                    <span className="text-xs">Little Renivet</span>
+                    <span className="text-xs">Kids</span>
                 </Link>
-                <Link href="/home-living" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="/home-living" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
+      e.preventDefault();
+      window.location.href = "/home-living"; // ✅ full page reload
+    }}>
                     <Icons.House className="w-6 h-6" />
                     <span className="text-xs">Home & Living</span>
                 </Link>
-                <Link href="/beauty-personal" className="flex flex-col items-center text-gray-700 hover:text-green-600">
+                <Link href="/beauty-personal" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
+      e.preventDefault();
+      window.location.href = "/beauty-personal"; // ✅ full page reload
+    }}>
                     <Icons.Droplet className="w-6 h-6" />
                     <span className="text-xs">Beauty</span>
                 </Link>
