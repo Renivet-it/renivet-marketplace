@@ -1,36 +1,48 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { trpc } from "@/lib/trpc/client";
+import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 
 type YouMayAlsoLikeProps = React.HTMLAttributes<HTMLDivElement> & {
-  /** Current product's category to fetch similar products */
+  /** Current product's category (not used in API, but kept for compatibility) */
   categoryId: string;
-  /** Optionally exclude the current product */
-  excludeProductId?: string;
-  /** How many products to show (defaults to 6) */
+  /** Use this as productId for recommendations */
+  excludeProductId: string;
+  /** How many products to show (defaults to 16) */
   limit?: number;
 };
 
 const YouMayAlsoLike = ({
   className,
-  categoryId,
+  categoryId, // kept for props compatibility
   excludeProductId,
   limit = 16,
   ...props
 }: YouMayAlsoLikeProps) => {
-  // 🔌 Fetch related products from tRPC
-  const { data: products, isLoading, isError } =
-    trpc.brands.products.getRecommendations.useQuery({
-      categoryId,
-      excludeProductId,
-      limit,
-    });
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!excludeProductId) return;
+
+    setLoading(true);
+    getAdvancedRecommendations(excludeProductId)
+      .then((res) => {
+        setProducts(res.slice(0, limit)); // enforce limit
+        setError(null);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError("Failed to load recommendations");
+      })
+      .finally(() => setLoading(false));
+  }, [excludeProductId, limit]);
+
+  if (loading) {
     return (
       <div className={cn("w-full px-4 py-8 text-center", className)} {...props}>
         Loading recommendations…
@@ -38,8 +50,8 @@ const YouMayAlsoLike = ({
     );
   }
 
-  if (isError || !products?.length) {
-    return null; // Hide section if nothing to show
+  if (error || !products.length) {
+    return null;
   }
 
   return (
@@ -60,8 +72,11 @@ const YouMayAlsoLike = ({
             {/* Product Image */}
             <div className="aspect-square bg-gray-100 overflow-hidden">
               <Image
-                src={product.media[0].url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
-                alt={product.title}
+                src={
+                  product?.media?.[0]?.url ??
+                  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                }
+                alt={product?.title}
                 width={300}
                 height={300}
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
@@ -70,12 +85,10 @@ const YouMayAlsoLike = ({
 
             {/* Product Info */}
             <div className="p-4 space-y-3">
-              {/* Product Name */}
               <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[40px]">
                 {product.title}
               </h3>
 
-              {/* Price */}
               <div className="flex items-center gap-2">
                 <span className="text-lg font-semibold text-gray-900">
                   ₹{product.price}
