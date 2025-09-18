@@ -72,6 +72,11 @@ export function ShopCategories() {
                   <Link
                     key={index}
                     href={category.href}
+                      prefetch={false}
+                       onClick={(e) => {
+    e.preventDefault();
+    window.location.href = category.href; // full page reload
+  }}
                     className="group flex flex-col items-center"
                   >
                     <div
@@ -133,6 +138,11 @@ export function ShopCategories() {
                 <Link
                   key={index}
                   href={category.href}
+                    prefetch={false}
+                     onClick={(e) => {
+    e.preventDefault();
+    window.location.href = category.href; // full page reload
+  }}
                   className="group flex flex-col items-center space-y-2 hover:opacity-80 transition-opacity duration-300"
                 >
                   <div className="relative w-full aspect-[3/4] overflow-hidden bg-gray-100 rounded-md">
