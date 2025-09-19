@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
+import { trpc } from "@/lib/trpc/client";
 
 type YouMayAlsoLikeProps = React.HTMLAttributes<HTMLDivElement> & {
   categoryId: string;
@@ -23,33 +23,19 @@ const YouMayAlsoLike = ({
   limit = 500,
   ...props
 }: YouMayAlsoLikeProps) => {
-  const [allProducts, setAllProducts] = useState<any[]>([]);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch recommendations
-  useEffect(() => {
-    if (!excludeProductId) return;
-
-    setLoading(true);
-    getAdvancedRecommendations(excludeProductId)
-      .then((res) => {
-        // slice to limit and update allProducts
-        setAllProducts(res.slice(0, limit));
-        setError(null);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Failed to load recommendations");
-      })
-      .finally(() => setLoading(false));
-  }, [excludeProductId, limit]);
+  // ✅ useQuery handles fetching, loading, and error
+  const { data: allProducts = [], isLoading, error } =
+    trpc.brands.products.getRecommendations.useQuery({
+      productId: excludeProductId,
+    });
 
   // Infinite scroll
   useEffect(() => {
     if (!loaderRef.current) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -60,11 +46,13 @@ const YouMayAlsoLike = ({
       },
       { rootMargin: "200px" }
     );
+
     observer.observe(loaderRef.current);
     return () => observer.disconnect();
   }, [allProducts.length]);
 
-  if (loading) {
+  // Loading state
+  if (isLoading) {
     return (
       <div className={cn("w-full px-4 py-8 text-center", className)} {...props}>
         Loading recommendations…
@@ -72,9 +60,12 @@ const YouMayAlsoLike = ({
     );
   }
 
+  // Error or no products
   if (error || !allProducts.length) return null;
 
-  const visibleProducts = allProducts.slice(0, visibleCount);
+  // Limit products
+  const limitedProducts = allProducts.slice(0, limit);
+  const visibleProducts = limitedProducts.slice(0, visibleCount);
 
   return (
     <div className={cn("w-full px-4 py-8", className)} {...props}>
@@ -82,7 +73,7 @@ const YouMayAlsoLike = ({
         You May Also Like
       </h2>
 
-      {/* ✅ Responsive grid that works well on mobile */}
+      {/* ✅ Responsive grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
         {visibleProducts.map((product) => {
           const sellingPricePaise = product.cost_per_item ?? product.price ?? 0;
@@ -112,7 +103,7 @@ const YouMayAlsoLike = ({
               </div>
 
               <div className="p-4 space-y-2">
-                {/* 🌟 Highlighted Brand */}
+                {/* 🌟 Brand */}
                 {product.brand && (
                   <p className="inline-block bg-indigo-100 text-indigo-700 text-sm font-semibold px-2 py-0.5 rounded">
                     {product.brand}
@@ -139,7 +130,8 @@ const YouMayAlsoLike = ({
         })}
       </div>
 
-      {visibleCount < allProducts.length && (
+      {/* Infinite loader */}
+      {visibleCount < limitedProducts.length && (
         <div ref={loaderRef} className="py-8 text-center text-gray-500">
           Loading more…
         </div>

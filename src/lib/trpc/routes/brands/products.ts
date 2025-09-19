@@ -42,6 +42,7 @@ import { InferenceClient } from "@huggingface/inference";
 import { products, productVariants, returnExchangePolicy, productSpecifications } from "@/lib/db/schema/product";
 import { getEmbedding } from "@/lib/python/sematic-search";
 import { brandMediaItems } from "@/lib/db/schema";
+import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 
 
 const token = process.env.HF_TOKEN;
@@ -1252,69 +1253,24 @@ if (product.variants && product.variants.length > 0) {
             return data;
         }),
 
-  getRecommendations: publicProcedure
-    .input(
-      z.object({
-        categoryId: z.string().uuid(),
-        excludeProductId: z.string().uuid().optional(),
-        limit: z.number().min(1).max(20).default(6),
-      })
-    )
-    .query(async ({ input, ctx }) => {
-      const { categoryId, excludeProductId, limit } = input;
+getRecommendations: publicProcedure
+  .input(
+    z.object({
+      productId: z.string().uuid(),
+    })
+  )
+  .query(async ({ input }) => {
+    // ✅ Call the shared axios helper inside the tRPC resolver
+    try {
+      const products = await getAdvancedRecommendations(input.productId);
 
-      // Build base condition
-      const whereCategory =
-        excludeProductId != null
-          ? and(eq(products.categoryId, categoryId), ne(products.id, excludeProductId))
-          : eq(products.categoryId, categoryId);
-
-      // 1️⃣ Fetch the candidate products
-      const productRows = await ctx.db
-        .select()
-        .from(products)
-        .where(
-          and(
-            whereCategory,
-            eq(products.isActive, true),
-            eq(products.isPublished, true),
-            eq(products.isDeleted, false)
-          )
-        )
-        .limit(limit);
-
-      // 2️⃣ Collect all media IDs safely
-      const allMediaIds: string[] = [];
-      for (const p of productRows) {
-        const productMedia = Array.isArray(p.media) ? (p.media as { id: string }[]) : [];
-        for (const m of productMedia) {
-          if (m?.id) allMediaIds.push(m.id);
-        }
-      }
-
-      // 3️⃣ Fetch the media rows only if we have IDs
-      const mediaRows =
-        allMediaIds.length > 0
-          ? await ctx.db
-              .select()
-              .from(brandMediaItems)
-              .where(inArray(brandMediaItems.id, allMediaIds))
-          : [];
-
-      const mediaMap = new Map(mediaRows.map((m) => [m.id, m]));
-
-      // 4️⃣ Attach URL back onto each product’s media array
-      const productsWithUrls = productRows.map((p) => {
-        const productMedia = Array.isArray(p.media) ? (p.media as { id: string }[]) : [];
-        return {
-          ...p,
-          media: productMedia.map((m) => ({
-            ...m,
-            url: mediaMap.get(m.id)?.url ?? null,
-          })),
-        };
+      // Optionally slice to respect the limit coming from input
+      return products;
+    } catch (err: any) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: err?.message || "Failed to fetch recommendations",
       });
-
-      return productsWithUrls;
-    }),
+    }
+  }),
 });
