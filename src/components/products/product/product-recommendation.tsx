@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
+import { trpc } from "@/lib/trpc/client";
 
 type YouMayAlsoLikeProps = React.HTMLAttributes<HTMLDivElement> & {
   categoryId: string;
@@ -23,33 +23,19 @@ const YouMayAlsoLike = ({
   limit = 500,
   ...props
 }: YouMayAlsoLikeProps) => {
-  const [allProducts, setAllProducts] = useState<any[]>([]);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch recommendations
-  useEffect(() => {
-    if (!excludeProductId) return;
-
-    setLoading(true);
-    getAdvancedRecommendations(excludeProductId)
-      .then((res) => {
-        // slice to limit and update allProducts
-        setAllProducts(res.slice(0, limit));
-        setError(null);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Failed to load recommendations");
-      })
-      .finally(() => setLoading(false));
-  }, [excludeProductId, limit]);
+  // ✅ useQuery handles fetching, loading, and error
+  const { data: allProducts = [], isLoading, error } =
+    trpc.brands.products.getRecommendations.useQuery({
+      productId: excludeProductId,
+    });
 
   // Infinite scroll
   useEffect(() => {
     if (!loaderRef.current) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -60,11 +46,13 @@ const YouMayAlsoLike = ({
       },
       { rootMargin: "200px" }
     );
+
     observer.observe(loaderRef.current);
     return () => observer.disconnect();
   }, [allProducts.length]);
 
-  if (loading) {
+  // Loading state
+  if (isLoading) {
     return (
       <div className={cn("w-full px-4 py-8 text-center", className)} {...props}>
         Loading recommendations…
@@ -72,9 +60,12 @@ const YouMayAlsoLike = ({
     );
   }
 
+  // Error or no products
   if (error || !allProducts.length) return null;
 
-  const visibleProducts = allProducts.slice(0, visibleCount);
+  // Limit products
+  const limitedProducts = allProducts.slice(0, limit);
+  const visibleProducts = limitedProducts.slice(0, visibleCount);
 
   return (
     <div className={cn("w-full px-4 py-8", className)} {...props}>
@@ -82,7 +73,7 @@ const YouMayAlsoLike = ({
         You May Also Like
       </h2>
 
-      {/* ✅ Responsive grid that works well on mobile */}
+      {/* ✅ Responsive grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
         {visibleProducts.map((product) => {
           const sellingPricePaise = product.cost_per_item ?? product.price ?? 0;
@@ -93,53 +84,48 @@ const YouMayAlsoLike = ({
           const mrp = mrpPaise ? convertPaiseToRupees(mrpPaise) : null;
 
           return (
-            <Link
-              key={product.id}
-              href={`/products/${product.slug ?? product.id}`}
-              className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
-                <Image
-                  src={
-                    product?.media?.[0]?.url ??
-                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                  }
-                  alt={product?.title ?? "Product Image"}
-                  width={400}
-                  height={400}
-                  className="max-h-full max-w-full object-contain p-4"
-                />
-              </div>
+<Link
+  key={product.id}
+  href={`/products/${product.slug ?? product.id}`}
+  className="bg-stone-50 rounded-lg shadow-sm border border-stone-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
+>
+  <div className="relative w-full aspect-square bg-white flex items-center justify-center overflow-hidden">
+    <Image
+      src={product?.media?.[0]?.url ?? "fallback-image"}
+      alt={product?.title ?? "Product Image"}
+      width={400}
+      height={400}
+      className="max-h-full max-w-full object-contain p-4"
+    />
+  </div>
 
-              <div className="p-4 space-y-2">
-                {/* 🌟 Highlighted Brand */}
-                {product.brand && (
-                  <p className="inline-block bg-indigo-100 text-indigo-700 text-sm font-semibold px-2 py-0.5 rounded">
-                    {product.brand}
-                  </p>
-                )}
+  <div className="p-4 space-y-2">
+    {product.brand && (
+      <p className="inline-block bg-stone-200 text-stone-700 text-xs font-medium px-2 py-0.5 rounded-full">
+        {product.brand}
+      </p>
+    )}
 
-                <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[40px]">
-                  {product.title}
-                </h3>
+    <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[40px]">
+      {product.title}
+    </h3>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold text-gray-900">
-                    ₹{sellingPrice}
-                  </span>
-                  {mrp && mrp > sellingPrice && (
-                    <span className="text-sm text-gray-500 line-through">
-                      ₹{mrp}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
+    <div className="flex items-center gap-2">
+      <span className="text-lg font-semibold text-gray-900">
+        ₹{sellingPrice}
+      </span>
+      {mrp && mrp > sellingPrice && (
+        <span className="text-sm text-gray-500 line-through">₹{mrp}</span>
+      )}
+    </div>
+  </div>
+</Link>
           );
         })}
       </div>
 
-      {visibleCount < allProducts.length && (
+      {/* Infinite loader */}
+      {visibleCount < limitedProducts.length && (
         <div ref={loaderRef} className="py-8 text-center text-gray-500">
           Loading more…
         </div>
