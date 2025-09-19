@@ -70,7 +70,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
       </div>
 
 {/* ------------------- MOBILE VIEW ------------------- */}
-<div className="md:hidden px-6">
+<div className="md:hidden px-2">
   <Carousel
     opts={{
       align: "start",
@@ -86,18 +86,34 @@ export function Landing({ className, banners, ...props }: PageProps) {
         inner: "size-full ml-0",
       }}
     >
+
       {banners.map((item, index) => (
         <CarouselItem key={index} className="px-0 py-0">
           <Link href={item.url || "/shop"}>
-            <div className="relative w-full overflow-hidden bg-gray-100 rounded-2xl">
+            <div className="relative w-full  h-[280px] overflow-hidden bg-gray-100 rounded-2xl">
               <Image
                 src={item.imageUrl}
                 alt={item.title}
-                width={1440}
-                height={550}
-                className="w-full h-auto object-contain"
+                fill
+                className="w-full h-full object-fill"
                 priority={index === 0}
               />
+
+    <div className="absolute inset-0 flex flex-col justify-center items-start text-left px-4">
+    <div className="text-white text-xl font-serif font-medium drop-shadow-md leading-snug">
+        <div>Autumn</div>
+        <div>Collection</div>
+        <div>2025</div>
+      </div>
+
+      <Link
+        href={item.url || "/shop"}
+        className="bg-[#699966] hover:bg-green-700 text-white text-xs font-medium px-1.5 py-0.5 transition"
+      >
+        &gt; Explore Now
+      </Link>
+    </div>
+        
             </div>
           </Link>
         </CarouselItem>
@@ -105,7 +121,6 @@ export function Landing({ className, banners, ...props }: PageProps) {
     </CarouselContent>
   </Carousel>
 </div>
-
 
     </section>
   );

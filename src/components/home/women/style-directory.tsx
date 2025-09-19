@@ -23,14 +23,15 @@ export function StyleDirectory({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-4 sm:py-6 bg-[#F4F0EC]",
+                "flex w-full justify-center py-1 sm:py-6 bg-white sm:bg-[#F4F0EC]",
                 className
             )}
             {...props}
         >
-            <div className="w-full space-y-6 max-w-screen-2xl mx-auto">
+            <div className="w-full space-y-2 sm:space-y-6 max-w-screen-2xl mx-auto">
                 {/* Title */}
-                <h4 className="text-center text-lg md:text-3xl font-normal sm:font-bold tracking-wide text-gray-800 px-4">
+                <h4 className="text-center text-lg md:text-3xl font-serif sm:font-sans font-normal sm:font-bold tracking-wide text-gray-800 
+                 px-1 sm:px-4">
                     {titleData?.title || "Style Directory"}
                 </h4>
 
@@ -49,10 +50,10 @@ export function StyleDirectory({
                                 <CarouselItem key={index} className="pl-1 basis-[20%] min-w-[80px]">
                                     <Link href={category.url || "/shop"} className="block">
                                         <div className="flex flex-col items-center p-1">
-                                            <div className="overflow-hidden w-full bg-gray-100 rounded-t-lg">
+                                            <div className="overflow-hidden w-full bg-[#EDCCBE] rounded-t-xl">
                                                 <Image
                                                     src={category.imageUrl}
-      // @ts-ignore
+      // @ts-ignore                                                                 
                                                     alt={category.title || "Category"}
                                                     width={186}
                                                     height={204}

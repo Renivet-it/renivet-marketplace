@@ -16,9 +16,11 @@ interface PageProps {
 export function WomenSkincare({ className, banners }: PageProps) {
     return (
         <section
-            className={cn("w-full", className)}
-            style={{ backgroundColor: "#f4f0ec" }}
-        >
+        className={cn(
+          "w-full py-2 md:py-12 bg-white md:bg-[#f4f0ec]",
+          className
+        )}
+      >
             <Carousel
                 opts={{
                     align: "start",
@@ -38,17 +40,17 @@ export function WomenSkincare({ className, banners }: PageProps) {
                     }}
                 >
                     {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full px-4 sm:px-12 py-6 lg:px-20">
+                        <CarouselItem key={index} className="h-full px-2 sm:px-4 sm:px-12 py-0 lg:px-20">
                             <div className="relative size-full rounded-3xl overflow-hidden">
                                 <Image
                                     src={item.imageUrl}
                                     alt={item.title}
                                     fill
-                                    className="object-cover brightness-75"
+                                    className="object-fill sm:object-cover brightness-75"
                                     priority={index === 0}
                                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 100vw"
                                 />
-                                <div className="absolute inset-0 flex items-center justify-center p-6">
+                                <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-6">
                                     <Button
                                         size="lg"
                                         className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-6"
