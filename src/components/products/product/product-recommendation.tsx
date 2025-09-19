@@ -76,21 +76,21 @@ const YouMayAlsoLike = ({
             <Link
               key={product.id}
               href={`/products/${product.slug ?? product.id}`}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
+              className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
             >
               {/* Product Image */}
-              <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
-                <Image
-                  src={
-                    product?.media?.[0]?.url ??
-                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                  }
-                  alt={product?.title ?? "Product Image"}
-                  width={300}
-                  height={300}
-                  className="w-full h-full object-contain hover:scale-105 transition-transform duration-200"
-                />
-              </div>
+<div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+  <Image
+    src={
+      product?.media?.[0]?.url ??
+      "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+    }
+    alt={product?.title ?? "Product Image"}
+    width={400}
+    height={400}
+    className="max-h-full max-w-full object-contain p-4"
+  />
+</div>
 
               {/* Product Info */}
               <div className="p-4 space-y-3">
