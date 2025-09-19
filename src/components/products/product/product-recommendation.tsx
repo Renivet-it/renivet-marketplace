@@ -1,38 +1,43 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 
 type YouMayAlsoLikeProps = React.HTMLAttributes<HTMLDivElement> & {
-  /** Current product's category (not used in API, but kept for compatibility) */
   categoryId: string;
-  /** Use this as productId for recommendations */
   excludeProductId: string;
-  /** How many products to show (defaults to 16) */
   limit?: number;
 };
 
+// 🔑 Show 30 products on first render
+const INITIAL_VISIBLE = 30;
+const BATCH_SIZE = 20;
+
 const YouMayAlsoLike = ({
   className,
-  categoryId, // kept for props compatibility
+  categoryId,
   excludeProductId,
-  limit = 16,
+  limit = 500,
   ...props
 }: YouMayAlsoLikeProps) => {
-  const [products, setProducts] = useState<any[]>([]);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loaderRef = useRef<HTMLDivElement | null>(null);
 
+  // Fetch recommendations
   useEffect(() => {
     if (!excludeProductId) return;
 
     setLoading(true);
     getAdvancedRecommendations(excludeProductId)
       .then((res) => {
-        setProducts(res.slice(0, limit));
+        // slice to limit and update allProducts
+        setAllProducts(res.slice(0, limit));
         setError(null);
       })
       .catch((err) => {
@@ -42,6 +47,23 @@ const YouMayAlsoLike = ({
       .finally(() => setLoading(false));
   }, [excludeProductId, limit]);
 
+  // Infinite scroll
+  useEffect(() => {
+    if (!loaderRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) =>
+            Math.min(prev + BATCH_SIZE, allProducts.length)
+          );
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [allProducts.length]);
+
   if (loading) {
     return (
       <div className={cn("w-full px-4 py-8 text-center", className)} {...props}>
@@ -50,9 +72,9 @@ const YouMayAlsoLike = ({
     );
   }
 
-  if (error || !products.length) {
-    return null;
-  }
+  if (error || !allProducts.length) return null;
+
+  const visibleProducts = allProducts.slice(0, visibleCount);
 
   return (
     <div className={cn("w-full px-4 py-8", className)} {...props}>
@@ -60,14 +82,12 @@ const YouMayAlsoLike = ({
         You May Also Like
       </h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-        {products.map((product) => {
-          // Safely get prices in paise and convert
-          const sellingPricePaise =
-            product.cost_per_item ??
-            product.price ??
-            0; // cost_per_item preferred, fallback to price
-          const mrpPaise = product.compare_at_price ?? product.compareAtPrice ?? 0;
+      {/* ✅ Responsive grid that works well on mobile */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
+        {visibleProducts.map((product) => {
+          const sellingPricePaise = product.cost_per_item ?? product.price ?? 0;
+          const mrpPaise =
+            product.compare_at_price ?? product.compareAtPrice ?? 0;
 
           const sellingPrice = convertPaiseToRupees(sellingPricePaise);
           const mrp = mrpPaise ? convertPaiseToRupees(mrpPaise) : null;
@@ -78,22 +98,27 @@ const YouMayAlsoLike = ({
               href={`/products/${product.slug ?? product.id}`}
               className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
             >
-              {/* Product Image */}
-<div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
-  <Image
-    src={
-      product?.media?.[0]?.url ??
-      "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-    }
-    alt={product?.title ?? "Product Image"}
-    width={400}
-    height={400}
-    className="max-h-full max-w-full object-contain p-4"
-  />
-</div>
+              <div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+                <Image
+                  src={
+                    product?.media?.[0]?.url ??
+                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                  }
+                  alt={product?.title ?? "Product Image"}
+                  width={400}
+                  height={400}
+                  className="max-h-full max-w-full object-contain p-4"
+                />
+              </div>
 
-              {/* Product Info */}
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-2">
+                {/* 🌟 Highlighted Brand */}
+                {product.brand && (
+                  <p className="inline-block bg-indigo-100 text-indigo-700 text-sm font-semibold px-2 py-0.5 rounded">
+                    {product.brand}
+                  </p>
+                )}
+
                 <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[40px]">
                   {product.title}
                 </h3>
@@ -113,6 +138,12 @@ const YouMayAlsoLike = ({
           );
         })}
       </div>
+
+      {visibleCount < allProducts.length && (
+        <div ref={loaderRef} className="py-8 text-center text-gray-500">
+          Loading more…
+        </div>
+      )}
     </div>
   );
 };
