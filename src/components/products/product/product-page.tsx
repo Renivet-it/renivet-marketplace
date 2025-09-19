@@ -26,6 +26,8 @@ import { useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductContent } from "./product-content";
 import { ProductDetails } from "./product-detais";
+import YouMayAlsoLike from "./product-recommendation";
+import { Separator } from "@/components/ui/separator";
 
 interface PageProps extends GenericProps {
     product: ProductWithBrand;
@@ -248,7 +250,12 @@ export function ProductPage({
 </div>
 
             </div>
-
+             <Separator />
+   <YouMayAlsoLike
+        categoryId={product.categoryId}
+        excludeProductId={product.id}
+        className="mt-12"
+      />
             {/* Modal */}
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogContent className="p-0">
