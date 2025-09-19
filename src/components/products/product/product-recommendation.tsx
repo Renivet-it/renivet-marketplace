@@ -84,48 +84,42 @@ const YouMayAlsoLike = ({
           const mrp = mrpPaise ? convertPaiseToRupees(mrpPaise) : null;
 
           return (
-            <Link
-              key={product.id}
-              href={`/products/${product.slug ?? product.id}`}
-              className="bg-gray-100 rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
-                <Image
-                  src={
-                    product?.media?.[0]?.url ??
-                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                  }
-                  alt={product?.title ?? "Product Image"}
-                  width={400}
-                  height={400}
-                  className="max-h-full max-w-full object-contain p-4"
-                />
-              </div>
+<Link
+  key={product.id}
+  href={`/products/${product.slug ?? product.id}`}
+  className="bg-stone-50 rounded-lg shadow-sm border border-stone-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
+>
+  <div className="relative w-full aspect-square bg-white flex items-center justify-center overflow-hidden">
+    <Image
+      src={product?.media?.[0]?.url ?? "fallback-image"}
+      alt={product?.title ?? "Product Image"}
+      width={400}
+      height={400}
+      className="max-h-full max-w-full object-contain p-4"
+    />
+  </div>
 
-              <div className="p-4 space-y-2">
-                {/* 🌟 Brand */}
-                {product.brand && (
-                  <p className="inline-block bg-indigo-100 text-indigo-700 text-sm font-semibold px-2 py-0.5 rounded">
-                    {product.brand}
-                  </p>
-                )}
+  <div className="p-4 space-y-2">
+    {product.brand && (
+      <p className="inline-block bg-stone-200 text-stone-700 text-xs font-medium px-2 py-0.5 rounded-full">
+        {product.brand}
+      </p>
+    )}
 
-                <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[40px]">
-                  {product.title}
-                </h3>
+    <h3 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[40px]">
+      {product.title}
+    </h3>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold text-gray-900">
-                    ₹{sellingPrice}
-                  </span>
-                  {mrp && mrp > sellingPrice && (
-                    <span className="text-sm text-gray-500 line-through">
-                      ₹{mrp}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
+    <div className="flex items-center gap-2">
+      <span className="text-lg font-semibold text-gray-900">
+        ₹{sellingPrice}
+      </span>
+      {mrp && mrp > sellingPrice && (
+        <span className="text-sm text-gray-500 line-through">₹{mrp}</span>
+      )}
+    </div>
+  </div>
+</Link>
           );
         })}
       </div>
