@@ -40,7 +40,7 @@ export function MiddleAnimationSection({
               delay: 5000,
             }),
           ]}
-          className="w-full aspect-[3/1] bg-[#F4F0EC]"
+          className="w-full aspect-[3/1] bg-gray-50 sm:bg-[#F4F0EC]"
         >
           <CarouselContent
             classNames={{
@@ -105,7 +105,7 @@ function FadeSlider({ banners }: { banners: Banner[] }) {
           alt={item.title}
           fill
           className={cn(
-            "absolute inset-0 object-contain transition-opacity duration-1000 ease-in-out",
+            "absolute inset-0 object-fill transition-opacity duration-1000 ease-in-out",
             i === index ? "opacity-100" : "opacity-0"
           )}
           priority={i === 0}

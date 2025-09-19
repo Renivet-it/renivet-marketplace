@@ -43,12 +43,14 @@ export function ExploreCategories({
 
   return (
     <section
-      className={cn("flex w-full justify-center py-4 sm:py-12 bg-[#F4F0EC]", className)}
+      className={cn("flex w-full justify-center py-2 sm:py-12 bg-white sm:bg-[#F4F0EC]", className)}
       {...props}
     >
       <div className="max-w-screen-2xl mx-auto w-full relative">
         {/* Title */}
-        <h2 className="text-center text-lg sm:text-3xl font-normal sm:font-bold text-gray-900 mb-4 sm:mb-8 px-4">
+        <h2 className="text-center text-lg sm:text-3xl font-normal sm:font-bold text-gray-900 mb-2 sm:mb-8 px-1
+        font-serif sm:font-[inherit]
+        ">
           {titleData?.title || "Explore Categories"}
         </h2>
 
@@ -116,7 +118,7 @@ export function ExploreCategories({
         </div>
 
         {/* ------------------- MOBILE VIEW ------------------- */}
-        <div className="sm:hidden px-4">
+        <div className="sm:hidden px-1">
           {/* Scrollable Categories Row (Mobile) */}
           <div className="flex overflow-x-auto gap-4 scrollbar-hide">
             {shopByCategories.map((category, index) => (
@@ -125,24 +127,28 @@ export function ExploreCategories({
                 href={category.url || "/shop"}
                 className="flex-shrink-0 group text-center"
               >
-                <div className="flex flex-col w-[120px]">
-                  {/* Image only (no border) */}
-                  <div className="relative h-[130px] w-full overflow-hidden rounded-lg">
-                    <Image
-                      src={category.imageUrl}
-                      alt={category.title || "Category"}
-                      width={120}
-                      height={110}
-                      quality={90}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
 
-                  {/* Text below image */}
-                  <p className="mt-2 font-normal text-gray-900 text-xs text-center uppercase tracking-wide">
-                    {category.title || "CATEGORY"}
-                  </p>
-                </div>
+
+        <div className="flex flex-col w-[120px] border border-gray-200 p-2 bg-white">
+          {/* Image */}
+          <div className="relative h-[130px] w-full overflow-hidden rounded-md">
+            <Image
+              src={category.imageUrl}
+              alt={category.title || "Category"}
+              width={120}
+              height={110}
+              quality={90}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* Name */}
+          <p className="mt-2 font-normal text-gray-600 text-[11px] text-center bg-gray-50 uppercase tracking-wide">
+            {category.title || "CATEGORY"}
+          </p>
+        </div>
+
+
               </Link>
             ))}
           </div>

@@ -36,11 +36,15 @@ export function TopCollection({
 
   return (
     <section
-      className={cn("w-full py-2 md:py-12", className)}
-      style={{ backgroundColor: "#f4f0ec" }}
-    >
+  className={cn(
+    "w-full py-2 md:py-12 bg-[#fcfbfa] md:bg-[#f4f0ec]",
+    className
+  )}
+>
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-lg md:text-3xl lg:text-4xl font-normal sm:font-bold text-left text-gray-900 mb-4 md:mb-12">
+        <h1 className="text-lg md:text-3xl lg:text-4xl font-normal sm:font-bold text-left text-gray-900 mb-4 md:mb-12
+        font-serif sm:font-sans"
+        >
           {title}
         </h1>
 
@@ -87,7 +91,8 @@ export function TopCollection({
 function CollectionCard({ collection }: { collection: CollectionItem }) {
   return (
     <div
-      className="group relative w-full rounded-xl md:rounded-2xl overflow-hidden shadow-sm transition-all duration-300 p-4 md:p-6 flex flex-col items-start text-left space-y-0 md:space-y-4"
+      className="group relative w-full rounded-xl md:rounded-2xl overflow-hidden shadow-sm transition-all 
+      duration-300 p-0 md:p-6 flex flex-col items-start text-left space-y-0 md:space-y-4"
       style={{ backgroundColor: "#f4f0ec" }}
     >
       {/* Context/Brand Label */}

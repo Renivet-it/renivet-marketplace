@@ -14,9 +14,10 @@ export function DiscountOffer({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <section className="w-full sm:pb-10 pb-4 bg-[#FAF9F7] sm:bg-[#F4F0EC]">
+    <section className="w-full sm:pb-10 pb-0 bg-white sm:bg-[#F4F0EC]">
+      
       {/* ---------- MOBILE VIEW ---------- */}
-      <div className="sm:hidden px-5 flex justify-center pt-4">
+      <div className="sm:hidden px-5 flex justify-center pt-1">
         <div className="w-full">
           <Carousel
             opts={{ align: "start", loop: true }}
@@ -25,32 +26,30 @@ export function DiscountOffer({ advertisements }: PageProps) {
           >
             <CarouselContent className="ml-0">
               {advertisements.map((ad, index) => (
-                <CarouselItem key={ad.id} className="p-0">
-                  <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-md">
-                    {/* Image is clickable. No button. */}
-                    {ad.url ? (
-                      <Link href={ad.url} target="_blank" className="block size-full">
-                        <Image
-                          src={ad.imageUrl}
-                          alt={ad.title}
-                          width={1440}
-                          height={305}
-                          className="size-full object-cover brightness-100"
-                          priority={index === 0}
-                        />
-                      </Link>
-                    ) : (
-                      <Image
-                        src={ad.imageUrl}
-                        alt={ad.title}
-                        width={1440}
-                        height={305}
-                        className="size-full object-cover brightness-100"
-                        priority={index === 0}
-                      />
-                    )}
-                  </div>
-                </CarouselItem>
+               <CarouselItem key={ad.id} className="p-0">
+               <div className="relative w-full h-[180px] rounded-t-xl overflow-hidden shadow-md">
+                 {/* Image */}
+                 <Image
+                   src={ad.imageUrl}
+                   alt={ad.title}
+                   fill
+                   className="object-fill z-0"
+                   priority={index === 0}
+                 />
+             
+                 {/* Shop Now button as link */}
+                 {ad.url && (
+                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                     <Link href={ad.url} target="_blank">
+                       <button className="bg-[#faf4d9] text-black text-xs font-medium px-3 py-1 shadow-md transition">
+                         &gt; Shop Now
+                       </button>
+                     </Link>
+                   </div>
+                 )}
+               </div>
+             </CarouselItem>
+             
               ))}
             </CarouselContent>
           </Carousel>

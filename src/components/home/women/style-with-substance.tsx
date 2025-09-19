@@ -63,11 +63,13 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
     >
       {/* Header */}
       <div className="flex justify-between items-center mb-2 sm:mb-6">
-        <h2 className="text-lg sm:text-2xl font-normal sm:font-bold text-black">Style, With Substance</h2>
-        <Link href="/products">
-          <Button className="bg-white text-black sm:bg-gray-800 sm:text-white px-6 py-2 rounded-md hover:bg-gray-100 sm:hover:bg-gray-700 text-sm">
+        <h2 className="text-lg sm:text-2xl font-normal sm:font-bold text-black
+             font-serif sm:font-[inherit] "
+        >Style, With Substance</h2>
+        <Link href="/products"
+        className="bg-gray-100 text-black sm:bg-gray-800 sm:text-white px-0.5 py-0
+             font-serif sm:font-sans hover:bg-gray-100 sm:hover:bg-gray-700 text-sm">
             Show all
-          </Button>
         </Link>
       </div>
 
@@ -107,7 +109,7 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
             <Link
               key={item.product.id}
               href={`/products/${item.product.slug}`}
-              className="min-w-[60%] h-[90px] bg-white rounded-lg shadow-sm flex flex-row flex-shrink-0"
+              className="min-w-[180px] h-[65px] bg-white rounded-lg shadow-sm flex flex-row flex-shrink-0"
             >
               <div className="w-[100px] h-full relative flex-shrink-0">
                 <Image
