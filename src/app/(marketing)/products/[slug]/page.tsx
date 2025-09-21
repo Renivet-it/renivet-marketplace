@@ -1,5 +1,5 @@
 import { GeneralShell } from "@/components/globals/layouts";
-import { ProductPage, ProductPassport } from "@/components/products/product";
+import { ProductPage } from "@/components/products/product";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BRAND_EVENTS } from "@/config/brand";
@@ -22,6 +22,9 @@ interface PageProps {
     }>;
 }
 
+// ------------------
+// 🔹 generateMetadata with OG + product meta tags
+// ------------------
 export async function generateMetadata({
     params,
 }: PageProps): Promise<Metadata> {
@@ -38,6 +41,16 @@ export async function generateMetadata({
             description: "The requested product was not found.",
         };
 
+    const retailerItemId =
+        existingProduct.nativeSku ?? existingProduct.sku ?? existingProduct.id;
+    const priceInRupees = existingProduct.price
+        ? (existingProduct.price / 100).toFixed(2)
+        : "0.00";
+    const availability =
+        (existingProduct.quantity ?? 0) > 0 ? "in stock" : "out of stock";
+    const image = existingProduct.media?.[0]?.mediaItem?.url ?? "";
+    const url = getAbsoluteURL(`/products/${slug}`);
+
     return {
         title: !!existingProduct.metaTitle?.length
             ? existingProduct.metaTitle
@@ -52,9 +65,9 @@ export async function generateMetadata({
             },
         ],
         openGraph: {
-            type: "website",
+            type: "website", // changed from product to website
             locale: "en_US",
-            url: getAbsoluteURL(`/products/${slug}`),
+            url,
             title: !!existingProduct.metaTitle?.length
                 ? existingProduct.metaTitle
                 : `${existingProduct.title} by ${existingProduct.brand.name}`,
@@ -65,7 +78,7 @@ export async function generateMetadata({
             siteName: siteConfig.name,
             images: [
                 {
-                    url: existingProduct.media?.[0]?.mediaItem?.url ?? "",
+                    url: image,
                     alt:
                         existingProduct.media?.[0]?.mediaItem?.alt ??
                         existingProduct.title,
@@ -85,7 +98,7 @@ export async function generateMetadata({
                     : existingProduct.description) ?? "",
             images: [
                 {
-                    url: existingProduct.media?.[0]?.mediaItem?.url ?? "",
+                    url: image,
                     alt:
                         existingProduct.media?.[0]?.mediaItem?.alt ??
                         existingProduct.title,
@@ -94,9 +107,21 @@ export async function generateMetadata({
                 },
             ],
         },
+        // 🔹 Meta requires these product tags
+        other: {
+            "product:retailer_item_id": retailerItemId,
+            "product:availability": availability,
+            "product:price:amount": priceInRupees,
+            "product:price:currency": "INR",
+            "product:brand": existingProduct.brand?.name ?? siteConfig.name,
+            "product:condition": "new",
+        },
     };
 }
 
+// ------------------
+// 🔹 Main Page
+// ------------------
 export default function Page({ params }: PageProps) {
     return (
         <GeneralShell>
@@ -107,6 +132,9 @@ export default function Page({ params }: PageProps) {
     );
 }
 
+// ------------------
+// 🔹 ProductFetch (server)
+// ------------------
 async function ProductFetch({ params }: PageProps) {
     const { slug } = await params;
     const { userId } = await auth();
@@ -133,6 +161,35 @@ async function ProductFetch({ params }: PageProps) {
         },
     });
 
+    const retailerItemId =
+        existingProduct.nativeSku ?? existingProduct.sku ?? existingProduct.id;
+    const priceInRupees = existingProduct.price
+        ? (existingProduct.price / 100).toFixed(2)
+        : "0.00";
+
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        sku: retailerItemId,
+        name: existingProduct.title,
+        image: [existingProduct.media?.[0]?.mediaItem?.url ?? ""],
+        description: existingProduct.description ?? "",
+        brand: {
+            "@type": "Brand",
+            name: existingProduct.brand?.name ?? siteConfig.name,
+        },
+        offers: {
+            "@type": "Offer",
+            price: priceInRupees,
+            priceCurrency: "INR",
+            availability:
+                (existingProduct.quantity ?? 0) > 0
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/OutOfStock",
+            url: getAbsoluteURL(`/products/${slug}`),
+        },
+    };
+
     return (
         <>
             <ProductPage
@@ -141,23 +198,25 @@ async function ProductFetch({ params }: PageProps) {
                 initialCart={userCart}
                 userId={userId ?? undefined}
             />
-
             <Separator />
-
-            {/* <ProductPassport product={existingProduct} /> */}
+            {/* Inject JSON-LD schema */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
         </>
     );
 }
 
+// ------------------
+// 🔹 Loading skeleton
+// ------------------
 function ProductSkeleton() {
     return (
         <div className="flex flex-col gap-5 md:flex-row">
             <div className="grid basis-3/5 grid-cols-1 gap-5 md:grid-cols-2">
                 {[...Array(5)].map((_, i) => (
-                    <Skeleton
-                        key={i}
-                        className="aspect-[3/4] overflow-hidden"
-                    />
+                    <Skeleton key={i} className="aspect-[3/4] overflow-hidden" />
                 ))}
             </div>
 
@@ -170,19 +229,14 @@ function ProductSkeleton() {
                             {[...Array(2)].map((_, i) => (
                                 <Skeleton
                                     key={i}
-                                    className={cn(
-                                        "h-10 w-1/3",
-                                        i === 0 && "w-full"
-                                    )}
+                                    className={cn("h-10 w-1/3", i === 0 && "w-full")}
                                 />
                             ))}
                         </div>
-
                         <div>
                             <Skeleton className="size-8" />
                         </div>
                     </div>
-
                     <Skeleton className="h-7 w-24" />
                 </div>
 
@@ -195,7 +249,6 @@ function ProductSkeleton() {
 
                 <div className="space-y-4">
                     <Skeleton className="h-6 w-28" />
-
                     <div className="flex flex-wrap gap-2">
                         {[...Array(3)].map((_, i) => (
                             <div
@@ -203,7 +256,6 @@ function ProductSkeleton() {
                                 className="flex flex-col items-center gap-2"
                             >
                                 <Skeleton className="size-12 rounded-full" />
-
                                 <Skeleton className="h-4 w-10" />
                             </div>
                         ))}
@@ -214,13 +266,9 @@ function ProductSkeleton() {
 
                 <div className="space-y-4">
                     <Skeleton className="h-6 w-32" />
-
                     <div className="flex flex-wrap gap-2">
                         {[...Array(5)].map((_, i) => (
-                            <Skeleton
-                                key={i}
-                                className="size-12 rounded-full"
-                            />
+                            <Skeleton key={i} className="size-12 rounded-full" />
                         ))}
                     </div>
                 </div>
@@ -241,7 +289,6 @@ function ProductSkeleton() {
                             />
                         ))}
                     </div>
-
                     <div className="space-y-1">
                         {[...Array(4)].map((_, i) => (
                             <Skeleton
