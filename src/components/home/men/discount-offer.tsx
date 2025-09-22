@@ -14,9 +14,9 @@ export function DiscountOffer({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <section className="w-full sm:pb-10 pb-4 bg-[#FAF9F7] sm:bg-[#F4F0EC]">
+    <section className="w-full sm:pb-10 pb-2 bg-[#FAF9F7] sm:bg-[#F4F0EC]">
       {/* ---------- MOBILE VIEW ---------- */}
-      <div className="sm:hidden px-5 flex justify-center pt-4">
+      <div className="sm:hidden px-2 flex justify-center pt-2">
         <div className="w-full">
           <Carousel
             opts={{ align: "start", loop: true }}
@@ -26,7 +26,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
             <CarouselContent className="ml-0">
               {advertisements.map((ad, index) => (
                 <CarouselItem key={ad.id} className="p-0">
-                  <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-md">
+                  <div className="relative w-full h-[180px] rounded-t-xl overflow-hidden shadow-md">
                     {ad.url ? (
                       <Link href={ad.url} target="_blank" className="block size-full">
                         <Image
@@ -42,9 +42,8 @@ export function DiscountOffer({ advertisements }: PageProps) {
                       <Image
                         src={ad.imageUrl}
                         alt={ad.title}
-                        width={1440}
-                        height={305}
-                        className="size-full object-cover brightness-100"
+                        fill
+                        className="object-fill z-0"
                         priority={index === 0}
                       />
                     )}

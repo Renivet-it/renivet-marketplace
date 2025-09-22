@@ -27,51 +27,55 @@ export function ElevateYourLooks({
   return (
     <section
       className={cn(
-        "flex w-full justify-center py-2 sm:py-12 bg-[#F4F0EC]",
+        "flex w-full justify-center py-2 sm:py-12 bg-white sm:bg-[#F4F0EC]",
         className
       )}
       {...props}
     >
-      <div className="w-full max-w-screen-2xl mx-auto px-4 relative">
+      <div className="w-full max-w-screen-2xl mx-auto px-2 sm:px-4 relative">
         {/* Title */}
-        <h4 className="text-center text-lg sm:text-3xl font-normal sm:font-bold text-gray-900 mb-4 sm:mb-12">
+        <h4 className="text-center text-lg sm:text-3xl font-normal sm:font-bold text-gray-900 mb-1 sm:mb-12
+         font-serif sm:font-sans">
           {title}
         </h4>
 
-      {/* =====================  MOBILE VIEW  ===================== */}
-<div className="sm:hidden px-2">
-  <div className="grid grid-cols-3 gap-4">
-    {shopByCategories.map((category, index) => (
-      <Link
-        key={index}
-        href={category.url || "/shop"}
-        className="group flex flex-col items-center w-full"
-      >
-        {/* Card container */}
-        <div className="flex flex-col items-center w-full h-full rounded-xl border border-gray-200 bg-white shadow-sm p-2">
-          {/* Image */}
-          <div className="w-full h-20 flex items-center justify-center overflow-hidden">
-            <Image
-              src={category.imageUrl}
-              alt={category.title || "Category"}
-              width={80}
-              height={80}
-              quality={100}
-              className="object-contain max-h-20"
-            />
-          </div>
+        {/* =====================  MOBILE VIEW  ===================== */}
+        <div className="sm:hidden relative">
+          <Carousel
+            opts={{ align: "start", loop: true, slidesToScroll: "auto" }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-1">
+              {shopByCategories.map((category, index) => (
+                <CarouselItem
+                  key={index}
+                  className="px-1 basis-1/4 min-w-0"
+                >
+                  <Link
+                    href={category.url || "/shop"}
+                    className="group flex flex-col items-center w-full"
+                  >
+                    {/* circular image container */}
+                    <div className="mx-auto mb-1 w-[70px] h-[70px] rounded-full overflow-hidden relative shrink-0">
+                      <Image
+                        src={category.imageUrl}
+                        alt={category.title || "Category"}
+                        fill
+                        sizes="70px"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    </div>
 
-          {/* Oval title */}
-          <div className="mt-2 px-3 py-1 rounded-full bg-gray-200">
-            <p className="text-xs font-medium text-gray-700 text-center">
-              {category.title || "Category"}
-            </p>
-          </div>
+                    {/* Title text */}
+                    <p className="text-[10px] font-normal uppercase text-gray-800 text-center">
+                      {category.title || "Category"}
+                    </p>
+                  </Link>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
         </div>
-      </Link>
-    ))}
-  </div>
-</div>
 
         {/* =====================  DESKTOP VIEW  ===================== */}
         <div className="hidden sm:block px-2 relative">

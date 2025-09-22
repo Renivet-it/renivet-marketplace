@@ -62,75 +62,93 @@ export function ProductGrid({ className, products, title = "Little Reinivet", ..
           </Link>
         </div>
 
-        {/* Mobile: Horizontal scroll with 3 cards in view */}
-        <div className="md:hidden overflow-x-auto pb-2 -mx-2 px-2">
-          <div className="flex space-x-3 w-max">
-            {products.slice(0, 3).map(({ product }) => {
-              const {
-                price,
-                originalPrice,
-                rating,
-                reviews,
-                status,
-                isBestSeller,
-                isSolo
-              } = getProductData(product);
+        {/* ---------- MOBILE VIEW: 2-COLUMN GRID ---------- */}
+<div className="md:hidden px-4">
+  <div className="grid grid-cols-2 gap-3">
+    {products.slice(0, 6).map(({ product }) => {
+      const {
+        price,
+        originalPrice,
+        rating,
+        reviews,
+        status,
+        isBestSeller,
+        isSolo,
+      } = getProductData(product);
 
-              return (
-                <div key={product.id} className="w-[140px] flex-shrink-0">
-                  <Card className="border border-gray-200 rounded-lg shadow-xs h-full flex flex-col">
-                    <CardHeader className="p-0 relative aspect-square">
-                      <Link href={`/products/${product.slug}`} className="block h-full">
-                        <div className="relative w-full h-full">
-                          <Image
-                            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
-                            alt={product.title}
-                            fill
-                            className="object-cover"
-                            sizes="140px"
-                          />
-                        </div>
-                      </Link>
-                      {isSolo && (
-                        <div className="absolute top-1 left-1 bg-white text-[8px] font-bold px-1 py-0.5 rounded-xs">
-                          SOLO
-                        </div>
-                      )}
-                    </CardHeader>
+      return (
+        <Link key={product.id} href={`/products/${product.slug}`} className="block">
+          <Card className="overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200 hover:shadow-md transition">
+            <CardHeader className="p-0 relative">
+              <div className="relative w-full h-40">
+                <Image
+                  src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                  alt={product.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width:768px) 100vw, 50vw"
+                />
+              </div>
 
-                    <CardContent className="p-2 flex-grow flex flex-col">
-                      <div className="mb-1">
-                        <p className="text-[10px] text-gray-500 truncate">{product.brand.name}</p>
-                        <h3 className="text-xs font-medium text-gray-900 line-clamp-2 leading-tight">
-                          {product.title}
-                        </h3>
-                      </div>
-
-                      <div className="mt-auto">
-                        <div className="text-xs font-bold text-gray-900">
-            {/* @ts-ignore */}
-
-                          ₹{typeof price === "number" ? price.toFixed(0) : price}
-                        </div>
-                        {originalPrice && (
-                          <div className="text-[10px] text-gray-500 line-through">
-            {/* @ts-ignore */}
-
-                            ₹{typeof originalPrice === "number" ? originalPrice.toFixed(0) : originalPrice}
-                          </div>
-                        )}
-
-                        <Button className="w-full mt-1 bg-black text-white rounded-sm py-1 text-[10px] font-medium">
-                          Add
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* optional tag badge */}
+              {(isSolo || isBestSeller) && (
+                <div className="absolute top-2 left-2 space-y-1">
+                  {isSolo && (
+                    <div className="bg-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
+                      SOLO
+                    </div>
+                  )}
+                  {isBestSeller && (
+                    <div className="bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm">
+                      BEST
+                    </div>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              )}
+            </CardHeader>
+
+            <CardContent className="p-2">
+              <div className="text-[11px] font-medium text-gray-700 uppercase mb-1">
+                {product.brand.name}
+              </div>
+              <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
+                {product.title}
+              </h3>
+
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                <span className="text-red-600 font-semibold text-base leading-none">
+                  ₹{typeof price === "number" ? price.toFixed(0) : price}
+                </span>
+                {originalPrice && (
+                  <span className="text-gray-500 text-xs line-through leading-none">
+                    ₹{typeof originalPrice === "number"
+                      ? originalPrice.toFixed(0)
+                      : originalPrice}
+                  </span>
+                )}
+                {originalPrice && (
+                  <span className="text-orange-600 text-[11px] font-medium leading-none">
+                    {Math.round(
+                      ((Number(originalPrice) - Number(price)) /
+                        Number(originalPrice)) *
+                        100
+                    )}
+                    % OFF
+                  </span>
+                )}
+              </div>
+
+              <Button className="w-full mt-2 bg-black text-white rounded-sm py-1.5 text-[11px] font-medium">
+                Add
+              </Button>
+            </CardContent>
+          </Card>
+        </Link>
+      );
+    })}
+  </div>
+</div>
+
 
         {/* Desktop: Normal grid */}
         <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

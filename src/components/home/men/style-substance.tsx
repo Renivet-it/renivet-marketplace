@@ -54,23 +54,23 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
 
   return (
     <section
-      className={cn("p-2 sm:p-8 bg-white md:bg-[#ded6d6]", className)}
+      className={cn("p-2 sm:p-8 bg-[FCFBFA] md:bg-[#ded6d6]", className)}
       {...props}
     >
       {/* Header */}
       <div className="flex justify-between items-center mb-2 sm:mb-6">
-        <h2 className="text-lg sm:text-2xl font-normal sm:font-bold text-black">
-          Style, With Substance
+        <h2 className="text-lg sm:text-2xl font-normal sm:font-bold text-black font-serif">
+          Style With Substance
         </h2>
         <Link href="/products">
-          <Button className="bg-white text-black sm:bg-gray-800 sm:text-white px-6 py-2 rounded-md hover:bg-gray-100 sm:hover:bg-gray-700 text-sm">
+          <Button className="bg-white text-black sm:bg-gray-800 sm:text-white px-4 py-2 rounded-md hover:bg-gray-100 sm:hover:bg-gray-700 text-sm">
             Show all
           </Button>
         </Link>
       </div>
 
       {/* ---------- Desktop View ---------- */}
-      <div className="hidden md:flex flex-row gap-4 overflow-x-auto pb-2">
+      <div className="hidden md:flex gap-4 overflow-x-auto pb-2">
         {visibleProducts.map((item) => {
           const { discountedPrice } = getPricing(item.product);
           return (
@@ -88,13 +88,8 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
                   sizes="(max-width: 768px) 100vw"
                 />
               </div>
-              <div
-                className="flex-1 p-4 flex flex-col justify-center"
-                style={{ backgroundColor: "#ede6df" }}
-              >
-                <h3 className="text-lg font-medium text-gray-800 mb-2">
-                  {item.product.title}
-                </h3>
+              <div className="flex-1 p-4 flex flex-col justify-center" style={{ backgroundColor: "#ede6df" }}>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">{item.product.title}</h3>
                 <p className="text-xl font-bold text-black">₹{discountedPrice}</p>
               </div>
             </Link>
@@ -103,14 +98,14 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
       </div>
 
       {/* ---------- Mobile View ---------- */}
-      <div className="flex md:hidden gap-3 overflow-x-auto pb-2 scrollbar-hide px-2">
+      <div className="flex md:hidden gap-3 overflow-x-auto pb-2 px-2 scrollbar-hide">
         {visibleProducts.map((item) => {
           const { discountedPrice } = getPricing(item.product);
           return (
             <Link
               key={item.product.id}
               href={`/products/${item.product.slug}`}
-              className="min-w-[60%] h-[90px] bg-white rounded-lg shadow-sm flex flex-row flex-shrink-0"
+              className="min-w-[180px] h-[65px] bg-white rounded-lg shadow-sm flex flex-row flex-shrink-0"
             >
               <div className="w-[100px] h-full relative flex-shrink-0">
                 <Image
@@ -121,13 +116,8 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
                   sizes="(max-width: 768px) 100vw"
                 />
               </div>
-              <div
-                className="flex-1 p-3 flex flex-col justify-center"
-                style={{ backgroundColor: "#ede6df" }}
-              >
-                <h3 className="text-xs font-normal text-gray-500 mb-1">
-                  {item.product.title}
-                </h3>
+              <div className="flex-1 p-3 flex flex-col justify-center" style={{ backgroundColor: "#ede6df" }}>
+                <h3 className="text-xs font-normal text-gray-500 mb-1">{item.product.title}</h3>
                 <p className="text-sm font-bold text-black">₹{discountedPrice}</p>
               </div>
             </Link>
