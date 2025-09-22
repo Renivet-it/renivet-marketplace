@@ -97,7 +97,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
               <CarouselItem key={index} className="px-0 py-0">
                 <Link href={item.url || "/shop"}>
                   <div
-                    className={`relative w-full overflow-hidden rounded-2xl transition-transform duration-700 ease-in-out ${
+                    className={`relative w-full h-[280px] overflow-hidden rounded-2xl transition-transform duration-700 ease-in-out ${
                       activeIndex === index ? "rotate-y-0" : "rotate-y-180"
                     }`}
                     style={{
@@ -107,9 +107,8 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     <Image
                       src={item.imageUrl}
                       alt={item.title}
-                      width={1440}
-                      height={550}
-                      className="w-full h-auto object-cover backface-hidden"
+                      fill
+                      className="w-full h-full object-fill"
                       priority={index === 0}
                     />
                   </div>

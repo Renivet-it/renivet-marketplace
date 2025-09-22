@@ -49,7 +49,7 @@ export function ExploreCategories({
       <div className="max-w-screen-2xl mx-auto w-full relative">
         {/* Title */}
         <h2 className="text-center text-lg sm:text-3xl font-normal sm:font-bold text-gray-900 mb-2 sm:mb-8 px-1
-        font-serif sm:font-[inherit]
+        font-serif sm:font-sans
         ">
           {titleData?.title || "Explore Categories"}
         </h2>
@@ -98,8 +98,8 @@ export function ExploreCategories({
                     <Image
                       src={category.imageUrl}
                       alt={category.title || "Category"}
-                      width={240}
-                      height={240}
+                      width={120}
+                      height={110}
                       quality={90}
                       className="w-full h-full object-cover"
                     />

@@ -14,7 +14,7 @@ interface PageProps {
 
 export function TopCollectionBanner({ className, advertisements }: PageProps) {
   return (
-    <section className={cn("w-full pt-2 sm:pt-10 bg-[#F4F0EC]", className)}>
+    <section className={cn("w-full pt-2 sm:pt-10 bg-[#FCFBFA] sm:bg-[#F4F0EC]", className)}>
       <Carousel
         opts={{
           align: "start",
@@ -36,7 +36,7 @@ export function TopCollectionBanner({ className, advertisements }: PageProps) {
                     src={item.imageUrl}
                     alt={item.title}
                     fill
-                    className="object-cover"
+                    className="object-fill"
                     priority={index === 0}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1440px"
                   />

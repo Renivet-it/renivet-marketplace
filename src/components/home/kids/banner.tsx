@@ -18,29 +18,47 @@ export function Landing({ className, banners, ...props }: PageProps) {
 
   return (
     <section className={cn("", className)} {...props}>
-      {/* ------------------- MOBILE NAVIGATION ------------------- */}
-      <nav className="flex justify-around items-center p-4 bg-gray-100 md:hidden">
-        <Link href="/women" className="flex flex-col items-center text-gray-700 hover:text-green-600">
-          <Icons.Venus className="w-6 h-6" />
-          <span className="text-xs">Women</span>
-        </Link>
-        <Link href="/men" className="flex flex-col items-center text-gray-700 hover:text-green-600">
-          <Icons.Mars className="w-6 h-6" />
-          <span className="text-xs">Men</span>
-        </Link>
-        <Link href="/little" className="flex flex-col items-center text-gray-700 hover:text-green-600">
-          <Icons.Users className="w-6 h-6" />
-          <span className="text-xs">Little Renivet</span>
-        </Link>
-        <Link href="/home" className="flex flex-col items-center text-gray-700 hover:text-green-600">
-          <Icons.House className="w-6 h-6" />
-          <span className="text-xs">Home & Living</span>
-        </Link>
-        <Link href="/beauty" className="flex flex-col items-center text-gray-700 hover:text-green-600">
-          <Icons.Droplet className="w-6 h-6" />
-          <span className="text-xs">Beauty</span>
-        </Link>
-      </nav>
+
+<nav className="relative md:hidden z-10">
+
+ {/* Background image with 25% opacity */}
+ <div
+    className="absolute inset-0 z-0"
+    style={{
+      backgroundImage: "url('/assets/clrdrop.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      opacity: 0.25,
+    }}
+  ></div>
+
+
+
+  {/* Navbar content */}
+  <div className="flex justify-around items-center p-4 text-black relative z-10">
+    <Link href="/women" className="flex flex-col items-center">
+      <Icons.Venus className="w-6 h-6" />
+      <span className="text-xs">Women</span>
+    </Link>
+    <Link href="/men" className="flex flex-col items-center">
+      <Icons.Mars className="w-6 h-6" />
+      <span className="text-xs">Men</span>
+    </Link>
+    <Link href="/little" className="flex flex-col items-center">
+      <Icons.Users className="w-6 h-6" />
+      <span className="text-xs">Little Renivet</span>
+    </Link>
+    <Link href="/home" className="flex flex-col items-center">
+      <Icons.House className="w-6 h-6" />
+      <span className="text-xs">Home & Living</span>
+    </Link>
+    <Link href="/beauty" className="flex flex-col items-center">
+      <Icons.Droplet className="w-6 h-6" />
+      <span className="text-xs">Beauty</span>
+    </Link>
+  </div>
+</nav>
+
 
       {/* ------------------- DESKTOP VIEW ------------------- */}
       <div className="hidden md:block">
@@ -85,84 +103,88 @@ export function Landing({ className, banners, ...props }: PageProps) {
         </Carousel>
       </div>
 {/* ------------------- MOBILE VIEW ------------------- */}
-<div className="md:hidden relative bg-[#8B34A3] text-white pb-32">
-  {/* ---------- TOP DRIPPING COLOR ---------- */}
-  <svg
-    viewBox="0 0 1440 150"
-    className="absolute top-0 left-0 w-full h-[150px] z-0"
-    preserveAspectRatio="none"
-  >
-    <path
-      d="
-        M0,40 
-        C60,90 120,10 180,60
-        C240,110 300,20 360,70
-        C420,120 480,30 540,80
-        C600,130 660,40 720,90
-        C780,140 840,50 900,100
-        C960,150 1020,60 1080,110
-        C1140,160 1200,70 1260,120
-        C1320,170 1380,80 1440,130
-        V0 H0 Z
-      "
-      fill="#8B34A3"
-    />
-  </svg>
+<div className="md:hidden relative bg-[#FDF8F4] text-gray-900 pb-10">
 
-  {/* ---------- carousel content ---------- */}
-  <div className="relative z-10">
-    <Carousel
-      opts={{ align: "start", loop: true, duration: 0 }}
-      plugins={[Autoplay({ delay: 5000 })]}
-      className="w-full"
-    >
-      <CarouselContent
-        classNames={{
-          wrapper: "size-full",
-          inner: "size-full ml-0",
-        }}
-      >
-        {banners.map((item, index) => (
-          <CarouselItem key={index} className="px-0 py-0">
-            <Link href={item.url || "/shop"}>
-              <div className="bg-white p-1 rounded-2xl">
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  width={1440}
-                  height={500}
-                  className="w-full h-auto object-cover rounded-2xl"
-                  priority={index === 0}
-                />
-              </div>
-            </Link>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-    </Carousel>
+  {/* ---------- Title & Subtitle ---------- */}
+  <div className="text-center px-2">
+  <h1 className="text-center text-xl font-semibold text-[#9a5aad]">
+    welcome to <br /> little renivet
+  </h1>
+    <p className="text-sm mt-2 text-gray-700 leading-snug">
+      Tiny Threads of Heritage <br />
+      Handcrafted ethnic wear for your little ones
+    </p>
   </div>
 
-  {/* ---------- BOTTOM CLOUD ---------- */}
-  <svg
-    viewBox="0 0 1440 200"
-    className="absolute bottom-0 left-0 w-full h-[200px] z-0"
-    preserveAspectRatio="none"
-  >
-    <path
-      d="M0,160
-         C120,140 240,180 360,160
-         C480,140 600,180 720,160
-         C840,140 960,180 1080,160
-         C1200,140 1320,180 1440,160
-         V200 H0 Z"
-      fill="#fff"
+  {/* ---------- Main Image ---------- */}
+  <div className="mt-6 px-4">
+    <Image
+      src={banners[0]?.imageUrl || "/placeholder.jpg"}
+      alt={banners[0]?.title || "Little renivet banner"}
+      width={1440}
+      height={500}
+      className="w-full h-auto rounded-2xl object-cover"
+      priority
     />
-  </svg>
+  </div>
+  <div className="relative flex justify-center items-center mt-8">
+  {/* Shop Now Button - perfectly centered */}
+  <button className="flex bg-[#f7e3c1] text-black px-4 py-2 rounded-lg shadow hover:bg-[#EBF2ED] text-lg font-semibold whitespace-nowrap z-10">
+    Shop Now
+  </button>
+
+  {/* Teddy Image - positioned to the right of the button */}
+  <Image
+    src="/assets/td.jpeg"
+    alt="Teddy sitting"
+    width={100}
+    height={100}
+    className="absolute left-1/2 translate-x-[80%] -rotate-12 mix-blend-multiply filter brightness-90 opacity-25"
+  />
 </div>
 
 
 
 
+  {/* Bottom curve SVG */}
+  <div className="mt-2 overflow-hidden w-full">
+  <svg
+    viewBox="0 0 1440 80"
+    className="w-full h-20"
+    preserveAspectRatio="none"
+  >
+    <path
+      d="M0,40 C360,0 720,80 1080,40 C1260,20 1440,60 1440,40"
+      stroke="#f7e3c1"      // Color of the line
+      strokeWidth="20"       // Increased thickness (you can adjust this value)
+      fill="none"           // Ensure no fill is applied
+    />
+  </svg>
+</div>
+
+  {/* ---------- Shop By Gender ---------- */}
+  <div className="mt-2 px-4">
+    <h2 className="text-sm font-semibold mb-3">Shop By Gender</h2>
+    <div className="flex gap-3">
+      <button className="flex-1 bg-gray-200 rounded-md py-2 text-center text-sm">Boys</button>
+      <button className="flex-1 bg-gray-200 rounded-md py-2 text-center text-sm">Girls</button>
+      <button className="flex-1 bg-gray-200 rounded-md py-2 text-center text-sm">Unisex</button>
+    </div>
+  </div>
+
+  {/* ---------- Shop By Age ---------- */}
+  <div className="mt-6 px-4">
+    <h2 className="text-sm font-semibold mb-3">Shop By Age</h2>
+    <div className="flex flex-wrap gap-3">
+      <button className="flex-1 min-w-[30%] bg-gray-200 rounded-md py-2 text-center text-sm">All Ages</button>
+      <button className="flex-1 min-w-[30%] bg-gray-200 rounded-md py-2 text-center text-sm">Infant(0-2)</button>
+      <button className="flex-1 min-w-[30%] bg-gray-200 rounded-md py-2 text-center text-sm">Toddlers(3-5)</button>
+    </div>
+  </div>
+
+</div>
+
+              
     </section>
   );
 }

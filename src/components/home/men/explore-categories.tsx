@@ -39,12 +39,18 @@ export function ExploreCategories({
 
   return (
     <section
-      className={cn("flex w-full justify-center py-4 sm:py-12 bg-[#F4F0EC]", className)}
+      className={cn(
+        "flex w-full justify-center py-2 sm:py-12 bg-[#FCFBFA] sm:bg-[#F4F0EC]",
+        className
+      )}
       {...props}
     >
       <div className="max-w-screen-2xl mx-auto w-full relative">
         {/* ---------- Title ---------- */}
-        <h2 className="text-center text-lg sm:text-3xl font-normal sm:font-bold text-gray-900 mb-4 sm:mb-8 px-4">
+        <h2
+          className="text-center text-lg sm:text-3xl font-normal sm:font-bold text-gray-900 mb-2 sm:mb-8 px-1
+                     font-serif sm:font-sans"
+        >
           {titleData?.title || "Explore Categories"}
         </h2>
 
@@ -83,19 +89,20 @@ export function ExploreCategories({
                 className="flex-shrink-0 group text-center"
               >
                 <div className="w-[240px] h-[300px] flex flex-col bg-white border border-gray-300 rounded-lg overflow-hidden">
-                  {/* Image */}
+                  {/* Image Container */}
                   <div className="relative h-[240px] w-full overflow-hidden border-b border-gray-300">
                     <Image
                       src={category.imageUrl}
                       alt={category.title || "Category"}
-                      width={240}
-                      height={240}
+                      width={120}
+                      height={110}
                       quality={90}
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  {/* Text */}
-                  <div className="h-[60px] flex items-center justify-center px-2">
+
+                  {/* Text Container */}
+                  <div className="h-[60px] w-full bg-white flex items-center justify-center px-2">
                     <p className="font-bold text-gray-900 text-lg text-center uppercase tracking-wider">
                       {category.title || "CATEGORY"}
                     </p>
@@ -115,23 +122,26 @@ export function ExploreCategories({
                 href={category.url || "/shop"}
                 className="flex-shrink-0 group text-center"
               >
-                <div className="flex flex-col w-[120px]">
-                  {/* Smaller Image Card */}
-                  <div className="relative h-[130px] w-full overflow-hidden rounded-lg">
-                    <Image
-                      src={category.imageUrl}
-                      alt={category.title || "Category"}
-                      width={120}
-                      height={110}
-                      quality={90}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  {/* Label */}
-                  <p className="mt-2 font-normal text-gray-900 text-xs text-center uppercase tracking-wide">
-                    {category.title || "CATEGORY"}
-                  </p>
-                </div>
+                 <div className="flex flex-col w-[120px] border border-gray-200 p-2 bg-white">
+          {/* Image */}
+          <div className="relative h-[130px] w-full overflow-hidden rounded-md">
+            <Image
+              src={category.imageUrl}
+              alt={category.title || "Category"}
+              width={120}
+              height={110}
+              quality={90}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* Name */}
+          <div className="w-full bg-[#FCFBFA]">
+          <p className="mt-2 font-normal text-gray-600 text-[11px] text-center uppercase tracking-wide">
+            {category.title || "CATEGORY"}
+          </p>
+          </div>
+        </div>
               </Link>
             ))}
           </div>

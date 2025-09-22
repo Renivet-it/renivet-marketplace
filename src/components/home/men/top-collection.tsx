@@ -3,11 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 
 interface CollectionItem {
   id: string;
@@ -36,11 +32,13 @@ export function TopCollection({
 
   return (
     <section
-      className={cn("w-full py-4 md:py-12", className)}
-      style={{ backgroundColor: "#f4f0ec" }}
-    >
+  className={cn(
+    "w-full py-2 md:py-12 bg-[#fcfbfa] md:bg-[#f4f0ec]",
+    className
+  )}
+>
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-lg md:text-3xl lg:text-4xl font-normal sm:font-bold text-left text-gray-900 mb-4 md:mb-12">
+        <h1 className="text-lg md:text-3xl lg:text-4xl font-normal sm:font-bold text-left text-gray-900 mb-4 md:mb-12 font-serif sm:font-sans">
           {title}
         </h1>
 
@@ -67,7 +65,7 @@ export function TopCollection({
           </Carousel>
         </div>
 
-        {/* Mobile: Stack one by one vertically */}
+        {/* Mobile: stacked vertically */}
         <div className="flex flex-col md:hidden gap-4">
           {collections.map((collection) => (
             <CollectionCard key={collection.id} collection={collection} />
@@ -78,16 +76,15 @@ export function TopCollection({
   );
 }
 
-// Reusable card component
+// Reusable Collection Card
 function CollectionCard({ collection }: { collection: CollectionItem }) {
   return (
     <div
-      className={cn(
-        "group relative w-full rounded-xl md:rounded-2xl overflow-hidden shadow-sm transition-all duration-300 p-4 md:p-6 flex flex-col items-start text-left space-y-2"
-      )}
+      className="group relative w-full rounded-xl md:rounded-2xl overflow-hidden shadow-sm transition-all 
+      duration-300 p-0 md:p-6 flex flex-col items-start text-left space-y-0 md:space-y-4"
       style={{ backgroundColor: "#f4f0ec" }}
     >
-      {/* Context/Brand Label */}
+      {/* Context/Brand */}
       {collection.context && (
         <div className="text-xs md:text-sm font-semibold text-gray-500 flex items-center space-x-2">
           <span className="text-base md:text-lg font-bold text-black">🌍</span>

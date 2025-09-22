@@ -106,13 +106,14 @@ export function ProductGrid({ className, products, ...props }: ProductGridProps)
 
   return (
     <section
-      className={cn("py-4 sm:py-10", className)}
-      style={{ backgroundColor: "#f4f0ec" }}
-      {...props}
-    >
-      <h2 className="text-lg sm:text-2xl font-semibold text-center mb-1 sm:mb-4 text-gray-900">
-        Featured Products
-      </h2>
+    className={cn("sm:py-4 py-2 sm:py-10bg-[#fcfbfa] md:bg-[#f4f0ec]", className)}
+    {...props}
+  >
+    <h2 className="text-lg sm:text-2xl font-semibold text-center mb-1 sm:mb-4 
+    font-serif sm:font-sans
+    text-gray-900">
+      Featured Products
+    </h2>
 
       {/* ---------- MOBILE VIEW: 2-COLUMN GRID ---------- */}
       <div className="sm:hidden px-4">
