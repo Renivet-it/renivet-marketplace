@@ -456,6 +456,243 @@ async getProducts({
     };
 }
 
+
+// Database query method
+async getAllCatalogueProducts({
+    search,
+    brandIds,
+    minPrice,
+    maxPrice,
+    categoryId,
+    subcategoryId,
+    productTypeId,
+    isActive,
+    isAvailable,
+    isPublished,
+    verificationStatus,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+    productImage,
+    productVisiblity,
+    isFeaturedWomen,
+    isFeaturedMen,
+    isStyleWithSubstanceWoMen,
+    isStyleWithSubstanceMen,
+    iskidsFetchSection,
+    isHomeAndLivingSectionNewArrival,
+    isHomeAndLivingSectionTopPicks,
+    isBeautyNewArrival,
+    isBeautyTopPicks,
+    isHomeNewArrival,
+    isAddedInEventProductPage,
+}: {
+    search?: string;
+    brandIds?: string[];
+    minPrice?: number | null;
+    maxPrice?: number | null;
+    categoryId?: string;
+    subcategoryId?: string;
+    productTypeId?: string;
+    isActive?: boolean;
+    isAvailable?: boolean;
+    isPublished?: boolean;
+    verificationStatus?: Product["verificationStatus"];
+    sortBy?: "price" | "createdAt";
+    sortOrder?: "asc" | "desc";
+    productImage?: Product["productImageFilter"];
+    productVisiblity?: Product["productVisiblityFilter"];
+    isFeaturedWomen?: Product["isFeaturedWomen"];
+    isFeaturedMen?: Product["isFeaturedMen"];
+    isStyleWithSubstanceWoMen?: Product["isStyleWithSubstanceWoMen"];
+    isStyleWithSubstanceMen?: Product["isStyleWithSubstanceMen"];
+    iskidsFetchSection?: Product["iskidsFetchSection"];
+    isHomeAndLivingSectionNewArrival?: Product["isHomeAndLivingSectionNewArrival"];
+    isHomeAndLivingSectionTopPicks?: Product["isHomeAndLivingSectionTopPicks"];
+    isBeautyNewArrival?: Product["isBeautyNewArrival"];
+    isBeautyTopPicks?: Product["isBeautyTopPicks"];
+    isHomeNewArrival?: Product["isHomeNewArrival"];
+    isAddedInEventProductPage?: Product["isAddedInEventProductPage"];
+}) {
+    // Price conversions
+    minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
+    maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
+
+    let searchQuery;
+    if (search?.length) {
+        const searchEmbedding = await getEmbedding(search);
+        const highRelevanceThreshold = 0.6;
+        const lowRelevanceThreshold = 0.8;
+        const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
+        const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+        searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+    }
+
+    const filters = [
+        // Always exclude deleted products (assuming you have deletedAt field)
+        searchQuery,
+        !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
+        !!minPrice
+            ? sql`(
+                COALESCE(${products.price}, 0) >= ${minPrice} 
+                OR EXISTS (
+                    SELECT 1 FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                    AND COALESCE(pv.price, 0) >= ${minPrice}
+                    AND pv.is_deleted = false
+                )
+            )`
+            : undefined,
+        !!maxPrice
+            ? sql`(
+                COALESCE(${products.price}, 0) <= ${maxPrice}
+                OR EXISTS (
+                    SELECT 1 FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                    AND COALESCE(pv.price, 0) <= ${maxPrice}
+                    AND pv.is_deleted = false
+                )
+            )`
+            : undefined,
+        isActive !== undefined ? eq(products.isActive, isActive) : undefined,
+        isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
+        isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
+        categoryId ? eq(products.categoryId, categoryId) : undefined,
+        subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
+        productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
+        verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
+        productImage
+            ? productImage === "with"
+                ? hasMedia(products, "media")
+                : productImage === "without"
+                  ? noMedia(products, "media")
+                  : undefined
+            : undefined,
+        productVisiblity
+            ? productVisiblity === "public"
+              ? eq(products.isDeleted, false)
+              : productVisiblity === "private"
+              ? eq(products.isDeleted, true)
+              : undefined
+            : undefined,
+        isFeaturedWomen !== undefined ? eq(products.isFeaturedWomen, isFeaturedWomen) : undefined,
+        isFeaturedMen !== undefined ? eq(products.isFeaturedMen, isFeaturedMen) : undefined,
+        isStyleWithSubstanceWoMen !== undefined ? eq(products.isStyleWithSubstanceWoMen, isStyleWithSubstanceWoMen) : undefined,
+        isStyleWithSubstanceMen !== undefined ? eq(products.isStyleWithSubstanceMen, isStyleWithSubstanceMen) : undefined,
+        iskidsFetchSection !== undefined ? eq(products.iskidsFetchSection, iskidsFetchSection) : undefined,
+        isHomeAndLivingSectionNewArrival !== undefined ? eq(products.isHomeAndLivingSectionNewArrival, isHomeAndLivingSectionNewArrival) : undefined,
+        isHomeAndLivingSectionTopPicks !== undefined ? eq(products.isHomeAndLivingSectionTopPicks, isHomeAndLivingSectionTopPicks) : undefined,
+        isBeautyNewArrival !== undefined ? eq(products.isBeautyNewArrival, isBeautyNewArrival) : undefined,
+        isBeautyTopPicks !== undefined ? eq(products.isBeautyTopPicks, isBeautyTopPicks) : undefined,
+        isHomeNewArrival !== undefined ? eq(products.isHomeNewArrival, isHomeNewArrival) : undefined,
+        isAddedInEventProductPage !== undefined ? eq(products.isAddedInEventProductPage, isAddedInEventProductPage) : undefined,
+    ].filter(Boolean);
+
+    const orderBy = [];
+
+    if (search?.length) {
+        const searchEmbedding = await getEmbedding(search);
+        const highRelevanceThreshold = 0.6;
+        orderBy.push(
+            sql`CASE 
+                WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0 
+                ELSE 1 
+            END ASC`,
+            sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+        );
+    }
+
+    if (sortBy && sortOrder) {
+        orderBy.push(
+            sortBy === "price"
+                ? sql`
+                    (
+                        SELECT COALESCE(
+                            MIN(COALESCE(pv.price, ${products.price}, 0)),
+                            COALESCE(${products.price}, 0)
+                        )
+                        FROM ${productVariants} pv
+                        WHERE pv.product_id = ${products.id}
+                        AND pv.is_deleted = false
+                    ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
+                `
+                : sortOrder === "asc"
+                  ? asc(products[sortBy])
+                  : desc(products[sortBy])
+        );
+    }
+
+    // Use the same query structure as getProducts, but without limit and offset
+    const data = await db.query.products.findMany({
+        with: {
+            brand: true,
+            variants: true,
+            category: true,
+            subcategory: true,
+            productType: true,
+            options: true,
+            journey: true,
+            values: true,
+            returnExchangePolicy: true,
+            specifications: {
+                columns: {
+                    key: true,
+                    value: true,
+                },
+            },
+        },
+        where: and(...filters),
+        // Remove limit and offset for getting all products
+        orderBy,
+    });
+
+    // Media handling - same as getProducts
+    const mediaIds = new Set<string>();
+    for (const product of data) {
+        product.media.forEach((media) => mediaIds.add(media.id));
+        product.variants.forEach((variant) => {
+            if (variant.image) mediaIds.add(variant.image);
+        });
+        if (product.sustainabilityCertificate)
+            mediaIds.add(product.sustainabilityCertificate);
+    }
+    const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+    const mediaMap = new Map(
+        mediaItems.data.map((item) => [item.id, item])
+    );
+
+    const enhancedData = data.map((product) => ({
+        ...product,
+        media: product.media.map((media) => ({
+            ...media,
+            mediaItem: mediaMap.get(media.id),
+        })),
+        sustainabilityCertificate: product.sustainabilityCertificate
+            ? mediaMap.get(product.sustainabilityCertificate)
+            : null,
+        variants: product.variants.map((variant) => ({
+            ...variant,
+            mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+        })),
+        returnable: product.returnExchangePolicy?.returnable ?? false,
+        returnDescription:
+            product.returnExchangePolicy?.returnDescription ?? null,
+        exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+        exchangeDescription:
+            product.returnExchangePolicy?.exchangeDescription ?? null,
+        specifications: product.specifications.map((spec) => ({
+            key: spec.key,
+            value: spec.value,
+        })),
+    }));
+
+    const parsed: ProductWithBrand[] = productWithBrandSchema
+        .array()
+        .parse(enhancedData);
+    return {
+        data: parsed,
+        total: parsed.length,
+    };
+}
     async getProduct({
         productId,
         isDeleted,
