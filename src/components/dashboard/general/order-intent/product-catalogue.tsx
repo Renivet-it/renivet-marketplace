@@ -1,184 +1,63 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/ui/data-table";
-import { DataTableViewOptions } from "@/components/ui/data-table-dash";
-import { Input } from "@/components/ui/input-dash";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { ProductWithBrand } from "@/lib/validations";
-import {
-  ColumnDef,
-  ColumnFiltersState,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable,
-  VisibilityState,
-} from "@tanstack/react-table";
 import { format } from "date-fns";
-import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { convertPaiseToRupees } from "@/lib/utils";
 
-export type TableProduct = ProductWithBrand;
+export default function DownloadProducts() {
+  // Fetch all products
+  const { data: products = [], isLoading } =
+    trpc.brands.products.getProducts.useQuery({
+      page: 1,
+      limit: 50,
+      search: "",
+    });
 
-const columns = (): ColumnDef<TableProduct>[] => [
-  {
-    accessorKey: "id",
-    header: "Product ID",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const data = row.original;
-      return data?.id;
-    },
-  },
-  {
-    accessorKey: "title",
-    header: "Product Name",
-    cell: ({ row }) => {
-      const data = row.original;
-      return (
-        <div className="flex flex-col">
-          <span className="font-medium">{data?.title}</span>
-          <span className="text-xs text-muted-foreground">
-            {data?.brand?.name}
-          </span>
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "price",
-    header: "Price",
-    cell: ({ row }) => {
-      const data = row.original;
-      return (
-        <span>
-          ₹{convertPaiseToRupees(data?.price ?? 0)}
-        </span>
-      );
-    },
-  },
-  {
-    accessorKey: "availability",
-    header: "Availability",
-    cell: ({ row }) => {
-      const data = row.original;
-      const inStock = (data?.quantity ?? 0) > 0;
-      return (
-        <Badge
-          className={cn(inStock ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")}
-        >
-          {inStock ? "In Stock" : "Out of Stock"}
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "createdAt",
-    header: "Added On",
-    cell: ({ row }) => {
-      const data = row.original;
-      return format(new Date(data.createdAt), "MMM dd, yyyy");
-    },
-  },
-  {
-    id: "actions",
-    header: "Actions",
-    cell: ({ row }) => {
-      const data = row.original;
-      return (
-        <div className="flex gap-2">
-          <a
-            href={`/products/${data.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-600 hover:underline"
-          >
-            View
-          </a>
-          <button
-            className="text-sm text-gray-600 hover:text-black"
-            onClick={() => console.log("Syncing product:", data.id)}
-          >
-            Sync
-          </button>
-        </div>
-      );
-    },
-  },
-];
+  const handleDownloadAll = () => {
+    console.log(products, "products");
 
-interface PageProps {
-  initialData: {
-    data: ProductWithBrand[];
-    count: number;
+    const exportData = products.data.map((p: any) => ({
+      "Product ID": p.id,
+      "Product Name": p.title,
+      Brand: p.brand?.name || "-",
+      "Price (₹)": convertPaiseToRupees(p.price ?? 0),
+      Availability: (p.quantity ?? 0) > 0 ? "In Stock" : "Out of Stock",
+      "Added On": format(new Date(p.createdAt), "MMM dd, yyyy"),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, `products_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`);
   };
-}
-
-export function ProductsTable({ initialData }: PageProps) {
-  const [page] = useQueryState("page", parseAsInteger.withDefault(1));
-  const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
-  const [search, setSearch] = useQueryState("search", { defaultValue: "" });
-
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
-
-  const {
-    data: { data: dataRaw, count },
-    refetch,
-    //@ts-ignore
-  } = trpc.brands.products.getProducts.useQuery(
-    { page, limit, search },
-    { initialData }
-  );
-  //@ts-ignore
-  const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
-
-  const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
-
-  const table = useReactTable({
-    data,
-    columns: columns(),
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: { sorting, columnFilters, columnVisibility, rowSelection },
-  });
 
   return (
-    <div className="space-y-4">
-      {/* Top bar */}
-      <div className="flex items-center gap-2">
-        <div className="w-full md:w-auto">
-          <Input
-            placeholder="Search products..."
-            value={(table.getColumn("title")?.getFilterValue() as string) ?? search}
-            onChange={(event) => {
-              table.getColumn("title")?.setFilterValue(event.target.value);
-              setSearch(event.target.value);
-            }}
-          />
-        </div>
-        <DataTableViewOptions table={table} />
+    <div className="flex flex-col items-center justify-center gap-6 py-10">
+      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md text-center">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          Export All Products
+        </h2>
+        <p className="text-gray-500 mb-6">
+          Click the button below to download all products as an Excel file.
+        </p>
+
+        <button
+          onClick={handleDownloadAll}
+          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? "Loading..." : "Download Products"}
+        </button>
       </div>
 
-      {/* Data table */}
-      <DataTable
-        columns={columns()}
-        table={table}
-        pages={pages}
-        count={count}
-      />
+      {products.length > 0 && (
+        <p className="text-gray-500 text-sm mt-4">
+          Total Products: <span className="font-medium">{products.length}</span>
+        </p>
+      )}
     </div>
   );
 }
