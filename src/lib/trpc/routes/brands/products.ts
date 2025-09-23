@@ -58,7 +58,7 @@ export const productsRouter = createTRPCRouter({
     getProducts: publicProcedure
         .input(
             z.object({
-                limit: z.number().min(1).max(50).default(10),
+                limit: z.number().min(1).default(10),
                 page: z.number().min(1).default(1),
                 search: z.string().optional(),
                 brandIds: z.array(productSchema.shape.brandId).optional(),
@@ -96,6 +96,43 @@ export const productsRouter = createTRPCRouter({
             const data = await queries.products.getProducts(input);
             return data;
         }),
+        getAllCatalogueProducts: publicProcedure
+    .input(
+        z.object({
+            search: z.string().optional(),
+            brandIds: z.array(productSchema.shape.brandId).optional(),
+            minPrice: productSchema.shape.price.optional(),
+            maxPrice: productSchema.shape.price.optional(),
+            categoryId: productSchema.shape.categoryId.optional(),
+            subcategoryId: productSchema.shape.subcategoryId.optional(),
+            productTypeId: productSchema.shape.productTypeId.optional(),
+            isActive: productSchema.shape.isActive.optional(),
+            isAvailable: productSchema.shape.isAvailable.optional(),
+            isPublished: productSchema.shape.isPublished.optional(),
+            verificationStatus: productSchema.shape.verificationStatus.optional(),
+            sortBy: z.enum(["price", "createdAt"]).optional(),
+            sortOrder: z.enum(["asc", "desc"]).optional(),
+            productImage: productSchema.shape.productImageFilter,
+            productVisiblity: productSchema.shape.productVisiblityFilter,
+            isFeaturedWomen: productSchema.shape.isFeaturedWomen,
+            isFeaturedMen: productSchema.shape.isFeaturedMen,
+            isStyleWithSubstanceWoMen: productSchema.shape.isStyleWithSubstanceWoMen,
+            isStyleWithSubstanceMen: productSchema.shape.isStyleWithSubstanceMen,
+            iskidsFetchSection: productSchema.shape.iskidsFetchSection,
+            isHomeAndLivingSectionNewArrival: productSchema.shape.isHomeAndLivingSectionNewArrival,
+            isHomeAndLivingSectionTopPicks: productSchema.shape.isHomeAndLivingSectionTopPicks,
+            isBeautyNewArrival: productSchema.shape.isBeautyNewArrival,
+            isBeautyTopPicks: productSchema.shape.isBeautyTopPicks,
+            isHomeNewArrival: productSchema.shape.isHomeNewArrival,
+            isAddedInEventProductPage: productSchema.shape.isAddedInEventProductPage,
+        })
+    )
+    .query(async ({ input, ctx }) => {
+        const { queries } = ctx;
+
+        const data = await queries.products.getAllCatalogueProducts(input);
+        return data;
+    }),
     getProduct: publicProcedure
         .input(
             z.object({
