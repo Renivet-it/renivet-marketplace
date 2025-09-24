@@ -15,6 +15,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { TrackViewContent } from "@/components/shop/facebook-pixel-events"; // Import the new component
 
 interface PageProps {
     params: Promise<{
@@ -204,6 +205,7 @@ async function ProductFetch({ params }: PageProps) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
+              <TrackViewContent product={existingProduct} />
         </>
     );
 }

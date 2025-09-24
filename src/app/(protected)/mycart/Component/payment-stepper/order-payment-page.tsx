@@ -284,7 +284,7 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                         value: orderDetails.totalAmount, // Pass actual total amount
                         currency: "INR",
                         contents: orderDetails.items.map((item: any) => ({
-                            id: item.id,
+                            id: item.product.id,
                             // name: item.product.title, // ✅ Include product title
                             quantity: item.quantity,
                             price: item.price
