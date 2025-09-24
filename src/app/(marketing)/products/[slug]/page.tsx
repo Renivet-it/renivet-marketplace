@@ -163,7 +163,7 @@ async function ProductFetch({ params }: PageProps) {
     });
 
     const retailerItemId =
-        existingProduct.nativeSku ?? existingProduct.sku ?? existingProduct.id;
+        existingProduct.id;
     const priceInRupees = existingProduct.price
         ? (existingProduct.price / 100).toFixed(2)
         : "0.00";
