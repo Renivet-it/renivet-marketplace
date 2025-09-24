@@ -44,9 +44,12 @@ export async function generateMetadata({
 
     const retailerItemId =
         existingProduct.id;
-    const priceInRupees = existingProduct.price
-        ? (existingProduct.price / 100).toFixed(2)
-        : "0.00";
+    const priceInRupees = existingProduct.costPerItem
+  ? (existingProduct.costPerItem / 100).toFixed(2)
+  : existingProduct.variants?.[0]?.price
+    ? (existingProduct.variants[0].price / 100).toFixed(2)
+    : "0.00";
+
     const availability =
         (existingProduct.quantity ?? 0) > 0 ? "in stock" : "out of stock";
     const image = existingProduct.media?.[0]?.mediaItem?.url ?? "";
@@ -164,9 +167,11 @@ async function ProductFetch({ params }: PageProps) {
 
     const retailerItemId =
         existingProduct.id;
-    const priceInRupees = existingProduct.price
-        ? (existingProduct.price / 100).toFixed(2)
-        : "0.00";
+    const priceInRupees = existingProduct.costPerItem
+  ? (existingProduct.costPerItem / 100).toFixed(2)
+  : existingProduct.variants?.[0]?.price
+    ? (existingProduct.variants[0].price / 100).toFixed(2)
+    : "0.00";
 
     const jsonLd = {
         "@context": "https://schema.org",
@@ -179,14 +184,14 @@ async function ProductFetch({ params }: PageProps) {
             "@type": "Brand",
             name: existingProduct.brand?.name ?? siteConfig.name,
         },
+        condition: "new",
         offers: {
             "@type": "Offer",
             price: priceInRupees,
             priceCurrency: "INR",
             availability:
                 (existingProduct.quantity ?? 0) > 0
-                    ? "https://schema.org/InStock"
-                    : "https://schema.org/OutOfStock",
+                    ? "in stock" : "out of stock",
             url: getAbsoluteURL(`/products/${slug}`),
         },
     };
