@@ -20,9 +20,9 @@ export function TrackViewContent({ product }: ViewContentProps) {
           content_name: product.title,
           content_type: "product",
           value: parseFloat(convertPaiseToRupees(product.costPerItem
-  ? (product.costPerItem / 100)
+  ? (product.costPerItem)
   : product.variants?.[0]?.price
-    ? (product.variants[0].price / 100)
+    ? (product.variants[0].price)
     : 0.00)),
           currency: "INR",
           content_category: product.brand?.name || "Unknown Brand",
