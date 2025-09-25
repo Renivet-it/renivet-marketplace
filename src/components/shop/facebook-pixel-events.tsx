@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { fbEvent } from "@/lib/fbpixel"; // Assuming you have this helper
+import { fbEvent } from "@/lib/fbpixel";
 import { ProductWithBrand } from "@/lib/validations";
 import { convertPaiseToRupees } from "@/lib/utils";
 
@@ -12,16 +12,26 @@ interface ViewContentProps {
 
 export function TrackViewContent({ product }: ViewContentProps) {
   useEffect(() => {
-    if (product) {
-      fbEvent("ViewContent", {
-        content_ids: [product.id], // Use the database product ID
-        content_name: product.title,
-        content_type: "product",
-        value: parseFloat(convertPaiseToRupees(product.price ?? 0)),
-        currency: "INR",
-      });
-    }
+    // Add a small delay to ensure pixel is loaded
+    const timer = setTimeout(() => {
+      if (product && typeof window !== "undefined" && window.fbq) {
+        fbEvent("ViewContent", {
+          content_ids: [product.id], // Make sure this matches your product catalog
+          content_name: product.title,
+          content_type: "product",
+          value: parseFloat(convertPaiseToRupees(product.costPerItem
+  ? (product.costPerItem / 100)
+  : product.variants?.[0]?.price
+    ? (product.variants[0].price / 100)
+    : 0.00)),
+          currency: "INR",
+          content_category: product.brand?.name || "Unknown Brand",
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [product]);
 
-  return null; // This component doesn't render anything
+  return null;
 }
