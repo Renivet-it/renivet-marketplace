@@ -79,11 +79,6 @@ export function ShopCategories() {
                   <Link
                     key={index}
                     href={category.href}
-                      prefetch={false}
-                       onClick={(e) => {
-    e.preventDefault();
-    window.location.href = category.href; // full page reload
-  }}
                     className="group flex flex-col items-center"
                   >
                     <div
@@ -133,36 +128,30 @@ export function ShopCategories() {
           </div>
         </div>
 
-            {/* Category Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              {categories.map((category, index) => (
-                <Link
-                  key={index}
-                  href={category.href}
-                    prefetch={false}
-                     onClick={(e) => {
-    e.preventDefault();
-    window.location.href = category.href; // full page reload
-  }}
-                  className="group flex flex-col items-center space-y-2 hover:opacity-80 transition-opacity duration-300"
-                >
-                  <div className="relative w-full aspect-[3/4] overflow-hidden bg-gray-100 rounded-md">
-                    <Image
-                      src={category.imageUrl}
-                      alt={category.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                    />
-                  </div>
-                  <h3 className="text-xs font-normal text-gray-700 text-center">
-                    {category.name}
-                  </h3>
-                </Link>
-              ))}
-            </div>
+       {/* Horizontal Scroll Categories */}
+      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+        {categories.map((category, index) => (
+        <Link
+         key={index}
+         href={category.href}
+         className="min-w-[100px] flex-shrink-0 group flex flex-col items-center space-y-2 hover:opacity-80 transition-opacity duration-300"
+         > 
+          <div className="relative w-[100px] h-[140px] overflow-hidden bg-gray-100 rounded-md">
+            <Image
+            src={category.imageUrl}
+            alt={category.name}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            sizes="100px"
+          />
           </div>
-   
+      <h3 className="text-xs font-normal text-gray-700 text-center">
+        {category.name}
+          </h3>
+         </Link>
+        ))}
+      </div>
+      </div>
     </section>
   );
 }
