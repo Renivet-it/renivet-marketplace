@@ -41,6 +41,54 @@ export const cartRouter = createTRPCRouter({
 
             return existingCart;
         }),
+        mergeGuestCart: protectedProcedure
+  .input(
+    z.array(
+      z.object({
+        productId: z.string(),
+        variantId: z.string().nullable(),
+        quantity: z.number(),
+      })
+    )
+  )
+  .mutation(async ({ ctx, input }) => {
+    const { queries, db } = ctx;
+    const userId = ctx.user.id;
+
+    for (const item of input) {
+      const existingCart = await userCartCache.getProduct({
+        userId,
+        productId: item.productId,
+        variantId: item.variantId ?? undefined,
+      });
+
+      if (!existingCart) {
+        await queries.userCarts.addProductToCart({
+          userId,
+          productId: item.productId,
+          variantId: item.variantId ?? null,
+          quantity: item.quantity,
+        });
+      } else {
+        await queries.userCarts.updateProductInCart(existingCart.id, {
+          ...existingCart,
+          quantity: existingCart.quantity + item.quantity,
+        });
+
+        // Remove from cache so it refetches
+        await userCartCache.remove({
+          userId,
+          productId: item.productId,
+          variantId: item.variantId ?? undefined,
+        });
+      }
+    }
+
+    // Clear entire user cart cache to refetch updated cart
+    await userCartCache.drop(userId);
+
+    return { success: true };
+  }),
     addProductToCart: protectedProcedure
         .input(createCartSchema)
         .use(({ ctx, input, next }) => {
