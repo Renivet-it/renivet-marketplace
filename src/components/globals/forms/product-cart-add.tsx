@@ -60,37 +60,44 @@ function useGuestCart() {
     };
   }, []);
 
-  const addToGuestCart = (item: any) => {
-    setGuestCart((prev) => {
-      const existing = prev.find(
-        (x) =>
-          x.productId === item.productId &&
-          (x.variantId || null) === (item.variantId || null)
+const addToGuestCart = (item: any) => {
+  setGuestCart((prev) => {
+    const existing = prev.find(
+      (x) =>
+        x.productId === item.productId &&
+        (x.variantId || null) === (item.variantId || null)
+    );
+
+    let updated;
+    if (existing) {
+      updated = prev.map((x) =>
+        x.productId === item.productId &&
+        (x.variantId || null) === (item.variantId || null)
+          ? { ...x, quantity: x.quantity + item.quantity }
+          : x
       );
-      let updated;
-      if (existing) {
-        updated = prev.map((x) =>
-          x.productId === item.productId &&
-          (x.variantId || null) === (item.variantId || null)
-            ? { ...x, quantity: x.quantity + item.quantity }
-            : x
-        );
-      } else {
-        updated = [...prev, item];
-      }
-      localStorage.setItem("guest_cart", JSON.stringify(updated));
-      
-      // 🔥 Dispatch event to notify other components
+      toast.success("Increased quantity in Cart"); // ✅ toast for guest
+    } else {
+      updated = [...prev, item];
+      toast.success("Added to Cart!"); // ✅ toast for guest
+    }
+
+    localStorage.setItem("guest_cart", JSON.stringify(updated));
+
+    // ✅ Defer event so Navbar updates safely
+    setTimeout(() => {
       window.dispatchEvent(new Event("guestCartUpdated"));
-      
-      return updated;
-    });
-  };
+    }, 0);
+
+    return updated;
+  });
+};
+
 
   const clearGuestCart = () => {
     localStorage.removeItem("guest_cart");
     setGuestCart([]);
-    window.dispatchEvent(new Event('guestCartUpdated'));
+    window.dispatchEvent(new Event("guestCartUpdated"));
   };
 
   return { guestCart, addToGuestCart, clearGuestCart };
