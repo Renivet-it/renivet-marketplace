@@ -17,6 +17,7 @@ import CheckoutStepper from "./Component/checkout-stepper";
 import CheckoutSection from "./Component/checkout-section";
 import CartFetcher from "./Component/cart-fetcher";
 import Page from "./Component/payment-stepper/payment";
+import GuestCartPage from "././Component/guest-cart-page";
 
 export const metadata: Metadata = {
     title: {
@@ -30,9 +31,12 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
     const resolvedSearchParams = await searchParams;
 
     // Fetch the userId using Clerk's auth
-    const { userId } = await auth();
-    if (!userId) redirect("/auth/signin");
-    const currentUser = await userCache.get(userId);
+     const { userId } = await auth();
+
+  if (!userId) {
+    // Show guest cart with "Proceed" button
+    return <GuestCartPage />;
+  }
 
     // Read the step from the query parameter (default to 0 if not present)
     const currentStep = parseInt(resolvedSearchParams.step || "0", 10);

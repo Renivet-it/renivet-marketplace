@@ -141,7 +141,7 @@ export function ProductContent({
                     setZipCode={setZipCode}
                     setEstimatedDelivery={setEstimatedDelivery}
                 />
-                <div className="space-y-2 mt-4">
+                {/* <div className="space-y-2 mt-4">
                 {[
                   { icon: <Icons.Recycle className="w-4 h-4" />, text: "Plastic-Free Packaging" },
                   { icon: <Icons.Droplet className="w-4 h-4" />, text: "Low-Water Dye" },
@@ -155,7 +155,7 @@ export function ProductContent({
                     <span>{item.text}</span>
                   </div>
                 ))}
-              </div>
+              </div> */}
                 {/* <DeliveryOption
                     initialZipCode={user?.addresses[0]?.zip}
                     warehousePincode={brandDetails?.warehousePostalCode}
