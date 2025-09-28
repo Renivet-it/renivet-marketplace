@@ -105,7 +105,7 @@ function GuestWishlistedProductCard({
         isRemoving && "opacity-0 scale-95"
       )}
     >
-      <Link href={`/products/${item.slug}`} target="_blank" rel="noreferrer">
+      <Link href={`/products/${item.fullProduct.slug}`} target="_blank" rel="noreferrer">
         <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg">
           <Image
             src={
