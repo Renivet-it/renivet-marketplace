@@ -495,7 +495,7 @@ const wishlistCount = user
                         classNames={{ wrapper: "min-w-80 hidden xl:flex" }}
                     />
  <Link
-  href={user ? "/profile/wishlist" : "/guest-wishlist"} // or a common wishlist page
+  href={user ? "/profile/wishlist" : "/guestWishlist"} // or a common wishlist page
   className="relative"
 >
   {wishlistCount > 0 && (
