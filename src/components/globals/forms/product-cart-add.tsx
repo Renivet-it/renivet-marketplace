@@ -31,7 +31,8 @@ import { trackAddToCart } from "@/actions/track-product";
 import { fbEvent } from "@/lib/fbpixel";
 import { DeliveryOption } from "../../products/product/product-delivery";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
-
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
+import { useRouter } from "next/navigation";
 //
 // 🔹 Guest cart hook
 //
@@ -130,6 +131,8 @@ export function ProductCartAddForm({
   setEstimatedDelivery,
 }: PageProps) {
   const { guestCart, addToGuestCart } = useGuestCart();
+const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
+const router = useRouter();
 
   const handleAddProductCart = async (productId: string, brandId: string) => {
     try {
@@ -511,13 +514,14 @@ export function ProductCartAddForm({
                   (product.productHasVariants && !selectedVariant) ||
                   isPending
                 }
-                onClick={(e) => {
-                  if (isAddedToCart) {
-                    e.preventDefault();
-                    redirect("/mycart");
-                  }
-                  handleAddProductCart(product.id, product.brandId);
-                }}
+  onClick={(e) => {
+  if (isAddedToCart) {
+    e.preventDefault();
+    router.push("/mycart"); // ✅ safe client navigation
+    return;
+  }
+  handleAddProductCart(product.id, product.brandId);
+}}
               >
                 {isPending ? (
                   <>
@@ -535,19 +539,49 @@ export function ProductCartAddForm({
                 )}
               </Button>
 
-              <WishlistButton
-                type="button"
-                variant="outline"
-                size="lg"
-                className="flex-1 rounded-full font-semibold"
-                userId={userId}
-                productId={product.id}
-                isProductWishlisted={isProductWishlisted}
-                setIsProductWishlisted={setIsProductWishlisted}
-                iconClassName={cn(
-                  isWishlisted && "fill-primary stroke-primary"
-                )}
-              />
+     {userId ? (
+  <WishlistButton
+    type="button"
+    variant="outline"
+    size="lg"
+    className="flex-1 rounded-full font-semibold"
+    userId={userId}
+    productId={product.id}
+    isProductWishlisted={isProductWishlisted}
+    setIsProductWishlisted={setIsProductWishlisted}
+    iconClassName={cn(isWishlisted && "fill-primary stroke-primary")}
+  />
+) : (
+  <Button
+    type="button"
+    variant="outline"
+    size="lg"
+    className="flex-1 rounded-full font-semibold"
+    onClick={() => {
+      addToGuestWishlist({
+        productId: product.id,
+        variantId: selectedVariant?.id || null,
+        title: product.title,
+        brand: product.brand?.name,
+        price: productPrice,
+        image: selectedVariant?.image ?? product.thumbnail ?? null,
+        sku: selectedVariant?.nativeSku ?? null,
+        fullProduct: product, // 👈 same trick as guest cart
+      });
+    }}
+  >
+    <Icons.Heart
+className={cn(
+  guestWishlist.some(
+    (w) =>
+      w.productId === product.id &&
+      String(w.variantId ?? "") === String(selectedVariant?.id ?? "")
+  ) && "fill-primary stroke-primary"
+)}
+    />
+    Wishlist
+  </Button>
+)}
             </div>
           </div>
         </form>

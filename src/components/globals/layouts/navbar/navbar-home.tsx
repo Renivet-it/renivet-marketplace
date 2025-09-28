@@ -41,6 +41,8 @@ import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
+
 function useGuestCart() {
   const [guestCart, setGuestCart] = useState<any[]>([]);
 
@@ -104,7 +106,7 @@ export function NavbarHome() {
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
     const setIsMenuOpen = useNavbarStore((state) => state.setIsOpen);
 const { guestCart } = useGuestCart();
-
+const { guestWishlist } = useGuestWishlist();
     const { scrollY } = useScroll();
 
     // useMotionValueEvent(scrollY, "change", (latest) => {
@@ -183,6 +185,10 @@ const { guestCart } = useGuestCart();
     };
 
 const cartCount = user ? (availableCart ?? []).length : guestCart.length;
+const wishlistCount = user
+  ? (userWishlist?.length ?? 0)
+  : guestWishlist.length;
+
     const { signOut } = useAuth();
     const posthog = usePostHog();
 
@@ -488,18 +494,19 @@ const cartCount = user ? (availableCart ?? []).length : guestCart.length;
                         placeholder="Search for products..."
                         classNames={{ wrapper: "min-w-80 hidden xl:flex" }}
                     />
-                {/* <Link href="/mycart" className="relative">
-                                    {availableCart?.length
-                                        ? availableCart.length > 0 && (
-                                              <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                                                  {availableCart.length}
-                                              </div>
-                                          )
-                                        : null}
-
-                                    <Icons.ShoppingCart className="size-5" />
-                                    <span className="sr-only">Cart</span>
-                                </Link> */}
+ <Link
+  href={user ? "/profile/wishlist" : "/guest-wishlist"} // or a common wishlist page
+  className="relative"
+>
+  {wishlistCount > 0 && (
+    <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2
+                    items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+      {wishlistCount}
+    </div>
+  )}
+  <Icons.Heart className="size-5" />
+  <span className="sr-only">Wishlist</span>
+</Link>
                                 <Link href="/mycart" className="relative">
   {cartCount > 0 && (
     <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">

@@ -33,6 +33,7 @@ import {
     MoveProductToWishlistModal,
     RemoveProductFromCartModal,
 } from "../../../../components/globals/modals";
+import { addToGuestWishlist } from "@/lib/hooks/wishlist";
 
 interface PageProps extends GenericProps {
     item: CachedCart;
@@ -258,6 +259,11 @@ export function ProductCartCard({
                                     onClick={() => {
                                         setIsActionDialogOpen(false);
                                         setIsMoveToWishlistModalOpen(true);
+                                        if (userId) {
+            setIsMoveToWishlistModalOpen(true);
+        } else {
+            addToGuestWishlist(item, imageUrl, itemPrice);
+        }
                                     }}
                                 >
                                     Move to Wishlist
