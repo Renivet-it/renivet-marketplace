@@ -2,6 +2,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 
 function useGuestCart() {
   const [guestCart, setGuestCart] = useState<any[]>([]);
@@ -95,3 +96,31 @@ export function useMergeGuestCartOnLogin() {
     }
   }, [userId, guestCart]);
 }
+
+
+export function useMergeGuestWishlistOnLogin() {
+  const { userId } = useAuth();
+  const { guestWishlist, clearGuestWishlist } = useGuestWishlist();
+  const utils = trpc.useUtils();
+
+  const mergeGuestWishlist = trpc.general.users.wishlist.mergeGuestWishlist.useMutation({
+    onSuccess: () => {
+      clearGuestWishlist();
+      if (userId) {
+        utils.general.users.wishlist.getWishlist.invalidate({ userId });
+      }
+    },
+  });
+
+  useEffect(() => {
+    // run only when user logs in & there is guest data
+    if (userId && guestWishlist.length > 0 && !mergeGuestWishlist.isLoading) {
+      mergeGuestWishlist.mutate(
+        guestWishlist.map((item) => ({
+          productId: item.id, // or item.productId if that’s your key
+        }))
+      );
+    }
+  }, [userId, guestWishlist]);
+}
+

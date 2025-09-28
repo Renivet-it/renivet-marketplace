@@ -43,6 +43,35 @@ export const wishlistRouter = createTRPCRouter({
             if (!existingWishlist) return [];
             return existingWishlist;
         }),
+       mergeGuestWishlist: protectedProcedure
+  .input(z.array(z.object({ productId: z.string() })))
+  .mutation(async ({ ctx, input }) => {
+    const { user, queries } = ctx;
+    const userId = user.id;
+
+    let mergedCount = 0;
+
+    for (const { productId } of input) {
+      const existing = await userWishlistCache.getProduct(userId, productId);
+      if (existing) continue;
+
+      const product = await queries.products.getProduct({
+        productId,
+        verificationStatus: "approved",
+        isPublished: true,
+        isActive: true,
+        isAvailable: true,
+        isDeleted: false,
+      });
+      if (!product) continue;
+
+      await queries.userWishlists.addProductInWishlist({ userId, productId });
+      mergedCount++;
+    }
+
+    await userWishlistCache.drop(userId);
+    return { mergedCount };
+  }),
     addProductInWishlist: protectedProcedure
         .input(createWishlistSchema)
         .use(({ ctx, input, next }) => {

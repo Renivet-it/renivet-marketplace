@@ -92,8 +92,13 @@ export function useGuestWishlist() {
     localStorage.setItem("guest_wishlist", JSON.stringify([...guestWishlist, item]));
     setTimeout(() => {
       window.dispatchEvent(new Event("guestWishlistUpdated"));
-    }, 0);  // 👈 important: defer
+    }, 0); // 👈 important: defer
   };
 
-  return { guestWishlist, addToGuestWishlist };
+    const clearGuestWishlist = () => {
+    localStorage.removeItem("guest_wishlist");
+    window.dispatchEvent(new Event("guestCartUpdated"));
+  };
+
+  return { guestWishlist, addToGuestWishlist, clearGuestWishlist };
 }

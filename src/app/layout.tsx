@@ -10,6 +10,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import FacebookPixel from "./facebook-pixel"; // ✅ add this
 import { MergeGuestCart } from "../components/globals/layouts/guest/merge-guest-cart"; // ✅ import wrapper
+import { MergeGuestWishlist } from "../components/globals/layouts/guest/merge-guest-wishlist";
 
 const FB_PIXEL_ID = "618442627790500"; // ✅
 
@@ -139,6 +140,7 @@ export default function RootLayout({ children }: LayoutProps) {
                 >
                     <ClientProvider>
                          <MergeGuestCart />
+                        <MergeGuestWishlist />
                         {children}
                         <Toaster />
                         {/* ✅ Track page changes */}
