@@ -161,6 +161,7 @@ export function DeliveryOption({
           )}
 
           <button
+          type="button"
             onClick={handleChangeClick}
             className="text-blue-600 font-medium hover:underline text-sm"
           >

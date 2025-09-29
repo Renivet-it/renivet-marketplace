@@ -494,28 +494,35 @@ const wishlistCount = user
                         placeholder="Search for products..."
                         classNames={{ wrapper: "min-w-80 hidden xl:flex" }}
                     />
- <Link
-  href={user ? "/profile/wishlist" : "/guestWishlist"} // or a common wishlist page
-  className="relative"
->
-  {wishlistCount > 0 && (
-    <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2
-                    items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-      {wishlistCount}
-    </div>
+  {/* ✅ Guest-only Wishlist & Cart */}
+  {!user && (
+    <>
+      <Link
+        href="/guestWishlist"
+        className="relative"
+      >
+        {wishlistCount > 0 && (
+          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2
+                          items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+            {wishlistCount}
+          </div>
+        )}
+        <Icons.Heart className="size-5" />
+        <span className="sr-only">Wishlist</span>
+      </Link>
+
+      <Link href="/mycart" className="relative">
+        {cartCount > 0 && (
+          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2
+                          items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+            {cartCount}
+          </div>
+        )}
+        <Icons.ShoppingCart className="size-5" />
+        <span className="sr-only">Cart</span>
+      </Link>
+    </>
   )}
-  <Icons.Heart className="size-5" />
-  <span className="sr-only">Wishlist</span>
-</Link>
-                                <Link href="/mycart" className="relative">
-  {cartCount > 0 && (
-    <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-      {cartCount}
-    </div>
-  )}
-  <Icons.ShoppingCart className="size-5" />
-  <span className="sr-only">Cart</span>
-</Link>
 
                     {user ? (
                         <div className="flex items-center">
