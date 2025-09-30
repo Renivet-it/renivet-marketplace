@@ -109,8 +109,8 @@ export function MobileBottomNav() {
 
   const navItems = [
     { href: "/", icon: Home, label: "Home" },
-    { href: "/cart", icon: ShoppingBag, label: "Cart", count: cartItemCount },
-    { href: "/wishlist", icon: Heart, label: "Wishlist" },
+    { href: "/mycart", icon: ShoppingBag, label: "Cart", count: cartItemCount },
+    { href: "/profile/wishlist", icon: Heart, label: "Wishlist" },
     { href: "/profile", icon: User, label: "Profile" },
   ];
 
