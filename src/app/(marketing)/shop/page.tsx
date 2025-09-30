@@ -67,12 +67,12 @@ export default async function Page({ searchParams }: PageProps) {
             <ShopSortBy />
           </div>
 
-          {/* Product types row (INLINE) */}
-         <ProductTypesRow
-  productTypes={productTypes}
-  productTypeId={(await searchParams).productTypeId ?? ""}
-/>
-
+<div className="block md:hidden">
+  <ProductTypesRow
+    productTypes={productTypes}
+    productTypeId={(await searchParams).productTypeId ?? ""}
+  />
+</div>
           <Separator />
 
           <Suspense fallback={<ShopProductsSkeleton />}>
