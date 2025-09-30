@@ -115,9 +115,10 @@ export function useMergeGuestWishlistOnLogin() {
   useEffect(() => {
     // run only when user logs in & there is guest data
     if (userId && guestWishlist.length > 0 && !mergeGuestWishlist.isLoading) {
+      console.log(mergeGuestWishlist, "mergeGuestWishlist");
       mergeGuestWishlist.mutate(
         guestWishlist.map((item) => ({
-          productId: item.id, // or item.productId if that’s your key
+          productId: item.productId, // or item.productId if that’s your key
         }))
       );
     }
