@@ -1,6 +1,7 @@
 import { GeneralShell } from "@/components/globals/layouts";
 import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { Label } from "@/components/ui/label";
+import { SearchInput } from "@/components/ui/search-input";
 // import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,35 +35,82 @@ interface PageProps {
     }>;
 }
 
-export default function Page({ searchParams }: PageProps) {
-    return (
-        <GeneralShell>
-            <div className="flex flex-col gap-5 md:flex-row">
-                <Suspense fallback={<ShopFiltersSkeleton />}>
-                    <ShopFiltersFetch className="w-full basis-1/6 space-y-4" />
-                </Suspense>
+export default async function Page({ searchParams }: PageProps) {
+  const productTypes = await productTypeCache.getAll();
 
-                <div className="hidden w-px bg-border md:inline-block" />
+  return (
+    <GeneralShell>
+      <div className="flex flex-col gap-5 md:flex-row">
+        {/* Desktop filters */}
+        <div className="hidden md:block md:basis-1/6">
+          <Suspense fallback={<ShopFiltersSkeleton />}>
+            <ShopFiltersFetch className="space-y-4" />
+          </Suspense>
+        </div>
 
-                <div className="w-full basis-5/6 space-y-5">
-                    {/* <SearchInput
-                        type="search"
-                        placeholder="Search for a product..."
-                        className="h-12 text-base"
-                    /> */}
-                    <div className="flex justify-end">
-                        <ShopSortBy />
-                    </div>
+        {/* Divider */}
+        <div className="hidden w-px bg-border md:inline-block" />
 
-                    <Separator />
+        {/* Main content */}
+        <div className="w-full md:basis-5/6 space-y-5">
+          {/* Mobile search */}
+          <div className="block md:hidden">
+            <SearchInput
+              type="search"
+              placeholder="Search for a product..."
+              className="h-12 text-base"
+            />
+          </div>
 
-                    <Suspense fallback={<ShopProductsSkeleton />}>
-                        <ShopProductsFetch searchParams={searchParams} />
-                    </Suspense>
-                </div>
-            </div>
-        </GeneralShell>
-    );
+          {/* Desktop sort by */}
+          <div className="hidden md:flex justify-end">
+            <ShopSortBy />
+          </div>
+
+          {/* Product types row (INLINE) */}
+         <ProductTypesRow
+  productTypes={productTypes}
+  productTypeId={(await searchParams).productTypeId ?? ""}
+/>
+
+          <Separator />
+
+          <Suspense fallback={<ShopProductsSkeleton />}>
+            <ShopProductsFetch searchParams={searchParams} />
+          </Suspense>
+        </div>
+      </div>
+    </GeneralShell>
+  );
+}
+
+function ProductTypesRow({ productTypes, productTypeId }: { productTypes: { id: string; name: string }[], productTypeId?: string }) {
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <a
+        href="?productTypeId="
+        className={cn(
+          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
+          productTypeId === "" && "bg-black text-white border-black"
+        )}
+      >
+        All Items
+      </a>
+
+      {productTypes.map((type) => (
+        <a
+          key={type.id}
+          href={`?productTypeId=${type.id}`}
+          className={cn(
+            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
+            productTypeId === type.id && "bg-black text-white border-black"
+          )}
+        >
+          {type.name}
+        </a>
+      ))}
+    </div>
+  );
 }
 
 async function ShopFiltersFetch(props: GenericProps) {
