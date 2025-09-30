@@ -161,6 +161,7 @@ export function DeliveryOption({
           )}
 
           <button
+          type="button"
             onClick={handleChangeClick}
             className="text-blue-600 font-medium hover:underline text-sm"
           >
@@ -213,13 +214,13 @@ export function DeliveryOption({
                     pattern="\d{6}"
                     required
                   />
-                  <button
+                  {/* <button
                     type="submit"
                     disabled={isPending}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:bg-gray-100"
                   >
                     {isPending ? "Checking..." : "Check"}
-                  </button>
+                  </button> */}
                 </div>
               </div>
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
