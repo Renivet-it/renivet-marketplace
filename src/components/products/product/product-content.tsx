@@ -6,9 +6,6 @@ import { Icons } from "@/components/icons";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { CachedCart, ProductWithBrand } from "@/lib/validations";
-import Link from "next/link";
-import { ProductDetails } from "./product-detais";
-import { DeliveryOption } from "./product-delivery";
 import { trpc } from "@/lib/trpc/client";
 import { useState, useEffect, useTransition } from "react";
 import { getEstimatedDelivery } from "@/actions/shiprocket/get-estimate-delivery";
@@ -21,10 +18,26 @@ interface PageProps extends GenericProps {
   userId?: string;
 }
 
-// Simple seeded random generator
+// 🔹 Simple seeded random generator
 function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
+}
+
+// 🔹 Convert string (id/title) into numeric seed
+function stringToSeed(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash);
+}
+
+// 🔹 Generate random rating & reviews per product (consistent per product)
+function getRandomRatingAndReviews(seed: number) {
+  const rating = Math.round((4.0 + seededRandom(seed) * 0.6) * 10) / 10; // 4.0–4.6
+  const reviews = Math.floor(seededRandom(seed + 1) * 71) + 10; // 10–80
+  return { rating, reviews };
 }
 
 export function ProductContent({
@@ -48,15 +61,11 @@ export function ProductContent({
 
   const { data: user } = trpc.general.users.currentUser.useQuery();
 
-  // Generate fixed rating/reviews per product using seeded random
-  const seed = product.id
-    ? product.id.length
-    : product.title.length; // simple seed
-  const rating =
-    Math.round((4.0 + seededRandom(seed) * 0.5) * 10) / 10; // between 4.0–4.5
-  const reviews = Math.floor(seededRandom(seed + 1) * 41) + 10; // between 10–50
+  // 🔹 Generate unique seed from product.id or title
+  const seed = stringToSeed(product.id || product.title);
+  const { rating, reviews } = getRandomRatingAndReviews(seed);
 
-  // Fetch estimated delivery date
+  // 🔹 Fetch estimated delivery date
   useEffect(() => {
     if (user?.addresses[0]?.zip && brandDetails?.warehousePostalCode) {
       startTransition(async () => {
@@ -127,31 +136,41 @@ export function ProductContent({
             </button>
           </div>
 
-          {/* Rating + Reviews + Brand */}
+          {/* ⭐ Rating + Reviews + Brand */}
           <div className="flex items-center gap-4">
             {/* Stars */}
             <div className="flex items-center text-yellow-500">
-              {[...Array(5)].map((_, i) => (
-                <Icons.Star
-                  key={i}
-                  className={`w-4 h-4 ${
-                    i < Math.floor(rating) ? "fill-current" : ""
-                  }`}
-                />
-              ))}
-              {rating % 1 !== 0 && (
-                <Icons.StarHalf className="w-4 h-4 fill-current" />
-              )}
+              {[...Array(5)].map((_, i) => {
+                const starValue = i + 1;
+                if (rating >= starValue) {
+                  return (
+                    <Icons.Star key={i} className="w-4 h-4 fill-current" />
+                  ); // full star
+                } else if (rating >= starValue - 0.5) {
+                  return (
+                    <Icons.StarHalf key={i} className="w-4 h-4 fill-current" />
+                  ); // half star
+                } else {
+                  return (
+                    <Icons.Star key={i} className="w-4 h-4 text-gray-300" />
+                  ); // empty star
+                }
+              })}
             </div>
+
+            {/* Rating & Reviews */}
             <span className="text-gray-700 text-sm">
               {rating} • {reviews} reviews
             </span>
+
+            {/* Brand */}
             <span className="bg-green-50 text-green-700 text-xs md:text-sm font-medium px-3 py-1 rounded-full border border-green-200">
               {product.brand.name}
             </span>
           </div>
         </div>
 
+        {/* Cart Add Form */}
         <ProductCartAddForm
           product={product}
           isWishlisted={isWishlisted}
