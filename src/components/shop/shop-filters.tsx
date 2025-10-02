@@ -198,53 +198,55 @@ function ShopFiltersSection({
         )}
       </div>
 
-      {/* Subcategories */}
-      {categoryId && (
-        <div className="space-y-2">
-          <Label className="font-semibold uppercase">Subcategory</Label>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {subCategories
-              .filter((s) => s.categoryId === categoryId)
-              .map((sub) => (
-                <div key={sub.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={sub.id}
-                    checked={subCategoryId === sub.id}
-                    onCheckedChange={() =>
-                      handleSubCategoryChange(
-                        subCategoryId === sub.id ? "" : sub.id
-                      )
-                    }
-                  />
-                  <Label htmlFor={sub.id}>{sub.name}</Label>
-                </div>
-              ))}
-          </div>
+      {/* Subcategories - Always show */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Subcategory</Label>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {subCategories
+            .filter((s) =>
+              categoryId ? String(s.categoryId) === String(categoryId) : true
+            )
+            .map((sub) => (
+              <div key={sub.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={sub.id}
+                  checked={subCategoryId === sub.id}
+                  onCheckedChange={() =>
+                    handleSubCategoryChange(
+                      subCategoryId === sub.id ? "" : sub.id
+                    )
+                  }
+                />
+                <Label htmlFor={sub.id}>{sub.name}</Label>
+              </div>
+            ))}
         </div>
-      )}
+      </div>
 
-      {/* Product Types */}
-      {subCategoryId && (
-        <div className="space-y-2">
-          <Label className="font-semibold uppercase">Type</Label>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {productTypes
-              .filter((t) => t.subCategoryId === subCategoryId)
-              .map((t) => (
-                <div key={t.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={t.id}
-                    checked={productTypeId === t.id}
-                    onCheckedChange={() =>
-                      setProductTypeId(productTypeId === t.id ? "" : t.id)
-                    }
-                  />
-                  <Label htmlFor={t.id}>{t.name}</Label>
-                </div>
-              ))}
-          </div>
+      {/* Product Types - Always show */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Type</Label>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {productTypes
+            .filter((t) =>
+              subCategoryId
+                ? String(t.subCategoryId) === String(subCategoryId)
+                : true
+            )
+            .map((t) => (
+              <div key={t.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={t.id}
+                  checked={productTypeId === t.id}
+                  onCheckedChange={() =>
+                    setProductTypeId(productTypeId === t.id ? "" : t.id)
+                  }
+                />
+                <Label htmlFor={t.id}>{t.name}</Label>
+              </div>
+            ))}
         </div>
-      )}
+      </div>
 
       <Separator />
 
