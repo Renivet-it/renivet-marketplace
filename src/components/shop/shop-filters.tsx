@@ -146,6 +146,17 @@ function ShopFiltersSection({
 
   const [showAllBrands, setShowAllBrands] = useState(false);
 
+  // ✅ Reset All
+  const handleResetAll = () => {
+    setCategoryId("");
+    setSubCategoryId("");
+    setProductTypeId("");
+    setBrandIds([]);
+    setMinPrice(0);
+    setMaxPrice(10000);
+    setPriceRange([0, 10000]);
+  };
+
   const handleCategoryChange = (id: string) => {
     setCategoryId(id);
     setSubCategoryId("");
@@ -157,15 +168,15 @@ function ShopFiltersSection({
     setProductTypeId("");
   };
 
-  const handleResetCategory = () => {
-    setCategoryId("");
-    setSubCategoryId("");
-    setProductTypeId("");
-  };
-
   return (
     <div className={cn("space-y-6", className)} {...props}>
-      <h4 className="text-lg font-semibold">Filters</h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-lg font-semibold">Filters</h4>
+        <Button size="sm" variant="outline" onClick={handleResetAll}>
+          <Icons.History className="mr-1" />
+          Reset All
+        </Button>
+      </div>
 
       <Separator />
 
@@ -190,12 +201,6 @@ function ShopFiltersSection({
             </div>
           ))}
         </div>
-        {categoryId && (
-          <Button size="sm" className="w-full" onClick={handleResetCategory}>
-            <Icons.History />
-            Reset Category
-          </Button>
-        )}
       </div>
 
       {/* Subcategories - Always show */}
