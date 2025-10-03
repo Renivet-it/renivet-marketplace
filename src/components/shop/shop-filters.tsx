@@ -31,7 +31,55 @@ import {
 } from "../ui/sheet";
 import { Slider } from "../ui/slider";
 import { Checkbox } from "../ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group"; // Import RadioGroup
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+
+// --- THE TRULY DYNAMIC COLOR SOLUTION ---
+import parse from "color-parse";
+
+// A function to convert an RGBA array to a hex string
+function rgbaToHex(rgba: number[]): string {
+  const toHex = (c: number) => `0${c.toString(16)}`.slice(-2);
+  return `#${toHex(rgba[0])}${toHex(rgba[1])}${toHex(rgba[2])}`;
+}
+
+// A truly dynamic function that intelligently parses color names.
+const getColorHex = (colorName: string): string => {
+  const strategies = [
+    colorName, // 1. Try the original name
+    colorName.replace(/[\s_-]/g, ""), // 2. Try with no spaces/dashes
+    colorName.split(/[\s_-]/).pop() || "", // 3. Try only the last word
+    colorName.split(/[\s_-]/).shift() || "" // 4. Try only the first word
+  ];
+
+  for (const strategy of strategies) {
+    if (!strategy) continue;
+    try {
+      const parsed = parse(strategy.toLowerCase());
+      if (parsed.space) { // The library found a valid color
+        return rgbaToHex(parsed.values);
+      }
+    } catch (e) {
+      // Ignore errors and try the next strategy
+    }
+  }
+
+  // If all dynamic strategies fail, default to white.
+  // This handles multi-word names like "Black & Fuchsia".
+  return "#FFFFFF";
+};
+
+// A robust function to determine the best checkmark color.
+const getCheckmarkColor = (hex: string): string => {
+  if (!hex || hex.length !== 7) return "black";
+  const r = parseInt(hex.substring(1, 3), 16);
+  const g = parseInt(hex.substring(3, 5), 16);
+  const b = parseInt(hex.substring(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.5 ? "white" : "black";
+};
+
+
+// --- YOUR COMPONENT CODE ---
 
 interface PageProps extends GenericProps {
   brandsMeta: BrandMeta[];
@@ -172,6 +220,7 @@ function ShopFiltersSection({
   ]);
 
   const [showAllBrands, setShowAllBrands] = useState(false);
+  const [showAllColors, setShowAllColors] = useState(false);
 
   const handleResetAll = () => {
     setCategoryId("");
@@ -196,16 +245,16 @@ function ShopFiltersSection({
     setSubCategoryId(id === subCategoryId ? "" : id);
     setProductTypeId("");
   };
-  
+
   const handleProductTypeChange = (id: string) => {
     setProductTypeId(id === productTypeId ? "" : id);
   };
 
-  const handleColorChange = (color: string) => {
+  const handleColorChange = (colorName: string) => {
     setColorFilters(
-      colorFilters.includes(color)
-        ? colorFilters.filter((c) => c !== color)
-        : [...colorFilters, color]
+      colorFilters.includes(colorName)
+        ? colorFilters.filter((c) => c !== colorName)
+        : [...colorFilters, colorName]
     );
   };
 
@@ -224,6 +273,8 @@ function ShopFiltersSection({
         : [...numSizeFilters, size]
     );
   };
+
+  const visibleColors = showAllColors ? colors : colors.slice(0, 21);
 
   return (
     <div className={cn("space-y-6", className)} {...props}>
@@ -262,7 +313,7 @@ function ShopFiltersSection({
         <RadioGroup
           value={subCategoryId}
           onValueChange={handleSubCategoryChange}
-          className="space-y-2 max-h-48 overflow-y-auto"
+          className="max-h-48 space-y-2 overflow-y-auto"
         >
           {subCategories
             .filter((s) =>
@@ -285,7 +336,7 @@ function ShopFiltersSection({
         <RadioGroup
           value={productTypeId}
           onValueChange={handleProductTypeChange}
-          className="space-y-2 max-h-48 overflow-y-auto"
+          className="max-h-48 space-y-2 overflow-y-auto"
         >
           {productTypes
             .filter((t) =>
@@ -304,30 +355,49 @@ function ShopFiltersSection({
 
       <Separator />
 
-      {/* Colors */}
-      <div className="space-y-2">
-        <Label className="font-semibold uppercase">Colors</Label>
-        <div className="flex flex-wrap gap-2">
-          {colors.map((color) => (
-            <button
-              key={color}
-              type="button"
-              onClick={() => handleColorChange(color)}
-              className={cn(
-                "w-8 h-8 rounded-full border flex items-center justify-center",
-                colorFilters.includes(color)
-                  ? "ring-2 ring-offset-1 ring-black"
-                  : "opacity-80 hover:opacity-100"
-              )}
-              title={color}
-              style={{ backgroundColor: color }}
-            >
-              {colorFilters.includes(color) && (
-                <Icons.Check className="w-4 h-4" style={{ color: color.toLowerCase() === 'black' ? 'white' : 'black' }} />
-              )}
-            </button>
-          ))}
+      {/* Colors Section */}
+      <div className="space-y-4">
+        <Label className="font-semibold uppercase">Color</Label>
+        <div className="grid grid-cols-3 gap-x-2 gap-y-4">
+          {visibleColors.map((colorName) => {
+            const hex = getColorHex(colorName);
+            return (
+              <div
+                key={colorName}
+                className="flex cursor-pointer flex-col items-center gap-2"
+                onClick={() => handleColorChange(colorName)}
+              >
+                <button
+                  type="button"
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-full border",
+                    colorFilters.includes(colorName)
+                      ? "ring-2 ring-black ring-offset-1"
+                      : ""
+                  )}
+                  title={colorName}
+                  style={{ backgroundColor: hex }}
+                >
+                  {colorFilters.includes(colorName) && (
+                    <Icons.Check
+                      className="size-4"
+                      style={{ color: getCheckmarkColor(hex) }}
+                    />
+                  )}
+                </button>
+                <span className="text-center text-sm capitalize">{colorName}</span>
+              </div>
+            );
+          })}
         </div>
+        {colors.length > 21 && (
+          <button
+            className="mt-2 text-sm text-gray-600 hover:underline"
+            onClick={() => setShowAllColors(!showAllColors)}
+          >
+            {showAllColors ? "View Less -" : "View More +"}
+          </button>
+        )}
       </div>
 
       <Separator />
@@ -342,7 +412,7 @@ function ShopFiltersSection({
               type="button"
               onClick={() => handleAlphaSizeChange(size)}
               className={cn(
-                "px-3 py-1 border rounded-md text-sm",
+                "rounded-md border px-3 py-1 text-sm",
                 alphaSizeFilters.includes(size)
                   ? "bg-black text-white"
                   : "bg-white text-black hover:bg-gray-100"
@@ -366,7 +436,7 @@ function ShopFiltersSection({
               type="button"
               onClick={() => handleNumSizeChange(size)}
               className={cn(
-                "px-3 py-1 border rounded-md text-sm",
+                "rounded-md border px-3 py-1 text-sm",
                 numSizeFilters.includes(size)
                   ? "bg-black text-white"
                   : "bg-white text-black hover:bg-gray-100"
@@ -403,10 +473,10 @@ function ShopFiltersSection({
         </div>
         {brandsMeta.length > 5 && (
           <button
-            className="text-sm text-gray-600 hover:underline mt-2"
+            className="mt-2 text-sm text-gray-600 hover:underline"
             onClick={() => setShowAllBrands(!showAllBrands)}
           >
-            {showAllBrands ? "View Less -" : "View More +"}
+            {showAllColors ? "View Less -" : "View More +"}
           </button>
         )}
       </div>
@@ -457,7 +527,7 @@ export function ShopSortBy() {
   return (
     <div className="w-52 space-y-1">
       <select
-        className="w-full border rounded-md px-3 py-2"
+        className="w-full rounded-md border px-3 py-2"
         value={`${sortBy}:${sortOrder}`}
         onChange={(e) => handleSort(e.target.value)}
       >
