@@ -260,6 +260,10 @@ const sortByWithOrderTypes = [
 ];
 
 // --- COMPONENTS ---
+interface GenericProps {
+  className?: string;
+  [key: string]: any;
+}
 
 interface PageProps extends GenericProps {
   brandsMeta: BrandMeta[];
@@ -378,12 +382,9 @@ function ShopFiltersSection({
   const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
     defaultValue: "",
   });
-  const [alphaSizeFilters, setAlphaSizeFilters] = useQueryState(
-    "alphaSize",
-    parseAsArrayOf(parseAsString, ",").withDefault([])
-  );
-  const [numSizeFilters, setNumSizeFilters] = useQueryState(
-    "numSize",
+  // --- UNIFIED SIZE STATE ---
+  const [sizeFilters, setSizeFilters] = useQueryState(
+    "sizes",
     parseAsArrayOf(parseAsString, ",").withDefault([])
   );
 
@@ -401,14 +402,23 @@ function ShopFiltersSection({
     setProductTypeId("");
     setBrandIds([]);
     setColorFilters([]);
-    setAlphaSizeFilters([]);
-    setNumSizeFilters([]);
+    setSizeFilters([]); // Reset unified size state
     setMinPrice(0);
     setMaxPrice(10000);
     setPriceRange([0, 10000]);
   };
 
+  // --- UNIFIED SIZE HANDLER ---
+  const handleSizeChange = (size: string) => {
+    setSizeFilters(
+      sizeFilters.includes(size)
+        ? sizeFilters.filter((s) => s !== size)
+        : [...sizeFilters, size]
+    );
+  };
+
   const visibleColors = showAllColors ? colors : colors.slice(0, 21);
+  const allSizes = [...alphaSize, ...numSize]; // Combine sizes for rendering
 
   return (
     <div className={cn("space-y-6", className)} {...props}>
@@ -557,45 +567,18 @@ function ShopFiltersSection({
 
       <Separator />
 
-      {/* Alpha & Numeric Sizes */}
+      {/* --- UNIFIED SIZES SECTION --- */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Sizes</Label>
         <div className="flex flex-wrap gap-2">
-          {alphaSize.map((size) => (
+          {allSizes.map((size) => (
             <button
               key={size}
               type="button"
-              onClick={() =>
-                setAlphaSizeFilters(
-                  alphaSizeFilters.includes(size)
-                    ? alphaSizeFilters.filter((s) => s !== size)
-                    : [...alphaSizeFilters, size]
-                )
-              }
+              onClick={() => handleSizeChange(size)}
               className={cn(
                 "rounded-md border px-3 py-1 text-sm",
-                alphaSizeFilters.includes(size)
-                  ? "bg-black text-white"
-                  : "bg-white text-black hover:bg-gray-100"
-              )}
-            >
-              {size}
-            </button>
-          ))}
-          {numSize.map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() =>
-                setNumSizeFilters(
-                  numSizeFilters.includes(size)
-                    ? numSizeFilters.filter((s) => s !== size)
-                    : [...numSizeFilters, size]
-                )
-              }
-              className={cn(
-                "rounded-md border px-3 py-1 text-sm",
-                numSizeFilters.includes(size)
+                sizeFilters.includes(size)
                   ? "bg-black text-white"
                   : "bg-white text-black hover:bg-gray-100"
               )}
