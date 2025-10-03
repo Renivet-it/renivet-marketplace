@@ -31,6 +31,7 @@ import {
 } from "../ui/sheet";
 import { Slider } from "../ui/slider";
 import { Checkbox } from "../ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group"; // Import RadioGroup
 
 interface PageProps extends GenericProps {
   brandsMeta: BrandMeta[];
@@ -186,21 +187,25 @@ function ShopFiltersSection({
   };
 
   const handleCategoryChange = (id: string) => {
-    setCategoryId(id);
+    setCategoryId(id === categoryId ? "" : id);
     setSubCategoryId("");
     setProductTypeId("");
   };
 
   const handleSubCategoryChange = (id: string) => {
-    setSubCategoryId(id);
+    setSubCategoryId(id === subCategoryId ? "" : id);
     setProductTypeId("");
   };
+  
+  const handleProductTypeChange = (id: string) => {
+    setProductTypeId(id === productTypeId ? "" : id);
+  };
 
-  const handleColorChange = (hex: string) => {
+  const handleColorChange = (color: string) => {
     setColorFilters(
-      colorFilters.includes(hex)
-        ? colorFilters.filter((c) => c !== hex)
-        : [...colorFilters, hex]
+      colorFilters.includes(color)
+        ? colorFilters.filter((c) => c !== color)
+        : [...colorFilters, color]
     );
   };
 
@@ -235,20 +240,18 @@ function ShopFiltersSection({
       {/* Categories */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Category</Label>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <RadioGroup
+          value={categoryId}
+          onValueChange={handleCategoryChange}
+          className="space-y-2"
+        >
           {categories.map((cat) => (
             <div key={cat.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={cat.id}
-                checked={categoryId === cat.id}
-                onCheckedChange={() =>
-                  handleCategoryChange(categoryId === cat.id ? "" : cat.id)
-                }
-              />
-              <Label htmlFor={cat.id}>{cat.name}</Label>
+              <RadioGroupItem value={cat.id} id={cat.id} />
+              <Label htmlFor={cat.id} className="font-normal">{cat.name}</Label>
             </div>
           ))}
-        </div>
+        </RadioGroup>
       </div>
 
       <Separator />
@@ -256,26 +259,22 @@ function ShopFiltersSection({
       {/* Subcategories */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Subcategory</Label>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <RadioGroup
+          value={subCategoryId}
+          onValueChange={handleSubCategoryChange}
+          className="space-y-2 max-h-48 overflow-y-auto"
+        >
           {subCategories
             .filter((s) =>
               categoryId ? String(s.categoryId) === String(categoryId) : true
             )
             .map((sub) => (
               <div key={sub.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={sub.id}
-                  checked={subCategoryId === sub.id}
-                  onCheckedChange={() =>
-                    handleSubCategoryChange(
-                      subCategoryId === sub.id ? "" : sub.id
-                    )
-                  }
-                />
-                <Label htmlFor={sub.id}>{sub.name}</Label>
+                <RadioGroupItem value={sub.id} id={sub.id} />
+                <Label htmlFor={sub.id} className="font-normal">{sub.name}</Label>
               </div>
             ))}
-        </div>
+        </RadioGroup>
       </div>
 
       <Separator />
@@ -283,7 +282,11 @@ function ShopFiltersSection({
       {/* Product Types */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Type</Label>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <RadioGroup
+          value={productTypeId}
+          onValueChange={handleProductTypeChange}
+          className="space-y-2 max-h-48 overflow-y-auto"
+        >
           {productTypes
             .filter((t) =>
               subCategoryId
@@ -292,17 +295,11 @@ function ShopFiltersSection({
             )
             .map((t) => (
               <div key={t.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={t.id}
-                  checked={productTypeId === t.id}
-                  onCheckedChange={() =>
-                    setProductTypeId(productTypeId === t.id ? "" : t.id)
-                  }
-                />
-                <Label htmlFor={t.id}>{t.name}</Label>
+                <RadioGroupItem value={t.id} id={t.id} />
+                <Label htmlFor={t.id} className="font-normal">{t.name}</Label>
               </div>
             ))}
-        </div>
+        </RadioGroup>
       </div>
 
       <Separator />
@@ -319,13 +316,14 @@ function ShopFiltersSection({
               className={cn(
                 "w-8 h-8 rounded-full border flex items-center justify-center",
                 colorFilters.includes(color)
-                  ? "ring-2 ring-black"
+                  ? "ring-2 ring-offset-1 ring-black"
                   : "opacity-80 hover:opacity-100"
               )}
               title={color}
+              style={{ backgroundColor: color }}
             >
               {colorFilters.includes(color) && (
-                <Icons.Check className="w-4 h-4 text-white" />
+                <Icons.Check className="w-4 h-4" style={{ color: color.toLowerCase() === 'black' ? 'white' : 'black' }} />
               )}
             </button>
           ))}
@@ -344,10 +342,10 @@ function ShopFiltersSection({
               type="button"
               onClick={() => handleAlphaSizeChange(size)}
               className={cn(
-                "px-3 py-1 border rounded-md",
+                "px-3 py-1 border rounded-md text-sm",
                 alphaSizeFilters.includes(size)
                   ? "bg-black text-white"
-                  : "bg-white text-black"
+                  : "bg-white text-black hover:bg-gray-100"
               )}
             >
               {size}
@@ -368,10 +366,10 @@ function ShopFiltersSection({
               type="button"
               onClick={() => handleNumSizeChange(size)}
               className={cn(
-                "px-3 py-1 border rounded-md",
+                "px-3 py-1 border rounded-md text-sm",
                 numSizeFilters.includes(size)
                   ? "bg-black text-white"
-                  : "bg-white text-black"
+                  : "bg-white text-black hover:bg-gray-100"
               )}
             >
               {size}
@@ -399,13 +397,13 @@ function ShopFiltersSection({
                   )
                 }
               />
-              <Label htmlFor={brand.id}>{brand.name}</Label>
+              <Label htmlFor={brand.id} className="font-normal">{brand.name}</Label>
             </div>
           ))}
         </div>
         {brandsMeta.length > 5 && (
           <button
-            className="text-sm text-gray-600 hover:underline"
+            className="text-sm text-gray-600 hover:underline mt-2"
             onClick={() => setShowAllBrands(!showAllBrands)}
           >
             {showAllBrands ? "View Less -" : "View More +"}
