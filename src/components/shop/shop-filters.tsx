@@ -33,42 +33,47 @@ import { Slider } from "../ui/slider";
 import { Checkbox } from "../ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 
-// --- THE TRULY DYNAMIC COLOR SOLUTION ---
+// --- FULLY DYNAMIC COLOR SOLUTION ---
 import parse from "color-parse";
 
-// A function to convert an RGBA array to a hex string
+// Convert RGBA array to hex
 function rgbaToHex(rgba: number[]): string {
-  const toHex = (c: number) => `0${c.toString(16)}`.slice(-2);
+  const toHex = (c: number) => c.toString(16).padStart(2, "0");
   return `#${toHex(rgba[0])}${toHex(rgba[1])}${toHex(rgba[2])}`;
 }
 
-// A truly dynamic function that intelligently parses color names.
-const getColorHex = (colorName: string): string => {
-  const strategies = [
-    colorName, // 1. Try the original name
-    colorName.replace(/[\s_-]/g, ""), // 2. Try with no spaces/dashes
-    colorName.split(/[\s_-]/).pop() || "", // 3. Try only the last word
-    colorName.split(/[\s_-]/).shift() || "" // 4. Try only the first word
-  ];
+// Generate a unique color from a string hash
+function stringToColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash; // 32bit int
+  }
+  const r = (hash >> 16) & 0xff;
+  const g = (hash >> 8) & 0xff;
+  const b = hash & 0xff;
+  return `#${r.toString(16).padStart(2, "0")}${g
+    .toString(16)
+    .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
 
-  for (const strategy of strategies) {
-    if (!strategy) continue;
+// Fully dynamic color parsing
+const getColorHex = (colorName: string): string => {
+  if (!colorName) return "#CCCCCC";
+
+  const cleaned = colorName.toLowerCase().split(/[\s&_-]+/);
+
+  for (const word of cleaned) {
     try {
-      const parsed = parse(strategy.toLowerCase());
-      if (parsed.space) { // The library found a valid color
-        return rgbaToHex(parsed.values);
-      }
-    } catch (e) {
-      // Ignore errors and try the next strategy
-    }
+      const parsed = parse(word);
+      if (parsed.space) return rgbaToHex(parsed.values);
+    } catch {}
   }
 
-  // If all dynamic strategies fail, default to white.
-  // This handles multi-word names like "Black & Fuchsia".
-  return "#FFFFFF";
+  return stringToColor(colorName);
 };
 
-// A robust function to determine the best checkmark color.
+// Determine the best checkmark color
 const getCheckmarkColor = (hex: string): string => {
   if (!hex || hex.length !== 7) return "black";
   const r = parseInt(hex.substring(1, 3), 16);
@@ -78,9 +83,7 @@ const getCheckmarkColor = (hex: string): string => {
   return luminance < 0.5 ? "white" : "black";
 };
 
-
-// --- YOUR COMPONENT CODE ---
-
+// --- COMPONENTS ---
 interface PageProps extends GenericProps {
   brandsMeta: BrandMeta[];
   categories: CachedCategory[];
@@ -476,7 +479,7 @@ function ShopFiltersSection({
             className="mt-2 text-sm text-gray-600 hover:underline"
             onClick={() => setShowAllBrands(!showAllBrands)}
           >
-            {showAllColors ? "View Less -" : "View More +"}
+            {showAllBrands ? "View Less -" : "View More +"}
           </button>
         )}
       </div>
