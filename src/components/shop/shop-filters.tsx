@@ -19,7 +19,6 @@ import { useState } from "react";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
 import { Label } from "../ui/label";
-import { ProductSearch } from "../ui/product-search";
 import { Separator } from "../ui/separator";
 import {
   Sheet,
@@ -38,6 +37,9 @@ interface PageProps extends GenericProps {
   categories: CachedCategory[];
   subCategories: CachedSubCategory[];
   productTypes: CachedProductType[];
+  colors: string[];
+  alphaSize: string[];
+  numSize: string[];
 }
 
 const sortByWithOrderTypes = [
@@ -53,6 +55,9 @@ export function ShopFilters({
   categories,
   subCategories,
   productTypes,
+  colors,
+  alphaSize,
+  numSize,
   ...props
 }: PageProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -82,6 +87,9 @@ export function ShopFilters({
             categories={categories}
             subCategories={subCategories}
             productTypes={productTypes}
+            colors={colors}
+            alphaSize={alphaSize}
+            numSize={numSize}
             {...props}
           />
 
@@ -104,6 +112,9 @@ export function ShopFilters({
       categories={categories}
       subCategories={subCategories}
       productTypes={productTypes}
+      colors={colors}
+      alphaSize={alphaSize}
+      numSize={numSize}
       {...props}
     />
   );
@@ -115,10 +126,17 @@ function ShopFiltersSection({
   categories,
   subCategories,
   productTypes,
+  colors,
+  alphaSize,
+  numSize,
   ...props
 }: PageProps) {
   const [brandIds, setBrandIds] = useQueryState(
     "brandIds",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+  const [colorFilters, setColorFilters] = useQueryState(
+    "colors",
     parseAsArrayOf(parseAsString, ",").withDefault([])
   );
   const [minPrice, setMinPrice] = useQueryState(
@@ -138,6 +156,14 @@ function ShopFiltersSection({
   const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
     defaultValue: "",
   });
+  const [alphaSizeFilters, setAlphaSizeFilters] = useQueryState(
+    "alphaSize",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+  const [numSizeFilters, setNumSizeFilters] = useQueryState(
+    "numSize",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
 
   const [priceRange, setPriceRange] = useState<number[]>([
     minPrice ? (minPrice < 0 ? 0 : minPrice) : 0,
@@ -146,12 +172,14 @@ function ShopFiltersSection({
 
   const [showAllBrands, setShowAllBrands] = useState(false);
 
-  // ✅ Reset All
   const handleResetAll = () => {
     setCategoryId("");
     setSubCategoryId("");
     setProductTypeId("");
     setBrandIds([]);
+    setColorFilters([]);
+    setAlphaSizeFilters([]);
+    setNumSizeFilters([]);
     setMinPrice(0);
     setMaxPrice(10000);
     setPriceRange([0, 10000]);
@@ -168,6 +196,30 @@ function ShopFiltersSection({
     setProductTypeId("");
   };
 
+  const handleColorChange = (hex: string) => {
+    setColorFilters(
+      colorFilters.includes(hex)
+        ? colorFilters.filter((c) => c !== hex)
+        : [...colorFilters, hex]
+    );
+  };
+
+  const handleAlphaSizeChange = (size: string) => {
+    setAlphaSizeFilters(
+      alphaSizeFilters.includes(size)
+        ? alphaSizeFilters.filter((s) => s !== size)
+        : [...alphaSizeFilters, size]
+    );
+  };
+
+  const handleNumSizeChange = (size: string) => {
+    setNumSizeFilters(
+      numSizeFilters.includes(size)
+        ? numSizeFilters.filter((s) => s !== size)
+        : [...numSizeFilters, size]
+    );
+  };
+
   return (
     <div className={cn("space-y-6", className)} {...props}>
       <div className="flex items-center justify-between">
@@ -177,10 +229,6 @@ function ShopFiltersSection({
           Reset All
         </Button>
       </div>
-
-      <Separator />
-
-      <ProductSearch type="search" placeholder="Search for a product..." />
 
       <Separator />
 
@@ -203,7 +251,9 @@ function ShopFiltersSection({
         </div>
       </div>
 
-      {/* Subcategories - Always show */}
+      <Separator />
+
+      {/* Subcategories */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Subcategory</Label>
         <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -228,7 +278,9 @@ function ShopFiltersSection({
         </div>
       </div>
 
-      {/* Product Types - Always show */}
+      <Separator />
+
+      {/* Product Types */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Type</Label>
         <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -250,6 +302,81 @@ function ShopFiltersSection({
                 <Label htmlFor={t.id}>{t.name}</Label>
               </div>
             ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Colors */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Colors</Label>
+        <div className="flex flex-wrap gap-2">
+          {colors.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => handleColorChange(color)}
+              className={cn(
+                "w-8 h-8 rounded-full border flex items-center justify-center",
+                colorFilters.includes(color)
+                  ? "ring-2 ring-black"
+                  : "opacity-80 hover:opacity-100"
+              )}
+              title={color}
+            >
+              {colorFilters.includes(color) && (
+                <Icons.Check className="w-4 h-4 text-white" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Alpha Sizes */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Sizes</Label>
+        <div className="flex flex-wrap gap-2">
+          {alphaSize.map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => handleAlphaSizeChange(size)}
+              className={cn(
+                "px-3 py-1 border rounded-md",
+                alphaSizeFilters.includes(size)
+                  ? "bg-black text-white"
+                  : "bg-white text-black"
+              )}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Numeric Sizes */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Numeric Sizes</Label>
+        <div className="flex flex-wrap gap-2">
+          {numSize.map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => handleNumSizeChange(size)}
+              className={cn(
+                "px-3 py-1 border rounded-md",
+                numSizeFilters.includes(size)
+                  ? "bg-black text-white"
+                  : "bg-white text-black"
+              )}
+            >
+              {size}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -312,11 +439,6 @@ function ShopFiltersSection({
 }
 
 export function ShopSortBy() {
-  const handleSort = (value: string) => {
-    const [sortBy, sortOrder] = value.split(":");
-    setSortBy(sortBy as "price" | "createdAt");
-    setSortOrder(sortOrder as "asc" | "desc");
-  };
   const [sortBy, setSortBy] = useQueryState(
     "sortBy",
     parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
@@ -327,6 +449,13 @@ export function ShopSortBy() {
     "sortOrder",
     parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
   );
+
+  const handleSort = (value: string) => {
+    const [sort, order] = value.split(":");
+    setSortBy(sort as "price" | "createdAt");
+    setSortOrder(order as "asc" | "desc");
+  };
+
   return (
     <div className="w-52 space-y-1">
       <select

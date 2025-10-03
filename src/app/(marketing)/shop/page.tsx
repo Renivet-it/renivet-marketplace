@@ -114,14 +114,18 @@ function ProductTypesRow({ productTypes, productTypeId }: { productTypes: { id: 
 }
 
 async function ShopFiltersFetch(props: GenericProps) {
-    const [categories, subCategories, productTypes, allBrands] =
+    const [categories, subCategories, productTypes, allBrands, colors, alphaSize, numSize] =
         await Promise.all([
             categoryCache.getAll(),
             subCategoryCache.getAll(),
             productTypeCache.getAll(),
             brandCache.getAll(),
+            productQueries.getUniqueColors(),
+            productQueries.getAlphaSizes(),
+            productQueries.getNumericSizes(),
         ]);
-
+console.log("numsize fetched:", numSize); // ✅ Log the fetched colors
+console.log("size fetched:", alphaSize); // ✅ Log the fetched colors
     const brandsMeta = brandMetaSchema.array().parse(allBrands);
 
     return (
@@ -130,6 +134,9 @@ async function ShopFiltersFetch(props: GenericProps) {
             subCategories={subCategories}
             productTypes={productTypes}
             brandsMeta={brandsMeta}
+            colors={colors} // ✅ pass colors
+            alphaSize={alphaSize} // ✅ pass sizes
+            numSize={numSize} // ✅ pass sizes
             {...props}
         />
     );
