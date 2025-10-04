@@ -263,6 +263,8 @@ async getProducts({
     sortOrder = "desc",
     productImage,
     productVisiblity,
+        colors,
+    sizes,
 }: {
     limit: number;
     page: number;
@@ -282,6 +284,8 @@ async getProducts({
     sortOrder?: "asc" | "desc";
     productImage?: Product["productImageFilter"];
     productVisiblity?: Product["productVisiblityFilter"];
+        colors?: string[];
+    sizes?: string[];
 }) {
     // Price conversions
     minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
@@ -296,7 +300,10 @@ async getProducts({
         const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
         searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
     }
-
+   const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
+    const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
+    const normalizedColors = colors?.map(c => c.toLowerCase());
+const normalizedSizes = sizes?.map(s => s.toLowerCase());
     const filters = [
         searchQuery,
         !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
@@ -344,8 +351,60 @@ async getProducts({
               ? eq(products.isDeleted, true)
               : undefined
             : undefined,
-    ].filter(Boolean);
+             // 🟦 Color filter (for JSON object format)
+  !!colors?.length
+    ? sql`
+        EXISTS (
+          SELECT 1
+          FROM ${productOptions} po,
+               jsonb_to_recordset(po.values) AS item(name text)
+          WHERE po.product_id = ${products.id}
+            AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+            AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
+        )
+      `
+    : undefined,
 
+  // 🟩 Size filter (for JSON object format)
+  !!sizes?.length
+    ? sql`
+        EXISTS (
+          SELECT 1
+          FROM ${productOptions} po,
+               jsonb_to_recordset(po.values) AS item(name text)
+          WHERE po.product_id = ${products.id}
+            AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+            AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
+        )
+      `
+    : undefined,
+              // +++ ADDED: Conditionally push the new color and size filters +++
+    ].filter(Boolean);
+if (colors?.length) {
+  filters.push(sql`
+    EXISTS (
+      SELECT 1
+      FROM ${productOptions} po,
+           jsonb_to_recordset(po.values) AS item(name text)
+      WHERE po.product_id = ${products.id}
+        AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+        AND LOWER(item.name) IN (${sql.join(colors.map(c => c.toLowerCase()), sql`, `)})
+    )
+  `);
+}
+
+if (sizes?.length) {
+  filters.push(sql`
+    EXISTS (
+      SELECT 1
+      FROM ${productOptions} po,
+           jsonb_to_recordset(po.values) AS item(name text)
+      WHERE po.product_id = ${products.id}
+        AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+        AND LOWER(item.name) IN (${sql.join(sizes.map(s => s.toLowerCase()), sql`, `)})
+    )
+  `);
+}
     const orderBy = [];
 
     if (search?.length) {
