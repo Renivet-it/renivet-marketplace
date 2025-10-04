@@ -35,6 +35,7 @@ import {
 import { Slider } from "../ui/slider";
 import { Checkbox } from "../ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 // --- HELPER FUNCTIONS ---
 
@@ -273,6 +274,7 @@ interface PageProps extends GenericProps {
   colors: string[];
   alphaSize: string[];
   numSize: string[];
+    sizes: string[];
 }
 
 export function ShopFilters({
@@ -382,6 +384,43 @@ function ShopFiltersSection({
   const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
     defaultValue: "",
   });
+const router = useRouter();
+const pathname = usePathname();
+const searchParams = useSearchParams();
+
+const handleColorClick = (colorName: string) => {
+  const newColors = colorFilters.includes(colorName)
+    ? colorFilters.filter(c => c !== colorName)
+    : [...colorFilters, colorName];
+
+  // Update URL query
+  const params = new URLSearchParams(searchParams.toString());
+  if (newColors.length > 0) {
+    params.set("colors", newColors.join(","));
+  } else {
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
+    params.delete("colors");
+  }
+
+  // Trigger server-side re-render without full reload
+  router.replace(`${pathname}?${params.toString()}`);
+};
+
+// const handleSizeClick = (size: string) => {
+//   const newSizes = sizeFilters.includes(size)
+//     ? sizeFilters.filter(s => s !== size)
+//     : [...sizeFilters, size];
+
+//   const params = new URLSearchParams(searchParams.toString());
+//   if (newSizes.length > 0) {
+//     params.set("sizes", newSizes.join(","));
+//   } else {
+//     // eslint-disable-next-line drizzle/enforce-delete-with-where
+//     params.delete("sizes");
+//   }
+
+//   router.replace(`${pathname}?${params.toString()}`);
+// };
   // --- UNIFIED SIZE STATE ---
   const [sizeFilters, setSizeFilters] = useQueryState(
     "sizes",
@@ -409,7 +448,7 @@ function ShopFiltersSection({
   };
 
   // --- UNIFIED SIZE HANDLER ---
-  const handleSizeChange = (size: string) => {
+  const handleSizeClick = (size: string) => {
     setSizeFilters(
       sizeFilters.includes(size)
         ? sizeFilters.filter((s) => s !== size)
@@ -456,7 +495,41 @@ function ShopFiltersSection({
       </div>
 
       <Separator />
-
+  {/* Brands */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Brands</Label>
+        <div className="space-y-2">
+          {(showAllBrands ? brandsMeta : brandsMeta.slice(0, 5)).map(
+            (brand) => (
+              <div key={brand.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={brand.id}
+                  checked={brandIds.includes(brand.id)}
+                  onCheckedChange={() =>
+                    setBrandIds(
+                      brandIds.includes(brand.id)
+                        ? brandIds.filter((b) => b !== brand.id)
+                        : [...brandIds, brand.id]
+                    )
+                  }
+                />
+                <Label htmlFor={brand.id} className="font-normal">
+                  {brand.name}
+                </Label>
+              </div>
+            )
+          )}
+        </div>
+        {brandsMeta.length > 5 && (
+          <button
+            className="mt-2 text-sm text-gray-600 hover:underline"
+            onClick={() => setShowAllBrands(!showAllBrands)}
+          >
+            {showAllBrands ? "View Less -" : "View More +"}
+          </button>
+        )}
+      </div>
+      <Separator />
       {/* Subcategories */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Subcategory</Label>
@@ -514,6 +587,27 @@ function ShopFiltersSection({
 
       <Separator />
 
+      {/* Price */}
+      <div className="space-y-3">
+        <Label className="font-semibold uppercase">Price</Label>
+        <Slider
+          value={priceRange}
+          step={100}
+          min={0}
+          max={10000}
+          onValueChange={setPriceRange}
+          onValueCommit={(values) => {
+            setMinPrice(values[0]);
+            setMaxPrice(values[1]);
+          }}
+        />
+        <p className="text-sm tabular-nums">
+          {formatPriceTag(priceRange[0])} - {formatPriceTag(priceRange[1])}
+          {priceRange[1] === 10000 && "+"}
+        </p>
+      </div>
+      <Separator />
+
       {/* Colors */}
       <div className="space-y-4">
         <Label className="font-semibold uppercase">Color</Label>
@@ -524,13 +618,14 @@ function ShopFiltersSection({
               <div
                 key={colorName}
                 className="flex cursor-pointer flex-col items-center gap-2"
-                onClick={() =>
+   onClick={() =>
                   setColorFilters(
                     colorFilters.includes(colorName)
                       ? colorFilters.filter((c) => c !== colorName)
                       : [...colorFilters, colorName]
                   )
                 }
+
               >
                 <button
                   type="button"
@@ -575,7 +670,7 @@ function ShopFiltersSection({
             <button
               key={size}
               type="button"
-              onClick={() => handleSizeChange(size)}
+              onClick={() => handleSizeClick(size)}
               className={cn(
                 "rounded-md border px-3 py-1 text-sm",
                 sizeFilters.includes(size)
@@ -589,64 +684,6 @@ function ShopFiltersSection({
         </div>
       </div>
 
-      <Separator />
-
-      {/* Brands */}
-      <div className="space-y-2">
-        <Label className="font-semibold uppercase">Brands</Label>
-        <div className="space-y-2">
-          {(showAllBrands ? brandsMeta : brandsMeta.slice(0, 5)).map(
-            (brand) => (
-              <div key={brand.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={brand.id}
-                  checked={brandIds.includes(brand.id)}
-                  onCheckedChange={() =>
-                    setBrandIds(
-                      brandIds.includes(brand.id)
-                        ? brandIds.filter((b) => b !== brand.id)
-                        : [...brandIds, brand.id]
-                    )
-                  }
-                />
-                <Label htmlFor={brand.id} className="font-normal">
-                  {brand.name}
-                </Label>
-              </div>
-            )
-          )}
-        </div>
-        {brandsMeta.length > 5 && (
-          <button
-            className="mt-2 text-sm text-gray-600 hover:underline"
-            onClick={() => setShowAllBrands(!showAllBrands)}
-          >
-            {showAllBrands ? "View Less -" : "View More +"}
-          </button>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* Price */}
-      <div className="space-y-3">
-        <Label className="font-semibold uppercase">Price</Label>
-        <Slider
-          value={priceRange}
-          step={100}
-          min={0}
-          max={10000}
-          onValueChange={setPriceRange}
-          onValueCommit={(values) => {
-            setMinPrice(values[0]);
-            setMaxPrice(values[1]);
-          }}
-        />
-        <p className="text-sm tabular-nums">
-          {formatPriceTag(priceRange[0])} - {formatPriceTag(priceRange[1])}
-          {priceRange[1] === 10000 && "+"}
-        </p>
-      </div>
     </div>
   );
 }

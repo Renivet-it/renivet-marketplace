@@ -32,6 +32,7 @@ interface PageProps {
         productTypeId?: string;
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
+  sizes?: string;
     }>;
 }
 
@@ -130,15 +131,14 @@ console.log("size fetched:", alphaSize); // ✅ Log the fetched colors
 
     return (
         <ShopFilters
-            categories={categories}
-            subCategories={subCategories}
-            productTypes={productTypes}
-            brandsMeta={brandsMeta}
-            colors={colors} // ✅ pass colors
-            alphaSize={alphaSize} // ✅ pass sizes
-            numSize={numSize} // ✅ pass sizes
-            {...props}
-        />
+        sizes={[]} categories={categories}
+        subCategories={subCategories}
+        productTypes={productTypes}
+        brandsMeta={brandsMeta}
+        colors={colors} // ✅ pass colors
+        alphaSize={alphaSize} // ✅ pass sizes
+        numSize={numSize} // ✅ pass sizes
+        {...props} />
     );
 }
 
@@ -157,6 +157,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         productTypeId: productTypeIdRaw,
         sortBy: sortByRaw,
         sortOrder: sortOrderRaw,
+          colors: colorsRaw, // ✅ add this
+  sizes: sizesRaw,
     } = await searchParams;
 
     const limit =
@@ -185,7 +187,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         : undefined;
     const sortBy = !!sortByRaw?.length ? sortByRaw : undefined;
     const sortOrder = !!sortOrderRaw?.length ? sortOrderRaw : undefined;
-
+const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
+const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
     const [data, userWishlist] = await Promise.all([
         productQueries.getProducts({
             page,
@@ -204,6 +207,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             productTypeId: !!productTypeId?.length ? productTypeId : undefined,
             sortBy,
             sortOrder,
+              colors,
+  sizes,
         }),
         userId ? userWishlistCache.get(userId) : undefined,
     ]);
