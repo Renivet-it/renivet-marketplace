@@ -71,6 +71,16 @@ export function ShopProducts({
     const [productTypeId] = useQueryState("productTypeId", {
         defaultValue: "",
     });
+    const [colors] = useQueryState(
+  "colors",
+  parseAsArrayOf(parseAsString, ",").withDefault([])
+);
+
+const [sizes] = useQueryState(
+  "sizes",
+  parseAsArrayOf(parseAsString, ",").withDefault([])
+);
+
     const [sortBy] = useQueryState(
         "sortBy",
         parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
@@ -102,6 +112,8 @@ export function ShopProducts({
             productTypeId: !!productTypeId.length ? productTypeId : undefined,
             sortBy,
             sortOrder,
+            colors: colors.length ? colors : undefined,
+    sizes: sizes.length ? sizes : undefined,
         },
         { initialData }
     );

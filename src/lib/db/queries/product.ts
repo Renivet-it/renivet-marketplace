@@ -14,7 +14,7 @@ import {
     UpdateProductValue,
     UpdateProductMediaInput
 } from "@/lib/validations";
-import { and, asc, count, desc, eq, exists, gte, ilike, inArray, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, gte, ilike, inArray, or, sql, sum } from "drizzle-orm";
 import { db } from "..";
 import {
     brands,
@@ -263,6 +263,8 @@ async getProducts({
     sortOrder = "desc",
     productImage,
     productVisiblity,
+        colors,
+    sizes,
 }: {
     limit: number;
     page: number;
@@ -282,6 +284,8 @@ async getProducts({
     sortOrder?: "asc" | "desc";
     productImage?: Product["productImageFilter"];
     productVisiblity?: Product["productVisiblityFilter"];
+        colors?: string[];
+    sizes?: string[];
 }) {
     // Price conversions
     minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
@@ -296,7 +300,10 @@ async getProducts({
         const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
         searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
     }
-
+   const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
+    const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
+    const normalizedColors = colors?.map(c => c.toLowerCase());
+const normalizedSizes = sizes?.map(s => s.toLowerCase());
     const filters = [
         searchQuery,
         !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
@@ -344,8 +351,60 @@ async getProducts({
               ? eq(products.isDeleted, true)
               : undefined
             : undefined,
-    ].filter(Boolean);
+             // 🟦 Color filter (for JSON object format)
+  !!colors?.length
+    ? sql`
+        EXISTS (
+          SELECT 1
+          FROM ${productOptions} po,
+               jsonb_to_recordset(po.values) AS item(name text)
+          WHERE po.product_id = ${products.id}
+            AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+            AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
+        )
+      `
+    : undefined,
 
+  // 🟩 Size filter (for JSON object format)
+  !!sizes?.length
+    ? sql`
+        EXISTS (
+          SELECT 1
+          FROM ${productOptions} po,
+               jsonb_to_recordset(po.values) AS item(name text)
+          WHERE po.product_id = ${products.id}
+            AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+            AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
+        )
+      `
+    : undefined,
+              // +++ ADDED: Conditionally push the new color and size filters +++
+    ].filter(Boolean);
+if (colors?.length) {
+  filters.push(sql`
+    EXISTS (
+      SELECT 1
+      FROM ${productOptions} po,
+           jsonb_to_recordset(po.values) AS item(name text)
+      WHERE po.product_id = ${products.id}
+        AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+        AND LOWER(item.name) IN (${sql.join(colors.map(c => c.toLowerCase()), sql`, `)})
+    )
+  `);
+}
+
+if (sizes?.length) {
+  filters.push(sql`
+    EXISTS (
+      SELECT 1
+      FROM ${productOptions} po,
+           jsonb_to_recordset(po.values) AS item(name text)
+      WHERE po.product_id = ${products.id}
+        AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+        AND LOWER(item.name) IN (${sql.join(sizes.map(s => s.toLowerCase()), sql`, `)})
+    )
+  `);
+}
     const orderBy = [];
 
     if (search?.length) {
@@ -3245,6 +3304,162 @@ async getProductsForFunnel(limit: number = 15, dateRange: string = "30d") {
     ctpRate: product.addToCart > 0 ? (product.purchases / product.addToCart) * 100 : 0
   }));
 }
+
+
+async getUniqueColors() {
+  try {
+    const colorOptions = await db
+      .select({
+        values: productOptions.values,
+      })
+      .from(productOptions)
+      .where(
+        or(
+          ilike(productOptions.name, "%color%"),
+          ilike(productOptions.name, "%colour%"),
+          sql`LOWER(${productOptions.name}) = 'color'`,
+          sql`LOWER(${productOptions.name}) = 'colour'`
+        )
+      );
+
+    const uniqueColorsMap = new Map<string, string>();
+
+    colorOptions.forEach((option) => {
+      if (option.values && Array.isArray(option.values)) {
+        (option.values as any[]).forEach((colorObj: any) => {
+          if (colorObj?.name && typeof colorObj.name === "string") {
+            const normalized = colorObj.name.trim().toLowerCase(); // ✅ normalize
+            if (!uniqueColorsMap.has(normalized)) {
+              // ✅ store original casing for display
+              uniqueColorsMap.set(normalized, colorObj.name.trim());
+            }
+          }
+        });
+      }
+    });
+
+    return Array.from(uniqueColorsMap.values()).sort((a, b) =>
+      a.localeCompare(b)
+    );
+  } catch (error) {
+    console.error("Error fetching unique colors:", error);
+    return [];
+  }
+}
+
+private normalizeSizeName(val: string): string {
+  let str = val.trim().toLowerCase();
+
+  // Replace underscores with space
+  str = str.replace(/_/g, " ");
+
+  // Normalize months
+  str = str.replace(/\b(m|months?)\b/gi, "Months");
+
+  // Normalize years
+  str = str.replace(/\b(y|years?)\b/gi, "Years");
+
+  // Remove hyphen before "Years" or "Months" if exists
+  str = str.replace(/-(Years|Months)/gi, " $1");
+
+  // Collapse multiple spaces
+  str = str.replace(/\s+/g, " ").trim();
+
+  // Capitalize first letters
+  str = str.replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return str;
+}
+
+
+async getNumericSizes() {
+  try {
+    const sizeOptions = await db
+      .select({ values: productOptions.values })
+      .from(productOptions)
+      .where(
+        or(
+          ilike(productOptions.name, "%size%"),
+          sql`LOWER(${productOptions.name}) = 'size'`,
+          sql`LOWER(${productOptions.name}) = 'sizes'`
+        )
+      );
+
+    const uniqueSizesMap = new Map<string, string>();
+
+    sizeOptions.forEach((option) => {
+      if (option.values && Array.isArray(option.values)) {
+        (option.values as any[]).forEach((sizeObj: any) => {
+          if (sizeObj?.name && typeof sizeObj.name === "string") {
+            const normalized = this.normalizeSizeName(sizeObj.name);
+            if (!uniqueSizesMap.has(normalized)) {
+              uniqueSizesMap.set(normalized, normalized);
+            }
+          }
+        });
+      }
+    });
+
+    const numericSizes = Array.from(uniqueSizesMap.values()).filter((val) =>
+      /(\d|\d+-\d+|\d+\s?(Months|Years)|\d{2}[A-D])/i.test(val)
+    );
+
+    return numericSizes.sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+  } catch (error) {
+    console.error("Error fetching numeric sizes:", error);
+    return [];
+  }
+}
+
+
+async getAlphaSizes() {
+  try {
+    const sizeOptions = await db
+      .select({
+        values: productOptions.values,
+      })
+      .from(productOptions)
+      .where(
+        or(
+          ilike(productOptions.name, "%size%"),
+          sql`LOWER(${productOptions.name}) = 'size'`,
+          sql`LOWER(${productOptions.name}) = 'sizes'`
+        )
+      );
+
+    const uniqueSizesMap = new Map<string, string>();
+
+    sizeOptions.forEach((option) => {
+      if (option.values && Array.isArray(option.values)) {
+        (option.values as any[]).forEach((sizeObj: any) => {
+          if (sizeObj?.name && typeof sizeObj.name === "string") {
+            const normalized = sizeObj.name.trim().toLowerCase();
+            if (!uniqueSizesMap.has(normalized)) {
+              uniqueSizesMap.set(normalized, sizeObj.name.trim());
+            }
+          }
+        });
+      }
+    });
+
+    // Only keep alpha sizes (XS, S, M, L, XL, XXL, Free Size)
+    const alphaSizes = Array.from(uniqueSizesMap.values()).filter((val) =>
+      /^(xxxl|xxl|xl|l|m|s|xs|free size)$/i.test(val.trim())
+    );
+
+    // Custom order for XS → S → M → L → XL → XXL → XXXL → Free Size
+    const order = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"];
+    return alphaSizes.sort(
+      (a, b) => order.indexOf(a.toUpperCase()) - order.indexOf(b.toUpperCase())
+    );
+  } catch (error) {
+    console.error("Error fetching alpha sizes:", error);
+    return [];
+  }
+}
+
 
     // ✅ Helper: Get Start Date based on range
     private getStartDate(dateRange: string): Date {

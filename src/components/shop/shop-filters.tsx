@@ -1,475 +1,725 @@
 "use client";
 
+import { useState } from "react";
+import { useMediaQuery } from "@mantine/hooks";
+import parse from "color-parse";
+
 import { cn, formatPriceTag } from "@/lib/utils";
 import {
-    BrandMeta,
-    CachedCategory,
-    CachedProductType,
-    CachedSubCategory,
+  BrandMeta,
+  CachedCategory,
+  CachedProductType,
+  CachedSubCategory,
 } from "@/lib/validations";
-import { useMediaQuery } from "@mantine/hooks";
 import {
-    parseAsArrayOf,
-    parseAsInteger,
-    parseAsString,
-    parseAsStringLiteral,
-    useQueryState,
+  parseAsArrayOf,
+  parseAsInteger,
+  parseAsString,
+  parseAsStringLiteral,
+  useQueryState,
 } from "nuqs";
-import { useState } from "react";
+
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
 import { Label } from "../ui/label";
-import { MultipleSelectorGeneral } from "../ui/multi-select-general";
-import { ProductSearch } from "../ui/product-search";
-// import { SearchInput } from "../ui/search-input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "../ui/select-general";
 import { Separator } from "../ui/separator";
 import {
-    Sheet,
-    SheetClose,
-    SheetContent,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from "../ui/sheet";
 import { Slider } from "../ui/slider";
+import { Checkbox } from "../ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-interface PageProps extends GenericProps {
-    brandsMeta: BrandMeta[];
-    categories: CachedCategory[];
-    subCategories: CachedSubCategory[];
-    productTypes: CachedProductType[];
+// --- HELPER FUNCTIONS ---
+
+// RGBA to HEX
+function rgbaToHex(rgba: number[]): string {
+  const toHex = (c: number) => c.toString(16).padStart(2, "0");
+  return `#${toHex(rgba[0])}${toHex(rgba[1])}${toHex(rgba[2])}`;
 }
 
+// Unique string hash to color
+function stringToColor(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash;
+  }
+  const r = (hash >> 16) & 0xff;
+  const g = (hash >> 8) & 0xff;
+  const b = hash & 0xff;
+  return `#${r.toString(16).padStart(2, "0")}${g
+    .toString(16)
+    .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+// --- All CSS Named Colors ---
+const ALL_COLORS: Record<string, string> = {
+  aliceblue: "#f0f8ff",
+  antiquewhite: "#faebd7",
+  aqua: "#00ffff",
+  aquamarine: "#7fffd4",
+  azure: "#f0ffff",
+  beige: "#f5f5dc",
+  black: "#000000",
+  blue: "#0000ff",
+  brown: "#a52a2a",
+  chartreuse: "#7fff00",
+  chocolate: "#d2691e",
+  coral: "#ff7f50",
+  crimson: "#dc143c",
+  cyan: "#00ffff",
+  darkblue: "#00008b",
+  darkcyan: "#008b8b",
+  darkgoldenrod: "#b8860b",
+  darkgray: "#a9a9a9",
+  darkgreen: "#006400",
+  darkgrey: "#a9a9a9",
+  darkkhaki: "#bdb76b",
+  darkmagenta: "#8b008b",
+  darkolivegreen: "#556b2f",
+  darkorange: "#ff8c00",
+  darkorchid: "#9932cc",
+  darkred: "#8b0000",
+  darksalmon: "#e9967a",
+  darkseagreen: "#8fbc8f",
+  darkslateblue: "#483d8b",
+  darkslategray: "#2f4f4f",
+  darkslategrey: "#2f4f4f",
+  darkturquoise: "#00ced1",
+  darkviolet: "#9400d3",
+  deeppink: "#ff1493",
+  deepskyblue: "#00bfff",
+  dimgray: "#696969",
+  dimgrey: "#696969",
+  dodgerblue: "#1e90ff",
+  firebrick: "#b22222",
+  floralwhite: "#fffaf0",
+  forestgreen: "#228b22",
+  fuchsia: "#ff00ff",
+  gainsboro: "#dcdcdc",
+  ghostwhite: "#f8f8ff",
+  gold: "#ffd700",
+  goldenrod: "#daa520",
+  gray: "#808080",
+  green: "#008000",
+  greenyellow: "#adff2f",
+  grey: "#808080",
+  honeydew: "#f0fff0",
+  hotpink: "#ff69b4",
+  indianred: "#cd5c5c",
+  indigo: "#4b0082",
+  ivory: "#fffff0",
+  khaki: "#f0e68c",
+  lavender: "#e6e6fa",
+  lavenderblush: "#fff0f5",
+  lawngreen: "#7cfc00",
+  lemonchiffon: "#fffacd",
+  lightblue: "#add8e6",
+  lightcoral: "#f08080",
+  lightcyan: "#e0ffff",
+  lightgoldenrodyellow: "#fafad2",
+  lightgray: "#d3d3d3",
+  lightgreen: "#90ee90",
+  lightgrey: "#d3d3d3",
+  lightpink: "#ffb6c1",
+  lightsalmon: "#ffa07a",
+  lightseagreen: "#20b2aa",
+  lightskyblue: "#87cefa",
+  lightslategray: "#778899",
+  lightslategrey: "#778899",
+  lightsteelblue: "#b0c4de",
+  lightyellow: "#ffffe0",
+  lime: "#00ff00",
+  limegreen: "#32cd32",
+  linen: "#faf0e6",
+  magenta: "#ff00ff",
+  maroon: "#800000",
+  mediumaquamarine: "#66cdaa",
+  mediumblue: "#0000cd",
+  mediumorchid: "#ba55d3",
+  mediumpurple: "#9370db",
+  mediumseagreen: "#3cb371",
+  mediumslateblue: "#7b68ee",
+  mediumspringgreen: "#00fa9a",
+  mediumturquoise: "#48d1cc",
+  mediumvioletred: "#c71585",
+  midnightblue: "#191970",
+  mintcream: "#f5fffa",
+  mistyrose: "#ffe4e1",
+  moccasin: "#ffe4b5",
+  navajowhite: "#ffdead",
+  navy: "#000080",
+  oldlace: "#fdf5e6",
+  olive: "#808000",
+  olivedrab: "#6b8e23",
+  orange: "#ffa500",
+  orangered: "#ff4500",
+  orchid: "#da70d6",
+  palegoldenrod: "#eee8aa",
+  palegreen: "#98fb98",
+  paleturquoise: "#afeeee",
+  palevioletred: "#db7093",
+  papayawhip: "#ffefd5",
+  peachpuff: "#ffdab9",
+  peru: "#cd853f",
+  pink: "#ffc0cb",
+  plum: "#dda0dd",
+  powderblue: "#b0e0e6",
+  purple: "#800080",
+  red: "#ff0000",
+  rosybrown: "#bc8f8f",
+  royalblue: "#4169e1",
+  saddlebrown: "#8b4513",
+  salmon: "#fa8072",
+  sandybrown: "#f4a460",
+  seagreen: "#2e8b57",
+  seashell: "#fff5ee",
+  sienna: "#a0522d",
+  silver: "#c0c0c0",
+  skyblue: "#87ceeb",
+  slateblue: "#6a5acd",
+  slategray: "#708090",
+  slategrey: "#708090",
+  snow: "#fffafa",
+  springgreen: "#00ff7f",
+  steelblue: "#4682b4",
+  tan: "#d2b48c",
+  teal: "#008080",
+  thistle: "#d8bfd8",
+  tomato: "#ff6347",
+  turquoise: "#40e0d0",
+  violet: "#ee82ee",
+  wheat: "#f5deb3",
+  white: "#ffffff",
+  whitesmoke: "#f5f5f5",
+  yellow: "#ffff00",
+  yellowgreen: "#9acd32",
+};
+
+// Find closest color by RGB distance
+function getClosestColor(hex: string): string {
+  const r = parseInt(hex.substring(1, 3), 16);
+  const g = parseInt(hex.substring(3, 5), 16);
+  const b = parseInt(hex.substring(5, 7), 16);
+
+  let closest = "#000000";
+  let minDist = Infinity;
+
+  for (const colorHex of Object.values(ALL_COLORS)) {
+    const cr = parseInt(colorHex.substring(1, 3), 16);
+    const cg = parseInt(colorHex.substring(3, 5), 16);
+    const cb = parseInt(colorHex.substring(5, 7), 16);
+
+    const dist = Math.sqrt((r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = colorHex;
+    }
+  }
+  return closest;
+}
+
+// Updated getColorHex
+const getColorHex = (colorName: string): string => {
+  if (!colorName) return "#CCCCCC";
+
+  const cleaned = colorName.toLowerCase().replace(/[\s&_-]+/g, "");
+  if (ALL_COLORS[cleaned]) return ALL_COLORS[cleaned];
+
+  try {
+    const parsed = parse(colorName);
+    if (parsed.space) return getClosestColor(rgbaToHex(parsed.values));
+  } catch {}
+
+  return stringToColor(colorName);
+};
+
+// Checkmark contrast color
+const getCheckmarkColor = (hex: string): string => {
+  if (!hex || hex.length !== 7) return "black";
+  const r = parseInt(hex.substring(1, 3), 16);
+  const g = parseInt(hex.substring(3, 5), 16);
+  const b = parseInt(hex.substring(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance < 0.5 ? "white" : "black";
+};
+
+// Sorting options
 const sortByWithOrderTypes = [
-    {
-        label: "Price: High to Low",
-        value: "price:desc",
-    },
-    {
-        label: "Price: Low to High",
-        value: "price:asc",
-    },
-    {
-        label: "Newest First",
-        value: "createdAt:desc",
-    },
-    {
-        label: "Oldest First",
-        value: "createdAt:asc",
-    },
+  { label: "Price: High to Low", value: "price:desc" },
+  { label: "Price: Low to High", value: "price:asc" },
+  { label: "Newest First", value: "createdAt:desc" },
+  { label: "Oldest First", value: "createdAt:asc" },
 ];
 
+// --- COMPONENTS ---
+interface GenericProps {
+  className?: string;
+  [key: string]: any;
+}
+
+interface PageProps extends GenericProps {
+  brandsMeta: BrandMeta[];
+  categories: CachedCategory[];
+  subCategories: CachedSubCategory[];
+  productTypes: CachedProductType[];
+  colors: string[];
+  alphaSize: string[];
+  numSize: string[];
+    sizes: string[];
+}
+
 export function ShopFilters({
-    className,
-    brandsMeta,
-    categories,
-    subCategories,
-    productTypes,
-    ...props
+  className,
+  brandsMeta,
+  categories,
+  subCategories,
+  productTypes,
+  colors,
+  alphaSize,
+  numSize,
+  ...props
 }: PageProps) {
-    const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
-    return isMobile ? (
-        <>
-            <Sheet>
-                <SheetTrigger asChild>
-                    <Button>
-                        <Icons.Filter />
-                        Filters
-                    </Button>
-                </SheetTrigger>
+  return isMobile ? (
+    <>
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button>
+            <Icons.Filter />
+            Filters
+          </Button>
+        </SheetTrigger>
 
-                <SheetContent
-                    side="bottom"
-                    className="h-screen overflow-auto p-0 [&>button]:hidden"
-                    style={{
-                        scrollbarWidth: "none",
-                    }}
-                >
-                    <SheetHeader className="sr-only p-4 text-start">
-                        <SheetTitle>Select Filters</SheetTitle>
-                    </SheetHeader>
+        <SheetContent
+          side="bottom"
+          className="h-screen overflow-auto p-0 [&>button]:hidden"
+          style={{ scrollbarWidth: "none" }}
+        >
+          <SheetHeader className="sr-only p-4 text-start">
+            <SheetTitle>Select Filters</SheetTitle>
+          </SheetHeader>
 
-                    <ShopFiltersSection
-                        className={cn("w-auto basis-full p-4", className)}
-                        brandsMeta={brandsMeta}
-                        categories={categories}
-                        subCategories={subCategories}
-                        productTypes={productTypes}
-                        {...props}
-                    />
-
-                    <div className="sticky bottom-0 space-y-4 border-t bg-background p-4">
-                        <SheetFooter>
-                            <SheetClose asChild>
-                                <Button>Close</Button>
-                            </SheetClose>
-                        </SheetFooter>
-                    </div>
-                </SheetContent>
-            </Sheet>
-
-            <Separator />
-        </>
-    ) : (
-        <ShopFiltersSection
-            className={cn("", className)}
+          <ShopFiltersSection
+            className={cn("w-auto basis-full p-4", className)}
             brandsMeta={brandsMeta}
             categories={categories}
             subCategories={subCategories}
             productTypes={productTypes}
+            colors={colors}
+            alphaSize={alphaSize}
+            numSize={numSize}
             {...props}
-        />
-    );
+          />
+
+          <div className="sticky bottom-0 space-y-4 border-t bg-background p-4">
+            <SheetFooter>
+              <SheetClose asChild>
+                <Button>Close</Button>
+              </SheetClose>
+            </SheetFooter>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Separator />
+    </>
+  ) : (
+    <ShopFiltersSection
+      className={cn("", className)}
+      brandsMeta={brandsMeta}
+      categories={categories}
+      subCategories={subCategories}
+      productTypes={productTypes}
+      colors={colors}
+      alphaSize={alphaSize}
+      numSize={numSize}
+      {...props}
+    />
+  );
 }
 
 function ShopFiltersSection({
-    className,
-    brandsMeta,
-    categories,
-    subCategories,
-    productTypes,
-    ...props
+  className,
+  brandsMeta,
+  categories,
+  subCategories,
+  productTypes,
+  colors,
+  alphaSize,
+  numSize,
+  ...props
 }: PageProps) {
-    const [brandIds, setBrandIds] = useQueryState(
-        "brandIds",
-        parseAsArrayOf(parseAsString, ",").withDefault([])
+  const [brandIds, setBrandIds] = useQueryState(
+    "brandIds",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+  const [colorFilters, setColorFilters] = useQueryState(
+    "colors",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+  const [minPrice, setMinPrice] = useQueryState(
+    "minPrice",
+    parseAsInteger.withDefault(0)
+  );
+  const [maxPrice, setMaxPrice] = useQueryState(
+    "maxPrice",
+    parseAsInteger.withDefault(10000)
+  );
+  const [categoryId, setCategoryId] = useQueryState("categoryId", {
+    defaultValue: "",
+  });
+  const [subCategoryId, setSubCategoryId] = useQueryState("subcategoryId", {
+    defaultValue: "",
+  });
+  const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
+    defaultValue: "",
+  });
+const router = useRouter();
+const pathname = usePathname();
+const searchParams = useSearchParams();
+
+const handleColorClick = (colorName: string) => {
+  const newColors = colorFilters.includes(colorName)
+    ? colorFilters.filter(c => c !== colorName)
+    : [...colorFilters, colorName];
+
+  // Update URL query
+  const params = new URLSearchParams(searchParams.toString());
+  if (newColors.length > 0) {
+    params.set("colors", newColors.join(","));
+  } else {
+    // eslint-disable-next-line drizzle/enforce-delete-with-where
+    params.delete("colors");
+  }
+
+  // Trigger server-side re-render without full reload
+  router.replace(`${pathname}?${params.toString()}`);
+};
+
+// const handleSizeClick = (size: string) => {
+//   const newSizes = sizeFilters.includes(size)
+//     ? sizeFilters.filter(s => s !== size)
+//     : [...sizeFilters, size];
+
+//   const params = new URLSearchParams(searchParams.toString());
+//   if (newSizes.length > 0) {
+//     params.set("sizes", newSizes.join(","));
+//   } else {
+//     // eslint-disable-next-line drizzle/enforce-delete-with-where
+//     params.delete("sizes");
+//   }
+
+//   router.replace(`${pathname}?${params.toString()}`);
+// };
+  // --- UNIFIED SIZE STATE ---
+  const [sizeFilters, setSizeFilters] = useQueryState(
+    "sizes",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+
+  const [priceRange, setPriceRange] = useState<number[]>([
+    minPrice ? Math.max(minPrice, 0) : 0,
+    maxPrice ? Math.min(maxPrice, 10000) : 10000,
+  ]);
+
+  const [showAllBrands, setShowAllBrands] = useState(false);
+  const [showAllColors, setShowAllColors] = useState(false);
+
+  const handleResetAll = () => {
+    setCategoryId("");
+    setSubCategoryId("");
+    setProductTypeId("");
+    setBrandIds([]);
+    setColorFilters([]);
+    setSizeFilters([]); // Reset unified size state
+    setMinPrice(0);
+    setMaxPrice(10000);
+    setPriceRange([0, 10000]);
+  };
+
+  // --- UNIFIED SIZE HANDLER ---
+  const handleSizeClick = (size: string) => {
+    setSizeFilters(
+      sizeFilters.includes(size)
+        ? sizeFilters.filter((s) => s !== size)
+        : [...sizeFilters, size]
     );
-    const [minPrice, setMinPrice] = useQueryState(
-        "minPrice",
-        parseAsInteger.withDefault(0)
-    );
-    const [maxPrice, setMaxPrice] = useQueryState(
-        "maxPrice",
-        parseAsInteger.withDefault(10000)
-    );
-    const [categoryId, setCategoryId] = useQueryState("categoryId", {
-        defaultValue: "",
-    });
-    const [subCategoryId, setSubCategoryId] = useQueryState("subcategoryId", {
-        defaultValue: "",
-    });
-    const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
-        defaultValue: "",
-    });
+  };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [sortBy, setSortBy] = useQueryState(
-        "sortBy",
-        parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
-            "createdAt"
-        )
-    );
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [sortOrder, setSortOrder] = useQueryState(
-        "sortOrder",
-        parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
-    );
+  const visibleColors = showAllColors ? colors : colors.slice(0, 21);
+  const allSizes = [...alphaSize, ...numSize]; // Combine sizes for rendering
 
-    const [priceRange, setPriceRange] = useState<number[]>([
-        minPrice ? (minPrice < 0 ? 0 : minPrice) : 0,
-        maxPrice ? (maxPrice > 10000 ? 10000 : maxPrice) : 10000,
-    ]);
+  return (
+    <div className={cn("space-y-6", className)} {...props}>
+      <div className="flex items-center justify-between">
+        <h4 className="text-lg font-semibold">Filters</h4>
+        <Button size="sm" variant="outline" onClick={handleResetAll}>
+          <Icons.History className="mr-1" />
+          Reset All
+        </Button>
+      </div>
 
-    const handleCategoryChange = (value: string) => {
-        setCategoryId(value);
-        setSubCategoryId("");
-        setProductTypeId("");
-    };
+      <Separator />
 
-    const handleSubCategoryChange = (value: string) => {
-        setSubCategoryId(value);
-        setProductTypeId("");
-    };
-
-    const handleResetCategory = () => {
-        setCategoryId("");
-        setSubCategoryId("");
-        setProductTypeId("");
-    };
-
-    const handleSort = (value: string) => {
-        const [sortBy, sortOrder] = value.split(":");
-        setSortBy(sortBy as "price" | "createdAt");
-        setSortOrder(sortOrder as "asc" | "desc");
-    };
-
-    return (
-        <div className={cn("", className)} {...props}>
-            <h4 className="text-lg">Filters</h4>
-
-            <Separator />
-            {/* <SearchInput
-                type="search"
-                placeholder="Search for a product..."
-                className="text-s h-10"
-            /> */}
-            <ProductSearch
-                type="search"
-                placeholder="Search for a product..."
-            />
-            <Separator />
-            <div className="space-y-[4px]">
-                <Label
-                    className="font-semibold uppercase"
-                    htmlFor="category_select"
-                >
-                    Category
-                </Label>
-
-                <Select
-                    value={categoryId}
-                    onValueChange={handleCategoryChange}
-                    disabled={categories.length === 0}
-                >
-                    <SelectTrigger className="w-full" id="category_select">
-                        <SelectValue placeholder="Select Category" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                        {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+      {/* Categories */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Category</Label>
+        <RadioGroup
+          value={categoryId}
+          onValueChange={(id) => {
+            setCategoryId(id === categoryId ? "" : id);
+            setSubCategoryId("");
+            setProductTypeId("");
+          }}
+          className="space-y-2"
+        >
+          {categories.map((cat) => (
+            <div key={cat.id} className="flex items-center space-x-2">
+              <RadioGroupItem value={cat.id} id={cat.id} />
+              <Label htmlFor={cat.id} className="font-normal">
+                {cat.name}
+              </Label>
             </div>
+          ))}
+        </RadioGroup>
+      </div>
 
-            {categoryId.length > 0 && (
-                <div className="space-y-[4px]">
-                    <Label
-                        className="font-semibold uppercase"
-                        htmlFor="sub_select"
-                    >
-                        Subcategory
-                    </Label>
-
-                    <Select
-                        value={subCategoryId}
-                        onValueChange={handleSubCategoryChange}
-                        disabled={
-                            subCategories.filter(
-                                (sub) => sub.categoryId === categoryId
-                            ).length === 0
-                        }
-                    >
-                        <SelectTrigger className="w-full" id="sub_select">
-                            <SelectValue placeholder="Select Sub-Category" />
-                        </SelectTrigger>
-
-                        <SelectContent>
-                            {subCategories
-                                .filter((sub) => sub.categoryId === categoryId)
-                                .map((sub) => (
-                                    <SelectItem key={sub.id} value={sub.id}>
-                                        {sub.name}
-                                    </SelectItem>
-                                ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            )}
-
-            {subCategoryId.length > 0 && (
-                <div className="space-y-[4px]">
-                    <Label
-                        className="font-semibold uppercase"
-                        htmlFor="type_select"
-                    >
-                        Type
-                    </Label>
-
-                    <Select
-                        value={productTypeId}
-                        onValueChange={setProductTypeId}
-                        disabled={
-                            productTypes.filter(
-                                (type) => type.subCategoryId === subCategoryId
-                            ).length === 0
-                        }
-                    >
-                        <SelectTrigger className="w-full" id="type_select">
-                            <SelectValue placeholder="Select Type" />
-                        </SelectTrigger>
-
-                        <SelectContent>
-                            {productTypes
-                                .filter(
-                                    (type) =>
-                                        type.subCategoryId === subCategoryId
-                                )
-                                .map((type) => (
-                                    <SelectItem key={type.id} value={type.id}>
-                                        {type.name}
-                                    </SelectItem>
-                                ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            )}
-
-            {categoryId.length > 0 && (
-                <Button
-                    size="sm"
-                    className="h-10 w-full"
-                    onClick={handleResetCategory}
-                    disabled={categoryId.length === 0}
-                >
-                    <Icons.History />
-                    Reset Category
-                </Button>
-            )}
-
-            <Separator />
-
-            <div className="space-y-1">
-                <Label className="font-semibold uppercase">Brand</Label>
-
-                <MultipleSelectorGeneral
-                    commandProps={{
-                        label: "Brands",
-                    }}
-                    defaultOptions={brandsMeta
-                        .map((brand) => ({
-                            label: brand.name,
-                            value: brand.slug,
-                        }))
-                        .sort((a, b) => a.value.localeCompare(b.value))}
-                    placeholder="Select brands"
-                    emptyIndicator={
-                        <p className="text-center text-sm">No results found</p>
-                    }
-                    value={brandsMeta
-                        .filter((brand) => brandIds.includes(brand.id))
-                        .map((brand) => ({
-                            label: brand.name,
-                            value: brand.slug,
-                        }))}
-                    onChange={(options) =>
-                        setBrandIds(
-                            options.map(
-                                (option) =>
-                                    brandsMeta.find(
-                                        (brand) => brand.slug === option.value
-                                    )?.id ?? ""
-                            )
-                        )
-                    }
+      <Separator />
+  {/* Brands */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Brands</Label>
+        <div className="space-y-2">
+          {(showAllBrands ? brandsMeta : brandsMeta.slice(0, 5)).map(
+            (brand) => (
+              <div key={brand.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={brand.id}
+                  checked={brandIds.includes(brand.id)}
+                  onCheckedChange={() =>
+                    setBrandIds(
+                      brandIds.includes(brand.id)
+                        ? brandIds.filter((b) => b !== brand.id)
+                        : [...brandIds, brand.id]
+                    )
+                  }
                 />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-3">
-                <div className="space-y-2">
-                    <Label
-                        className="font-semibold uppercase"
-                        htmlFor="price_slider"
-                    >
-                        Price
-                    </Label>
-
-                    <Slider
-                        id="price_slider"
-                        value={priceRange}
-                        step={100}
-                        onValueChange={setPriceRange}
-                        onValueCommit={(values) => {
-                            setMinPrice(values[0]);
-                            setMaxPrice(values[1]);
-                        }}
-                        min={0}
-                        max={10000}
-                        minStepsBetweenThumbs={1}
-                        aria-label="Price range slider"
-                    />
-                </div>
-
-                <div>
-                    <Label className="tabular-nums">
-                        {formatPriceTag(priceRange[0])} -{" "}
-                        {formatPriceTag(priceRange[1])}
-                        {priceRange[1] === 10000 && "+"}
-                    </Label>
-                </div>
-            </div>
-
-            <Separator />
-
-            {/* <div className="space-y-1">
-                <Label
-                    className="font-semibold uppercase"
-                    htmlFor="sort_select"
-                >
-                    Sort By
+                <Label htmlFor={brand.id} className="font-normal">
+                  {brand.name}
                 </Label>
-
-                <Select
-                    value={`${sortBy}:${sortOrder}`}
-                    onValueChange={handleSort}
-                >
-                    <SelectTrigger className="w-full" id="sort_select">
-                        <SelectValue placeholder="Sort By" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                        {sortByWithOrderTypes.map((x) => (
-                            <SelectItem key={x.value} value={x.value}>
-                                {x.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div> */}
+              </div>
+            )
+          )}
         </div>
-    );
+        {brandsMeta.length > 5 && (
+          <button
+            className="mt-2 text-sm text-gray-600 hover:underline"
+            onClick={() => setShowAllBrands(!showAllBrands)}
+          >
+            {showAllBrands ? "View Less -" : "View More +"}
+          </button>
+        )}
+      </div>
+      <Separator />
+      {/* Subcategories */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Subcategory</Label>
+        <RadioGroup
+          value={subCategoryId}
+          onValueChange={(id) => {
+            setSubCategoryId(id === subCategoryId ? "" : id);
+            setProductTypeId("");
+          }}
+          className="max-h-48 space-y-2 overflow-y-auto"
+        >
+          {subCategories
+            .filter((s) =>
+              categoryId ? String(s.categoryId) === String(categoryId) : true
+            )
+            .map((sub) => (
+              <div key={sub.id} className="flex items-center space-x-2">
+                <RadioGroupItem value={sub.id} id={sub.id} />
+                <Label htmlFor={sub.id} className="font-normal">
+                  {sub.name}
+                </Label>
+              </div>
+            ))}
+        </RadioGroup>
+      </div>
+
+      <Separator />
+
+      {/* Product Types */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Type</Label>
+        <RadioGroup
+          value={productTypeId}
+          onValueChange={(id) =>
+            setProductTypeId(id === productTypeId ? "" : id)
+          }
+          className="max-h-48 space-y-2 overflow-y-auto"
+        >
+          {productTypes
+            .filter((t) =>
+              subCategoryId
+                ? String(t.subCategoryId) === String(subCategoryId)
+                : true
+            )
+            .map((t) => (
+              <div key={t.id} className="flex items-center space-x-2">
+                <RadioGroupItem value={t.id} id={t.id} />
+                <Label htmlFor={t.id} className="font-normal">
+                  {t.name}
+                </Label>
+              </div>
+            ))}
+        </RadioGroup>
+      </div>
+
+      <Separator />
+
+      {/* Price */}
+      <div className="space-y-3">
+        <Label className="font-semibold uppercase">Price</Label>
+        <Slider
+          value={priceRange}
+          step={100}
+          min={0}
+          max={10000}
+          onValueChange={setPriceRange}
+          onValueCommit={(values) => {
+            setMinPrice(values[0]);
+            setMaxPrice(values[1]);
+          }}
+        />
+        <p className="text-sm tabular-nums">
+          {formatPriceTag(priceRange[0])} - {formatPriceTag(priceRange[1])}
+          {priceRange[1] === 10000 && "+"}
+        </p>
+      </div>
+      <Separator />
+
+      {/* Colors */}
+      <div className="space-y-4">
+        <Label className="font-semibold uppercase">Color</Label>
+        <div className="grid grid-cols-3 gap-x-2 gap-y-4">
+          {visibleColors.map((colorName) => {
+            const hex = getColorHex(colorName);
+            return (
+              <div
+                key={colorName}
+                className="flex cursor-pointer flex-col items-center gap-2"
+   onClick={() =>
+                  setColorFilters(
+                    colorFilters.includes(colorName)
+                      ? colorFilters.filter((c) => c !== colorName)
+                      : [...colorFilters, colorName]
+                  )
+                }
+
+              >
+                <button
+                  type="button"
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-full border",
+                    colorFilters.includes(colorName)
+                      ? "ring-2 ring-black ring-offset-1"
+                      : ""
+                  )}
+                  title={colorName}
+                  style={{ backgroundColor: hex }}
+                >
+                  {colorFilters.includes(colorName) && (
+                    <Icons.Check
+                      className="size-4"
+                      style={{ color: getCheckmarkColor(hex) }}
+                    />
+                  )}
+                </button>
+                <span className="text-center text-sm capitalize">{colorName}</span>
+              </div>
+            );
+          })}
+        </div>
+        {colors.length > 21 && (
+          <button
+            className="mt-2 text-sm text-gray-600 hover:underline"
+            onClick={() => setShowAllColors(!showAllColors)}
+          >
+            {showAllColors ? "View Less -" : "View More +"}
+          </button>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* --- UNIFIED SIZES SECTION --- */}
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase">Sizes</Label>
+        <div className="flex flex-wrap gap-2">
+          {allSizes.map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => handleSizeClick(size)}
+              className={cn(
+                "rounded-md border px-3 py-1 text-sm",
+                sizeFilters.includes(size)
+                  ? "bg-black text-white"
+                  : "bg-white text-black hover:bg-gray-100"
+              )}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
 }
 
+// --- Shop Sort Component ---
 export function ShopSortBy() {
-    const handleSort = (value: string) => {
-        const [sortBy, sortOrder] = value.split(":");
-        setSortBy(sortBy as "price" | "createdAt");
-        setSortOrder(sortOrder as "asc" | "desc");
-    };
-    const [sortBy, setSortBy] = useQueryState(
-        "sortBy",
-        parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
-            "createdAt"
-        )
-    );
-    const [sortOrder, setSortOrder] = useQueryState(
-        "sortOrder",
-        parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
-    );
-    return (
-        <div className="w-52 space-y-1">
-            {/* <Label className="font-semibold uppercase" htmlFor="sort_select">
-                Sort By
-            </Label> */}
+  const [sortBy, setSortBy] = useQueryState(
+    "sortBy",
+    parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
+      "createdAt"
+    )
+  );
+  const [sortOrder, setSortOrder] = useQueryState(
+    "sortOrder",
+    parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
+  );
 
-            <Select value={`${sortBy}:${sortOrder}`} onValueChange={handleSort}>
-                <SelectTrigger className="w-100px" id="sort_select">
-                    <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
+  const handleSort = (value: string) => {
+    const [sort, order] = value.split(":");
+    setSortBy(sort as "price" | "createdAt");
+    setSortOrder(order as "asc" | "desc");
+  };
 
-                <SelectContent>
-                    {sortByWithOrderTypes.map((x) => (
-                        <SelectItem key={x.value} value={x.value}>
-                            Sort By :{" "}
-                            <span className="font-semibold">{x.label}</span>
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
+  return (
+    <div className="w-52 space-y-1">
+      <select
+        className="w-full rounded-md border px-3 py-2"
+        value={`${sortBy}:${sortOrder}`}
+        onChange={(e) => handleSort(e.target.value)}
+      >
+        {sortByWithOrderTypes.map((x) => (
+          <option key={x.value} value={x.value}>
+            {x.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 }
