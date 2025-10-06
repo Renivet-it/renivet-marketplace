@@ -2,7 +2,6 @@ import { GeneralShell } from "@/components/globals/layouts";
 import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { Label } from "@/components/ui/label";
 import { SearchInput } from "@/components/ui/search-input";
-// import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries } from "@/lib/db/queries";
@@ -32,7 +31,7 @@ interface PageProps {
         productTypeId?: string;
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
-  sizes?: string;
+        sizes?: string;
     }>;
 }
 
@@ -41,56 +40,70 @@ export default async function Page({ searchParams }: PageProps) {
 
   return (
     <GeneralShell>
-      <div className="flex flex-col gap-5 md:flex-row ">
-        {/* Desktop filters */}
-        <div className="hidden md:block md:basis-1/6">
+      <div className="flex flex-col gap-5 md:flex-row">
+        {/* Desktop filters - Fixed sidebar */}
+        <aside className="hidden md:block md:basis-1/5 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto">
           <Suspense fallback={<ShopFiltersSkeleton />}>
-            <ShopFiltersFetch className="space-y-4" />
+            <ShopFiltersFetch className="space-y-4 pr-2" />
           </Suspense>
-        </div>
+        </aside>
 
         {/* Divider */}
         <div className="hidden w-px bg-border md:inline-block" />
 
         {/* Main content */}
-        <div className="w-full md:basis-5/6 space-y-5">
-          {/* Mobile search */}
-          <div className="block md:hidden">
+        <main className="w-full md:basis-4/5 space-y-5">
+          {/* Mobile search and filters */}
+          <div className="block md:hidden space-y-4">
             <SearchInput
               type="search"
               placeholder="Search for a product..."
               className="h-12 text-base"
             />
+            <Suspense fallback={<ShopFiltersSkeleton />}>
+              <ShopFiltersFetch className="space-y-4" />
+            </Suspense>
           </div>
 
-          {/* Desktop sort by */}
-          <div className="hidden md:flex justify-end">
+          {/* Desktop search and sort */}
+          <div className="hidden md:flex md:items-center md:justify-between md:gap-4">
+            <div className="flex-1 max-w-md">
+              <SearchInput
+                type="search"
+                placeholder="Search for a product..."
+                className="h-10"
+              />
+            </div>
             <ShopSortBy />
           </div>
 
-<div className="block md:hidden">
-  <ProductTypesRow
-    productTypes={productTypes}
-    productTypeId={(await searchParams).productTypeId ?? ""}
-  />
-</div>
-{/* 🖥️ Desktop Product Types (limit 10) */}
-<div className="hidden md:block">
-  <ProductTypesRowDesktop
-    productTypes={productTypes.slice(0, 10)}
-    productTypeId={(await searchParams).productTypeId ?? ""}
-  />
-</div>
+          {/* Mobile Product Types */}
+          <div className="block md:hidden">
+            <ProductTypesRow
+              productTypes={productTypes}
+              productTypeId={(await searchParams).productTypeId ?? ""}
+            />
+          </div>
+
+          {/* Desktop Product Types (limit 10) */}
+          <div className="hidden md:block">
+            <ProductTypesRowDesktop
+              productTypes={productTypes.slice(0, 10)}
+              productTypeId={(await searchParams).productTypeId ?? ""}
+            />
+          </div>
+
           <Separator />
 
           <Suspense fallback={<ShopProductsSkeleton />}>
             <ShopProductsFetch searchParams={searchParams} />
           </Suspense>
-        </div>
+        </main>
       </div>
     </GeneralShell>
   );
 }
+
 function ProductTypesRowDesktop({
   productTypes,
   productTypeId,
@@ -99,12 +112,12 @@ function ProductTypesRowDesktop({
   productTypeId?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 pb-2">
+    <div className="flex flex-wrap gap-2">
       <a
         href="?productTypeId="
         className={cn(
-          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
-          productTypeId === "" && "bg-black text-white border-black"
+          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
+          productTypeId === "" && "bg-black text-white border-black hover:bg-gray-900"
         )}
       >
         All Items
@@ -115,8 +128,8 @@ function ProductTypesRowDesktop({
           key={type.id}
           href={`?productTypeId=${type.id}`}
           className={cn(
-            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
-            productTypeId === type.id && "bg-black text-white border-black"
+            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
+            productTypeId === type.id && "bg-black text-white border-black hover:bg-gray-900"
           )}
         >
           {type.name}
@@ -126,13 +139,19 @@ function ProductTypesRowDesktop({
   );
 }
 
-function ProductTypesRow({ productTypes, productTypeId }: { productTypes: { id: string; name: string }[], productTypeId?: string }) {
+function ProductTypesRow({
+  productTypes,
+  productTypeId,
+}: {
+  productTypes: { id: string; name: string }[];
+  productTypeId?: string;
+}) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
       <a
         href="?productTypeId="
         className={cn(
-          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
+          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
           productTypeId === "" && "bg-black text-white border-black"
         )}
       >
@@ -144,7 +163,7 @@ function ProductTypesRow({ productTypes, productTypeId }: { productTypes: { id: 
           key={type.id}
           href={`?productTypeId=${type.id}`}
           className={cn(
-            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
+            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
             productTypeId === type.id && "bg-black text-white border-black"
           )}
         >
@@ -166,20 +185,24 @@ async function ShopFiltersFetch(props: GenericProps) {
             productQueries.getAlphaSizes(),
             productQueries.getNumericSizes(),
         ]);
-console.log("numsize fetched:", numSize); // ✅ Log the fetched colors
-console.log("size fetched:", alphaSize); // ✅ Log the fetched colors
+
+    console.log("numsize fetched:", numSize);
+    console.log("size fetched:", alphaSize);
+
     const brandsMeta = brandMetaSchema.array().parse(allBrands);
 
     return (
         <ShopFilters
-        sizes={[]} categories={categories}
-        subCategories={subCategories}
-        productTypes={productTypes}
-        brandsMeta={brandsMeta}
-        colors={colors} // ✅ pass colors
-        alphaSize={alphaSize} // ✅ pass sizes
-        numSize={numSize} // ✅ pass sizes
-        {...props} />
+            sizes={[]}
+            categories={categories}
+            subCategories={subCategories}
+            productTypes={productTypes}
+            brandsMeta={brandsMeta}
+            colors={colors}
+            alphaSize={alphaSize}
+            numSize={numSize}
+            {...props}
+        />
     );
 }
 
@@ -198,8 +221,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         productTypeId: productTypeIdRaw,
         sortBy: sortByRaw,
         sortOrder: sortOrderRaw,
-          colors: colorsRaw, // ✅ add this
-  sizes: sizesRaw,
+        colors: colorsRaw,
+        sizes: sizesRaw,
     } = await searchParams;
 
     const limit =
@@ -228,8 +251,9 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         : undefined;
     const sortBy = !!sortByRaw?.length ? sortByRaw : undefined;
     const sortOrder = !!sortOrderRaw?.length ? sortOrderRaw : undefined;
-const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
-const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
+    const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
+    const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
+
     const [data, userWishlist] = await Promise.all([
         productQueries.getProducts({
             page,
@@ -248,8 +272,8 @@ const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
             productTypeId: !!productTypeId?.length ? productTypeId : undefined,
             sortBy,
             sortOrder,
-              colors,
-  sizes,
+            colors,
+            sizes,
         }),
         userId ? userWishlistCache.get(userId) : undefined,
     ]);
@@ -265,46 +289,51 @@ const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
 
 function ShopFiltersSkeleton() {
     return (
-        <div className="w-full basis-1/6 space-y-4">
-            <h4 className="text-lg">Filters</h4>
+        <div className="w-full space-y-4">
+            <div className="flex items-center justify-between">
+                <h4 className="text-lg font-semibold">Filters</h4>
+                <Skeleton className="h-8 w-16" />
+            </div>
 
             <Separator />
 
-            <div className="space-y-1">
-                <Label className="font-semibold uppercase">Category</Label>
+            <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide">Category</Label>
                 <Skeleton className="h-10" />
             </div>
 
             <Separator />
 
-            <div className="space-y-1">
-                <Label className="font-semibold uppercase">Brand</Label>
+            <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide">Brand</Label>
                 <Skeleton className="h-10" />
             </div>
 
             <Separator />
 
-            <div className="space-y-1">
+            <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide">Price Range</Label>
                 <div className="space-y-2">
-                    <Label className="font-semibold uppercase">Price</Label>
                     <Skeleton className="h-6" />
+                    <div className="flex gap-2">
+                        <Skeleton className="h-4 flex-1" />
+                        <Skeleton className="h-4 flex-1" />
+                    </div>
                 </div>
-
-                <Skeleton className="h-4 w-1/2" />
             </div>
 
             <Separator />
 
-            <div className="space-y-1">
-                <Label className="font-semibold uppercase">Colors</Label>
-                <Skeleton className="h-10" />
+            <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide">Colors</Label>
+                <Skeleton className="h-20" />
             </div>
 
             <Separator />
 
-            <div className="space-y-1">
-                <Label className="font-semibold uppercase">Sort By</Label>
-                <Skeleton className="h-10" />
+            <div className="space-y-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide">Sizes</Label>
+                <Skeleton className="h-24" />
             </div>
         </div>
     );
@@ -313,19 +342,13 @@ function ShopFiltersSkeleton() {
 function ShopProductsSkeleton() {
     return (
         <>
-            <div className="grid grid-cols-1 gap-5 md:grid-cols-5">
-                {[...Array(8)].map((_, i) => (
-                    <div key={i}>
-                        <div>
-                            <Skeleton className="aspect-[3/4] size-full" />
-                        </div>
-
-                        <div className="space-y-2 py-2">
-                            <div className="space-y-1">
-                                <Skeleton className="h-5 w-full" />
-                                <Skeleton className="h-3 w-1/2" />
-                            </div>
-
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
+                {[...Array(10)].map((_, i) => (
+                    <div key={i} className="space-y-3">
+                        <Skeleton className="aspect-[3/4] w-full rounded-lg" />
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-3 w-2/3" />
                             <Skeleton className="h-5 w-1/3" />
                         </div>
                     </div>
@@ -335,12 +358,12 @@ function ShopProductsSkeleton() {
             <Separator />
 
             <div className="flex w-full items-center justify-center gap-2">
-                {Array.from({ length: 4 }).map((_, i) => (
+                {Array.from({ length: 5 }).map((_, i) => (
                     <Skeleton
                         key={i}
-                        className={cn("size-10", {
-                            "w-20": i === 0 || i === 3,
-                            "hidden md:inline-block": i === 1 || i === 2,
+                        className={cn("size-10 rounded", {
+                            "w-20": i === 0 || i === 4,
+                            "hidden md:inline-block": i === 1 || i === 3,
                         })}
                     />
                 ))}
