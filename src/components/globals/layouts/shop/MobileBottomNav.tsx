@@ -9,36 +9,50 @@ import { useAuth } from "@clerk/nextjs";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
 
-// Define a type for cart items for better safety and clarity
 type CartItem = {
   productId: string;
   variantId?: string | null;
   quantity: number;
 };
 
-// --- START: Combined Cart Hook Logic ---
-// This hook manages cart state for both guests and logged-in users.
+// Unified cart hook
 function useUnifiedCart() {
   const { userId } = useAuth();
   const utils = trpc.useUtils();
 
-  // --- State and Mutations for LOGGED-IN USERS ---
-  const { data: userCart, isLoading: isUserCartLoading } = trpc.general.users.cart.getCartForUser.useQuery(undefined, {
-    enabled: !!userId, // Only fetch if the user is logged in
-  });
+  // ✅ Only call query when userId exists
+  const {
+    data: userCart,
+    isLoading: isUserCartLoading,
+    error,
+  } = trpc.general.users.cart.getCartForUser.useQuery(
+    { userId: userId as string },
+    {
+      enabled: !!userId,
+      retry: false,
+    }
+  );
+
+  // Console log the API response
+  useEffect(() => {
+    if (userId) {
+      console.log("🛒 User Cart Data:", userCart);
+      console.log("📊 Is Array?:", Array.isArray(userCart));
+      console.log("🔢 Cart Length:", Array.isArray(userCart) ? userCart.length : "Not an array");
+    }
+  }, [userCart, userId]);
 
   const addToUserCartMutation = trpc.general.users.cart.addProductToCart.useMutation({
     onSuccess: () => {
       toast.success("Added to Cart!");
-      utils.general.users.cart.getCartForUser.invalidate(); // Refresh cart from server
+      utils.general.users.cart.getCartForUser.invalidate({ userId: userId as string });
     },
     onError: (err) => toast.error(err.message || "Failed to add item."),
   });
 
-  // --- State and Logic for GUEST USERS ---
+  // Guest cart logic
   const [guestCart, setGuestCart] = useState<CartItem[]>([]);
 
-  // Effect to load guest cart from localStorage (only runs for guests)
   useEffect(() => {
     if (!userId) {
       try {
@@ -48,24 +62,27 @@ function useUnifiedCart() {
         }
       } catch (error) {
         console.error("Failed to parse guest cart from localStorage", error);
-        localStorage.removeItem("guest_cart"); // Clear corrupted data
+        localStorage.removeItem("guest_cart");
       }
     }
   }, [userId]);
 
-  // --- UNIFIED FUNCTIONS (The "Public API" of the hook) ---
-
+  // Unified addToCart
   const addToCart = (item: CartItem) => {
     if (userId) {
-      // If logged in, use the tRPC mutation
       addToUserCartMutation.mutate(item);
     } else {
-      // If a guest, update localStorage
       setGuestCart((prev) => {
-        const existing = prev.find(x => x.productId === item.productId && (x.variantId || null) === (item.variantId || null));
+        const existing = prev.find(
+          (x) => x.productId === item.productId && (x.variantId || null) === (item.variantId || null)
+        );
         let updated: CartItem[];
         if (existing) {
-          updated = prev.map(x => x.productId === item.productId && (x.variantId || null) === (item.variantId || null) ? { ...x, quantity: x.quantity + item.quantity } : x);
+          updated = prev.map((x) =>
+            x.productId === item.productId && (x.variantId || null) === (item.variantId || null)
+              ? { ...x, quantity: x.quantity + item.quantity }
+              : x
+          );
           toast.success("Increased quantity in Cart");
         } else {
           updated = [...prev, item];
@@ -78,25 +95,24 @@ function useUnifiedCart() {
     }
   };
 
-  // Determine which cart's items and count to expose
-  const cartItems = userId ? userCart?.items ?? [] : guestCart;
-  const cartItemCount = cartItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
+  // Handle userCart being an array directly
+  const cartItems = userId 
+    ? (Array.isArray(userCart) ? userCart : userCart?.items ?? [])
+    : guestCart;
+  // Show number of unique items, not total quantity
+  const cartItemCount = cartItems.length;
 
   return {
     cartItemCount,
-    // You can also return `addToCart` if other components need it, but this one doesn't
+    addToCart,
+    isUserCartLoading,
+    error,
   };
 }
-// --- END: Combined Cart Hook Logic ---
 
-
-/**
- * A mobile-only bottom navigation bar that is fixed to the viewport.
- * It correctly displays the cart count for both guests and logged-in users.
- */
+// Mobile navigation
 export function MobileBottomNav() {
   const pathname = usePathname();
-  // The component now uses the unified hook to get the cart count.
   const { cartItemCount } = useUnifiedCart();
 
   const navItems = [
@@ -106,7 +122,6 @@ export function MobileBottomNav() {
     { href: "/profile", icon: User, label: "Profile" },
   ];
 
-  // Do not render on auth pages for a cleaner UI
   if (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) {
     return null;
   }
@@ -120,17 +135,18 @@ export function MobileBottomNav() {
               key={item.label}
               href={item.href}
               className={cn(
-                "relative flex h-full w-full flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
+                "flex h-full w-full flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
                 pathname === item.href ? "text-white" : "text-neutral-400 hover:text-white"
               )}
             >
-              <item.icon className="h-6 w-6" />
-              {/* Cart item count badge */}
-              {item.label === "Cart" && item.count > 0 && (
-                <span className="absolute right-3 top-2 flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                  {item.count > 9 ? "9+" : item.count}
-                </span>
-              )}
+              <div className="relative">
+                <item.icon className="h-6 w-6" />
+                {item.label === "Cart" && item.count > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    {item.count}
+                  </span>
+                )}
+              </div>
             </Link>
           ))}
         </div>

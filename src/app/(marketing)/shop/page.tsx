@@ -41,7 +41,7 @@ export default async function Page({ searchParams }: PageProps) {
 
   return (
     <GeneralShell>
-      <div className="flex flex-col gap-5 md:flex-row">
+      <div className="flex flex-col gap-5 md:flex-row ">
         {/* Desktop filters */}
         <div className="hidden md:block md:basis-1/6">
           <Suspense fallback={<ShopFiltersSkeleton />}>
@@ -74,6 +74,13 @@ export default async function Page({ searchParams }: PageProps) {
     productTypeId={(await searchParams).productTypeId ?? ""}
   />
 </div>
+{/* 🖥️ Desktop Product Types (limit 10) */}
+<div className="hidden md:block">
+  <ProductTypesRowDesktop
+    productTypes={productTypes.slice(0, 10)}
+    productTypeId={(await searchParams).productTypeId ?? ""}
+  />
+</div>
           <Separator />
 
           <Suspense fallback={<ShopProductsSkeleton />}>
@@ -82,6 +89,40 @@ export default async function Page({ searchParams }: PageProps) {
         </div>
       </div>
     </GeneralShell>
+  );
+}
+function ProductTypesRowDesktop({
+  productTypes,
+  productTypeId,
+}: {
+  productTypes: { id: string; name: string }[];
+  productTypeId?: string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 pb-2">
+      <a
+        href="?productTypeId="
+        className={cn(
+          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
+          productTypeId === "" && "bg-black text-white border-black"
+        )}
+      >
+        All Items
+      </a>
+
+      {productTypes.map((type) => (
+        <a
+          key={type.id}
+          href={`?productTypeId=${type.id}`}
+          className={cn(
+            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium",
+            productTypeId === type.id && "bg-black text-white border-black"
+          )}
+        >
+          {type.name}
+        </a>
+      ))}
+    </div>
   );
 }
 
