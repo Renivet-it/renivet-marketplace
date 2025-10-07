@@ -37,9 +37,9 @@ export default function Page() {
                                            <Suspense>
                 <ShopCategoryFetch />
             </Suspense>
-                            <Suspense>
+                            {/* <Suspense>
                 <BrandCollaborateFetch />
-            </Suspense>
+            </Suspense> */}
                             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>

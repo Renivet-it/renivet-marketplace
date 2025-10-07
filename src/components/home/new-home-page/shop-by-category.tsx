@@ -39,7 +39,7 @@ export function ShopCategories() {
       <div className="hidden xl:flex justify-center">
         <div
           className="bg-[#ede6df] rounded-lg shadow-sm border border-gray-200 overflow-hidden"
-          style={{ width: "1552px", height: "357px" }}
+          style={{ width: "1652px", height: "357px" }}
         >
           <div className="flex h-full">
             {/* Left Side - Text Content */}
