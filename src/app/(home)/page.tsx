@@ -59,6 +59,9 @@ export default function Page() {
                                                <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
+                                                                     <Suspense>
+                <ConciousClickBannerFetch />
+            </Suspense>
                                     <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
@@ -71,9 +74,7 @@ export default function Page() {
                       <Suspense>
                 <BrandProductsFetch />
             </Suspense>
-                                                              <Suspense>
-                <ConciousClickBannerFetch />
-            </Suspense>
+     
                                  {/* <Suspense>
                 <NewAdvertisementsFetch />
             </Suspense> */}
