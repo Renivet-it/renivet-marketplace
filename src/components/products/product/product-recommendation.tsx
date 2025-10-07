@@ -76,7 +76,7 @@ const YouMayAlsoLike = ({
       {/* ✅ Responsive grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-6">
         {visibleProducts.map((product) => {
-          const sellingPricePaise = product.cost_per_item ?? product.price ?? 0;
+          const sellingPricePaise = product.price ?? 0;
           const mrpPaise =
             product.compare_at_price ?? product.compareAtPrice ?? 0;
 
