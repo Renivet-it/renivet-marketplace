@@ -53,16 +53,21 @@ export default async function Page({ searchParams }: PageProps) {
 
         {/* Main content */}
         <main className="w-full md:basis-4/5 space-y-5">
-          {/* Mobile search and filters */}
+          {/* Mobile search, filters, and sort */}
           <div className="block md:hidden space-y-4">
             <SearchInput
               type="search"
               placeholder="Search for a product..."
               className="h-12 text-base"
             />
-            <Suspense fallback={<ShopFiltersSkeleton />}>
-              <ShopFiltersFetch className="space-y-4" />
-            </Suspense>
+            {/* --- MODIFIED SECTION --- */}
+            <div className="grid grid-cols-2 gap-2">
+              <Suspense fallback={<Skeleton className="h-10 w-full" />}>
+                <ShopFiltersFetch isMobileFullWidth={true} />
+              </Suspense>
+              <ShopSortBy />
+            </div>
+            {/* --- END MODIFICATION --- */}
           </div>
 
           {/* Desktop search and sort */}
@@ -174,6 +179,13 @@ function ProductTypesRow({
   );
 }
 
+// --- MODIFIED SECTION ---
+interface GenericProps {
+    className?: string;
+    isMobileFullWidth?: boolean; // New prop
+    [key: string]: any;
+}
+
 async function ShopFiltersFetch(props: GenericProps) {
     const [categories, subCategories, productTypes, allBrands, colors, alphaSize, numSize] =
         await Promise.all([
@@ -185,9 +197,6 @@ async function ShopFiltersFetch(props: GenericProps) {
             productQueries.getAlphaSizes(),
             productQueries.getNumericSizes(),
         ]);
-
-    console.log("numsize fetched:", numSize);
-    console.log("size fetched:", alphaSize);
 
     const brandsMeta = brandMetaSchema.array().parse(allBrands);
 
@@ -205,6 +214,7 @@ async function ShopFiltersFetch(props: GenericProps) {
         />
     );
 }
+// --- END MODIFICATION ---
 
 async function ShopProductsFetch({ searchParams }: PageProps) {
     const { userId } = await auth();

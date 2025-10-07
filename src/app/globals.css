@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 html {
-    font-family: var(--font-dmsans);
+    font-family: var(--font-lato);
 }
 
 h1,
@@ -12,7 +12,7 @@ h3,
 h4,
 h5,
 h6 {
-    font-family: var(--font-rubik);
+    font-family: var(--font-lato);
 }
 
 @layer base {
