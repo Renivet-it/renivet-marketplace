@@ -36,7 +36,7 @@ export function BrandPromotion({
 
   return (
     // Outer container with the solid background color and padding
-    <div className={cn("w-full bg-[#F4F0EC] py-16 md:py-10", className)}>
+    <div className={cn("w-full bg-[#F4F0EC] py-16 md:py-7", className)}>
       {/* This section is now just a simple max-width container */}
       <section className="relative mx-auto max-w-[1750px]">
         {/* This div now contains the background image and content */}
