@@ -5,8 +5,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
-import { ArrowUpRight } from "lucide-react";
 
+// Define the structure for each item in the carousel
 interface MoodboardItem {
   id: string;
   imageUrl: string;
@@ -14,79 +14,91 @@ interface MoodboardItem {
   url?: string;
 }
 
+// Define the props for the component
 interface PageProps {
   moodboardItems: MoodboardItem[];
   title?: string;
   className?: string;
 }
 
+// The background image for the inner content area
+const contentBackgroundUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN1PvavSZkoUs8MvPRa6CdSruet23wTjfHEgmZ";
+
 export function BrandPromotion({
   moodboardItems,
-  title = "Elevate Everyday Living",
+  title = "Jute & Cotton", // Default title updated to match the image
   className,
-}: PageProps) {
-  if (!moodboardItems.length) return null;
+}: PageProps ) {
+  // Don't render the component if there are no items to display
+  if (!moodboardItems || !moodboardItems.length) {
+    return null;
+  }
 
   return (
-    <section className={cn("w-full bg-[#F4F0EC] py-16", className)}>
-      <div className="max-w-screen-2xl mx-auto px-6">
-        {/* Section Title */}
-        <div className="mb-12">
-          <h2 className="text-3xl md:text-4xl font-light text-gray-900 tracking-wide">
-            {title}
-          </h2>
-        </div>
-
-        {/* Carousel */}
-        <Carousel
-          opts={{
-            align: "start",
-            loop: true,
+    // Outer container with the solid background color and padding
+    <div className={cn("w-full bg-[#F4F0EC] py-16 md:py-10", className)}>
+      {/* This section is now just a simple max-width container */}
+      <section className="relative mx-auto max-w-[1750px]">
+        {/* This div now contains the background image and content */}
+        <div
+          className="flex flex-col items-center bg-center bg-no-repeat px-4 py-10 sm:px-6 lg:px-8"
+          style={{
+            // Apply a semi-transparent white overlay on top of the image
+            backgroundImage: `linear-gradient(rgba(244, 240, 236, 0.85), rgba(244, 240, 236, 0.85)), url('${contentBackgroundUrl}')`,
+            backgroundSize: "contain",
           }}
-          plugins={[
-            Autoplay({
-              delay: 5000,
-            }),
-          ]}
-          className="w-full"
         >
-          <CarouselContent className="-ml-4">
-            {moodboardItems.map((item) => (
-              <CarouselItem key={item.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-1/5">
-                <div className="group cursor-pointer">
-                  <div className="relative bg-[#e1ddd5] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 p-4">
-                    {/* Title and Arrow Button */}
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-medium text-gray-700">
-                        {item.title || "Product"}
-                      </h3>
-                      <Link
-                        href={item.url || "/shop"}
-                        className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors duration-200"
-                      >
-                        <ArrowUpRight className="w-4 h-4 text-gray-600" />
-                      </Link>
-                    </div>
+          {/* Section Title */}
+          <div className="mb-12 text-center">
+            <h2 className="text-2xl font-light tracking-wide text-black md:text-3xl">
+              {title}
+            </h2>
+          </div>
 
-                    {/* Product Image */}
-                    <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50">
-                      <Link href={item.url || "/shop"} className="block w-full h-full">
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.title || "Product image"}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, (max-width: 1536px) 25vw, 20vw"
-                        />
-                      </Link>
-                    </div>
+          {/* Carousel */}
+          <Carousel
+            opts={{
+              align: "start",
+              loop: true,
+            }}
+            plugins={[
+              Autoplay({
+                delay: 4000,
+                stopOnInteraction: true,
+              }),
+            ]}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4 md:-ml-6">
+              {moodboardItems.map((item) => (
+                <CarouselItem
+                  key={item.id}
+                  className="basis-auto pl-4 md:pl-6"
+                >
+                  <div
+                    className="group relative overflow-hidden transition-shadow duration-300 hover:shadow-lg"
+                    style={{
+                      width: "264px",
+                      height: "388px",
+                      borderRadius: "30px"
+                    }}
+                  >
+                    <Link href={item.url || "/shop"} className="block size-full">
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title || "Moodboard image"}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        sizes="(max-width: 768px) 50vw, 264px"
+                      />
+                    </Link>
                   </div>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-      </div>
-    </section>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
+        </div>
+      </section>
+    </div>
   );
 }
