@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { useMediaQuery } from "@mantine/hooks";
 import parse from "color-parse";
+import {
+  useQueryState,
+  parseAsArrayOf,
+  parseAsInteger,
+  parseAsString,
+  parseAsStringLiteral,
+} from "nuqs";
 
 import { cn, formatPriceTag } from "@/lib/utils";
 import {
@@ -11,17 +18,12 @@ import {
   CachedProductType,
   CachedSubCategory,
 } from "@/lib/validations";
-import {
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  parseAsStringLiteral,
-  useQueryState,
-} from "nuqs";
 
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
+import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Separator } from "../ui/separator";
 import {
   Sheet,
@@ -33,11 +35,8 @@ import {
   SheetTrigger,
 } from "../ui/sheet";
 import { Slider } from "../ui/slider";
-import { Checkbox } from "../ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-// --- HELPER FUNCTIONS ---
+// --- HELPER FUNCTIONS (Keep these as they are) ---
 
 // RGBA to HEX
 function rgbaToHex(rgba: number[]): string {
@@ -62,146 +61,7 @@ function stringToColor(str: string): string {
 
 // --- All CSS Named Colors ---
 const ALL_COLORS: Record<string, string> = {
-  aliceblue: "#f0f8ff",
-  antiquewhite: "#faebd7",
-  aqua: "#00ffff",
-  aquamarine: "#7fffd4",
-  azure: "#f0ffff",
-  beige: "#f5f5dc",
-  black: "#000000",
-  blue: "#0000ff",
-  brown: "#a52a2a",
-  chartreuse: "#7fff00",
-  chocolate: "#d2691e",
-  coral: "#ff7f50",
-  crimson: "#dc143c",
-  cyan: "#00ffff",
-  darkblue: "#00008b",
-  darkcyan: "#008b8b",
-  darkgoldenrod: "#b8860b",
-  darkgray: "#a9a9a9",
-  darkgreen: "#006400",
-  darkgrey: "#a9a9a9",
-  darkkhaki: "#bdb76b",
-  darkmagenta: "#8b008b",
-  darkolivegreen: "#556b2f",
-  darkorange: "#ff8c00",
-  darkorchid: "#9932cc",
-  darkred: "#8b0000",
-  darksalmon: "#e9967a",
-  darkseagreen: "#8fbc8f",
-  darkslateblue: "#483d8b",
-  darkslategray: "#2f4f4f",
-  darkslategrey: "#2f4f4f",
-  darkturquoise: "#00ced1",
-  darkviolet: "#9400d3",
-  deeppink: "#ff1493",
-  deepskyblue: "#00bfff",
-  dimgray: "#696969",
-  dimgrey: "#696969",
-  dodgerblue: "#1e90ff",
-  firebrick: "#b22222",
-  floralwhite: "#fffaf0",
-  forestgreen: "#228b22",
-  fuchsia: "#ff00ff",
-  gainsboro: "#dcdcdc",
-  ghostwhite: "#f8f8ff",
-  gold: "#ffd700",
-  goldenrod: "#daa520",
-  gray: "#808080",
-  green: "#008000",
-  greenyellow: "#adff2f",
-  grey: "#808080",
-  honeydew: "#f0fff0",
-  hotpink: "#ff69b4",
-  indianred: "#cd5c5c",
-  indigo: "#4b0082",
-  ivory: "#fffff0",
-  khaki: "#f0e68c",
-  lavender: "#e6e6fa",
-  lavenderblush: "#fff0f5",
-  lawngreen: "#7cfc00",
-  lemonchiffon: "#fffacd",
-  lightblue: "#add8e6",
-  lightcoral: "#f08080",
-  lightcyan: "#e0ffff",
-  lightgoldenrodyellow: "#fafad2",
-  lightgray: "#d3d3d3",
-  lightgreen: "#90ee90",
-  lightgrey: "#d3d3d3",
-  lightpink: "#ffb6c1",
-  lightsalmon: "#ffa07a",
-  lightseagreen: "#20b2aa",
-  lightskyblue: "#87cefa",
-  lightslategray: "#778899",
-  lightslategrey: "#778899",
-  lightsteelblue: "#b0c4de",
-  lightyellow: "#ffffe0",
-  lime: "#00ff00",
-  limegreen: "#32cd32",
-  linen: "#faf0e6",
-  magenta: "#ff00ff",
-  maroon: "#800000",
-  mediumaquamarine: "#66cdaa",
-  mediumblue: "#0000cd",
-  mediumorchid: "#ba55d3",
-  mediumpurple: "#9370db",
-  mediumseagreen: "#3cb371",
-  mediumslateblue: "#7b68ee",
-  mediumspringgreen: "#00fa9a",
-  mediumturquoise: "#48d1cc",
-  mediumvioletred: "#c71585",
-  midnightblue: "#191970",
-  mintcream: "#f5fffa",
-  mistyrose: "#ffe4e1",
-  moccasin: "#ffe4b5",
-  navajowhite: "#ffdead",
-  navy: "#000080",
-  oldlace: "#fdf5e6",
-  olive: "#808000",
-  olivedrab: "#6b8e23",
-  orange: "#ffa500",
-  orangered: "#ff4500",
-  orchid: "#da70d6",
-  palegoldenrod: "#eee8aa",
-  palegreen: "#98fb98",
-  paleturquoise: "#afeeee",
-  palevioletred: "#db7093",
-  papayawhip: "#ffefd5",
-  peachpuff: "#ffdab9",
-  peru: "#cd853f",
-  pink: "#ffc0cb",
-  plum: "#dda0dd",
-  powderblue: "#b0e0e6",
-  purple: "#800080",
-  red: "#ff0000",
-  rosybrown: "#bc8f8f",
-  royalblue: "#4169e1",
-  saddlebrown: "#8b4513",
-  salmon: "#fa8072",
-  sandybrown: "#f4a460",
-  seagreen: "#2e8b57",
-  seashell: "#fff5ee",
-  sienna: "#a0522d",
-  silver: "#c0c0c0",
-  skyblue: "#87ceeb",
-  slateblue: "#6a5acd",
-  slategray: "#708090",
-  slategrey: "#708090",
-  snow: "#fffafa",
-  springgreen: "#00ff7f",
-  steelblue: "#4682b4",
-  tan: "#d2b48c",
-  teal: "#008080",
-  thistle: "#d8bfd8",
-  tomato: "#ff6347",
-  turquoise: "#40e0d0",
-  violet: "#ee82ee",
-  wheat: "#f5deb3",
-  white: "#ffffff",
-  whitesmoke: "#f5f5f5",
-  yellow: "#ffff00",
-  yellowgreen: "#9acd32",
+    aliceblue:"#f0f8ff", antiquewhite:"#faebd7", aqua:"#00ffff", aquamarine:"#7fffd4", azure:"#f0ffff", beige:"#f5f5dc", black:"#000000", blue:"#0000ff", brown:"#a52a2a", chartreuse:"#7fff00", chocolate:"#d2691e", coral:"#ff7f50", crimson:"#dc143c", cyan:"#00ffff", darkblue:"#00008b", darkcyan:"#008b8b", darkgoldenrod:"#b8860b", darkgray:"#a9a9a9", darkgreen:"#006400", darkgrey:"#a9a9a9", darkkhaki:"#bdb76b", darkmagenta:"#8b008b", darkolivegreen:"#556b2f", darkorange:"#ff8c00", darkorchid:"#9932cc", darkred:"#8b0000", darksalmon:"#e9967a", darkseagreen:"#8fbc8f", darkslateblue:"#483d8b", darkslategray:"#2f4f4f", darkslategrey:"#2f4f4f", darkturquoise:"#00ced1", darkviolet:"#9400d3", deeppink:"#ff1493", deepskyblue:"#00bfff", dimgray:"#696969", dimgrey:"#696969", dodgerblue:"#1e90ff", firebrick:"#b22222", floralwhite:"#fffaf0", forestgreen:"#228b22", fuchsia:"#ff00ff", gainsboro:"#dcdcdc", ghostwhite:"#f8f8ff", gold:"#ffd700", goldenrod:"#daa520", gray:"#808080", green:"#008000", greenyellow:"#adff2f", grey:"#808080", honeydew:"#f0fff0", hotpink:"#ff69b4", indianred:"#cd5c5c", indigo:"#4b0082", ivory:"#fffff0", khaki:"#f0e68c", lavender:"#e6e6fa", lavenderblush:"#fff0f5", lawngreen:"#7cfc00", lemonchiffon:"#fffacd", lightblue:"#add8e6", lightcoral:"#f08080", lightcyan:"#e0ffff", lightgoldenrodyellow:"#fafad2", lightgray:"#d3d3d3", lightgreen:"#90ee90", lightgrey:"#d3d3d3", lightpink:"#ffb6c1", lightsalmon:"#ffa07a", lightseagreen:"#20b2aa", lightskyblue:"#87cefa", lightslategray:"#778899", lightslategrey:"#778899", lightsteelblue:"#b0c4de", lightyellow:"#ffffe0", lime:"#00ff00", limegreen:"#32cd32", linen:"#faf0e6", magenta:"#ff00ff", maroon:"#800000", mediumaquamarine:"#66cdaa", mediumblue:"#0000cd", mediumorchid:"#ba55d3", mediumpurple:"#9370db", mediumseagreen:"#3cb371", mediumslateblue:"#7b68ee", mediumspringgreen:"#00fa9a", mediumturquoise:"#48d1cc", mediumvioletred:"#c71585", midnightblue:"#191970", mintcream:"#f5fffa", mistyrose:"#ffe4e1", moccasin:"#ffe4b5", navajowhite:"#ffdead", navy:"#000080", oldlace:"#fdf5e6", olive:"#808000", olivedrab:"#6b8e23", orange:"#ffa500", orangered:"#ff4500", orchid:"#da70d6", palegoldenrod:"#eee8aa", palegreen:"#98fb98", paleturquoise:"#afeeee", palevioletred:"#db7093", papayawhip:"#ffefd5", peachpuff:"#ffdab9", peru:"#cd853f", pink:"#ffc0cb", plum:"#dda0dd", powderblue:"#b0e0e6", purple:"#800080", red:"#ff0000", rosybrown:"#bc8f8f", royalblue:"#4169e1", saddlebrown:"#8b4513", salmon:"#fa8072", sandybrown:"#f4a460", seagreen:"#2e8b57", seashell:"#fff5ee", sienna:"#a0522d", silver:"#c0c0c0", skyblue:"#87ceeb", slateblue:"#6a5acd", slategray:"#708090", slategrey:"#708090", snow:"#fffafa", springgreen:"#00ff7f", steelblue:"#4682b4", tan:"#d2b48c", teal:"#008080", thistle:"#d8bfd8", tomato:"#ff6347", turquoise:"#40e0d0", violet:"#ee82ee", wheat:"#f5deb3", white:"#ffffff", whitesmoke:"#f5f5f5", yellow:"#ffff00", yellowgreen:"#9acd32"
 };
 
 // Find closest color by RGB distance
@@ -260,7 +120,9 @@ const sortByWithOrderTypes = [
   { label: "Oldest First", value: "createdAt:asc" },
 ];
 
-// --- COMPONENTS ---
+// --- TYPE DEFINITIONS ---
+type ActiveFilter = "category" | "brand" | "price" | "color" | "size";
+
 interface GenericProps {
   className?: string;
   [key: string]: any;
@@ -274,9 +136,10 @@ interface PageProps extends GenericProps {
   colors: string[];
   alphaSize: string[];
   numSize: string[];
-    sizes: string[];
+  sizes: string[];
 }
 
+// --- MAIN COMPONENT ---
 export function ShopFilters({
   className,
   brandsMeta,
@@ -286,68 +149,148 @@ export function ShopFilters({
   colors,
   alphaSize,
   numSize,
+  sizes, // You passed sizes, let's use it
   ...props
 }: PageProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
+
+  // State for mobile view to track which filter panel is active
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("brand");
+
+  // Combine all available sizes into one array
+  const allSizes = [...new Set([...alphaSize, ...numSize, ...sizes])];
+
+  // All props are now passed down to both mobile and desktop views
+  const filterProps = {
+    className,
+    brandsMeta,
+    categories,
+    subCategories,
+    productTypes,
+    colors,
+    allSizes,
+    ...props,
+  };
 
   return isMobile ? (
     <>
       <Sheet>
         <SheetTrigger asChild>
-          <Button>
-            <Icons.Filter />
+          <Button variant="outline" className="flex items-center gap-2">
+            <Icons.Filter className="size-4" />
             Filters
           </Button>
         </SheetTrigger>
 
         <SheetContent
           side="bottom"
-          className="h-screen overflow-auto p-0 [&>button]:hidden"
+          className="flex h-screen flex-col p-0"
           style={{ scrollbarWidth: "none" }}
         >
-          <SheetHeader className="sr-only p-4 text-start">
-            <SheetTitle>Select Filters</SheetTitle>
+          <SheetHeader className="border-b p-4">
+            <SheetTitle className="text-start">Filters</SheetTitle>
           </SheetHeader>
 
-          <ShopFiltersSection
-            className={cn("w-auto basis-full p-4", className)}
-            brandsMeta={brandsMeta}
-            categories={categories}
-            subCategories={subCategories}
-            productTypes={productTypes}
-            colors={colors}
-            alphaSize={alphaSize}
-            numSize={numSize}
-            {...props}
-          />
+          {/* Main content area with two panels */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left Panel: Filter Category Selection */}
+            <nav className="w-1/3 overflow-y-auto border-r bg-gray-50">
+              <FilterNavButton
+                label="Brand"
+                isActive={activeFilter === "brand"}
+                onClick={() => setActiveFilter("brand")}
+              />
+              <FilterNavButton
+                label="Category"
+                isActive={activeFilter === "category"}
+                onClick={() => setActiveFilter("category")}
+              />
+              <FilterNavButton
+                label="Price"
+                isActive={activeFilter === "price"}
+                onClick={() => setActiveFilter("price")}
+              />
+              <FilterNavButton
+                label="Color"
+                isActive={activeFilter === "color"}
+                onClick={() => setActiveFilter("color")}
+              />
+              <FilterNavButton
+                label="Size"
+                isActive={activeFilter === "size"}
+                onClick={() => setActiveFilter("size")}
+              />
+            </nav>
 
-          <div className="sticky bottom-0 space-y-4 border-t bg-background p-4">
-            <SheetFooter>
-              <SheetClose asChild>
-                <Button>Close</Button>
-              </SheetClose>
-            </SheetFooter>
+            {/* Right Panel: Filter Options */}
+            <div className="w-2/3 overflow-y-auto p-4">
+              {activeFilter === "brand" && <BrandFilter {...filterProps} />}
+              {activeFilter === "category" && <CategoryFilter {...filterProps} />}
+              {activeFilter === "price" && <PriceFilter {...filterProps} />}
+              {activeFilter === "color" && <ColorFilter {...filterProps} />}
+              {activeFilter === "size" && <SizeFilter {...filterProps} />}
+            </div>
           </div>
+
+          {/* Sticky Footer */}
+          <SheetFooter className="sticky bottom-0 grid grid-cols-2 gap-4 border-t bg-background p-4">
+            <Button variant="outline" onClick={() => handleResetAll(filterProps)}>
+              Clear All
+            </Button>
+            <SheetClose asChild>
+              <Button>Apply</Button>
+            </SheetClose>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
-
-      <Separator />
     </>
   ) : (
-    <ShopFiltersSection
-      className={cn("", className)}
-      brandsMeta={brandsMeta}
-      categories={categories}
-      subCategories={subCategories}
-      productTypes={productTypes}
-      colors={colors}
-      alphaSize={alphaSize}
-      numSize={numSize}
-      {...props}
-    />
+    // Desktop View: The original single-column layout
+    <ShopFiltersSection {...filterProps} />
   );
 }
 
+// --- HELPER FOR MOBILE NAV ---
+function FilterNavButton({
+  label,
+  isActive,
+  onClick,
+}: {
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full p-4 text-left text-sm font-medium",
+        isActive ? "bg-white font-bold text-black" : "text-gray-600 hover:bg-gray-100"
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+// --- RESET ALL FUNCTION ---
+const handleResetAll = (props: any) => {
+  // This is a placeholder. You need to implement the logic to clear query states.
+  // Since useQueryState is a hook, it can't be called here directly.
+  // A better approach would be to use a state management library (like Zustand or Jotai)
+  // or to pass down the setter functions from the parent component.
+  // For now, this will just log to the console.
+  console.log("Resetting all filters...");
+  // Example of how you would do it if you had access to setters:
+  // props.setBrandIds([]);
+  // props.setColorFilters([]);
+  // props.setSizeFilters([]);
+  // etc.
+  // A simple way is to clear the URL params:
+  window.location.href = window.location.pathname;
+};
+
+// --- DESKTOP FILTER SECTION (Original Layout) ---
 function ShopFiltersSection({
   className,
   brandsMeta,
@@ -355,123 +298,97 @@ function ShopFiltersSection({
   subCategories,
   productTypes,
   colors,
-  alphaSize,
-  numSize,
+  allSizes,
   ...props
-}: PageProps) {
-  const [brandIds, setBrandIds] = useQueryState(
-    "brandIds",
-    parseAsArrayOf(parseAsString, ",").withDefault([])
-  );
-  const [colorFilters, setColorFilters] = useQueryState(
-    "colors",
-    parseAsArrayOf(parseAsString, ",").withDefault([])
-  );
-  const [minPrice, setMinPrice] = useQueryState(
-    "minPrice",
-    parseAsInteger.withDefault(0)
-  );
-  const [maxPrice, setMaxPrice] = useQueryState(
-    "maxPrice",
-    parseAsInteger.withDefault(10000)
-  );
-  const [categoryId, setCategoryId] = useQueryState("categoryId", {
-    defaultValue: "",
-  });
-  const [subCategoryId, setSubCategoryId] = useQueryState("subcategoryId", {
-    defaultValue: "",
-  });
-  const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
-    defaultValue: "",
-  });
-const router = useRouter();
-const pathname = usePathname();
-const searchParams = useSearchParams();
-
-const handleColorClick = (colorName: string) => {
-  const newColors = colorFilters.includes(colorName)
-    ? colorFilters.filter(c => c !== colorName)
-    : [...colorFilters, colorName];
-
-  // Update URL query
-  const params = new URLSearchParams(searchParams.toString());
-  if (newColors.length > 0) {
-    params.set("colors", newColors.join(","));
-  } else {
-    // eslint-disable-next-line drizzle/enforce-delete-with-where
-    params.delete("colors");
-  }
-
-  // Trigger server-side re-render without full reload
-  router.replace(`${pathname}?${params.toString()}`);
-};
-
-// const handleSizeClick = (size: string) => {
-//   const newSizes = sizeFilters.includes(size)
-//     ? sizeFilters.filter(s => s !== size)
-//     : [...sizeFilters, size];
-
-//   const params = new URLSearchParams(searchParams.toString());
-//   if (newSizes.length > 0) {
-//     params.set("sizes", newSizes.join(","));
-//   } else {
-//     // eslint-disable-next-line drizzle/enforce-delete-with-where
-//     params.delete("sizes");
-//   }
-
-//   router.replace(`${pathname}?${params.toString()}`);
-// };
-  // --- UNIFIED SIZE STATE ---
-  const [sizeFilters, setSizeFilters] = useQueryState(
-    "sizes",
-    parseAsArrayOf(parseAsString, ",").withDefault([])
-  );
-
-  const [priceRange, setPriceRange] = useState<number[]>([
-    minPrice ? Math.max(minPrice, 0) : 0,
-    maxPrice ? Math.min(maxPrice, 10000) : 10000,
-  ]);
-
-  const [showAllBrands, setShowAllBrands] = useState(false);
-  const [showAllColors, setShowAllColors] = useState(false);
-
-  const handleResetAll = () => {
-    setCategoryId("");
-    setSubCategoryId("");
-    setProductTypeId("");
-    setBrandIds([]);
-    setColorFilters([]);
-    setSizeFilters([]); // Reset unified size state
-    setMinPrice(0);
-    setMaxPrice(10000);
-    setPriceRange([0, 10000]);
-  };
-
-  // --- UNIFIED SIZE HANDLER ---
-  const handleSizeClick = (size: string) => {
-    setSizeFilters(
-      sizeFilters.includes(size)
-        ? sizeFilters.filter((s) => s !== size)
-        : [...sizeFilters, size]
-    );
-  };
-
-  const visibleColors = showAllColors ? colors : colors.slice(0, 21);
-  const allSizes = [...alphaSize, ...numSize]; // Combine sizes for rendering
-
+}: PageProps & { allSizes: string[] }) {
   return (
     <div className={cn("space-y-6", className)} {...props}>
       <div className="flex items-center justify-between">
         <h4 className="text-lg font-semibold">Filters</h4>
-        <Button size="sm" variant="outline" onClick={handleResetAll}>
+        <Button size="sm" variant="outline" onClick={() => handleResetAll(props)}>
           <Icons.History className="mr-1" />
           Reset All
         </Button>
       </div>
-
       <Separator />
+      <CategoryFilter
+        categories={categories}
+        subCategories={subCategories}
+        productTypes={productTypes}
+      />
+      <Separator />
+      <BrandFilter brandsMeta={brandsMeta} />
+      <Separator />
+      <PriceFilter />
+      <Separator />
+      <ColorFilter colors={colors} />
+      <Separator />
+      <SizeFilter allSizes={allSizes} />
+    </div>
+  );
+}
 
-      {/* Categories */}
+// --- REFACTORED FILTER COMPONENTS ---
+
+function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
+  const [brandIds, setBrandIds] = useQueryState(
+    "brandIds",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+  const [showAllBrands, setShowAllBrands] = useState(false);
+  const visibleBrands = showAllBrands ? brandsMeta : brandsMeta.slice(0, 10);
+
+  return (
+    <div className="space-y-2">
+      <Label className="font-semibold uppercase">Brands</Label>
+      {/* TODO: Add Search by Brand input here if needed */}
+      <div className="space-y-2">
+        {visibleBrands.map((brand) => (
+          <div key={brand.id} className="flex items-center space-x-2">
+            <Checkbox
+              id={`brand-${brand.id}`}
+              checked={brandIds.includes(brand.id)}
+              onCheckedChange={() =>
+                setBrandIds(
+                  brandIds.includes(brand.id)
+                    ? brandIds.filter((b) => b !== brand.id)
+                    : [...brandIds, brand.id]
+                )
+              }
+            />
+            <Label htmlFor={`brand-${brand.id}`} className="font-normal">
+              {brand.name}
+            </Label>
+          </div>
+        ))}
+      </div>
+      {brandsMeta.length > 10 && (
+        <button
+          className="mt-2 text-sm text-blue-600 hover:underline"
+          onClick={() => setShowAllBrands(!showAllBrands)}
+        >
+          {showAllBrands ? "View Less -" : `View More +`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CategoryFilter({
+  categories,
+  subCategories,
+  productTypes,
+}: {
+  categories: CachedCategory[];
+  subCategories: CachedSubCategory[];
+  productTypes: CachedProductType[];
+}) {
+  const [categoryId, setCategoryId] = useQueryState("categoryId", { defaultValue: "" });
+  const [subCategoryId, setSubCategoryId] = useQueryState("subcategoryId", { defaultValue: "" });
+  const [productTypeId, setProductTypeId] = useQueryState("productTypeId", { defaultValue: "" });
+
+  return (
+    <div className="space-y-4">
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Category</Label>
         <RadioGroup
@@ -485,52 +402,15 @@ const handleColorClick = (colorName: string) => {
         >
           {categories.map((cat) => (
             <div key={cat.id} className="flex items-center space-x-2">
-              <RadioGroupItem value={cat.id} id={cat.id} />
-              <Label htmlFor={cat.id} className="font-normal">
+              <RadioGroupItem value={cat.id} id={`cat-${cat.id}`} />
+              <Label htmlFor={`cat-${cat.id}`} className="font-normal">
                 {cat.name}
               </Label>
             </div>
           ))}
         </RadioGroup>
       </div>
-
       <Separator />
-  {/* Brands */}
-      <div className="space-y-2">
-        <Label className="font-semibold uppercase">Brands</Label>
-        <div className="space-y-2">
-          {(showAllBrands ? brandsMeta : brandsMeta.slice(0, 5)).map(
-            (brand) => (
-              <div key={brand.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={brand.id}
-                  checked={brandIds.includes(brand.id)}
-                  onCheckedChange={() =>
-                    setBrandIds(
-                      brandIds.includes(brand.id)
-                        ? brandIds.filter((b) => b !== brand.id)
-                        : [...brandIds, brand.id]
-                    )
-                  }
-                />
-                <Label htmlFor={brand.id} className="font-normal">
-                  {brand.name}
-                </Label>
-              </div>
-            )
-          )}
-        </div>
-        {brandsMeta.length > 5 && (
-          <button
-            className="mt-2 text-sm text-gray-600 hover:underline"
-            onClick={() => setShowAllBrands(!showAllBrands)}
-          >
-            {showAllBrands ? "View Less -" : "View More +"}
-          </button>
-        )}
-      </div>
-      <Separator />
-      {/* Subcategories */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Subcategory</Label>
         <RadioGroup
@@ -542,159 +422,165 @@ const handleColorClick = (colorName: string) => {
           className="max-h-48 space-y-2 overflow-y-auto"
         >
           {subCategories
-            .filter((s) =>
-              categoryId ? String(s.categoryId) === String(categoryId) : true
-            )
+            .filter((s) => (categoryId ? String(s.categoryId) === String(categoryId) : true))
             .map((sub) => (
               <div key={sub.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={sub.id} id={sub.id} />
-                <Label htmlFor={sub.id} className="font-normal">
+                <RadioGroupItem value={sub.id} id={`sub-${sub.id}`} />
+                <Label htmlFor={`sub-${sub.id}`} className="font-normal">
                   {sub.name}
                 </Label>
               </div>
             ))}
         </RadioGroup>
       </div>
-
       <Separator />
-
-      {/* Product Types */}
       <div className="space-y-2">
         <Label className="font-semibold uppercase">Type</Label>
         <RadioGroup
           value={productTypeId}
-          onValueChange={(id) =>
-            setProductTypeId(id === productTypeId ? "" : id)
-          }
+          onValueChange={(id) => setProductTypeId(id === productTypeId ? "" : id)}
           className="max-h-48 space-y-2 overflow-y-auto"
         >
           {productTypes
-            .filter((t) =>
-              subCategoryId
-                ? String(t.subCategoryId) === String(subCategoryId)
-                : true
-            )
+            .filter((t) => (subCategoryId ? String(t.subCategoryId) === String(subCategoryId) : true))
             .map((t) => (
               <div key={t.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={t.id} id={t.id} />
-                <Label htmlFor={t.id} className="font-normal">
+                <RadioGroupItem value={t.id} id={`type-${t.id}`} />
+                <Label htmlFor={`type-${t.id}`} className="font-normal">
                   {t.name}
                 </Label>
               </div>
             ))}
         </RadioGroup>
       </div>
-
-      <Separator />
-
-      {/* Price */}
-      <div className="space-y-3">
-        <Label className="font-semibold uppercase">Price</Label>
-        <Slider
-          value={priceRange}
-          step={100}
-          min={0}
-          max={10000}
-          onValueChange={setPriceRange}
-          onValueCommit={(values) => {
-            setMinPrice(values[0]);
-            setMaxPrice(values[1]);
-          }}
-        />
-        <p className="text-sm tabular-nums">
-          {formatPriceTag(priceRange[0])} - {formatPriceTag(priceRange[1])}
-          {priceRange[1] === 10000 && "+"}
-        </p>
-      </div>
-      <Separator />
-
-      {/* Colors */}
-      <div className="space-y-4">
-        <Label className="font-semibold uppercase">Color</Label>
-        <div className="grid grid-cols-3 gap-x-2 gap-y-4">
-          {visibleColors.map((colorName) => {
-            const hex = getColorHex(colorName);
-            return (
-              <div
-                key={colorName}
-                className="flex cursor-pointer flex-col items-center gap-2"
-   onClick={() =>
-                  setColorFilters(
-                    colorFilters.includes(colorName)
-                      ? colorFilters.filter((c) => c !== colorName)
-                      : [...colorFilters, colorName]
-                  )
-                }
-
-              >
-                <button
-                  type="button"
-                  className={cn(
-                    "flex size-8 items-center justify-center rounded-full border",
-                    colorFilters.includes(colorName)
-                      ? "ring-2 ring-black ring-offset-1"
-                      : ""
-                  )}
-                  title={colorName}
-                  style={{ backgroundColor: hex }}
-                >
-                  {colorFilters.includes(colorName) && (
-                    <Icons.Check
-                      className="size-4"
-                      style={{ color: getCheckmarkColor(hex) }}
-                    />
-                  )}
-                </button>
-                <span className="text-center text-sm capitalize">{colorName}</span>
-              </div>
-            );
-          })}
-        </div>
-        {colors.length > 21 && (
-          <button
-            className="mt-2 text-sm text-gray-600 hover:underline"
-            onClick={() => setShowAllColors(!showAllColors)}
-          >
-            {showAllColors ? "View Less -" : "View More +"}
-          </button>
-        )}
-      </div>
-
-      <Separator />
-
-      {/* --- UNIFIED SIZES SECTION --- */}
-      <div className="space-y-2">
-        <Label className="font-semibold uppercase">Sizes</Label>
-        <div className="flex flex-wrap gap-2">
-          {allSizes.map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => handleSizeClick(size)}
-              className={cn(
-                "rounded-md border px-3 py-1 text-sm",
-                sizeFilters.includes(size)
-                  ? "bg-black text-white"
-                  : "bg-white text-black hover:bg-gray-100"
-              )}
-            >
-              {size}
-            </button>
-          ))}
-        </div>
-      </div>
-
     </div>
   );
 }
 
-// --- Shop Sort Component ---
+function PriceFilter() {
+  const [minPrice, setMinPrice] = useQueryState("minPrice", parseAsInteger.withDefault(0));
+  const [maxPrice, setMaxPrice] = useQueryState("maxPrice", parseAsInteger.withDefault(10000));
+  const [priceRange, setPriceRange] = useState<number[]>([minPrice, maxPrice]);
+
+  return (
+    <div className="space-y-3">
+      <Label className="font-semibold uppercase">Price</Label>
+      <Slider
+        value={priceRange}
+        step={100}
+        min={0}
+        max={10000}
+        onValueChange={setPriceRange}
+        onValueCommit={(values) => {
+          setMinPrice(values[0]);
+          setMaxPrice(values[1]);
+        }}
+      />
+      <p className="text-sm tabular-nums">
+        {formatPriceTag(priceRange[0])} - {formatPriceTag(priceRange[1])}
+        {priceRange[1] === 10000 && "+"}
+      </p>
+    </div>
+  );
+}
+
+function ColorFilter({ colors }: { colors: string[] }) {
+  const [colorFilters, setColorFilters] = useQueryState(
+    "colors",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+  const [showAllColors, setShowAllColors] = useState(false);
+  const visibleColors = showAllColors ? colors : colors.slice(0, 21);
+
+  return (
+    <div className="space-y-4">
+      <Label className="font-semibold uppercase">Color</Label>
+      <div className="grid grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-4 md:grid-cols-3">
+        {visibleColors.map((colorName) => {
+          const hex = getColorHex(colorName);
+          return (
+            <div
+              key={colorName}
+              className="flex cursor-pointer flex-col items-center gap-2"
+              onClick={() =>
+                setColorFilters(
+                  colorFilters.includes(colorName)
+                    ? colorFilters.filter((c) => c !== colorName)
+                    : [...colorFilters, colorName]
+                )
+              }
+            >
+              <button
+                type="button"
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-full border",
+                  colorFilters.includes(colorName) ? "ring-2 ring-black ring-offset-1" : ""
+                )}
+                title={colorName}
+                style={{ backgroundColor: hex }}
+              >
+                {colorFilters.includes(colorName) && (
+                  <Icons.Check className="size-4" style={{ color: getCheckmarkColor(hex) }} />
+                )}
+              </button>
+              <span className="text-center text-sm capitalize">{colorName}</span>
+            </div>
+          );
+        })}
+      </div>
+      {colors.length > 21 && (
+        <button
+          className="mt-2 text-sm text-blue-600 hover:underline"
+          onClick={() => setShowAllColors(!showAllColors)}
+        >
+          {showAllColors ? "View Less -" : "View More +"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SizeFilter({ allSizes }: { allSizes: string[] }) {
+  const [sizeFilters, setSizeFilters] = useQueryState(
+    "sizes",
+    parseAsArrayOf(parseAsString, ",").withDefault([])
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label className="font-semibold uppercase">Sizes</Label>
+      <div className="flex flex-wrap gap-2">
+        {allSizes.map((size) => (
+          <button
+            key={size}
+            type="button"
+            onClick={() =>
+              setSizeFilters(
+                sizeFilters.includes(size)
+                  ? sizeFilters.filter((s) => s !== size)
+                  : [...sizeFilters, size]
+              )
+            }
+            className={cn(
+              "rounded-md border px-3 py-1 text-sm",
+              sizeFilters.includes(size)
+                ? "border-black bg-black text-white"
+                : "bg-white text-black hover:bg-gray-100"
+            )}
+          >
+            {size}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Shop Sort Component (Unchanged) ---
 export function ShopSortBy() {
   const [sortBy, setSortBy] = useQueryState(
     "sortBy",
-    parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
-      "createdAt"
-    )
+    parseAsStringLiteral(["price", "createdAt"] as const).withDefault("createdAt")
   );
   const [sortOrder, setSortOrder] = useQueryState(
     "sortOrder",
