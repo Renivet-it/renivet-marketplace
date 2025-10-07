@@ -1,5 +1,6 @@
 import tAnimate from "tailwindcss-animate";
 import { withUt } from "uploadthing/tw";
+import { fontFamily } from "tailwindcss/defaultTheme"; // ✅ 1. Import fontFamily
 
 export default withUt({
     darkMode: ["class"],
@@ -11,6 +12,9 @@ export default withUt({
     ],
     theme: {
         extend: {
+                   fontFamily: {
+                sans: ["var(--font-lato)", ...fontFamily.sans],
+            },
             colors: {
                 "myntra-primary" : "#282c3f",
                 "myntra-label": "#7e818c",

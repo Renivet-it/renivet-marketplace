@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
-import { dmsans, rubik } from "./fonts";
+import { dmsans, rubik, lato } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -97,7 +97,7 @@ export default function RootLayout({ children }: LayoutProps) {
         <html
             lang="en"
             suppressHydrationWarning
-            className={cn(dmsans.variable, rubik.variable)}
+            className={cn(lato.variable, dmsans.variable, rubik.variable)}
         >
             <head>
                 {FB_PIXEL_ID && (
