@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMediaQuery } from "@mantine/hooks";
 import parse from "color-parse";
 import {
@@ -36,7 +36,7 @@ import {
 } from "../ui/sheet";
 import { Slider } from "../ui/slider";
 
-// --- HELPER FUNCTIONS (Keep these as they are) ---
+// --- HELPER FUNCTIONS (Unchanged) ---
 
 // RGBA to HEX
 function rgbaToHex(rgba: number[]): string {
@@ -112,14 +112,6 @@ const getCheckmarkColor = (hex: string): string => {
   return luminance < 0.5 ? "white" : "black";
 };
 
-// Sorting options
-const sortByWithOrderTypes = [
-  { label: "Price: High to Low", value: "price:desc" },
-  { label: "Price: Low to High", value: "price:asc" },
-  { label: "Newest First", value: "createdAt:desc" },
-  { label: "Oldest First", value: "createdAt:asc" },
-];
-
 // --- TYPE DEFINITIONS ---
 type ActiveFilter = "category" | "brand" | "price" | "color" | "size";
 
@@ -149,18 +141,18 @@ export function ShopFilters({
   colors,
   alphaSize,
   numSize,
-  sizes, // You passed sizes, let's use it
+  sizes,
   ...props
 }: PageProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
-
-  // State for mobile view to track which filter panel is active
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("brand");
 
-  // Combine all available sizes into one array
-  const allSizes = [...new Set([...alphaSize, ...numSize, ...sizes])];
+  // Use useMemo to prevent re-calculating on every render
+  const allSizes = useMemo(
+    () => [...new Set([...alphaSize, ...numSize, ...sizes])],
+    [alphaSize, numSize, sizes]
+  );
 
-  // All props are now passed down to both mobile and desktop views
   const filterProps = {
     className,
     brandsMeta,
@@ -181,7 +173,6 @@ export function ShopFilters({
             Filters
           </Button>
         </SheetTrigger>
-
         <SheetContent
           side="bottom"
           className="flex h-screen flex-col p-0"
@@ -190,10 +181,7 @@ export function ShopFilters({
           <SheetHeader className="border-b p-4">
             <SheetTitle className="text-start">Filters</SheetTitle>
           </SheetHeader>
-
-          {/* Main content area with two panels */}
           <div className="flex flex-1 overflow-hidden">
-            {/* Left Panel: Filter Category Selection */}
             <nav className="w-1/3 overflow-y-auto border-r bg-gray-50">
               <FilterNavButton
                 label="Brand"
@@ -221,8 +209,6 @@ export function ShopFilters({
                 onClick={() => setActiveFilter("size")}
               />
             </nav>
-
-            {/* Right Panel: Filter Options */}
             <div className="w-2/3 overflow-y-auto p-4">
               {activeFilter === "brand" && <BrandFilter {...filterProps} />}
               {activeFilter === "category" && <CategoryFilter {...filterProps} />}
@@ -231,10 +217,8 @@ export function ShopFilters({
               {activeFilter === "size" && <SizeFilter {...filterProps} />}
             </div>
           </div>
-
-          {/* Sticky Footer */}
           <SheetFooter className="sticky bottom-0 grid grid-cols-2 gap-4 border-t bg-background p-4">
-            <Button variant="outline" onClick={() => handleResetAll(filterProps)}>
+            <Button variant="outline" onClick={handleResetAll}>
               Clear All
             </Button>
             <SheetClose asChild>
@@ -245,12 +229,12 @@ export function ShopFilters({
       </Sheet>
     </>
   ) : (
-    // Desktop View: The original single-column layout
     <ShopFiltersSection {...filterProps} />
   );
 }
 
-// --- HELPER FOR MOBILE NAV ---
+// --- HELPER COMPONENTS & FUNCTIONS ---
+
 function FilterNavButton({
   label,
   isActive,
@@ -273,24 +257,12 @@ function FilterNavButton({
   );
 }
 
-// --- RESET ALL FUNCTION ---
-const handleResetAll = (props: any) => {
-  // This is a placeholder. You need to implement the logic to clear query states.
-  // Since useQueryState is a hook, it can't be called here directly.
-  // A better approach would be to use a state management library (like Zustand or Jotai)
-  // or to pass down the setter functions from the parent component.
-  // For now, this will just log to the console.
-  console.log("Resetting all filters...");
-  // Example of how you would do it if you had access to setters:
-  // props.setBrandIds([]);
-  // props.setColorFilters([]);
-  // props.setSizeFilters([]);
-  // etc.
-  // A simple way is to clear the URL params:
+const handleResetAll = () => {
+  // Simple reset by clearing URL params and reloading the page
   window.location.href = window.location.pathname;
 };
 
-// --- DESKTOP FILTER SECTION (Original Layout) ---
+// --- DESKTOP FILTER SECTION ---
 function ShopFiltersSection({
   className,
   brandsMeta,
@@ -305,7 +277,7 @@ function ShopFiltersSection({
     <div className={cn("space-y-6", className)} {...props}>
       <div className="flex items-center justify-between">
         <h4 className="text-lg font-semibold">Filters</h4>
-        <Button size="sm" variant="outline" onClick={() => handleResetAll(props)}>
+        <Button size="sm" variant="outline" onClick={handleResetAll}>
           <Icons.History className="mr-1" />
           Reset All
         </Button>
@@ -328,7 +300,7 @@ function ShopFiltersSection({
   );
 }
 
-// --- REFACTORED FILTER COMPONENTS ---
+// --- INDIVIDUAL FILTER COMPONENTS ---
 
 function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
   const [brandIds, setBrandIds] = useQueryState(
@@ -341,7 +313,6 @@ function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
   return (
     <div className="space-y-2">
       <Label className="font-semibold uppercase">Brands</Label>
-      {/* TODO: Add Search by Brand input here if needed */}
       <div className="space-y-2">
         {visibleBrands.map((brand) => (
           <div key={brand.id} className="flex items-center space-x-2">
@@ -540,44 +511,96 @@ function ColorFilter({ colors }: { colors: string[] }) {
   );
 }
 
+// +++ NEW: Helper function to categorize sizes +++
+const categorizeSizes = (sizes: string[]) => {
+  const categories = {
+    age: [] as string[],
+    standard: [] as string[],
+    other: [] as string[],
+  };
+
+  const standardSizes = new Set(["XS", "S", "M", "L", "XL", "XXL", "XXXL", "2XL", "3XL", "Free Size"]);
+  const ageRegex = /year|month|y|m/i;
+
+  sizes.forEach((size) => {
+    if (ageRegex.test(size)) {
+      categories.age.push(size);
+    } else if (standardSizes.has(size)) {
+      categories.standard.push(size);
+    } else {
+      categories.other.push(size);
+    }
+  });
+
+  return categories;
+};
+
+// +++ UPDATED: SizeFilter component +++
 function SizeFilter({ allSizes }: { allSizes: string[] }) {
   const [sizeFilters, setSizeFilters] = useQueryState(
     "sizes",
     parseAsArrayOf(parseAsString, ",").withDefault([])
   );
 
-  return (
-    <div className="space-y-2">
-      <Label className="font-semibold uppercase">Sizes</Label>
-      <div className="flex flex-wrap gap-2">
-        {allSizes.map((size) => (
-          <button
-            key={size}
-            type="button"
-            onClick={() =>
-              setSizeFilters(
+  // Categorize sizes
+  const categorized = useMemo(() => categorizeSizes(allSizes), [allSizes]);
+
+  const handleSizeClick = (size: string) => {
+    setSizeFilters(
+      sizeFilters.includes(size)
+        ? sizeFilters.filter((s) => s !== size)
+        : [...sizeFilters, size]
+    );
+  };
+
+  // Helper to render a group of size buttons
+  const renderSizeGroup = (title: string, sizes: string[]) => {
+    if (sizes.length === 0) return null;
+    return (
+      <div className="space-y-2">
+        <Label className="font-semibold uppercase text-gray-600">{title}</Label>
+        <div className="flex flex-wrap gap-2">
+          {sizes.map((size) => (
+            <button
+              key={size}
+              type="button"
+              onClick={() => handleSizeClick(size)}
+              className={cn(
+                "rounded-md border px-3 py-1 text-sm",
                 sizeFilters.includes(size)
-                  ? sizeFilters.filter((s) => s !== size)
-                  : [...sizeFilters, size]
-              )
-            }
-            className={cn(
-              "rounded-md border px-3 py-1 text-sm",
-              sizeFilters.includes(size)
-                ? "border-black bg-black text-white"
-                : "bg-white text-black hover:bg-gray-100"
-            )}
-          >
-            {size}
-          </button>
-        ))}
+                  ? "border-black bg-black text-white"
+                  : "bg-white text-black hover:bg-gray-100"
+              )}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {renderSizeGroup("Standard Sizes", categorized.standard)}
+      {renderSizeGroup("Age-Based", categorized.age)}
+      {renderSizeGroup("Other Sizes", categorized.other)}
     </div>
   );
 }
 
-// --- Shop Sort Component (Unchanged) ---
+// --- +++ UPDATED: ShopSortBy Component +++ ---
+
+// The original sorting options as requested
+const sortByWithOrderTypes = [
+  { label: "Price: High to Low", value: "price:desc" },
+  { label: "Price: Low to High", value: "price:asc" },
+  { label: "Newest First", value: "createdAt:desc" },
+  { label: "Oldest First", value: "createdAt:asc" },
+];
+
 export function ShopSortBy() {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [sortBy, setSortBy] = useQueryState(
     "sortBy",
     parseAsStringLiteral(["price", "createdAt"] as const).withDefault("createdAt")
@@ -593,19 +616,59 @@ export function ShopSortBy() {
     setSortOrder(order as "asc" | "desc");
   };
 
+  const currentValue = `${sortBy}:${sortOrder}`;
+
+  // --- Desktop View (Dropdown) ---
+  if (!isMobile) {
+    return (
+      <div className="w-52">
+        <select
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          value={currentValue}
+          onChange={(e) => handleSort(e.target.value)}
+        >
+          {sortByWithOrderTypes.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  // --- Mobile View (Bottom Sheet) ---
   return (
-    <div className="w-52 space-y-1">
-      <select
-        className="w-full rounded-md border px-3 py-2"
-        value={`${sortBy}:${sortOrder}`}
-        onChange={(e) => handleSort(e.target.value)}
-      >
-        {sortByWithOrderTypes.map((x) => (
-          <option key={x.value} value={x.value}>
-            {x.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" className="flex items-center gap-2">
+          <Icons.ArrowUpDown className="size-4" />
+          Sort
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="p-0">
+        <SheetHeader className="border-b p-4">
+          <SheetTitle className="text-start text-base font-bold uppercase">Sort By</SheetTitle>
+        </SheetHeader>
+        <div className="p-4">
+          <RadioGroup value={currentValue} onValueChange={handleSort}>
+            {sortByWithOrderTypes.map((option) => (
+              <SheetClose key={option.value} asChild>
+                <Label
+                  htmlFor={option.value}
+                  className={cn(
+                    "flex items-center space-x-3 py-3 text-base",
+                    currentValue === option.value ? "font-bold text-pink-600" : "text-gray-700"
+                  )}
+                >
+                  <RadioGroupItem value={option.value} id={option.value} className="mr-2" />
+                  <span>{option.label}</span>
+                </Label>
+              </SheetClose>
+            ))}
+          </RadioGroup>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
