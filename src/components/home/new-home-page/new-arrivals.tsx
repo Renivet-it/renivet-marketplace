@@ -20,7 +20,7 @@ interface Product {
 
 interface ProductWrapper {
   id: string;
-  category: string; // ✅ category comes from the backend
+  category: string; // ✅ category comes from backend
   product: Product;
 }
 
@@ -40,17 +40,14 @@ export function ProductGridNewArrivals({
 }: ProductGridProps) {
   const [activeTab, setActiveTab] = useState("Most Ordered");
 
-  // Debug log
   console.log("Products data received:", products);
 
   if (!products || !Array.isArray(products) || products.length === 0) {
     return null;
   }
 
-  // ✅ Filter products based on the top-level 'category' field
-  const filteredProducts = products.filter(
-    (item) => item.category === activeTab
-  );
+  // ✅ Filter products by top-level category
+  const filteredProducts = products.filter((item) => item.category === activeTab);
 
   return (
     <section className={cn("w-full py-12 bg-[#F4F0EC]", className)} {...props}>
@@ -89,7 +86,9 @@ export function ProductGridNewArrivals({
 // --- PRODUCT CARD COMPONENT ---
 function ProductCard({ product }: { product: Product }) {
   const rawPrice = product.variants?.[0]?.price || product.price || 0;
-  const price = rawPrice; // If prices are in paise, use convertPaiseToRupees(rawPrice)
+
+  // ✅ Convert paise → rupees
+  const price = convertPaiseToRupees(rawPrice);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -115,9 +114,7 @@ function ProductCard({ product }: { product: Product }) {
             {product.title}
           </h3>
           <div className="flex justify-center items-center space-x-3 mt-1">
-            <p className="text-sm font-medium text-gray-900">
-              ₹{typeof price === "number" ? price.toFixed(2) : price}
-            </p>
+            <p className="text-sm font-medium text-gray-900">₹{price}</p>
             <button
               onClick={handleAddToCart}
               className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors"
