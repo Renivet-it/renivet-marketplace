@@ -763,14 +763,13 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
 }
 
 
-
 export async function toggleHomeNewArrivalsProduct(
     productId: string,
-    shouldBeActive: boolean,
-    category: string // The new category parameter
+    isActive: boolean, // renamed for clarity
+    category: string
 ) {
     try {
-        // Check if product exists in products table
+        // ✅ Check if product exists in products table
         const existingProduct = await db
             .select()
             .from(products)
@@ -781,56 +780,83 @@ export async function toggleHomeNewArrivalsProduct(
             return { success: false, error: "Product not found" };
         }
 
-        // This block handles REMOVING the product.
-        if (!shouldBeActive) {
-            // Remove from featured products (soft delete)
-            await db
-                .update(homeNewArrivals)
-                .set({
-                    isDeleted: true,
-                    deletedAt: new Date()
-                })
-                .where(eq(homeNewArrivals.productId, productId));
-
-            // This part is now removed as requested.
-            // The 'products' table will not be updated on removal.
-
-            revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from New Arrivals." };
-        } else {
-            // This block handles ADDING or UPDATING the product.
+        // =============================
+        // 🟢 ADD PRODUCT TO CATEGORY
+        // =============================
+        if (isActive) {
+            // Check if product already exists
             const existing = await db
                 .select()
                 .from(homeNewArrivals)
                 .where(eq(homeNewArrivals.productId, productId))
                 .then((res) => res[0]);
 
+            if (existing && !existing.isDeleted) {
+                return {
+                    success: false,
+                    error: "Product is already in New Arrivals",
+                };
+            }
+
             if (existing) {
-                // MODIFIED: Restore and update the category if it exists.
+                // Reactivate and update category
                 await db
                     .update(homeNewArrivals)
                     .set({
                         isDeleted: false,
                         deletedAt: null,
-                        category: category // Update the category
+                        category,
                     })
                     .where(eq(homeNewArrivals.productId, productId));
             } else {
-                // MODIFIED: Add new entry with the category.
-                await db.insert(homeNewArrivals)
-                    .values({
-                        productId: productId,
-                        category: category // Insert the category
-                    });
+                // Insert new record
+                await db.insert(homeNewArrivals).values({
+                    productId,
+                    category,
+                });
             }
 
+            // Update product table flag
+            await db
+                .update(products)
+                .set({ isHomeNewArrival: true })
+                .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: `Product added to '${category}' category.` };
+            return {
+                success: true,
+                message: `Product added to New Arrivals category: ${category}`,
+            };
         }
+
+        // =============================
+        // 🔴 REMOVE PRODUCT
+        // =============================
+        await db
+            .update(homeNewArrivals)
+            .set({
+                isDeleted: true,
+                deletedAt: new Date(),
+            })
+            .where(eq(homeNewArrivals.productId, productId));
+
+        // Update flag in products table
+        await db
+            .update(products)
+            .set({ isHomeNewArrival: false })
+            .where(eq(products.id, productId));
+
+        revalidatePath("/dashboard/general/products");
+        return {
+            success: true,
+            message: "Product removed from New Arrivals list",
+        };
     } catch (error) {
         console.error("Error toggling New Arrivals status:", error);
-        return { success: false, error: "Failed to update New Arrivals status." };
+        return {
+            success: false,
+            error: "Failed to update New Arrivals status",
+        };
     }
 }
 
