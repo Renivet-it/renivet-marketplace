@@ -5,6 +5,7 @@ import { Banner } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
 
 interface PageProps extends GenericProps {
   banners: Banner[];
@@ -12,36 +13,55 @@ interface PageProps extends GenericProps {
 }
 
 export function SwapSpace({ className, banners, ...props }: PageProps) {
+  if (!banners || banners.length === 0) {
+    return null;
+  }
+
+  // const backgroundImageUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNOYfiCWBHKYuSX87vxCz1aEsjfWTRVJZ9Qmtn";
+  const backgroundImageUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN3wy7IOl64McafQHoWsZUzihAkJ3DF5EGgPpY";
+
   return (
-    <section className={cn("w-full py-6 md:py-12 bg-[#F4F0EC]", className)} {...props}>
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section
+      className={cn("w-full py-10 md:py-16 bg-center bg-cover bg-no-repeat", className )} 
+      style={{ backgroundImage: `url('${backgroundImageUrl}')` }}
+      {...props}
+    >
+      <div className="max-w-screen-2xl mx-auto">
         <Carousel
           opts={{
             align: "start",
             loop: true,
           }}
+          plugins={[
+            Autoplay({
+              delay: 4000,
+              stopOnInteraction: true,
+            }),
+          ]}
           className="w-full"
         >
-          <CarouselContent className="flex gap-2 md:gap-4 -ml-2 md:-ml-4">
+          <CarouselContent className="-ml-4">
             {banners.map((item, index) => (
               <CarouselItem
                 key={index}
-                className="pl-2 md:pl-4 basis-full sm:basis-1/2 lg:basis-1/3 flex-shrink-0"
+                className="pl-4 basis-auto" // Use basis-auto for fixed-width items
               >
-                <div className="relative w-full aspect-[3/4] group">
+                <div 
+                  className="group relative overflow-hidden"
+                  style={{
+                    width: "208px",
+                    height: "313px",
+                  }}
+                >
                   <Link href={item.url || "/shop"} className="block w-full h-full">
                     <Image
                       src={item.imageUrl}
-                      alt={item.title || "New Arrival"}
+                      alt={item.title || "Product Image"}
                       fill
-                      className="object-contain"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover rounded-2xl" // Apply rounded corners to the image itself
+                      sizes="208px"
                     />
-                    <div className="absolute inset-0 flex items-end pb-4 md:pb-8 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="bg-white text-gray-900 px-4 py-2 md:px-6 md:py-3 font-medium uppercase tracking-wide text-xs md:text-sm hover:bg-gray-100 transition-colors">
-                        Shop Now
-                      </button>
-                    </div>
+                    {/* The "Shop Now" button is hidden as it's not in the new design */}
                   </Link>
                 </div>
               </CarouselItem>

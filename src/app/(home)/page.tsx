@@ -62,33 +62,29 @@ export default function Page() {
                                                                      <Suspense>
                 <ConciousClickBannerFetch />
             </Suspense>
+                                             <Suspense>
+                <MatchaBagFetch />
+            </Suspense>
                                     <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-                            <Suspense>
+                            {/* <Suspense>
                 <SustanableBatchFetch />
-            </Suspense>
-                           <Suspense>
+            </Suspense> */}
+                           {/* <Suspense>
                 <EcoIconsFetch />
-            </Suspense>
-                      <Suspense>
+            </Suspense> */}
+                      {/* <Suspense>
                 <BrandProductsFetch />
-            </Suspense>
-     
+            </Suspense> */}
                                  {/* <Suspense>
                 <NewAdvertisementsFetch />
             </Suspense> */}
-                                     <Suspense>
-                <MatchaBagFetch />
-            </Suspense>
-            <Suspense>
+            {/* <Suspense>
                 <EveryDayEssentialFetch />
-            </Suspense>
+            </Suspense> */}
                                                   <Suspense>
                 <SwapSpaceBannerFetch />
-            </Suspense>
-                                            <Suspense>
-                <ProductGridFetch />
             </Suspense>
                  <Suspense>
                 <ShopByNewCategoriesFetch />

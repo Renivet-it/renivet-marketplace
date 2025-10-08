@@ -45,7 +45,7 @@ export function EffortlessElegance({
         <div
           className="relative w-full overflow-hidden"
           // Set the aspect ratio based on the image dimensions (1363.34 / 300)
-          style={{ aspectRatio: '1363.34 / 300' }}
+          style={{ aspectRatio: "1363.34 / 300" }}
         >
           {moodboardItems.map((item, index) => (
             <Link
