@@ -3,9 +3,10 @@
 import { cn, convertPaiseToRupees } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Icons } from "@/components/icons"; // Assuming you have an icons utility
 
+// --- INTERFACES ---
 interface Product {
   slug: any;
   id: string;
@@ -15,170 +16,116 @@ interface Product {
     price: number;
   }[];
   price?: number;
-  rating?: number;
-  reviewCount?: number;
-  stockStatus?: string;
+}
+
+interface ProductWrapper {
+  id: string;
+  category: string; // ✅ category comes from the backend
+  product: Product;
 }
 
 interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
-  products: { product: Product }[];
+  products: ProductWrapper[];
   title?: string;
 }
 
-export function ProductGridNewArrivals({ 
-  className, 
-  products, 
-  title = "Renivet Favorites", 
-  ...props 
+// --- CATEGORY CONSTANT ---
+const CATEGORIES = ["Most Ordered", "In Season", "Fresh Deals", "Limited Offer", "Best Value"];
+
+// --- MAIN COMPONENT ---
+export function ProductGridNewArrivals({
+  className,
+  products,
+  ...props
 }: ProductGridProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [activeTab, setActiveTab] = useState("Most Ordered");
+
+  // Debug log
+  console.log("Products data received:", products);
 
   if (!products || !Array.isArray(products) || products.length === 0) {
     return null;
   }
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = 280; // Card width + gap
-      const newScrollLeft = direction === 'left' 
-        ? scrollRef.current.scrollLeft - scrollAmount
-        : scrollRef.current.scrollLeft + scrollAmount;
-      
-      scrollRef.current.scrollTo({
-        left: newScrollLeft,
-        behavior: 'smooth'
-      });
-
-      // Update current slide for dots
-      const newSlide = direction === 'left' 
-        ? Math.max(0, currentSlide - 1)
-        : Math.min(products.length - 1, currentSlide + 1);
-      setCurrentSlide(newSlide);
-    }
-  };
-
-  const handleScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-    }
-  };
+  // ✅ Filter products based on the top-level 'category' field
+  const filteredProducts = products.filter(
+    (item) => item.category === activeTab
+  );
 
   return (
-    <section className={cn("w-full py-16 bg-[#F4F0EC]", className)} {...props}>
-      <div className="max-w-screen-2xl mx-auto px-6">
-        {/* Section Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-4">
-            {title}
-          </h2>
-          <p className="text-base text-gray-600">
-            Beautifully Functional. Purposefully Designed. Consciously Crafted.
-          </p>
+    <section className={cn("w-full py-12 bg-[#F4F0EC]", className)} {...props}>
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Tab Navigation */}
+        <div className="flex justify-center border-b border-gray-200 mb-8">
+          <div className="flex space-x-4 sm:space-x-8 overflow-x-auto pb-1">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category}
+                onClick={() => setActiveTab(category)}
+                className={cn(
+                  "py-3 px-1 text-sm sm:text-base font-medium whitespace-nowrap transition-colors duration-200",
+                  activeTab === category
+                    ? "text-orange-600 border-b-2 border-orange-600"
+                    : "text-gray-500 hover:text-gray-800"
+                )}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Carousel Container */}
-        <div className="relative">
-          {/* Left Arrow */}
-          <button
-            onClick={() => scroll('left')}
-            disabled={!canScrollLeft}
-            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
-              canScrollLeft 
-                ? 'hover:bg-gray-50 cursor-pointer' 
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-            style={{ marginLeft: '-24px' }}
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-600" />
-          </button>
-
-          {/* Right Arrow */}
-          <button
-            onClick={() => scroll('right')}
-            disabled={!canScrollRight}
-            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
-              canScrollRight 
-                ? 'hover:bg-gray-50 cursor-pointer' 
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-            style={{ marginRight: '-24px' }}
-          >
-            <ChevronRight className="w-6 h-6 text-gray-600" />
-          </button>
-
-          {/* Scrollable Products Container */}
-          <div
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {products.map(({ product }) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-
-          {/* Dots Indicator */}
-          <div className="flex justify-center mt-8 gap-2">
-            {Array.from({ length: Math.min(products.length, 5) }).map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`w-2 h-2 rounded-full transition-colors ${
-                  index === currentSlide % 5 ? "bg-gray-800" : "bg-gray-300"
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
+        {/* Product Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4 sm:gap-6">
+          {filteredProducts.map(({ product }) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
         </div>
       </div>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </section>
   );
 }
 
+// --- PRODUCT CARD COMPONENT ---
 function ProductCard({ product }: { product: Product }) {
-  const price = convertPaiseToRupees(product.variants?.[0]?.price || product.price || 0);
+  const rawPrice = product.variants?.[0]?.price || product.price || 0;
+  const price = rawPrice; // If prices are in paise, use convertPaiseToRupees(rawPrice)
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log(`Added ${product.title} to cart`);
+    // toast.success(`${product.title} added to cart!`);
+  };
 
   return (
-    <div className="flex-shrink-0 group cursor-pointer" style={{ width: '262px' }}>
+    <div className="flex-shrink-0 group cursor-pointer bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg">
       <Link href={`/products/${product.slug}`} className="block">
-        {/* Product Image */}
-        <div
-          className="relative bg-gray-50 rounded-lg overflow-hidden mb-4 group-hover:shadow-md transition-shadow duration-300"
-          style={{ width: '262px', height: '421px' }}
-        >
+        <div className="relative w-full aspect-[1/1]">
           <Image
             src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
             alt={product.title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="262px"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           />
         </div>
-
-        {/* Product Info */}
-        <div className="space-y-1">
-          <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
+        <div className="p-2 text-center">
+          <h3 className="text-sm font-normal text-gray-700 truncate">
             {product.title}
           </h3>
-          <p className="text-xs text-gray-500">
-            {product.stockStatus || "Available"}
-          </p>
-          <p className="text-lg font-semibold text-gray-900">
-            {typeof price === "number" ? price.toFixed(0) : price}
-          </p>
+          <div className="flex justify-center items-center space-x-3 mt-1">
+            <p className="text-sm font-medium text-gray-900">
+              ₹{typeof price === "number" ? price.toFixed(2) : price}
+            </p>
+            <button
+              onClick={handleAddToCart}
+              className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors"
+              aria-label="Add to cart"
+            >
+              <Icons.Plus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </Link>
     </div>

@@ -764,7 +764,11 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
 
 
 
-export async function toggleHomeNewArrivalsProduct(productId: string, isFeatured: boolean) {
+export async function toggleHomeNewArrivalsProduct(
+    productId: string,
+    shouldBeActive: boolean,
+    category: string // The new category parameter
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -777,9 +781,10 @@ export async function toggleHomeNewArrivalsProduct(productId: string, isFeatured
             return { success: false, error: "Product not found" };
         }
 
-        if (isFeatured) {
+        // This block handles REMOVING the product.
+        if (!shouldBeActive) {
             // Remove from featured products (soft delete)
-            const result = await db
+            await db
                 .update(homeNewArrivals)
                 .set({
                     isDeleted: true,
@@ -787,60 +792,47 @@ export async function toggleHomeNewArrivalsProduct(productId: string, isFeatured
                 })
                 .where(eq(homeNewArrivals.productId, productId));
 
-            if (!result) {
-                return { success: false, error: "Featured product not found" };
-            }
-
-            // Update isStyleWithSubstanceMen to false in products table
-            await db
-                .update(products)
-                .set({ isHomeNewArrival: false })
-                .where(eq(products.id, productId));
+            // This part is now removed as requested.
+            // The 'products' table will not be updated on removal.
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return { success: true, message: "Product removed from New Arrivals." };
         } else {
-            // Check if product already exists and is not deleted
+            // This block handles ADDING or UPDATING the product.
             const existing = await db
                 .select()
                 .from(homeNewArrivals)
                 .where(eq(homeNewArrivals.productId, productId))
                 .then((res) => res[0]);
 
-            if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
-            }
-
             if (existing) {
-                // Restore if previously soft deleted
+                // MODIFIED: Restore and update the category if it exists.
                 await db
                     .update(homeNewArrivals)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
+                        category: category // Update the category
                     })
                     .where(eq(homeNewArrivals.productId, productId));
             } else {
-                // Add new entry
+                // MODIFIED: Add new entry with the category.
                 await db.insert(homeNewArrivals)
-                    .values({ productId });
+                    .values({
+                        productId: productId,
+                        category: category // Insert the category
+                    });
             }
 
-            // Update isHomeAndLivingSectionTopPicks to true in products table
-            await db
-                .update(products)
-                .set({ isHomeNewArrival: true })
-                .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return { success: true, message: `Product added to '${category}' category.` };
         }
     } catch (error) {
-        console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        console.error("Error toggling New Arrivals status:", error);
+        return { success: false, error: "Failed to update New Arrivals status." };
     }
 }
-
 
 export async function newEventPageSection(productId: string, isFeatured: boolean) {
     try {

@@ -249,6 +249,7 @@ export const homeNewArrivals = pgTable(
         productId: uuid("product_id")
             .notNull()
             .references(() => products.id, { onDelete: "cascade" }),
+        category: text("category"),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,

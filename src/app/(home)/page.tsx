@@ -87,16 +87,14 @@ export default function Page() {
                                          <Suspense>
                 <EventSectionBannerOneFetch />
             </Suspense>
+                                                              <Suspense>
+                <InstaBannerFetch />
+            </Suspense>
                                                           <Suspense>
                 <ArtisanCollectionFetch />
             </Suspense>
                  <Suspense>
                 <ShopByNewCategoriesFetch />
-            </Suspense>
-
-
-                                                          <Suspense>
-                <InstaBannerFetch />
             </Suspense>
 
             {/* <Suspense>

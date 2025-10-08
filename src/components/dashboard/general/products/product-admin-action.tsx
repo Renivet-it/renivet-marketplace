@@ -1,6 +1,19 @@
 "use client";
 
 import {
+    menToggleFeaturedProduct,
+    newEventPageSection,
+    toggleBeautyNewArrivalSection,
+    toggleBeautyTopPickSection,
+    toggleFeaturedProduct,
+    toggleHomeAndLivingNewArrivalsSection,
+    toggleHomeAndLivingTopPicksSection,
+    toggleHomeNewArrivalsProduct,
+    toggleKidsFetchSection,
+    toggleMenStyleWithSubstance,
+    toggleWomenStyleWithSubstance,
+} from "@/actions/product-action";
+import {
     ProductActivationModal,
     ProductAvailablityModal,
     ProductDeleteModal,
@@ -16,28 +29,28 @@ import {
     DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
+    DropdownMenuPortal,
     DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { trpc } from "@/lib/trpc/client";
 import Link from "next/link";
+import { parseAsInteger, useQueryState } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 import { TableProduct as ReviewTableProduct } from "./products-review-table";
-import {
-    toggleFeaturedProduct,
-    menToggleFeaturedProduct,
-    toggleWomenStyleWithSubstance,
-    toggleMenStyleWithSubstance,
-    toggleKidsFetchSection,
-    toggleHomeAndLivingNewArrivalsSection,
-    toggleHomeAndLivingTopPicksSection,
-        toggleBeautyNewArrivalSection,
-    toggleBeautyTopPickSection,
-    toggleHomeNewArrivalsProduct,
-    newEventPageSection,
-} from "@/actions/product-action";
-import { trpc } from "@/lib/trpc/client";
-import { parseAsInteger, useQueryState } from "nuqs";
+
+// The categories for the "New Arrivals" section
+const NEW_ARRIVALS_CATEGORIES = [
+    "Most Ordered",
+    "In Season",
+    "Fresh Deals",
+    "Limited Offer",
+    "Best Value",
+];
 
 interface PageProps {
     product: ReviewTableProduct & {
@@ -52,14 +65,17 @@ interface PageProps {
         isHomeAndLivingSectionTopPicks?: boolean;
         isBeautyNewArrival?: boolean;
         isBeautyTopPicks?: boolean;
-        isHomeNewArrival?: boolean;
+        // CORRECTED: This prop now holds the category string or null
+        homeNewArrivalCategory?: string | null;
         isAddedInEventProductPage?: boolean;
     };
 }
 
 export function ProductAction({ product }: PageProps) {
-    const [isRejectionViewModalOpen, setIsRejectionViewModalOpen] = useState(false);
-    const [isSendForReviewModalOpen, setIsSendForReviewModalOpen] = useState(false);
+    const [isRejectionViewModalOpen, setIsRejectionViewModalOpen] =
+        useState(false);
+    const [isSendForReviewModalOpen, setIsSendForReviewModalOpen] =
+        useState(false);
     const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
     const [isAvailablityModalOpen, setIsAvailablityModalOpen] = useState(false);
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -78,10 +94,41 @@ export function ProductAction({ product }: PageProps) {
         search,
     });
 
+    // CORRECTED: This handler now sends the category string to the updated server action
+    const handletoggleHomeNewArrivalsProduct = async (category: string) => {
+        setIsLoading(true);
+        // If the product is already in this category, clicking again will remove it.
+        // Otherwise, it will add/update it to the new category.
+        const isCurrentlySelected = product.homeNewArrivalCategory === category;
+
+        try {
+            const result = await toggleHomeNewArrivalsProduct(
+                product.id,
+                !isCurrentlySelected, // This boolean tells the backend if the product should be active or not
+                category
+            );
+
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update New Arrivals status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // --- All other handler functions remain unchanged ---
     const handleToggleFeatured = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleFeaturedProduct(product.id, product.isFeaturedWomen ?? false);
+            const result = await toggleFeaturedProduct(
+                product.id,
+                product.isFeaturedWomen ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -94,11 +141,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
     const handleToggleFeaturedMen = async () => {
         setIsLoading(true);
         try {
-            const result = await menToggleFeaturedProduct(product.id, product.isFeaturedMen ?? false);
+            const result = await menToggleFeaturedProduct(
+                product.id,
+                product.isFeaturedMen ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -111,11 +160,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
     const handleToggleWomenStyleWithSubstance = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleWomenStyleWithSubstance(product.id, product.isStyleWithSubstanceWoMen ?? false);
+            const result = await toggleWomenStyleWithSubstance(
+                product.id,
+                product.isStyleWithSubstanceWoMen ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -128,11 +179,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
     const handleToggleMenStyleWithSubstance = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleMenStyleWithSubstance(product.id, product.isStyleWithSubstanceMen ?? false);
+            const result = await toggleMenStyleWithSubstance(
+                product.id,
+                product.isStyleWithSubstanceMen ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -145,11 +198,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
-        const handleToggleKidsFetchProducts = async () => {
+    const handleToggleKidsFetchProducts = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleKidsFetchSection(product.id, product.iskidsFetchSection ?? false);
+            const result = await toggleKidsFetchSection(
+                product.id,
+                product.iskidsFetchSection ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -162,11 +217,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
-            const handletoggleHomeAndLivingNewArrivalsSection = async () => {
+    const handletoggleHomeAndLivingNewArrivalsSection = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleHomeAndLivingNewArrivalsSection(product.id, product.isHomeAndLivingSectionNewArrival ?? false);
+            const result = await toggleHomeAndLivingNewArrivalsSection(
+                product.id,
+                product.isHomeAndLivingSectionNewArrival ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -179,11 +236,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
-            const handletoggleHomeAndLivingTopPicksSection = async () => {
+    const handletoggleHomeAndLivingTopPicksSection = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleHomeAndLivingTopPicksSection(product.id, product.isHomeAndLivingSectionTopPicks ?? false);
+            const result = await toggleHomeAndLivingTopPicksSection(
+                product.id,
+                product.isHomeAndLivingSectionTopPicks ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -196,12 +255,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
-
-              const handletoggleBeautyNewArrivalSection = async () => {
+    const handletoggleBeautyNewArrivalSection = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleBeautyNewArrivalSection(product.id, product.isBeautyNewArrival ?? false);
+            const result = await toggleBeautyNewArrivalSection(
+                product.id,
+                product.isBeautyNewArrival ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -214,11 +274,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
-                  const handletoggleBeautyTopPickSection = async () => {
+    const handletoggleBeautyTopPickSection = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleBeautyTopPickSection(product.id, product.isBeautyTopPicks ?? false);
+            const result = await toggleBeautyTopPickSection(
+                product.id,
+                product.isBeautyTopPicks ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -231,29 +293,13 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
-                      const handletoggleHomeNewArrivalsProduct = async () => {
+    const handlenewEventPageSectionProduct = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleHomeNewArrivalsProduct(product.id, product.isBeautyTopPicks ?? false);
-            if (result.success) {
-                refetch();
-                toast.success(result.message);
-            } else {
-                toast.error(result.error);
-            }
-        } catch (error) {
-            toast.error("Failed to update Style With Substance status");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-
- const handlenewEventPageSectionProduct = async () => {
-        setIsLoading(true);
-        try {
-            const result = await newEventPageSection(product.id, product.isAddedInEventProductPage ?? false);
+            const result = await newEventPageSection(
+                product.id,
+                product.isAddedInEventProductPage ?? false
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -282,14 +328,19 @@ export function ProductAction({ product }: PageProps) {
 
                     <DropdownMenuGroup>
                         {product.isPublished && (
-                            <DropdownMenuItem asChild disabled={!product.isPublished}>
-                                <Link href={`/products/${product.slug}`} target="_blank">
+                            <DropdownMenuItem
+                                asChild
+                                disabled={!product.isPublished}
+                            >
+                                <Link
+                                    href={`/products/${product.slug}`}
+                                    target="_blank"
+                                >
                                     <Icons.Eye className="size-4" />
                                     <span>View</span>
                                 </Link>
                             </DropdownMenuItem>
                         )}
-
                         <DropdownMenuItem
                             onClick={() => {
                                 navigator.clipboard.writeText(product.id);
@@ -300,150 +351,260 @@ export function ProductAction({ product }: PageProps) {
                             <span>Copy ID</span>
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
-
                     <DropdownMenuSeparator />
-
                     <DropdownMenuGroup>
-                        <DropdownMenuItem disabled={product.verificationStatus === "pending"} asChild>
-                            <Link href={`/dashboard/general/products/preview-form/${product.id}`} target="_blank">
+                        <DropdownMenuItem
+                            disabled={product.verificationStatus === "pending"}
+                            asChild
+                        >
+                            <Link
+                                href={`/dashboard/general/products/preview-form/${product.id}`}
+                                target="_blank"
+                            >
                                 <Icons.Edit className="size-4" />
                                 <span>Edit</span>
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled={product.verificationStatus === "pending"} asChild>
-                            <Link href={`/dashboard/general/products/${product.id}`}>
+                        <DropdownMenuItem
+                            disabled={product.verificationStatus === "pending"}
+                            asChild
+                        >
+                            <Link
+                                href={`/dashboard/general/products/${product.id}`}
+                            >
                                 <Icons.Eye className="size-4" />
                                 <span>Review Product</span>
                             </Link>
                         </DropdownMenuItem>
-
                         <DropdownMenuItem asChild>
                             <Link
                                 href={`/dashboard/general/products/preview-form/${product.id}/values`}
                                 target="_blank"
                             >
                                 <Icons.ShoppingCart className="size-4" />
-                                <span>{product.values ? "Edit Values" : "Add Values"}</span>
+                                <span>
+                                    {product.values
+                                        ? "Edit Values"
+                                        : "Add Values"}
+                                </span>
                             </Link>
                         </DropdownMenuItem>
-
                         <DropdownMenuItem asChild>
                             <Link
                                 href={`/dashboard/general/products/preview-form/${product.id}/journey`}
                                 target="_blank"
                             >
                                 <Icons.Globe className="size-4" />
-                                <span>{product.journey ? "Edit Journey" : "Add Journey"}</span>
+                                <span>
+                                    {product.journey
+                                        ? "Edit Journey"
+                                        : "Add Journey"}
+                                </span>
                             </Link>
                         </DropdownMenuItem>
-
-                        {/* Featured Products Section */}
-                        <DropdownMenuItem onClick={handleToggleFeatured} disabled={isLoading}>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                        <DropdownMenuItem
+                            onClick={handleToggleFeatured}
+                            disabled={isLoading}
+                        >
                             <Icons.Star className="size-4" />
-                            <span>{product.isFeaturedWomen ? "Remove from Featured Women" : "Add to Featured Women"}</span>
+                            <span>
+                                {product.isFeaturedWomen
+                                    ? "Remove from Featured Women"
+                                    : "Add to Featured Women"}
+                            </span>
                         </DropdownMenuItem>
-
-                        <DropdownMenuItem onClick={handleToggleFeaturedMen} disabled={isLoading}>
+                        <DropdownMenuItem
+                            onClick={handleToggleFeaturedMen}
+                            disabled={isLoading}
+                        >
                             <Icons.Star className="size-4" />
-                            <span>{product.isFeaturedMen ? "Remove from Featured Men" : "Add to Featured Men"}</span>
+                            <span>
+                                {product.isFeaturedMen
+                                    ? "Remove from Featured Men"
+                                    : "Add to Featured Men"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handleToggleWomenStyleWithSubstance}
+                            disabled={isLoading}
+                        >
+                            <Icons.Layers className="size-4" />
+                            <span>
+                                {product.isStyleWithSubstanceWoMen
+                                    ? "Remove from Style With Substance (Women)"
+                                    : "Add to Style With Substance (Women)"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handleToggleMenStyleWithSubstance}
+                            disabled={isLoading}
+                        >
+                            <Icons.Layers className="size-4" />
+                            <span>
+                                {product.isStyleWithSubstanceMen
+                                    ? "Remove from Style With Substance (Men)"
+                                    : "Add to Style With Substance (Men)"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handleToggleKidsFetchProducts}
+                            disabled={isLoading}
+                        >
+                            <Icons.Layers className="size-4" />
+                            <span>
+                                {product.iskidsFetchSection
+                                    ? "Remove from Product Feature (Kids)"
+                                    : "Add to Product Feature (Kids)"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={
+                                handletoggleHomeAndLivingNewArrivalsSection
+                            }
+                            disabled={isLoading}
+                        >
+                            <Icons.Layers className="size-4" />
+                            <span>
+                                {product.isHomeAndLivingSectionNewArrival
+                                    ? "Remove from New Arrivals (Home living)"
+                                    : "Add to New Arrivals (Home living)"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handletoggleHomeAndLivingTopPicksSection}
+                            disabled={isLoading}
+                        >
+                            <Icons.Layers className="size-4" />
+                            <span>
+                                {product.isHomeAndLivingSectionTopPicks
+                                    ? "Remove from Top Picks(Home living)"
+                                    : "Add to Top Picks(Home living)"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handletoggleBeautyNewArrivalSection}
+                            disabled={isLoading}
+                        >
+                            <Icons.Layers className="size-4" />
+                            <span>
+                                {product.isBeautyNewArrival
+                                    ? "Remove from New Arrivals(Beauty Personal)"
+                                    : "Add to New Arrivals(Beauty Personal)"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handletoggleBeautyTopPickSection}
+                            disabled={isLoading}
+                        >
+                            <Icons.Layers className="size-4" />
+                            <span>
+                                {product.isBeautyTopPicks
+                                    ? "Remove from Top Picks(Beauty Personal)"
+                                    : "Add to Top Picks(Beauty Personal)"}
+                            </span>
                         </DropdownMenuItem>
 
-                        {/* Style With Substance Section */}
-                        {/* <DropdownMenuItem onClick={handleToggleWomenStyleWithSubstance} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isStyleWithSubstanceWoMen ? "Remove from Style With Substance (Women)" : "Add to Style With Substance (Women)"}</span>
-                        </DropdownMenuItem> */}
-<DropdownMenuItem onClick={handleToggleWomenStyleWithSubstance} disabled={isLoading}>
-    <Icons.Layers className="size-4" />
-    <span>
-        {product.isStyleWithSubstanceWoMen
-            ? "Remove from Style With Substance (Women)"
-            : "Add to Style With Substance (Women)"}
-    </span>
-</DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleToggleMenStyleWithSubstance} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isStyleWithSubstanceMen ? "Remove from Style With Substance (Men)" : "Add to Style With Substance (Men)"}</span>
-                        </DropdownMenuItem>
+                        {/* --- Refactored New Arrivals Section --- */}
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger disabled={isLoading}>
+                                <Icons.Layers className="mr-2 size-4" />
+                                <span>New Arrivals (Home Page)</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuLabel>
+                                        Select a Category
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    {NEW_ARRIVALS_CATEGORIES.map((category) => (
+                                        <DropdownMenuItem
+                                            key={category}
+                                            onClick={() =>
+                                                handletoggleHomeNewArrivalsProduct(
+                                                    category
+                                                )
+                                            }
+                                            disabled={isLoading}
+                                        >
+                                            {product.homeNewArrivalCategory ===
+                                                category && (
+                                                <Icons.Check className="mr-2 size-4" />
+                                            )}
+                                            <span>{category}</span>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                        {/* --- End of Refactored Section --- */}
 
-                         <DropdownMenuItem onClick={handleToggleKidsFetchProducts} disabled={isLoading}>
+                        <DropdownMenuItem
+                            onClick={handlenewEventPageSectionProduct}
+                            disabled={isLoading}
+                        >
                             <Icons.Layers className="size-4" />
-                            <span>{product.iskidsFetchSection ? "Remove from Product Feature (Kids)" : "Add to Product Feature (Kids)"}</span>
+                            <span>
+                                {product.isAddedInEventProductPage
+                                    ? "Remove from Event Exibition Page"
+                                    : "Add to Event Exibition Page"}
+                            </span>
                         </DropdownMenuItem>
-
-                        <DropdownMenuItem onClick={handletoggleHomeAndLivingNewArrivalsSection} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isHomeAndLivingSectionNewArrival ? "Remove from New Arrivals (Home living)" : "Add to New Arrivals (Home living)"}</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem onClick={handletoggleHomeAndLivingTopPicksSection} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isHomeAndLivingSectionTopPicks ? "Remove from Top Picks(Home living)" : "Add to Top Picks(Home living)"}</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem onClick={handletoggleBeautyNewArrivalSection} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isBeautyNewArrival ? "Remove from New Arrivals(Beauty Personal)" : "Add to New Arrivals(Beauty Personal)"}</span>
-                        </DropdownMenuItem>
-
-
-                        <DropdownMenuItem onClick={handletoggleBeautyTopPickSection} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isBeautyTopPicks ? "Remove from Top Picks(Beauty Personal)" : "Add to Top Picks(Beauty Personal)"}</span>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem onClick={handletoggleHomeNewArrivalsProduct} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isHomeNewArrival ? "Remove from New Arrivals(Home Page)" : "Add to New Arrivals(Home Page)"}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handlenewEventPageSectionProduct} disabled={isLoading}>
-                            <Icons.Layers className="size-4" />
-                            <span>{product.isAddedInEventProductPage ? "Remove from Event Exibition Page" : "Add to Event Exibition Page"}</span>
-                        </DropdownMenuItem>
-                        {product.isPublished && (
-                            <>
-                                {/* Existing availability and activation items */}
-                            </>
-                        )}
 
                         {product.verificationStatus === "idle" && (
-                            <DropdownMenuItem onClick={() => setIsSendForReviewModalOpen(true)}>
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    setIsSendForReviewModalOpen(true)
+                                }
+                            >
                                 <Icons.Shield className="size-4" />
                                 <span>Send for Review</span>
                             </DropdownMenuItem>
                         )}
-
                         {product.verificationStatus === "rejected" && (
                             <>
-                                <DropdownMenuItem onClick={() => setIsSendForReviewModalOpen(true)}>
+                                {" "}
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        setIsSendForReviewModalOpen(true)
+                                    }
+                                >
                                     <Icons.Shield className="size-4" />
                                     <span>Resend for Review</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setIsRejectionViewModalOpen(true)}>
+                                </DropdownMenuItem>{" "}
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        setIsRejectionViewModalOpen(true)
+                                    }
+                                >
                                     <Icons.AlertTriangle className="size-4" />
                                     <span>View Reason</span>
-                                </DropdownMenuItem>
+                                </DropdownMenuItem>{" "}
                             </>
                         )}
-
-                        {!product.isPublished && product.verificationStatus === "approved" && (
-                            <DropdownMenuItem onClick={() => setIsPublishModalOpen(true)}>
-                                <Icons.Send className="size-4" />
-                                <span>Publish Product</span>
-                            </DropdownMenuItem>
-                        )}
+                        {!product.isPublished &&
+                            product.verificationStatus === "approved" && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsPublishModalOpen(true)}
+                                >
+                                    <Icons.Send className="size-4" />
+                                    <span>Publish Product</span>
+                                </DropdownMenuItem>
+                            )}
                     </DropdownMenuGroup>
-
                     <DropdownMenuSeparator />
-
-                    <DropdownMenuItem onClick={() => setIsDeleteModalOpen(true)}>
+                    <DropdownMenuItem
+                        onClick={() => setIsDeleteModalOpen(true)}
+                    >
                         <Icons.Trash className="size-4" />
                         <span>Delete</span>
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Existing modals */}
+            {/* --- All your existing modals --- */}
             <ProductSendReviewModal
                 product={product}
                 isOpen={isSendForReviewModalOpen}
