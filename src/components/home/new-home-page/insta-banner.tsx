@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 
+// The component props are unchanged, as you requested.
 interface InstaPost {
   id: string;
   imageUrl: string;
@@ -15,57 +16,56 @@ interface PageProps {
   className?: string;
 }
 
-export function InstaBanner({ className, banners }: PageProps) {
-  // Fixed box dimensions in exact order
-  const boxDimensions = [
-    { width: 173, height: 209 }, // Box 1
-    { width: 173, height: 258 }, // Box 2
-    { width: 173, height: 209 }, // Box 3
-    { width: 173, height: 258 }, // Box 4
-    { width: 173, height: 209 }, // Box 5
-    { width: 173, height: 258 }, // Box 6
-    { width: 173, height: 209 }, // Box 7
-    { width: 173, height: 258 }  // Box 8
-  ];
+// The URL for the static top banner image.
+const staticTopBannerUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQbKsKQvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT";
 
+export function InstaBanner({ className, banners }: PageProps  ) {
   return (
+    // 1. Main section with the page's solid background color.
     <section className={cn("w-full py-12 bg-[#F4F0EC]", className)}>
+      {/* 2. A max-width container to center the component on the page. */}
       <div className="max-w-[1612px] mx-auto px-4">
-        {/* Title Section */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold uppercase text-gray-800 inline-block border-b-2 border-gray-300 pb-2 px-4">
-            Follow Us On Instagram
-          </h2>
-          {/* <p className="mt-4 text-gray-600 max-w-2xl mx-auto">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sorsitengue eius utlrices sollicitudin etiquam sism.
-          </p> */}
-        </div>
+        {/* 3. The container with the reddish background. */}
+        <div className="w-full bg-[#C95E5A] py-8 px-4 sm:px-6 md:px-8 space-y-8">
+          
+          {/* 4. Static Top Banner, now aligned to the left. */}
+          <div className="w-full">
+            <div className="relative w-full max-w-lg h-20 md:h-24">
+              <Image
+                src={staticTopBannerUrl}
+                alt="Festive Categories"
+                fill
+                className="object-contain object-left" // Aligns image to the left
+              />
+            </div>
+          </div>
 
-        {/* Instagram Grid - Fixed layout */}
-        <div className="flex flex-wrap justify-center" style={{ gap: 0 }}>
-          {banners.slice(0, 8).map((post, index) => {
-            const dimensions = boxDimensions[index];
-            return (
+          {/* 5. Dynamic Grid, now aligned to the left. */}
+          <div className="flex flex-wrap justify-start gap-6"> {/* CHANGED: justify-start */}
+            {banners.map((post, index) => (
+              // The light-yellow card container
               <div
                 key={post.id || index}
-                className="relative overflow-hidden"
+                className="group bg-[#FFFBEB] rounded-2xl p-2"
                 style={{
-                  width: `${dimensions.width}px`,
-                  height: `${dimensions.height}px`
+                  width: "231px",
+                  height: "348px",
                 }}
               >
                 <Link href={post.url || "#"} className="block w-full h-full">
-                  <Image
-                    src={post.imageUrl}
-                    alt={`Instagram post ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                  />
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={post.imageUrl}
+                      alt={`Festive item ${index + 1}`}
+                      fill
+                      className="object-contain transition-transform duration-300 group-hover:scale-105"
+                      sizes="231px"
+                    />
+                  </div>
                 </Link>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     </section>

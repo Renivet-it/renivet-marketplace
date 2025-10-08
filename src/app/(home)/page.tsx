@@ -46,9 +46,7 @@ export default function Page() {
                                <Suspense>
                 <CuratedBannerFetch />
             </Suspense>
-                                           <Suspense>
-                <EventSectionBannerOneFetch />
-            </Suspense>
+
                                                    <Suspense>
                 <EventSectionTwoBannerFetch />
             </Suspense>
@@ -83,16 +81,19 @@ export default function Page() {
             {/* <Suspense>
                 <EveryDayEssentialFetch />
             </Suspense> */}
-                                                  <Suspense>
+                                              <Suspense>
                 <SwapSpaceBannerFetch />
+            </Suspense>
+                                         <Suspense>
+                <EventSectionBannerOneFetch />
+            </Suspense>
+                                                          <Suspense>
+                <ArtisanCollectionFetch />
             </Suspense>
                  <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
 
-                                                          <Suspense>
-                <ArtisanCollectionFetch />
-            </Suspense>
 
                                                           <Suspense>
                 <InstaBannerFetch />

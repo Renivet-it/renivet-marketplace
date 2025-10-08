@@ -47,7 +47,7 @@ export function ArtisanCollection({
           className="py-10"
           style={{
             // CORRECTED: Gradient is now 'to bottom'
-            background: 'linear-gradient(to bottom, #FFFFFF 9%, #D78D2F 100%)'
+            background: "linear-gradient(to bottom, #FFFFFF 9%, #D78D2F 100%)"
           }}
         >
           {/* The carousel with the white cards sits ON TOP of the gradient */}
