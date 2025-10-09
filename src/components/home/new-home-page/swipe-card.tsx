@@ -1,48 +1,60 @@
 "use client";
 
-import { useSpring, animated, useSprings } from "@react-spring/web";
+import { animated, useSprings } from "@react-spring/web";
 import { useDrag } from "react-use-gesture";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react"; // Import useMemo
 import Link from "next/link";
 import Image from "next/image";
 import { Icons } from "@/components/icons";
-import { cn } from "@/lib/utils";
 
-// --- INTERFACES (Unchanged) ---
+// --- INTERFACE UPDATED ---
+// Added 'category' to the Product interface
 interface Product {
   slug: any;
   id: string;
-  media: { mediaItem: { url: string } }[];
+  media: { mediaItem: { url:string } }[];
   title: string;
   description?: string;
+  category?: string; // Assuming category is an optional string
 }
 
 interface SwipeableProductCardProps {
-  products: { product: Product }[];
+  products: {
+      category: string; product: Product
+}[];
 }
 
 // --- MAIN COMPONENT ---
 export function SwipeCard({ products }: SwipeableProductCardProps) {
+  // --- FILTERING LOGIC ADDED ---
+  // Use useMemo to filter products only when the products prop changes.
+  // This prevents re-filtering on every render.
+  console.log("Products data received in SwipeCard:", products);
+  const filteredProducts = useMemo(() =>
+    products.filter((p) => p.category === "Swipe Left or Right"),
+    [products]
+  );
+
   const [gone] = useState(() => new Set());
-  const [props, api] = useSprings(products.length, i => ({
+  // IMPORTANT: Initialize useSprings with the length of the *filtered* list
+  const [props, api] = useSprings(filteredProducts.length, (i) => ({
     x: 0,
     y: 0,
     scale: 1,
     rot: 0,
+    display: "flex",
   }));
 
-  // --- PROFESSIONAL SWIPE-AWAY LOGIC ---
   const bind = useDrag(({ args: [index], down, movement: [mx], direction: [xDir], velocity }) => {
     const trigger = velocity > 0.2;
     const dir = xDir < 0 ? -1 : 1;
 
     if (!down && trigger) gone.add(index);
 
-    api.start(i => {
+    api.start((i) => {
       if (index !== i) return;
       const isGone = gone.has(index);
-      
-      // The card is animated off-screen
+
       const x = isGone ? (200 + window.innerWidth) * dir : down ? mx : 0;
       const rot = mx / 100 + (isGone ? dir * 10 * velocity : 0);
       const scale = down ? 1.05 : 1;
@@ -53,52 +65,51 @@ export function SwipeCard({ products }: SwipeableProductCardProps) {
         scale,
         delay: undefined,
         config: { friction: 50, tension: down ? 800 : isGone ? 220 : 500 },
-        // After the animation, if the card is gone, hide it to prevent layout issues
         onRest: () => {
           if (isGone) {
-            api.start(j => (j === index ? { display: 'none' } : {}));
+            api.start((j) => (j === index ? { display: "none" } : {}));
           }
         },
       };
     });
 
-    if (!down && gone.size === products.length) {
+    // Reset if all *filtered* cards are gone
+    if (!down && gone.size === filteredProducts.length) {
       setTimeout(() => {
         gone.clear();
-        // Reset all cards to be visible and in their initial state
-        api.start(i => ({ x: 0, y: 0, scale: 1, rot: 0, display: 'flex' }));
+        api.start((i) => ({ x: 0, y: 0, scale: 1, rot: 0, display: "flex" }));
       }, 600);
     }
   });
 
   const triggerSwipe = (index: number, dir: -1 | 1) => {
     gone.add(index);
-    api.start(i => {
+    api.start((i) => {
       if (index !== i) return;
       return {
         x: (200 + window.innerWidth) * dir,
         rot: dir * 15,
         config: { friction: 50, tension: 220 },
-        onRest: () => api.start(j => (j === index ? { display: 'none' } : {})),
+        onRest: () => api.start((j) => (j === index ? { display: "none" } : {})),
       };
     });
-    if (gone.size === products.length) {
+    if (gone.size === filteredProducts.length) {
       setTimeout(() => {
         gone.clear();
-        api.start(i => ({ x: 0, y: 0, scale: 1, rot: 0, display: 'flex' }));
+        api.start((i) => ({ x: 0, y: 0, scale: 1, rot: 0, display: "flex" }));
       }, 600);
     }
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#F8F5F2] p-8 lg:p-16">
-      <h1 className="text-2xl font-serif text-gray-800 mb-8">select what matters</h1>
-      {/* --- LAYOUT NOW HANDLES SINGLE COLUMN GRACEFULLY --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        {/* Column 1: Swipeable Product Card */}
-        <div className="relative w-full max-w-md mx-auto h-[450px] flex items-center justify-center">
+    <div className="min-h-screen w-full bg-[#F8F5F2] p-8 lg:p-16">
+      <h1 className="mb-8 font-serif text-2xl text-gray-800">select what matters</h1>
+      <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+        <div className="relative mx-auto flex h-[450px] w-full max-w-md items-center justify-center">
+          {/* Map over the *filtered* props array */}
           {props.map(({ x, y, rot, scale, display }, i) => {
-            const currentProduct = products[i]?.product;
+            // Get the product from the filtered list
+            const currentProduct = filteredProducts[i]?.product;
             if (!currentProduct) return null;
 
             const shortDescription =
@@ -110,14 +121,14 @@ export function SwipeCard({ products }: SwipeableProductCardProps) {
               <animated.div
                 key={currentProduct.id}
                 style={{ x, y, display }}
-                className="absolute w-full h-full flex items-center justify-center"
+                className="absolute flex size-full items-center justify-center"
               >
                 <animated.div
                   {...bind(i)}
-                  style={{ transform: rot.to(r => `rotateZ(${r}deg)`), scale }}
-                  className="bg-white rounded-2xl shadow-lg w-full h-full max-w-sm touch-none cursor-grab active:cursor-grabbing flex flex-col"
+                  style={{ transform: rot.to((r) => `rotateZ(${r}deg)`), scale }}
+                  className="flex size-full max-w-sm cursor-grab touch-none flex-col rounded-2xl bg-white shadow-lg active:cursor-grabbing"
                 >
-                  <div className="relative w-full flex-grow overflow-hidden rounded-t-2xl">
+                  <div className="relative w-full grow overflow-hidden rounded-t-2xl">
                     <Image
                       src={currentProduct.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
                       alt={currentProduct.title}
@@ -127,25 +138,25 @@ export function SwipeCard({ products }: SwipeableProductCardProps) {
                       draggable="false"
                     />
                   </div>
-                  <div className="p-6 flex-shrink-0">
-                    <h3 className="text-2xl font-bold text-gray-900 capitalize">{currentProduct.title}</h3>
-                    <p className="text-gray-500 mt-1 text-sm h-10">
+                  <div className="shrink-0 p-6">
+                    <h3 className="text-2xl font-bold capitalize text-gray-900">{currentProduct.title}</h3>
+                    <p className="mt-1 h-10 text-sm text-gray-500">
                       {shortDescription}
                     </p>
-                    <div className="flex justify-between items-center mt-4">
+                    <div className="mt-4 flex items-center justify-between">
                       <button
                         onClick={() => triggerSwipe(i, -1)}
-                        className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 transition-transform transform hover:scale-110"
+                        className="flex size-10 items-center justify-center rounded-full bg-red-500 text-white shadow-md transition-transform hover:scale-110 hover:bg-red-600"
                         aria-label="Dislike"
                       >
-                        <Icons.X className="w-5 h-5" />
+                        <Icons.X className="size-5" />
                       </button>
                       <button
                         onClick={() => triggerSwipe(i, 1)}
-                        className="flex items-center justify-center w-10 h-10 rounded-full bg-green-500 text-white shadow-md hover:bg-green-600 transition-transform transform hover:scale-110"
+                        className="flex size-10 items-center justify-center rounded-full bg-green-500 text-white shadow-md transition-transform hover:scale-110 hover:bg-green-600"
                         aria-label="Like"
                       >
-                        <Icons.Check className="w-5 h-5" />
+                        <Icons.Check className="size-5" />
                       </button>
                     </div>
                   </div>
@@ -155,17 +166,16 @@ export function SwipeCard({ products }: SwipeableProductCardProps) {
           })}
         </div>
 
-        {/* Column 2: Static Info Card */}
-        <div className="w-full max-w-md mx-auto rounded-2xl shadow-lg p-8 text-left bg-white/30 backdrop-blur-lg border border-white/40">
-          <h2 className="text-3xl font-serif text-gray-800">Slow Fashion Guide</h2>
+        <div className="mx-auto w-full max-w-md rounded-2xl border border-white/40 bg-white/30 p-8 text-left shadow-lg backdrop-blur-lg">
+          <h2 className="font-serif text-3xl text-gray-800">Slow Fashion Guide</h2>
           <p className="mt-4 text-gray-700">
             Learn How Choosing Well Makes An Impact.
-              
+
 
             Read Our Short Guide.
           </p>
-          <Link href="/slow-fashion-guide" className="inline-block mt-6">
-            <Icons.ArrowRight className="w-8 h-8 text-gray-800 hover:text-black transition-colors" />
+          <Link href="/slow-fashion-guide" className="mt-6 inline-block">
+            <Icons.ArrowRight className="size-8 text-gray-800 transition-colors hover:text-black" />
           </Link>
         </div>
       </div>
