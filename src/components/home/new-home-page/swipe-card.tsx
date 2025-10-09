@@ -227,10 +227,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
   // 🔸 UI
   // --------------------------------------------------------
   return (
-    <div className="min-h-screen w-full bg-[#F8F5F2] p-8 lg:p-16">
-      <h1 className="mb-8 font-serif text-2xl text-gray-800">
-        select what matters
-      </h1>
+    <div className=" w-full bg-[#F8F5F2] p-8 lg:p-16">
 
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
         {/* --- Swipe Area --- */}

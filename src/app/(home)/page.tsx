@@ -61,6 +61,9 @@ export default function Page() {
                                                                      <Suspense>
                 <ConciousClickBannerFetch />
             </Suspense>
+                    <Suspense>
+                <ProductSwipeCardFetch />
+            </Suspense>
                                              <Suspense>
                 <MatchaBagFetch />
             </Suspense>
@@ -96,9 +99,6 @@ export default function Page() {
             </Suspense>
                  <Suspense>
                 <ShopByNewCategoriesFetch />
-            </Suspense>
-        <Suspense>
-                <ProductSwipeCardFetch />
             </Suspense>
             {/* <Suspense>
                 <BlogsFetch />
