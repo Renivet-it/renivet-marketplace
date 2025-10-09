@@ -765,11 +765,11 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
 
 export async function toggleHomeNewArrivalsProduct(
     productId: string,
-    isActive: boolean, // renamed for clarity
+    isActive: boolean,
     category: string
 ) {
     try {
-        // ✅ Check if product exists in products table
+        // ✅ Check if product exists
         const existingProduct = await db
             .select()
             .from(products)
@@ -784,13 +784,13 @@ export async function toggleHomeNewArrivalsProduct(
         // 🟢 ADD PRODUCT TO CATEGORY
         // =============================
         if (isActive) {
-            // Check if product already exists
             const existing = await db
                 .select()
                 .from(homeNewArrivals)
                 .where(eq(homeNewArrivals.productId, productId))
                 .then((res) => res[0]);
 
+            // ✅ Only block if already active *and* we're adding again
             if (existing && !existing.isDeleted) {
                 return {
                     success: false,
@@ -799,7 +799,7 @@ export async function toggleHomeNewArrivalsProduct(
             }
 
             if (existing) {
-                // Reactivate and update category
+                // Reactivate + update category
                 await db
                     .update(homeNewArrivals)
                     .set({
@@ -816,10 +816,12 @@ export async function toggleHomeNewArrivalsProduct(
                 });
             }
 
-            // Update product table flag
+            // ✅ Update product table flag
             await db
                 .update(products)
-                .set({ isHomeNewArrival: true })
+                .set({
+                    isHomeNewArrival: true,
+                })
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
@@ -832,6 +834,19 @@ export async function toggleHomeNewArrivalsProduct(
         // =============================
         // 🔴 REMOVE PRODUCT
         // =============================
+        const existing = await db
+            .select()
+            .from(homeNewArrivals)
+            .where(eq(homeNewArrivals.productId, productId))
+            .then((res) => res[0]);
+
+        if (!existing) {
+            return {
+                success: false,
+                error: "Product not found in New Arrivals list",
+            };
+        }
+
         await db
             .update(homeNewArrivals)
             .set({
@@ -840,10 +855,12 @@ export async function toggleHomeNewArrivalsProduct(
             })
             .where(eq(homeNewArrivals.productId, productId));
 
-        // Update flag in products table
+        // ✅ Update products table flag
         await db
             .update(products)
-            .set({ isHomeNewArrival: false })
+            .set({
+                isHomeNewArrival: false,
+            })
             .where(eq(products.id, productId));
 
         revalidatePath("/dashboard/general/products");
@@ -859,6 +876,7 @@ export async function toggleHomeNewArrivalsProduct(
         };
     }
 }
+
 
 export async function newEventPageSection(productId: string, isFeatured: boolean) {
     try {

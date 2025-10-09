@@ -95,31 +95,57 @@ export function ProductAction({ product }: PageProps) {
     });
 
     // CORRECTED: This handler now sends the category string to the updated server action
-    const handletoggleHomeNewArrivalsProduct = async (category: string) => {
-        setIsLoading(true);
-        // If the product is already in this category, clicking again will remove it.
-        // Otherwise, it will add/update it to the new category.
-        const isCurrentlySelected = product.homeNewArrivalCategory === category;
+    // const handletoggleHomeNewArrivalsProduct = async (category: string) => {
+    //     setIsLoading(true);
+    //     // If the product is already in this category, clicking again will remove it.
+    //     // Otherwise, it will add/update it to the new category.
+    //     const isCurrentlySelected = product.homeNewArrivalCategory === category;
 
-        try {
-            const result = await toggleHomeNewArrivalsProduct(
-                product.id,
-                !isCurrentlySelected, // This boolean tells the backend if the product should be active or not
-                category
-            );
+    //     try {
+    //         const result = await toggleHomeNewArrivalsProduct(
+    //             product.id,
+    //             !isCurrentlySelected, // This boolean tells the backend if the product should be active or not
+    //             category
+    //         );
 
-            if (result.success) {
-                refetch();
-                toast.success(result.message);
-            } else {
-                toast.error(result.error);
-            }
-        } catch (error) {
-            toast.error("Failed to update New Arrivals status");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    //         if (result.success) {
+    //             refetch();
+    //             toast.success(result.message);
+    //         } else {
+    //             toast.error(result.error);
+    //         }
+    //     } catch (error) {
+    //         toast.error("Failed to update New Arrivals status");
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
+    const handletoggleHomeNewArrivalsProduct = async (
+  category: string,
+  isActive: boolean // <-- added this
+) => {
+  setIsLoading(true);
+
+  try {
+    const result = await toggleHomeNewArrivalsProduct(
+      product.id,
+      isActive, // directly use the param
+      category
+    );
+
+    if (result.success) {
+      refetch();
+      toast.success(result.message);
+    } else {
+      toast.error(result.error);
+    }
+  } catch (error) {
+    toast.error("Failed to update New Arrivals status");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
     // --- All other handler functions remain unchanged ---
     const handleToggleFeatured = async () => {
@@ -506,39 +532,67 @@ export function ProductAction({ product }: PageProps) {
                                     : "Add to Top Picks(Beauty Personal)"}
                             </span>
                         </DropdownMenuItem>
+                     {/* --- Refactored New Arrivals Section --- */}
+{/* --- Fixed New Arrivals Section --- */}
+{/* --- Fixed New Arrivals Section --- */}
+<DropdownMenuSub>
+  <DropdownMenuSubTrigger disabled={isLoading}>
+    <Icons.Layers className="mr-2 size-4" />
+    <span>New Arrivals (Home Page)</span>
+  </DropdownMenuSubTrigger>
 
-                        {/* --- Refactored New Arrivals Section --- */}
-                        <DropdownMenuSub>
-                            <DropdownMenuSubTrigger disabled={isLoading}>
-                                <Icons.Layers className="mr-2 size-4" />
-                                <span>New Arrivals (Home Page)</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                                <DropdownMenuSubContent>
-                                    <DropdownMenuLabel>
-                                        Select a Category
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {NEW_ARRIVALS_CATEGORIES.map((category) => (
-                                        <DropdownMenuItem
-                                            key={category}
-                                            onClick={() =>
-                                                handletoggleHomeNewArrivalsProduct(
-                                                    category
-                                                )
-                                            }
-                                            disabled={isLoading}
-                                        >
-                                            {product.homeNewArrivalCategory ===
-                                                category && (
-                                                <Icons.Check className="mr-2 size-4" />
-                                            )}
-                                            <span>{category}</span>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                        </DropdownMenuSub>
+  <DropdownMenuPortal>
+    <DropdownMenuSubContent>
+      <DropdownMenuLabel>Select a Category</DropdownMenuLabel>
+      <DropdownMenuSeparator />
+
+      {/* 🟢 Add to Category */}
+      {NEW_ARRIVALS_CATEGORIES.map((category) => (
+        <DropdownMenuItem
+          key={category}
+          onClick={() =>
+            handletoggleHomeNewArrivalsProduct(category, true) // ✅ add (isActive = true)
+          }
+          disabled={isLoading}
+        >
+          {product.homeNewArrivalCategory === category && (
+            <Icons.Check className="mr-2 size-4" />
+          )}
+          <span>{category}</span>
+        </DropdownMenuItem>
+      ))}
+
+      {/* 🔴 Remove option if already active */}
+      {product.isHomeNewArrival && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() =>
+              handletoggleHomeNewArrivalsProduct(
+                product.homeNewArrivalCategory ?? "",
+                false // ✅ remove (isActive = false)
+              )
+            }
+            disabled={isLoading}
+            className="text-red-600 focus:text-red-600"
+          >
+            <Icons.Trash className="mr-2 size-4" />
+            <span>
+              Remove from New Arrivals
+              {product.homeNewArrivalCategory
+                ? ` (${product.homeNewArrivalCategory})`
+                : ""}
+            </span>
+          </DropdownMenuItem>
+        </>
+      )}
+    </DropdownMenuSubContent>
+  </DropdownMenuPortal>
+</DropdownMenuSub>
+{/* --- End of Fixed Section --- */}
+
+{/* --- End of Fixed Section --- */}
+
                         {/* --- End of Refactored Section --- */}
 
                         <DropdownMenuItem
