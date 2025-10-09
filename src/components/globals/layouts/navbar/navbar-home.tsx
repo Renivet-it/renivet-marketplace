@@ -221,6 +221,19 @@ const wishlistCount = user
         },
     });
 
+    const categoryPriorityMap: Record<string, string[]> = {
+        "Men": ["Topwear", "Men Footwear", "Innerwear and Sleepwear", "Fashion Accessories"],
+        "Women": ["Western Wear", "Indian and Fusion Wear", "Women Sports and Active Wear","Backpacks","Jewellery"],
+        "Kids": ["Girls Clothing", "Boys Clothing ","unisex clothing"],
+        "Home and Living": [],
+        "Beauty and Personal Care": [],
+      };
+      
+
+
+
+
+
     return (
         <motion.header
             variants={{
@@ -419,6 +432,7 @@ const wishlistCount = user
         </NavigationMenuTrigger>
                                     <NavigationMenuContent>
                                         <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
+                                    
                                             {subcategories.data
                                                 .filter(
                                                     (sub) =>
@@ -427,8 +441,35 @@ const wishlistCount = user
                                                             (pt) =>
                                                                 pt.subCategoryId === sub.id &&
                                                                 (pt.productCount ?? 0) > 0
-                                                        )
-                                                )
+                                                        ))
+                                                       .sort((a, b) => {
+                                                        const priorityOrder =
+                                                        categoryPriorityMap[category.name as keyof typeof categoryPriorityMap] || [];
+
+                                                        console.log("Priority order:", priorityOrder);
+                                                        console.log(
+                                                          "Names in data:",
+                                                          subcategories.data
+                                                            .filter((s) => s.categoryId === category.id)
+                                                            .map((s) => s.name)
+                                                        );
+
+
+                                                            const aIndex = priorityOrder.findIndex(
+                                                                (item) => item.toLowerCase().trim() === a.name.toLowerCase().trim()
+                                                              ); 
+                                                              const bIndex = priorityOrder.findIndex(
+                                                                (item) => item.toLowerCase().trim() === b.name.toLowerCase().trim()
+                                                              );
+                                                        
+                                                            if (aIndex === -1 && bIndex === -1) {
+                                                              return a.name.localeCompare(b.name);
+                                                            }
+                                                            if (aIndex === -1) return 1;
+                                                            if (bIndex === -1) return -1;
+                                                            return aIndex - bIndex;
+                                                          })              
+                                                
                                                 .map((subcategory) => (
                                                     <div
                                                         key={subcategory.id}
