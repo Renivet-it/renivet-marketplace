@@ -50,6 +50,7 @@ const NEW_ARRIVALS_CATEGORIES = [
     "Fresh Deals",
     "Limited Offer",
     "Best Value",
+    "Swipe Left or Right",
 ];
 
 interface PageProps {

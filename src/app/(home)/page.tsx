@@ -21,6 +21,7 @@ import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 import { Page as EveryDayEssential } from "@/components/home/new-home-page/everyday-essential";
 import { ProductGrid } from "@/components/home/new-home-page/kids-product-grid";
 import { ProductGridNewArrivals } from "@/components/home/new-home-page/new-arrivals";
+import { SwipeCard } from "@/components/home/new-home-page/swipe-card";
 import { EcoIcons } from "@/components/home/new-home-page/eco-icons";
 
 export default function Page() {
@@ -96,7 +97,9 @@ export default function Page() {
                  <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
-
+        <Suspense>
+                <ProductSwipeCardFetch />
+            </Suspense>
             {/* <Suspense>
                 <BlogsFetch />
             </Suspense> */}
@@ -118,6 +121,13 @@ async function ProductNewArrivalsGridFetch() {
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGridNewArrivals products={products} />;
+}
+
+async function ProductSwipeCardFetch() {
+  const products = await productQueries.getHomePageFeaturedProducts();
+  if (!products.length) return null;
+    //@ts-ignore
+  return <SwipeCard products={products} />;
 }
 
 
