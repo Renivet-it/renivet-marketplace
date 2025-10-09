@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { MarketingStrip as TypeMarketingStrip } from "@/lib/validations";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -16,6 +16,7 @@ export function DealofTheMonthStrip({
   marketingStrip,
   ...props
 }: PageProps) {
+  // --- DESKTOP SCROLL LOGIC ---
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -38,19 +39,79 @@ export function DealofTheMonthStrip({
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
       setCanScrollLeft(scrollLeft > 0);
+      // Use a small buffer to ensure it reaches the end
       setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
     }
   };
 
+  // Effect to handle scroll state on mount and resize for desktop
+  useEffect(() => {
+    const currentRef = scrollRef.current;
+    if (currentRef) {
+      handleScroll(); // Initial check
+      const checkScroll = () => handleScroll();
+      window.addEventListener("resize", checkScroll);
+      return () => window.removeEventListener("resize", checkScroll);
+    }
+  }, [marketingStrip]);
+
+  // --- MOBILE DATA PREPARATION ---
+  // Split the items into two rows for the mobile carousel
+  const midIndex = Math.ceil(marketingStrip.length / 2);
+  const firstRowItems = marketingStrip.slice(0, midIndex);
+  const secondRowItems = marketingStrip.slice(midIndex);
+
   return (
     <section
-      className={cn("w-full bg-[#F4F0EC] py-10 relative overflow-hidden", className)}
+      className={cn("w-full bg-[#F4F0EC] py-10", className)}
       {...props}
     >
-      <div className="max-w-screen-3xl mx-auto px-6 relative">
-        {/* Carousel Container */}
-        <div className="relative">
-          {/* Left Arrow */}
+      <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
+        
+        {/* --- MOBILE VERSION (Two-Row Carousel, 88x88 items) --- */}
+        <div className="md:hidden flex flex-col gap-4">
+          {/* First Row */}
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
+            {firstRowItems.map((item, index) => (
+              <Link
+                key={`row1-${index}`}
+                href={item.href || "/shop"}
+                className="flex-shrink-0 relative rounded-xl overflow-hidden"
+                style={{ width: "88px", height: "88px" }}
+              >
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                  sizes="88px"
+                />
+              </Link>
+            ))}
+          </div>
+          {/* Second Row */}
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
+            {secondRowItems.map((item, index) => (
+              <Link
+                key={`row2-${index}`}
+                href={item.href || "/shop"}
+                className="flex-shrink-0 relative rounded-xl overflow-hidden"
+                style={{ width: "88px", height: "88px" }}
+              >
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                  sizes="88px"
+                />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* --- DESKTOP VERSION (Single-Row Carousel) --- */}
+        <div className="hidden md:block relative">
           <button
             onClick={() => scroll("left")}
             disabled={!canScrollLeft}
@@ -64,7 +125,6 @@ export function DealofTheMonthStrip({
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
 
-          {/* Right Arrow */}
           <button
             onClick={() => scroll("right")}
             disabled={!canScrollRight}
@@ -78,12 +138,10 @@ export function DealofTheMonthStrip({
             <ChevronRight className="w-6 h-6 text-gray-600" />
           </button>
 
-          {/* Scrollable Full-Image Cards */}
           <div
             ref={scrollRef}
             onScroll={handleScroll}
             className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {marketingStrip.map((item, index) => (
               <div
@@ -91,7 +149,6 @@ export function DealofTheMonthStrip({
                 className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
                 style={{ width: "230px", height: "230px" }}
               >
-                {/* Full Image */}
                 <Image
                   src={item.imageUrl}
                   alt={item.title}
@@ -99,20 +156,12 @@ export function DealofTheMonthStrip({
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="230px"
                 />
-
-                {/* Clickable Overlay */}
                 <Link href={item.href || "/shop"} className="absolute inset-0" />
               </div>
             ))}
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </section>
   );
 }
