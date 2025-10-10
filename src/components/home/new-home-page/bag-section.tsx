@@ -35,38 +35,48 @@ export function BagSection({
         {/* ========================================================== */}
         {/* 🔹 FIXED TAG HANDLE SVG (Responsive for Desktop)            */}
         {/* ========================================================== */}
-<div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[85%] w-full h-24 md:h-28 z-0">
-  <svg
-    viewBox="0 0 1300 120"
-    preserveAspectRatio="xMidYMid meet"
-    className="w-full h-full"
-  >
-    {/* angled + flat tag line */}
-    <path
-      d="M 180 100 L 500 25 H 800 L 1120 100"
-      stroke="#4B4B4B"
-      strokeWidth="1.5"
-      fill="none"
-      strokeLinecap="round"
-    />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[85%] w-full z-0">
+          {/* 📱 Mobile version (original curved handle) */}
+          <svg
+            viewBox="0 0 400 80"
+            preserveAspectRatio="xMidYMax meet"
+            className="block md:hidden w-full h-24"
+          >
+            <path
+              d="M 50 70 L 150 20 H 250 L 350 70"
+              stroke="#4B4B4B"
+              strokeWidth="1.5"
+              fill="none"
+              strokeLinecap="round"
+            />
+            <ellipse cx="200" cy="20" rx="40" ry="8" fill="#D2691E" />
+          </svg>
 
-    {/* oval tag hole in center */}
-    <ellipse
-      cx="650"
-      cy="25"
-      rx="45"
-      ry="8"
-      fill="#D2691E"
-    />
-  </svg>
-</div>
+          {/* 💻 Desktop version (edge-to-edge angled handle) */}
+          <svg
+            viewBox="0 0 1300 120"
+            preserveAspectRatio="xMidYMid meet"
+            className="hidden md:block w-full h-28"
+          >
+            <path
+              d="M 180 100 L 500 25 H 800 L 1120 100"
+              stroke="#4B4B4B"
+              strokeWidth="1.5"
+              fill="none"
+              strokeLinecap="round"
+            />
+            <ellipse cx="650" cy="25" rx="45" ry="8" fill="#D2691E" />
+          </svg>
+        </div>
 
 
         {/* ========================================================== */}
         {/* 🔸 MAIN YELLOW TAG CONTAINER                               */}
         {/* ========================================================== */}
         <div
-          className="relative w-full rounded-3xl bg-yellow-500 p-4 sm:p-6 md:p-10 flex items-center"
+          // Use responsive classes: h-[150px] for mobile, remove inline style
+          className="relative w-full rounded-3xl bg-yellow-500 p-4 sm:p-6 md:p-10 flex items-center h-[150px] md:h-auto"
+          // The aspect ratio is now controlled by responsive classes
           style={{ aspectRatio: "1300 / 480" }}
         >
           {/* Left "hole" */}
@@ -92,13 +102,15 @@ export function BagSection({
               {moodboardItems.map((item) => (
                 <CarouselItem key={item.id} className="basis-auto pl-4">
                   <Link href={item.url || "/shop"} className="block group">
-                    <div className="relative w-[150px] h-[144px] md:w-[261px] md:h-[250px] overflow-hidden rounded-2xl bg-white p-2 shadow-sm transition-transform duration-300 group-hover:-translate-y-1">
+                    {/* Use responsive classes for card size */}
+                    <div className="relative w-[100px] h-[100px] md:w-[261px] md:h-[250px] overflow-hidden rounded-2xl mt-8 p-2 shadow-sm transition-transform duration-300 group-hover:-translate-y-1">
                       <Image
                         src={item.imageUrl}
                         alt={item.title || "Bag image"}
                         fill
                         className="object-contain"
-                        sizes="(max-width: 768px) 150px, 261px"
+                        // Update sizes prop for better image optimization
+                        sizes="(max-width: 768px) 100px, 261px"
                       />
                     </div>
                   </Link>
