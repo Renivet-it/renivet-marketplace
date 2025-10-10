@@ -64,7 +64,6 @@ export default async function Page({ searchParams }: PageProps) {
     }),
   ]);
 
-  console.log("🧠 Filtered productssssss:", data);
   return (
     <GeneralShell>
 <AutoRefresher />
@@ -314,7 +313,6 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         }),
         userId ? userWishlistCache.get(userId) : undefined,
     ]);
-console.log("🧠 Filtered products data:", data);
 
     return (
         <ShopProducts

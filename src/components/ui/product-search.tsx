@@ -165,7 +165,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
       <div
         ref={wrapperRef}
         className={cn(
-          "relative flex w-full items-center gap-1 border border-foreground/40",
+           "relative flex w-full items-center gap-1 rounded-full bg-white shadow-md",
           disabled && "cursor-not-allowed opacity-50",
           classNames?.wrapper
         )}
@@ -178,7 +178,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           type="text"
           className={cn(
-            "flex h-9 w-full bg-transparent pr-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+    "flex h-9 w-full bg-transparent pr-10 text-sm text-gray-700 placeholder-gray-500 focus:outline-none",
             className,
             classNames?.input
           )}
