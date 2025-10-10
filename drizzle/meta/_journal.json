@@ -1289,6 +1289,13 @@
       "when": 1759953776245,
       "tag": "0183_chubby_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 184,
+      "version": "7",
+      "when": 1760098707761,
+      "tag": "0184_goofy_longshot",
+      "breakpoints": true
     }
   ]
 }

@@ -602,6 +602,15 @@ export const homeBrandIntroductionBanner = pgTable("home_brand_introduction_sect
     ...timestamps,
 });
 
+export const homeBagSectionBanner = pgTable("home_bag_section", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    title: text("title"),
+    imageUrl: text("image_url"),
+    isActive: boolean("is_active").notNull().default(true),
+    url: text("url"),
+    ...timestamps,
+});
+
 export const homeMatchingBanner = pgTable("home_matching_banner", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     title: text("title").notNull(),

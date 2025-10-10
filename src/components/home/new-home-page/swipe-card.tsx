@@ -308,7 +308,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
           <p className="mt-4 text-gray-700">
             Learn how mindful shopping makes an impact. Read our quick guide.
           </p>
-          <Link href="/slow-fashion-guide" className="mt-6 inline-block">
+          <Link href="/shop" className="mt-6 inline-block">
             <Icons.ArrowRight className="size-8 text-gray-800 transition-colors hover:text-black" />
           </Link>
         </div>

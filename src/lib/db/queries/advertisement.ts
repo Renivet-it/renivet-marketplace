@@ -91,7 +91,7 @@ import {
     homeEffortlessEleganceSection,
     homeEventBannerSectionOne,
     homeEventBannerSectionTwo,
-
+homeBagSectionBanner
 } from "../schema";
 
 class AdvertiseMentQuery {
@@ -5612,6 +5612,93 @@ console.log("test");
         const data = await db
             .delete(homeBrandIntroductionBanner)
             .where(eq(homeBrandIntroductionBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+
+        async getHomePageBagSectionections(p0: { limit: number; page: number; }) {
+        const data = await db.query.homeBagSectionBanner.findMany({
+            orderBy: [asc(homeBagSectionBanner.createdAt)],
+        });
+
+        return data;
+    }
+
+    async getAllHomePageBagSectionection({
+        limit,
+        page,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+    }) {
+        const data = await db.query.homeBagSectionBanner.findMany({
+            limit,
+            offset: (page - 1) * limit,
+            orderBy: [asc(homeBagSectionBanner.createdAt)],
+            extras: {
+                count: db
+                    .$count(homeBagSectionBanner)
+                    .as("home_shop_by_category_count"),
+            },
+        });
+        const parsed = homeShopByCategorySchema.array().parse(data);
+
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getHomePageBagSectionection(id: string) {
+        const data = await db.query.homeBagSectionBanner.findFirst({
+            where: eq(homeBagSectionBanner.id, id),
+        });
+
+        return data;
+    }
+
+    async createHomePageBagSectionection(
+        values: createWomenBrandProduct & {
+            imageUrl: string;
+           title: string | null; // Make title nullable
+        }
+    ) {
+        const data = await db
+            .insert(homeBagSectionBanner)
+            .values(values)
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateHomePageBagSectionection(
+        id: string,
+        values: UpdateHomeShopByCategory & {
+            imageUrl: string;
+        }
+    ) {
+        const data = await db
+            .update(homeBagSectionBanner)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(homeBagSectionBanner.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async deleteHomePageBagSectionection(id: string) {
+        const data = await db
+            .delete(homeBagSectionBanner)
+            .where(eq(homeBagSectionBanner.id, id))
             .returning()
             .then((res) => res[0]);
 
