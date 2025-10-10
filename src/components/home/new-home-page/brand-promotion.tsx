@@ -26,9 +26,9 @@ const contentBackgroundUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN1PvavSZkoU
 
 export function BrandPromotion({
   moodboardItems,
-  title = "Jute & Cotton", // Default title
+  title = "Linen & Cotton", // Default title
   className,
-}: PageProps  ) {
+}: PageProps ) {
   // Don't render the component if there are no items to display
   if (!moodboardItems || !moodboardItems.length) {
     return null;

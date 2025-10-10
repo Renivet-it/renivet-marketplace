@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Icons } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
+import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 
 // ==========================================================
 // 🔹 1. Guest Cart Hook
@@ -273,9 +274,35 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                   <h3 className="text-2xl font-bold capitalize text-gray-900">
                     {product.title}
                   </h3>
-                  <p className="mt-1 h-10 text-sm text-gray-500">
-                    {description}
-                  </p>
+<RichTextViewer
+  content={
+    (() => {
+      const plainText = product.description
+        ? product.description.replace(/<[^>]+>/g, "") // strip HTML tags
+        : "Discover sustainable style that lasts.";
+
+      // Limit to 30 words
+      const limitedText = plainText.split(" ").slice(0, 30).join(" ");
+      const finalText =
+        plainText.split(" ").length > 30
+          ? `${limitedText}...`
+          : limitedText;
+
+      // Rewrap as HTML
+      return `<p>${finalText}</p>`;
+    })()
+  }
+  customClasses={{
+    orderedList:
+      "text-base leading-[1.7] text-gray-700 text-opacity-90",
+    bulletList:
+      "text-base leading-[1.7] text-gray-700 text-opacity-90",
+    heading:
+      "text-base leading-[1.7] text-gray-900 font-medium",
+  }}
+  editorClasses="pt-3"
+/>
+
 
                   <div className="mt-4 flex items-center justify-between">
                     <button
