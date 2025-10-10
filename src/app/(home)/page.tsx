@@ -12,6 +12,7 @@ import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
 import { EventSectionOneBanner } from "@/components/home/new-home-page/event-section-one";
 import { EventSectionTwoBanner } from "@/components/home/new-home-page/event-section-two";
 import { BrandPromotion } from "@/components/home/new-home-page/brand-promotion";
+import { BagSection } from "@/components/home/new-home-page/bag-section";
 import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
 import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
 import { ConciousClick } from "@/components/home/new-home-page/concious-click";
@@ -21,6 +22,7 @@ import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 import { Page as EveryDayEssential } from "@/components/home/new-home-page/everyday-essential";
 import { ProductGrid } from "@/components/home/new-home-page/kids-product-grid";
 import { ProductGridNewArrivals } from "@/components/home/new-home-page/new-arrivals";
+import { SwipeCard } from "@/components/home/new-home-page/swipe-card";
 import { EcoIcons } from "@/components/home/new-home-page/eco-icons";
 
 export default function Page() {
@@ -37,18 +39,16 @@ export default function Page() {
                                            <Suspense>
                 <ShopCategoryFetch />
             </Suspense>
-                            <Suspense>
+                            {/* <Suspense>
                 <BrandCollaborateFetch />
-            </Suspense>
+            </Suspense> */}
                             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
                                <Suspense>
                 <CuratedBannerFetch />
             </Suspense>
-                                           <Suspense>
-                <EventSectionBannerOneFetch />
-            </Suspense>
+
                                                    <Suspense>
                 <EventSectionTwoBannerFetch />
             </Suspense>
@@ -59,48 +59,51 @@ export default function Page() {
                                                <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
+                                                                     <Suspense>
+                <ConciousClickBannerFetch />
+            </Suspense>
+                    <Suspense>
+                <ProductSwipeCardFetch />
+            </Suspense>
+                                             <Suspense>
+                <MatchaBagFetch />
+            </Suspense>
                                     <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-                            <Suspense>
+                            {/* <Suspense>
                 <SustanableBatchFetch />
-            </Suspense>
-                           <Suspense>
+            </Suspense> */}
+                           {/* <Suspense>
                 <EcoIconsFetch />
-            </Suspense>
-                      <Suspense>
+            </Suspense> */}
+                      {/* <Suspense>
                 <BrandProductsFetch />
-            </Suspense>
-                                                              <Suspense>
-                <ConciousClickBannerFetch />
-            </Suspense>
+            </Suspense> */}
                                  {/* <Suspense>
                 <NewAdvertisementsFetch />
             </Suspense> */}
-                                     <Suspense>
-                <MatchaBagFetch />
-            </Suspense>
-            <Suspense>
+            {/* <Suspense>
                 <EveryDayEssentialFetch />
-            </Suspense>
-                                                  <Suspense>
+            </Suspense> */}
+                                              <Suspense>
                 <SwapSpaceBannerFetch />
             </Suspense>
-                                            <Suspense>
-                <ProductGridFetch />
+                                                    <Suspense>
+                <BagSectionFetch />
+            </Suspense>
+                                         <Suspense>
+                <EventSectionBannerOneFetch />
+            </Suspense>
+                                                              <Suspense>
+                <InstaBannerFetch />
+            </Suspense>
+                                                          <Suspense>
+                <ArtisanCollectionFetch />
             </Suspense>
                  <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
-
-                                                          <Suspense>
-                <ArtisanCollectionFetch />
-            </Suspense>
-
-                                                          <Suspense>
-                <InstaBannerFetch />
-            </Suspense>
-
             {/* <Suspense>
                 <BlogsFetch />
             </Suspense> */}
@@ -122,6 +125,13 @@ async function ProductNewArrivalsGridFetch() {
   if (!products.length) return null;
     //@ts-ignore
   return <ProductGridNewArrivals products={products} />;
+}
+
+async function ProductSwipeCardFetch() {
+  const products = await productQueries.getHomePageFeaturedProducts();
+  if (!products.length) return null;
+    //@ts-ignore
+  return <SwipeCard products={products} />;
 }
 
 
@@ -201,6 +211,21 @@ async function BrandPromotionFetch() {
     //@ts-ignore
 
     return <BrandPromotion moodboardItems={sbc} titleData={sbcT} />;
+}
+
+async function BagSectionFetch() {
+    const [sbc, sbcT] = await Promise.all([
+    //@ts-ignore
+
+        WomenHomeSectionQueries.getHomePageBagSectionections(),
+        homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
+    ]);
+    if (!Array.isArray(sbc) || !sbc.length) {
+        return null;
+    }
+    //@ts-ignore
+
+    return <BagSection moodboardItems={sbc} titleData={sbcT} />;
 }
 
 async function MatchaBagFetch() {

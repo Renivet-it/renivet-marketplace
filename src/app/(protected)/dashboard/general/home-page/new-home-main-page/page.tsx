@@ -81,6 +81,12 @@ const menuItems = {
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
             queryKey: "getEventSectionTwo",
         },
+        {
+            title: "Bag Section",
+            url: "/dashboard/general/home-page/bag-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+            queryKey: "getBagSection",
+        },
     ]
 
 };
@@ -97,6 +103,7 @@ const queryMap: Record<string, (params: { limit: number; page: number }) => Prom
     getEffortlessEleganceSection: WomenHomeSectionQueries.getHomePageEffortlessEleganceSections,
     getEventSectionOne: WomenHomeSectionQueries.getHomePageEventOneSections,
     getEventSectionTwo: WomenHomeSectionQueries.getHomePageEventTwoSections,
+    getBagSection: WomenHomeSectionQueries.getHomePageBagSectionections,
 
 };
 

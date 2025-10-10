@@ -2,150 +2,166 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button-general";
 import { MarketingStrip as TypeMarketingStrip } from "@/lib/validations";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PageProps extends GenericProps {
-    marketingStrip: TypeMarketingStrip[];
+  marketingStrip: TypeMarketingStrip[];
 }
 
 export function DealofTheMonthStrip({
-    className,
-    marketingStrip,
-    ...props
+  className,
+  marketingStrip,
+  ...props
 }: PageProps) {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(true);
+  // --- DESKTOP SCROLL LOGIC ---
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
-    const scroll = (direction: 'left' | 'right') => {
-        if (scrollRef.current) {
-            const scrollAmount = 420; // Card width + gap
-            const newScrollLeft = direction === 'left' 
-                ? scrollRef.current.scrollLeft - scrollAmount
-                : scrollRef.current.scrollLeft + scrollAmount;
-            scrollRef.current.scrollTo({
-                left: newScrollLeft,
-                behavior: 'smooth'
-            });
-        }
-    };
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const scrollAmount = 300;
+      const newScrollLeft =
+        direction === "left"
+          ? scrollRef.current.scrollLeft - scrollAmount
+          : scrollRef.current.scrollLeft + scrollAmount;
+      scrollRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: "smooth",
+      });
+    }
+  };
 
-    const handleScroll = () => {
-        if (scrollRef.current) {
-            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-            setCanScrollLeft(scrollLeft > 0);
-            setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-        }
-    };
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      // Use a small buffer to ensure it reaches the end
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
 
-    return (
-        <section
-            className={cn(
-                "w-full bg-[#F4F0EC] py-16 relative",
-                className
-            )}
-              style={{
-        // backgroundImage: "linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)), url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNIahoXCLrApCnKbtW0hkXs6adUVPBQFlvOi2M')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat"
-    }}
-            {...props}
-        >
-            <div className="max-w-screen-2xl mx-auto bg-white/10  px-6 ">
-                {/* Section Title */}
-                <div className="mb-12">
-                    <h2 className="text-3xl md:text-4xl font-light text-black tracking-wide">
-                        Mindfully Curated Home Essentials
-                    </h2>
-                </div>
+  // Effect to handle scroll state on mount and resize for desktop
+  useEffect(() => {
+    const currentRef = scrollRef.current;
+    if (currentRef) {
+      handleScroll(); // Initial check
+      const checkScroll = () => handleScroll();
+      window.addEventListener("resize", checkScroll);
+      return () => window.removeEventListener("resize", checkScroll);
+    }
+  }, [marketingStrip]);
 
-                {/* Carousel Container */}
-                <div className="relative">
-                    {/* Left Arrow */}
-                    <button
-                        onClick={() => scroll('left')}
-                        disabled={!canScrollLeft}
-                        className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
-                            canScrollLeft 
-                                ? 'hover:bg-gray-50 cursor-pointer' 
-                                : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        style={{ marginLeft: '-24px' }}
-                    >
-                        <ChevronLeft className="w-6 h-6 text-gray-600" />
-                    </button>
+  // --- MOBILE DATA PREPARATION ---
+  // Split the items into two rows for the mobile carousel
+  const midIndex = Math.ceil(marketingStrip.length / 2);
+  const firstRowItems = marketingStrip.slice(0, midIndex);
+  const secondRowItems = marketingStrip.slice(midIndex);
 
-                    {/* Right Arrow */}
-                    <button
-                        onClick={() => scroll('right')}
-                        disabled={!canScrollRight}
-                        className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center transition-all duration-300 ${
-                            canScrollRight 
-                                ? 'hover:bg-gray-50 cursor-pointer' 
-                                : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        style={{ marginRight: '-24px' }}
-                    >
-                        <ChevronRight className="w-6 h-6 text-gray-600" />
-                    </button>
+  return (
+    <section
+      className={cn("w-full bg-[#F4F0EC] py-10", className)}
+      {...props}
+    >
+      <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
+        
+        {/* --- MOBILE VERSION (Two-Row Carousel, 88x88 items) --- */}
+        <div className="md:hidden flex flex-col gap-4">
+          {/* First Row */}
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
+            {firstRowItems.map((item, index) => (
+              <Link
+                key={`row1-${index}`}
+                href={item.href || "/shop"}
+                className="flex-shrink-0 relative rounded-xl overflow-hidden"
+                style={{ width: "88px", height: "88px" }}
+              >
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                  sizes="88px"
+                />
+              </Link>
+            ))}
+          </div>
+          {/* Second Row */}
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
+            {secondRowItems.map((item, index) => (
+              <Link
+                key={`row2-${index}`}
+                href={item.href || "/shop"}
+                className="flex-shrink-0 relative rounded-xl overflow-hidden"
+                style={{ width: "88px", height: "88px" }}
+              >
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                  sizes="88px"
+                />
+              </Link>
+            ))}
+          </div>
+        </div>
 
-                    {/* Scrollable Cards Container */}
-                    <div
-                        ref={scrollRef}
-                        onScroll={handleScroll}
-                        className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth"
-                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                    >
-                        {marketingStrip.map((item, index) => (
-                            <div
-                                key={index}
-                                className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
-                                style={{ width: "398px", height: "393px" }}
-                            >
-                                {/* Background Image */}
-                                <div className="absolute inset-0">
-                                    <Image
-                                        src={item.imageUrl}
-                                        alt={item.title}
-                                        fill
-                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                        sizes="398px"
-                                    />
-                                </div>
-                                {/* Overlay Gradient */}
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
+        {/* --- DESKTOP VERSION (Single-Row Carousel) --- */}
+        <div className="hidden md:block relative">
+          <button
+            onClick={() => scroll("left")}
+            disabled={!canScrollLeft}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center transition-all duration-300 ${
+              canScrollLeft
+                ? "hover:bg-gray-100 cursor-pointer"
+                : "opacity-40 cursor-not-allowed"
+            }`}
+            style={{ marginLeft: "-24px" }}
+          >
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
+          </button>
 
-                                {/* Content */}
-                                <div className="relative h-full flex flex-col justify-end p-8">
-                                    {/* Bottom Button - Moved to right */}
-                                    <div className="self-end">
-                                        <Button
-                                            asChild
-                                            variant="outline"
-                                            className="border-white/60 text-white hover:bg-white/10 hover:border-white text-sm px-6 py-2 rounded-none font-normal backdrop-blur-sm bg-black/20"
-                                        >
-                                            <Link href={item.href || "/shop"}>
-                                                → EXPLORE NOW
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+          <button
+            onClick={() => scroll("right")}
+            disabled={!canScrollRight}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center transition-all duration-300 ${
+              canScrollRight
+                ? "hover:bg-gray-100 cursor-pointer"
+                : "opacity-40 cursor-not-allowed"
+            }`}
+            style={{ marginRight: "-24px" }}
+          >
+            <ChevronRight className="w-6 h-6 text-gray-600" />
+          </button>
 
-            <style jsx>{`
-                .scrollbar-hide::-webkit-scrollbar {
-                    display: none;
-                }
-            `}</style>
-        </section>
-    );
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+          >
+            {marketingStrip.map((item, index) => (
+              <div
+                key={index}
+                className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
+                style={{ width: "230px", height: "230px" }}
+              >
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="230px"
+                />
+                <Link href={item.href || "/shop"} className="absolute inset-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }

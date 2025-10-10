@@ -732,6 +732,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             url: "/dashboard/general/home-page/event-section-two",
             permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
         },
+                {
+            title: "Bag Section",
+            url: "/dashboard/general/home-page/bag-section",
+            permissions: BitFieldSitePermission.MANAGE_CATEGORIES | BitFieldSitePermission.MANAGE_BRANDS,
+        },
 
     ]
 },

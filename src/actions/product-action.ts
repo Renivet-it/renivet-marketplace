@@ -763,10 +763,13 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
 }
 
 
-
-export async function toggleHomeNewArrivalsProduct(productId: string, isFeatured: boolean) {
+export async function toggleHomeNewArrivalsProduct(
+    productId: string,
+    isActive: boolean,
+    category: string
+) {
     try {
-        // Check if product exists in products table
+        // ✅ Check if product exists
         const existingProduct = await db
             .select()
             .from(products)
@@ -777,67 +780,100 @@ export async function toggleHomeNewArrivalsProduct(productId: string, isFeatured
             return { success: false, error: "Product not found" };
         }
 
-        if (isFeatured) {
-            // Remove from featured products (soft delete)
-            const result = await db
-                .update(homeNewArrivals)
-                .set({
-                    isDeleted: true,
-                    deletedAt: new Date()
-                })
-                .where(eq(homeNewArrivals.productId, productId));
-
-            if (!result) {
-                return { success: false, error: "Featured product not found" };
-            }
-
-            // Update isStyleWithSubstanceMen to false in products table
-            await db
-                .update(products)
-                .set({ isHomeNewArrival: false })
-                .where(eq(products.id, productId));
-
-            revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
-        } else {
-            // Check if product already exists and is not deleted
+        // =============================
+        // 🟢 ADD PRODUCT TO CATEGORY
+        // =============================
+        if (isActive) {
             const existing = await db
                 .select()
                 .from(homeNewArrivals)
                 .where(eq(homeNewArrivals.productId, productId))
                 .then((res) => res[0]);
 
+            // ✅ Only block if already active *and* we're adding again
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in New Arrivals",
+                };
             }
 
             if (existing) {
-                // Restore if previously soft deleted
+                // Reactivate + update category
                 await db
                     .update(homeNewArrivals)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
+                        category,
                     })
                     .where(eq(homeNewArrivals.productId, productId));
             } else {
-                // Add new entry
-                await db.insert(homeNewArrivals)
-                    .values({ productId });
+                // Insert new record
+                await db.insert(homeNewArrivals).values({
+                    productId,
+                    category,
+                });
             }
 
-            // Update isHomeAndLivingSectionTopPicks to true in products table
+            // ✅ Update product table flag
             await db
                 .update(products)
-                .set({ isHomeNewArrival: true })
+                .set({
+                    isHomeNewArrival: true,
+                })
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: `Product added to New Arrivals category: ${category}`,
+            };
         }
+
+        // =============================
+        // 🔴 REMOVE PRODUCT
+        // =============================
+        const existing = await db
+            .select()
+            .from(homeNewArrivals)
+            .where(eq(homeNewArrivals.productId, productId))
+            .then((res) => res[0]);
+
+        if (!existing) {
+            return {
+                success: false,
+                error: "Product not found in New Arrivals list",
+            };
+        }
+
+        await db
+            .update(homeNewArrivals)
+            .set({
+                isDeleted: true,
+                deletedAt: new Date(),
+            })
+            .where(eq(homeNewArrivals.productId, productId));
+
+        // ✅ Update products table flag
+        await db
+            .update(products)
+            .set({
+                isHomeNewArrival: false,
+            })
+            .where(eq(products.id, productId));
+
+        revalidatePath("/dashboard/general/products");
+        return {
+            success: true,
+            message: "Product removed from New Arrivals list",
+        };
     } catch (error) {
-        console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        console.error("Error toggling New Arrivals status:", error);
+        return {
+            success: false,
+            error: "Failed to update New Arrivals status",
+        };
     }
 }
 

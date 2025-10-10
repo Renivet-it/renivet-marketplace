@@ -1,0 +1,1 @@
+ALTER TABLE "home_new_arrivals" ADD COLUMN "category" text;

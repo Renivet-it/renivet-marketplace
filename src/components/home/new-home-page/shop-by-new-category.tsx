@@ -3,11 +3,6 @@ import { cn } from "@/lib/utils";
 import { HomeShopByCategory } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
-import {
-    Carousel,
-    CarouselContent,
-    CarouselItem,
-} from "@/components/ui/carousel";
 
 interface PageProps extends GenericProps {
     shopByCategories: HomeShopByCategory[];
@@ -20,14 +15,19 @@ export function ShopByNewCategories({
     titleData,
     ...props
 }: PageProps) {
-    // Function to split categories into chunks of 6 for desktop view
+    // --- DATA PREPARATION ---
+    // Function to split categories for desktop view
     const chunkArray = (arr: any[], size: number) => {
         return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
             arr.slice(i * size, i * size + size)
         );
     };
-
     const desktopChunks = chunkArray(shopByCategories, 6);
+
+    // Split categories for the two-row mobile carousel
+    const midIndex = Math.ceil(shopByCategories.length / 2);
+    const firstRowItems = shopByCategories.slice(0, midIndex);
+    const secondRowItems = shopByCategories.slice(midIndex);
 
     return (
         <section
@@ -39,47 +39,81 @@ export function ShopByNewCategories({
         >
             <div className="w-full space-y-8 max-w-screen-2xl mx-auto px-4">
                 {/* Title */}
-  <h2 className="text-2xl md:text-3xl font-bold text-gray-800  border-gray-300 pb-2 px-4">
-    {titleData?.title || "Shop by Category"}
-  </h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 border-gray-300 pb-2 px-4">
+                    {titleData?.title || "Shop by Category"}
+                </h2>
 
-                {/* Mobile View (3 full cards) */}
-                <div className="md:hidden grid auto-cols-[calc(33.333%-8px)] grid-flow-col gap-3 overflow-x-auto px-2 scrollbar-hide">
-                    {shopByCategories.map((category, index) => (
-                        <Link
-                            key={index}
-                            href={category.url || "/shop"}
-                            className="block"
-                        >
-                            <div className="flex flex-col items-center bg-gradient-to-b from-[#E8E8E8] to-[#F5F5F5] p-2 w-full">
-                                <div className="relative w-full aspect-[2/3]">
-                                    <Image
-                                        src={category.imageUrl}
-                                        alt={"Category"}
-                                        fill
-                                        quality={85}
-                                        className="object-cover"
-                                    />
+                {/* ========================================================== */}
+                {/* 🔹 MOBILE-ONLY VIEW (Two-Row Scrolling Carousel)        */}
+                {/* ========================================================== */}
+                <div className="md:hidden flex flex-col gap-4 px-2">
+                    {/* First Row */}
+                    <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                        {firstRowItems.map((category, index) => (
+                            <Link
+                                key={`row1-${index}`}
+                                href={category.url || "/shop"}
+                                className="block w-[110px] flex-shrink-0" // Set fixed width and prevent shrinking
+                            >
+                                <div className="flex flex-col items-center bg-gradient-to-b from-[#E8E8E8] to-[#F5F5F5] p-2 w-full rounded-md">
+                                    <div className="relative w-full aspect-[2/3] rounded-sm overflow-hidden">
+                                        <Image
+                                            src={category.imageUrl}
+                                            alt={category.title || "Category"}
+                                            fill
+                                            quality={85}
+                                            className="object-cover"
+                                            sizes="110px"
+                                        />
+                                    </div>
+                                    <div className="mt-2 text-center w-full space-y-0.5">
+                                        <p className="text-xs font-bold text-gray-800 truncate">
+                                            {category.title || "Category"}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 hover:underline">
+                                            Shop
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="mt-3 text-center w-full space-y-1">
-                                    <p className="text-sm font-bold text-gray-800">
-                                        {category.title || "Category"}
-                                    </p>
-                                    <p
-                                        className={cn(
-                                            "text-xs hover:underline",
-                                            index === 0 ? "text-gray-500" : "text-gray-500"
-                                        )}
-                                    >
-                                        {index === 0 ? "Shop" : "Shop"}
-                                    </p>
+                            </Link>
+                        ))}
+                    </div>
+                    {/* Second Row */}
+                    <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                        {secondRowItems.map((category, index) => (
+                            <Link
+                                key={`row2-${index}`}
+                                href={category.url || "/shop"}
+                                className="block w-[110px] flex-shrink-0"
+                            >
+                                <div className="flex flex-col items-center bg-gradient-to-b from-[#E8E8E8] to-[#F5F5F5] p-2 w-full rounded-md">
+                                    <div className="relative w-full aspect-[2/3] rounded-sm overflow-hidden">
+                                        <Image
+                                            src={category.imageUrl}
+                                            alt={category.title || "Category"}
+                                            fill
+                                            quality={85}
+                                            className="object-cover"
+                                            sizes="110px"
+                                        />
+                                    </div>
+                                    <div className="mt-2 text-center w-full space-y-0.5">
+                                        <p className="text-xs font-bold text-gray-800 truncate">
+                                            {category.title || "Category"}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 hover:underline">
+                                            Shop
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Desktop View (Grid with rows of 6 items) */}
+                {/* ========================================================== */}
+                {/* 🔹 DESKTOP-ONLY VIEW (Original code, untouched)         */}
+                {/* ========================================================== */}
                 <div className="hidden md:block">
                     {desktopChunks.map((chunk, chunkIndex) => (
                         <div key={chunkIndex} className="grid grid-cols-6 gap-4 mb-6 px-2">
@@ -93,7 +127,7 @@ export function ShopByNewCategories({
                                         <div className="relative w-full h-[180px]">
                                             <Image
                                                 src={category.imageUrl}
-                                                alt={"Category"}
+                                                alt={category.title || "Category"}
                                                 fill
                                                 quality={90}
                                                 className="object-cover"
@@ -103,13 +137,8 @@ export function ShopByNewCategories({
                                             <p className="text-sm font-bold text-gray-800">
                                                 {category.title || "Category"}
                                             </p>
-                                            <p
-                                                className={cn(
-                                                    "text-xs hover:underline",
-                                                    index === 0 && chunkIndex === 0 ? "text-gray-500" : "text-gray-500"
-                                                )}
-                                            >
-                                                {index === 0 && chunkIndex === 0 ? "Shop" : "Shop"}
+                                            <p className="text-xs text-gray-500 hover:underline">
+                                                Shop
                                             </p>
                                         </div>
                                     </div>

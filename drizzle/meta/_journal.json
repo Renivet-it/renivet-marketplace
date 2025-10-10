@@ -1282,6 +1282,20 @@
       "when": 1756840926481,
       "tag": "0182_curved_pyro",
       "breakpoints": true
+    },
+    {
+      "idx": 183,
+      "version": "7",
+      "when": 1759953776245,
+      "tag": "0183_chubby_zarda",
+      "breakpoints": true
+    },
+    {
+      "idx": 184,
+      "version": "7",
+      "when": 1760098707761,
+      "tag": "0184_goofy_longshot",
+      "breakpoints": true
     }
   ]
 }
