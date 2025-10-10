@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
+import { SearchableProductTypes } from "./search-component";
 
 interface PageProps {
     searchParams: Promise<{
@@ -36,8 +37,34 @@ interface PageProps {
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  const productTypes = await productTypeCache.getAll();
+  // const productTypes = await productTypeCache.getAll();
+    const params = await searchParams;
 
+ const [productTypes, data] = await Promise.all([
+    productTypeCache.getAll(),
+    productQueries.getProducts({
+      page: parseInt(params.page || "1"),
+      limit: parseInt(params.limit || "30"),
+      search: params.search,
+      isAvailable: true,
+      isActive: true,
+      isPublished: true,
+      isDeleted: false,
+      verificationStatus: "approved",
+      brandIds: params.brandIds?.split(","),
+      minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
+      maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 10000,
+      categoryId: params.categoryId,
+      subcategoryId: params.subCategoryId,
+      productTypeId: params.productTypeId,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+      colors: params.colors?.split(","),
+      sizes: params.sizes?.split(","),
+    }),
+  ]);
+
+  console.log("🧠 Filtered productssssss:", data);
   return (
     <GeneralShell>
       <div className="flex flex-col gap-5 md:flex-row">
@@ -83,20 +110,24 @@ export default async function Page({ searchParams }: PageProps) {
           </div>
 
           {/* Mobile Product Types */}
-          <div className="block md:hidden">
-            <ProductTypesRow
-              productTypes={productTypes}
-              productTypeId={(await searchParams).productTypeId ?? ""}
-            />
-          </div>
+<div className="block md:hidden">
+  <SearchableProductTypes
+    productTypes={productTypes}
+    productTypeId={(await searchParams).productTypeId ?? ""}
+    initialProducts={data?.data ?? []} // 👈 renamed prop
 
-          {/* Desktop Product Types (limit 10) */}
-          <div className="hidden md:block">
-            <ProductTypesRowDesktop
-              productTypes={productTypes.slice(0, 10)}
-              productTypeId={(await searchParams).productTypeId ?? ""}
-            />
-          </div>
+  />
+</div>
+
+{/* Desktop Product Types */}
+<div className="hidden md:block">
+  <SearchableProductTypes
+    productTypes={productTypes.slice(0, 10)}
+    productTypeId={(await searchParams).productTypeId ?? ""}
+    initialProducts={data?.data ?? []} // 👈 renamed prop
+    isDesktop
+  />
+</div>
 
           <Separator />
 
@@ -287,6 +318,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         }),
         userId ? userWishlistCache.get(userId) : undefined,
     ]);
+console.log("🧠 Filtered products data:", data);
 
     return (
         <ShopProducts
