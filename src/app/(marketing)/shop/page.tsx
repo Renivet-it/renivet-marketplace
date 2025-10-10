@@ -17,6 +17,7 @@ import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import { SearchableProductTypes } from "./search-component";
+import AutoRefresher from "./AutoRefresher";
 
 interface PageProps {
     searchParams: Promise<{
@@ -39,7 +40,6 @@ interface PageProps {
 export default async function Page({ searchParams }: PageProps) {
   // const productTypes = await productTypeCache.getAll();
     const params = await searchParams;
-
  const [productTypes, data] = await Promise.all([
     productTypeCache.getAll(),
     productQueries.getProducts({
@@ -67,6 +67,8 @@ export default async function Page({ searchParams }: PageProps) {
   console.log("🧠 Filtered productssssss:", data);
   return (
     <GeneralShell>
+<AutoRefresher />
+
       <div className="flex flex-col gap-5 md:flex-row">
         {/* Desktop filters - Fixed sidebar */}
         <aside className="hidden md:block md:basis-1/5 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto">
@@ -99,13 +101,7 @@ export default async function Page({ searchParams }: PageProps) {
 
           {/* Desktop search and sort */}
           <div className="hidden md:flex md:items-center md:justify-between md:gap-4">
-            <div className="flex-1 max-w-md">
-              <SearchInput
-                type="search"
-                placeholder="Search for a product..."
-                className="h-10"
-              />
-            </div>
+    
             <ShopSortBy />
           </div>
 
