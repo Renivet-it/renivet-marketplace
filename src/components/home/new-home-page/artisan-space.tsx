@@ -42,15 +42,14 @@ export function ArtisanCollection({
           </h2>
         )}
 
-        {/* The container with the CORRECT top-to-bottom gradient background */}
+        {/* The container with the gradient background */}
         <div
           className="py-10"
           style={{
-            // CORRECTED: Gradient is now 'to bottom'
             background: "linear-gradient(to bottom, #FFFFFF 9%, #D78D2F 100%)"
           }}
         >
-          {/* The carousel with the white cards sits ON TOP of the gradient */}
+          {/* The carousel with responsive spacing */}
           <Carousel
             opts={{
               align: "start",
@@ -59,20 +58,16 @@ export function ArtisanCollection({
             plugins={[Autoplay({ delay: 4000, stopOnInteraction: true })]}
             className="w-full"
           >
-            <CarouselContent className="-ml-6 px-6">
+            <CarouselContent className="-ml-4 md:-ml-6 px-4 md:px-6">
               {shopByCategories.map((category, index) => (
                 <CarouselItem
                   key={index}
-                  className="pl-6 basis-auto" // Use padding for the gap
+                  className="pl-4 md:pl-6 basis-auto" // Responsive padding for the gap
                 >
                   <Link href={category.url || "/shop"} className="block group">
-                    {/* The white card with fixed dimensions */}
+                    {/* The white card with responsive dimensions */}
                     <div
-                      className="relative bg-white rounded-2xl overflow-hidden shadow-sm"
-                      style={{
-                        width: "230px",
-                        height: "300px",
-                      }}
+                      className="relative bg-white rounded-2xl overflow-hidden shadow-sm w-[150px] h-[200px] md:w-[230px] md:h-[300px]"
                     >
                       <Image
                         src={category.imageUrl}
@@ -80,7 +75,7 @@ export function ArtisanCollection({
                         fill
                         quality={90}
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        sizes="230px"
+                        sizes="(max-width: 768px) 150px, 230px"
                       />
                     </div>
                   </Link>

@@ -17,12 +17,11 @@ export function SwapSpace({ className, banners, ...props }: PageProps) {
     return null;
   }
 
-  // const backgroundImageUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNOYfiCWBHKYuSX87vxCz1aEsjfWTRVJZ9Qmtn";
   const backgroundImageUrl = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN3wy7IOl64McafQHoWsZUzihAkJ3DF5EGgPpY";
 
   return (
     <section
-      className={cn("w-full py-10 md:py-16 bg-center bg-cover bg-no-repeat", className )} 
+      className={cn("w-full py-10 md:py-16 bg-center bg-cover bg-no-repeat px-4", className  )} 
       style={{ backgroundImage: `url('${backgroundImageUrl}')` }}
       {...props}
     >
@@ -44,24 +43,20 @@ export function SwapSpace({ className, banners, ...props }: PageProps) {
             {banners.map((item, index) => (
               <CarouselItem
                 key={index}
-                className="pl-4 basis-auto" // Use basis-auto for fixed-width items
+                className="pl-4 basis-auto" // Use basis-auto for items with a set width
               >
+                {/* Applying responsive width and height classes */}
                 <div 
-                  className="group relative overflow-hidden"
-                  style={{
-                    width: "208px",
-                    height: "313px",
-                  }}
+                  className="group relative overflow-hidden w-[141px] h-[212px] md:w-[208px] md:h-[313px]"
                 >
                   <Link href={item.url || "/shop"} className="block w-full h-full">
                     <Image
                       src={item.imageUrl}
                       alt={item.title || "Product Image"}
                       fill
-                      className="object-cover rounded-2xl" // Apply rounded corners to the image itself
-                      sizes="208px"
+                      className="object-cover rounded-2xl" // Rounded corners on the image
+                      sizes="(max-width: 768px) 141px, 208px"
                     />
-                    {/* The "Shop Now" button is hidden as it's not in the new design */}
                   </Link>
                 </div>
               </CarouselItem>
