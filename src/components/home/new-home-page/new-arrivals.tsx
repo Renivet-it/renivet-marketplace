@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Icons } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // ==========================================================
 // 🔹 GUEST CART HOOK (Copied from your SwipeCard component for consistency)
@@ -129,6 +130,8 @@ export function ProductGridNewArrivals({
 // --- PRODUCT CARD COMPONENT (WITH CORRECTED API LOGIC) ---
 function ProductCard({ product, userId }: { product: Product; userId?: string }) {
   const { addToGuestCart } = useGuestCart();
+    const router = useRouter();
+
   const { mutateAsync: addToCart, isLoading } =
     trpc.general.users.cart.addProductToCart.useMutation();
 
@@ -149,7 +152,8 @@ function ProductCard({ product, userId }: { product: Product; userId?: string })
           quantity: 1,
           userId,
         });
-        toast.success("Added to Cart!"); // Simplified toast message for consistency
+        console.log("Product added to cart for user:", userId);
+        // toast.success("Added to Cart!"); // Simplified toast message for consistency
       } else {
         // --- GUEST USER (Logic from SwipeCard) ---
         addToGuestCart({
