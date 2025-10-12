@@ -168,7 +168,7 @@ async function CuratedBannerFetch() {
 
 async function SwapSpaceBannerFetch() {
     const brandProducts =
-        await WomenHomeSectionQueries.getHomePageSwapBannerSections();
+        await productQueries.getHomeHeroProducts();
     if (!brandProducts.length) return null;
 
     return <SwapSpace banners={brandProducts} />;

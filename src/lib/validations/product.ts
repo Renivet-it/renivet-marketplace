@@ -442,6 +442,7 @@ export const productSchema = z.object({
         isBeautyTopPicks: z.boolean().optional().default(false),
         isHomeNewArrival: z.boolean().optional().default(false),
         isAddedInEventProductPage: z.boolean().optional().default(false),
+        isHomeHeroProducts: z.boolean().optional().default(false),
 });
 
 export const productOptionSchema = z.object({

@@ -91,6 +91,7 @@ isBeautyTopPicks: boolean("is_beauty_top_picks").default(false),
 isBeautyNewArrival: boolean("is_beauty_new_Arrivals").default(false),
 isHomeNewArrival: boolean("is_home_new_Arrivals").default(false),
 isAddedInEventProductPage: boolean("is_added_in_event_product_page").default(false),
+isHomeHeroProducts: boolean("is_home_hero_products").default(false),
         embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
@@ -244,6 +245,20 @@ export const beautyNewArrivals = pgTable(
 
 export const homeNewArrivals = pgTable(
     "home_new_arrivals",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        category: text("category"),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
+
+export const homeProductSection = pgTable(
+    "home_product_Section",
     {
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         productId: uuid("product_id")
@@ -500,6 +515,12 @@ export const beautyNewArrivalsRelation = relations(beautyNewArrivals, ({ one }) 
 export const homeNewArrivalsRelation = relations(homeNewArrivals, ({ one }) => ({
   product: one(products, {
     fields: [homeNewArrivals.productId],
+    references: [products.id],
+  }),
+}));
+export const homeProductSectionRelation = relations(homeProductSection, ({ one }) => ({
+  product: one(products, {
+    fields: [homeProductSection.productId],
     references: [products.id],
   }),
 }));
