@@ -466,6 +466,17 @@ export function ProductAction({ product }: PageProps) {
                                     : "Add to Featured Women"}
                             </span>
                         </DropdownMenuItem>
+                                           <DropdownMenuItem
+                            onClick={handleToggleProductHeroHomePage}
+                            disabled={isLoading}
+                        >
+                            <Icons.Star className="size-4" />
+                            <span>
+                                {product.isHomeHeroProducts
+                                    ? "Remove from Hero Home Page"
+                                    : "Add to Hero Home Page"}
+                            </span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={handleToggleFeaturedMen}
                             disabled={isLoading}
