@@ -92,7 +92,20 @@ interface SwipeableProductCardProps {
 }
 
 // ==========================================================
-// 🔹 3. SwipeCard Component
+// 🔹 3. NEW Animated Text Guide
+// ==========================================================
+const AnimatedSwipeGuide = () => (
+  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+    <div className="flex items-center space-x-2 p-2 bg-black/50 text-white rounded-full text-sm font-medium animate-pulse">
+      <Icons.MoreHorizontal className="h-4 w-4" />
+      <span>Swipe left or right</span>
+    </div>
+  </div>
+);
+
+
+// ==========================================================
+// 🔹 4. SwipeCard Component (Updated)
 // ==========================================================
 export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
   const { addToGuestCart } = useGuestCart();
@@ -103,8 +116,8 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
   );
 
   const [goneCards, setGoneCards] = useState<Set<number>>(new Set());
+  const [hasInteracted, setHasInteracted] = useState(false); // State to hide the guide
 
-  // Initial spring setup
   const to = (i: number) => ({
     x: 0,
     y: i * -4,
@@ -123,17 +136,14 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
   const { mutateAsync: addToCart } =
     trpc.general.users.cart.addProductToCart.useMutation();
 
-  // --------------------------------------------------------
-  // 🔸 Swipe logic (left/right)
-  // --------------------------------------------------------
   const handleSwipe = async (index: number, dir: number) => {
     if (goneCards.has(index)) return;
-    setGoneCards((prev) => new Set([...prev, index])); // mark as gone
+    if (!hasInteracted) setHasInteracted(true); // User has swiped, so hide the guide
+    setGoneCards((prev) => new Set([...prev, index]));
 
     const product = filteredProducts[index]?.product;
     if (!product) return;
 
-    // Animate card out
     api.start((i) => {
       if (i !== index) return;
       const x = (200 + window.innerWidth) * dir;
@@ -146,7 +156,6 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
       };
     });
 
-    // Handle cart addition
     if (dir === 1) {
       try {
         if (userId) {
@@ -175,7 +184,6 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
       }
     }
 
-    // Keep it gone visually
     setTimeout(() => {
       api.start((i) =>
         i === index
@@ -188,9 +196,6 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     }, 400);
   };
 
-  // --------------------------------------------------------
-  // 🔸 Gesture binding
-  // --------------------------------------------------------
   const bind = useDrag(
     ({
       args: [index],
@@ -200,6 +205,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
       velocity,
     }) => {
       if (goneCards.has(index)) return;
+      if (down && !hasInteracted) setHasInteracted(true); // Hide guide on first touch
       const trigger = velocity > 0.2;
       const dir = xDir < 0 ? -1 : 1;
 
@@ -224,24 +230,19 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     }
   );
 
-  // --------------------------------------------------------
-  // 🔸 UI
-  // --------------------------------------------------------
+  // Condition to show the guide
+  const showGuide = !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
+
   return (
     <div className=" w-full bg-[#F8F5F2] p-8 lg:p-16">
-
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-        {/* --- Swipe Area --- */}
         <div className="relative mx-auto flex h-[450px] w-full max-w-md items-center justify-center">
+          {/* --- Render Animated Text Guide --- */}
+          {showGuide && <AnimatedSwipeGuide />}
+
           {springs.map(({ x, y, rot, scale }, i) => {
             const product = filteredProducts[i]?.product;
             if (!product || goneCards.has(i)) return null;
-
-            const description =
-              product.description && product.description.length > 100
-                ? `${product.description.slice(0, 100)}...`
-                : product.description ||
-                  "Discover sustainable style that lasts.";
 
             return (
               <animated.div
@@ -274,36 +275,27 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                   <h3 className="text-2xl font-bold capitalize text-gray-900">
                     {product.title}
                   </h3>
-<RichTextViewer
-  content={
-    (() => {
-      const plainText = product.description
-        ? product.description.replace(/<[^>]+>/g, "") // strip HTML tags
-        : "Discover sustainable style that lasts.";
-
-      // Limit to 30 words
-      const limitedText = plainText.split(" ").slice(0, 30).join(" ");
-      const finalText =
-        plainText.split(" ").length > 30
-          ? `${limitedText}...`
-          : limitedText;
-
-      // Rewrap as HTML
-      return `<p>${finalText}</p>`;
-    })()
-  }
-  customClasses={{
-    orderedList:
-      "text-base leading-[1.7] text-gray-700 text-opacity-90",
-    bulletList:
-      "text-base leading-[1.7] text-gray-700 text-opacity-90",
-    heading:
-      "text-base leading-[1.7] text-gray-900 font-medium",
-  }}
-  editorClasses="pt-3"
-/>
-
-
+                  <RichTextViewer
+                    content={
+                      (() => {
+                        const plainText = product.description
+                          ? product.description.replace(/<[^>]+>/g, "")
+                          : "Discover sustainable style that lasts.";
+                        const limitedText = plainText.split(" ").slice(0, 30).join(" ");
+                        const finalText =
+                          plainText.split(" ").length > 30
+                            ? `${limitedText}...`
+                            : limitedText;
+                        return `<p>${finalText}</p>`;
+                      })()
+                    }
+                    customClasses={{
+                      orderedList: "text-base leading-[1.7] text-gray-700 text-opacity-90",
+                      bulletList: "text-base leading-[1.7] text-gray-700 text-opacity-90",
+                      heading: "text-base leading-[1.7] text-gray-900 font-medium",
+                    }}
+                    editorClasses="pt-3"
+                  />
                   <div className="mt-4 flex items-center justify-between">
                     <button
                       onClick={() => handleSwipe(i, -1)}
@@ -312,7 +304,6 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                     >
                       <Icons.X className="size-5" />
                     </button>
-
                     <button
                       onClick={() => handleSwipe(i, 1)}
                       className="flex size-10 items-center justify-center rounded-full bg-green-500 text-white shadow-md transition-transform hover:scale-110 hover:bg-green-600"
@@ -327,7 +318,6 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
           })}
         </div>
 
-        {/* --- Right Side Guide --- */}
         <div className="mx-auto w-full max-w-md rounded-2xl border border-white/40 bg-white/30 p-8 text-left shadow-lg backdrop-blur-lg">
           <h2 className="font-serif text-3xl text-gray-800">
             Slow Fashion Guide

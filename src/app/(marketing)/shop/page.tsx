@@ -98,11 +98,19 @@ export default async function Page({ searchParams }: PageProps) {
             {/* --- END MODIFICATION --- */}
           </div>
 
-          {/* Desktop search and sort */}
-          <div className="hidden md:flex md:items-center md:justify-between md:gap-4">
-    
-            <ShopSortBy />
-          </div>
+       {/* Desktop search and sort */}
+<div className="hidden md:flex md:items-center md:justify-between md:gap-4">
+  {/* This div will now take up all available space */}
+  <div className="flex-1">
+    {/* Your Search Input component would go here */}
+    {/* e.g., <ShopSearch /> */}
+  </div>
+
+  {/* This component will be pushed to the right */}
+  <ShopSortBy />
+
+</div>
+
 
           {/* Mobile Product Types */}
 <div className="block md:hidden">

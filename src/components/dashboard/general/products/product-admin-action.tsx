@@ -9,6 +9,7 @@ import {
     toggleHomeAndLivingNewArrivalsSection,
     toggleHomeAndLivingTopPicksSection,
     toggleHomeNewArrivalsProduct,
+    toggleHomeHeroProduct,
     toggleKidsFetchSection,
     toggleMenStyleWithSubstance,
     toggleWomenStyleWithSubstance,
@@ -69,6 +70,8 @@ interface PageProps {
         // CORRECTED: This prop now holds the category string or null
         homeNewArrivalCategory?: string | null;
         isAddedInEventProductPage?: boolean;
+        isHomeHeroProducts?: boolean;
+
     };
 }
 
@@ -193,6 +196,26 @@ export function ProductAction({ product }: PageProps) {
             const result = await toggleWomenStyleWithSubstance(
                 product.id,
                 product.isStyleWithSubstanceWoMen ?? false
+            );
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+      const handleToggleProductHeroHomePage = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleHomeHeroProduct(
+                product.id,
+                product.isHomeHeroProducts ?? false
             );
             if (result.success) {
                 refetch();
@@ -441,6 +464,17 @@ export function ProductAction({ product }: PageProps) {
                                 {product.isFeaturedWomen
                                     ? "Remove from Featured Women"
                                     : "Add to Featured Women"}
+                            </span>
+                        </DropdownMenuItem>
+                                           <DropdownMenuItem
+                            onClick={handleToggleProductHeroHomePage}
+                            disabled={isLoading}
+                        >
+                            <Icons.Star className="size-4" />
+                            <span>
+                                {product.isHomeHeroProducts
+                                    ? "Remove from Hero Home Page"
+                                    : "Add to Hero Home Page"}
                             </span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
