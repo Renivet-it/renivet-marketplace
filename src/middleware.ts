@@ -8,12 +8,26 @@ export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
     const res = NextResponse.next();
 
-    if (url.pathname === "/api/webhooks/clerk") return NextResponse.next();
+    // ✅ 1. Allow public pages without auth
+    const publicRoutes = [
+        "/", // homepage
+        "/shop",
+        "/about",
+        "/contact",
+        "/privacy-policy",
+        "/terms",
+        "/shipping-policy",
+        "/refund-policy",
+        "/api/webhooks/clerk",
+    ];
 
+    // If the path is public, skip auth checks
+    if (publicRoutes.some((route) => url.pathname === route || url.pathname.startsWith(route)))
+        return NextResponse.next();
+
+    // ✅ 2. Redirect rules
     if (url.pathname === "/support")
-        return NextResponse.redirect(new URL("https://dsc.gg/drvgo"), {
-            status: 301,
-        });
+        return NextResponse.redirect(new URL("https://dsc.gg/drvgo"), { status: 301 });
 
     if (url.pathname === "/auth")
         return NextResponse.redirect(new URL("/auth/signin", url));
@@ -21,6 +35,7 @@ export default clerkMiddleware(async (auth, req) => {
     if (url.pathname === "/products")
         return NextResponse.redirect(new URL("/shop", url));
 
+    // ✅ 3. Authenticated routes
     const isAuth = await auth();
 
     if (isAuth.sessionId) {
@@ -33,47 +48,37 @@ export default clerkMiddleware(async (auth, req) => {
         });
 
         const res = await cFetch<ResponseData<CachedUser>>(
-            new URL(
-                `/api/permission?${searchParams.toString()}`,
-                url
-            ).toString()
+            new URL(`/api/permission?${searchParams.toString()}`, url).toString()
         );
+
         if (res.error) return NextResponse.redirect(new URL("/", url));
 
         if (url.pathname.startsWith("/dashboard")) {
             const existingUser = res.data!.data!;
-            const { brandPermissions, sitePermissions } = getUserPermissions(
-                existingUser.roles
-            );
+            const { brandPermissions, sitePermissions } = getUserPermissions(existingUser.roles);
 
             if (url.pathname === "/dashboard") {
-                if (existingUser.brand) {
+                if (existingUser.brand)
                     return NextResponse.redirect(
-                        new URL(
-                            `/dashboard/brands/${existingUser.brand.id}/analytics`,
-                            url
-                        )
+                        new URL(`/dashboard/brands/${existingUser.brand.id}/analytics`, url)
                     );
-                } else
-                    return NextResponse.redirect(
-                        new URL("/dashboard/general/banners", url)
-                    );
+                else
+                    return NextResponse.redirect(new URL("/dashboard/general/banners", url));
             }
 
             if (url.pathname.startsWith("/dashboard/general")) {
                 if (existingUser.brand)
                     return NextResponse.redirect(new URL("/dashboard", url));
 
-                const routes = generalSidebarConfig
-                    .map((item) => item.items.map((subItem) => subItem))
-                    .flat();
-
+                const routes = generalSidebarConfig.flatMap((item) => item.items);
                 if (url.pathname !== "/dashboard/general") {
                     if (
-                        url.pathname === "/dashboard/general/terms" ||
-                        url.pathname === "/dashboard/general/privacy" ||
-                        url.pathname === "/dashboard/general/shipping-policy" ||
-                        url.pathname === "/dashboard/general/refund-policy"
+                        [
+                            "/dashboard/general/terms",
+                            "/dashboard/general/privacy",
+                            "/dashboard/general/shipping-policy",
+                            "/dashboard/general/refund-policy",
+                        ].includes(url.pathname)
                     )
                         return NextResponse.next();
 
@@ -81,17 +86,11 @@ export default clerkMiddleware(async (auth, req) => {
                         url.pathname.startsWith(route.url)
                     );
                     if (!accessedRoute)
-                        return NextResponse.redirect(
-                            new URL("/dashboard", url)
-                        );
+                        return NextResponse.redirect(new URL("/dashboard", url));
 
-                    const isAuthorized = hasPermission(sitePermissions, [
-                        accessedRoute.permissions,
-                    ]);
+                    const isAuthorized = hasPermission(sitePermissions, [accessedRoute.permissions]);
                     if (!isAuthorized)
-                        return NextResponse.redirect(
-                            new URL("/dashboard", url)
-                        );
+                        return NextResponse.redirect(new URL("/dashboard", url));
                 }
             }
 
@@ -101,29 +100,19 @@ export default clerkMiddleware(async (auth, req) => {
 
                 if (url.pathname === "/dashboard/brands")
                     return NextResponse.redirect(
-                        new URL(
-                            `/dashboard/brands/${existingUser.brand.id}`,
-                            url
-                        )
+                        new URL(`/dashboard/brands/${existingUser.brand.id}`, url)
                     );
 
                 const routes = generateBrandSideNav(existingUser.brand.id)
-                    .map((item) => item.items.map((subItem) => subItem))
-                    .flat();
+                    .flatMap((item) => item.items);
 
-                if (
-                    url.pathname !==
-                    `/dashboard/brands/${existingUser.brand.id}`
-                ) {
+                if (url.pathname !== `/dashboard/brands/${existingUser.brand.id}`) {
                     const accessedRoute = routes.find((route) =>
                         url.pathname.startsWith(route.url)
                     );
                     if (!accessedRoute)
                         return NextResponse.redirect(
-                            new URL(
-                                `/dashboard/brands/${existingUser.brand.id}`,
-                                url
-                            )
+                            new URL(`/dashboard/brands/${existingUser.brand.id}`, url)
                         );
 
                     const isAuthorized = hasPermission(brandPermissions, [
@@ -131,16 +120,14 @@ export default clerkMiddleware(async (auth, req) => {
                     ]);
                     if (!isAuthorized)
                         return NextResponse.redirect(
-                            new URL(
-                                `/dashboard/brands/${existingUser.brand.id}`,
-                                url
-                            )
+                            new URL(`/dashboard/brands/${existingUser.brand.id}`, url)
                         );
                 }
             }
         }
     }
 
+    // ✅ 4. If not signed in, protect private routes
     if (!isAuth.sessionId)
         if (
             url.pathname.startsWith("/dashboard") ||
