@@ -264,12 +264,14 @@ const exportData = dataToUse.flatMap((order) =>
             ? 0
             : order.shipments?.[0]?.awbDetailsShipRocketJson?.response?.data?.freight_charges || 0;
         const paymentGatewayFee = order.totalAmount * 0.02 > 2000 ? order.totalAmount * 0.02 : 2000;
-
+// console.log(order.items, "order");
         return {
             "Order ID": order.id,
             "Order Date": format(new Date(order.createdAt), "yyyy-MM-dd"),
             "Product SKU": item.product.sku || "N/A",
             "Product Name": item.product.title || "N/A",
+            "Customer State": order.address?.state || "N/A",
+            "Customer Zip": order.address?.zip || "N/A",
             "Gross Sale (Incl. GST)": formatPriceTag(grossSale, true),
             "Net Taxable Value": formatPriceTag(netTaxableValue, true),
             "GST Collected (18%)": formatPriceTag(gstCollected, true),
