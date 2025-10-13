@@ -8,77 +8,16 @@ import Link from "next/link";
 import { Icons } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
-import { RichTextViewer } from "@/components/ui/rich-text-viewer";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 
 // ==========================================================
-// 🔹 1. Guest Cart Hook
-// ==========================================================
-function useGuestCart() {
-  const [guestCart, setGuestCart] = useState<any[]>([]);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("guest_cart");
-      if (stored) setGuestCart(JSON.parse(stored));
-    } catch {
-      setGuestCart([]);
-    }
-  }, []);
-
-  const syncGuestCart = () => {
-    try {
-      const stored = localStorage.getItem("guest_cart");
-      setGuestCart(stored ? JSON.parse(stored) : []);
-    } catch {
-      setGuestCart([]);
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener("guestCartUpdated", syncGuestCart);
-    window.addEventListener("storage", syncGuestCart);
-    return () => {
-      window.removeEventListener("guestCartUpdated", syncGuestCart);
-      window.removeEventListener("storage", syncGuestCart);
-    };
-  }, []);
-
-  const addToGuestCart = (item: any) => {
-    setGuestCart((prev) => {
-      const existing = prev.find(
-        (x) =>
-          x.productId === item.productId &&
-          (x.variantId || null) === (item.variantId || null)
-      );
-
-      const updated = existing
-        ? prev.map((x) =>
-            x.productId === item.productId &&
-            (x.variantId || null) === (item.variantId || null)
-              ? { ...x, quantity: x.quantity + item.quantity }
-              : x
-          )
-        : [...prev, item];
-
-      localStorage.setItem("guest_cart", JSON.stringify(updated));
-      window.dispatchEvent(new Event("guestCartUpdated"));
-      toast.success(existing ? "Increased quantity in Cart" : "Added to Cart!");
-      return updated;
-    });
-  };
-
-  return { guestCart, addToGuestCart };
-}
-
-// ==========================================================
-// 🔹 2. Types
+// 🔹 1. Types
 // ==========================================================
 interface Product {
   id: string;
   slug: string;
   media: { mediaItem: { url: string } }[];
   title: string;
-  description?: string;
   price: number;
   brand?: { name: string };
 }
@@ -92,7 +31,7 @@ interface SwipeableProductCardProps {
 }
 
 // ==========================================================
-// 🔹 3. NEW Animated Text Guide
+// 🔹 2. Animated Text Guide
 // ==========================================================
 const AnimatedSwipeGuide = () => (
   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
@@ -103,12 +42,11 @@ const AnimatedSwipeGuide = () => (
   </div>
 );
 
-
 // ==========================================================
-// 🔹 4. SwipeCard Component (Updated)
+// 🔹 3. SwipeCard Component (Updated with Toast)
 // ==========================================================
 export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
-  const { addToGuestCart } = useGuestCart();
+  const { addToGuestWishlist } = useGuestWishlist();
 
   const filteredProducts = useMemo(
     () => products.filter((p) => p.category === "Swipe Left or Right"),
@@ -116,7 +54,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
   );
 
   const [goneCards, setGoneCards] = useState<Set<number>>(new Set());
-  const [hasInteracted, setHasInteracted] = useState(false); // State to hide the guide
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const to = (i: number) => ({
     x: 0,
@@ -133,12 +71,20 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     from: from(i),
   }));
 
-  const { mutateAsync: addToCart } =
-    trpc.general.users.cart.addProductToCart.useMutation();
+  // ✅ Corrected tRPC hook name and added toast on success
+  const { mutateAsync: addToWishlist } =
+    trpc.general.users.wishlist.addProductInWishlist.useMutation({
+      onSuccess: () => {
+        toast.success("Added to Wishlist!");
+      },
+      onError: (err) => {
+        toast.error(err.message || "Could not add to wishlist.");
+      },
+    });
 
   const handleSwipe = async (index: number, dir: number) => {
     if (goneCards.has(index)) return;
-    if (!hasInteracted) setHasInteracted(true); // User has swiped, so hide the guide
+    if (!hasInteracted) setHasInteracted(true);
     setGoneCards((prev) => new Set([...prev, index]));
 
     const product = filteredProducts[index]?.product;
@@ -156,21 +102,14 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
       };
     });
 
-    if (dir === 1) {
+    if (dir === 1) { // On right swipe, add to wishlist
       try {
         if (userId) {
-          await addToCart({
-            productId: product.id,
-            variantId: null,
-            quantity: 1,
-            userId,
-          });
-          toast.success("Added to Cart!");
+          await addToWishlist({ productId: product.id });
         } else {
-          addToGuestCart({
+          addToGuestWishlist({
             productId: product.id,
             variantId: null,
-            quantity: 1,
             title: product.title,
             brand: product.brand?.name,
             price: product.price,
@@ -178,9 +117,12 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
             sku: null,
             fullProduct: product,
           });
+          // ✅ Manually trigger toast for guest users
+          toast.success("Added to Wishlist!");
         }
       } catch (err: any) {
-        toast.error(err.message || "Could not add to cart.");
+        // This will now primarily catch errors from the guest wishlist logic
+        toast.error(err.message || "Could not add to wishlist.");
       }
     }
 
@@ -205,7 +147,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
       velocity,
     }) => {
       if (goneCards.has(index)) return;
-      if (down && !hasInteracted) setHasInteracted(true); // Hide guide on first touch
+      if (down && !hasInteracted) setHasInteracted(true);
       const trigger = velocity > 0.2;
       const dir = xDir < 0 ? -1 : 1;
 
@@ -230,14 +172,12 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     }
   );
 
-  // Condition to show the guide
   const showGuide = !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
 
   return (
     <div className=" w-full bg-[#F8F5F2] p-8 lg:p-16">
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
         <div className="relative mx-auto flex h-[450px] w-full max-w-md items-center justify-center">
-          {/* --- Render Animated Text Guide --- */}
           {showGuide && <AnimatedSwipeGuide />}
 
           {springs.map(({ x, y, rot, scale }, i) => {
@@ -275,27 +215,6 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                   <h3 className="text-2xl font-bold capitalize text-gray-900">
                     {product.title}
                   </h3>
-                  <RichTextViewer
-                    content={
-                      (() => {
-                        const plainText = product.description
-                          ? product.description.replace(/<[^>]+>/g, "")
-                          : "Discover sustainable style that lasts.";
-                        const limitedText = plainText.split(" ").slice(0, 30).join(" ");
-                        const finalText =
-                          plainText.split(" ").length > 30
-                            ? `${limitedText}...`
-                            : limitedText;
-                        return `<p>${finalText}</p>`;
-                      })()
-                    }
-                    customClasses={{
-                      orderedList: "text-base leading-[1.7] text-gray-700 text-opacity-90",
-                      bulletList: "text-base leading-[1.7] text-gray-700 text-opacity-90",
-                      heading: "text-base leading-[1.7] text-gray-900 font-medium",
-                    }}
-                    editorClasses="pt-3"
-                  />
                   <div className="mt-4 flex items-center justify-between">
                     <button
                       onClick={() => handleSwipe(i, -1)}
@@ -309,7 +228,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                       className="flex size-10 items-center justify-center rounded-full bg-green-500 text-white shadow-md transition-transform hover:scale-110 hover:bg-green-600"
                       aria-label="Like"
                     >
-                      <Icons.Check className="size-5" />
+                      <Icons.Heart className="size-5" />
                     </button>
                   </div>
                 </div>
