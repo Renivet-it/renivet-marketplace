@@ -3,9 +3,9 @@
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"; // Make sure this path is correct
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 
-// --- INTERFACES (UNCHANGED) ---
+// --- INTERFACES ---
 interface InstaPost {
   id: string;
   imageUrl: string;
@@ -17,111 +17,57 @@ interface PageProps {
   className?: string;
 }
 
-const topCategoryImages = [
-  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcCP5AieO4H8MeNYoyJQSarWCqgVpRxP5lDBu",
-  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjzPoAomPpnZoHc5f2E4rFNLugdK3ty9ObjYx",
-  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNyDgSLH5TEHko4KfX8CDn1z7Q2migSIjw0dsy",
-  // "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcCP5AieO4H8MeNYoyJQSarWCqgVpRxP5lDBu",
-  // "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjzPoAomPpnZoHc5f2E4rFNLugdK3ty9ObjYx",
-];
-
-export function InstaBanner({ className, banners }: PageProps ) {
+export function InstaBanner({ className, banners }: PageProps) {
   return (
-    <section className={cn("w-full py-12 bg-[#F4F0EC]", className)}>
+    <section className={cn("w-full bg-[#F4F0EC]", className)}>
       <div className="max-w-[1509px] mx-auto px-4">
-
         {/* ========================================================== */}
-        {/* 🔹 DESKTOP-ONLY VIEW (Original code, untouched)          */}
+        {/* 🔹 UNIFIED & LEFT-ALIGNED VIEW                            */}
         {/* ========================================================== */}
-        <div className="hidden md:block">
-          <div
-            className="w-full rounded-2xl pt-8 px-8 relative"
-            style={{
-              background: 'linear-gradient(to bottom, #C95E5A 0%, rgba(201, 94, 90, 0) 50%, #C95E5A 100%)',
-              aspectRatio: '1309 / 404',
-            }}
-          >
-            <div className="flex flex-wrap justify-start gap-4 mb-8">
-              {topCategoryImages.map((imageUrl, index) => (
-                <Link
-                  href={"/shop"}
-                  key={index}
-                  className="block w-24 h-24 relative rounded-lg overflow-hidden shadow-md"
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={`Category ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="96px"
-                  />
-                </Link>
-              ))}
-            </div>
-            <div className="absolute bottom-[-40px] left-0 right-0 px-8">
-              <div className="flex flex-wrap justify-start gap-6">
-                {banners.map((post, index) => (
-                  <div
-                    key={post.id || index}
-                    className="group bg-[#FFFBEB] rounded-2xl p-2 shadow-lg"
-                    style={{
-                      width: "231px",
-                      height: "348px",
-                    }}
-                  >
-                    <Link href={post.url || "#"} className="block w-full h-full">
-                      <div className="relative w-full h-full">
-                        <Image
-                          src={post.imageUrl}
-                          alt={`Festive item ${index + 1}`}
-                          fill
-                          className="object-contain transition-transform duration-300 group-hover:scale-105"
-                          sizes="231px"
-                        />
-                      </div>
-                    </Link>
+        <div
+          className={cn(
+            "w-full rounded-2xl",
+            "p-4 md:p-14" // Responsive padding: smaller on mobile, larger on desktop
+          )}
+          style={{
+            background: "linear-gradient(to bottom, #C95E5A 0%, rgba(201, 94, 90, 0) 50%, #C95E5A 100%)",
+          }}
+        >
+          {/* --- Desktop View: Left-Aligned Flex Layout --- */}
+          <div className="hidden md:flex flex-wrap justify-start gap-6">
+            {banners.map((post, index) => (
+              <div
+                key={post.id || index}
+                className="group bg-[#FFFBEB] rounded-2xl p-2 shadow-lg"
+                style={{
+                  width: "231px",
+                  height: "348px",
+                }}
+              >
+                <Link href={post.url || "#"} className="block w-full h-full">
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={post.imageUrl}
+                      alt={`Festive item ${index + 1}`}
+                      fill
+                      className="object-contain transition-transform duration-300 group-hover:scale-105"
+                      sizes="231px"
+                    />
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================== */}
-        {/* 🔹 MOBILE-ONLY VIEW (New, separate logic)                 */}
-        {/* ========================================================== */}
-        <div className="md:hidden">
-          <div
-            className="w-full rounded-2xl pt-6 px-4 pb-8 relative"
-            style={{
-              background: 'linear-gradient(to bottom, #C95E5A 0%, rgba(201, 94, 90, 0) 50%, #C95E5A 100%)',
-            }}
-          >
-            {/* Mobile Top Banners (Scrollable) */}
-            <div className="flex justify-start gap-3 mb-6 overflow-x-auto scrollbar-hide">
-              {topCategoryImages.map((imageUrl, index) => (
-                <Link
-                  href={"/shop"}
-                  key={index}
-                  className="block w-16 h-16 relative rounded-lg overflow-hidden shadow-md flex-shrink-0"
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={`Category ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="64px"
-                  />
                 </Link>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
 
-            {/* Mobile Bottom Cards (Carousel) */}
-            <Carousel opts={{ align: "start", loop: false }} className="w-full">
-              <CarouselContent className="-ml-2">
+          {/* --- Mobile View: Left-Aligned Carousel --- */}
+          <div className="md:hidden">
+            <Carousel opts={{ align: "start", loop: banners.length > 2 }} className="w-full">
+              {/* Use ml-0 and control spacing with padding on items */}
+              <CarouselContent className="ml-0">
                 {banners.map((post, index) => (
-                  <CarouselItem key={post.id || index} className="pl-2 basis-auto">
-                    <div className="group bg-[#FFFBEB] rounded-2xl p-1.5 shadow-lg w-[140px] h-[210px]">
+                  // Use basis-1/2 for a 2-across view on mobile, with padding for gutters
+                  <CarouselItem key={post.id || index} className="basis-1/2 pr-2">
+                    <div className="group bg-[#FFFBEB] rounded-2xl p-1.5 shadow-lg w-full h-auto aspect-[2/3]">
                       <Link href={post.url || "#"} className="block w-full h-full">
                         <div className="relative w-full h-full">
                           <Image
@@ -129,7 +75,7 @@ export function InstaBanner({ className, banners }: PageProps ) {
                             alt={`Festive item ${index + 1}`}
                             fill
                             className="object-contain"
-                            sizes="140px"
+                            sizes="(max-width: 767px) 50vw, 140px"
                           />
                         </div>
                       </Link>
