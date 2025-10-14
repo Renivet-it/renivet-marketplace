@@ -341,7 +341,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(getAbsoluteURL()),
 };
 
-// ✅ Safe wrapper component (prevents server render crash → no noindex)
+// ✅ Root layout with global crash protection
 export default function RootLayout({ children }: LayoutProps) {
   return (
     <html
@@ -350,49 +350,45 @@ export default function RootLayout({ children }: LayoutProps) {
       className={cn(lato.variable, dmsans.variable, rubik.variable)}
     >
       <head>
-        {FB_PIXEL_ID && (
-          <>
-            {/* ✅ Meta Pixel Script */}
-            <Script id="fb-pixel" strategy="afterInteractive">
-              {`
-                !function(f,b,e,v,n,t,s){
-                  if(f.fbq)return;
-                  n=f.fbq=function(){n.callMethod?
-                  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                  if(!f._fbq)f._fbq=n;
-                  n.push=n;n.loaded=!0;n.version='2.0';
-                  n.queue=[];t=b.createElement(e);t.async=!0;
-                  t.src='https://connect.facebook.net/en_US/fbevents.js';
-                  s=b.getElementsByTagName(e)[0];
-                  s.parentNode.insertBefore(t,s)
-                }(window,document,'script');
-                fbq('init', '${FB_PIXEL_ID}');
-                fbq('track', 'PageView');
-              `}
-            </Script>
+        {/* ✅ Facebook Pixel Script */}
+        <Script id="fb-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s){
+              if(f.fbq)return;
+              n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;
+              n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src='https://connect.facebook.net/en_US/fbevents.js';
+              s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)
+            }(window,document,'script');
+            fbq('init', '${FB_PIXEL_ID}');
+            fbq('track', 'PageView');
+          `}
+        </Script>
 
-            {/* ✅ NoScript Fallback */}
-            <noscript>
-              <img
-                height="1"
-                width="1"
-                style={{ display: "none" }}
-                src={`https://www.facebook.com/tr?id=${FB_PIXEL_ID}&ev=PageView&noscript=1`}
-                alt=""
-              />
-            </noscript>
-          </>
-        )}
+        {/* ✅ NoScript Fallback */}
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src={`https://www.facebook.com/tr?id=${FB_PIXEL_ID}&ev=PageView&noscript=1`}
+            alt="Facebook Pixel"
+          />
+        </noscript>
       </head>
 
       <body className={cn("min-h-screen overflow-x-hidden antialiased")}>
         <ServerProvider>
           <ClientProvider>
-            {/* ✅ Prevent cart/wishlist crash during hydration */}
+            {/* ✅ Avoid guest cart/wishlist crash during hydration */}
             <MergeGuestCart />
             <MergeGuestWishlist />
 
-            {/* ✅ Render children safely */}
+            {/* ✅ Safe render wrapper — never crash to Next.js error */}
             <SafeRender>{children}</SafeRender>
 
             <Toaster />
@@ -405,18 +401,22 @@ export default function RootLayout({ children }: LayoutProps) {
   );
 }
 
-// ✅ SafeRender wrapper: avoids runtime error → prevents Next.js error overlay (and "noindex")
+// ✅ SafeRender wrapper (prevents __next_error__ and noindex)
 function SafeRender({ children }: { children: React.ReactNode }) {
   try {
     return <>{children}</>;
   } catch (error) {
-    console.error("Render error:", error);
+    console.error("Render error caught in RootLayout:", error);
     return (
-      <main className="flex items-center justify-center min-h-screen text-center">
-        <h1 className="text-2xl font-semibold">
+      <main className="flex items-center justify-center min-h-screen text-center p-8">
+        <h1 className="text-2xl font-semibold mb-2">
           Something went wrong — please refresh or try again later.
         </h1>
+        <p className="text-gray-600 max-w-md mx-auto">
+          We’re fixing this issue. Your experience matters to us.
+        </p>
       </main>
     );
   }
 }
+
