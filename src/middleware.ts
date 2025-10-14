@@ -156,7 +156,7 @@ export const config = {
     matcher: [
         "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|mp4|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
         "/(api(?!/webhooks/clerk)|trpc)(.*)",
-        // "/",
+        "/",
         "/dashboard/:path*",
         "/profile/:path*",
         "/auth/:path*",
