@@ -25,13 +25,25 @@ export const viewport: Viewport = {
     maximumScale: 1,
 };
 
+// export const metadata: Metadata = {
 export const metadata: Metadata = {
     title: {
-        default: siteConfig.name,
+        default: `${siteConfig.name} | Sustainable Marketplace for Quality Products`,
         template: "%s | " + siteConfig.name,
     },
-    description: siteConfig.description,
-    keywords: siteConfig.keywords,
+    description:
+        "Renivet is a sustainable online marketplace connecting conscious consumers with high-quality, eco-friendly brands. Discover verified sellers, transparent pricing, and responsibly sourced products — because better choices build a better world.",
+    keywords: [
+        "Renivet",
+        "sustainable marketplace",
+        "eco friendly shopping",
+        "ethical brands",
+        "green products",
+        "responsible sourcing",
+        "online shopping India",
+        "sustainable lifestyle",
+        "shop eco brands",
+    ],
     authors: [
         {
             name: `${siteConfig.name} Team`,
@@ -45,7 +57,7 @@ export const metadata: Metadata = {
         telephone: false,
     },
     referrer: "origin-when-cross-origin",
-    category: siteConfig.category,
+    category: "Sustainable Shopping & Lifestyle",
     appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
@@ -53,14 +65,15 @@ export const metadata: Metadata = {
     },
     creator: siteConfig.name,
     openGraph: {
-        title: siteConfig.name,
-        description: siteConfig.description,
+        title: "Renivet | Sustainable Marketplace for a Better Future",
+        description:
+            "Shop responsibly with Renivet — your trusted sustainable marketplace featuring eco-conscious brands, verified sellers, and ethically sourced products.",
         url: getAbsoluteURL(),
         siteName: siteConfig.name,
         images: [
             {
                 ...siteConfig.og,
-                alt: siteConfig.name,
+                alt: "Renivet - Sustainable Marketplace",
             },
         ],
         locale: "en_US",
@@ -68,8 +81,9 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: "summary_large_image",
-        title: siteConfig.name,
-        description: siteConfig.description,
+        title: "Renivet | Sustainable Marketplace for a Better Future",
+        description:
+            "Discover eco-friendly, ethically made products from verified brands on Renivet. Shop consciously and make a difference.",
         images: [siteConfig.og.url],
         creator: "@itsdrvgo",
     },
@@ -91,6 +105,71 @@ export const metadata: Metadata = {
     manifest: "/site.webmanifest",
     metadataBase: new URL(getAbsoluteURL()),
 };
+//     title: {
+//         default: siteConfig.name,
+//         template: "%s | " + siteConfig.name,
+//     },
+//     description: siteConfig.description,
+//     keywords: siteConfig.keywords,
+//     authors: [
+//         {
+//             name: `${siteConfig.name} Team`,
+//             url: getAbsoluteURL("/about#team"),
+//         },
+//     ],
+//     publisher: `${siteConfig.name} Team`,
+//     formatDetection: {
+//         email: false,
+//         address: false,
+//         telephone: false,
+//     },
+//     referrer: "origin-when-cross-origin",
+//     category: siteConfig.category,
+//     appleWebApp: {
+//         capable: true,
+//         statusBarStyle: "black-translucent",
+//         title: siteConfig.name,
+//     },
+//     creator: siteConfig.name,
+//     openGraph: {
+//         title: siteConfig.name,
+//         description: siteConfig.description,
+//         url: getAbsoluteURL(),
+//         siteName: siteConfig.name,
+//         images: [
+//             {
+//                 ...siteConfig.og,
+//                 alt: siteConfig.name,
+//             },
+//         ],
+//         locale: "en_US",
+//         type: "website",
+//     },
+//     twitter: {
+//         card: "summary_large_image",
+//         title: siteConfig.name,
+//         description: siteConfig.description,
+//         images: [siteConfig.og.url],
+//         creator: "@itsdrvgo",
+//     },
+//     icons: {
+//         icon: [
+//             {
+//                 url: "/favicon.ico",
+//                 sizes: "32x32",
+//                 type: "image/x-icon",
+//             },
+//             {
+//                 url: "/favicon-96x96.png",
+//                 sizes: "96x96",
+//                 type: "image/png",
+//             },
+//         ],
+//         apple: "/apple-touch-icon.png",
+//     },
+//     manifest: "/site.webmanifest",
+//     metadataBase: new URL(getAbsoluteURL()),
+// };
 
 export default function RootLayout({ children }: LayoutProps) {
     return (
