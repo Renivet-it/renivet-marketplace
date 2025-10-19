@@ -246,279 +246,557 @@ class ProductQuery {
         return parsed;
     }
 
-async getProducts({
-    limit,
-    page,
-    search,
-    brandIds,
-    minPrice,
-    maxPrice,
-    categoryId,
-    subcategoryId,
-    productTypeId,
-    isActive,
-    isAvailable,
-    isPublished,
-    isDeleted,
-    verificationStatus,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-    productImage,
-    productVisiblity,
-        colors,
-    sizes,
-}: {
-    limit: number;
-    page: number;
-    search?: string;
-    brandIds?: string[];
-    minPrice?: number | null;
-    maxPrice?: number | null;
-    categoryId?: string;
-    subcategoryId?: string;
-    productTypeId?: string;
-    isActive?: boolean;
-    isAvailable?: boolean;
-    isPublished?: boolean;
-    isDeleted?: boolean;
-    verificationStatus?: Product["verificationStatus"];
-    sortBy?: "price" | "createdAt";
-    sortOrder?: "asc" | "desc";
-    productImage?: Product["productImageFilter"];
-    productVisiblity?: Product["productVisiblityFilter"];
-        colors?: string[];
-    sizes?: string[];
-}) {
-    // Price conversions
-    minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
-    maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
+// async getProducts({
+//     limit,
+//     page,
+//     search,
+//     brandIds,
+//     minPrice,
+//     maxPrice,
+//     categoryId,
+//     subcategoryId,
+//     productTypeId,
+//     isActive,
+//     isAvailable,
+//     isPublished,
+//     isDeleted,
+//     verificationStatus,
+//     sortBy = "createdAt",
+//     sortOrder = "desc",
+//     productImage,
+//     productVisiblity,
+//         colors,
+//     sizes,
+// }: {
+//     limit: number;
+//     page: number;
+//     search?: string;
+//     brandIds?: string[];
+//     minPrice?: number | null;
+//     maxPrice?: number | null;
+//     categoryId?: string;
+//     subcategoryId?: string;
+//     productTypeId?: string;
+//     isActive?: boolean;
+//     isAvailable?: boolean;
+//     isPublished?: boolean;
+//     isDeleted?: boolean;
+//     verificationStatus?: Product["verificationStatus"];
+//     sortBy?: "price" | "createdAt";
+//     sortOrder?: "asc" | "desc";
+//     productImage?: Product["productImageFilter"];
+//     productVisiblity?: Product["productVisiblityFilter"];
+//         colors?: string[];
+//     sizes?: string[];
+// }) {
+//     // Price conversions
+//     minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
+//     maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
 
-    let searchQuery;
-    if (search?.length) {
-        const searchEmbedding = await getEmbedding(search);
-        const highRelevanceThreshold = 0.6;
-        const lowRelevanceThreshold = 0.8;
-        const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
-        const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-        searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
-    }
-   const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
-    const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
-    const normalizedColors = colors?.map(c => c.toLowerCase());
-const normalizedSizes = sizes?.map(s => s.toLowerCase());
-    const filters = [
-        searchQuery,
-        !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
-        !!minPrice
-            ? sql`(
-                COALESCE(${products.price}, 0) >= ${minPrice} 
-                OR EXISTS (
-                    SELECT 1 FROM ${productVariants} pv
-                    WHERE pv.product_id = ${products.id}
-                    AND COALESCE(pv.price, 0) >= ${minPrice}
-                    AND pv.is_deleted = false
-                )
-            )`
-            : undefined,
-        !!maxPrice
-            ? sql`(
-                COALESCE(${products.price}, 0) <= ${maxPrice}
-                OR EXISTS (
-                    SELECT 1 FROM ${productVariants} pv
-                    WHERE pv.product_id = ${products.id}
-                    AND COALESCE(pv.price, 0) <= ${maxPrice}
-                    AND pv.is_deleted = false
-                )
-            )`
-            : undefined,
-        isActive !== undefined ? eq(products.isActive, isActive) : undefined,
-        isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
-        isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
-        isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
-        categoryId ? eq(products.categoryId, categoryId) : undefined,
-        subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
-        productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
-        verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
-        productImage
-            ? productImage === "with"
-                ? hasMedia(products, "media")
-                : productImage === "without"
-                  ? noMedia(products, "media")
-                  : undefined
-            : undefined,
-        productVisiblity
-            ? productVisiblity === "public"
-              ? eq(products.isDeleted, false)
-              : productVisiblity === "private"
-              ? eq(products.isDeleted, true)
-              : undefined
-            : undefined,
-             // 🟦 Color filter (for JSON object format)
-  !!colors?.length
-    ? sql`
-        EXISTS (
-          SELECT 1
-          FROM ${productOptions} po,
-               jsonb_to_recordset(po.values) AS item(name text)
-          WHERE po.product_id = ${products.id}
-            AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
-            AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
-        )
-      `
-    : undefined,
+//     let searchQuery;
+//     if (search?.length) {
+//         const searchEmbedding = await getEmbedding(search);
+//         const highRelevanceThreshold = 0.6;
+//         const lowRelevanceThreshold = 0.8;
+//         const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
+//         const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+//         searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+//     }
+//    const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
+//     const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
+//     const normalizedColors = colors?.map(c => c.toLowerCase());
+// const normalizedSizes = sizes?.map(s => s.toLowerCase());
+//     const filters = [
+//         searchQuery,
+//         !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
+//         !!minPrice
+//             ? sql`(
+//                 COALESCE(${products.price}, 0) >= ${minPrice} 
+//                 OR EXISTS (
+//                     SELECT 1 FROM ${productVariants} pv
+//                     WHERE pv.product_id = ${products.id}
+//                     AND COALESCE(pv.price, 0) >= ${minPrice}
+//                     AND pv.is_deleted = false
+//                 )
+//             )`
+//             : undefined,
+//         !!maxPrice
+//             ? sql`(
+//                 COALESCE(${products.price}, 0) <= ${maxPrice}
+//                 OR EXISTS (
+//                     SELECT 1 FROM ${productVariants} pv
+//                     WHERE pv.product_id = ${products.id}
+//                     AND COALESCE(pv.price, 0) <= ${maxPrice}
+//                     AND pv.is_deleted = false
+//                 )
+//             )`
+//             : undefined,
+//         isActive !== undefined ? eq(products.isActive, isActive) : undefined,
+//         isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
+//         isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
+//         isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
+//         categoryId ? eq(products.categoryId, categoryId) : undefined,
+//         subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
+//         productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
+//         verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
+//         productImage
+//             ? productImage === "with"
+//                 ? hasMedia(products, "media")
+//                 : productImage === "without"
+//                   ? noMedia(products, "media")
+//                   : undefined
+//             : undefined,
+//         productVisiblity
+//             ? productVisiblity === "public"
+//               ? eq(products.isDeleted, false)
+//               : productVisiblity === "private"
+//               ? eq(products.isDeleted, true)
+//               : undefined
+//             : undefined,
+//              // 🟦 Color filter (for JSON object format)
+//   !!colors?.length
+//     ? sql`
+//         EXISTS (
+//           SELECT 1
+//           FROM ${productOptions} po,
+//                jsonb_to_recordset(po.values) AS item(name text)
+//           WHERE po.product_id = ${products.id}
+//             AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+//             AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
+//         )
+//       `
+//     : undefined,
 
-  // 🟩 Size filter (for JSON object format)
-  !!sizes?.length
-    ? sql`
-        EXISTS (
-          SELECT 1
-          FROM ${productOptions} po,
-               jsonb_to_recordset(po.values) AS item(name text)
-          WHERE po.product_id = ${products.id}
-            AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
-            AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
-        )
-      `
-    : undefined,
-              // +++ ADDED: Conditionally push the new color and size filters +++
-    ].filter(Boolean);
-if (colors?.length) {
-  filters.push(sql`
-    EXISTS (
-      SELECT 1
-      FROM ${productOptions} po,
-           jsonb_to_recordset(po.values) AS item(name text)
-      WHERE po.product_id = ${products.id}
-        AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
-        AND LOWER(item.name) IN (${sql.join(colors.map(c => c.toLowerCase()), sql`, `)})
-    )
-  `);
-}
+//   // 🟩 Size filter (for JSON object format)
+//   !!sizes?.length
+//     ? sql`
+//         EXISTS (
+//           SELECT 1
+//           FROM ${productOptions} po,
+//                jsonb_to_recordset(po.values) AS item(name text)
+//           WHERE po.product_id = ${products.id}
+//             AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+//             AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
+//         )
+//       `
+//     : undefined,
+//               // +++ ADDED: Conditionally push the new color and size filters +++
+//     ].filter(Boolean);
+// if (colors?.length) {
+//   filters.push(sql`
+//     EXISTS (
+//       SELECT 1
+//       FROM ${productOptions} po,
+//            jsonb_to_recordset(po.values) AS item(name text)
+//       WHERE po.product_id = ${products.id}
+//         AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+//         AND LOWER(item.name) IN (${sql.join(colors.map(c => c.toLowerCase()), sql`, `)})
+//     )
+//   `);
+// }
 
-if (sizes?.length) {
-  filters.push(sql`
-    EXISTS (
-      SELECT 1
-      FROM ${productOptions} po,
-           jsonb_to_recordset(po.values) AS item(name text)
-      WHERE po.product_id = ${products.id}
-        AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
-        AND LOWER(item.name) IN (${sql.join(sizes.map(s => s.toLowerCase()), sql`, `)})
-    )
-  `);
-}
-    const orderBy = [];
+// if (sizes?.length) {
+//   filters.push(sql`
+//     EXISTS (
+//       SELECT 1
+//       FROM ${productOptions} po,
+//            jsonb_to_recordset(po.values) AS item(name text)
+//       WHERE po.product_id = ${products.id}
+//         AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+//         AND LOWER(item.name) IN (${sql.join(sizes.map(s => s.toLowerCase()), sql`, `)})
+//     )
+//   `);
+// }
+//     const orderBy = [];
 
-    if (search?.length) {
-        const searchEmbedding = await getEmbedding(search);
-        const highRelevanceThreshold = 0.6;
-        orderBy.push(
-            sql`CASE 
-                WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0 
-                ELSE 1 
-            END ASC`,
-            sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
-        );
-    }
+//     if (search?.length) {
+//         const searchEmbedding = await getEmbedding(search);
+//         const highRelevanceThreshold = 0.6;
+//         orderBy.push(
+//             sql`CASE 
+//                 WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0 
+//                 ELSE 1 
+//             END ASC`,
+//             sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+//         );
+//     }
 
-    if (sortBy && sortOrder) {
-        orderBy.push(
-            sortBy === "price"
-                ? sql`
-                    (
-                        SELECT COALESCE(
-                            MIN(COALESCE(pv.price, ${products.price}, 0)),
-                            COALESCE(${products.price}, 0)
-                        )
-                        FROM ${productVariants} pv
-                        WHERE pv.product_id = ${products.id}
-                        AND pv.is_deleted = false
-                    ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
-                `
-                : sortOrder === "asc"
-                  ? asc(products[sortBy])
-                  : desc(products[sortBy])
-        );
-    }
+//     if (sortBy && sortOrder) {
+//         orderBy.push(
+//             sortBy === "price"
+//                 ? sql`
+//                     (
+//                         SELECT COALESCE(
+//                             MIN(COALESCE(pv.price, ${products.price}, 0)),
+//                             COALESCE(${products.price}, 0)
+//                         )
+//                         FROM ${productVariants} pv
+//                         WHERE pv.product_id = ${products.id}
+//                         AND pv.is_deleted = false
+//                     ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
+//                 `
+//                 : sortOrder === "asc"
+//                   ? asc(products[sortBy])
+//                   : desc(products[sortBy])
+//         );
+//     }
 
-    const data = await db.query.products.findMany({
-        with: {
-            brand: true,
-            variants: true,
-            category: true,
-            subcategory: true,
-            productType: true,
-            options: true,
-            journey: true,
-            values: true,
-            returnExchangePolicy: true,
-            specifications: {
-                columns: {
-                    key: true,
-                    value: true,
-                },
-            },
-        },
-        where: and(...filters),
-        limit,
-        offset: (page - 1) * limit,
-        orderBy,
-        extras: {
-            count: db.$count(products, and(...filters)).as("product_count"),
-        },
-    });
+//     const data = await db.query.products.findMany({
+//         with: {
+//             brand: true,
+//             variants: true,
+//             category: true,
+//             subcategory: true,
+//             productType: true,
+//             options: true,
+//             journey: true,
+//             values: true,
+//             returnExchangePolicy: true,
+//             specifications: {
+//                 columns: {
+//                     key: true,
+//                     value: true,
+//                 },
+//             },
+//         },
+//         where: and(...filters),
+//         limit,
+//         offset: (page - 1) * limit,
+//         orderBy,
+//         extras: {
+//             count: db.$count(products, and(...filters)).as("product_count"),
+//         },
+//     });
 
-    // Media handling remains the same
-    const mediaIds = new Set<string>();
-    for (const product of data) {
-        product.media.forEach((media) => mediaIds.add(media.id));
-        product.variants.forEach((variant) => {
-            if (variant.image) mediaIds.add(variant.image);
-        });
-        if (product.sustainabilityCertificate)
-            mediaIds.add(product.sustainabilityCertificate);
-    }
-    const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-    const mediaMap = new Map(
-        mediaItems.data.map((item) => [item.id, item])
-    );
+//     // Media handling remains the same
+//     const mediaIds = new Set<string>();
+//     for (const product of data) {
+//         product.media.forEach((media) => mediaIds.add(media.id));
+//         product.variants.forEach((variant) => {
+//             if (variant.image) mediaIds.add(variant.image);
+//         });
+//         if (product.sustainabilityCertificate)
+//             mediaIds.add(product.sustainabilityCertificate);
+//     }
+//     const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+//     const mediaMap = new Map(
+//         mediaItems.data.map((item) => [item.id, item])
+//     );
 
-    const enhancedData = data.map((product) => ({
-        ...product,
-        media: product.media.map((media) => ({
-            ...media,
-            mediaItem: mediaMap.get(media.id),
-        })),
-        sustainabilityCertificate: product.sustainabilityCertificate
-            ? mediaMap.get(product.sustainabilityCertificate)
-            : null,
-        variants: product.variants.map((variant) => ({
-            ...variant,
-            mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        })),
-        returnable: product.returnExchangePolicy?.returnable ?? false,
-        returnDescription:
-            product.returnExchangePolicy?.returnDescription ?? null,
-        exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-        exchangeDescription:
-            product.returnExchangePolicy?.exchangeDescription ?? null,
-        specifications: product.specifications.map((spec) => ({
-            key: spec.key,
-            value: spec.value,
-        })),
-    }));
+//     const enhancedData = data.map((product) => ({
+//         ...product,
+//         media: product.media.map((media) => ({
+//             ...media,
+//             mediaItem: mediaMap.get(media.id),
+//         })),
+//         sustainabilityCertificate: product.sustainabilityCertificate
+//             ? mediaMap.get(product.sustainabilityCertificate)
+//             : null,
+//         variants: product.variants.map((variant) => ({
+//             ...variant,
+//             mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+//         })),
+//         returnable: product.returnExchangePolicy?.returnable ?? false,
+//         returnDescription:
+//             product.returnExchangePolicy?.returnDescription ?? null,
+//         exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+//         exchangeDescription:
+//             product.returnExchangePolicy?.exchangeDescription ?? null,
+//         specifications: product.specifications.map((spec) => ({
+//             key: spec.key,
+//             value: spec.value,
+//         })),
+//     }));
 
-    const parsed: ProductWithBrand[] = productWithBrandSchema
-        .array()
-        .parse(enhancedData);
-    return {
-        data: parsed,
-        count: +data?.[0]?.count || 0,
-    };
-}
+//     const parsed: ProductWithBrand[] = productWithBrandSchema
+//         .array()
+//         .parse(enhancedData);
+//     return {
+//         data: parsed,
+//         count: +data?.[0]?.count || 0,
+//     };
+// }
 
 
 // Database query method
+async getProducts({
+  limit,
+  page,
+  search,
+  brandIds,
+  minPrice,
+  maxPrice,
+  categoryId,
+  subcategoryId,
+  productTypeId,
+  isActive,
+  isAvailable,
+  isPublished,
+  isDeleted,
+  verificationStatus,
+  sortBy = "createdAt",
+  sortOrder = "desc",
+  productImage,
+  productVisiblity,
+  colors,
+  sizes,
+}: {
+  limit: number;
+  page: number;
+  search?: string;
+  brandIds?: string[];
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  categoryId?: string;
+  subcategoryId?: string;
+  productTypeId?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isPublished?: boolean;
+  isDeleted?: boolean;
+  verificationStatus?: Product["verificationStatus"];
+  sortBy?: "price" | "createdAt";
+  sortOrder?: "asc" | "desc";
+  productImage?: Product["productImageFilter"];
+  productVisiblity?: Product["productVisiblityFilter"];
+  colors?: string[];
+  sizes?: string[];
+}) {
+  // --- Price conversions ---
+  minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
+  maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
+
+  // --- Constants ---
+  const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
+  const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
+  const normalizedColors = colors?.map((c) => c.toLowerCase());
+  const normalizedSizes = sizes?.map((s) => s.toLowerCase());
+  const BRAND_MATCH_THRESHOLD = 0.28;
+
+  let searchEmbedding: number[] | null = null;
+  let topBrandMatch: { id: string; name: string; distance: number } | null = null;
+
+  // --- Search embedding (semantic) ---
+  if (search?.length) {
+    searchEmbedding = await getEmbedding(search);
+
+    // 🔍 Detect brand intent
+    const brandResult = await db.execute(sql`
+      SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
+      FROM brands
+      WHERE embeddings IS NOT NULL
+      ORDER BY distance ASC
+      LIMIT 1
+    `);
+
+    const brandRow = Array.isArray(brandResult)
+      ? brandResult[0]
+      : brandResult?.rows?.[0];
+    if (brandRow && Number(brandRow.distance) < BRAND_MATCH_THRESHOLD) {
+      topBrandMatch = {
+        id: brandRow.id,
+        name: brandRow.name,
+        distance: Number(brandRow.distance),
+      };
+      console.log(`🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`);
+    }
+  }
+
+  // --- Search relevance filters ---
+  let searchQuery;
+  if (searchEmbedding) {
+    const highRelevanceThreshold = 0.6;
+    const lowRelevanceThreshold = 0.8;
+    const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
+    const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+    searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+  }
+
+  // --- Build filters ---
+  const filters = [
+    searchQuery,
+    !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
+    !!minPrice
+      ? sql`(
+          COALESCE(${products.price}, 0) >= ${minPrice}
+          OR EXISTS (
+            SELECT 1 FROM ${productVariants} pv
+            WHERE pv.product_id = ${products.id}
+            AND COALESCE(pv.price, 0) >= ${minPrice}
+            AND pv.is_deleted = false
+          )
+        )`
+      : undefined,
+    !!maxPrice
+      ? sql`(
+          COALESCE(${products.price}, 0) <= ${maxPrice}
+          OR EXISTS (
+            SELECT 1 FROM ${productVariants} pv
+            WHERE pv.product_id = ${products.id}
+            AND COALESCE(pv.price, 0) <= ${maxPrice}
+            AND pv.is_deleted = false
+          )
+        )`
+      : undefined,
+    isActive !== undefined ? eq(products.isActive, isActive) : undefined,
+    isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
+    isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
+    isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
+    categoryId ? eq(products.categoryId, categoryId) : undefined,
+    subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
+    productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
+    verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
+    productImage
+      ? productImage === "with"
+        ? hasMedia(products, "media")
+        : productImage === "without"
+        ? noMedia(products, "media")
+        : undefined
+      : undefined,
+    productVisiblity
+      ? productVisiblity === "public"
+        ? eq(products.isDeleted, false)
+        : productVisiblity === "private"
+        ? eq(products.isDeleted, true)
+        : undefined
+      : undefined,
+    !!colors?.length
+      ? sql`
+          EXISTS (
+            SELECT 1
+            FROM ${productOptions} po,
+                 jsonb_to_recordset(po.values) AS item(name text)
+            WHERE po.product_id = ${products.id}
+              AND LOWER(po.name) IN (${sql.join(colorOptionNames.map((c) => c.toLowerCase()), sql`, `)})
+              AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
+          )
+        `
+      : undefined,
+    !!sizes?.length
+      ? sql`
+          EXISTS (
+            SELECT 1
+            FROM ${productOptions} po,
+                 jsonb_to_recordset(po.values) AS item(name text)
+            WHERE po.product_id = ${products.id}
+              AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map((c) => c.toLowerCase()), sql`, `)})
+              AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
+          )
+        `
+      : undefined,
+  ].filter(Boolean);
+
+  // --- OrderBy construction ---
+  const orderBy: any[] = [];
+
+  // 🟦 Step 1: prioritize matched brand
+  if (topBrandMatch) {
+    orderBy.push(
+      sql`CASE WHEN ${products.brandId} = ${topBrandMatch.id} THEN 0 ELSE 1 END ASC`
+    );
+  }
+
+  // 🟩 Step 2: semantic relevance (embedding distance)
+  if (searchEmbedding) {
+    orderBy.push(
+      sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+    );
+  }
+
+  // 🟨 Step 3: user-selected sorting (price or createdAt)
+  if (sortBy && sortOrder) {
+    orderBy.push(
+      sortBy === "price"
+        ? sql`
+            (
+              SELECT COALESCE(
+                MIN(COALESCE(pv.price, ${products.price}, 0)),
+                COALESCE(${products.price}, 0)
+              )
+              FROM ${productVariants} pv
+              WHERE pv.product_id = ${products.id}
+              AND pv.is_deleted = false
+            ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
+          `
+        : sortOrder === "asc"
+        ? asc(products[sortBy])
+        : desc(products[sortBy])
+    );
+  }
+
+  // --- Query the DB ---
+  const data = await db.query.products.findMany({
+    with: {
+      brand: true,
+      variants: true,
+      category: true,
+      subcategory: true,
+      productType: true,
+      options: true,
+      journey: true,
+      values: true,
+      returnExchangePolicy: true,
+      specifications: {
+        columns: { key: true, value: true },
+      },
+    },
+    where: and(...filters),
+    limit,
+    offset: (page - 1) * limit,
+    orderBy,
+    extras: {
+      count: db.$count(products, and(...filters)).as("product_count"),
+    },
+  });
+
+  // --- Media mapping ---
+  const mediaIds = new Set<string>();
+  for (const product of data) {
+    product.media.forEach((m) => mediaIds.add(m.id));
+    product.variants.forEach((v) => {
+      if (v.image) mediaIds.add(v.image);
+    });
+    if (product.sustainabilityCertificate)
+      mediaIds.add(product.sustainabilityCertificate);
+  }
+
+  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+  const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
+
+  const enhancedData = data.map((product) => ({
+    ...product,
+    media: product.media.map((m) => ({
+      ...m,
+      mediaItem: mediaMap.get(m.id),
+    })),
+    sustainabilityCertificate: product.sustainabilityCertificate
+      ? mediaMap.get(product.sustainabilityCertificate)
+      : null,
+    variants: product.variants.map((v) => ({
+      ...v,
+      mediaItem: v.image ? mediaMap.get(v.image) : null,
+    })),
+    returnable: product.returnExchangePolicy?.returnable ?? false,
+    returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+    exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+    exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+    specifications: product.specifications.map((s) => ({
+      key: s.key,
+      value: s.value,
+    })),
+  }));
+
+  const parsed: ProductWithBrand[] = productWithBrandSchema
+    .array()
+    .parse(enhancedData);
+
+  return {
+    data: parsed,
+    count: +data?.[0]?.count || 0,
+    topBrandMatch, // optional — can show in frontend
+  };
+}
+
 async getAllCatalogueProducts({
     search,
     brandIds,
