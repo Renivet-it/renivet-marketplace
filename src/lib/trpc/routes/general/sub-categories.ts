@@ -12,10 +12,13 @@ import {
     updateSubCategorySchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
+import { log } from "console";
 import { z } from "zod";
 
 export const subCategoriesRouter = createTRPCRouter({
     getSubCategories: publicProcedure.query(async () => {
+        console.log("******** Inside t.general.sub-categories********* ");
+        
         const subCategories = await subCategoryCache.getAll();
         return {
             data: subCategories,
@@ -40,7 +43,9 @@ export const subCategoriesRouter = createTRPCRouter({
 
             return subCategory;
         }),
-    createSubCategory: protectedProcedure
+
+        
+        createSubCategory: protectedProcedure
         .input(createSubCategorySchema)
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_SETTINGS))
         .mutation(async ({ input, ctx }) => {

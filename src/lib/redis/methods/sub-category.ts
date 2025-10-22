@@ -9,41 +9,65 @@ class SubCategoryCache {
     constructor() {
         this.genKey = generateCacheKey(":", "sub-category");
     }
-
     async getAll(): Promise<CachedSubCategory[]> {
+        // await subCategoryCache.drop();
+        // console.log("✅ SubCategory cache dropped manually");
+        console.log("***********  getAll() started");
         const [dbSubCategoriesCount, keys] = await Promise.all([
             subCategoryQueries.getCount(),
             redis.keys(this.genKey("*")),
         ]);
-
+    
+        console.log("DB count:", dbSubCategoriesCount);
+        console.log("Redis keys:", keys);
+    
         if (keys.length !== dbSubCategoriesCount) {
+            console.log("============ Cache mismatch or empty, dropping cache...");
             await this.drop();
-
+    
             const dbSubCategories = await subCategoryQueries.getSubCategories();
+            console.log("=============== Fetched from DB:", dbSubCategories);
+    
             if (!dbSubCategories.length) return [];
-
+    
             const cachedSubCategories = cachedSubCategorySchema.array().parse(
                 dbSubCategories
-                    .map((sub) => ({
-                        ...sub,
-                        productTypes: sub.productTypes.length,
-                    }))
+                    .map((sub) => {
+                        console.log("============= Processing subcategory:", sub);
+                        return {
+                            ...sub,
+                            productTypes: Array.isArray(sub.productTypes) ? sub.productTypes.length : 0, // ✅ fallback added by rachana
+                            priorityId: sub.priorityId ?? 0, // ✅ added by rachana
+                        };
+                    })
                     .sort(
                         (a, b) =>
                             new Date(b.createdAt).getTime() -
                             new Date(a.createdAt).getTime()
                     )
             );
-
+    
+            console.log("=============== Parsed and validated subcategories:", cachedSubCategories);
+    
             await this.addBulk(cachedSubCategories);
             return cachedSubCategories;
         }
-        if (!keys.length) return [];
-
+    
+        if (!keys.length) {
+            console.log("============ No keys in cache after initial check, returning empty array.");
+            return [];
+        }
+    
         const cachedCategories = await redis.mget(...keys);
-        return cachedSubCategorySchema.array().parse(
+        console.log("============== Fetched from Redis:", cachedCategories);
+    
+        const parsedCachedCategories = cachedSubCategorySchema.array().parse(
             cachedCategories
-                .map((sub) => parseToJSON<CachedSubCategory>(sub))
+                .map((sub) => {
+                    const parsed = parseToJSON<CachedSubCategory>(sub);
+                    console.log("============== Parsed cached object:", parsed);
+                    return parsed;
+                })
                 .filter((sub): sub is CachedSubCategory => sub !== null)
                 .sort(
                     (a, b) =>
@@ -51,7 +75,12 @@ class SubCategoryCache {
                         new Date(a.createdAt).getTime()
                 )
         );
+    
+        console.log("============= Final parsed cached subcategories:", parsedCachedCategories);
+    
+        return parsedCachedCategories;
     }
+    
 
     async get(id: string): Promise<CachedSubCategory | null> {
         const cachedSubCategoryRaw = await redis.get(this.genKey(id));

@@ -9,16 +9,39 @@ class SubCategoryQuery {
         return +data || 0;
     }
 
-    async getSubCategories() {
-        const data = await db.query.subCategories.findMany({
-            with: {
-                productTypes: true,
-            },
-            orderBy: [desc(subCategories.createdAt)],
-        });
+    // async getSubCategories() {
+    //     const data = await db.query.subCategories.findMany({
+    //         with: {
+    //             productTypes: true,
+                
+    //         },
+    //         orderBy: [desc(subCategories.createdAt)],
+    //     });
 
+    
+    // }
+
+    async getSubCategories() {
+        const data = await db
+            .select({
+                id: subCategories.id,
+                categoryId: subCategories.categoryId,
+                name: subCategories.name,
+                slug: subCategories.slug,
+                description: subCategories.description,
+                priorityId: subCategories.priorityId, // ✅ added by rachana
+                createdAt: subCategories.createdAt,
+                updatedAt: subCategories.updatedAt,
+            })
+            .from(subCategories)
+            .orderBy(desc(subCategories.createdAt));
+    
         return data;
     }
+    
+    
+
+
 
     async getSubCategoriesByCategory(categoryId: string) {
         const data = await db.query.subCategories.findMany({

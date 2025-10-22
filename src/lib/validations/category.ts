@@ -106,6 +106,15 @@ export const subCategorySchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
+
+
+        priorityId: z
+        .number({
+            required_error: "Priority ID is required",
+            invalid_type_error: "Priority ID must be a number",
+        })
+        .int(),
+
 });
 
 export const productTypeSchema = z.object({
@@ -279,6 +288,7 @@ export const cachedSubCategorySchema = subCategorySchema.extend({
         required_error: "Product types is required",
         invalid_type_error: "Product types must be a number",
     }),
+
 });
 export const cachedProductTypeSchema = productTypeSchema;
 

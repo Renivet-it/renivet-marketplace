@@ -230,10 +230,6 @@ const wishlistCount = user
       };
       
 
-
-
-
-
     return (
         <motion.header
             variants={{
@@ -430,87 +426,68 @@ const wishlistCount = user
                                 />
             {category.name}
         </NavigationMenuTrigger>
-                                    <NavigationMenuContent>
-                                        <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
-                                    
-                                            {subcategories.data
-                                                .filter(
-                                                    (sub) =>
-                                                        sub.categoryId === category.id &&
-                                                        productTypes.data.some(
-                                                            (pt) =>
-                                                                pt.subCategoryId === sub.id &&
-                                                                (pt.productCount ?? 0) > 0
-                                                        ))
-                                                       .sort((a, b) => {
-                                                        const priorityOrder =
-                                                        categoryPriorityMap[category.name as keyof typeof categoryPriorityMap] || [];
+        <NavigationMenuContent>
+  <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
+    {(() => {
+      const filteredAndSorted = subcategories.data
+        .filter(
+          (sub) =>
+            sub.categoryId === category.id &&
+            productTypes.data.some(
+              (pt) => pt.subCategoryId === sub.id && (pt.productCount ?? 0) > 0
+            )
+        )
+        .sort((a, b) => (a.priorityId ?? 99) - (b.priorityId ?? 99));
 
-                                                        console.log("Priority order:", priorityOrder);
-                                                        console.log(
-                                                          "Names in data:",
-                                                          subcategories.data
-                                                            .filter((s) => s.categoryId === category.id)
-                                                            .map((s) => s.name)
-                                                        );
+      // Console log for debugging
+      console.log(
+        "********************* Filtered & sorted subcategories for category:",
+        category.name,
+        filteredAndSorted.map((sub) => ({
+          id: sub.id,
+          name: sub.name,
+          priority_id: sub.priorityId,
+        }))
+      );
 
+      return filteredAndSorted.map((subcategory) => (
+        <div key={subcategory.id} className="space-y-2">
+          <Link
+            href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+            className="block hover:opacity-80"
+          >
+            <h3 className="font-medium text-primary">{subcategory.name}</h3>
+          </Link>
+          <ul className="space-y-1">
+            {productTypes.data
+              .filter(
+                (pt) =>
+                  pt.subCategoryId === subcategory.id &&
+                  (pt.productCount ?? 0) > 0
+              )
+              .map((productType) => (
+                <li key={productType.id}>
+                  <NavigationMenuLink asChild>
+                    <Link
+                      href={handleNavigate(
+                        category.id,
+                        subcategory.id,
+                        productType.id
+                      )}
+                      className="block text-sm text-muted-foreground hover:font-semibold hover:text-foreground"
+                    >
+                      {productType.name}
+                    </Link>
+                  </NavigationMenuLink>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ));
+    })()}
+  </div>
+</NavigationMenuContent>
 
-                                                            const aIndex = priorityOrder.findIndex(
-                                                                (item) => item.toLowerCase().trim() === a.name.toLowerCase().trim()
-                                                              ); 
-                                                              const bIndex = priorityOrder.findIndex(
-                                                                (item) => item.toLowerCase().trim() === b.name.toLowerCase().trim()
-                                                              );
-                                                        
-                                                            if (aIndex === -1 && bIndex === -1) {
-                                                              return a.name.localeCompare(b.name);
-                                                            }
-                                                            if (aIndex === -1) return 1;
-                                                            if (bIndex === -1) return -1;
-                                                            return aIndex - bIndex;
-                                                          })              
-                                                
-                                                .map((subcategory) => (
-                                                    <div
-                                                        key={subcategory.id}
-                                                        className="space-y-2"
-                                                    >
-                                                        <Link
-                                                            href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
-                                                            className="block hover:opacity-80"
-                                                        >
-                                                            <h3 className="font-medium text-primary">
-                                                                {subcategory.name}
-                                                            </h3>
-                                                        </Link>
-                                                        <ul className="space-y-1">
-                                                            {productTypes.data
-                                                                .filter(
-                                                                    (pt) =>
-                                                                        pt.subCategoryId === subcategory.id &&
-                                                                        (pt.productCount ?? 0) > 0
-                                                                )
-                                                                .map((productType) => (
-                                                                    <li key={productType.id}>
-                                                                        <NavigationMenuLink asChild>
-                                                                            <Link
-                                                                                href={handleNavigate(
-                                                                                    category.id,
-                                                                                    subcategory.id,
-                                                                                    productType.id
-                                                                                )}
-                                                                                className="block text-sm text-muted-foreground hover:font-semibold hover:text-foreground"
-                                                                            >
-                                                                                {productType.name}
-                                                                            </Link>
-                                                                        </NavigationMenuLink>
-                                                                    </li>
-                                                                ))}
-                                                        </ul>
-                                                    </div>
-                                                ))}
-                                        </div>
-                                    </NavigationMenuContent>
                                 </div>
                             ) : (
                                 <>

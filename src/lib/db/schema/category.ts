@@ -25,6 +25,7 @@ export const subCategories = pgTable("sub_categories", {
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
+    priorityId: integer("priority_id").notNull().default(0), // added by rachana
     ...timestamps,
 });
 
