@@ -8,6 +8,7 @@ import {
     text,
     timestamp,
     uuid,
+    vector,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brandMediaItems } from "./brand-media-item";
@@ -75,6 +76,8 @@ export const brands = pgTable(
         confidentialVerificationRejectedAt: timestamp(
             "confidential_verification_rejected_at"
         ),
+                embeddings: vector("embeddings", { dimensions: 384 }),
+
         ...timestamps,
     },
     (table) => ({
