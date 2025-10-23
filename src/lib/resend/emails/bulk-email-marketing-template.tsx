@@ -6,46 +6,52 @@ interface EmailTemplateProps {
   discount: string;
   expiryDate: string;
   brandName: string;
+  emailContent: string; // 🆕 dynamic HTML from Quill
   additionalMessage?: string;
   ctaText?: string;
 }
 
-export const MarketingEmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
+export const DynamicMarketingEmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
   firstName,
   discount,
   expiryDate,
   brandName,
-  ctaText = "Redeem Now", // Default value for ctaText
+  emailContent,
+  additionalMessage,
+  ctaText = "Redeem Now",
 }) => (
-  <Layout
-    preview={`${discount}% OFF at ${brandName}`}
-    heading="Special Offer For You"
-  >
+  <Layout preview={`${discount}% OFF at ${brandName}`} heading="Exclusive Offer Just for You">
     <div style={containerStyle}>
       <div style={contentStyle}>
         {/* Personalized Greeting */}
         <p style={greetingStyle}>Hi {firstName},</p>
-        {/* Opening Paragraph */}
-        <p style={paragraphStyle}>
-          We are thrilled to introduce something special — just for you.
-        </p>
-        {/* Discount Highlight */}
+
+        {/* 🆕 Inject the custom content written in ReactQuill */}
+        <div
+          style={dynamicSectionStyle}
+          dangerouslySetInnerHTML={{ __html: emailContent }}
+        />
+
+        {/* Core campaign details */}
         <div style={discountContainer}>
           <p style={discountText}>{discount}% OFF</p>
           <p style={offerText}>on your next purchase at {brandName}</p>
         </div>
-        {/* Main Content */}
-        <p style={paragraphStyle}>
-          Whether you are upgrading your tools or exploring something new, now is the perfect time.
-        </p>
+
+        {/* Optional additional message */}
+        {additionalMessage && (
+          <p style={paragraphStyle}>{additionalMessage}</p>
+        )}
+
         {/* Urgency Section */}
         <p style={urgentText}>
-          But hurry — this offer is valid only until {expiryDate}!
+          Hurry! This offer is valid until {expiryDate}.
         </p>
-        {/* Call-to-Action Button */}
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
+
+        {/* CTA Button */}
+        <div style={{ textAlign: "center", marginTop: "24px" }}>
           <a
-            href="https://renivet.com" // Placeholder URL, to be replaced in sendBulkEmail
+            href="https://renivet.com" // Replace dynamically if needed later
             style={ctaButtonStyle}
           >
             {ctaText}
@@ -56,7 +62,7 @@ export const MarketingEmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
   </Layout>
 );
 
-// Styles
+// --- Styles (copied & extended from your current file) ---
 const containerStyle = {
   maxWidth: "600px",
   margin: "0 auto",
@@ -123,4 +129,10 @@ const ctaButtonStyle = {
   textDecoration: "none",
   textAlign: "center" as const,
   margin: "0 auto",
+};
+
+const dynamicSectionStyle = {
+  fontSize: "16px",
+  lineHeight: 1.6,
+  margin: "0 0 20px 0",
 };

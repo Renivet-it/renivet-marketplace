@@ -42,21 +42,21 @@ console.log("Recipients:", recipients);
   const handleFileChange = (file?: File) => {
     if (!file) return;
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        const parsedData = result.data as Recipient[];
-        if (!parsedData.length) {
-          toast.error("No valid data found");
-          return;
-        }
-        setRecipients(parsedData);
-        setShowPreview(true);
-        toast.success(`Loaded ${parsedData.length} recipients`);
-      },
-      error: () => toast.error("Failed to parse file"),
-    });
+Papa.parse(file, {
+  header: true,
+  skipEmptyLines: true,
+  transformHeader: (header) => header.trim().toLowerCase(),
+  complete: (result) => {
+    const normalizedData = (result.data as any[]).map((row) => ({
+      email: row["email"] || "",
+      firstName: row["firstname"] || "",
+      discount: row["discount(%)"] || row["discount"] || "",
+      expiryDate: row["expirydate"] || "",
+      brandName: row["brandname"] || "",
+    }));
+    setRecipients(normalizedData);
+  },
+});
   };
 
   // 🆕 Send function now includes email content + subject
@@ -142,9 +142,9 @@ console.log("Recipients:", recipients);
                   <tbody className="divide-y divide-gray-100">
                     {recipients.map((r, i) => (
                       <tr key={i}>
-                        <td className="px-4 py-2">{r.Email}</td>
-                        <td className="px-4 py-2">{r.FirstName}</td>
-                        <td className="px-4 py-2">{r["Discount(%)"]}</td>
+                        <td className="px-4 py-2">{r.email}</td>
+                        <td className="px-4 py-2">{r.firstName}</td>
+                        <td className="px-4 py-2">{r.discount}</td>
                       </tr>
                     ))}
                   </tbody>
