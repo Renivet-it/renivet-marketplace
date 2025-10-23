@@ -4,14 +4,14 @@ import React, { useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import Papa from "papaparse";
-import { Send, Upload, Download, X } from "lucide-react";
+import { Send, Upload, Download } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { sendBulkEmail } from "@/actions/sendBulkEmail";
+import { useUploadThing } from "@/lib/uploadthing";
 
-// Dynamically import ReactQuill because it needs window
+// 🧩 Import Quill dynamically (SSR safe)
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
-
 
 type Recipient = {
   email: string;
@@ -29,37 +29,107 @@ export function MarketingEmailForm() {
   const [progress, setProgress] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
-console.log("Recipients:", recipients);
-  // 🆕 new states for email editor
   const [emailContent, setEmailContent] = useState("");
   const [subject, setSubject] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const { register, handleSubmit } = useForm();
 
-  // CSV parse logic same as before
-  const handleFileChange = (file?: File) => {
-    if (!file) return;
+  // ✅ UploadThing setup
+  const { startUpload } = useUploadThing("contentUploader");
+  const quillRef = useRef<any>(null);
 
-Papa.parse(file, {
-  header: true,
-  skipEmptyLines: true,
-  transformHeader: (header) => header.trim().toLowerCase(),
-  complete: (result) => {
-    const normalizedData = (result.data as any[]).map((row) => ({
-      email: row["email"] || "",
-      firstName: row["firstname"] || "",
-      discount: row["discount(%)"] || row["discount"] || "",
-      expiryDate: row["expirydate"] || "",
-      brandName: row["brandname"] || "",
-    }));
-    setRecipients(normalizedData);
-  },
-});
+  // 🧩 CSV Template Download
+  const downloadTemplate = () => {
+    try {
+      const csvContent = [
+        ["Email", "FirstName", "Discount(%)", "expiryDate", "BrandName"],
+        ["john@example.com", "John", "20", "2025-12-31", "Your Company"],
+        ["jane@example.com", "Jane", "15", "2025-12-31", "Your Company"],
+      ]
+        .map((row) => row.join(","))
+        .join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "email_template.csv";
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Template downloaded successfully!");
+    } catch (error) {
+      console.error("Template download error:", error);
+      toast.error("Failed to download CSV template.");
+    }
   };
 
-  // 🆕 Send function now includes email content + subject
+  // 🧩 Handle CSV upload
+  const handleFileChange = (file?: File) => {
+    if (!file) return;
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim().toLowerCase(),
+      complete: (result) => {
+        const normalizedData = (result.data as any[]).map((row) => ({
+          email: row["email"] || "",
+          firstName: row["firstname"] || "",
+          discount: row["discount(%)"] || row["discount"] || "",
+          expiryDate: row["expirydate"] || "",
+          brandName: row["brandname"] || "",
+        }));
+
+        if (normalizedData.length === 0) {
+          toast.error("No valid data found in CSV.");
+          return;
+        }
+
+        setRecipients(normalizedData);
+        toast.success(`Loaded ${normalizedData.length} recipients`);
+      },
+      error: (err) => {
+        console.error("CSV parse error:", err);
+        toast.error("Failed to parse CSV file.");
+      },
+    });
+  };
+
+  // ✅ Custom image upload handler for Quill
+  const handleImageUpload = useCallback(() => {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      try {
+        toast.info("Uploading image...");
+        const uploaded = await startUpload([file]);
+        if (!uploaded || uploaded.length === 0) {
+          toast.error("Image upload failed.");
+          return;
+        }
+
+        const imageUrl = uploaded[0].url;
+        const quill = quillRef.current?.getEditor();
+        const range = quill?.getSelection(true);
+        if (range) {
+          quill.insertEmbed(range.index, "image", imageUrl);
+          toast.success("Image uploaded successfully!");
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        toast.error("Failed to upload image.");
+      }
+    };
+  }, [startUpload]);
+
+  // 🧩 Send Emails
   const onSubmit = async () => {
     if (!recipients.length) {
       toast.error("Please upload a valid CSV first.");
@@ -95,8 +165,23 @@ Papa.parse(file, {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-8 bg-gray-50 rounded-xl shadow-lg">
-      {/* Upload section */}
+    <div className="max-w-5xl mx-auto p-8 bg-gray-50 rounded-xl shadow-lg space-y-6">
+      {/* --- Header --- */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Send Bulk Emails
+        </h2>
+
+        <button
+          onClick={downloadTemplate}
+          className="flex items-center gap-2 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition text-sm font-medium"
+        >
+          <Download className="w-4 h-4" />
+          Download CSV Template
+        </button>
+      </div>
+
+      {/* --- Upload CSV --- */}
       <form onSubmit={handleSubmit(() => setConfirmSend(true))} className="space-y-6">
         <div
           onClick={() => fileInputRef.current?.click()}
@@ -112,9 +197,12 @@ Papa.parse(file, {
             ref={fileInputRef}
             onChange={(e) => handleFileChange(e.target.files?.[0])}
           />
+          <p className="text-xs text-gray-400 mt-2">
+            Required columns: Email, FirstName, Discount(%), expiryDate, BrandName
+          </p>
         </div>
 
-        {/* Preview Table */}
+        {/* --- Preview --- */}
         {recipients.length > 0 && (
           <div className="bg-white p-4 rounded-lg shadow-md">
             <div className="flex justify-between mb-4">
@@ -129,14 +217,21 @@ Papa.parse(file, {
                 {showPreview ? "Hide" : "Show"}
               </button>
             </div>
+
             {showPreview && (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">First Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Email
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        First Name
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Discount
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -154,7 +249,7 @@ Papa.parse(file, {
           </div>
         )}
 
-        {/* 🆕 Email Editor Section */}
+        {/* --- Email Editor with UploadThing --- */}
         {recipients.length > 0 && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-800">Compose Email</h3>
@@ -165,25 +260,30 @@ Papa.parse(file, {
               onChange={(e) => setSubject(e.target.value)}
               className="w-full border border-gray-300 rounded-md p-2 text-sm"
             />
+
             <ReactQuill
+              ref={quillRef}
               theme="snow"
               value={emailContent}
               onChange={setEmailContent}
               className="bg-white rounded-md"
               modules={{
-                toolbar: [
-                  [{ header: [1, 2, false] }],
-                  ["bold", "italic", "underline", "strike"],
-                  [{ list: "ordered" }, { list: "bullet" }],
-                  ["link", "image"],
-                  ["clean"],
-                ],
+                toolbar: {
+                  container: [
+                    [{ header: [1, 2, false] }],
+                    ["bold", "italic", "underline", "strike"],
+                    [{ list: "ordered" }, { list: "bullet" }],
+                    ["link", "image"],
+                    ["clean"],
+                  ],
+                  handlers: { image: handleImageUpload },
+                },
               }}
             />
           </div>
         )}
 
-        {/* Progress bar */}
+        {/* --- Progress Bar --- */}
         {isLoading && (
           <div className="relative mt-4">
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -195,7 +295,7 @@ Papa.parse(file, {
           </div>
         )}
 
-        {/* Submit */}
+        {/* --- Submit Button --- */}
         {recipients.length > 0 && (
           <button
             type="submit"
@@ -207,11 +307,13 @@ Papa.parse(file, {
         )}
       </form>
 
-      {/* Confirm Modal */}
+      {/* --- Confirmation Modal --- */}
       {confirmSend && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Bulk Email Send</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Confirm Bulk Email Send
+            </h3>
             <p className="text-sm text-gray-600 mb-6">
               You are about to send "{subject}" to {recipients.length} recipients.
             </p>
