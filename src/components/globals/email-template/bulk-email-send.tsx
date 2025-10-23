@@ -29,7 +29,7 @@ export function MarketingEmailForm() {
   const [progress, setProgress] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
-
+console.log("Recipients:", recipients);
   // 🆕 new states for email editor
   const [emailContent, setEmailContent] = useState("");
   const [subject, setSubject] = useState("");
@@ -142,9 +142,9 @@ export function MarketingEmailForm() {
                   <tbody className="divide-y divide-gray-100">
                     {recipients.map((r, i) => (
                       <tr key={i}>
-                        <td className="px-4 py-2">{r.email}</td>
-                        <td className="px-4 py-2">{r.firstName}</td>
-                        <td className="px-4 py-2">{r.discount}</td>
+                        <td className="px-4 py-2">{r.Email}</td>
+                        <td className="px-4 py-2">{r.FirstName}</td>
+                        <td className="px-4 py-2">{r["Discount(%)"]}</td>
                       </tr>
                     ))}
                   </tbody>
