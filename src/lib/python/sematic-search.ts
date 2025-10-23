@@ -4,7 +4,7 @@ export async function getEmbedding(text:any) {
   try {
     const embeddingServiceUrl = process.env.EMBEDDING_SERVICE_URL || "http://localhost:8000";
     console.log("Generating embedding for text:", embeddingServiceUrl);
-    const response = await axios.post(`${"http://localhost:8000"}/embeddings/generate`, { text }, {
+    const response = await axios.post(`${"http://64.227.137.174:8000"}/embeddings/generate`, { text }, {
       headers: {
         "Content-Type": "application/json",
       },
