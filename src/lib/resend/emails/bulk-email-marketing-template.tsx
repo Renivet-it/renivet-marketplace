@@ -1,126 +1,96 @@
 import React from "react";
-import Layout from "./layout";
+import Layout from "./email-layout";
 
 interface EmailTemplateProps {
   firstName: string;
   discount: string;
   expiryDate: string;
   brandName: string;
+  emailContent: string;
   additionalMessage?: string;
   ctaText?: string;
 }
 
-export const MarketingEmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
+export const DynamicMarketingEmailTemplate: React.FC<
+  Readonly<EmailTemplateProps>
+> = ({
   firstName,
   discount,
   expiryDate,
   brandName,
-  ctaText = "Redeem Now", // Default value for ctaText
+  emailContent,
+  additionalMessage,
+  ctaText = "Shop Now",
 }) => (
-  <Layout
-    preview={`${discount}% OFF at ${brandName}`}
-    heading="Special Offer For You"
-  >
-    <div style={containerStyle}>
-      <div style={contentStyle}>
-        {/* Personalized Greeting */}
-        <p style={greetingStyle}>Hi {firstName},</p>
-        {/* Opening Paragraph */}
-        <p style={paragraphStyle}>
-          We are thrilled to introduce something special — just for you.
-        </p>
-        {/* Discount Highlight */}
-        <div style={discountContainer}>
-          <p style={discountText}>{discount}% OFF</p>
-          <p style={offerText}>on your next purchase at {brandName}</p>
-        </div>
-        {/* Main Content */}
-        <p style={paragraphStyle}>
-          Whether you are upgrading your tools or exploring something new, now is the perfect time.
-        </p>
-        {/* Urgency Section */}
-        <p style={urgentText}>
-          But hurry — this offer is valid only until {expiryDate}!
-        </p>
-        {/* Call-to-Action Button */}
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <a
-            href="https://renivet.com" // Placeholder URL, to be replaced in sendBulkEmail
-            style={ctaButtonStyle}
-          >
-            {ctaText}
-          </a>
-        </div>
-      </div>
+  <Layout preview={`${brandName} | Personalized Offer`}>
+    {/* Greeting */}
+    <p style={greetingStyle}>Hi {firstName},</p>
+
+    {/* Dynamic Email Content */}
+    <div
+      style={dynamicSectionStyle}
+      dangerouslySetInnerHTML={{
+        __html: injectResponsiveImageStyles(emailContent),
+      }}
+    />
+
+    {/* Optional message */}
+    {additionalMessage && <p style={paragraphStyle}>{additionalMessage}</p>}
+
+
+    {/* CTA */}
+    <div style={{ textAlign: "center", marginTop: "40px" }}>
+      <a href="https://renivet.com" style={ctaButtonStyle}>
+        {ctaText}
+      </a>
     </div>
   </Layout>
 );
 
-// Styles
-const containerStyle = {
-  maxWidth: "600px",
-  margin: "0 auto",
-  fontFamily: "'Helvetica Neue', Arial, sans-serif",
-  lineHeight: 1.6,
-  color: "#333333",
-};
+function injectResponsiveImageStyles(html: string) {
+  return html.replace(
+    /<img(.*?)>/g,
+    "<img$1 style=\"max-width:100%;height:auto;display:block;margin:28px auto;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,0.08);\" />"
+  );
+}
 
-const contentStyle = {
-  backgroundColor: "#FFFFFF",
-  borderRadius: "8px",
-  padding: "30px",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-};
-
+// --- Styles ---
 const greetingStyle = {
+  fontSize: "18px",
+  margin: "0 0 24px 0",
+  color: "#2C3E50",
+  lineHeight: 1.8,
+};
+
+const dynamicSectionStyle = {
   fontSize: "16px",
-  margin: "0 0 20px 0",
-  lineHeight: 1.5,
+  color: "#333",
+  lineHeight: 1.8,
+  marginBottom: "24px",
 };
 
 const paragraphStyle = {
   fontSize: "16px",
-  margin: "0 0 20px 0",
-  lineHeight: 1.5,
-};
-
-const discountContainer = {
-  backgroundColor: "#F8F9FA",
-  borderLeft: "4px solid #3498DB",
-  padding: "20px",
-  margin: "25px 0",
-  borderRadius: "0 4px 4px 0",
-};
-
-const discountText = {
-  color: "#2C3E50",
-  fontSize: "28px",
-  fontWeight: "bold" as const,
-  margin: "0 0 5px 0",
-  lineHeight: 1.2,
-};
-
-const offerText = {
-  color: "#7F8C8D",
-  fontSize: "16px",
-  margin: "0",
+  color: "#555",
+  marginBottom: "24px",
 };
 
 const urgentText = {
-  ...paragraphStyle,
-  color: "#E74C3C",
+  fontSize: "15px",
+  color: "#E63946",
   fontWeight: "bold" as const,
+  textAlign: "center" as const,
+  marginTop: "16px",
 };
 
 const ctaButtonStyle = {
   display: "inline-block",
-  backgroundColor: "#3498DB",
-  color: "#FFFFFF",
+  backgroundColor: "#007BFF",
+  color: "#fff",
   fontSize: "16px",
-  fontWeight: "bold" as const,
-  padding: "12px 24px",
-  borderRadius: "4px",
+  fontWeight: "600" as const,
+  padding: "14px 38px",
+  borderRadius: "8px",
   textDecoration: "none",
-  textAlign: "center" as const,
-  margin: "0 auto",
+  boxShadow: "0 3px 8px rgba(0, 123, 255, 0.25)",
 };
