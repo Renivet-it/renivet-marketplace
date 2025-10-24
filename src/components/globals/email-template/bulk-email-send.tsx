@@ -315,7 +315,7 @@ export function MarketingEmailForm() {
               Confirm Bulk Email Send
             </h3>
             <p className="text-sm text-gray-600 mb-6">
-              You are about to send "{subject}" to {recipients.length} recipients.
+              You are about to send &quot;{subject}&quot; to {recipients.length} recipients.
             </p>
             <div className="flex justify-end gap-3">
               <button

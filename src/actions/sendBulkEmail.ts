@@ -56,7 +56,7 @@ export async function sendBulkEmail(formData: FormData) {
               expiryDate,
               brandName,
               additionalMessage,
-              ctaText: ctaText || "Redeem Now",
+              ctaText: ctaText || "Check out our Website",
               emailContent, // from ReactQuill
             }),
           });
