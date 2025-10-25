@@ -24,6 +24,7 @@ import { SubCategoryAction } from "./sub-category-action";
 export type TableSubCategory = SubCategory & {
     productTypes: number;
     category: string;
+    priority_id?: number; // ✅ added by rachana
 };
 
 const columns: ColumnDef<TableSubCategory>[] = [
@@ -40,6 +41,7 @@ const columns: ColumnDef<TableSubCategory>[] = [
         accessorKey: "productTypes",
         header: "Product Types",
     },
+    { accessorKey: "priority_id", header: "Priority Id" }, // added by rachana
     {
         accessorKey: "createdAt",
         header: "Created At",
@@ -95,6 +97,7 @@ export function SubCategoriesTable({ initialData, categories }: PageProps) {
                         categories.find(
                             (category) => category.id === subCategory.categoryId
                         )?.name ?? "",
+                        priority_id: subCategory.priorityId, // ✅ added by rachana
                 }))
                 .slice((page - 1) * limit, page * limit),
         [dataRaw, page, limit, categories]

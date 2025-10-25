@@ -39,6 +39,7 @@ export function SubCategoryManageForm({ subCategory, setIsOpen }: PageProps) {
             name: subCategory?.name ?? "",
             description: subCategory?.description ?? "",
             categoryId: subCategory?.categoryId ?? "",
+            priorityId: subCategory?.priorityId ?? 0,
         },
     });
 
@@ -179,6 +180,34 @@ export function SubCategoryManageForm({ subCategory, setIsOpen }: PageProps) {
                         </FormItem>
                     )}
                 />
+
+
+                       {/* ✅ Priority ID */}
+                <FormField
+                    control={form.control}
+                    name="priorityId"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Priority ID</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="Enter priority ID"
+                                    disabled={
+                                        isSubCategoryCreating ||
+                                        isSubCategoryUpdating
+                                    }
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    onChange={(e) => field.onChange(Number(e.target.value))} // ✅ convert to number
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+
 
                 <DialogFooter>
                     <DialogClose asChild>
