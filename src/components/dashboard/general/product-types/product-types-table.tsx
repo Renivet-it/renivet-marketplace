@@ -24,6 +24,8 @@ import { ProductTypeAction } from "./product-type-action";
 export type TableProductType = ProductType & {
     category: string;
     subCategory: string;
+    priority_id?: number; // ✅ added by rachana
+
 };
 
 const columns: ColumnDef<TableProductType>[] = [
@@ -40,6 +42,7 @@ const columns: ColumnDef<TableProductType>[] = [
         accessorKey: "category",
         header: "Category",
     },
+    { accessorKey: "priority_id", header: "Priority Id" }, // added by rachana
     {
         accessorKey: "createdAt",
         header: "Created At",
@@ -97,6 +100,7 @@ export function ProductTypesTable({
                     subCategory:
                         subCategories.find((s) => s.id === p.subCategoryId)
                             ?.name ?? "",
+                            
                     category:
                         categories.find(
                             (c) =>
@@ -105,6 +109,8 @@ export function ProductTypesTable({
                                     (s) => s.id === p.subCategoryId
                                 )?.categoryId
                         )?.name ?? "",
+                        priority_id: p.priorityId, // ✅ added by rachana
+
                 }))
                 .slice((page - 1) * limit, page * limit),
         [dataRaw, page, limit, subCategories, categories]

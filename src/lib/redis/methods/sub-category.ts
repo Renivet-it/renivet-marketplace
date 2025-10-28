@@ -11,7 +11,7 @@ class SubCategoryCache {
     }
     async getAll(): Promise<CachedSubCategory[]> {
         // await subCategoryCache.drop();
-        // console.log("✅ SubCategory cache dropped manually");
+         //console.log("✅ SubCategory cache dropped manually");
         console.log("***********  getAll() started");
         const [dbSubCategoriesCount, keys] = await Promise.all([
             subCategoryQueries.getCount(),

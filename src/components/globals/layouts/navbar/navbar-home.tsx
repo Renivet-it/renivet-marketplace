@@ -429,6 +429,7 @@ const wishlistCount = user
         <NavigationMenuContent>
   <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
     {(() => {
+      // Filter and sort subcategories by priority
       const filteredAndSorted = subcategories.data
         .filter(
           (sub) =>
@@ -439,7 +440,7 @@ const wishlistCount = user
         )
         .sort((a, b) => (a.priorityId ?? 99) - (b.priorityId ?? 99));
 
-      // Console log for debugging
+      // Debugging info
       console.log(
         "********************* Filtered & sorted subcategories for category:",
         category.name,
@@ -450,22 +451,36 @@ const wishlistCount = user
         }))
       );
 
-      return filteredAndSorted.map((subcategory) => (
-        <div key={subcategory.id} className="space-y-2">
-          <Link
-            href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
-            className="block hover:opacity-80"
-          >
-            <h3 className="font-medium text-primary">{subcategory.name}</h3>
-          </Link>
-          <ul className="space-y-1">
-            {productTypes.data
-              .filter(
-                (pt) =>
-                  pt.subCategoryId === subcategory.id &&
-                  (pt.productCount ?? 0) > 0
-              )
-              .map((productType) => (
+      return filteredAndSorted.map((subcategory) => {
+        // Sort product types for this subcategory by priority
+        const sortedProductTypes = productTypes.data
+          .filter(
+            (pt) =>
+              pt.subCategoryId === subcategory.id &&
+              (pt.productCount ?? 0) > 0
+          )
+          .sort((a, b) => (a.priorityId ?? 99) - (b.priorityId ?? 99));
+
+        // Debugging info for product types
+        console.log(
+          `---- Product types for subcategory ${subcategory.name}:`,
+          sortedProductTypes.map((pt) => ({
+            id: pt.id,
+            name: pt.name,
+            priority_id: pt.priorityId,
+          }))
+        );
+
+        return (
+          <div key={subcategory.id} className="space-y-2">
+            <Link
+              href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+              className="block hover:opacity-80"
+            >
+              <h3 className="font-medium text-primary">{subcategory.name}</h3>
+            </Link>
+            <ul className="space-y-1">
+              {sortedProductTypes.map((productType) => (
                 <li key={productType.id}>
                   <NavigationMenuLink asChild>
                     <Link
@@ -481,9 +496,10 @@ const wishlistCount = user
                   </NavigationMenuLink>
                 </li>
               ))}
-          </ul>
-        </div>
-      ));
+            </ul>
+          </div>
+        );
+      });
     })()}
   </div>
 </NavigationMenuContent>

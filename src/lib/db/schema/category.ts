@@ -44,6 +44,7 @@ export const productTypes = pgTable("product_types", {
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
+    priorityId: integer("priority_id").notNull().default(0), // added by rachana
     ...timestamps,
 });
 

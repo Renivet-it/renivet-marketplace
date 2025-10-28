@@ -2,6 +2,7 @@ import { CreateProductType, UpdateProductType } from "@/lib/validations";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "..";
 import { productTypes } from "../schema";
+import { productTypeCache } from "@/lib/redis/methods";
 
 class ProductTypeQuery {
     async getCount() {
@@ -19,24 +20,60 @@ class ProductTypeQuery {
 
     //     return data;
     // }
+
+    
+    // async getProductTypes() {
+    //     const data = await db.query.productTypes.findMany({
+    //         orderBy: [desc(productTypes.createdAt)],
+    //         with: {
+    //             products: {
+    //                 columns: {
+    //                     id: true, // just need one field to count
+    //                 },
+    //             },
+    //         },
+    //     });
+
+    //     // Add productCount manually
+    //     return data.map((pt) => ({
+    //         ...pt,
+    //         productCount: pt.products.length,
+    //     }));
+    // }
+
     async getProductTypes() {
         const data = await db.query.productTypes.findMany({
-            orderBy: [desc(productTypes.createdAt)],
-            with: {
-                products: {
-                    columns: {
-                        id: true, // just need one field to count
-                    },
-                },
+          orderBy: [desc(productTypes.createdAt)],
+          with: {
+            products: {
+              columns: {
+                id: true, // just need one field to count
+              },
             },
+          },
+          columns: {
+            id: true,
+            name: true,
+            categoryId: true,
+            subCategoryId: true,   //  added
+            slug: true,            //  added
+            description: true,     //  added
+            createdAt: true,
+            updatedAt: true,       //  added
+            priorityId: true,      //  added by rachana
+          },
         });
-
-        // Add productCount manually
+      
         return data.map((pt) => ({
-            ...pt,
-            productCount: pt.products.length,
+          ...pt,
+          productCount: pt.products.length,
+          priorityId: pt.priorityId ?? 0, // ✅ fallback to 0
         }));
-    }
+      }
+      
+    
+
+
 
     async getProductTypeBySubCategory(subCategoryId: string) {
         const data = await db.query.productTypes.findMany({

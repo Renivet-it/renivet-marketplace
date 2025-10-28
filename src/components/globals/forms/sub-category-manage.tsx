@@ -39,7 +39,7 @@ export function SubCategoryManageForm({ subCategory, setIsOpen }: PageProps) {
             name: subCategory?.name ?? "",
             description: subCategory?.description ?? "",
             categoryId: subCategory?.categoryId ?? "",
-            priorityId: subCategory?.priorityId ?? 0,
+            priorityId: subCategory?.priorityId ?? 0,     // added by rachana
         },
     });
 
