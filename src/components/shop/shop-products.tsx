@@ -41,8 +41,7 @@ export function ShopProducts({
     userId,
     ...props
 }: PageProps) {
-
-        const handleProductClick = async (productId: string, brandId: string) => {
+    const handleProductClick = async (productId: string, brandId: string) => {
         try {
             // Track the click
             await trackProductClick(productId, brandId);
@@ -52,6 +51,7 @@ export function ShopProducts({
             console.error("Failed to track click:", error);
         }
     };
+
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(30));
     const [search] = useQueryState("search", { defaultValue: "" });
@@ -72,14 +72,14 @@ export function ShopProducts({
         defaultValue: "",
     });
     const [colors] = useQueryState(
-  "colors",
-  parseAsArrayOf(parseAsString, ",").withDefault([])
-);
+        "colors",
+        parseAsArrayOf(parseAsString, ",").withDefault([])
+    );
 
-const [sizes] = useQueryState(
-  "sizes",
-  parseAsArrayOf(parseAsString, ",").withDefault([])
-);
+    const [sizes] = useQueryState(
+        "sizes",
+        parseAsArrayOf(parseAsString, ",").withDefault([])
+    );
 
     const [sortBy] = useQueryState(
         "sortBy",
@@ -113,7 +113,7 @@ const [sizes] = useQueryState(
             sortBy,
             sortOrder,
             colors: colors.length ? colors : undefined,
-    sizes: sizes.length ? sizes : undefined,
+            sizes: sizes.length ? sizes : undefined,
         },
         { initialData }
     );
@@ -123,9 +123,14 @@ const [sizes] = useQueryState(
         { enabled: !!userId, initialData: initialWishlist }
     );
 
+    // --- QUICK CLIENT-SIDE FILTER: remove any products with isDeleted === true
+    const visibleProducts: ProductWithBrand[] = Array.isArray(products)
+        ? products.filter((p: any) => !p?.isDeleted)
+        : [];
+
     const pages = Math.ceil(count / limit) ?? 1;
 
-    if (!products.length) return <NoProductCard />;
+    if (!visibleProducts.length) return <NoProductCard />;
 
     return (
         <>
@@ -136,8 +141,8 @@ const [sizes] = useQueryState(
                 )}
                 {...props}
             >
-                {products.length > 0 ? (
-                    products.map((product) => {
+                {visibleProducts.length > 0 ? (
+                    visibleProducts.map((product) => {
                         const isWishlisted =
                             wishlist?.some(
                                 (item) => item.productId === product.id
@@ -145,16 +150,15 @@ const [sizes] = useQueryState(
 
                         return (
                             <div
-                    key={product.id}
-                    onClick={() => handleProductClick(product.id, product.brandId)}
-                    className="cursor-pointer"
-                >
-                            <ProductCard
                                 key={product.id}
-                                product={product}
-                                isWishlisted={isWishlisted}
-                                userId={userId}
-                            />
+                                onClick={() => handleProductClick(product.id, product.brandId)}
+                                className="cursor-pointer"
+                            >
+                                <ProductCard
+                                    product={product}
+                                    isWishlisted={isWishlisted}
+                                    userId={userId}
+                                />
                             </div>
                         );
                     })

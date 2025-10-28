@@ -321,13 +321,16 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         }),
         userId ? userWishlistCache.get(userId) : undefined,
     ]);
-
+console.log(data.data, "data");
     return (
-        <ShopProducts
-            initialData={data}
-            initialWishlist={userWishlist}
-            userId={userId ?? undefined}
-        />
+<ShopProducts
+    initialData={{
+        ...data,
+        data: data?.data?.filter((p: any) => !p.isDeleted) ?? [],
+    }}
+    initialWishlist={userWishlist}
+    userId={userId ?? undefined}
+/>
     );
 }
 
