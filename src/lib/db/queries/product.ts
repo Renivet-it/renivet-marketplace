@@ -2117,6 +2117,8 @@ async getAllCatalogueProducts({
             .set({
                 isPublished,
                 publishedAt: isPublished ? new Date() : null,
+                isDeleted: false,
+                 isActive: true,
                 updatedAt: new Date(),
             })
             .where(eq(products.id, productId))
