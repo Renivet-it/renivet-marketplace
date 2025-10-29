@@ -922,16 +922,16 @@ if (product.variants && product.variants.length > 0) {
             const { productId, isPublished } = input;
             const { queries, user } = ctx;
 
-            if (user.brand?.confidentialVerificationStatus !== "approved")
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message:
-                        "You must complete the brand verification process to publish products",
-                });
+            // if (user.brand?.confidentialVerificationStatus !== "approved")
+            //     throw new TRPCError({
+            //         code: "FORBIDDEN",
+            //         message:
+            //             "You must complete the brand verification process to publish products",
+            //     });
 
             const existingProduct = await queries.products.getProduct({
                 productId,
-                isDeleted: false,
+                // isDeleted: tr,
             });
             if (!existingProduct)
                 throw new TRPCError({
@@ -939,11 +939,11 @@ if (product.variants && product.variants.length > 0) {
                     message: "Product not found",
                 });
 
-            if (existingProduct.brand.id !== user.brand?.id)
-                throw new TRPCError({
-                    code: "FORBIDDEN",
-                    message: "You are not a member of this brand",
-                });
+            // if (existingProduct.brand.id !== user.brand?.id)
+            //     throw new TRPCError({
+            //         code: "FORBIDDEN",
+            //         message: "You are not a member of this brand",
+            //     });
 
             if (existingProduct.isPublished && !isPublished)
                 throw new TRPCError({
@@ -963,16 +963,16 @@ if (product.variants && product.variants.length > 0) {
                 isPublished
             );
 
-            posthog.capture({
-                event: POSTHOG_EVENTS.PRODUCT.PUBLISHED,
-                distinctId: user.brand.id,
-                properties: {
-                    brandName: user.brand.name,
-                    brandOwnerId: user.id,
-                    productId: data.id,
-                    productTitle: data.title,
-                },
-            });
+            // posthog.capture({
+            //     event: POSTHOG_EVENTS.PRODUCT.PUBLISHED,
+            //     distinctId: user.brand.id,
+            //     properties: {
+            //         brandName: user.brand.name,
+            //         brandOwnerId: user.id,
+            //         productId: data.id,
+            //         productTitle: data.title,
+            //     },
+            // });
 
             return data;
         }),
