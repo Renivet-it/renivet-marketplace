@@ -56,7 +56,7 @@ function useGuestCart() {
 
 const PLACEHOLDER_IMAGE_URL = "/placeholder-product.jpg";
 const BACKGROUND_IMAGE_URL =
-  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN3wy7IOl64McafQHoWsZUzihAkJ3DF5EGgPpY";
+  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN27mxBlQOYTpvrXwqtZHon4P85jVxyMmDkf3s";
 
 // ---------------- Product Card (With Add to Cart Logic ) ----------------
 interface ProductCardProps {
