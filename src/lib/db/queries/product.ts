@@ -606,7 +606,7 @@ async getProducts({
   let searchQuery;
   if (searchEmbedding) {
     const highRelevanceThreshold = 0.6;
-    const lowRelevanceThreshold = 0.8;
+    const lowRelevanceThreshold = 0.99;
     const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
     const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
     searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
