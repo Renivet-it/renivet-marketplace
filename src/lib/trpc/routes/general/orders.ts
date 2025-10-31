@@ -236,6 +236,24 @@ export const ordersRouter = createTRPCRouter({
                 totalAmount: Number(item.price * item.quantity),
               });
               console.log("Database order created successfully:", newOrder);
+// ✅ Log in ordersIntent table that order was created in your database
+if (input.intentId) {
+  await db
+    .update(schemas.ordersIntent)
+    .set({
+      orderLog: {
+        step: "order_created_in_database",
+        status: "success",
+        timestamp: new Date().toISOString(),
+        details: {
+          orderId: newOrder.id,
+          brandId: item.brandId,
+          totalAmount: newOrder.totalAmount,
+        },
+      },
+    })
+    .where(eq(schemas.ordersIntent.id, input.intentId));
+}
 
               // NEW: Insert single order item
               await db.insert(schemas.orderItems).values({
@@ -365,16 +383,16 @@ if (input.intentId) {
     .set({
       shiprocketRequest: srOrderRequest, // ✅ Save request data
       shiprocketResponse: srOrder, // ✅ Save full response
-      orderLog: {
-        step: "shiprocket_order_created",
-        status: srOrder.status ? "success" : "failed",
-        timestamp: new Date().toISOString(),
-        details: {
-          orderId: newOrder.id,
-          brandName: brand.name,
-          pickupLocation,
-        },
-      },
+      // orderLog: {
+      //   step: "shiprocket_order_created",
+      //   status: srOrder.status ? "success" : "failed",
+      //   timestamp: new Date().toISOString(),
+      //   details: {
+      //     orderId: newOrder.id,
+      //     brandName: brand.name,
+      //     pickupLocation,
+      //   },
+      // },
     })
     .where(eq(schemas.ordersIntent.id, input.intentId));
 }
@@ -428,12 +446,12 @@ if (input.intentId) {
         error: shiprocketError.message,
         stack: shiprocketError.stack,
       },
-      orderLog: {
-        step: "shiprocket_order_failed",
-        status: "error",
-        timestamp: new Date().toISOString(),
-        message: shiprocketError.message,
-      },
+      // orderLog: {
+      //   step: "shiprocket_order_failed",
+      //   status: "error",
+      //   timestamp: new Date().toISOString(),
+      //   message: shiprocketError.message,
+      // },
     })
     .where(eq(schemas.ordersIntent.id, input.intentId));
   }
@@ -568,6 +586,16 @@ console.log(stockUpdate, "stockUpdatestockUpdate");
             // NEW: Return all created orders
             return createdOrders;
           } catch (err) {
+             if (input.intentId) {
+    await db.update(schemas.ordersIntent).set({
+      orderLog: {
+        step: "order_creation_failed_in_database",
+        status: "error",
+        message: err.message,
+        timestamp: new Date().toISOString(),
+      },
+    }).where(eq(schemas.ordersIntent.id, input.intentId));
+  }
             console.error(err);
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
