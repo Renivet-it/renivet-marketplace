@@ -187,6 +187,8 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                 products: productsForIntent,
                 totalAmount: priceList.total,
             });
+            const intentId = orderIntent?.id;
+
             console.log("Order intent created:", orderIntent);
 
             // Create a single Razorpay order for the total amount
@@ -267,8 +269,10 @@ export function OrderPage({ className, initialData, user, ...props }: PageProps)
                 refetch: () => {},
                 createOrder: async (orderDetails: any) => {
                     try {
-                        const createdOrder = await retryCreateOrder(orderDetails); // Use retry logic for order creation
-                        // After successful order creation, link the intent to the order
+    const createdOrder = await retryCreateOrder({
+      ...orderDetails,
+      intentId, // ✅ Pass intentId to backend
+    });// After successful order creation, link the intent to the order
                         if (orderIntent?.id && createdOrder?.id) { // Assuming createdOrder will have an ID after creation
                             await linkOrderIntentToOrder({
                                 userId: user.id,

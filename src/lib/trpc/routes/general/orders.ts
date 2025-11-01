@@ -150,6 +150,7 @@ export const ordersRouter = createTRPCRouter({
             coupon: z.string().optional(),
             razorpayOrderId: z.string(),
             razorpayPaymentId: z.string(),
+            intentId: z.string().optional(),
           })
         )
         .use(({ ctx, input, next }) => {
@@ -232,9 +233,27 @@ export const ordersRouter = createTRPCRouter({
                 userId: user.id,
                 // Adjust totalAmount to reflect single item
                 // @ts-ignore
-                totalAmount: item.price * item.quantity,
+                totalAmount: Number(item.price * item.quantity),
               });
               console.log("Database order created successfully:", newOrder);
+// ✅ Log in ordersIntent table that order was created in your database
+if (input.intentId) {
+  await db
+    .update(schemas.ordersIntent)
+    .set({
+      orderLog: {
+        step: "order_created_in_database",
+        status: "success",
+        timestamp: new Date().toISOString(),
+        details: {
+          orderId: newOrder.id,
+          brandId: item.brandId,
+          totalAmount: newOrder.totalAmount,
+        },
+      },
+    })
+    .where(eq(schemas.ordersIntent.id, input.intentId));
+}
 
               // NEW: Insert single order item
               await db.insert(schemas.orderItems).values({
@@ -333,15 +352,15 @@ export const ordersRouter = createTRPCRouter({
               const srOrderRequest = {
                 order_id: orderId,
                 order_date: format(new Date(), "yyyy-MM-dd"),
-                pickup_location: pickupLocation,
-                billing_customer_name: existingAddress.fullName.split(" ")[0],
+                pickup_location: pickupLocation || "DefaultPickup",
+                billing_customer_name: existingAddress.fullName.split(" ")[0] || "Customer",
                 billing_last_name: existingAddress.fullName.split(" ")[1] || "",
-                billing_address: existingAddress.street,
-                billing_city: existingAddress.city,
-                billing_pincode: +existingAddress.zip,
-                billing_state: existingAddress.state,
+                billing_address: existingAddress.street || "Unknown Street",
+                billing_city: existingAddress.city || "Delhi",
+                billing_pincode: +existingAddress.zip || 110001,
+                billing_state: existingAddress.state || "Delhi",
                 billing_country: "India",
-                billing_email: user.email,
+                billing_email: user.email || "test@example.com",
                 billing_phone: getRawNumberFromPhone(existingAddress.phone),
                 shipping_is_billing: true,
                 order_items: orderItemsForShiprocket,
@@ -358,7 +377,25 @@ export const ordersRouter = createTRPCRouter({
                 // const srOrder = await sr.requestCreateOrder(srOrderRequest);
                 const srOrder = await createShiprocketOrderWithRetry(sr, srOrderRequest);
                 console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
-
+if (input.intentId) {
+  await db
+    .update(schemas.ordersIntent)
+    .set({
+      shiprocketRequest: srOrderRequest, // ✅ Save request data
+      shiprocketResponse: srOrder, // ✅ Save full response
+      // orderLog: {
+      //   step: "shiprocket_order_created",
+      //   status: srOrder.status ? "success" : "failed",
+      //   timestamp: new Date().toISOString(),
+      //   details: {
+      //     orderId: newOrder.id,
+      //     brandName: brand.name,
+      //     pickupLocation,
+      //   },
+      // },
+    })
+    .where(eq(schemas.ordersIntent.id, input.intentId));
+}
                 if (srOrder.status && srOrder.data) {
                   const shipment = await db
                     .insert(schemas.orderShipments)
@@ -402,6 +439,22 @@ export const ordersRouter = createTRPCRouter({
                   }
                 }
               } catch (shiprocketError) {
+                 if (input.intentId) {
+    await db.update(schemas.ordersIntent).set({
+      shiprocketRequest: srOrderRequest,
+      shiprocketResponse: {
+        error: shiprocketError.message,
+        stack: shiprocketError.stack,
+      },
+      // orderLog: {
+      //   step: "shiprocket_order_failed",
+      //   status: "error",
+      //   timestamp: new Date().toISOString(),
+      //   message: shiprocketError.message,
+      // },
+    })
+    .where(eq(schemas.ordersIntent.id, input.intentId));
+  }
                 console.error(`Failed to create Shiprocket order for brand ${brand.name}:`, shiprocketError);
                     throw new TRPCError({
                     code: "INTERNAL_SERVER_ERROR",
@@ -533,6 +586,16 @@ console.log(stockUpdate, "stockUpdatestockUpdate");
             // NEW: Return all created orders
             return createdOrders;
           } catch (err) {
+             if (input.intentId) {
+    await db.update(schemas.ordersIntent).set({
+      orderLog: {
+        step: "order_creation_failed_in_database",
+        status: "error",
+        message: err.message,
+        timestamp: new Date().toISOString(),
+      },
+    }).where(eq(schemas.ordersIntent.id, input.intentId));
+  }
             console.error(err);
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",

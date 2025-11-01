@@ -837,6 +837,9 @@ console.log(total, "toitalsc");
       variantId?: string;
       totalItems?: number;
       totalAmount: number;
+          shiprocketRequest?: any;// ✅ new
+    shiprocketResponse?: any;// ✅ new
+    orderLog?: any;
     },
     metadata?: {
       ipAddress?: string;
@@ -855,6 +858,13 @@ console.log(total, "toitalsc");
           totalAmount: values.totalAmount,
           paymentStatus: "pending",
           status: "pending",
+
+                  // ✅ New fields, saved as JSONB
+        shiprocketRequest: values.shiprocketRequest || null,
+        shiprocketResponse: values.shiprocketResponse || null,
+        orderLog: values.orderLog || null,
+
+
           logDetails: {
             created: new Date().toISOString(),
             status: "initiated",
@@ -867,6 +877,7 @@ console.log(total, "toitalsc");
               }
             ]
           }
+
         })
         .returning()
         .then((res) => res[0]);

@@ -105,6 +105,9 @@ export const ordersIntent = pgTable(
         totalItems: integer("total_items"),
         totalAmount: integer("total_amount"),
         logDetails: jsonb("log_details"),
+        shiprocketRequest: jsonb("shiprocket_request"), // Store full Shiprocket API request
+        shiprocketResponse: jsonb("shiprocket_response"), // Store Shiprocket API response
+        orderLog: jsonb("order_log"),
         ...timestamps,
     },
 
