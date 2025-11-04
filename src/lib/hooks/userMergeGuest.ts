@@ -77,24 +77,24 @@ export function useMergeGuestCartOnLogin() {
   const { guestCart, clearGuestCart } = useGuestCart();
   const utils = trpc.useUtils(); // ✅ get query utils
 
-  const mergeGuestCart = trpc.general.users.cart.mergeGuestCart.useMutation({
-    onSuccess: () => {
-      clearGuestCart();
-      utils.general.users.cart.getCartForUser.invalidate(); // ✅ refetch cart after merge
-    },
-  });
+  // const mergeGuestCart = trpc.general.users.cart.mergeGuestCart.useMutation({
+  //   onSuccess: () => {
+  //     clearGuestCart();
+  //     utils.general.users.cart.getCartForUser.invalidate(); // ✅ refetch cart after merge
+  //   },
+  // });
 
-  useEffect(() => {
-    if (userId && guestCart.length > 0) {
-      mergeGuestCart.mutate(
-        guestCart.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId ?? null,
-          quantity: item.quantity,
-        }))
-      );
-    }
-  }, [userId, guestCart]);
+  // useEffect(() => {
+  //   if (userId && guestCart.length > 0) {
+  //     mergeGuestCart.mutate(
+  //       guestCart.map((item) => ({
+  //         productId: item.productId,
+  //         variantId: item.variantId ?? null,
+  //         quantity: item.quantity,
+  //       }))
+  //     );
+  //   }
+  // }, [userId, guestCart]);
 }
 
 

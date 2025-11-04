@@ -218,7 +218,7 @@ export default function RootLayout({ children }: LayoutProps) {
                     className={cn("min-h-screen overflow-x-hidden antialiased")}
                 >
                     <ClientProvider>
-                         <MergeGuestCart />
+                         {/* <MergeGuestCart /> */}
                         <MergeGuestWishlist />
                         {children}
                         <Toaster />

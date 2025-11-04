@@ -148,37 +148,45 @@ const onSubmit = async () => {
     <div className="max-w-4xl mx-auto py-12 px-6">
       {/* Progress Steps */}
       {step <= 3 && (
-        <div className="flex items-center justify-between mb-8">
-          {["Upload Audience", "Compose Email", "Review & Send"].map(
-            (label, i) => {
-              const current = i + 1;
-              const active = current === step;
-              const done = step > current;
-              return (
-                <div key={label} className="flex flex-col items-center w-1/3">
-                  <div
-                    className={`w-10 h-10 flex items-center justify-center rounded-full border-2 text-sm font-medium transition ${
+ <div className="flex items-center justify-around md:justify-between mb-8 gap-2">
+    {["Upload Audience", "Compose Email", "Review & Send"].map(
+      (label, index) => {
+        const current = index + 1;
+        const active = current === step;
+        const done = step > current;
+
+        return (
+          <div
+            key={label}
+            className="flex flex-col items-center text-center w-full"
+          >
+            {/* Step Circle */}
+            <div
+              className={`w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 text-xs md:text-sm font-medium transition
+                    ${
                       done
                         ? "bg-green-500 border-green-500 text-white"
                         : active
                         ? "bg-indigo-600 border-indigo-600 text-white"
                         : "border-gray-300 text-gray-400"
                     }`}
-                  >
-                    {done ? <CheckCircle className="w-5 h-5" /> : current}
-                  </div>
-                  <p
-                    className={`mt-2 text-sm ${
-                      active ? "text-indigo-600 font-semibold" : "text-gray-500"
-                    }`}
-                  >
-                    {label}
-                  </p>
-                </div>
-              );
-            }
-          )}
-        </div>
+            >
+              {done ? "✓" : current}
+            </div>
+
+            {/* Label */}
+            <p
+              className={`mt-2 text-[10px] sm:text-xs md:text-sm leading-tight ${
+                active ? "text-indigo-600 font-semibold" : "text-gray-600"
+              }`}
+            >
+              {label}
+            </p>
+          </div>
+        );
+      }
+    )}
+  </div>
       )}
 
       {/* Step 1: Upload Audience */}

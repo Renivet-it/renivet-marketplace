@@ -32,37 +32,75 @@ import {
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
 import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
 
 
 
+// async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
+//   for (let attempt = 1; attempt <= retries; attempt++) {
+//     try {
+//       const srOrder = await sr.requestCreateOrder(srOrderRequest);
+//       console.log(`Shiprocket response for attempt ${attempt}:`, JSON.stringify(srOrder, null, 2));
+
+//       if (srOrder.status && srOrder.data) {
+//         return srOrder; // ✅ Success, exit
+//       }
+
+//       console.warn(`Shiprocket attempt ${attempt} failed: ${JSON.stringify(srOrder)}`);
+//     } catch (error: any) {
+//       console.warn(`Shiprocket attempt ${attempt} error: ${error.message}`);
+//     }
+
+//     if (attempt < retries) {
+//       console.log(`Retrying Shiprocket order creation after ${delay}ms...`);
+
+//       // ✅ ✅ Correct way to delay
+//       await new Promise((resolve) => setTimeout(resolve, delay));
+//     }
+//   }
+
+// }
 
 async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
+  let lastError = null;
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const srOrder = await sr.requestCreateOrder(srOrderRequest);
-      console.log(`Shiprocket response for attempt ${attempt}:`, JSON.stringify(srOrder, null, 2));
-      if (srOrder.status && srOrder.data) {
+      console.log(`✅ Shiprocket Attempt ${attempt}:`, srOrder);
+
+      // ✅ Success case
+      if (srOrder?.status === true && srOrder?.data) {
         return srOrder;
       }
-      console.warn(`Shiprocket attempt ${attempt} failed: ${JSON.stringify(srOrder)}`);
+
+      // ❌ Failure but no exception → throw full response so we can see full error
+      console.warn(`⚠ Shiprocket responded with invalid data on attempt ${attempt}`, srOrder);
+      lastError = srOrder;
+      throw srOrder;
+
     } catch (error: any) {
-      console.warn(`Shiprocket attempt ${attempt} error: ${error.message}`);
+      // ✅ Capture both thrown response objects and Axios errors
+      const fullError = error?.response?.data || error;
+      console.warn(`❌ Shiprocket error on attempt ${attempt}:`, fullError);
+      lastError = fullError;
     }
+
     if (attempt < retries) {
-      console.log(`Retrying Shiprocket order creation after ${delay}ms...`);
-    // @ts-ignore
-      setTimeout(delay);
+      console.log(`🔄 Retrying in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  throw new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message: "Failed to create Shiprocket order after retries",
-  });
+
+  // 🚨 After all retries, throw the complete error object (not trimmed)
+  throw lastError;
 }
+
+
+
 
 export const ordersRouter = createTRPCRouter({
     getOrders: protectedProcedure
@@ -172,6 +210,7 @@ export const ordersRouter = createTRPCRouter({
         })
         .mutation(async ({ input, ctx }) => {
           const { queries, user, db, schemas } = ctx;
+  console.log("🟢 Received intentId:", input.intentId);
 
           const existingAddress = user.addresses.find(
             (add) => add.id === input.addressId
@@ -214,6 +253,10 @@ export const ordersRouter = createTRPCRouter({
 
             // NEW: Process each item individually to create a separate order
             for (const item of input.items) {
+
+                console.log("------------------------------------------------");
+  console.log("🛒 Creating new order for brand:", item.brandId);
+  console.log("📦 Intent ID attached to this order:", input.intentId);
               const receiptId = generateReceiptId();
               const brand = existingBrands.find((b) => b.id === item.brandId);
               if (!brand) {
@@ -311,22 +354,22 @@ if (input.intentId) {
               const dims = variant || product;
               const orderDimensions = {
                 // @ts-ignore
-                weight: (dims.weight || 0) * item.quantity,
+                weight: (dims.weight || 100) * item.quantity,
                 // @ts-ignore
-                length: dims.length || 0,
+                length: dims.length || 100,
                 // @ts-ignore
-                width: dims.width || 0,
+                width: dims.width || 100,
                 // @ts-ignore
-                height: (dims.height || 0) * item.quantity,
+                height: (dims.height || 100) * item.quantity,
               };
               console.log(`Order dimensions for brand ${brand.name}:`, orderDimensions);
 
               // Ensure dimensions meet Shiprocket's minimum requirements
               const validatedDimensions = {
                 weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams
-                length: Math.max(orderDimensions.length, 0.5), // Minimum 0.5 cm
-                width: Math.max(orderDimensions.width, 0.5), // Minimum 0.5 cm
-                height: Math.max(orderDimensions.height, 0.5), // Minimum 0.5 cm
+                length: Math.max(orderDimensions.length, 100), // Minimum 100 cm
+                width: Math.max(orderDimensions.width, 100), // Minimum 100 cm
+                height: Math.max(orderDimensions.height, 100), // Minimum 100 cm
               };
               console.log(`Validated dimensions for brand ${brand.name}:`, validatedDimensions);
 
@@ -372,30 +415,55 @@ if (input.intentId) {
                 weight: +(Math.max(orderDimensions.weight, 0.1) / 1000).toFixed(2),
               };
               console.log(`Shiprocket order request for brand ${brand.name}:`, srOrderRequest);
+// ✅ Step 1: Check if intent exists in last 2 minutes before updating
+// ✅ Step 1: Fetch all intents from last 2 minutes
+const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+
+const intents = await db.query.ordersIntent.findMany({
+  where: gte(schemas.ordersIntent.createdAt, twoMinsAgo),
+});
+
+// ✅ Step 2: Find intent where productId matches current item.productId
+let matchedIntent = null;
+
+for (const intentRow of intents) {
+  if (intentRow.productId === item.productId) {
+    matchedIntent = intentRow;
+    break;
+  }
+}
+
+if (matchedIntent) {
+  console.log(`✅ Matched intent ${matchedIntent.id} for product ${item.productId}`);
+} else {
+  console.log(`⚠ No intent found for product ${item.productId} in last 2 mins`);
+}
+
 
               try {
                 // const srOrder = await sr.requestCreateOrder(srOrderRequest);
                 const srOrder = await createShiprocketOrderWithRetry(sr, srOrderRequest);
                 console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
-if (input.intentId) {
-  await db
-    .update(schemas.ordersIntent)
-    .set({
-      shiprocketRequest: srOrderRequest, // ✅ Save request data
-      shiprocketResponse: srOrder, // ✅ Save full response
-      // orderLog: {
-      //   step: "shiprocket_order_created",
-      //   status: srOrder.status ? "success" : "failed",
-      //   timestamp: new Date().toISOString(),
-      //   details: {
-      //     orderId: newOrder.id,
-      //     brandName: brand.name,
-      //     pickupLocation,
-      //   },
-      // },
-    })
-    .where(eq(schemas.ordersIntent.id, input.intentId));
-}
+
+
+  if (matchedIntent) {
+    await db
+      .update(schemas.ordersIntent)
+      .set({
+        shiprocketRequest: {
+          ...(matchedIntent.shiprocketRequest || {}),
+          [newOrder.id]: srOrderRequest, // Save full request
+        },
+        shiprocketResponse: {
+          ...(matchedIntent.shiprocketResponse || {}),
+          [newOrder.id]: srOrder, // ✅ Save full Shiprocket response object here
+        },
+      })
+      .where(eq(schemas.ordersIntent.id, matchedIntent.id));
+  }
+
+
+
                 if (srOrder.status && srOrder.data) {
                   const shipment = await db
                     .insert(schemas.orderShipments)
@@ -439,27 +507,31 @@ if (input.intentId) {
                   }
                 }
               } catch (shiprocketError) {
-                 if (input.intentId) {
-    await db.update(schemas.ordersIntent).set({
-      shiprocketRequest: srOrderRequest,
-      shiprocketResponse: {
-        error: shiprocketError.message,
-        stack: shiprocketError.stack,
-      },
-      // orderLog: {
-      //   step: "shiprocket_order_failed",
-      //   status: "error",
-      //   timestamp: new Date().toISOString(),
-      //   message: shiprocketError.message,
-      // },
-    })
-    .where(eq(schemas.ordersIntent.id, input.intentId));
+ console.log("Shiprocket actual error:", shiprocketError);
+
+  // ✅ Save to DB if needed
+  if (matchedIntent) {
+    await db.update(schemas.ordersIntent)
+      .set({
+        shiprocketRequest: srOrderRequest,
+        shiprocketResponse: {
+          [newOrder.id]: shiprocketError
+        }
+      })
+      .where(eq(schemas.ordersIntent.id, matchedIntent.id));
   }
+
+  // // ✅ Return it to frontend:
+  // throw new TRPCError({
+  //   code: "BAD_REQUEST",
+  //   message: "Shiprocket Order Failed",
+  //   cause: shiprocketError, // 👈 YOUR ACTUAL ERROR HERE!
+  // });
                 console.error(`Failed to create Shiprocket order for brand ${brand.name}:`, shiprocketError);
-                    throw new TRPCError({
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: `Failed to create Shiprocket order for brand ${brand.name}`,
-                    });
+                    // throw new TRPCError({
+                    // code: "INTERNAL_SERVER_ERROR",
+                    // message: `Failed to create Shiprocket order for brand ${brand.name}`,
+                    // });
               }
                     // NEW: Logic 1 - Validate and Deduct Stock
                     console.log(`Validating stock for order ${newOrder.id}`);
@@ -586,16 +658,6 @@ console.log(stockUpdate, "stockUpdatestockUpdate");
             // NEW: Return all created orders
             return createdOrders;
           } catch (err) {
-             if (input.intentId) {
-    await db.update(schemas.ordersIntent).set({
-      orderLog: {
-        step: "order_creation_failed_in_database",
-        status: "error",
-        message: err.message,
-        timestamp: new Date().toISOString(),
-      },
-    }).where(eq(schemas.ordersIntent.id, input.intentId));
-  }
             console.error(err);
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
