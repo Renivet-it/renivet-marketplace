@@ -313,26 +313,26 @@ if (input.intentId) {
               // NEW: Process Shiprocket order for this single item
               console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`);
 
-              // try {
-              //   await sendBrandOrderNotificationEmail({
-              //     orderId: newOrder.id,
-              //     brand: {
-              //       id: brand.id,
-              //       email: brand.email,
-              //       name: brand.name,
-              //       street: existingAddress.street,
-              //       city: existingAddress.city,
-              //       state: existingAddress.state,
-              //       zip: existingAddress.zip,
-              //       country: "India",
-              //       customerName: existingAddress.fullName.split(" ")[0],
-              //     },
-              //   });
-              //   console.log(`Order confirmation email sent for order ${newOrder.id}`);
-              // } catch (emailError) {
-              //   console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
-              //   // Log the error but don't fail the mutation
-              // }
+              try {
+                await sendBrandOrderNotificationEmail({
+                  orderId: newOrder.id,
+                  brand: {
+                    id: brand.id,
+                    email: brand.email,
+                    name: brand.name,
+                    street: existingAddress.street,
+                    city: existingAddress.city,
+                    state: existingAddress.state,
+                    zip: existingAddress.zip,
+                    country: "India",
+                    customerName: existingAddress.fullName.split(" ")[0],
+                  },
+                });
+                console.log(`Order confirmation email sent for order ${newOrder.id}`);
+              } catch (emailError) {
+                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
+                // Log the error but don't fail the mutation
+              }
 
               const product = await queries.products.getProduct({
                 productId: item.productId,
@@ -354,22 +354,22 @@ if (input.intentId) {
               const dims = variant || product;
               const orderDimensions = {
                 // @ts-ignore
-                weight: (dims.weight || 0) * item.quantity,
+                weight: (dims.weight || 100) * item.quantity,
                 // @ts-ignore
-                length: dims.length || 0,
+                length: dims.length || 100,
                 // @ts-ignore
-                width: dims.width || 0,
+                width: dims.width || 100,
                 // @ts-ignore
-                height: (dims.height || 0) * item.quantity,
+                height: (dims.height || 100) * item.quantity,
               };
               console.log(`Order dimensions for brand ${brand.name}:`, orderDimensions);
 
               // Ensure dimensions meet Shiprocket's minimum requirements
               const validatedDimensions = {
                 weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams
-                length: Math.max(orderDimensions.length, 0.5), // Minimum 0.5 cm
-                width: Math.max(orderDimensions.width, 0.5), // Minimum 0.5 cm
-                height: Math.max(orderDimensions.height, 0.5), // Minimum 0.5 cm
+                length: Math.max(orderDimensions.length, 100), // Minimum 100 cm
+                width: Math.max(orderDimensions.width, 100), // Minimum 100 cm
+                height: Math.max(orderDimensions.height, 100), // Minimum 100 cm
               };
               console.log(`Validated dimensions for brand ${brand.name}:`, validatedDimensions);
 
