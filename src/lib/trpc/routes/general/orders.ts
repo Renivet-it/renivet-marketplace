@@ -32,11 +32,10 @@ import {
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
 import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
-
 
 
 
@@ -45,24 +44,26 @@ async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retr
     try {
       const srOrder = await sr.requestCreateOrder(srOrderRequest);
       console.log(`Shiprocket response for attempt ${attempt}:`, JSON.stringify(srOrder, null, 2));
+
       if (srOrder.status && srOrder.data) {
-        return srOrder;
+        return srOrder; // ✅ Success, exit
       }
+
       console.warn(`Shiprocket attempt ${attempt} failed: ${JSON.stringify(srOrder)}`);
     } catch (error: any) {
       console.warn(`Shiprocket attempt ${attempt} error: ${error.message}`);
     }
+
     if (attempt < retries) {
       console.log(`Retrying Shiprocket order creation after ${delay}ms...`);
-    // @ts-ignore
-      setTimeout(delay);
+
+      // ✅ ✅ Correct way to delay
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  throw new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message: "Failed to create Shiprocket order after retries",
-  });
+
 }
+
 
 export const ordersRouter = createTRPCRouter({
     getOrders: protectedProcedure
@@ -172,6 +173,7 @@ export const ordersRouter = createTRPCRouter({
         })
         .mutation(async ({ input, ctx }) => {
           const { queries, user, db, schemas } = ctx;
+  console.log("🟢 Received intentId:", input.intentId);
 
           const existingAddress = user.addresses.find(
             (add) => add.id === input.addressId
@@ -214,6 +216,10 @@ export const ordersRouter = createTRPCRouter({
 
             // NEW: Process each item individually to create a separate order
             for (const item of input.items) {
+
+                console.log("------------------------------------------------");
+  console.log("🛒 Creating new order for brand:", item.brandId);
+  console.log("📦 Intent ID attached to this order:", input.intentId);
               const receiptId = generateReceiptId();
               const brand = existingBrands.find((b) => b.id === item.brandId);
               if (!brand) {
@@ -270,26 +276,26 @@ if (input.intentId) {
               // NEW: Process Shiprocket order for this single item
               console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`);
 
-              try {
-                await sendBrandOrderNotificationEmail({
-                  orderId: newOrder.id,
-                  brand: {
-                    id: brand.id,
-                    email: brand.email,
-                    name: brand.name,
-                    street: existingAddress.street,
-                    city: existingAddress.city,
-                    state: existingAddress.state,
-                    zip: existingAddress.zip,
-                    country: "India",
-                    customerName: existingAddress.fullName.split(" ")[0],
-                  },
-                });
-                console.log(`Order confirmation email sent for order ${newOrder.id}`);
-              } catch (emailError) {
-                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
-                // Log the error but don't fail the mutation
-              }
+              // try {
+              //   await sendBrandOrderNotificationEmail({
+              //     orderId: newOrder.id,
+              //     brand: {
+              //       id: brand.id,
+              //       email: brand.email,
+              //       name: brand.name,
+              //       street: existingAddress.street,
+              //       city: existingAddress.city,
+              //       state: existingAddress.state,
+              //       zip: existingAddress.zip,
+              //       country: "India",
+              //       customerName: existingAddress.fullName.split(" ")[0],
+              //     },
+              //   });
+              //   console.log(`Order confirmation email sent for order ${newOrder.id}`);
+              // } catch (emailError) {
+              //   console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
+              //   // Log the error but don't fail the mutation
+              // }
 
               const product = await queries.products.getProduct({
                 productId: item.productId,
@@ -372,30 +378,55 @@ if (input.intentId) {
                 weight: +(Math.max(orderDimensions.weight, 0.1) / 1000).toFixed(2),
               };
               console.log(`Shiprocket order request for brand ${brand.name}:`, srOrderRequest);
+// ✅ Step 1: Check if intent exists in last 2 minutes before updating
+// ✅ Step 1: Fetch all intents from last 2 minutes
+const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+
+const intents = await db.query.ordersIntent.findMany({
+  where: gte(schemas.ordersIntent.createdAt, twoMinsAgo),
+});
+
+// ✅ Step 2: Find intent where productId matches current item.productId
+let matchedIntent = null;
+
+for (const intentRow of intents) {
+  if (intentRow.productId === item.productId) {
+    matchedIntent = intentRow;
+    break;
+  }
+}
+
+if (matchedIntent) {
+  console.log(`✅ Matched intent ${matchedIntent.id} for product ${item.productId}`);
+} else {
+  console.log(`⚠ No intent found for product ${item.productId} in last 2 mins`);
+}
+
 
               try {
                 // const srOrder = await sr.requestCreateOrder(srOrderRequest);
                 const srOrder = await createShiprocketOrderWithRetry(sr, srOrderRequest);
                 console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
-if (input.intentId) {
-  await db
-    .update(schemas.ordersIntent)
-    .set({
-      shiprocketRequest: srOrderRequest, // ✅ Save request data
-      shiprocketResponse: srOrder, // ✅ Save full response
-      // orderLog: {
-      //   step: "shiprocket_order_created",
-      //   status: srOrder.status ? "success" : "failed",
-      //   timestamp: new Date().toISOString(),
-      //   details: {
-      //     orderId: newOrder.id,
-      //     brandName: brand.name,
-      //     pickupLocation,
-      //   },
-      // },
-    })
-    .where(eq(schemas.ordersIntent.id, input.intentId));
-}
+
+
+  if (matchedIntent) {
+    await db
+      .update(schemas.ordersIntent)
+      .set({
+        shiprocketRequest: {
+          ...(matchedIntent.shiprocketRequest || {}),
+          [newOrder.id]: srOrderRequest, // Save full request
+        },
+        shiprocketResponse: {
+          ...(matchedIntent.shiprocketResponse || {}),
+          [newOrder.id]: srOrder, // ✅ Save full Shiprocket response object here
+        },
+      })
+      .where(eq(schemas.ordersIntent.id, matchedIntent.id));
+  }
+
+
+
                 if (srOrder.status && srOrder.data) {
                   const shipment = await db
                     .insert(schemas.orderShipments)
@@ -439,27 +470,33 @@ if (input.intentId) {
                   }
                 }
               } catch (shiprocketError) {
-                 if (input.intentId) {
+  const fullErrorResponse =
+    shiprocketError?.response?.data ||
+    shiprocketError?.data ||
+    shiprocketError?.message ||
+    shiprocketError;
+
+  if (matchedIntent) {
     await db.update(schemas.ordersIntent).set({
       shiprocketRequest: srOrderRequest,
       shiprocketResponse: {
-        error: shiprocketError.message,
-        stack: shiprocketError.stack,
+        ...(matchedIntent.shiprocketResponse || {}),
+        [newOrder.id]: fullErrorResponse,
       },
-      // orderLog: {
-      //   step: "shiprocket_order_failed",
-      //   status: "error",
-      //   timestamp: new Date().toISOString(),
-      //   message: shiprocketError.message,
-      // },
-    })
-    .where(eq(schemas.ordersIntent.id, input.intentId));
+    }).where(eq(schemas.ordersIntent.id, matchedIntent.id));
   }
+
+  // ✅ Send full error back instead of TRPCError
+  return {
+    success: false,
+    orderId: newOrder.id,
+    shiprocketError: fullErrorResponse,
+  };
                 console.error(`Failed to create Shiprocket order for brand ${brand.name}:`, shiprocketError);
-                    throw new TRPCError({
-                    code: "INTERNAL_SERVER_ERROR",
-                    message: `Failed to create Shiprocket order for brand ${brand.name}`,
-                    });
+                    // throw new TRPCError({
+                    // code: "INTERNAL_SERVER_ERROR",
+                    // message: `Failed to create Shiprocket order for brand ${brand.name}`,
+                    // });
               }
                     // NEW: Logic 1 - Validate and Deduct Stock
                     console.log(`Validating stock for order ${newOrder.id}`);
@@ -586,16 +623,6 @@ console.log(stockUpdate, "stockUpdatestockUpdate");
             // NEW: Return all created orders
             return createdOrders;
           } catch (err) {
-             if (input.intentId) {
-    await db.update(schemas.ordersIntent).set({
-      orderLog: {
-        step: "order_creation_failed_in_database",
-        status: "error",
-        message: err.message,
-        timestamp: new Date().toISOString(),
-      },
-    }).where(eq(schemas.ordersIntent.id, input.intentId));
-  }
             console.error(err);
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
