@@ -65,38 +65,40 @@ import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-noti
 // }
 
 async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
-  let lastError = null; // store exact shiprocket error
+  let lastError = null;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const srOrder = await sr.requestCreateOrder(srOrderRequest);
-      console.log(`✅ Shiprocket Success Attempt ${attempt}:`, srOrder);
+      console.log(`✅ Shiprocket Attempt ${attempt}:`, srOrder);
 
-      // ✅ If response contains success structure → return it
-      if (srOrder?.status && srOrder?.data) {
+      // ✅ Success case
+      if (srOrder?.status === true && srOrder?.data) {
         return srOrder;
       }
 
-      // ❌ If Shiprocket responds with error in body (not thrown)
-      console.warn(`⚠ Shiprocket responded with failure on attempt ${attempt}:`, srOrder);
+      // ❌ Failure but no exception → throw full response so we can see full error
+      console.warn(`⚠ Shiprocket responded with invalid data on attempt ${attempt}`, srOrder);
       lastError = srOrder;
+      throw srOrder;
 
     } catch (error: any) {
-      // ❌ If Shiprocket *threw* an error (like Axios error)
-      console.warn(`❌ Shiprocket threw error on attempt ${attempt}:`, error?.response?.data || error);
-      lastError = error?.response?.data || error; // keep actual error data
+      // ✅ Capture both thrown response objects and Axios errors
+      const fullError = error?.response?.data || error;
+      console.warn(`❌ Shiprocket error on attempt ${attempt}:`, fullError);
+      lastError = fullError;
     }
 
-    // Retry logic
     if (attempt < retries) {
       console.log(`🔄 Retrying in ${delay}ms...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
-  // 🚨 All retries failed — throw the *real* Shiprocket error (not TRPCError)
-  throw lastError || new Error("Unknown Shiprocket error");
+  // 🚨 After all retries, throw the complete error object (not trimmed)
+  throw lastError;
 }
+
 
 
 
