@@ -39,30 +39,65 @@ import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-noti
 
 
 
+// async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
+//   for (let attempt = 1; attempt <= retries; attempt++) {
+//     try {
+//       const srOrder = await sr.requestCreateOrder(srOrderRequest);
+//       console.log(`Shiprocket response for attempt ${attempt}:`, JSON.stringify(srOrder, null, 2));
+
+//       if (srOrder.status && srOrder.data) {
+//         return srOrder; // ✅ Success, exit
+//       }
+
+//       console.warn(`Shiprocket attempt ${attempt} failed: ${JSON.stringify(srOrder)}`);
+//     } catch (error: any) {
+//       console.warn(`Shiprocket attempt ${attempt} error: ${error.message}`);
+//     }
+
+//     if (attempt < retries) {
+//       console.log(`Retrying Shiprocket order creation after ${delay}ms...`);
+
+//       // ✅ ✅ Correct way to delay
+//       await new Promise((resolve) => setTimeout(resolve, delay));
+//     }
+//   }
+
+// }
+
 async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
+  let lastError = null; // store exact shiprocket error
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const srOrder = await sr.requestCreateOrder(srOrderRequest);
-      console.log(`Shiprocket response for attempt ${attempt}:`, JSON.stringify(srOrder, null, 2));
+      console.log(`✅ Shiprocket Success Attempt ${attempt}:`, srOrder);
 
-      if (srOrder.status && srOrder.data) {
-        return srOrder; // ✅ Success, exit
+      // ✅ If response contains success structure → return it
+      if (srOrder?.status && srOrder?.data) {
+        return srOrder;
       }
 
-      console.warn(`Shiprocket attempt ${attempt} failed: ${JSON.stringify(srOrder)}`);
+      // ❌ If Shiprocket responds with error in body (not thrown)
+      console.warn(`⚠ Shiprocket responded with failure on attempt ${attempt}:`, srOrder);
+      lastError = srOrder;
+
     } catch (error: any) {
-      console.warn(`Shiprocket attempt ${attempt} error: ${error.message}`);
+      // ❌ If Shiprocket *threw* an error (like Axios error)
+      console.warn(`❌ Shiprocket threw error on attempt ${attempt}:`, error?.response?.data || error);
+      lastError = error?.response?.data || error; // keep actual error data
     }
 
+    // Retry logic
     if (attempt < retries) {
-      console.log(`Retrying Shiprocket order creation after ${delay}ms...`);
-
-      // ✅ ✅ Correct way to delay
+      console.log(`🔄 Retrying in ${delay}ms...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
+  // 🚨 All retries failed — throw the *real* Shiprocket error (not TRPCError)
+  throw lastError || new Error("Unknown Shiprocket error");
 }
+
 
 
 export const ordersRouter = createTRPCRouter({
@@ -470,28 +505,26 @@ if (matchedIntent) {
                   }
                 }
               } catch (shiprocketError) {
-  const fullErrorResponse =
-    shiprocketError?.response?.data ||
-    shiprocketError?.data ||
-    shiprocketError?.message ||
-    shiprocketError;
+ console.log("Shiprocket actual error:", shiprocketError);
 
+  // ✅ Save to DB if needed
   if (matchedIntent) {
-    await db.update(schemas.ordersIntent).set({
-      shiprocketRequest: srOrderRequest,
-      shiprocketResponse: {
-        ...(matchedIntent.shiprocketResponse || {}),
-        [newOrder.id]: fullErrorResponse,
-      },
-    }).where(eq(schemas.ordersIntent.id, matchedIntent.id));
+    await db.update(schemas.ordersIntent)
+      .set({
+        shiprocketRequest: srOrderRequest,
+        shiprocketResponse: {
+          [newOrder.id]: shiprocketError
+        }
+      })
+      .where(eq(schemas.ordersIntent.id, matchedIntent.id));
   }
 
-  // ✅ Send full error back instead of TRPCError
-  return {
-    success: false,
-    orderId: newOrder.id,
-    shiprocketError: fullErrorResponse,
-  };
+  // // ✅ Return it to frontend:
+  // throw new TRPCError({
+  //   code: "BAD_REQUEST",
+  //   message: "Shiprocket Order Failed",
+  //   cause: shiprocketError, // 👈 YOUR ACTUAL ERROR HERE!
+  // });
                 console.error(`Failed to create Shiprocket order for brand ${brand.name}:`, shiprocketError);
                     // throw new TRPCError({
                     // code: "INTERNAL_SERVER_ERROR",
