@@ -337,26 +337,26 @@ if (input.intentId) {
               // NEW: Process Shiprocket order for this single item
               console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`);
 
-              // try {
-              //   await sendBrandOrderNotificationEmail({
-              //     orderId: newOrder.id,
-              //     brand: {
-              //       id: brand.id,
-              //       email: brand.email,
-              //       name: brand.name,
-              //       street: existingAddress.street,
-              //       city: existingAddress.city,
-              //       state: existingAddress.state,
-              //       zip: existingAddress.zip,
-              //       country: "India",
-              //       customerName: existingAddress.fullName.split(" ")[0],
-              //     },
-              //   });
-              //   console.log(`Order confirmation email sent for order ${newOrder.id}`);
-              // } catch (emailError) {
-              //   console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
-              //   // Log the error but don't fail the mutation
-              // }
+              try {
+                await sendBrandOrderNotificationEmail({
+                  orderId: newOrder.id,
+                  brand: {
+                    id: brand.id,
+                    email: brand.email,
+                    name: brand.name,
+                    street: existingAddress.street,
+                    city: existingAddress.city,
+                    state: existingAddress.state,
+                    zip: existingAddress.zip,
+                    country: "India",
+                    customerName: existingAddress.fullName.split(" ")[0],
+                  },
+                });
+                console.log(`Order confirmation email sent for order ${newOrder.id}`);
+              } catch (emailError) {
+                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
+                // Log the error but don't fail the mutation
+              }
 
               const product = await queries.products.getProduct({
                 productId: item.productId,
