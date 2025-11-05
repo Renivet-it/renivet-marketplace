@@ -192,6 +192,12 @@ export const ordersRouter = createTRPCRouter({
           })
         )
         .use(({ ctx, input, next }) => {
+            console.log("🧭 [STEP 0] Middleware: validating access for user", {
+      inputUserId: input.userId,
+      ctxUserId: ctx.user?.id,
+      hasBrandOnUser: ctx.user?.brand !== null,
+    });
+
           const { user } = ctx;
           const { userId } = input;
 
@@ -211,43 +217,61 @@ export const ordersRouter = createTRPCRouter({
         .mutation(async ({ input, ctx }) => {
           const { queries, user, db, schemas } = ctx;
   console.log("🟢 Received intentId:", input.intentId);
+  console.log("🟢 Received request :", input);
+ console.log("🧩 [STEP 1] Mutation start: input received (redact sensitive as needed)");
+    console.log("🟢 Received intentId:", input.intentId);
+    console.log("🟢 Input meta:", {
+      itemsCount: input.items?.length,
+      coupon: input.coupon ?? null,
+      razorpayOrderId: input.razorpayOrderId,
+      razorpayPaymentId: input.razorpayPaymentId,
+      userId: input.userId,
+      addressId: input.addressId,
+    });
+    console.log("🧩 [STEP 2] Validating shipping address for user", { userId: user.id, addressId: input.addressId });
 
           const existingAddress = user.addresses.find(
             (add) => add.id === input.addressId
           );
-          if (!existingAddress)
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "Address not found",
-            });
+    if (!existingAddress) {
+      console.error("❌ [STEP 2] Address not found", { userId: user.id, addressId: input.addressId });
+      throw new TRPCError({ code: "NOT_FOUND", message: "Address not found" });
+    }
+    console.log("✅ [STEP 2] Address found:", { addressId: existingAddress.id });
 
           const existingCategories = await categoryCache.getAll();
           const cachedAllBrands = await brandCache.getAll();
           const brandIds = [...new Set(input.items.map((item) => item.brandId))];
+    console.log("🧩 [STEP 3] Brand IDs from items:", brandIds);
 
           const existingBrands = cachedAllBrands.filter((brand) =>
             brandIds.includes(brand.id)
           );
+    console.log("🧩 [STEP 3] Brands resolved:", existingBrands.map((b) => ({ id: b.id, name: b.name, rzpAccountId: b.rzpAccountId })));
 
           if (existingBrands.length !== brandIds.length)
             throw new TRPCError({
               code: "NOT_FOUND",
               message: "Order contains invalid brand(s)",
             });
+    console.log("🧩 [STEP 4] Checking brands for Razorpay linked accounts…");
 
           const brandsWithoutRzpAccount = existingBrands.filter(
             (brand) => brand.rzpAccountId === null
           );
 
-          if (brandsWithoutRzpAccount.length > 0)
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: `Product(s) from brand(s) ${brandsWithoutRzpAccount
-                .map((brand) => `'${brand.name}'`)
-                .join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
-            });
+ if (brandsWithoutRzpAccount.length > 0) {
+      console.error("❌ [STEP 4] Brands missing Razorpay accounts:", brandsWithoutRzpAccount.map((b) => ({ id: b.id, name: b.name })));
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Product(s) from brand(s) ${brandsWithoutRzpAccount.map((brand) => `'${brand.name}'`).join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
+      });
+    }
+    console.log("✅ [STEP 4] All brands have Razorpay accounts");
 
           try {
+                  console.log("🧩 [STEP 5] Starting per-item order creation loop…", { itemsCount: input.items.length });
+
             // NEW: Array to store all created orders
             const createdOrders = [];
 
@@ -313,26 +337,26 @@ if (input.intentId) {
               // NEW: Process Shiprocket order for this single item
               console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`);
 
-              try {
-                await sendBrandOrderNotificationEmail({
-                  orderId: newOrder.id,
-                  brand: {
-                    id: brand.id,
-                    email: brand.email,
-                    name: brand.name,
-                    street: existingAddress.street,
-                    city: existingAddress.city,
-                    state: existingAddress.state,
-                    zip: existingAddress.zip,
-                    country: "India",
-                    customerName: existingAddress.fullName.split(" ")[0],
-                  },
-                });
-                console.log(`Order confirmation email sent for order ${newOrder.id}`);
-              } catch (emailError) {
-                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
-                // Log the error but don't fail the mutation
-              }
+              // try {
+              //   await sendBrandOrderNotificationEmail({
+              //     orderId: newOrder.id,
+              //     brand: {
+              //       id: brand.id,
+              //       email: brand.email,
+              //       name: brand.name,
+              //       street: existingAddress.street,
+              //       city: existingAddress.city,
+              //       state: existingAddress.state,
+              //       zip: existingAddress.zip,
+              //       country: "India",
+              //       customerName: existingAddress.fullName.split(" ")[0],
+              //     },
+              //   });
+              //   console.log(`Order confirmation email sent for order ${newOrder.id}`);
+              // } catch (emailError) {
+              //   console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
+              //   // Log the error but don't fail the mutation
+              // }
 
               const product = await queries.products.getProduct({
                 productId: item.productId,
