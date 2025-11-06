@@ -382,19 +382,20 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
           </button>
         )}
 
-        {isSuggestionVisible && suggestions.length > 0 && (
-          <ul className="absolute top-full left-0 mt-1 w-full bg-white border border-foreground/20 rounded-md shadow-lg z-10 max-h-80 overflow-y-auto">
-            {suggestions.map((suggestion, index) => (
-              <li
-                key={index}
-                className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                onClick={() => handleSuggestionClick(suggestion)}
-              >
-                {suggestion}
-              </li>
-            ))}
-          </ul>
-        )}
+{isSuggestionVisible && suggestions.length > 0 && (
+  <ul className="absolute top-full left-0 mt-1 w-full bg-white border border-foreground/20 rounded-md shadow-lg z-10 max-h-80 overflow-y-auto text-left">
+    {suggestions.map((suggestion, index) => (
+      <li
+        key={index}
+        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-left"
+        onClick={() => handleSuggestionClick(suggestion)}
+      >
+        {suggestion}
+      </li>
+    ))}
+  </ul>
+)}
+
       </div>
     );
   }
