@@ -68,7 +68,9 @@ export function Landing({ className, banners, ...props }: PageProps) {
                 {/* --- OVERLAY CONTENT CONTAINER --- */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   {/* --- MOBILE-ONLY CONTENT --- */}
-                  <div className="flex h-full w-full flex-col items-center justify-start pt-4 text-center text-black md:hidden">
+                  {/* <div className="flex h-full w-full flex-col items-center justify-start pt-4 text-center text-black md:hidden"> */}
+                    <div className="flex h-screen w-full flex-col items-center justify-start pt-4 text-center text-black md:hidden overflow-hidden">
+
                     {/* Category Circles */}
                     <div className="flex w-full justify-around px-2 py-4">
                       {categories.map((category) => (
