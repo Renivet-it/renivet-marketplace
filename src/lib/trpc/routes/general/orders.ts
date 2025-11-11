@@ -1,3 +1,5 @@
+import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
+import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
@@ -18,10 +20,10 @@ import {
 import {
     convertPaiseToRupees,
     formatPriceTag,
+    generateOrderId,
     generatePickupLocationCode,
     generateReceiptId,
     getRawNumberFromPhone,
-    generateOrderId
 } from "@/lib/utils";
 import {
     categorySchema,
@@ -34,73 +36,55 @@ import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
 import { and, eq, gte } from "drizzle-orm";
 import { z } from "zod";
-import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
-import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
+
+import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
+import { orderShipments } from "@/lib/db/schema/order-shipment";
 
 
+async function createShiprocketOrderWithRetry(
+    sr: any,
+    srOrderRequest: any,
+    retries = 3,
+    delay = 1000
+) {
+    let lastError = null;
 
-// async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
-//   for (let attempt = 1; attempt <= retries; attempt++) {
-//     try {
-//       const srOrder = await sr.requestCreateOrder(srOrderRequest);
-//       console.log(`Shiprocket response for attempt ${attempt}:`, JSON.stringify(srOrder, null, 2));
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const srOrder = await sr.requestCreateOrder(srOrderRequest);
+            console.log(`✅ Shiprocket Attempt ${attempt}:`, srOrder);
 
-//       if (srOrder.status && srOrder.data) {
-//         return srOrder; // ✅ Success, exit
-//       }
+            // ✅ Success case
+            if (srOrder?.status === true && srOrder?.data) {
+                return srOrder;
+            }
 
-//       console.warn(`Shiprocket attempt ${attempt} failed: ${JSON.stringify(srOrder)}`);
-//     } catch (error: any) {
-//       console.warn(`Shiprocket attempt ${attempt} error: ${error.message}`);
-//     }
+            // ❌ Failure but no exception → throw full response so we can see full error
+            console.warn(
+                `⚠ Shiprocket responded with invalid data on attempt ${attempt}`,
+                srOrder
+            );
+            lastError = srOrder;
+            throw srOrder;
+        } catch (error: any) {
+            // ✅ Capture both thrown response objects and Axios errors
+            const fullError = error?.response?.data || error;
+            console.warn(
+                `❌ Shiprocket error on attempt ${attempt}:`,
+                fullError
+            );
+            lastError = fullError;
+        }
 
-//     if (attempt < retries) {
-//       console.log(`Retrying Shiprocket order creation after ${delay}ms...`);
-
-//       // ✅ ✅ Correct way to delay
-//       await new Promise((resolve) => setTimeout(resolve, delay));
-//     }
-//   }
-
-// }
-
-async function createShiprocketOrderWithRetry(sr: any, srOrderRequest: any, retries = 3, delay = 1000) {
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const srOrder = await sr.requestCreateOrder(srOrderRequest);
-      console.log(`✅ Shiprocket Attempt ${attempt}:`, srOrder);
-
-      // ✅ Success case
-      if (srOrder?.status === true && srOrder?.data) {
-        return srOrder;
-      }
-
-      // ❌ Failure but no exception → throw full response so we can see full error
-      console.warn(`⚠ Shiprocket responded with invalid data on attempt ${attempt}`, srOrder);
-      lastError = srOrder;
-      throw srOrder;
-
-    } catch (error: any) {
-      // ✅ Capture both thrown response objects and Axios errors
-      const fullError = error?.response?.data || error;
-      console.warn(`❌ Shiprocket error on attempt ${attempt}:`, fullError);
-      lastError = fullError;
+        if (attempt < retries) {
+            console.log(`🔄 Retrying in ${delay}ms...`);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
     }
 
-    if (attempt < retries) {
-      console.log(`🔄 Retrying in ${delay}ms...`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-
-  // 🚨 After all retries, throw the complete error object (not trimmed)
-  throw lastError;
+    // 🚨 After all retries, throw the complete error object (not trimmed)
+    throw lastError;
 }
-
-
-
 
 export const ordersRouter = createTRPCRouter({
     getOrders: protectedProcedure
@@ -110,8 +94,8 @@ export const ordersRouter = createTRPCRouter({
                 page: z.number().int().positive().optional(),
                 search: z.string().optional(),
                 brandIds: z.array(productSchema.shape.brandId).optional(),
-               startDate: z.string().optional(),
-              endDate: z.string().optional(),
+                startDate: z.string().optional(),
+                endDate: z.string().optional(),
             })
         )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
@@ -171,523 +155,778 @@ export const ordersRouter = createTRPCRouter({
 
             return data;
         }),
-        createOrder: protectedProcedure
+    createOrder: protectedProcedure
         .input(
-          createOrderSchema.omit({ id: true, receiptId: true }).extend({
-            items: z.array(
-              createOrderItemSchema
-                .omit({
-                  orderId: true,
-                })
-                .extend({
-                  brandId: z.string(),
-                  price: productSchema.shape.price,
-                  categoryId: categorySchema.shape.id,
-                })
-            ),
-            coupon: z.string().optional(),
-            razorpayOrderId: z.string(),
-            razorpayPaymentId: z.string(),
-            intentId: z.string().optional(),
-          })
+            createOrderSchema.omit({ id: true, receiptId: true }).extend({
+                items: z.array(
+                    createOrderItemSchema
+                        .omit({
+                            orderId: true,
+                        })
+                        .extend({
+                            brandId: z.string(),
+                            price: productSchema.shape.price,
+                            categoryId: categorySchema.shape.id,
+                        })
+                ),
+                coupon: z.string().optional(),
+                razorpayOrderId: z.string(),
+                razorpayPaymentId: z.string(),
+                intentId: z.string().optional(),
+            })
         )
         .use(({ ctx, input, next }) => {
             console.log("🧭 [STEP 0] Middleware: validating access for user", {
-      inputUserId: input.userId,
-      ctxUserId: ctx.user?.id,
-      hasBrandOnUser: ctx.user?.brand !== null,
-    });
-
-          const { user } = ctx;
-          const { userId } = input;
-
-          if (user.id !== userId)
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: "You are not allowed to create an order for another user",
-            });
-          if (user.brand !== null)
-            throw new TRPCError({
-              code: "FORBIDDEN",
-              message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
+                inputUserId: input.userId,
+                ctxUserId: ctx.user?.id,
+                hasBrandOnUser: ctx.user?.brand !== null,
             });
 
-          return next();
+            const { user } = ctx;
+            const { userId } = input;
+
+            if (user.id !== userId)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message:
+                        "You are not allowed to create an order for another user",
+                });
+            if (user.brand !== null)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
+                });
+
+            return next();
         })
         .mutation(async ({ input, ctx }) => {
-          const { queries, user, db, schemas } = ctx;
-  console.log("🟢 Received intentId:", input.intentId);
-  console.log("🟢 Received request :", input);
- console.log("🧩 [STEP 1] Mutation start: input received (redact sensitive as needed)");
-    console.log("🟢 Received intentId:", input.intentId);
-    console.log("🟢 Input meta:", {
-      itemsCount: input.items?.length,
-      coupon: input.coupon ?? null,
-      razorpayOrderId: input.razorpayOrderId,
-      razorpayPaymentId: input.razorpayPaymentId,
-      userId: input.userId,
-      addressId: input.addressId,
-    });
-    console.log("🧩 [STEP 2] Validating shipping address for user", { userId: user.id, addressId: input.addressId });
-
-          const existingAddress = user.addresses.find(
-            (add) => add.id === input.addressId
-          );
-    if (!existingAddress) {
-      console.error("❌ [STEP 2] Address not found", { userId: user.id, addressId: input.addressId });
-      throw new TRPCError({ code: "NOT_FOUND", message: "Address not found" });
-    }
-    console.log("✅ [STEP 2] Address found:", { addressId: existingAddress.id });
-
-          const existingCategories = await categoryCache.getAll();
-          const cachedAllBrands = await brandCache.getAll();
-          const brandIds = [...new Set(input.items.map((item) => item.brandId))];
-    console.log("🧩 [STEP 3] Brand IDs from items:", brandIds);
-
-          const existingBrands = cachedAllBrands.filter((brand) =>
-            brandIds.includes(brand.id)
-          );
-    console.log("🧩 [STEP 3] Brands resolved:", existingBrands.map((b) => ({ id: b.id, name: b.name, rzpAccountId: b.rzpAccountId })));
-
-          if (existingBrands.length !== brandIds.length)
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: "Order contains invalid brand(s)",
+            const { queries, user, db, schemas } = ctx;
+            console.log("🟢 Received intentId:", input.intentId);
+            console.log("🟢 Received request :", input);
+            console.log(
+                "🧩 [STEP 1] Mutation start: input received (redact sensitive as needed)"
+            );
+            console.log("🟢 Received intentId:", input.intentId);
+            console.log("🟢 Input meta:", {
+                itemsCount: input.items?.length,
+                coupon: input.coupon ?? null,
+                razorpayOrderId: input.razorpayOrderId,
+                razorpayPaymentId: input.razorpayPaymentId,
+                userId: input.userId,
+                addressId: input.addressId,
             });
-    console.log("🧩 [STEP 4] Checking brands for Razorpay linked accounts…");
-
-          const brandsWithoutRzpAccount = existingBrands.filter(
-            (brand) => brand.rzpAccountId === null
-          );
-
- if (brandsWithoutRzpAccount.length > 0) {
-      console.error("❌ [STEP 4] Brands missing Razorpay accounts:", brandsWithoutRzpAccount.map((b) => ({ id: b.id, name: b.name })));
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: `Product(s) from brand(s) ${brandsWithoutRzpAccount.map((brand) => `'${brand.name}'`).join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
-      });
-    }
-    console.log("✅ [STEP 4] All brands have Razorpay accounts");
-
-          try {
-                  console.log("🧩 [STEP 5] Starting per-item order creation loop…", { itemsCount: input.items.length });
-
-            // NEW: Array to store all created orders
-            const createdOrders = [];
-
-            // NEW: Process each item individually to create a separate order
-            for (const item of input.items) {
-
-                console.log("------------------------------------------------");
-  console.log("🛒 Creating new order for brand:", item.brandId);
-  console.log("📦 Intent ID attached to this order:", input.intentId);
-              const receiptId = generateReceiptId();
-              const brand = existingBrands.find((b) => b.id === item.brandId);
-              if (!brand) {
-                console.warn(`Brand not found for brandId: ${item.brandId}, skipping item`);
-                continue;
-              }
-
-              // Generate a readable and concise order_id for this item
-              const orderId = generateOrderId(brand.name);
-              console.log("Creating order with new ID:", orderId);
-
-              // NEW: Create order for this single item
-              const newOrder = await queries.orders.createOrder({
-                ...input,
-                id: orderId,
-                receiptId,
+            console.log("🧩 [STEP 2] Validating shipping address for user", {
                 userId: user.id,
-                // Adjust totalAmount to reflect single item
-                // @ts-ignore
-                totalAmount: Number(item.price * item.quantity),
-              });
-              console.log("Database order created successfully:", newOrder);
-// ✅ Log in ordersIntent table that order was created in your database
-if (input.intentId) {
-  await db
-    .update(schemas.ordersIntent)
-    .set({
-      orderLog: {
-        step: "order_created_in_database",
-        status: "success",
-        timestamp: new Date().toISOString(),
-        details: {
-          orderId: newOrder.id,
-          brandId: item.brandId,
-          totalAmount: newOrder.totalAmount,
-        },
-      },
-    })
-    .where(eq(schemas.ordersIntent.id, input.intentId));
-}
+                addressId: input.addressId,
+            });
 
-              // NEW: Insert single order item
-              await db.insert(schemas.orderItems).values({
-                ...item,
-                orderId: orderId,
-              });
-              console.log("Order item inserted for order:", orderId);
-
-              // Clear user cart (do this once after all orders are created to avoid multiple calls)
-              // Moved outside the loop
-
-              const sr = await shiprocket();
-
-              // NEW: Process Shiprocket order for this single item
-              console.log(`Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`);
-
-              try {
-                await sendBrandOrderNotificationEmail({
-                  orderId: newOrder.id,
-                  brand: {
-                    id: brand.id,
-                    email: brand.email,
-                    name: brand.name,
-                    street: existingAddress.street,
-                    city: existingAddress.city,
-                    state: existingAddress.state,
-                    zip: existingAddress.zip,
-                    country: "India",
-                    customerName: existingAddress.fullName.split(" ")[0],
-                  },
+            const existingAddress = user.addresses.find(
+                (add) => add.id === input.addressId
+            );
+            if (!existingAddress) {
+                console.error("❌ [STEP 2] Address not found", {
+                    userId: user.id,
+                    addressId: input.addressId,
                 });
-                console.log(`Order confirmation email sent for order ${newOrder.id}`);
-              } catch (emailError) {
-                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
-                // Log the error but don't fail the mutation
-              }
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Address not found",
+                });
+            }
+            console.log("✅ [STEP 2] Address found:", {
+                addressId: existingAddress.id,
+            });
 
-              const product = await queries.products.getProduct({
-                productId: item.productId,
-                isActive: true,
-                isDeleted: false,
-                isAvailable: true,
-                isPublished: true,
-                verificationStatus: "approved",
-              });
+            const existingCategories = await categoryCache.getAll();
+            const cachedAllBrands = await brandCache.getAll();
+            const brandIds = [
+                ...new Set(input.items.map((item) => item.brandId)),
+            ];
+            console.log("🧩 [STEP 3] Brand IDs from items:", brandIds);
 
-              const variant =
-                item.variantId && product
-                  ? product.variants.find((v) => v.id === item.variantId)
-                  : null;
+            const existingBrands = cachedAllBrands.filter((brand) =>
+                brandIds.includes(brand.id)
+            );
+            console.log(
+                "🧩 [STEP 3] Brands resolved:",
+                existingBrands.map((b) => ({
+                    id: b.id,
+                    name: b.name,
+                    rzpAccountId: b.rzpAccountId,
+                }))
+            );
 
-              const productDetails = { product, variant, item };
-              console.log(`Product details for brand ${brand.name}:`, productDetails);
+            if (existingBrands.length !== brandIds.length)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order contains invalid brand(s)",
+                });
+            console.log(
+                "🧩 [STEP 4] Checking brands for Razorpay linked accounts…"
+            );
 
-              const dims = variant || product;
-              const orderDimensions = {
-                // @ts-ignore
-                weight: (dims.weight || 100) * item.quantity,
-                // @ts-ignore
-                length: dims.length || 100,
-                // @ts-ignore
-                width: dims.width || 100,
-                // @ts-ignore
-                height: (dims.height || 100) * item.quantity,
-              };
-              console.log(`Order dimensions for brand ${brand.name}:`, orderDimensions);
+            // const brandsWithoutRzpAccount = existingBrands.filter(
+            //     (brand) => brand.rzpAccountId === null
+            // );
 
-              // Ensure dimensions meet Shiprocket's minimum requirements
-              const validatedDimensions = {
-                weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams
-                length: Math.max(orderDimensions.length, 100), // Minimum 100 cm
-                width: Math.max(orderDimensions.width, 100), // Minimum 100 cm
-                height: Math.max(orderDimensions.height, 100), // Minimum 100 cm
-              };
-              console.log(`Validated dimensions for brand ${brand.name}:`, validatedDimensions);
+            // if (brandsWithoutRzpAccount.length > 0) {
+            //     console.error(
+            //         "❌ [STEP 4] Brands missing Razorpay accounts:",
+            //         brandsWithoutRzpAccount.map((b) => ({
+            //             id: b.id,
+            //             name: b.name,
+            //         }))
+            //     );
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: `Product(s) from brand(s) ${brandsWithoutRzpAccount.map((brand) => `'${brand.name}'`).join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
+            //     });
+            // }
+            console.log("✅ [STEP 4] All brands have Razorpay accounts");
 
-              const orderValue = (item.price || 0) * item.quantity;
-              console.log(`Order value for brand ${brand.name}:`, orderValue);
+            try {
+                console.log(
+                    "🧩 [STEP 5] Starting per-item order creation loop…",
+                    { itemsCount: input.items.length }
+                );
 
-            const pickupLocation = generatePickupLocationCode({
-                brandId: item.brandId,
-                brandName: brand.name,
-              });
-              console.log(`Generated pickup location for brand ${brand.name}:`, pickupLocation);
+                // NEW: Array to store all created orders
+                const createdOrders = [];
 
-              const orderItemsForShiprocket = [
-                {
-                  name: product?.title || item.sku || "",
-                  sku: item.sku || "",
-                  units: item.quantity,
-                  selling_price: Math.floor(+convertPaiseToRupees(item.price || 0)),
-                },
-              ];
-              console.log(`Order items for Shiprocket for brand ${brand.name}:`, orderItemsForShiprocket);
+                // NEW: Process each item individually to create a separate order
+                for (const item of input.items) {
+                    console.log(
+                        "------------------------------------------------"
+                    );
+                    console.log(
+                        "🛒 Creating new order for brand:",
+                        item.brandId
+                    );
+                    console.log(
+                        "📦 Intent ID attached to this order:",
+                        input.intentId
+                    );
+                    const receiptId = generateReceiptId();
+                    const brand = existingBrands.find(
+                        (b) => b.id === item.brandId
+                    );
+                    if (!brand) {
+                        console.warn(
+                            `Brand not found for brandId: ${item.brandId}, skipping item`
+                        );
+                        continue;
+                    }
 
-              const srOrderRequest = {
-                order_id: orderId,
-                order_date: format(new Date(), "yyyy-MM-dd"),
-                pickup_location: pickupLocation || "DefaultPickup",
-                billing_customer_name: existingAddress.fullName.split(" ")[0] || "Customer",
-                billing_last_name: existingAddress.fullName.split(" ")[1] || "",
-                billing_address: existingAddress.street || "Unknown Street",
-                billing_city: existingAddress.city || "Delhi",
-                billing_pincode: +existingAddress.zip || 110001,
-                billing_state: existingAddress.state || "Delhi",
-                billing_country: "India",
-                billing_email: user.email || "test@example.com",
-                billing_phone: getRawNumberFromPhone(existingAddress.phone),
-                shipping_is_billing: true,
-                order_items: orderItemsForShiprocket,
-                payment_method: (input.paymentMethod === "COD" ? "COD" : "Prepaid") as "COD" | "Prepaid",
-                sub_total: Math.floor(+convertPaiseToRupees(orderValue)),
-                length: Math.max(orderDimensions.length, 0.5),
-                breadth: Math.max(orderDimensions.width, 0.5),
-                height: Math.max(orderDimensions.height, 0.5),
-                weight: +(Math.max(orderDimensions.weight, 0.1) / 1000).toFixed(2),
-              };
-              console.log(`Shiprocket order request for brand ${brand.name}:`, srOrderRequest);
-// ✅ Step 1: Check if intent exists in last 2 minutes before updating
-// ✅ Step 1: Fetch all intents from last 2 minutes
-const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+                    // Generate a readable and concise order_id for this item
+                    const orderId = generateOrderId(brand.name);
+                    console.log("Creating order with new ID:", orderId);
 
-const intents = await db.query.ordersIntent.findMany({
-  where: gte(schemas.ordersIntent.createdAt, twoMinsAgo),
-});
+                    // NEW: Create order for this single item
+                    const newOrder = await queries.orders.createOrder({
+                        ...input,
+                        id: orderId,
+                        receiptId,
+                        userId: user.id,
+                        // Adjust totalAmount to reflect single item
+                        // @ts-ignore
+                        totalAmount: Number(item.price * item.quantity),
+                    });
+                    console.log(
+                        "Database order created successfully:",
+                        newOrder
+                    );
+                    // ✅ Log in ordersIntent table that order was created in your database
+                    if (input.intentId) {
+                        await db
+                            .update(schemas.ordersIntent)
+                            .set({
+                                orderLog: {
+                                    step: "order_created_in_database",
+                                    status: "success",
+                                    timestamp: new Date().toISOString(),
+                                    details: {
+                                        orderId: newOrder.id,
+                                        brandId: item.brandId,
+                                        totalAmount: newOrder.totalAmount,
+                                    },
+                                },
+                            })
+                            .where(eq(schemas.ordersIntent.id, input.intentId));
+                    }
 
-// ✅ Step 2: Find intent where productId matches current item.productId
-let matchedIntent = null;
+                    // NEW: Insert single order item
+                    await db.insert(schemas.orderItems).values({
+                        ...item,
+                        orderId: orderId,
+                    });
+                    console.log("Order item inserted for order:", orderId);
 
-for (const intentRow of intents) {
-  if (intentRow.productId === item.productId) {
-    matchedIntent = intentRow;
-    break;
-  }
-}
-
-if (matchedIntent) {
-  console.log(`✅ Matched intent ${matchedIntent.id} for product ${item.productId}`);
-} else {
-  console.log(`⚠ No intent found for product ${item.productId} in last 2 mins`);
-}
-
-
-              try {
-                // const srOrder = await sr.requestCreateOrder(srOrderRequest);
-                const srOrder = await createShiprocketOrderWithRetry(sr, srOrderRequest);
-                console.log(`Shiprocket order creation response for brand ${brand.name}:`, srOrder);
-
-
-  if (matchedIntent) {
-    await db
-      .update(schemas.ordersIntent)
-      .set({
-        shiprocketRequest: {
-          ...(matchedIntent.shiprocketRequest || {}),
-          [newOrder.id]: srOrderRequest, // Save full request
-        },
-        shiprocketResponse: {
-          ...(matchedIntent.shiprocketResponse || {}),
-          [newOrder.id]: srOrder, // ✅ Save full Shiprocket response object here
-        },
-      })
-      .where(eq(schemas.ordersIntent.id, matchedIntent.id));
-  }
-
+                    // Clear user cart (do this once after all orders are created to avoid multiple calls)
+                    // Moved outside the loop
 
 
-                if (srOrder.status && srOrder.data) {
-                  const shipment = await db
-                    .insert(schemas.orderShipments)
-                    .values({
-                      orderId: newOrder.id,
-                      brandId: item.brandId,
-                      shiprocketOrderId: srOrder.data.order_id,
-                      shiprocketShipmentId: srOrder.data.shipment_id,
-                      status: "pending",
-                      courierCompanyId: srOrder.data.courier_company_id || null,
-                      courierName: srOrder.data.courier_name || null,
-                      awbNumber: srOrder.data.awb_code || null,
-                    })
-                    .returning()
-                    .then((res) => res[0]);
+                    try {
+                        await sendBrandOrderNotificationEmail({
+                            orderId: newOrder.id,
+                            brand: {
+                                id: brand.id,
+                                email: brand.email,
+                                name: brand.name,
+                                street: existingAddress.street,
+                                city: existingAddress.city,
+                                state: existingAddress.state,
+                                zip: existingAddress.zip,
+                                country: "India",
+                                customerName:
+                                    existingAddress.fullName.split(" ")[0],
+                            },
+                        });
+                        console.log(
+                            `Order confirmation email sent for order ${newOrder.id}`
+                        );
+                    } catch (emailError) {
+                        console.error(
+                            `Failed to send order confirmation email for order ${newOrder.id}:`,
+                            emailError
+                        );
+                        // Log the error but don't fail the mutation
+                    }
+                  // const sr = await shiprocket();
 
-                  const orderItemsForBrand = await db
-                    .select({
-                      orderItem: schemas.orderItems,
-                      product: schemas.products,
-                    })
-                    .from(schemas.orderItems)
-                    .where(
-                      and(
-                        eq(schemas.orderItems.orderId, newOrder.id),
-                        eq(schemas.products.brandId, item.brandId)
-                      )
-                    )
-                    .innerJoin(
-                      schemas.products,
-                      eq(schemas.orderItems.productId, schemas.products.id)
+                  //   // NEW: Process Shiprocket order for this single item
+                  //   console.log(
+                  //       `Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`
+                  //   );
+                    const product = await queries.products.getProduct({
+                        productId: item.productId,
+                        isActive: true,
+                        isDeleted: false,
+                        isAvailable: true,
+                        isPublished: true,
+                        verificationStatus: "approved",
+                    });
+
+                    const variant =
+                        item.variantId && product
+                            ? product.variants.find(
+                                  (v) => v.id === item.variantId
+                              )
+                            : null;
+
+                    const productDetails = { product, variant, item };
+                    console.log(
+                        `Product details for brand ${brand.name}:`,
+                        productDetails
                     );
 
-                  if (orderItemsForBrand.length > 0) {
-                    await db.insert(schemas.orderShipmentItems).values(
-                      orderItemsForBrand.map((row) => ({
-                        shipmentId: shipment.id,
-                        orderItemId: row.orderItem.id,
-                      }))
+                    const dims = variant || product;
+                    const orderDimensions = {
+                        // @ts-ignore
+                        weight: (dims.weight || 100) * item.quantity,
+                        // @ts-ignore
+                        length: dims.length || 100,
+                        // @ts-ignore
+                        width: dims.width || 100,
+                        // @ts-ignore
+                        height: (dims.height || 100) * item.quantity,
+                    };
+                    console.log(
+                        `Order dimensions for brand ${brand.name}:`,
+                        orderDimensions
                     );
-                  }
-                }
-              } catch (shiprocketError) {
- console.log("Shiprocket actual error:", shiprocketError);
 
-  // ✅ Save to DB if needed
-  if (matchedIntent) {
-    await db.update(schemas.ordersIntent)
-      .set({
-        shiprocketRequest: srOrderRequest,
-        shiprocketResponse: {
-          [newOrder.id]: shiprocketError
-        }
-      })
-      .where(eq(schemas.ordersIntent.id, matchedIntent.id));
-  }
+                    // Ensure dimensions meet Shiprocket's minimum requirements
+                    const validatedDimensions = {
+                        weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams
+                        length: Math.max(orderDimensions.length, 100), // Minimum 100 cm
+                        width: Math.max(orderDimensions.width, 100), // Minimum 100 cm
+                        height: Math.max(orderDimensions.height, 100), // Minimum 100 cm
+                    };
+                    console.log(
+                        `Validated dimensions for brand ${brand.name}:`,
+                        validatedDimensions
+                    );
 
-  // // ✅ Return it to frontend:
-  // throw new TRPCError({
-  //   code: "BAD_REQUEST",
-  //   message: "Shiprocket Order Failed",
-  //   cause: shiprocketError, // 👈 YOUR ACTUAL ERROR HERE!
-  // });
-                console.error(`Failed to create Shiprocket order for brand ${brand.name}:`, shiprocketError);
-                    // throw new TRPCError({
-                    // code: "INTERNAL_SERVER_ERROR",
-                    // message: `Failed to create Shiprocket order for brand ${brand.name}`,
-                    // });
-              }
+                    const orderValue = (item.price || 0) * item.quantity;
+                    console.log(
+                        `Order value for brand ${brand.name}:`,
+                        orderValue
+                    );
+
+                    const pickupLocation = generatePickupLocationCode({
+                        brandId: item.brandId,
+                        brandName: brand.name,
+                    });
+                    console.log(
+                        `Generated pickup location for brand ${brand.name}:`,
+                        pickupLocation
+                    );
+
+                    const orderItemsForShiprocket = [
+                        {
+                            name: product?.title || item.sku || "",
+                            sku: item.sku || "",
+                            units: item.quantity,
+                            selling_price: Math.floor(
+                                +convertPaiseToRupees(item.price || 0)
+                            ),
+                        },
+                    ];
+                    console.log(
+                        `Order items for Shiprocket for brand ${brand.name}:`,
+                        orderItemsForShiprocket
+                    );
+
+                    // const srOrderRequest = {
+                    //     order_id: orderId,
+                    //     order_date: format(new Date(), "yyyy-MM-dd"),
+                    //     pickup_location: pickupLocation || "DefaultPickup",
+                    //     billing_customer_name:
+                    //         existingAddress.fullName.split(" ")[0] ||
+                    //         "Customer",
+                    //     billing_last_name:
+                    //         existingAddress.fullName.split(" ")[1] || "",
+                    //     billing_address:
+                    //         existingAddress.street || "Unknown Street",
+                    //     billing_city: existingAddress.city || "Delhi",
+                    //     billing_pincode: +existingAddress.zip || 110001,
+                    //     billing_state: existingAddress.state || "Delhi",
+                    //     billing_country: "India",
+                    //     billing_email: user.email || "test@example.com",
+                    //     billing_phone: getRawNumberFromPhone(
+                    //         existingAddress.phone
+                    //     ),
+                    //     shipping_is_billing: true,
+                    //     order_items: orderItemsForShiprocket,
+                    //     payment_method: (input.paymentMethod === "COD"
+                    //         ? "COD"
+                    //         : "Prepaid") as "COD" | "Prepaid",
+                    //     sub_total: Math.floor(
+                    //         +convertPaiseToRupees(orderValue)
+                    //     ),
+                    //     length: Math.max(orderDimensions.length, 0.5),
+                    //     breadth: Math.max(orderDimensions.width, 0.5),
+                    //     height: Math.max(orderDimensions.height, 0.5),
+                    //     weight: +(
+                    //         Math.max(orderDimensions.weight, 0.1) / 1000
+                    //     ).toFixed(2),
+                    // };
+                    // console.log(
+                    //     `Shiprocket order request for brand ${brand.name}:`,
+                    //     srOrderRequest
+                    // );
+                    // ✅ Step 1: Check if intent exists in last 2 minutes before updating
+                    // ✅ Step 1: Fetch all intents from last 2 minutes
+
+                      const delhiveryPayload = {
+                        pickup_location: {
+                        name: pickupLocation, // must match registered Delhivery pickup name
+                      },
+                      shipments: [
+                        {
+                          name: existingAddress.fullName,
+                          add: existingAddress.street,
+                          city: existingAddress.city,
+                          state: existingAddress.state,
+                          country: "India",
+                          pin: existingAddress.zip,
+                          phone: String(getRawNumberFromPhone(existingAddress.phone)),
+                          order: orderId,
+                          payment_mode: input.paymentMethod === "COD" ? "COD" : "Prepaid",
+                          total_amount: +convertPaiseToRupees(orderValue),
+                          cod_amount:
+                            input.paymentMethod === "COD"
+                              ? +convertPaiseToRupees(orderValue)
+                              : 0,
+                          products_desc:
+                            product?.title ||
+                            variant?.sku ||
+                            "General Product",
+                          weight: validatedDimensions.weight / 1000, // grams → kg
+                          shipment_length: validatedDimensions.length / 10, // cm → mm optional
+                          shipment_width: validatedDimensions.width / 10,
+                          shipment_height: validatedDimensions.height / 10,
+                          quantity: String(item.quantity),
+                          seller_name: brand.name,
+                          seller_add: brand.address || "Warehouse Address",
+                          return_name: brand.name,
+                          return_add: brand.address || "Warehouse Address",
+                          return_city: existingAddress.city,
+                          return_phone: getRawNumberFromPhone(existingAddress.phone),
+                          return_state: existingAddress.state,
+                          return_country: "India",
+                          return_pin: existingAddress.zip,
+                          fragile_shipment: false,
+                          plastic_packaging: false,
+                        },
+                      ],
+                    };
+
+                    console.log("🚀 Delhivery Order Payload:", delhiveryPayload);
+
+
+                    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+
+                    const intents = await db.query.ordersIntent.findMany({
+                        where: gte(schemas.ordersIntent.createdAt, twoMinsAgo),
+                    });
+
+                    // ✅ Step 2: Find intent where productId matches current item.productId
+                    let matchedIntent = null;
+
+                    for (const intentRow of intents) {
+                        if (intentRow.productId === item.productId) {
+                            matchedIntent = intentRow;
+                            break;
+                        }
+                    }
+
+                    if (matchedIntent) {
+                        console.log(
+                            `✅ Matched intent ${matchedIntent.id} for product ${item.productId}`
+                        );
+                    } else {
+                        console.log(
+                            `⚠ No intent found for product ${item.productId} in last 2 mins`
+                        );
+                    }
+
+                    try {
+                        // const srOrder = await sr.requestCreateOrder(srOrderRequest);
+                        // const srOrder = await createShiprocketOrderWithRetry(
+                        //     sr,
+                        //     srOrderRequest
+                        // );
+                        // console.log(
+                        //     `Shiprocket order creation response for brand ${brand.name}:`,
+                        //     srOrder
+                        // );
+                    const srOrder = await createDelhiveryOrder(delhiveryPayload);
+ console.log("✅ Delhivery Response:", srOrder);
+                        if (matchedIntent) {
+                            await db
+                                .update(schemas.ordersIntent)
+                                .set({
+                                    shiprocketRequest: {
+                                        ...(matchedIntent.shiprocketRequest ||
+                                            {}),
+                                        [newOrder.id]: delhiveryPayload, // Save full request
+                                    },
+                                    shiprocketResponse: {
+                                        ...(matchedIntent.shiprocketResponse ||
+                                            {}),
+                                        [newOrder.id]: srOrder, // ✅ Save full Shiprocket response object here
+                                    },
+                                })
+                                .where(
+                                    eq(
+                                        schemas.ordersIntent.id,
+                                        matchedIntent.id
+                                    )
+                                );
+                        }
+
+
+             console.log("📦 Checking Delhivery response success:", srOrder?.data?.success);
+
+                    if (srOrder?.data?.success === true) {
+                        const pkg = srOrder.data.packages?.[0];
+                        console.log("📦 Extracted Delhivery Package:", pkg);
+
+                        const shipment = await db
+                            .insert(schemas.orderShipments)
+                            .values({
+                                orderId: newOrder.id,
+                                brandId: item.brandId,
+
+                                // 🔄 Stored in old Shiprocket fields
+                                // shiprocketOrderId: pkg?.waybill || null, // using refnum as order reference
+                                // shiprocketShipmentId: pkg?.waybill || null, // using upload_wbn
+                                uploadWbn: srOrder.data.upload_wbn || null, // New field
+                                status: "pending",
+
+                                // courierCompanyId: pkg?.sort_code || null, // not exactly a company id but closest
+                                delhiveryClientId: pkg?.client || null,
+                                delhiverySortCode: pkg?.sort_code || null,
+                                courierName: "Delhivery", // fixed since courier is always Delhivery
+                                awbNumber: pkg?.waybill || null, // MAIN AWB FROM DELHIVERY
+                                isAwbGenerated: true,
+                            })
+                            .returning()
+                            .then((res) => res[0]);
+
+                        console.log("🚚 Delhivery shipment stored in DB:", shipment);
+
+                        // Fetch Order Items for this brand
+                        const orderItemsForBrand = await db
+                            .select({
+                                orderItem: schemas.orderItems,
+                                product: schemas.products,
+                            })
+                            .from(schemas.orderItems)
+                            .where(
+                                and(
+                                    eq(schemas.orderItems.orderId, newOrder.id),
+                                    eq(schemas.products.brandId, item.brandId)
+                                )
+                            )
+                            .innerJoin(
+                                schemas.products,
+                                eq(schemas.orderItems.productId, schemas.products.id)
+                            );
+
+                        console.log("🧾 Order items for shipment:", orderItemsForBrand);
+
+                        if (orderItemsForBrand.length > 0) {
+                            await db.insert(schemas.orderShipmentItems).values(
+                                orderItemsForBrand.map((row) => ({
+                                    shipmentId: shipment.id,
+                                    orderItemId: row.orderItem.id,
+                                }))
+                            );
+                            console.log("🧾 Order Shipment Items inserted.");
+                        }
+                    } else {
+                        console.log("❌ Delhivery response failed:", srOrder);
+                    }
+                        // if (srOrder.status || srOrder.data) {
+                        //     const shipment = await db
+                        //         .insert(schemas.orderShipments)
+                        //         .values({
+                        //             orderId: newOrder.id,
+                        //             brandId: item.brandId,
+                        //             shiprocketOrderId: srOrder.data.order_id,
+                        //             shiprocketShipmentId:
+                        //                 srOrder.data.shipment_id,
+                        //             status: "pending",
+                        //             courierCompanyId:
+                        //                 srOrder.data.courier_company_id || null,
+                        //             courierName:
+                        //                 srOrder.data.courier_name || null,
+                        //             awbNumber: srOrder.data.awb_code || null,
+                        //         })
+                        //         .returning()
+                        //         .then((res) => res[0]);
+
+                        //     const orderItemsForBrand = await db
+                        //         .select({
+                        //             orderItem: schemas.orderItems,
+                        //             product: schemas.products,
+                        //         })
+                        //         .from(schemas.orderItems)
+                        //         .where(
+                        //             and(
+                        //                 eq(
+                        //                     schemas.orderItems.orderId,
+                        //                     newOrder.id
+                        //                 ),
+                        //                 eq(
+                        //                     schemas.products.brandId,
+                        //                     item.brandId
+                        //                 )
+                        //             )
+                        //         )
+                        //         .innerJoin(
+                        //             schemas.products,
+                        //             eq(
+                        //                 schemas.orderItems.productId,
+                        //                 schemas.products.id
+                        //             )
+                        //         );
+
+                        //     if (orderItemsForBrand.length > 0) {
+                        //         await db
+                        //             .insert(schemas.orderShipmentItems)
+                        //             .values(
+                        //                 orderItemsForBrand.map((row) => ({
+                        //                     shipmentId: shipment.id,
+                        //                     orderItemId: row.orderItem.id,
+                        //                 }))
+                        //             );
+                        //     }
+                        // }
+                    } catch (shiprocketError) {
+                        console.log(
+                            "Shiprocket actual error:",
+                            shiprocketError
+                        );
+
+                        // ✅ Save to DB if needed
+                        if (matchedIntent) {
+                            await db
+                                .update(schemas.ordersIntent)
+                                .set({
+                                    shiprocketRequest: delhiveryPayload,
+                                    shiprocketResponse: {
+                                        [newOrder.id]: shiprocketError,
+                                    },
+                                })
+                                .where(
+                                    eq(
+                                        schemas.ordersIntent.id,
+                                        matchedIntent.id
+                                    )
+                                );
+                        }
+
+                        console.error(
+                            `Failed to create Shiprocket order for brand ${brand.name}:`,
+                            shiprocketError
+                        );
+                    }
                     // NEW: Logic 1 - Validate and Deduct Stock
                     console.log(`Validating stock for order ${newOrder.id}`);
-                    const isStockAvailable = product && (
-                    product.verificationStatus === "approved" &&
-                    !product.isDeleted &&
-                    product.isAvailable &&
-                    (product.quantity ? product.quantity >= item.quantity : true) &&
-                    (!variant || (variant && !variant.isDeleted && variant.quantity >= item.quantity))
-                    );
+                    const isStockAvailable =
+                        product &&
+                        product.verificationStatus === "approved" &&
+                        !product.isDeleted &&
+                        product.isAvailable &&
+                        (product.quantity
+                            ? product.quantity >= item.quantity
+                            : true) &&
+                        (!variant ||
+                            (variant &&
+                                !variant.isDeleted &&
+                                variant.quantity >= item.quantity));
 
                     if (!isStockAvailable) {
-                    console.warn(`Order ${newOrder.id} has insufficient stock`);
-                    throw new TRPCError({
-                        code: "BAD_REQUEST",
-                        message: "Insufficient stock for the item",
-                    });
+                        console.warn(
+                            `Order ${newOrder.id} has insufficient stock`
+                        );
+                        throw new TRPCError({
+                            code: "BAD_REQUEST",
+                            message: "Insufficient stock for the item",
+                        });
                     }
 
                     console.log(`Deducting stock for order ${newOrder.id}`);
-                    const stockUpdate = [{
-                    productId: item.productId,
-                    variantId: item.variantId ?? undefined, // Convert null to undefined
-                    // @ts-ignore
-                    quantity: item.quantity,
-                    }];
-console.log(stockUpdate, "stockUpdatestockUpdate");
+                    const stockUpdate = [
+                        {
+                            productId: item.productId,
+                            variantId: item.variantId ?? undefined, // Convert null to undefined
+                            // @ts-ignore
+                            quantity: item.quantity,
+                        },
+                    ];
+                    console.log(stockUpdate, "stockUpdatestockUpdate");
 
                     try {
-                    await queries.products.updateProductStock(stockUpdate);
-                    console.log(`Stock updated successfully for order ${newOrder.id}`);
+                        await queries.products.updateProductStock(stockUpdate);
+                        console.log(
+                            `Stock updated successfully for order ${newOrder.id}`
+                        );
                     } catch (stockError) {
-                    console.error(`Failed to update stock for order ${newOrder.id}:`, stockError);
-                    // throw new TRPCError({
-                    //     code: "INTERNAL_SERVER_ERROR",
-                    //     message: "Failed to update product stock",
-                    // });
+                        console.error(
+                            `Failed to update stock for order ${newOrder.id}:`,
+                            stockError
+                        );
+                        // throw new TRPCError({
+                        //     code: "INTERNAL_SERVER_ERROR",
+                        //     message: "Failed to update product stock",
+                        // });
                     }
 
                     // NEW: Logic 2 - Mark as Paid
                     console.log(`Marking order ${newOrder.id} as paid`);
                     try {
-                    await queries.orders.updateOrderStatus(newOrder.id, {
-                        paymentId: input.razorpayPaymentId,
-                        paymentMethod: "online",
-                        paymentStatus: "paid",
-                        status: "processing",
-                    });
-                    console.log(`Order ${newOrder.id} marked as paid`);
+                        await queries.orders.updateOrderStatus(newOrder.id, {
+                            paymentId: input.razorpayPaymentId,
+                            paymentMethod: "online",
+                            paymentStatus: "paid",
+                            status: "processing",
+                        });
+                        console.log(`Order ${newOrder.id} marked as paid`);
                     } catch (statusError) {
-                    console.error(`Failed to update order status for order ${newOrder.id}:`, statusError);
-                    throw new TRPCError({
-                        code: "INTERNAL_SERVER_ERROR",
-                        message: "Failed to update order payment status",
-                    });
+                        console.error(
+                            `Failed to update order status for order ${newOrder.id}:`,
+                            statusError
+                        );
+                        throw new TRPCError({
+                            code: "INTERNAL_SERVER_ERROR",
+                            message: "Failed to update order payment status",
+                        });
                     }
-              // NEW: Track analytics for this order
-              const brandRevenue = (item.price ?? 0) * item.quantity;
-              await analytics.track({
-                namespace: BRAND_EVENTS.ORDER.CREATED,
-                brandId: item.brandId,
-                event: {
-                  orderId: newOrder.id,
-                  orderTotal: formatPriceTag(
-                    +convertPaiseToRupees(newOrder.totalAmount),
-                    true
-                  ),
-                  brandRevenue: formatPriceTag(
-                    +convertPaiseToRupees(brandRevenue),
-                    true
-                  ),
-                  orderItems: [
-                    {
-                      productId: item.productId,
-                      variantId: item.variantId,
-                      quantity: item.quantity,
-                      sku: item.sku,
-                      price: formatPriceTag(
-                        +convertPaiseToRupees(item.price ?? 0),
-                        true
-                      ),
-                    },
-                  ],
-                },
-              });
+                    // NEW: Track analytics for this order
+                    const brandRevenue = (item.price ?? 0) * item.quantity;
+                    await analytics.track({
+                        namespace: BRAND_EVENTS.ORDER.CREATED,
+                        brandId: item.brandId,
+                        event: {
+                            orderId: newOrder.id,
+                            orderTotal: formatPriceTag(
+                                +convertPaiseToRupees(newOrder.totalAmount),
+                                true
+                            ),
+                            brandRevenue: formatPriceTag(
+                                +convertPaiseToRupees(brandRevenue),
+                                true
+                            ),
+                            orderItems: [
+                                {
+                                    productId: item.productId,
+                                    variantId: item.variantId,
+                                    quantity: item.quantity,
+                                    sku: item.sku,
+                                    price: formatPriceTag(
+                                        +convertPaiseToRupees(item.price ?? 0),
+                                        true
+                                    ),
+                                },
+                            ],
+                        },
+                    });
 
-              // NEW: Send order confirmation email for this order
-              try {
-                await sendOrderConfirmationEmail({
-                  orderId: newOrder.id,
-                  user: {
-                    id: user.id,
-                    email: user.email,
-                    firstName: user.firstName,
-                    lastName: "",
-                  },
+                    // NEW: Send order confirmation email for this order
+                    try {
+                        await sendOrderConfirmationEmail({
+                            orderId: newOrder.id,
+                            user: {
+                                id: user.id,
+                                email: user.email,
+                                firstName: user.firstName,
+                                lastName: "",
+                            },
+                        });
+                        console.log(
+                            `Order confirmation email sent for order ${newOrder.id}`
+                        );
+                    } catch (emailError) {
+                        console.error(
+                            `Failed to send order confirmation email for order ${newOrder.id}:`,
+                            emailError
+                        );
+                        // Log the error but don't fail the mutation
+                    }
+
+                    createdOrders.push(newOrder);
+                }
+
+                // NEW: Clear user cart once after all orders are created
+                await userCartCache.drop(user.id);
+                console.log("Cart cleared for user:", user.id);
+
+                // NEW: Handle coupon usage (apply to all orders if provided)
+                if (input.coupon) {
+                    const existingCoupon = await queries.coupons.getCoupon({
+                        code: input.coupon,
+                        isActive: true,
+                    });
+                    if (existingCoupon)
+                        await queries.coupons.updateCouponUses(
+                            existingCoupon.code,
+                            existingCoupon.uses + input.items.length // Increment by number of orders
+                        );
+                }
+
+                // NEW: Return all created orders
+                return createdOrders;
+            } catch (err) {
+                console.error(err);
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "Failed to create order(s)",
                 });
-                console.log(`Order confirmation email sent for order ${newOrder.id}`);
-              } catch (emailError) {
-                console.error(`Failed to send order confirmation email for order ${newOrder.id}:`, emailError);
-                // Log the error but don't fail the mutation
-              }
-
-              createdOrders.push(newOrder);
             }
-
-            // NEW: Clear user cart once after all orders are created
-            await userCartCache.drop(user.id);
-            console.log("Cart cleared for user:", user.id);
-
-            // NEW: Handle coupon usage (apply to all orders if provided)
-            if (input.coupon) {
-              const existingCoupon = await queries.coupons.getCoupon({
-                code: input.coupon,
-                isActive: true,
-              });
-              if (existingCoupon)
-                await queries.coupons.updateCouponUses(
-                  existingCoupon.code,
-                  existingCoupon.uses + input.items.length // Increment by number of orders
-                );
-            }
-
-            // NEW: Return all created orders
-            return createdOrders;
-          } catch (err) {
-            console.error(err);
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "Failed to create order(s)",
-            });
-          }
         }),
     updateOrderStatus: protectedProcedure
         .input(
@@ -848,38 +1087,64 @@ console.log(stockUpdate, "stockUpdatestockUpdate");
 
             return true;
         }),
-        deleteOrder: protectedProcedure
-        .input(z.object({
-            orderId: z.string(),
-        }))
+    deleteOrder: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+            })
+        )
         .mutation(async ({ input, ctx }) => {
             try {
-            const { queries } = ctx;
+                const { queries } = ctx;
 
-                const deletedOrder = await queries.orders.deleteOrder(input.orderId);
+                const deletedOrder = await queries.orders.deleteOrder(
+                    input.orderId
+                );
                 return deletedOrder;
             } catch (error) {
                 throw new Error(
-                    error instanceof Error ? error.message : `Failed to delete order ${input.orderId}`
+                    error instanceof Error
+                        ? error.message
+                        : `Failed to delete order ${input.orderId}`
                 );
             }
         }),
-        deleteItemFromCart: protectedProcedure
-        .input(z.object({
-            userId: z.string(),
-        }))
+    deleteItemFromCart: protectedProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+            })
+        )
         .mutation(async ({ input, ctx }) => {
             try {
-            const { queries } = ctx;
+                const { queries } = ctx;
 
-                const deleteItemFromCart = await queries.userCarts.dropActiveItemsFromCart(input.userId);
+                const deleteItemFromCart =
+                    await queries.userCarts.dropActiveItemsFromCart(
+                        input.userId
+                    );
                 return deleteItemFromCart;
             } catch (error) {
                 throw new Error(
-                    error instanceof Error ? error.message : `Failed to delete cart ${input.userId}`
+                    error instanceof Error
+                        ? error.message
+                        : `Failed to delete cart ${input.userId}`
                 );
             }
         }),
+        updatePickupStatus: protectedProcedure
+  .input(z.object({ orderId: z.string() }))
+  .mutation(async ({ ctx, input }) => {
+    await ctx.db.update(orderShipments)
+         .set({
+        isPickupScheduled: true,
+        isAwbGenerated: true,
+      })
+      .where(eq(orderShipments.orderId, input.orderId));
+
+    return { success: true };
+  }),
+
     cancelOrder: protectedProcedure
         .input(
             z.object({

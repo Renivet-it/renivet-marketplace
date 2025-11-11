@@ -4,6 +4,10 @@ import { CachedBrand, cachedBrandSchema } from "@/lib/validations";
 import { redis } from "..";
 
 class BrandCache {
+    set: any;
+    set(id: any, arg1: { delhiveryWarehouseName: string; }) {
+        throw new Error("Method not implemented.");
+    }
     private genKey: (...args: string[]) => string;
 
     constructor() {

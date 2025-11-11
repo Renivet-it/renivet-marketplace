@@ -59,6 +59,8 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ReplaceModal } from "./replace-modal";
+import { ReturnModal } from "./return-modal";
 
 interface PageProps extends GenericProps {
     initialData: OrderWithItemAndBrand[];
@@ -74,6 +76,8 @@ export function OrdersPage({
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
+const [returnItem, setReturnItem] = useState(null);
+const [replaceItem, setReplaceItem] = useState(null);
     const { data: orders } = trpc.general.orders.getOrdersByUserId.useQuery(
         { userId: user.id, year: selectedYear },
         { initialData }
@@ -296,6 +300,7 @@ function OrderCard({
 }: OrderCardProps) {
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
+
     const { refetch } = trpc.general.orders.getOrdersByUserId.useQuery({
         userId: order.userId,
         year: selectedYear,
@@ -320,6 +325,8 @@ function OrderCard({
     type OrderShipment = NonNullable<
         OrderWithItemAndBrand["shipments"]
     >[number];
+const [returnItem, setReturnItem] = useState(null);
+const [replaceItem, setReplaceItem] = useState(null);
 
     const itemsByBrand = availableItems.reduce(
         (acc, item) => {
@@ -405,13 +412,68 @@ function OrderCard({
                         )
                     )}
                 </CardContent>
-                <CardFooter>
-                    <button className="ml-auto underline-offset-2 hover:underline">
-                        <Link href={`/orders/${order.id}`} className="text-sm">
-                            View Order Details
-                        </Link>
-                    </button>
-                </CardFooter>
+         <CardFooter className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6">
+
+  {/* Left: View Order + Track Shipment */}
+  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+    <Link
+      href={`/orders/${order.id}`}
+      className="text-sm underline text-gray-700 hover:text-black"
+    >
+      View Order Details
+    </Link>
+
+    <button
+      onClick={() => {
+        localStorage.setItem("trackingOrder", JSON.stringify(order));
+        window.location.href = `/orders/${order.id}/tracking`;
+      }}
+      className="text-sm underline text-primary hover:opacity-80"
+    >
+      Track Shipment
+    </button>
+  </div>
+
+  {/* Right: Return + Replace */}
+  {order.status === "delivered" && (
+    <div className="flex gap-3">
+      <Button
+        size="sm"
+        className="bg-orange-500 hover:bg-orange-600 text-white px-5"
+        onClick={() => setReturnItem(order.items[0])}
+      >
+        Return
+      </Button>
+
+      <Button
+        size="sm"
+        className="bg-blue-600 hover:bg-blue-700 text-white px-5"
+        onClick={() => setReplaceItem(order.items[0])}
+      >
+        Replace
+      </Button>
+    </div>
+  )}
+
+  {/* Modals */}
+  {returnItem && (
+    <ReturnModal
+      orderItem={returnItem}
+      isOpen={!!returnItem}
+      onClose={() => setReturnItem(null)}
+    />
+  )}
+
+  {replaceItem && (
+    <ReplaceModal
+      orderItem={replaceItem}
+      isOpen={!!replaceItem}
+      onClose={() => setReplaceItem(null)}
+    />
+  )}
+
+</CardFooter>
+
             </Card>
 
             <AlertDialog
@@ -504,7 +566,8 @@ function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
                 return "Order Status";
         }
     };
-
+const [openReturn, setOpenReturn] = useState(false);
+const [openReplace, setOpenReplace] = useState(false);
     const getStatusMessage = () => {
         switch (order.paymentStatus) {
             case "refunded":
@@ -523,6 +586,8 @@ function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
                 return "Order is being processed.";
         }
     };
+
+ 
 
     return (
         <>
@@ -544,6 +609,7 @@ function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
                     {getStatusMessage()}
                 </p>
             </div>
+
         </>
     );
 }

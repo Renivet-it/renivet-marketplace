@@ -165,6 +165,18 @@ export const productsRouter = createTRPCRouter({
 
             return data;
         }),
+        getVariants: publicProcedure
+  .input(
+    z.object({
+      productId: z.string()
+    })
+  )
+  .query(async ({ input, ctx }) => {
+    return await ctx.db.query.productVariants.findMany({
+      where: (variants, { eq }) => eq(variants.productId, input.productId)
+    });
+  }),
+
     createProduct: protectedProcedure
         .input(createProductSchema)
         .use(

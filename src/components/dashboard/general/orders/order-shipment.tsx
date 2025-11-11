@@ -20,13 +20,16 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, generatePickupLocationCode } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CourierCardList from "./courier-card-list";
 import { TableOrder } from "./orders-table";
+
+// ====== ADD: import your pickup location generator ======
+// =======================================================
 
 interface PageProps {
     isSheetOpen: boolean;
@@ -51,142 +54,203 @@ export default function OrderShipment({
 }: PageProps) {
     const { data: customerAddressDetails, refetch: refetchCustomerAddress } =
         trpc.general.addresses.getAddressById.useQuery(
-            {
-                addressId: order.addressId,
-            },
-            {
-                enabled: false,
-            }
+            { addressId: order.addressId },
+            { enabled: false }
         );
+
     const { data: brandAddressDetails, refetch: refetchBrandAddress } =
         trpc.general.addresses.getBrandAddressFromOrderID.useQuery(
-            {
-                orderId: order.id,
-            },
-            {
-                enabled: false,
-            }
+            { orderId: order.id },
+            { enabled: false }
         );
+
     const [loading, setLoading] = useState(false);
     const [buttonLoading, setButtonLoading] = useState(false);
-    const [allCourierResponse, setAllCourierResponse] = useState(undefined);
-    const [recommendedCourierForShiping, setRecommendedCourierForShiping] =
-        useState<ApiResponse<CourierListResponse> | undefined>(undefined);
     const [selectedCourier, setSelectedCourier] =
         useState<GetCourierForDeliveryLocation | null>(null);
+    const [recommendedCourierForShiping, setRecommendedCourierForShiping] =
+        useState<ApiResponse<CourierListResponse> | undefined>(undefined);
     const [serviceabilityParams, setServiceabilityParams] =
         useState<initialShippingAvaibilityParams | null>(null);
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-        undefined
-    );
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+    const [selectedTime, setSelectedTime] = useState<string | undefined>(); // ⭐ NEW
 
+    const shipment = order.shipments?.[0];
+    const isDelhivery = Boolean(shipment?.uploadWbn);
+
+    // ====== ADD: generate pickupLocation the same way backend does ======
+    const pickupLocation = generatePickupLocationCode({
+        brandId: shipment?.brandId ?? "",
+        brandName: order.items[0]?.product.brand.name ?? "",
+    });
+    console.log("⭐ Generated pickupLocation (for Delhivery):", pickupLocation);
+    // ================================================================
+
+    console.log("⭐ Shipment Type:", isDelhivery ? "Delhivery" : "Shiprocket");
+const utils = trpc.useUtils();
+const updatePickupStatus = trpc.general.orders.updatePickupStatus.useMutation();
+
+    /* -----------------------------------------------------------
+     ⭐ HANDLE SHIP NOW CLICK
+    ------------------------------------------------------------ */
     const handleShipNow = async () => {
-        if (!serviceabilityParams || !selectedDate || !selectedCourier) {
-            toast.error("Please select a shipping date and a courier partner.");
+        if (!selectedDate) {
+            toast.error("Please select a pickup date.");
             return;
         }
+
+        if (isDelhivery && !selectedTime) {
+            toast.error("Please select a pickup time (Delhivery requires time).");
+            return;
+        }
+
         setButtonLoading(true);
-        const awbPayload = {
-            shipment_id: order.shipments[0].shiprocketShipmentId,
-            courier_id: selectedCourier.courier_company_id,
-        };
-        const pickUpRequestPayload = {
-            shipment_id: order.shipments[0].shiprocketShipmentId,
-            pickup_date: format(selectedDate, "yyyy-MM-dd"),
-        };
+
         try {
+            /* -----------------------------------------------------------
+             ⭐ DELHIVERY PICKUP FLOW
+            ------------------------------------------------------------ */
+            if (isDelhivery) {
+                const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+                const delhiveryPayload = {
+                    // ====== USE the generated pickupLocation here ======
+                    pickup_location: pickupLocation,
+                    // ==================================================
+                    pickup_date: dateStr,
+                    pickup_time: selectedTime, // ⭐ TIME INCLUDED
+                    expected_package_count: 1,
+                };
+
+                console.log("📦 Sending Delhivery Pickup Payload:", delhiveryPayload);
+
+                const res = await fetch("/api/delhivery/pickup", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(delhiveryPayload),
+                });
+
+                const data = await res.json();
+
+                if (!data.success) {
+                    toast.error(data.message || "Failed to schedule Delhivery pickup");
+                    return;
+                }
+
+                toast.success("Delhivery pickup scheduled!");
+                // update DB pickup status
+await updatePickupStatus.mutateAsync({ orderId: order.id });
+
+// OPTIONAL: refresh order table
+utils.general.orders.getOrders.invalidate();
+                setIsSheetOpen(false);
+                onShipmentSuccessRefetchOrder();
+                return;
+            }
+
+            /* -----------------------------------------------------------
+             🚚 SHIPROCKET PICKUP FLOW
+            ------------------------------------------------------------ */
+            if (!selectedCourier) {
+                toast.error("Please select a courier partner.");
+                return;
+            }
+
+            const awbPayload = {
+                shipment_id: shipment.shiprocketShipmentId,
+                courier_id: selectedCourier.courier_company_id,
+            };
+
+            const pickUpRequestPayload = {
+                shipment_id: shipment.shiprocketShipmentId,
+                pickup_date: format(selectedDate, "yyyy-MM-dd"),
+            };
+
             const generateAwb = await fetch(
                 "/api/shiprocket/couriers/generate-awb",
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(awbPayload),
                 }
             );
             const awbData = await generateAwb.json();
+
             if (!awbData.status) {
                 toast.error(awbData.message);
                 return;
             }
-            if (awbData.status) {
-                toast.success(awbData.message);
-            }
+
+            toast.success(awbData.message);
+
             const madePickUpRequest = await fetch(
                 "/api/shiprocket/couriers/pickup",
                 {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(pickUpRequestPayload),
                 }
             );
             const pickUpData = await madePickUpRequest.json();
+
             if (!pickUpData.status) {
                 toast.error(pickUpData.message);
                 return;
             }
-            if (pickUpData.status) {
-                toast.success(pickUpData.message);
-            }
-            toast.success("Pickup request generated successfully!");
+
+            toast.success("Shiprocket pickup successfully scheduled!");
             setIsSheetOpen(false);
             onShipmentSuccessRefetchOrder();
-        } catch (error) {
-            toast.error("An error occurred while generating the AWB.");
-            console.error(error);
+        } catch (err) {
+            console.error(err);
+            toast.error("Something went wrong.");
         } finally {
             setButtonLoading(false);
         }
     };
 
+    /* -----------------------------------------------------------
+     LOAD SHIPROCKET COURIERS (only if NOT Delhivery)
+    ------------------------------------------------------------ */
     useEffect(() => {
+        if (!isSheetOpen) return;
+
+        if (isDelhivery) return;
+
         const fetchCouriers = async () => {
             setLoading(true);
             setButtonLoading(true);
+
             try {
                 const { data: newCustomerAddressDetails } =
                     await refetchCustomerAddress();
                 const { data: newBrandAddressDetails } =
                     await refetchBrandAddress();
 
-                console.log("Initial order:", order);
-
                 const initialParams: initialShippingAvaibilityParams = {
                     pickup_postcode: `${newBrandAddressDetails?.warehousePostalCode ?? ""}`,
                     delivery_postcode: `${newCustomerAddressDetails?.zip ?? ""}`,
-                    order_id: `${order.shipments[0].shiprocketOrderId ?? ""}`,
+                    order_id: `${shipment.shiprocketOrderId ?? ""}`,
                 };
-                console.log("Initial Params:", initialParams);
-                // Save the params to state
+
                 setServiceabilityParams(initialParams);
 
-                // Fetch all couriers
-                const couriersResponse = await fetch(
-                    "/api/shiprocket/couriers"
-                );
-                const couriersData = await couriersResponse.json();
-                setAllCourierResponse(couriersData);
-
-                // Fetch recommended courier based on serviceability params
-                const queryParams = new URLSearchParams(
-                    initialParams as any
-                ).toString();
                 const recommendedResponse = await fetch(
-                    `/api/shiprocket/couriers/serviceability?${queryParams}`
+                    `/api/shiprocket/couriers/serviceability?${new URLSearchParams(
+                        initialParams as any
+                    )}`
                 );
                 const recommendedData = await recommendedResponse.json();
                 setRecommendedCourierForShiping(recommendedData);
-            } catch (err) {
-                toast.error("Something went wrong");
+            } catch (error) {
+                toast.error("Something went wrong.");
             } finally {
                 setLoading(false);
                 setButtonLoading(false);
             }
         };
-        if (isSheetOpen) fetchCouriers();
+
+        fetchCouriers();
     }, [isSheetOpen]);
 
     return (
@@ -196,36 +260,41 @@ export default function OrderShipment({
                 onOpenChange={() => {
                     setIsSheetOpen(false);
                     setSelectedDate(undefined);
+                    setSelectedTime(undefined); // ⭐ Reset Time
                 }}
             >
                 <SheetContent side={side}>
                     <SheetHeader className="mb-4">
                         <SheetTitle className={cn("capitalize text-primary")}>
-                            Ship Products with our active courier partners
+                            {isDelhivery
+                                ? "Schedule Delhivery Pickup"
+                                : "Ship Products with Courier Partners"}
                         </SheetTitle>
-                        <SheetDescription
-                            className={cn("text-sm uppercase text-secondary")}
-                        >
-                            Display the list of courier partners and their
-                            details please select your preferred
+
+                        <SheetDescription className="text-sm uppercase text-secondary">
+                            {isDelhivery
+                                ? "Select pickup date & time for Delhivery"
+                                : "Select your preferred courier partner"}
                         </SheetDescription>
-                        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+
+                        <div className="mt-4 flex flex-col gap-3">
+                            {/* ⭐ PICKUP DATE */}
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
-                                        variant={"outline"}
+                                        variant="outline"
                                         className={cn(
-                                            "w-full justify-start text-left font-normal sm:w-[260px]",
-                                            !selectedDate &&
-                                                "text-muted-foreground"
+                                            "w-full justify-start text-left font-normal",
+                                            !selectedDate && "text-muted-foreground"
                                         )}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {selectedDate
                                             ? format(selectedDate, "PPP")
-                                            : "Pick a shipping date"}
+                                            : "Pick pickup date"}
                                     </Button>
                                 </PopoverTrigger>
+
                                 <PopoverContent className="w-auto p-0">
                                     <Calendar
                                         mode="single"
@@ -241,43 +310,68 @@ export default function OrderShipment({
                                 </PopoverContent>
                             </Popover>
 
-                            <Button
-                                className="flex items-center gap-2" // You can adjust the layout of the icon and text
-                                onClick={handleShipNow}
-                                disabled={buttonLoading}
-                            >
-                                <Truck className="h-4 w-4" />{" "}
-                                {/* Adjust the size of the icon */}
-                                Ship Now
-                            </Button>
+                            {/* ⭐ TIME PICKER FOR DELHIVERY */}
+                            {isDelhivery && (
+                                <select
+                                    value={selectedTime}
+                                    onChange={(e) => setSelectedTime(e.target.value)}
+                                    className="border rounded-md p-2 text-sm w-full"
+                                >
+                                    <option value="">Select Pickup Time</option>
+                                    <option value="09:00:00">9 AM – 10 AM</option>
+                                    <option value="11:00:00">11 AM – 12 PM</option>
+                                    <option value="14:00:00">2 PM – 3 PM</option>
+                                    <option value="16:00:00">4 PM – 5 PM</option>
+                                    <option value="18:00:00">6 PM – 7 PM</option>
+                                </select>
+                            )}
+
+                            {/* SHIP NOW BUTTON */}
+<Button
+    className="flex items-center gap-2"
+    onClick={handleShipNow}
+    disabled={buttonLoading}
+>
+    {buttonLoading ? (
+        <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Processing...
+        </>
+    ) : (
+        <>
+            <Truck className="h-4 w-4" />
+            Ship Now
+        </>
+    )}
+</Button>
+
                         </div>
                     </SheetHeader>
-                    {loading ? (
-                        <div className="flex h-24 items-center justify-center text-muted-foreground">
-                            <Loader2 className="mr-2 animate-spin" />
-                            Loading courier partners...
-                        </div>
-                    ) : recommendedCourierForShiping?.data?.data
-                          .available_courier_companies?.length ? (
-                        <CourierCardList
-                            couriers={
-                                recommendedCourierForShiping.data.data
-                                    .available_courier_companies as GetCourierForDeliveryLocation[]
-                            }
-                            selectedCourierId={
-                                selectedCourier?.courier_company_id
-                            }
-                            onCourierSelect={(
-                                courier: GetCourierForDeliveryLocation
-                            ) => {
-                                setSelectedCourier(courier);
-                            }}
-                        />
-                    ) : (
-                        <div className="text-sm text-muted-foreground">
-                            No courier data found.
-                        </div>
-                    )}
+
+                    {/* SHIPROCKET COURIER LIST */}
+                    {!isDelhivery &&
+                        (loading ? (
+                            <div className="flex h-24 items-center justify-center text-muted-foreground">
+                                <Loader2 className="mr-2 animate-spin" />
+                                Loading courier partners...
+                            </div>
+                        ) : recommendedCourierForShiping?.data?.data
+                              ?.available_courier_companies?.length ? (
+                            <CourierCardList
+                                couriers={
+                                    recommendedCourierForShiping.data.data
+                                        .available_courier_companies as GetCourierForDeliveryLocation[]
+                                }
+                                selectedCourierId={
+                                    selectedCourier?.courier_company_id
+                                }
+                                onCourierSelect={(c) => setSelectedCourier(c)}
+                            />
+                        ) : (
+                            <div className="text-sm text-muted-foreground">
+                                No courier data found.
+                            </div>
+                        ))}
                 </SheetContent>
             </Sheet>
         </>

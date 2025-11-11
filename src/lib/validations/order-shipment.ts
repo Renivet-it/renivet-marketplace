@@ -19,6 +19,10 @@ export const orderShipmentSchema = z.object({
         .uuid("Brand ID is invalid"),
     shiprocketOrderId: z.number().nullable(), // Changed from string to number
     shiprocketShipmentId: z.number().nullable(), // Added new field
+    uploadWbn: z.string().nullable().optional(), // Added new field
+    delhiveryClientId: z.string().nullable().optional(),
+    delhiverySortCode: z.string().nullable().optional(),
+    delhiveryTrackingJson: z.object({}).nullable().default({}).optional(),
     courierCompanyId: z.number().nullable(), // Added new field
     courierName: z.string().nullable(), // Added new field
     awbNumber: z.string().nullable(),
@@ -132,6 +136,10 @@ export const createOrderShipmentSchema = orderShipmentSchema.omit({
     id: true,
     shiprocketOrderId: true,
     awbNumber: true,
+    uploadWbn: true,
+     delhiveryClientId: true,
+     delhiveryTrackingJson: true,
+     delhiverySortCode: true,
     trackingNumber: true,
     shipmentDate: true,
     estimatedDeliveryDate: true,
@@ -151,6 +159,10 @@ export const updateOrderShipmentSchema = orderShipmentSchema.pick({
     courierCompanyId: true,
     courierName: true,
     awbNumber: true,
+    uploadWbn: true,
+     delhiveryClientId: true,
+     delhiveryTrackingJson: true,
+     delhiverySortCode: true,
     trackingNumber: true,
     status: true,
     shipmentDate: true,

@@ -1,0 +1,1 @@
+ALTER TABLE "order_shipments" ADD COLUMN "delhivery_tracking_json" jsonb DEFAULT '{}'::jsonb;

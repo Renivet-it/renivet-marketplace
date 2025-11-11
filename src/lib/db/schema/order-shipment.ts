@@ -21,6 +21,7 @@ import {
     returnPaymentDetails,
     returnReasonDetails,
 } from "./order-return-exchange";
+import { users } from "./user";
 
 export const orderShipments = pgTable(
     "order_shipments",
@@ -38,6 +39,9 @@ export const orderShipments = pgTable(
         courierCompanyId: integer("courier_company_id"), // Added new field
         courierName: text("courier_name"), // Added new field
         awbNumber: text("awb_number"),
+        uploadWbn: text("upload_wbn"),
+        delhiveryClientId: text("delhivery_client_id"),
+        delhiverySortCode: text("delhivery_sort_code"),
         trackingNumber: text("tracking_number"),
         status: text("status", {
             enum: [
@@ -77,6 +81,7 @@ export const orderShipments = pgTable(
             "pick_up_details_shiprocket_json"
         ).default({}),
         isRtoReturn: boolean("is_rto_return").default(false),
+        delhiveryTrackingJson: jsonb("delhivery_tracking_json").default({}),
     },
     (table) => ({
         orderShipmentOrderIdIdx: index("order_shipment_order_id_idx").on(
@@ -89,6 +94,42 @@ export const orderShipments = pgTable(
             table.status
         ),
     })
+);
+export const orderReturnRequests = pgTable(
+    "order_return_requests",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        orderId: text("order_id")
+            .notNull()
+            .references(() => orders.id, { onDelete: "cascade" }),
+
+        orderItemId: uuid("order_item_id")
+            .notNull()
+            .references(() => orderItems.id, { onDelete: "cascade" }),
+
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "cascade" }),
+
+        requestType: text("request_type", {
+            enum: ["return", "replace"],
+        }).notNull(),
+
+        newVariantId: uuid("new_variant_id"), // only for replacement
+
+        reason: text("reason"),
+        comment: text("comment"),
+
+        images: jsonb("images").default([]),
+
+        status: text("status", {
+            enum: ["pending", "approved", "rejected", "processing", "completed"],
+        })
+            .notNull()
+            .default("pending"),
+
+        ...timestamps,
+    }
 );
 
 export const orderShipmentItems = pgTable(
@@ -203,6 +244,30 @@ export const orderShipmentItemsRelations = relations(
         }),
     })
 );
+
+export const orderReturnRequestsRelations = relations(
+    orderReturnRequests,
+    ({ one }) => ({
+        order: one(orders, {
+            fields: [orderReturnRequests.orderId],
+            references: [orders.id],
+        }),
+        orderItem: one(orderItems, {
+            fields: [orderReturnRequests.orderItemId],
+            references: [orderItems.id],
+        }),
+        brand: one(brands, {
+            fields: [orderReturnRequests.brandId],
+            references: [brands.id],
+        }),
+    //         user: one(users, {
+    //   fields: [orderReturnRequests.orderId],
+    //   references: [orders.id],
+    //   relationName: "returnRequestUser",
+    // }),
+    })
+);
+
 
 export const returnShipmentsRelations = relations(
     returnShipments,

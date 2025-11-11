@@ -10,6 +10,7 @@ import {
     convertValueToLabel,
     formatPriceTag,
 } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 import { Order } from "@/lib/validations";
 import {
     ColumnDef,
@@ -31,22 +32,26 @@ import { OrderAction } from "./order-action";
 export type TableOrder = Order;
 
 const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
-    {
-        accessorKey: "id",
-        header: "Order ID",
-        enableHiding: false,
-        cell: ({ row }) => {
-            const data = row.original;
-            return (
-                <Link
-                    className="text-blue-500 hover:underline"
-                    href={window.location.pathname + "/" + data.id}
-                >
-                    {data.id}
-                </Link>
-            );
-        },
+{
+    accessorKey: "id",
+    header: "Order ID",
+    enableHiding: false,
+    cell: ({ row }) => {
+        "use client"; // ensure this cell runs on client side
+
+        const data = row.original;
+        const pathname = usePathname();
+
+        return (
+            <Link
+                className="text-blue-500 hover:underline"
+                href={`${pathname}/${data.id}`}
+            >
+                {data.id}
+            </Link>
+        );
     },
+},
     {
         accessorKey: "fullName",
         header: "Customer Name",
@@ -90,6 +95,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             id: "actions",
             cell: ({ row }) => {
                 const data = row.original;
+                console.log("Order actions data:", data);
                 return <OrderAction order={data} onAction={onAction}/>;
             },
      },
@@ -104,7 +110,6 @@ interface PageProps {
 export function OrdersTable({ initialData, brandId, totalCount }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
-
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
