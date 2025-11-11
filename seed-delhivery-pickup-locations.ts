@@ -151,7 +151,7 @@ async function seedDelhiveryWarehouses() {
       }
 
       console.log("⏳ Waiting 1 second before next brand...");
-      await new Promise((res) => setTimeout(res, 1000)); // rate-limit delay
+      await new Promise((res) => setTimeout(res, 10000)); // rate-limit delay
     }
 
     console.log("\n🎯 Delhivery seeding finished!");

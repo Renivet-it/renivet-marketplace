@@ -1,14 +1,14 @@
-import { delhiveryClient, authQuery } from "./client";
+import { delhiveryClient } from "./client";
 
 /**
- * Registers a new client warehouse (pickup location) in Delhivery.
+ * Registers a new client warehouse (pickup location ) in Delhivery.
  * This must be done before you can create or ship orders from that location.
  *
  * Docs Reference: "Client Warehouse Creation API"
  * Base URL: https://track.delhivery.com/api/client_warehouse/create.json
  */
 export async function createClientWarehouse(payload: {
-  /** ✅ REQUIRED — Warehouse name (case-sensitive, used later in pickup_location.name) */
+  /** ✅ REQUIRED — Warehouse name (case-sensitive, used later in pickup_location.name ) */
   name: string;
 
   /** 🟡 OPTIONAL — Your registered company name */
@@ -48,8 +48,17 @@ export async function createClientWarehouse(payload: {
   return_country?: string;
 }) {
   try {
+    const createUrl = "/api/backend/clientwarehouse/create/";
+    const apiUrl = delhiveryClient.defaults.baseURL;
+
+    // --- Logging the URLs ---
+    console.log("Delhivery API Base URL:", apiUrl);
+    console.log("Delhivery Create Warehouse URL:", createUrl);
+    console.log("Full Request URL:", `${apiUrl}${createUrl}`);
+    // -------------------------
+
     const res = await delhiveryClient.post(
-      "/api/backend/clientwarehouse/create",
+      createUrl, // Using the variable here
       {
         name: payload.name,
         registered_name: payload.registered_name,
@@ -58,14 +67,13 @@ export async function createClientWarehouse(payload: {
         address: payload.address,
         city: payload.city,
         pin: payload.pin,
-        country: payload.country || "India",
+        country:"India",
         return_address: payload.return_address,
         return_city: payload.return_city || payload.city,
         return_pin: payload.return_pin || payload.pin,
         return_state: payload.return_state,
-        return_country: payload.return_country || "India",
+        return_country: "India",
       },
-      { params: authQuery }
     );
 
     return {
@@ -80,4 +88,3 @@ export async function createClientWarehouse(payload: {
     };
   }
 }
-
