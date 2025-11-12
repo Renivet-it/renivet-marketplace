@@ -17,7 +17,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   const desktopAspectRatio = 1440 / 500;
   const mobileAspectRatio = 375 / 487;
   const mobileImageUrl =
-    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNFKHMrsYuOBPqLnX487ACSVER29DxtW5vmhNc";
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNL8xWHSUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW";
 
   const categories = [
     { name: "Men", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcdSN8FeO4H8MeNYoyJQSarWCqgVpRxP5lDBu", href: "/men" },
