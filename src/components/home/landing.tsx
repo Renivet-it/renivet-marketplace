@@ -17,7 +17,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   const desktopAspectRatio = 1440 / 500;
   const mobileAspectRatio = 375 / 487;
   const mobileImageUrl =
-    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuJOrQshnjfTvXWe4YdlSzoaZPyC7xGVghIDL";
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNL8xWHSUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW";
 
   const categories = [
     { name: "Men", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcdSN8FeO4H8MeNYoyJQSarWCqgVpRxP5lDBu", href: "/men" },
@@ -93,11 +93,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
 
           {/* Main Text Content */}
           <div className="flex flex-col items-center justify-center space-y-6 flex-grow">
-            <div className="space-y-2 text-white">
-              <h1 className="text-4xl font-serif">Style That Lasts.</h1>
-              <h2 className="text-4xl font-serif">Fashion That Cares.</h2>
-              <p className="pt-2 text-sm">Discover slow fashion that looks good and feels right.</p>
-            </div>
+ 
             <Button
               size="lg"
               className="rounded-full border border-gray-200 bg-white/50 px-8 py-3 text-base font-medium text-black backdrop-blur-sm hover:bg-white"
