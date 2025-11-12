@@ -1,5 +1,6 @@
 // src/lib/delhivery/orders.ts
-import { delhiveryClient, authQuery } from "./client";
+import qs from "qs";
+import { delhiveryClient } from "./client";
 
 /**
  * Complete type for Delhivery shipment creation payload.
@@ -120,6 +121,7 @@ export interface DelhiveryPickupLocation {
  * Standard createOrder payload
  */
 export interface DelhiveryOrderPayload {
+  format?: "json"; // 🆕 added
   shipments: DelhiveryShipment[];
   pickup_location: DelhiveryPickupLocation;
 }
@@ -130,15 +132,24 @@ export interface DelhiveryOrderPayload {
  */
 export const createOrder = async (payload: DelhiveryOrderPayload) => {
   try {
-    const res = await delhiveryClient.post(
-      "/api/cmu/create.json",
-      payload,
-      { params: authQuery }
-    );
+    // Convert to form-urlencoded structure as required by Delhivery
+    const formBody = qs.stringify({
+      format: "json",
+      data: JSON.stringify(payload),
+    });
+
+    const res = await delhiveryClient.post("/api/cmu/create.json", formBody, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
 
     return { success: true, data: res.data };
   } catch (err: any) {
-    console.error("Delhivery createOrder error:", err.response?.data || err.message);
+    console.error(
+      "Delhivery createOrder error:",
+      err.response?.data || err.message
+    );
     return {
       success: false,
       error: err.response?.data || err.message,
@@ -152,7 +163,6 @@ export const createOrder = async (payload: DelhiveryOrderPayload) => {
 export const cancelOrder = async (waybill: string) => {
   const body = { waybill, action: "cancel" };
   const res = await delhiveryClient.post("/api/p/edit", body, {
-    params: authQuery,
   });
   return res.data;
 };
@@ -163,7 +173,6 @@ export const cancelOrder = async (waybill: string) => {
 export const createReturn = async (waybill: string, reason: string) => {
   const body = { waybill, action: "rto", reason };
   const res = await delhiveryClient.post("/api/p/edit", body, {
-    params: authQuery,
   });
   return res.data;
 };

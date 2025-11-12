@@ -37,6 +37,7 @@ import { format } from "date-fns";
 import { and, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 
+import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
 
 
 async function createShiprocketOrderWithRetry(
@@ -362,12 +363,6 @@ export const ordersRouter = createTRPCRouter({
                     // Clear user cart (do this once after all orders are created to avoid multiple calls)
                     // Moved outside the loop
 
-                    const sr = await shiprocket();
-
-                    // NEW: Process Shiprocket order for this single item
-                    console.log(
-                        `Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`
-                    );
 
                     try {
                         await sendBrandOrderNotificationEmail({
@@ -395,7 +390,12 @@ export const ordersRouter = createTRPCRouter({
                         );
                         // Log the error but don't fail the mutation
                     }
+                  // const sr = await shiprocket();
 
+                  //   // NEW: Process Shiprocket order for this single item
+                  //   console.log(
+                  //       `Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`
+                  //   );
                     const product = await queries.products.getProduct({
                         productId: item.productId,
                         isActive: true,
@@ -476,46 +476,94 @@ export const ordersRouter = createTRPCRouter({
                         orderItemsForShiprocket
                     );
 
-                    const srOrderRequest = {
-                        order_id: orderId,
-                        order_date: format(new Date(), "yyyy-MM-dd"),
-                        pickup_location: pickupLocation || "DefaultPickup",
-                        billing_customer_name:
-                            existingAddress.fullName.split(" ")[0] ||
-                            "Customer",
-                        billing_last_name:
-                            existingAddress.fullName.split(" ")[1] || "",
-                        billing_address:
-                            existingAddress.street || "Unknown Street",
-                        billing_city: existingAddress.city || "Delhi",
-                        billing_pincode: +existingAddress.zip || 110001,
-                        billing_state: existingAddress.state || "Delhi",
-                        billing_country: "India",
-                        billing_email: user.email || "test@example.com",
-                        billing_phone: getRawNumberFromPhone(
-                            existingAddress.phone
-                        ),
-                        shipping_is_billing: true,
-                        order_items: orderItemsForShiprocket,
-                        payment_method: (input.paymentMethod === "COD"
-                            ? "COD"
-                            : "Prepaid") as "COD" | "Prepaid",
-                        sub_total: Math.floor(
-                            +convertPaiseToRupees(orderValue)
-                        ),
-                        length: Math.max(orderDimensions.length, 0.5),
-                        breadth: Math.max(orderDimensions.width, 0.5),
-                        height: Math.max(orderDimensions.height, 0.5),
-                        weight: +(
-                            Math.max(orderDimensions.weight, 0.1) / 1000
-                        ).toFixed(2),
-                    };
-                    console.log(
-                        `Shiprocket order request for brand ${brand.name}:`,
-                        srOrderRequest
-                    );
+                    // const srOrderRequest = {
+                    //     order_id: orderId,
+                    //     order_date: format(new Date(), "yyyy-MM-dd"),
+                    //     pickup_location: pickupLocation || "DefaultPickup",
+                    //     billing_customer_name:
+                    //         existingAddress.fullName.split(" ")[0] ||
+                    //         "Customer",
+                    //     billing_last_name:
+                    //         existingAddress.fullName.split(" ")[1] || "",
+                    //     billing_address:
+                    //         existingAddress.street || "Unknown Street",
+                    //     billing_city: existingAddress.city || "Delhi",
+                    //     billing_pincode: +existingAddress.zip || 110001,
+                    //     billing_state: existingAddress.state || "Delhi",
+                    //     billing_country: "India",
+                    //     billing_email: user.email || "test@example.com",
+                    //     billing_phone: getRawNumberFromPhone(
+                    //         existingAddress.phone
+                    //     ),
+                    //     shipping_is_billing: true,
+                    //     order_items: orderItemsForShiprocket,
+                    //     payment_method: (input.paymentMethod === "COD"
+                    //         ? "COD"
+                    //         : "Prepaid") as "COD" | "Prepaid",
+                    //     sub_total: Math.floor(
+                    //         +convertPaiseToRupees(orderValue)
+                    //     ),
+                    //     length: Math.max(orderDimensions.length, 0.5),
+                    //     breadth: Math.max(orderDimensions.width, 0.5),
+                    //     height: Math.max(orderDimensions.height, 0.5),
+                    //     weight: +(
+                    //         Math.max(orderDimensions.weight, 0.1) / 1000
+                    //     ).toFixed(2),
+                    // };
+                    // console.log(
+                    //     `Shiprocket order request for brand ${brand.name}:`,
+                    //     srOrderRequest
+                    // );
                     // ✅ Step 1: Check if intent exists in last 2 minutes before updating
                     // ✅ Step 1: Fetch all intents from last 2 minutes
+
+                      const delhiveryPayload = {
+                        pickup_location: {
+                        name: pickupLocation, // must match registered Delhivery pickup name
+                      },
+                      shipments: [
+                        {
+                          name: existingAddress.fullName,
+                          add: existingAddress.street,
+                          city: existingAddress.city,
+                          state: existingAddress.state,
+                          country: "India",
+                          pin: existingAddress.zip,
+                          phone: String(getRawNumberFromPhone(existingAddress.phone)),
+                          order: orderId,
+                          payment_mode: input.paymentMethod === "COD" ? "COD" : "Prepaid",
+                          total_amount: +convertPaiseToRupees(orderValue),
+                          cod_amount:
+                            input.paymentMethod === "COD"
+                              ? +convertPaiseToRupees(orderValue)
+                              : 0,
+                          products_desc:
+                            product?.title ||
+                            variant?.sku ||
+                            "General Product",
+                          weight: validatedDimensions.weight / 1000, // grams → kg
+                          shipment_length: validatedDimensions.length / 10, // cm → mm optional
+                          shipment_width: validatedDimensions.width / 10,
+                          shipment_height: validatedDimensions.height / 10,
+                          quantity: String(item.quantity),
+                          seller_name: brand.name,
+                          seller_add: brand.address || "Warehouse Address",
+                          return_name: brand.name,
+                          return_add: brand.address || "Warehouse Address",
+                          return_city: existingAddress.city,
+                          return_phone: getRawNumberFromPhone(existingAddress.phone),
+                          return_state: existingAddress.state,
+                          return_country: "India",
+                          return_pin: existingAddress.zip,
+                          fragile_shipment: false,
+                          plastic_packaging: false,
+                        },
+                      ],
+                    };
+
+                    console.log("🚀 Delhivery Order Payload:", delhiveryPayload);
+
+
                     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
 
                     const intents = await db.query.ordersIntent.findMany({
@@ -544,15 +592,16 @@ export const ordersRouter = createTRPCRouter({
 
                     try {
                         // const srOrder = await sr.requestCreateOrder(srOrderRequest);
-                        const srOrder = await createShiprocketOrderWithRetry(
-                            sr,
-                            srOrderRequest
-                        );
-                        console.log(
-                            `Shiprocket order creation response for brand ${brand.name}:`,
-                            srOrder
-                        );
-
+                        // const srOrder = await createShiprocketOrderWithRetry(
+                        //     sr,
+                        //     srOrderRequest
+                        // );
+                        // console.log(
+                        //     `Shiprocket order creation response for brand ${brand.name}:`,
+                        //     srOrder
+                        // );
+                    const srOrder = await createDelhiveryOrder(delhiveryPayload);
+ console.log("✅ Delhivery Response:", srOrder);
                         if (matchedIntent) {
                             await db
                                 .update(schemas.ordersIntent)
@@ -560,7 +609,7 @@ export const ordersRouter = createTRPCRouter({
                                     shiprocketRequest: {
                                         ...(matchedIntent.shiprocketRequest ||
                                             {}),
-                                        [newOrder.id]: srOrderRequest, // Save full request
+                                        [newOrder.id]: delhiveryPayload, // Save full request
                                     },
                                     shiprocketResponse: {
                                         ...(matchedIntent.shiprocketResponse ||
@@ -576,7 +625,7 @@ export const ordersRouter = createTRPCRouter({
                                 );
                         }
 
-                        if (srOrder.status && srOrder.data) {
+                        if (srOrder.status || srOrder.data) {
                             const shipment = await db
                                 .insert(schemas.orderShipments)
                                 .values({
@@ -643,7 +692,7 @@ export const ordersRouter = createTRPCRouter({
                             await db
                                 .update(schemas.ordersIntent)
                                 .set({
-                                    shiprocketRequest: srOrderRequest,
+                                    shiprocketRequest: delhiveryPayload,
                                     shiprocketResponse: {
                                         [newOrder.id]: shiprocketError,
                                     },
