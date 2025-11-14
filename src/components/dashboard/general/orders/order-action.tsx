@@ -47,6 +47,7 @@ export function OrderAction({ order, onAction }: PageProps) {
             enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
         }
     );
+const isDelhivery = Boolean(order?.shipments?.[0]?.uploadWbn);
 
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
@@ -56,6 +57,7 @@ export function OrderAction({ order, onAction }: PageProps) {
     const [isShipmentGenerated, setIsShipmentGenerated] = useState(false);
 
     useEffect(() => {
+        console.log("Order Shipment Details:", order);
         if (orderShipmentDetails) {
             const awbGenerated = orderShipmentDetails.some(
                 (shipment) => shipment.isAwbGenerated
@@ -113,7 +115,7 @@ export function OrderAction({ order, onAction }: PageProps) {
 
     return (
         <>
-            <DropdownMenu>
+            {/* <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="size-8 p-0">
                         <span className="sr-only">Open menu</span>
@@ -157,6 +159,66 @@ export function OrderAction({ order, onAction }: PageProps) {
                     </DropdownMenuGroup>
                 </DropdownMenuContent>
             </DropdownMenu>
+             */}
+             <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="size-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <Icons.MoreHorizontal className="size-4" />
+        </Button>
+    </DropdownMenuTrigger>
+
+    <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+        <DropdownMenuGroup>
+            {/* 🚚 SHIP NOW — SHOW ONLY WHEN PICKUP NOT DONE */}
+            {!order?.shipments[0]?.isPickupScheduled === true && (
+                <DropdownMenuItem onClick={() => setIsSheetOpen(true)}>
+                    <Icons.Truck className="size-4" />
+                    <span>Ship Now</span>
+                </DropdownMenuItem>
+            )}
+
+            {/* 📄 DOWNLOAD INVOICE — always shown */}
+            <DropdownMenuItem onClick={() => setIsInvoiceModalOpen(true)}>
+                <Icons.FileText className="size-4" />
+                <span>Download Invoice</span>
+            </DropdownMenuItem>
+
+            {/* ===============================
+               🚚 DELHIVERY LABEL LOGIC
+               =============================== */}
+            {isDelhivery && order?.shipments[0]?.isPickupScheduled === true && (
+                <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>
+                    <Icons.Tag className="size-4" />
+                    <span>Download Label</span>
+                </DropdownMenuItem>
+            )}
+
+            {/* ===============================
+               🚚 SHIPROCKET LABEL LOGIC
+               =============================== */}
+            {!isDelhivery && isAwbGenerated && (
+                <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>
+                    <Icons.Tag className="size-4" />
+                    <span>Download Label</span>
+                </DropdownMenuItem>
+            )}
+
+            {/* 📦 MANIFEST — SHIPROCKET ONLY */}
+            {!isDelhivery && isAwbGenerated && (
+                <DropdownMenuItem onClick={() => setIsManifestModalOpen(true)}>
+                    <Icons.ClipboardList className="size-4" />
+                    <span>Download Manifest</span>
+                </DropdownMenuItem>
+            )}
+        </DropdownMenuGroup>
+
+    </DropdownMenuContent>
+</DropdownMenu>
+
+
 
             {/* Invoice Modal */}
             <Dialog open={isInvoiceModalOpen} onOpenChange={setIsInvoiceModalOpen}>
