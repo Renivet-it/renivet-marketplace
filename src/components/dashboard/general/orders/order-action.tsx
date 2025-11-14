@@ -69,6 +69,72 @@ const isDelhivery = Boolean(order?.shipments?.[0]?.uploadWbn);
             setIsShipmentGenerated(shipmentGenerated);
         }
     }, [orderShipmentDetails]);
+// Frontend download function
+const downloadDelhiveryLabel = async () => {
+  try {
+    console.log("🖱️ Download initiated for WBN:", order?.shipments?.[0]?.awbNumber);
+    const res = await fetch("/api/delhivery/label", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wbn: order?.shipments?.[0]?.awbNumber }),
+    });
+
+    console.log("🖱️ Response Status:", res.status);
+    console.log("🖱️ Response Headers:", Object.fromEntries(res.headers.entries()));
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      console.error("❌ Frontend Error:", errorData);
+      toast.error(errorData.message || "Failed to download label");
+      return;
+    }
+
+    const blob = await res.blob();
+    console.log("🖱️ Blob Size:", blob.size);
+    console.log("🖱️ Blob Type:", blob.type);
+    // Verify it's a valid PDF by checking the first few bytes
+    const arrayBuffer = await blob.slice(0, 100).arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const header = new TextDecoder().decode(uint8Array.slice(0, 4));
+    console.log("🖱️ PDF Header Check:", header, "(should be %PDF)");
+    if (header !== "%PDF") {
+      console.error("❌ Downloaded file is not a valid PDF");
+      const text = new TextDecoder().decode(uint8Array);
+      console.error("❌ File content (first 100 bytes):", text);
+      toast.error("Downloaded file is not a valid PDF");
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    const contentDisposition = res.headers.get("content-disposition");
+    let fileName = "delhivery_label.pdf";
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (fileNameMatch && fileNameMatch.length === 2) {
+        fileName = fileNameMatch[1];
+      }
+    }
+
+    console.log("🖱️ Download File Name:", fileName);
+
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("Delhivery label downloaded!");
+  } catch (err) {
+    console.error("❌ Frontend Catch Error:", err);
+    toast.error("Failed to download Delhivery label");
+  }
+};
+
+
+
 
     const handleDownload = async (type: "invoice" | "label" | "manifest") => {
         try {
@@ -254,14 +320,18 @@ const isDelhivery = Boolean(order?.shipments?.[0]?.uploadWbn);
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsLabelModalOpen(false)}>Cancel</Button>
-                        <Button
-                            onClick={async () => {
-                                await handleDownload("label");
-                                setIsLabelModalOpen(false);
-                            }}
-                        >
-                            Download
-                        </Button>
+                    <Button
+                    onClick={async () => {
+                        if (isDelhivery) {
+                            await downloadDelhiveryLabel();
+                        } else {
+                            await handleDownload("label");
+                        }
+                        setIsLabelModalOpen(false);
+                    }}
+                    >
+                    Download
+                    </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

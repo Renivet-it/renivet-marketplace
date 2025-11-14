@@ -96,3 +96,117 @@ export const reschedulePickup = async (
     );
   }
 };
+
+// /* ============================================================
+//    ⭐ downloadDelhiveryLabel — DOWNLOAD PACKING SLIP (LABEL)
+//    ============================================================ */
+// export const downloadDelhiveryLabel = async (wbn: string) => {
+//   try {
+//     console.log("📨 Downloading Delhivery Label for WBN:", wbn);
+
+//     const res = await delhiveryClient.get("/api/p/packing_slip", {
+//       params: {
+//         wbns: wbn,
+//         pdf: true,
+//         pdf_size: "4R",
+//       },
+//       responseType: "arraybuffer", // 🚀 IMPORTANT: get PDF buffer
+//     });
+
+//     console.log("✅ Delhivery Label Download Success");
+
+//     // Convert binary → base64 for frontend download
+//     const base64PDF = Buffer.from(res.data, "binary").toString("base64");
+
+//     return {
+//       success: true,
+//       labelBase64: base64PDF,
+//       fileName: `delhivery_label_${wbn}.pdf`,
+//     };
+//   } catch (err: any) {
+//     console.error("❌ Delhivery Label Download ERROR");
+
+//     if (err.response) {
+//       console.error("🚨 Response Status:", err.response.status);
+//       console.error("🚨 Response Data:", err.response.data);
+//     }
+
+//     throw new Error(
+//       err?.response?.data?.message ||
+//         err?.message ||
+//         "Failed to download Delhivery label"
+//     );
+//   }
+// };
+
+
+// lib/delhivery/pickup.ts
+// lib/delhivery/pickup.ts
+export const downloadDelhiveryLabel = async (wbn: string) => {
+  try {
+    console.log("📨 Requesting Delhivery Label for WBN:", wbn);
+
+    // Step 1: Get the PDF download link from Delhivery
+    const res = await delhiveryClient.get("/api/p/packing_slip", {
+      params: {
+        wbns: wbn,
+        pdf: "true",
+        pdf_size: "4R",
+      },
+    });
+
+    console.log("✅ Delhivery API Response Status:", res.status);
+    console.log("📦 Response Data:", res.data);
+
+    // Parse the JSON response
+    const responseData = res.data;
+    
+    if (!responseData.packages || responseData.packages.length === 0) {
+      throw new Error("No packages found in Delhivery response");
+    }
+
+    const pdfDownloadLink = responseData.packages[0].pdf_download_link;
+    
+    if (!pdfDownloadLink) {
+      throw new Error("No PDF download link found in Delhivery response");
+    }
+
+    console.log("🔗 PDF Download Link:", pdfDownloadLink);
+
+    // Step 2: Download the actual PDF from the S3 link
+    const pdfResponse = await fetch(pdfDownloadLink);
+    
+    if (!pdfResponse.ok) {
+      throw new Error(`Failed to download PDF from S3: ${pdfResponse.status}`);
+    }
+
+    const pdfBuffer = await pdfResponse.arrayBuffer();
+    console.log("✅ Downloaded PDF from S3, size:", pdfBuffer.byteLength);
+
+    const base64PDF = Buffer.from(pdfBuffer).toString("base64");
+    
+    console.log("🔄 Base64 Length:", base64PDF.length);
+    console.log("🔄 First 100 chars of Base64:", base64PDF.substring(0, 100));
+
+    // Verify PDF header
+    const pdfHeader = Buffer.from(pdfBuffer).toString('utf8', 0, 4);
+    console.log("✅ PDF Header Check:", pdfHeader);
+
+    if (pdfHeader !== '%PDF') {
+      throw new Error("Downloaded file is not a valid PDF");
+    }
+
+    return {
+      success: true,
+      labelBase64: base64PDF,
+      fileName: `delhivery_label_${wbn}.pdf`,
+    };
+  } catch (err: any) {
+    console.error("❌ Delhivery Label ERROR - Full Error:", err);
+    console.error("❌ Error Response Data:", err?.response?.data);
+    console.error("❌ Error Response Status:", err?.response?.status);
+    
+    const errorMessage = err?.response?.data?.toString() || err?.message || "Failed to fetch Delhivery label";
+    throw new Error(errorMessage);
+  }
+};
