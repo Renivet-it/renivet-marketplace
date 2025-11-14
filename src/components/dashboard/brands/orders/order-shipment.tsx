@@ -49,6 +49,8 @@ export default function OrderShipment({
     order,
     onShipmentSuccessRefetchOrder,
 }: PageProps) {
+
+    console.log("order in shipment sheet:", order);
     const { data: customerAddressDetails, refetch: refetchCustomerAddress } =
         trpc.general.addresses.getAddressById.useQuery(
             {

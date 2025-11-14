@@ -11,6 +11,7 @@ import {
     formatPriceTag,
 } from "@/lib/utils";
 import { Order } from "@/lib/validations";
+
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -90,6 +91,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             id: "actions",
             cell: ({ row }) => {
                 const data = row.original;
+                console.log("Order actions data:", data);
                 return <OrderAction order={data} onAction={onAction}/>;
             },
      },
@@ -104,7 +106,6 @@ interface PageProps {
 export function OrdersTable({ initialData, brandId, totalCount }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
-
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
