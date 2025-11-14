@@ -1,24 +1,21 @@
-import { delhiveryClient, authQuery } from "./client";
+import { delhiveryClient } from "./client";
 
 export interface PickupRequest {
   pickup_location: string;
   pickup_date: string; // YYYY-MM-DD
   pickup_time?: string; // Optional time slot, e.g. "10:00-13:00"
-  shipment_count: number;
-  awbs?: string[];
+  expected_package_count: number;
 }
 
 export const schedulePickup = async (payload: PickupRequest) => {
   const res = await delhiveryClient.post(
-    "/api/pickup/create.json",
+    "/fm/request/new/",
     {
       pickup_date: payload.pickup_date,
       pickup_time: payload.pickup_time,
       pickup_location: payload.pickup_location,
-      shipments: payload.awbs,
-      shipment_count: payload.shipment_count,
+      expected_package_count: payload.expected_package_count,
     },
-    { params: authQuery }
   );
 
   return res.data;
@@ -36,7 +33,6 @@ export const reschedulePickup = async (
       new_date,
       new_slot,
     },
-    { params: authQuery }
   );
 
   return res.data;
