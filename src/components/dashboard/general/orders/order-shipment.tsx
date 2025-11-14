@@ -320,14 +320,24 @@ export default function OrderShipment({
                             )}
 
                             {/* SHIP NOW BUTTON */}
-                            <Button
-                                className="flex items-center gap-2"
-                                onClick={handleShipNow}
-                                disabled={buttonLoading}
-                            >
-                                <Truck className="h-4 w-4" />
-                                Ship Now
-                            </Button>
+<Button
+    className="flex items-center gap-2"
+    onClick={handleShipNow}
+    disabled={buttonLoading}
+>
+    {buttonLoading ? (
+        <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Processing...
+        </>
+    ) : (
+        <>
+            <Truck className="h-4 w-4" />
+            Ship Now
+        </>
+    )}
+</Button>
+
                         </div>
                     </SheetHeader>
 
