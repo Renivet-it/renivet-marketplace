@@ -87,6 +87,8 @@ export default function OrderShipment({
     // ================================================================
 
     console.log("⭐ Shipment Type:", isDelhivery ? "Delhivery" : "Shiprocket");
+const utils = trpc.useUtils();
+const updatePickupStatus = trpc.general.orders.updatePickupStatus.useMutation();
 
     /* -----------------------------------------------------------
      ⭐ HANDLE SHIP NOW CLICK
@@ -136,6 +138,11 @@ export default function OrderShipment({
                 }
 
                 toast.success("Delhivery pickup scheduled!");
+                // update DB pickup status
+await updatePickupStatus.mutateAsync({ orderId: order.id });
+
+// OPTIONAL: refresh order table
+utils.general.orders.getOrders.invalidate();
                 setIsSheetOpen(false);
                 onShipmentSuccessRefetchOrder();
                 return;

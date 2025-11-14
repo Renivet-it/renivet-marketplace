@@ -38,6 +38,7 @@ import { and, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 
 import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
+import { orderShipments } from "@/lib/db/schema/order-shipment";
 
 
 async function createShiprocketOrderWithRetry(
@@ -1131,6 +1132,19 @@ export const ordersRouter = createTRPCRouter({
                 );
             }
         }),
+        updatePickupStatus: protectedProcedure
+  .input(z.object({ orderId: z.string() }))
+  .mutation(async ({ ctx, input }) => {
+    await ctx.db.update(orderShipments)
+         .set({
+        isPickupScheduled: true,
+        isAwbGenerated: true,
+      })
+      .where(eq(orderShipments.orderId, input.orderId));
+
+    return { success: true };
+  }),
+
     cancelOrder: protectedProcedure
         .input(
             z.object({
