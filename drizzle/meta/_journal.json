@@ -1317,6 +1317,20 @@
       "when": 1761943308608,
       "tag": "0187_talented_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 188,
+      "version": "7",
+      "when": 1763066811956,
+      "tag": "0188_right_vulcan",
+      "breakpoints": true
+    },
+    {
+      "idx": 189,
+      "version": "7",
+      "when": 1763104193906,
+      "tag": "0189_zippy_mephistopheles",
+      "breakpoints": true
     }
   ]
 }

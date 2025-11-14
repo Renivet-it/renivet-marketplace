@@ -38,6 +38,9 @@ export const orderShipments = pgTable(
         courierCompanyId: integer("courier_company_id"), // Added new field
         courierName: text("courier_name"), // Added new field
         awbNumber: text("awb_number"),
+        uploadWbn: text("upload_wbn"),
+        delhiveryClientId: text("delhivery_client_id"),
+        delhiverySortCode: text("delhivery_sort_code"),
         trackingNumber: text("tracking_number"),
         status: text("status", {
             enum: [

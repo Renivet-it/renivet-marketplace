@@ -264,23 +264,23 @@ export const ordersRouter = createTRPCRouter({
                 "🧩 [STEP 4] Checking brands for Razorpay linked accounts…"
             );
 
-            const brandsWithoutRzpAccount = existingBrands.filter(
-                (brand) => brand.rzpAccountId === null
-            );
+            // const brandsWithoutRzpAccount = existingBrands.filter(
+            //     (brand) => brand.rzpAccountId === null
+            // );
 
-            if (brandsWithoutRzpAccount.length > 0) {
-                console.error(
-                    "❌ [STEP 4] Brands missing Razorpay accounts:",
-                    brandsWithoutRzpAccount.map((b) => ({
-                        id: b.id,
-                        name: b.name,
-                    }))
-                );
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: `Product(s) from brand(s) ${brandsWithoutRzpAccount.map((brand) => `'${brand.name}'`).join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
-                });
-            }
+            // if (brandsWithoutRzpAccount.length > 0) {
+            //     console.error(
+            //         "❌ [STEP 4] Brands missing Razorpay accounts:",
+            //         brandsWithoutRzpAccount.map((b) => ({
+            //             id: b.id,
+            //             name: b.name,
+            //         }))
+            //     );
+            //     throw new TRPCError({
+            //         code: "BAD_REQUEST",
+            //         message: `Product(s) from brand(s) ${brandsWithoutRzpAccount.map((brand) => `'${brand.name}'`).join(", ")} do not meet the requirements to accept payments, please remove them from the order`,
+            //     });
+            // }
             console.log("✅ [STEP 4] All brands have Razorpay accounts");
 
             try {
@@ -625,62 +625,125 @@ export const ordersRouter = createTRPCRouter({
                                 );
                         }
 
-                        if (srOrder.status || srOrder.data) {
-                            const shipment = await db
-                                .insert(schemas.orderShipments)
-                                .values({
-                                    orderId: newOrder.id,
-                                    brandId: item.brandId,
-                                    shiprocketOrderId: srOrder.data.order_id,
-                                    shiprocketShipmentId:
-                                        srOrder.data.shipment_id,
-                                    status: "pending",
-                                    courierCompanyId:
-                                        srOrder.data.courier_company_id || null,
-                                    courierName:
-                                        srOrder.data.courier_name || null,
-                                    awbNumber: srOrder.data.awb_code || null,
-                                })
-                                .returning()
-                                .then((res) => res[0]);
 
-                            const orderItemsForBrand = await db
-                                .select({
-                                    orderItem: schemas.orderItems,
-                                    product: schemas.products,
-                                })
-                                .from(schemas.orderItems)
-                                .where(
-                                    and(
-                                        eq(
-                                            schemas.orderItems.orderId,
-                                            newOrder.id
-                                        ),
-                                        eq(
-                                            schemas.products.brandId,
-                                            item.brandId
-                                        )
-                                    )
+             console.log("📦 Checking Delhivery response success:", srOrder?.data?.success);
+
+                    if (srOrder?.data?.success === true) {
+                        const pkg = srOrder.data.packages?.[0];
+                        console.log("📦 Extracted Delhivery Package:", pkg);
+
+                        const shipment = await db
+                            .insert(schemas.orderShipments)
+                            .values({
+                                orderId: newOrder.id,
+                                brandId: item.brandId,
+
+                                // 🔄 Stored in old Shiprocket fields
+                                // shiprocketOrderId: pkg?.waybill || null, // using refnum as order reference
+                                // shiprocketShipmentId: pkg?.waybill || null, // using upload_wbn
+                                uploadWbn: srOrder.data.upload_wbn || null, // New field
+                                status: "pending",
+
+                                // courierCompanyId: pkg?.sort_code || null, // not exactly a company id but closest
+                                delhiveryClientId: pkg?.client || null,
+                                delhiverySortCode: pkg?.sort_code || null,
+                                courierName: "Delhivery", // fixed since courier is always Delhivery
+                                awbNumber: pkg?.waybill || null, // MAIN AWB FROM DELHIVERY
+                                isAwbGenerated: true,
+                            })
+                            .returning()
+                            .then((res) => res[0]);
+
+                        console.log("🚚 Delhivery shipment stored in DB:", shipment);
+
+                        // Fetch Order Items for this brand
+                        const orderItemsForBrand = await db
+                            .select({
+                                orderItem: schemas.orderItems,
+                                product: schemas.products,
+                            })
+                            .from(schemas.orderItems)
+                            .where(
+                                and(
+                                    eq(schemas.orderItems.orderId, newOrder.id),
+                                    eq(schemas.products.brandId, item.brandId)
                                 )
-                                .innerJoin(
-                                    schemas.products,
-                                    eq(
-                                        schemas.orderItems.productId,
-                                        schemas.products.id
-                                    )
-                                );
+                            )
+                            .innerJoin(
+                                schemas.products,
+                                eq(schemas.orderItems.productId, schemas.products.id)
+                            );
 
-                            if (orderItemsForBrand.length > 0) {
-                                await db
-                                    .insert(schemas.orderShipmentItems)
-                                    .values(
-                                        orderItemsForBrand.map((row) => ({
-                                            shipmentId: shipment.id,
-                                            orderItemId: row.orderItem.id,
-                                        }))
-                                    );
-                            }
+                        console.log("🧾 Order items for shipment:", orderItemsForBrand);
+
+                        if (orderItemsForBrand.length > 0) {
+                            await db.insert(schemas.orderShipmentItems).values(
+                                orderItemsForBrand.map((row) => ({
+                                    shipmentId: shipment.id,
+                                    orderItemId: row.orderItem.id,
+                                }))
+                            );
+                            console.log("🧾 Order Shipment Items inserted.");
                         }
+                    } else {
+                        console.log("❌ Delhivery response failed:", srOrder);
+                    }
+                        // if (srOrder.status || srOrder.data) {
+                        //     const shipment = await db
+                        //         .insert(schemas.orderShipments)
+                        //         .values({
+                        //             orderId: newOrder.id,
+                        //             brandId: item.brandId,
+                        //             shiprocketOrderId: srOrder.data.order_id,
+                        //             shiprocketShipmentId:
+                        //                 srOrder.data.shipment_id,
+                        //             status: "pending",
+                        //             courierCompanyId:
+                        //                 srOrder.data.courier_company_id || null,
+                        //             courierName:
+                        //                 srOrder.data.courier_name || null,
+                        //             awbNumber: srOrder.data.awb_code || null,
+                        //         })
+                        //         .returning()
+                        //         .then((res) => res[0]);
+
+                        //     const orderItemsForBrand = await db
+                        //         .select({
+                        //             orderItem: schemas.orderItems,
+                        //             product: schemas.products,
+                        //         })
+                        //         .from(schemas.orderItems)
+                        //         .where(
+                        //             and(
+                        //                 eq(
+                        //                     schemas.orderItems.orderId,
+                        //                     newOrder.id
+                        //                 ),
+                        //                 eq(
+                        //                     schemas.products.brandId,
+                        //                     item.brandId
+                        //                 )
+                        //             )
+                        //         )
+                        //         .innerJoin(
+                        //             schemas.products,
+                        //             eq(
+                        //                 schemas.orderItems.productId,
+                        //                 schemas.products.id
+                        //             )
+                        //         );
+
+                        //     if (orderItemsForBrand.length > 0) {
+                        //         await db
+                        //             .insert(schemas.orderShipmentItems)
+                        //             .values(
+                        //                 orderItemsForBrand.map((row) => ({
+                        //                     shipmentId: shipment.id,
+                        //                     orderItemId: row.orderItem.id,
+                        //                 }))
+                        //             );
+                        //     }
+                        // }
                     } catch (shiprocketError) {
                         console.log(
                             "Shiprocket actual error:",
