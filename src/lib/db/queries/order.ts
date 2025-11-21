@@ -24,6 +24,7 @@ import {
     users,
     ordersIntent,
     products as productTable,
+    addresses,
 } from "../schema";
 import {
     returnAddressDetails,
@@ -306,6 +307,7 @@ console.log(total, "toitalsc");
         userId: orders.userId,
         firstName: users.firstName,
         lastName: users.lastName,
+        phone: users.phone,
         shiprocketOrderId: orderShipments.shiprocketOrderId,
         shiprocketShipmentId: orderShipments.shiprocketShipmentId,
         awbNumber: orderShipments.awbNumber,
@@ -325,15 +327,24 @@ console.log(total, "toitalsc");
         deliveryAmount: orders.deliveryAmount,
         discountAmount: orders.discountAmount,
         totalAmount: orders.totalAmount,
+        street: addresses.street,
+          city: addresses.city,
+          state: addresses.state,
+          zip: addresses.zip,
+          brandId: orderShipments.brandId,
+          productId: orderItems.productId,
         createdAt: orders.createdAt,
         updatedAt: orders.updatedAt,
       })
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
       .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
+      .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+      .leftJoin(addresses, eq(orders.addressId, addresses.id)) // ⭐ NEW JOIN
       .where(
         sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
       )
+      .orderBy(desc(orders.createdAt))
       .limit(limit)
       .offset(offset);
 
@@ -343,6 +354,7 @@ console.log(total, "toitalsc");
         userId: item.userId,
         firstName: item.firstName,
         lastName: item.lastName,
+        phone: item.phone,
         shiprocketOrderId: item.shiprocketOrderId ?? undefined,
         shiprocketShipmentId: item.shiprocketShipmentId ?? undefined,
         awbNumber: item.awbNumber ?? undefined,
@@ -362,6 +374,12 @@ console.log(total, "toitalsc");
         deliveryAmount: item.deliveryAmount,
         discountAmount: item.discountAmount,
         totalAmount: item.totalAmount,
+        street: item.street,
+          city: item.city,
+          state: item.state,
+          zip: item.zip,
+          brandId: item.brandId,
+          productId: item.productId,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       })),

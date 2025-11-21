@@ -62,6 +62,11 @@ export const orderSchema = z.object({
     courierName: z.string().nullable().optional(), // Added new field
     delhiverySortCode: z.string().nullable().optional(),
     delhiveryTrackingJson: z.object({}).nullable().default({}).optional(),
+    street: z.string().nullable().optional(),
+    city: z.string().nullable().optional(),
+    state: z.string().nullable().optional(),
+    zip: z.string().nullable().optional(),
+    phone: z.string().nullable().optional(),
     awbNumber: z.string().nullable().optional(),
     isAwbGenerated: z.boolean().nullable().optional(),
     addressId: z
@@ -108,6 +113,8 @@ export const orderSchema = z.object({
             // Optional fields
         firstName: z.string().optional(),
         lastName: z.string().optional(),
+        brandId: z.string().nullable().optional(),
+        productId: z.string().nullable().optional(),
         razorpayOrderId: z.string().optional(),
 
 });

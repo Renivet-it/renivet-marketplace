@@ -21,6 +21,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -34,20 +35,32 @@ interface PageProps {
 }
 
 export function OrderAction({ order, onAction }: PageProps) {
+    // -----------------------------
+    // 1. Detect if Delhivery order
+    // -----------------------------
+    const isDelhivery = Boolean(order?.uploadWbn || order?.awbNumber);
+  const { data: userData } = trpc.general.users.currentUser.useQuery();
+
+    // Shiprocket shipment details
     const { data: orderShipmentDetails } =
-        // trpc.brands.orders.getOrderShipmentDetailsByShipmentId.useQuery({
-        //     shipmentId: order.shiprocketShipmentId!,
-        // });
         trpc.brands.orders.getOrderShipmentDetailsByShipmentId.useQuery(
             {
-              shipmentId: order.shiprocketShipmentId
-                ? Number(order.shiprocketShipmentId)
-                : 0, // Fallback to 0 if undefined
+                shipmentId: order.shiprocketShipmentId
+                    ? Number(order.shiprocketShipmentId)
+                    : 0,
             },
             {
-              enabled: !!order.shiprocketShipmentId, // Only run query if shiprocketShipmentId exists
+                enabled: !!order.shiprocketShipmentId,
             }
-          );
+        );
+const { data: brandData } = trpc.brands.brands.getBrandWithConfidential.useQuery(
+  { brandId: userData?.brand?.id ?? "" },
+  { enabled: !!userData?.brand?.id }
+);
+const { data: productData } = trpc.brands.products.getProduct.useQuery(
+  { productId: order?.productId ?? "" },
+);
+console.log(productData, "productData");
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
@@ -55,6 +68,7 @@ export function OrderAction({ order, onAction }: PageProps) {
     const [isAwbGenerated, setIsAwbGenerated] = useState(false);
     const [isShipmentGenerated, setIsShipmentGenerated] = useState(false);
 
+    // Detect Shiprocket statuses
     useEffect(() => {
         if (orderShipmentDetails) {
             const awbGenerated = orderShipmentDetails.some(
@@ -67,7 +81,95 @@ export function OrderAction({ order, onAction }: PageProps) {
             setIsShipmentGenerated(shipmentGenerated);
         }
     }, [orderShipmentDetails]);
+console.log(order, "orders");
+    // ------------------------------------------------------
+    // 2. DELHIVERY DOWNLOAD INVOICE
+    // ------------------------------------------------------
+    const downloadDelhiveryInvoice = async () => {
+        try {
+            const res = await fetch("/api/delhivery/invoice", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    order: {
+                        id: order.id,
+                        customerName:
+                            order.firstName +
+                            " " +
+                            order.lastName,
+                        phone: order?.phone,
+                        address:
+                            order.street +
+                            ", " +
+                            order.city +
+                            ", " +
+                            order.state +
+                            " - " +
+                            order.zip,
+                        amount: order.totalAmount,
+                        items: productData,
+                        brand: brandData,
+                        date: order.createdAt,
+                    },
+                }),
+            });
 
+            if (!res.ok) {
+                toast.error("Failed to download invoice");
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = `invoice_${order.id}.pdf`;
+            link.click();
+
+            URL.revokeObjectURL(url);
+            toast.success("Invoice downloaded!");
+        } catch (err) {
+            toast.error("Could not download invoice");
+        }
+    };
+
+    // ------------------------------------------------------
+    // 3. DELHIVERY DOWNLOAD LABEL
+    // ------------------------------------------------------
+    const downloadDelhiveryLabel = async () => {
+        try {
+            const res = await fetch("/api/delhivery/label", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    wbn: order?.awbNumber,
+                }),
+            });
+
+            if (!res.ok) {
+                toast.error("Failed to download label");
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = `label_${order.id}.pdf`;
+            link.click();
+
+            URL.revokeObjectURL(url);
+            toast.success("Label downloaded!");
+        } catch (err) {
+            toast.error("Could not download label");
+        }
+    };
+
+    // ------------------------------------------------------
+    // 4. SHIPROCKET DOWNLOAD HANDLER
+    // ------------------------------------------------------
     const handleDownload = async (type: "invoice" | "label" | "manifest") => {
         try {
             if (type === "invoice") {
@@ -77,44 +179,33 @@ export function OrderAction({ order, onAction }: PageProps) {
                 link.download = `invoice_${order.shiprocketOrderId}.pdf`;
                 document.body.appendChild(link);
                 link.click();
-                document.body.removeChild(link);
-                toast.success("Invoice download started");
+                link.remove();
             } else if (type === "label") {
-                const response = await generateLabel(
-                    order.shiprocketShipmentId
-                );
+                const response = await generateLabel(order.shiprocketShipmentId);
                 const link = document.createElement("a");
                 link.href = response.labelUrl;
                 link.download = `label_${order.shiprocketShipmentId}.pdf`;
-                document.body.appendChild(link);
                 link.click();
-                document.body.removeChild(link);
-                toast.success("Label download started");
-        } else if (type === "manifest") {
-            const response = await generateManifest(order.shiprocketShipmentId);
+            } else if (type === "manifest") {
+                const response = await generateManifest(
+                    order.shiprocketShipmentId
+                );
+                const manifestUrl =
+                    response.manifestUrl || response.manifest_url;
 
-            // Log the API response to check actual keys
-            console.log("Manifest API Response:", response);
-            // Handle both camelCase and snake_case keys
-            const manifestUrl = response?.manifestUrl || response?.manifest_url;
+                if (!manifestUrl) {
+                    toast.error("Manifest already downloaded");
+                    return;
+                }
 
-            if (manifestUrl) {
                 const link = document.createElement("a");
                 link.href = manifestUrl;
                 link.download = `manifest_${order.shiprocketShipmentId}.pdf`;
-                document.body.appendChild(link);
                 link.click();
-                document.body.removeChild(link);
-                toast.success("Manifest download started");
-            } else {
-                toast.error("Manifest alrerady downloaded");
             }
-        }
-        } catch (error: any) {
-            console.error(`Error downloading ${type}:`, error);
-            toast.error(
-                error.message || `Failed to download ${type}. Please try again.`
-            );
+            toast.success(`${type} download started`);
+        } catch (err) {
+            toast.error(`Failed to download ${type}`);
         }
     };
 
@@ -123,7 +214,6 @@ export function OrderAction({ order, onAction }: PageProps) {
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="size-8 p-0">
-                        <span className="sr-only">Open menu</span>
                         <Icons.MoreHorizontal className="size-4" />
                     </Button>
                 </DropdownMenuTrigger>
@@ -132,20 +222,16 @@ export function OrderAction({ order, onAction }: PageProps) {
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
                     <DropdownMenuGroup>
-                        <>
-                            {!isShipmentGenerated && (
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        // TODO: Implement ship products logic
-                                        setIsSheetOpen(true);
-                                    }}
-                                >
-                                    <Icons.Truck className="size-4" />
-                                    <span>Ship Now</span>
-                                </DropdownMenuItem>
-                            )}
-                        </>
+                        {!isShipmentGenerated && (
+                            <DropdownMenuItem
+                                onClick={() => setIsSheetOpen(true)}
+                            >
+                                <Icons.Truck className="size-4" />
+                                <span>Ship Now</span>
+                            </DropdownMenuItem>
+                        )}
 
+                        {/* INVOICE */}
                         <DropdownMenuItem
                             onClick={() => setIsInvoiceModalOpen(true)}
                         >
@@ -153,31 +239,39 @@ export function OrderAction({ order, onAction }: PageProps) {
                             <span>Download Invoice</span>
                         </DropdownMenuItem>
 
-                        <>
-                            {isAwbGenerated && (
+                        {/* LABEL */}
+                        {isDelhivery ? (
+                            <DropdownMenuItem
+                                onClick={() => setIsLabelModalOpen(true)}
+                            >
+                                <Icons.Tag className="size-4" />
+                                <span>Download Label (Delhivery)</span>
+                            </DropdownMenuItem>
+                        ) : (
+                            isAwbGenerated && (
                                 <DropdownMenuItem
                                     onClick={() => setIsLabelModalOpen(true)}
                                 >
                                     <Icons.Tag className="size-4" />
                                     <span>Download Label</span>
                                 </DropdownMenuItem>
-                            )}
-                        </>
+                            )
+                        )}
 
-                        <>
-                            {isAwbGenerated && (
-                                <DropdownMenuItem
-                                    onClick={() => setIsManifestModalOpen(true)}
-                                >
-                                    <Icons.ClipboardList className="size-4" />
-                                    <span>Download Manifest</span>
-                                </DropdownMenuItem>
-                            )}
-                        </>
+                        {/* MANIFEST (Shiprocket only) */}
+                        {!isDelhivery && isAwbGenerated && (
+                            <DropdownMenuItem
+                                onClick={() => setIsManifestModalOpen(true)}
+                            >
+                                <Icons.ClipboardList className="size-4" />
+                                <span>Download Manifest</span>
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuGroup>
                 </DropdownMenuContent>
             </DropdownMenu>
 
+            {/* --------------------- INVOICE MODAL --------------------- */}
             <Dialog
                 open={isInvoiceModalOpen}
                 onOpenChange={setIsInvoiceModalOpen}
@@ -186,10 +280,10 @@ export function OrderAction({ order, onAction }: PageProps) {
                     <DialogHeader>
                         <DialogTitle>Download Invoice</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to download the invoice for
-                            this order?
+                            Download invoice for this order?
                         </DialogDescription>
                     </DialogHeader>
+
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -197,9 +291,13 @@ export function OrderAction({ order, onAction }: PageProps) {
                         >
                             Cancel
                         </Button>
+
                         <Button
                             onClick={async () => {
-                                await handleDownload("invoice");
+                                if (isDelhivery)
+                                    await downloadDelhiveryInvoice();
+                                else await handleDownload("invoice");
+
                                 setIsInvoiceModalOpen(false);
                             }}
                         >
@@ -209,15 +307,16 @@ export function OrderAction({ order, onAction }: PageProps) {
                 </DialogContent>
             </Dialog>
 
+            {/* --------------------- LABEL MODAL --------------------- */}
             <Dialog open={isLabelModalOpen} onOpenChange={setIsLabelModalOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Download Label</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to download the label for this
-                            order?
+                            Download shipping label?
                         </DialogDescription>
                     </DialogHeader>
+
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -225,9 +324,13 @@ export function OrderAction({ order, onAction }: PageProps) {
                         >
                             Cancel
                         </Button>
+
                         <Button
                             onClick={async () => {
-                                await handleDownload("label");
+                                if (isDelhivery)
+                                    await downloadDelhiveryLabel();
+                                else await handleDownload("label");
+
                                 setIsLabelModalOpen(false);
                             }}
                         >
@@ -237,6 +340,7 @@ export function OrderAction({ order, onAction }: PageProps) {
                 </DialogContent>
             </Dialog>
 
+            {/* --------------------- MANIFEST MODAL --------------------- */}
             <Dialog
                 open={isManifestModalOpen}
                 onOpenChange={setIsManifestModalOpen}
@@ -245,16 +349,14 @@ export function OrderAction({ order, onAction }: PageProps) {
                     <DialogHeader>
                         <DialogTitle>Download Manifest</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to download the manifest for
-                            this order?
+                            Are you sure you want to download the manifest?
                         </DialogDescription>
                     </DialogHeader>
-                    <div>
-                        <p className={cn("text-[#FF5733]", "font-bold")}>
-                            Note: You can download only once for this download
-                            label.
-                        </p>
-                    </div>
+
+                    <p className={cn("text-[#FF5733] font-bold")}>
+                        Note: Manifest can be downloaded only once.
+                    </p>
+
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -262,6 +364,7 @@ export function OrderAction({ order, onAction }: PageProps) {
                         >
                             Cancel
                         </Button>
+
                         <Button
                             onClick={async () => {
                                 await handleDownload("manifest");
@@ -273,14 +376,15 @@ export function OrderAction({ order, onAction }: PageProps) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            {/* shipment component */}
+
+            {/* Shipment Component */}
             <OrderShipment
                 isSheetOpen={isSheetOpen}
                 setIsSheetOpen={setIsSheetOpen}
                 side="bottom"
                 order={order}
                 onShipmentSuccessRefetchOrder={onAction}
-            ></OrderShipment>
+            />
         </>
     );
 }

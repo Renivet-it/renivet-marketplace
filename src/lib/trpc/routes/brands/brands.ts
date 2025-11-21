@@ -1,5 +1,6 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldBrandPermission } from "@/config/permissions";
+import { brands } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { brandCache } from "@/lib/redis/methods";
 import {
@@ -14,6 +15,7 @@ import {
     updateBrandSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const brandSubscriptionsRouter = createTRPCRouter({
@@ -174,6 +176,17 @@ const brandSubscriptionsRouter = createTRPCRouter({
 
 export const brandsRouter = createTRPCRouter({
     subscriptions: brandSubscriptionsRouter,
+    getBrandWithConfidential: protectedProcedure
+  .input(z.object({ brandId: z.string() }))
+  .query(async ({ ctx, input }) => {
+    return await ctx.db.query.brands.findFirst({
+      where: eq(brands.id, input.brandId),
+      with: {
+        confidential: true,
+      },
+    });
+  }),
+
     getBrand: publicProcedure
         .input(
             z.object({

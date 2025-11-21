@@ -4,6 +4,7 @@ import { eq, and, like, sql } from "drizzle-orm";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { orderReturnRequests, orders, orderItems, users } from "@/lib/db/schema";
 import { generatePickupLocationCode } from "@/lib/utils";
+import Razorpay from "razorpay";
 
 export const returnReplaceRouter = createTRPCRouter({
 
@@ -378,6 +379,31 @@ createRTOShipment: protectedProcedure
 
     const delhiveryResponse = await resp.json();
     console.log("📩 Delhivery RTO Raw Response →", delhiveryResponse);
+
+   // ⭐ If Delhivery success → initiate Razorpay full refund
+    const paymentId = customer.paymentId; // must exist in your orders table
+
+    if (!paymentId) {
+      console.error("❌ No paymentId found for refund");
+    } else {
+      console.log("💰 Initiating full refund for payment:", paymentId);
+
+      const razorpay = new Razorpay({
+        key_id: process.env.RAZOR_PAY_KEY_ID!,
+        key_secret: process.env.RAZOR_PAY_SECRET_KEY!,
+      });
+
+       const refund = razorpay.payments.refund(customer.paymentId, {
+         amount: customer.totalAmount, // convert to paise
+       });
+      console.log("💰 Razorpay Refund Response →", refund);
+
+      // Optional: store refund ID in DB
+      // await ctx.db.update(orders).set({
+      //   refundId: refund.id,
+      //   refundStatus: refund.status,
+      // }).where(eq(orders.id, customer.id));
+    }
 
     // Save in DB
     await ctx.db
