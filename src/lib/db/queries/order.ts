@@ -334,6 +334,7 @@ console.log(total, "toitalsc");
       .where(
         sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
       )
+      .orderBy(desc(orders.createdAt))
       .limit(limit)
       .offset(offset);
 
