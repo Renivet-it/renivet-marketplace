@@ -4,6 +4,8 @@ import { orderShipmentSchema } from "./order-shipment";
 import { productVariantSchema, productWithBrandSchema, returnExchangePolicySchema } from "./product";
 import { addressSchema } from "./address";
 import { userSchema } from "./user";
+import { is } from "drizzle-orm";
+import { courierService } from "@/actions/shiprocket/couriers";
 
 export const orderSchema = z.object({
     id: z
@@ -55,6 +57,13 @@ export const orderSchema = z.object({
     ]),
     shiprocketOrderId: z.number().nullable().optional(), // Changed from string to number
     shiprocketShipmentId: z.number().nullable().optional(), // Added new field
+    uploadWbn: z.string().nullable().optional(), // Added new field
+    delhiveryClientId: z.string().nullable().optional(),
+    courierName: z.string().nullable().optional(), // Added new field
+    delhiverySortCode: z.string().nullable().optional(),
+    delhiveryTrackingJson: z.object({}).nullable().default({}).optional(),
+    awbNumber: z.string().nullable().optional(),
+    isAwbGenerated: z.boolean().nullable().optional(),
     addressId: z
         .string({
             required_error: "Address ID is required",

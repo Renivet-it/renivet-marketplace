@@ -1317,6 +1317,34 @@
       "when": 1761943308608,
       "tag": "0187_talented_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 188,
+      "version": "7",
+      "when": 1763066811956,
+      "tag": "0188_right_vulcan",
+      "breakpoints": true
+    },
+    {
+      "idx": 189,
+      "version": "7",
+      "when": 1763104193906,
+      "tag": "0189_zippy_mephistopheles",
+      "breakpoints": true
+    },
+    {
+      "idx": 190,
+      "version": "7",
+      "when": 1763493009063,
+      "tag": "0190_blue_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 191,
+      "version": "7",
+      "when": 1763574412684,
+      "tag": "0191_volatile_ultimates",
+      "breakpoints": true
     }
   ]
 }

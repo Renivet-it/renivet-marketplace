@@ -320,6 +320,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_BRANDS,
             },
             {
+                title: "Orders RTO Request Table",
+                url: "/dashboard/general/return-replace",
+                permissions: BitFieldSitePermission.MANAGE_BRANDS,
+            },
+            {
                 title: "Orders Intent Table",
                 url: "/dashboard/general/order-intent",
                 permissions: BitFieldSitePermission.MANAGE_BRANDS,
