@@ -9,6 +9,7 @@ import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
 import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
 import { BrandTypes } from "@/components/home/new-home-page/brand-types";
+import { WelcomeRenivet } from "@/components/home/new-home-page/welcome-to-renivet";
 import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
 import { EventSectionOneBanner } from "@/components/home/new-home-page/event-section-one";
 import { EventSectionTwoBanner } from "@/components/home/new-home-page/event-section-two";
@@ -43,7 +44,10 @@ export default function Page() {
                                                        <Suspense>
                 <BrandTypesFetch />
             </Suspense>
-                            {/* <Suspense>
+                            <Suspense>
+                <WelcomeToRenivetFetch />
+            </Suspense>
+                               {/* <Suspense>
                 <BrandCollaborateFetch />
             </Suspense> */}
                             <Suspense>
@@ -284,6 +288,12 @@ async function BrandTypesFetch() {
 
     return <BrandTypes />;
 }
+async function WelcomeToRenivetFetch() {
+    //@ts-ignore
+
+    return <WelcomeRenivet />;
+}
+
 async function BrandCollaborateFetch() {
     //@ts-ignore
 

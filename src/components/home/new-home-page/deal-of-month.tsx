@@ -90,7 +90,7 @@ export function DealofTheMonthStrip({
         </div>
 
         {/* Title + Count */}
-        <div className="px-4 py-3 bg-[#F4F0EC]">
+        <div className="px-4 py-3">
           <h3 className="text-[16px] italic font-medium text-gray-900 capitalize">
             {item.title}
           </h3>
@@ -159,7 +159,7 @@ export function DealofTheMonthStrip({
                 </div>
 
                 {/* Text Section */}
-                <div className="px-4 pt-4 bg-[#F4F0EC]">
+                <div className="px-4 pt-4">
                   <h3 className="text-[18px] font-medium text-gray-900 capitalize">
                     {item.title}
                   </h3>
