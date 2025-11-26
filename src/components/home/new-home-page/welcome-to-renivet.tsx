@@ -1,82 +1,124 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
+import { Icons } from "@/components/icons";
 
 export function WelcomeRenivet() {
-  const categories = [
-    {
-      title: "Homegrown",
-      subtitle: "Locally crafted, authentic.",
-      imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPUzUsWO9kwm36pdODjHU0ryYqC2xJehFZ5Q7",
-    },
-    {
-      title: "Sustainable",
-      subtitle: "Eco-friendly, conscious.",
-      imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNsFy8G1n3bApvy2W4lj8UTcEV5GdMa0thXR6o",
-    },
-    {
-      title: "Sustainable Drops",
-      subtitle: "Limited, eco-focused releases.",
-      imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPUzUsWO9kwm36pdODjHU0ryYqC2xJehFZ5Q7",
-    },
-    {
-      title: "Artisan-led",
-      subtitle: "Crafted by artisans.",
-      imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNsFy8G1n3bApvy2W4lj8UTcEV5GdMa0thXR6o",
-    },
-  ];
-
   return (
-    <section className="w-full bg-[#FFF7F4] py-12 px-4">
-      {/* Heading */}
-      <h2 className="text-center text-[28px] md:text-[34px] font-light text-[#3B3B3B] mb-12">
-        Type of Brands we collaborate with
-      </h2>
+    <section className="w-full bg-[#FDF5F2] py-12 px-4">
+      <div className="max-w-[1500px] mx-auto border border-[#D8D2C7] bg-[#F8F4EF] rounded-md px-6 md:px-16 py-12">
 
-      {/* DESKTOP — Single row, 4 images horizontally */}
-      <div className="hidden md:flex justify-center gap-8 max-w-[1550px] mx-auto">
-        {categories.map((item, index) => (
-          <div
-            key={index}
-            className="relative group w-[350px] h-[380px] overflow-hidden"
-          >
+        {/* ---------------- DESKTOP ---------------- */}
+        <div className="hidden md:flex items-start gap-12">
+
+          {/* LEFT IMAGE */}
+          <div className="relative w-[480px] h-[430px] rounded-md overflow-hidden">
             <Image
-              src={item.imageUrl}
-              alt={item.title}
-              fill
-              className="object-cover group-hover:scale-105 transition-all duration-300"
-            />
-
-            {/* Overlay text */}
-            <div className="absolute bottom-4 left-4 text-white drop-shadow-lg">
-              <h3 className="text-[26px] font-light">{item.title}</h3>
-              <p className="text-sm italic">{item.subtitle}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* MOBILE — 2×2 Grid */}
-      <div className="md:hidden grid grid-cols-2 gap-4 max-w-lg mx-auto">
-        {categories.map((item, index) => (
-          <div key={index} className="relative group w-full h-[220px] overflow-hidden">
-            <Image
-              src={item.imageUrl}
-              alt={item.title}
+              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkKIY1exYt1TxMBy6jes3QdWaELUvNIiXHwRO"
+              alt="Renivet Circle"
               fill
               className="object-cover"
             />
-
-            <div className="absolute bottom-2 left-2 text-white drop-shadow-lg">
-              <h3 className="text-lg font-light leading-tight">{item.title}</h3>
-              <p className="text-[10px] italic leading-tight">{item.subtitle}</p>
-            </div>
           </div>
-        ))}
+
+          {/* RIGHT CONTENT */}
+          <div className="flex-1 flex flex-col items-center text-center">
+
+            {/* TITLE */}
+            <h2 className="text-[26px] font-light text-[#3B3B3B] mb-5 tracking-wide">
+              Welcome to the Renivet Circle
+            </h2>
+
+            {/* ICON ROW – LUCIDE ICONS */}
+            <div className="flex gap-5 mb-6 text-[#3B3B3B]">
+              <Icons.Leaf size={28} strokeWidth={1.25} />
+              <Icons.Recycle size={28} strokeWidth={1.25} />
+              <Icons.Footprints size={28} strokeWidth={1.25} />
+              <Icons.Heart size={28} strokeWidth={1.25} />
+              <Icons.Globe size={28} strokeWidth={1.25} />
+            </div>
+
+            {/* DESCRIPTION */}
+            <div className="text-[#474747] text-[16px] leading-relaxed max-w-[620px] space-y-4">
+              <p>Renivet isn’t just a marketplace — it’s a curated space of discovery.</p>
+
+              <p>
+                We connect you with brands that are sustainable, homegrown, and crafted
+                with intention. Every piece here tells a story — of craft, culture,
+                and conscious creation.
+              </p>
+
+              <p>
+                We believe in the stories behind products, the meaning behind
+                making, and the people behind brands.
+              </p>
+
+              <p>Renivet is where thoughtful creation meets thoughtful living.</p>
+            </div>
+
+            {/* BUTTON */}
+            <Link
+              href="/about"
+              className="mt-8 px-6 py-2 border border-gray-500 text-gray-700 text-sm rounded-sm hover:bg-gray-100 transition"
+            >
+              → Discover Our Story
+            </Link>
+
+          </div>
+        </div>
+
+        {/* ---------------- MOBILE ---------------- */}
+        <div className="md:hidden flex flex-col items-center text-center">
+
+          <h2 className="text-[22px] font-light text-[#3B3B3B] mb-5 tracking-wide">
+            Welcome to the Renivet Circle
+          </h2>
+
+          {/* ICON ROW MOBILE */}
+          <div className="flex gap-4 mb-6 text-[#3B3B3B]">
+            <Icons.Leaf size={24} strokeWidth={1.25} />
+            <Icons.Recycle size={24} strokeWidth={1.25} />
+            <Icons.Footprints size={24} strokeWidth={1.25} />
+            <Icons.Heart size={24} strokeWidth={1.25} />
+            <Icons.Globe size={24} strokeWidth={1.25} />
+          </div>
+
+          {/* TEXT */}
+          <div className="text-[#474747] text-[14px] leading-relaxed max-w-sm space-y-3 mb-6">
+            <p>Renivet isn’t just a marketplace — it’s a curated space of discovery.</p>
+
+            <p>
+              We connect you with brands that are sustainable, homegrown, and
+              crafted with intention. Every piece here tells a story — of craft,
+              culture, and conscious creation.
+            </p>
+
+            <p>
+              We believe in the stories behind products, the meaning behind
+              making, and the people behind brands.
+            </p>
+
+            <p>Renivet is where thoughtful creation meets thoughtful living.</p>
+          </div>
+
+          {/* MOBILE IMAGE */}
+          <div className="relative w-[260px] h-[240px] rounded-md overflow-hidden mb-8">
+            <Image
+              src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkKIY1exYt1TxMBy6jes3QdWaELUvNIiXHwRO"
+              alt="Renivet Circle"
+              fill
+              className="object-cover"
+            />
+          </div>
+
+          <Link
+            href="/about"
+            className="px-6 py-2 border border-gray-500 text-gray-700 text-sm rounded-sm hover:bg-gray-100 transition"
+          >
+            → Discover Our Story
+          </Link>
+        </div>
       </div>
     </section>
   );
