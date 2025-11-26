@@ -64,7 +64,9 @@ export function DealofTheMonthStrip({
       {...props}
     >
       <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
-
+  <h2 className="text-center text-[22px] sm:text-[26px] md:text-[32px] font-light text-gray-900 mb-8">
+    Build Your Conscious Closet
+  </h2>
         {/* ---------------- MOBILE VERSION (UNCHANGED) ---------------- */}
    {/* ---------------- MOBILE VERSION (SINGLE IMAGE CAROUSEL) ---------------- */}
 <div className="md:hidden w-full overflow-x-auto scrollbar-hide scroll-smooth">
@@ -88,11 +90,11 @@ export function DealofTheMonthStrip({
         </div>
 
         {/* Title + Count */}
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 bg-[#F4F0EC]">
           <h3 className="text-[16px] italic font-medium text-gray-900 capitalize">
             {item.title}
           </h3>
-          <p className="text-[14px] text-gray-700">
+          <p className="text-[14px]  text-gray-700">
             {item.description}
           </p>
         </div>
@@ -157,7 +159,7 @@ export function DealofTheMonthStrip({
                 </div>
 
                 {/* Text Section */}
-                <div className="px-4 pt-4">
+                <div className="px-4 pt-4 bg-[#F4F0EC]">
                   <h3 className="text-[18px] font-medium text-gray-900 capitalize">
                     {item.title}
                   </h3>
