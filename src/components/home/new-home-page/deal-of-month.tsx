@@ -66,47 +66,42 @@ export function DealofTheMonthStrip({
       <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
 
         {/* ---------------- MOBILE VERSION (UNCHANGED) ---------------- */}
-        <div className="md:hidden flex flex-col gap-4">
-          {/* First Row */}
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
-            {firstRowItems.map((item, index) => (
-              <Link
-                key={`row1-${index}`}
-                href={item.href || "/shop"}
-                className="flex-shrink-0 relative rounded-xl overflow-hidden"
-                style={{ width: "88px", height: "88px" }}
-              >
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover"
-                  sizes="88px"
-                />
-              </Link>
-            ))}
-          </div>
-
-          {/* Second Row */}
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
-            {secondRowItems.map((item, index) => (
-              <Link
-                key={`row2-${index}`}
-                href={item.href || "/shop"}
-                className="flex-shrink-0 relative rounded-xl overflow-hidden"
-                style={{ width: "88px", height: "88px" }}
-              >
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover"
-                  sizes="88px"
-                />
-              </Link>
-            ))}
-          </div>
+   {/* ---------------- MOBILE VERSION (SINGLE IMAGE CAROUSEL) ---------------- */}
+<div className="md:hidden w-full overflow-x-auto scrollbar-hide scroll-smooth">
+  <div className="flex gap-4">
+    {marketingStrip.map((item, index) => (
+      <Link
+        key={`mobile-${index}`}
+        href={item.href || "/shop"}
+        className="flex-shrink-0 bg-white rounded-xl border border-gray-200 overflow-hidden"
+        style={{ width: "260px" }}
+      >
+        
+        {/* Single clean image */}
+        <div className="relative w-full h-[330px]">
+          <Image
+            src={item.imageUrl}
+            alt={item.title}
+            fill
+            className="object-cover"
+          />
         </div>
+
+        {/* Title + Count */}
+        <div className="px-4 py-3">
+          <h3 className="text-[16px] italic font-medium text-gray-900 capitalize">
+            {item.title}
+          </h3>
+          <p className="text-[14px] text-gray-700">
+            {item.description}
+          </p>
+        </div>
+
+      </Link>
+    ))}
+  </div>
+</div>
+
 
         {/* ---------------- DESKTOP VERSION (UPDATED!) ---------------- */}
         <div className="hidden md:block relative">
