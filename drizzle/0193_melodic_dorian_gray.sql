@@ -1,0 +1,2 @@
+ALTER TABLE "products" ADD COLUMN "is_home_love_these_products" boolean DEFAULT false;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN "is_home_may_also_like_these_products" boolean DEFAULT false;

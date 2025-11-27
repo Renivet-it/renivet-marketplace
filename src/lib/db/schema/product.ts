@@ -92,6 +92,8 @@ isBeautyNewArrival: boolean("is_beauty_new_Arrivals").default(false),
 isHomeNewArrival: boolean("is_home_new_Arrivals").default(false),
 isAddedInEventProductPage: boolean("is_added_in_event_product_page").default(false),
 isHomeHeroProducts: boolean("is_home_hero_products").default(false),
+isHomeLoveTheseProducts: boolean("is_home_love_these_products").default(false),
+isHomeYouMayAlsoLikeTheseProducts: boolean("is_home_may_also_like_these_products").default(false),
         embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
@@ -270,6 +272,35 @@ export const homeProductSection = pgTable(
         ...timestamps,
     },
 );
+
+export const homeProductLoveTheseSection = pgTable(
+    "home_product__love_these_Section",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        category: text("category"),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
+
+export const homeProductMayAlsoLikeThese = pgTable(
+    "home_product__may_also_like_these_Section",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        category: text("category"),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
+
 
 export const beautyTopPicks = pgTable(
     "beauty_top_picks",
@@ -525,6 +556,20 @@ export const homeProductSectionRelation = relations(homeProductSection, ({ one }
   }),
 }));
 
+export const homeProductLoveTheseSectionRelation = relations(homeProductLoveTheseSection, ({ one }) => ({
+  product: one(products, {
+    fields: [homeProductLoveTheseSection.productId],
+    references: [products.id],
+  }),
+}));
+
+
+export const homeProductMayAlsoLikeTheseRelation = relations(homeProductMayAlsoLikeThese, ({ one }) => ({
+  product: one(products, {
+    fields: [homeProductMayAlsoLikeThese.productId],
+    references: [products.id],
+  }),
+}));
 export const beautyTopPicksRelation = relations(beautyTopPicks, ({ one }) => ({
   product: one(products, {
     fields: [beautyTopPicks.productId],

@@ -168,7 +168,7 @@ interface SwapSpaceProps {
   className?: string;
 }
 
-export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
+export function LoveThese({ banners, userId, className }: SwapSpaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   if (!banners.length) return null;
 

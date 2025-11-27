@@ -19,6 +19,8 @@ import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
 import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
 import { ConciousClick } from "@/components/home/new-home-page/concious-click";
 import { SwapSpace } from "@/components/home/new-home-page/swap-space";
+import { LoveThese } from "@/components/home/new-home-page/love-these";
+import { MayAlsoLoveThese } from "@/components/home/new-home-page/may-also-love";
 import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
 import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 import { Page as EveryDayEssential } from "@/components/home/new-home-page/everyday-essential";
@@ -103,6 +105,9 @@ export default function Page() {
                                          <Suspense>
                 <EventSectionBannerOneFetch />
             </Suspense>
+                                                     <Suspense>
+                <ProductGridFetch />
+            </Suspense>
                                                               <Suspense>
                 <InstaBannerFetch />
             </Suspense>
@@ -181,6 +186,24 @@ async function SwapSpaceBannerFetch() {
 
     return <SwapSpace banners={brandProducts} />;
 }
+
+
+async function LoveTheseFetch() {
+    const brandProducts =
+        await productQueries.getHomeLoveTheseProducts();
+    if (!brandProducts.length) return null;
+
+    return <LoveThese banners={brandProducts} />;
+}
+
+async function MayAlsoLoveTheseFetch() {
+    const brandProducts =
+        await productQueries.getHomeYouMayAlsoLikeProducts();
+    if (!brandProducts.length) return null;
+
+    return <MayAlsoLoveThese banners={brandProducts} />;
+}
+
 
 async function ArtisanCollectionFetch() {
     const brandProducts =
