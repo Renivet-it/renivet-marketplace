@@ -1,228 +1,133 @@
 "use client";
 
-import { cn, convertPaiseToRupees } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { Banner } from "@/lib/validations";
-import React, { useRef, useState, useEffect } from "react";
 import { Icons } from "@/components/icons";
-import { trpc } from "@/lib/trpc/client";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { convertPaiseToRupees } from "@/lib/utils";
+import React from "react";
 
-// =============================
-// ⭐ GUEST CART HOOK
-// =============================
-function useGuestCart() {
-  const [guestCart, setGuestCart] = useState<any[]>([]);
+const PLACEHOLDER_IMAGE_URL =
+  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("guest_cart");
-      if (stored) setGuestCart(JSON.parse(stored));
-    } catch {
-      setGuestCart([]);
-    }
-  }, []);
-
-  const addToGuestCart = (item: any) => {
-    setGuestCart((prev) => {
-      const existing = prev.find(
-        (x) =>
-          x.productId === item.productId &&
-          (x.variantId || null) === (item.variantId || null)
-      );
-
-      const updated = existing
-        ? prev.map((x) =>
-            x.productId === item.productId &&
-            (x.variantId || null) === (item.variantId || null)
-              ? { ...x, quantity: x.quantity + item.quantity }
-              : x
-          )
-        : [...prev, item];
-
-      localStorage.setItem("guest_cart", JSON.stringify(updated));
-      window.dispatchEvent(new Event("guestCartUpdated"));
-      toast.success(existing ? "Updated Cart" : "Added to Cart!");
-      return updated;
-    });
-  };
-
-  return { guestCart, addToGuestCart };
-}
-
-const PLACEHOLDER_IMAGE_URL = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
-
-// =============================
-// ⭐ PRODUCT CARD (Matches your screenshot design)
-// =============================
-interface ProductCardProps {
-  banner: Banner;
-  userId?: string;
-}
-
-const ProductCard = ({ banner, userId }: ProductCardProps) => {
+// ⭐ PRODUCT CARD — CLEAN VERSION
+const ProductCard = ({ banner }: { banner: Banner }) => {
   const { product } = banner;
-  const router = useRouter();
-  const { addToGuestCart } = useGuestCart();
-
-  const { mutateAsync: addToCart, isLoading } =
-    trpc.general.users.cart.addProductToCart.useMutation();
-
   if (!product) return null;
-
-  const rawPrice = product.variants?.[0]?.price ?? product.price ?? 0;
-  const price = convertPaiseToRupees(rawPrice);
-  const originalPrice =
-    product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
-  const displayPrice = originalPrice
-    ? convertPaiseToRupees(originalPrice)
-    : null;
-
-  const discount =
-    displayPrice && price
-      ? Math.round(((Number(displayPrice) - Number(price)) / Number(displayPrice)) * 100)
-      : null;
 
   const imageUrl =
     product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
 
-  const variantId = product.variants?.[0]?.id || null;
-  const productUrl = product.slug ? `/products/${product.slug}` : "/shop";
+  const price = convertPaiseToRupees(
+    product.variants?.[0]?.price ?? product.price ?? 0
+  );
 
-  const handleAddToCart = async (e: any) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const compareAt =
+    product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
 
-    try {
-      if (userId) {
-        await addToCart({
-          productId: product.id,
-          variantId,
-          quantity: 1,
-          userId,
-        });
-        toast.success("Added to Cart!");
-      } else {
-        addToGuestCart({
-          productId: product.id,
-          variantId,
-          quantity: 1,
-          title: product.title,
-          brand: product.brand?.name,
-          price: rawPrice,
-          image: imageUrl,
-          fullProduct: product,
-        });
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Could not add to cart");
-    }
-  };
+  const displayCompare = compareAt
+    ? convertPaiseToRupees(compareAt)
+    : null;
+
+  const alerts = ["only 2 left!", "only 5 left!", "10% off", null];
+  const alert = alerts[Math.floor(Math.random() * alerts.length)];
+
+  const productUrl = `/products/${product.slug}`;
 
   return (
-    <div className="group w-[260px] flex-shrink-0 cursor-pointer">
-      <Link href={productUrl}>
-        {/* Product Image */}
-        <div className="relative w-full h-[350px] bg-gray-50 rounded-md overflow-hidden">
-          <Image src={imageUrl} alt={product.title} fill className="object-cover" />
-        </div>
-      </Link>
-
-      {/* Product Content */}
-      <div className="pt-3 pb-5 text-left">
-        <Link href={productUrl}>
-          <h3 className="text-[15px] font-normal text-gray-700 leading-tight line-clamp-2 h-10">
-            {product.title}
-          </h3>
-        </Link>
-
-        <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-lg font-semibold text-gray-900">₹{price}</span>
-          {displayPrice && (
-            <span className="text-sm text-gray-400 line-through">₹{displayPrice}</span>
-          )}
-          {discount && <span className="text-sm text-green-600">{discount}% off</span>}
-        </div>
-
-        {/* Add to Cart */}
-        <button
-          onClick={handleAddToCart}
-          disabled={isLoading}
-          className="mt-3 w-full border border-gray-700 text-gray-700 hover:bg-gray-800 hover:text-white text-sm font-medium rounded-md py-2 transition-colors disabled:opacity-50 flex items-center justify-center"
-        >
-          {isLoading ? <Icons.Spinner className="h-4 w-4 animate-spin" /> : "Add to Cart"}
-        </button>
+    <Link
+      href={productUrl}
+      className="block w-[170px] sm:w-[220px] text-center"
+    >
+      {/* TOP vegan + heart */}
+      <div className="flex justify-between items-center px-2 mb-2">
+        <span className="text-[12px] text-green-700 font-medium">
+          100%vegan
+        </span>
       </div>
-    </div>
+
+      {/* FULL IMAGE COVER */}
+      <div className="relative w-full h-[200px] sm:h-[240px] bg-white overflow-hidden rounded-md">
+        <Image
+          src={imageUrl}
+          alt={product.title}
+          fill
+          className="object-cover"   // <==== FILLED IMAGE
+        />
+      </div>
+
+      {/* LOW STOCK */}
+      {alert && (
+        <p className="text-[12px] text-red-500 mt-2">{alert}</p>
+      )}
+
+      {/* Title */}
+      <h3 className="mt-1 text-[14px] font-medium text-gray-800 line-clamp-2 h-[38px]">
+        {product.title}
+      </h3>
+
+      {/* Price */}
+      <div className="mt-1 flex justify-center items-center gap-2">
+        <span className="text-[15px] font-semibold text-gray-900">
+          ₹{price}
+        </span>
+
+        {displayCompare && (
+          <span className="text-[12px] line-through text-gray-400">
+            ₹{displayCompare}
+          </span>
+        )}
+      </div>
+
+    </Link>
   );
 };
 
-// =============================
-// ⭐ SWAPSPACE (New What's New Design)
-// =============================
-interface SwapSpaceProps {
-  banners: Banner[];
-  userId?: string;
-  className?: string;
-}
-
-export function MayAlsoLoveThese({ banners, userId, className }: SwapSpaceProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+// ⭐ MAIN LAYOUT — MOBILE = 2 ROW SCROLL / DESKTOP GRID
+export function MayAlsoLoveThese({ banners }: { banners: Banner[] }) {
   if (!banners.length) return null;
 
-  const scroll = (direction: "left" | "right") => {
-    if (scrollRef.current) {
-      const amount = direction === "left" ? -400 : 400;
-      scrollRef.current.scrollBy({ left: amount, behavior: "smooth" });
-    }
-  };
+  const items = banners.slice(0, 18);
 
   return (
-    <section className={cn("w-full py-16 bg-[#FFF9F4]", className)}>
-      {/* Title */}
-      <h2 className="text-center text-3xl font-light text-[#4A453F] mb-12">
-        What's New
+    <section className="w-full py-16 bg-[#FFF9F4]">
+      <h2 className="text-center text-4xl font-light text-[#4A453F] mb-12">
+        You'll Love These
       </h2>
 
-      {/* DESKTOP CAROUSEL (Not grid anymore) */}
-      <div className="hidden md:block relative max-w-screen-3xl mx-auto px-6">
-
-        {/* Left Arrow */}
-        <button
-          onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
-        >
-          <Icons.ChevronLeft className="h-6 w-6 text-gray-700" />
-        </button>
-
-        {/* Scroll Row */}
+      {/* 📱 MOBILE — 2 ROWS SCROLL */}
+      <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
         <div
-          ref={scrollRef}
-          className="overflow-x-auto scrollbar-hide scroll-smooth"
+          className="
+            grid 
+            grid-flow-col
+            grid-rows-2
+            auto-cols-max
+            gap-x-6
+            gap-y-10
+            w-max
+          "
         >
-          <div className="flex space-x-6 w-max">
-            {banners.map((item) => (
-              <ProductCard key={item.id} banner={item} userId={userId} />
-            ))}
-          </div>
+          {items.map((b) => (
+            <ProductCard key={b.id} banner={b} />
+          ))}
         </div>
-
-        {/* Right Arrow */}
-        <button
-          onClick={() => scroll("right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
-        >
-          <Icons.ChevronRight className="h-6 w-6 text-gray-700" />
-        </button>
       </div>
 
-      {/* MOBILE CAROUSEL */}
-      <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
-        <div ref={scrollRef} className="flex space-x-6">
-          {banners.map((item) => (
-            <ProductCard key={item.id} banner={item} userId={userId} />
+      {/* 🖥 DESKTOP — NORMAL GRID */}
+      <div className="hidden md:block max-w-screen-2xl mx-auto px-6">
+        <div
+          className="
+            grid 
+            gap-10
+            grid-cols-2
+            sm:grid-cols-3
+            lg:grid-cols-4
+            xl:grid-cols-6
+          "
+        >
+          {items.map((b) => (
+            <ProductCard key={b.id} banner={b} />
           ))}
         </div>
       </div>
