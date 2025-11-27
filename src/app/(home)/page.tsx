@@ -46,80 +46,69 @@ export default function Page() {
                                                        <Suspense>
                 <BrandTypesFetch />
             </Suspense>
+                                <Suspense>
+                <CuratedBannerFetch />
+            </Suspense>
+                                                    <Suspense>
+                <SwapSpaceBannerFetch />
+            </Suspense>
                             <Suspense>
                 <WelcomeToRenivetFetch />
             </Suspense>
                                {/* <Suspense>
                 <BrandCollaborateFetch />
             </Suspense> */}
+                                                     <Suspense>
+                <EventSectionTwoBannerFetch />
+            </Suspense>
                             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
-                               <Suspense>
-                <CuratedBannerFetch />
-            </Suspense>
-
-                                                   <Suspense>
-                <EventSectionTwoBannerFetch />
-            </Suspense>
-
+{/* 
                            <Suspense>
                 <BrandPromotionFetch />
-            </Suspense>
+            </Suspense> */}
                                                <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
-                                                                     <Suspense>
+                                                                     {/* <Suspense>
                 <ConciousClickBannerFetch />
+            </Suspense> */}
+                                 <Suspense>
+                <ProductNewArrivalsGridFetch />
+            </Suspense>
+                                                    <Suspense>
+                <ProductGridFetch />
+            </Suspense>
+                                               <Suspense>
+                <MatchaBagFetch />
+            </Suspense>
+                                                                  <Suspense>
+                <LoveTheseFetch />
             </Suspense>
                     <Suspense>
                 <ProductSwipeCardFetch />
             </Suspense>
-                                             <Suspense>
-                <MatchaBagFetch />
+                                                                                   <Suspense>
+                <MayAlsoLoveTheseFetch />
             </Suspense>
-                                    <Suspense>
-                <ProductNewArrivalsGridFetch />
-            </Suspense>
-                            {/* <Suspense>
-                <SustanableBatchFetch />
-            </Suspense> */}
-                           {/* <Suspense>
-                <EcoIconsFetch />
-            </Suspense> */}
-                      {/* <Suspense>
-                <BrandProductsFetch />
-            </Suspense> */}
-                                 {/* <Suspense>
-                <NewAdvertisementsFetch />
-            </Suspense> */}
-            {/* <Suspense>
-                <EveryDayEssentialFetch />
-            </Suspense> */}
-                                              <Suspense>
-                <SwapSpaceBannerFetch />
-            </Suspense>
-                                                    <Suspense>
+          
+               
+                                                    {/* <Suspense>
                 <BagSectionFetch />
             </Suspense>
                                          <Suspense>
                 <EventSectionBannerOneFetch />
             </Suspense>
-                                                     <Suspense>
-                <ProductGridFetch />
-            </Suspense>
+             
                                                               <Suspense>
                 <InstaBannerFetch />
-            </Suspense>
+            </Suspense> */}
                                                           <Suspense>
                 <ArtisanCollectionFetch />
             </Suspense>
-                                                                      <Suspense>
-                <LoveTheseFetch />
-            </Suspense>
-                                                                                  <Suspense>
-                <MayAlsoLoveTheseFetch />
-            </Suspense>
+                
+           
                  <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
