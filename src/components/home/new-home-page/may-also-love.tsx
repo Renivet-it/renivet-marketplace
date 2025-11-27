@@ -52,7 +52,7 @@ function useGuestCart() {
   return { guestCart, addToGuestCart };
 }
 
-const PLACEHOLDER_IMAGE_URL = "/placeholder-product.jpg";
+const PLACEHOLDER_IMAGE_URL = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
 // =============================
 // ⭐ PRODUCT CARD (Matches your screenshot design)

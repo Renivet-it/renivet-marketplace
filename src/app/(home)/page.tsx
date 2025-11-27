@@ -114,6 +114,12 @@ export default function Page() {
                                                           <Suspense>
                 <ArtisanCollectionFetch />
             </Suspense>
+                                                                      <Suspense>
+                <LoveTheseFetch />
+            </Suspense>
+                                                                                  <Suspense>
+                <MayAlsoLoveTheseFetch />
+            </Suspense>
                  <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
