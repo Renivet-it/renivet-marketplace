@@ -178,7 +178,7 @@ function ProductCard({ product, userId }: { product: Product; userId?: string })
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative w-full aspect-[1/1]">
           <Image
-            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+            src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
             alt={product.title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"

@@ -79,7 +79,7 @@ export function StyleWithSubstance({ className, products, ...props }: ProductGri
             >
               <div className="w-[145px] h-full relative flex-shrink-0">
                 <Image
-                  src={item.product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                  src={item.product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
                   alt={item.product.title}
                   fill
                   className="object-cover"

@@ -201,7 +201,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                   <Image
                     src={
                       product.media[0]?.mediaItem?.url ||
-                      "/placeholder-product.jpg"
+                      "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
                     }
                     alt={product.title}
                     fill

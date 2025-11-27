@@ -75,7 +75,7 @@ export function ProductGrid({ className, products, ...props }: ProductGridProps)
                 <Link href={`/products/${item.product.slug}`} className="block">
                   <div className="relative w-full h-40 overflow-hidden">
                     <Image
-                      src={item.product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                      src={item.product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
                       alt={item.product.title}
                       fill
                       className="object-cover"
