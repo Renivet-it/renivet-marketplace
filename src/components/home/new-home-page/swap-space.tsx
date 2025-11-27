@@ -5,15 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { Banner } from "@/lib/validations";
 import React, { useRef, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Icons } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Icons } from "@/components/icons"; // Assuming you have an Icons component
 
-// ==========================================================
-// 🔹 GUEST CART HOOK (For guest user functionality)
-// ==========================================================
+// =============================
+// ⭐ GUEST CART HOOK
+// =============================
 function useGuestCart() {
   const [guestCart, setGuestCart] = useState<any[]>([]);
 
@@ -44,8 +43,8 @@ function useGuestCart() {
         : [...prev, item];
 
       localStorage.setItem("guest_cart", JSON.stringify(updated));
-      window.dispatchEvent(new Event("guestCartUpdated")); // To notify other components like the cart icon
-      toast.success(existing ? "Increased quantity in Cart" : "Added to Cart!");
+      window.dispatchEvent(new Event("guestCartUpdated"));
+      toast.success(existing ? "Updated Cart" : "Added to Cart!");
       return updated;
     });
   };
@@ -53,23 +52,21 @@ function useGuestCart() {
   return { guestCart, addToGuestCart };
 }
 
+const PLACEHOLDER_IMAGE_URL = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
-const PLACEHOLDER_IMAGE_URL = "/placeholder-product.jpg";
-const BACKGROUND_IMAGE_URL =
-  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN27mxBlQOYTpvrXwqtZHon4P85jVxyMmDkf3s";
-
-// ---------------- Product Card (With Add to Cart Logic ) ----------------
+// =============================
+// ⭐ PRODUCT CARD (Matches your screenshot design)
+// =============================
 interface ProductCardProps {
   banner: Banner;
-  userId?: string; // Accept userId as a prop
+  userId?: string;
 }
 
 const ProductCard = ({ banner, userId }: ProductCardProps) => {
   const { product } = banner;
-  const { addToGuestCart } = useGuestCart();
   const router = useRouter();
+  const { addToGuestCart } = useGuestCart();
 
-  // tRPC mutation for logged-in users
   const { mutateAsync: addToCart, isLoading } =
     trpc.general.users.cart.addProductToCart.useMutation();
 
@@ -82,35 +79,35 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
   const displayPrice = originalPrice
     ? convertPaiseToRupees(originalPrice)
     : null;
-  const productUrl = product.slug ? `/products/${product.slug}` : "/shop";
-  const imageUrl =
-    product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
-  const variantId = product.variants?.[0]?.id || null;
 
   const discount =
     displayPrice && price
       ? Math.round(((Number(displayPrice) - Number(price)) / Number(displayPrice)) * 100)
       : null;
 
-  const handleAddToCart = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const imageUrl =
+    product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
+
+  const variantId = product.variants?.[0]?.id || null;
+  const productUrl = product.slug ? `/products/${product.slug}` : "/shop";
+
+  const handleAddToCart = async (e: any) => {
     e.preventDefault();
     e.stopPropagation();
 
     try {
       if (userId) {
-        // --- LOGGED-IN USER ---
         await addToCart({
           productId: product.id,
-          variantId: variantId,
+          variantId,
           quantity: 1,
           userId,
         });
         toast.success("Added to Cart!");
       } else {
-        // --- GUEST USER ---
         addToGuestCart({
           productId: product.id,
-          variantId: variantId,
+          variantId,
           quantity: 1,
           title: product.title,
           brand: product.brand?.name,
@@ -120,127 +117,114 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
         });
       }
     } catch (err: any) {
-      toast.error(err.message || "Could not add to cart.");
+      toast.error(err.message || "Could not add to cart");
     }
   };
 
   return (
-    <div className="group w-[220px] flex-shrink-0 cursor-pointer">
+    <div className="group w-[260px] flex-shrink-0 cursor-pointer">
       <Link href={productUrl}>
-        <div className="relative w-full h-[220px] bg-gray-100 rounded-md overflow-hidden">
-          <Image
-            src={imageUrl}
-            alt={product.title || "Product image"}
-            fill
-            className="object-cover"
-          />
+        {/* Product Image */}
+        <div className="relative w-full h-[350px] bg-gray-50 rounded-md overflow-hidden">
+          <Image src={imageUrl} alt={product.title} fill className="object-cover" />
         </div>
       </Link>
 
-      <div className="pt-2 pb-3 text-left">
+      {/* Product Content */}
+      <div className="pt-3 pb-5 text-left">
         <Link href={productUrl}>
-          <h3 className="text-sm font-normal text-gray-700 leading-tight line-clamp-2 h-10">
+          <h3 className="text-[15px] font-normal text-gray-700 leading-tight line-clamp-2 h-10">
             {product.title}
           </h3>
         </Link>
 
-        <div className="mt-1 flex items-baseline space-x-2">
-          <span className="text-base font-bold text-gray-900">₹{price}</span>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span className="text-lg font-semibold text-gray-900">₹{price}</span>
           {displayPrice && (
-            <span className="text-sm text-gray-400 line-through">
-              ₹{displayPrice}
-            </span>
+            <span className="text-sm text-gray-400 line-through">₹{displayPrice}</span>
           )}
-          {discount && (
-            <span className="text-sm font-semibold text-green-600">
-              {discount}% off
-            </span>
-          )}
+          {discount && <span className="text-sm text-green-600">{discount}% off</span>}
         </div>
 
+        {/* Add to Cart */}
         <button
           onClick={handleAddToCart}
           disabled={isLoading}
-          className="mt-3 w-full border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white text-sm font-medium rounded-md py-2 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-3 w-full border border-gray-700 text-gray-700 hover:bg-gray-800 hover:text-white text-sm font-medium rounded-md py-2 transition-colors disabled:opacity-50 flex items-center justify-center"
         >
-          {isLoading ? (
-            <Icons.Spinner className="h-4 w-4 animate-spin" />
-          ) : (
-            "Add to Cart"
-          )}
+          {isLoading ? <Icons.Spinner className="h-4 w-4 animate-spin" /> : "Add to Cart"}
         </button>
       </div>
     </div>
   );
 };
 
-// ---------------- SwapSpace (Updated to pass userId) ----------------
-interface SwapSpaceProps extends React.HTMLAttributes<HTMLElement> {
+// =============================
+// ⭐ SWAPSPACE (New What's New Design)
+// =============================
+interface SwapSpaceProps {
   banners: Banner[];
-  userId?: string; // Accept userId
+  userId?: string;
+  className?: string;
 }
 
-export function SwapSpace({ className, banners, userId, ...props }: SwapSpaceProps) {
+export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  if (!banners || banners.length === 0) return null;
+  if (!banners.length) return null;
 
-  const scroll = (dir: "left" | "right") => {
-    const container = scrollRef.current;
-    if (container) {
-      const scrollAmount = dir === "left" ? -400 : 400;
-      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+  const scroll = (direction: "left" | "right") => {
+    if (scrollRef.current) {
+      const amount = direction === "left" ? -400 : 400;
+      scrollRef.current.scrollBy({ left: amount, behavior: "smooth" });
     }
   };
 
   return (
-    <section
-      className={cn(
-        "w-full py-12 md:py-20 bg-center bg-cover bg-no-repeat relative",
-        className
-      )}
-      style={{ backgroundImage: `url('${BACKGROUND_IMAGE_URL}')` }}
-      aria-labelledby="swapspace-heading"
-      {...props}
-    >
-      <div className="max-w-screen-2xl mx-auto px-4 md:px-10 relative">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl md:text-2xl font-semibold text-gray-900">
-            Best Deals on Top Picks
-          </h2>
-          <Link
-            href="/shop"
-            className="text-sm font-medium text-blue-600 hover:underline"
-          >
-            View All →
-          </Link>
-        </div>
+    <section className={cn("w-full py-16 bg-[#FFF9F4]", className)}>
+      {/* Title */}
+      <h2 className="text-center text-3xl font-light text-[#4A453F] mb-12">
+        What's New
+      </h2>
 
+      {/* DESKTOP CAROUSEL (Not grid anymore) */}
+      <div className="hidden md:block relative max-w-screen-3xl mx-auto px-6">
+
+        {/* Left Arrow */}
         <button
           onClick={() => scroll("left")}
-          className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white shadow-md hover:shadow-lg rounded-full w-10 h-10 items-center justify-center z-20 border"
-          aria-label="Scroll left"
+          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
         >
-          <ChevronLeft className="h-5 w-5 text-gray-700" />
+          <Icons.ChevronLeft className="h-6 w-6 text-gray-700" />
         </button>
 
+        {/* Scroll Row */}
         <div
           ref={scrollRef}
           className="overflow-x-auto scrollbar-hide scroll-smooth"
         >
-          <div className="flex space-x-5 w-max">
+          <div className="flex space-x-6 w-max">
             {banners.map((item) => (
               <ProductCard key={item.id} banner={item} userId={userId} />
             ))}
           </div>
         </div>
 
+        {/* Right Arrow */}
         <button
           onClick={() => scroll("right")}
-          className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white shadow-md hover:shadow-lg rounded-full w-10 h-10 items-center justify-center z-20 border"
-          aria-label="Scroll right"
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
         >
-          <ChevronRight className="h-5 w-5 text-gray-700" />
+          <Icons.ChevronRight className="h-6 w-6 text-gray-700" />
         </button>
+      </div>
+
+      {/* MOBILE CAROUSEL */}
+      <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
+        <div ref={scrollRef} className="flex space-x-6">
+          {banners.map((item) => (
+            <ProductCard key={item.id} banner={item} userId={userId} />
+          ))}
+        </div>
       </div>
     </section>
   );

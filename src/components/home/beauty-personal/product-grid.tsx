@@ -104,7 +104,7 @@ function ProductCard({ product }: { product: Product }) {
         {/* Product Image */}
         <div className="relative aspect-square mb-4 overflow-hidden">
           <Image
-            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+            src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
             alt={product.title}
             fill
             className="object-cover"
@@ -155,7 +155,7 @@ function MobileProductCard({ product }: { product: Product }) {
         {/* Product Image */}
         <div className="relative aspect-square mb-3 overflow-hidden">
           <Image
-            src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+            src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
             alt={product.title}
             fill
             className="object-cover"

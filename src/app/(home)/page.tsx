@@ -8,6 +8,8 @@ import { Suspense } from "react";
 import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
 import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
+import { BrandTypes } from "@/components/home/new-home-page/brand-types";
+import { WelcomeRenivet } from "@/components/home/new-home-page/welcome-to-renivet";
 import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
 import { EventSectionOneBanner } from "@/components/home/new-home-page/event-section-one";
 import { EventSectionTwoBanner } from "@/components/home/new-home-page/event-section-two";
@@ -17,6 +19,8 @@ import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
 import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
 import { ConciousClick } from "@/components/home/new-home-page/concious-click";
 import { SwapSpace } from "@/components/home/new-home-page/swap-space";
+import { LoveThese } from "@/components/home/new-home-page/love-these";
+import { MayAlsoLoveThese } from "@/components/home/new-home-page/may-also-love";
 import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
 import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 import { Page as EveryDayEssential } from "@/components/home/new-home-page/everyday-essential";
@@ -39,68 +43,72 @@ export default function Page() {
                                            <Suspense>
                 <ShopCategoryFetch />
             </Suspense>
-                            {/* <Suspense>
+                                                       <Suspense>
+                <BrandTypesFetch />
+            </Suspense>
+                                <Suspense>
+                <CuratedBannerFetch />
+            </Suspense>
+                                                    <Suspense>
+                <SwapSpaceBannerFetch />
+            </Suspense>
+                            <Suspense>
+                <WelcomeToRenivetFetch />
+            </Suspense>
+                               {/* <Suspense>
                 <BrandCollaborateFetch />
             </Suspense> */}
+                                                     <Suspense>
+                <EventSectionTwoBannerFetch />
+            </Suspense>
                             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
-                               <Suspense>
-                <CuratedBannerFetch />
-            </Suspense>
-
-                                                   <Suspense>
-                <EventSectionTwoBannerFetch />
-            </Suspense>
-
+{/* 
                            <Suspense>
                 <BrandPromotionFetch />
-            </Suspense>
+            </Suspense> */}
                                                <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
-                                                                     <Suspense>
+                                                                     {/* <Suspense>
                 <ConciousClickBannerFetch />
+            </Suspense> */}
+                                 <Suspense>
+                <ProductNewArrivalsGridFetch />
+            </Suspense>
+                                                    <Suspense>
+                <ProductGridFetch />
+            </Suspense>
+                                               <Suspense>
+                <MatchaBagFetch />
+            </Suspense>
+                                                                  <Suspense>
+                <LoveTheseFetch />
             </Suspense>
                     <Suspense>
                 <ProductSwipeCardFetch />
             </Suspense>
-                                             <Suspense>
-                <MatchaBagFetch />
+                                                                                   <Suspense>
+                <MayAlsoLoveTheseFetch />
             </Suspense>
-                                    <Suspense>
-                <ProductNewArrivalsGridFetch />
-            </Suspense>
-                            {/* <Suspense>
-                <SustanableBatchFetch />
-            </Suspense> */}
-                           {/* <Suspense>
-                <EcoIconsFetch />
-            </Suspense> */}
-                      {/* <Suspense>
-                <BrandProductsFetch />
-            </Suspense> */}
-                                 {/* <Suspense>
-                <NewAdvertisementsFetch />
-            </Suspense> */}
-            {/* <Suspense>
-                <EveryDayEssentialFetch />
-            </Suspense> */}
-                                              <Suspense>
-                <SwapSpaceBannerFetch />
-            </Suspense>
-                                                    <Suspense>
+          
+               
+                                                    {/* <Suspense>
                 <BagSectionFetch />
             </Suspense>
                                          <Suspense>
                 <EventSectionBannerOneFetch />
             </Suspense>
+             
                                                               <Suspense>
                 <InstaBannerFetch />
-            </Suspense>
+            </Suspense> */}
                                                           <Suspense>
                 <ArtisanCollectionFetch />
             </Suspense>
+                
+           
                  <Suspense>
                 <ShopByNewCategoriesFetch />
             </Suspense>
@@ -173,6 +181,24 @@ async function SwapSpaceBannerFetch() {
 
     return <SwapSpace banners={brandProducts} />;
 }
+
+
+async function LoveTheseFetch() {
+    const brandProducts =
+        await productQueries.getHomeLoveTheseProducts();
+    if (!brandProducts.length) return null;
+
+    return <LoveThese banners={brandProducts} />;
+}
+
+async function MayAlsoLoveTheseFetch() {
+    const brandProducts =
+        await productQueries.getHomeYouMayAlsoLikeProducts();
+    if (!brandProducts.length) return null;
+
+    return <MayAlsoLoveThese banners={brandProducts} />;
+}
+
 
 async function ArtisanCollectionFetch() {
     const brandProducts =
@@ -275,6 +301,17 @@ async function ShopCategoryFetch() {
 
     return <ShopCategories />;
 }
+async function BrandTypesFetch() {
+    //@ts-ignore
+
+    return <BrandTypes />;
+}
+async function WelcomeToRenivetFetch() {
+    //@ts-ignore
+
+    return <WelcomeRenivet />;
+}
+
 async function BrandCollaborateFetch() {
     //@ts-ignore
 

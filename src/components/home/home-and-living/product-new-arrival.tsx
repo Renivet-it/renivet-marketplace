@@ -109,7 +109,7 @@ function ProductCard({ product }: { product: Product }) {
           <Link href={`/products/${product.slug}`} className="block h-full">
             <div className="relative w-full h-full overflow-hidden">
               <Image
-                src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
                 alt={product.title}
                 fill
                 className="object-cover"
@@ -144,7 +144,7 @@ function MobileProductCard({ product }: { product: Product }) {
           <Link href={`/products/${product.slug}`} className="block h-full">
             <div className="relative w-full h-full overflow-hidden">
               <Image
-                src={product.media[0]?.mediaItem?.url || "/placeholder-product.jpg"}
+                src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
                 alt={product.title}
                 fill
                 className="object-cover"

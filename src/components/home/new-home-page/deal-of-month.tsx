@@ -23,11 +23,12 @@ export function DealofTheMonthStrip({
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
-      const scrollAmount = 300;
+      const scrollAmount = 400;
       const newScrollLeft =
         direction === "left"
           ? scrollRef.current.scrollLeft - scrollAmount
           : scrollRef.current.scrollLeft + scrollAmount;
+
       scrollRef.current.scrollTo({
         left: newScrollLeft,
         behavior: "smooth",
@@ -39,24 +40,20 @@ export function DealofTheMonthStrip({
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
       setCanScrollLeft(scrollLeft > 0);
-      // Use a small buffer to ensure it reaches the end
       setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
     }
   };
 
-  // Effect to handle scroll state on mount and resize for desktop
   useEffect(() => {
-    const currentRef = scrollRef.current;
-    if (currentRef) {
-      handleScroll(); // Initial check
-      const checkScroll = () => handleScroll();
-      window.addEventListener("resize", checkScroll);
-      return () => window.removeEventListener("resize", checkScroll);
+    const ref = scrollRef.current;
+    if (ref) {
+      handleScroll();
+      window.addEventListener("resize", handleScroll);
+      return () => window.removeEventListener("resize", handleScroll);
     }
   }, [marketingStrip]);
 
-  // --- MOBILE DATA PREPARATION ---
-  // Split the items into two rows for the mobile carousel
+  // --- MOBILE SPLIT ---
   const midIndex = Math.ceil(marketingStrip.length / 2);
   const firstRowItems = marketingStrip.slice(0, midIndex);
   const secondRowItems = marketingStrip.slice(midIndex);
@@ -67,51 +64,50 @@ export function DealofTheMonthStrip({
       {...props}
     >
       <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
+  <h2 className="text-center text-[22px] sm:text-[26px] md:text-[32px] font-light text-gray-900 mb-8">
+    Build Your Conscious Closet
+  </h2>
+        {/* ---------------- MOBILE VERSION (UNCHANGED) ---------------- */}
+   {/* ---------------- MOBILE VERSION (SINGLE IMAGE CAROUSEL) ---------------- */}
+<div className="md:hidden w-full overflow-x-auto scrollbar-hide scroll-smooth">
+  <div className="flex gap-4">
+    {marketingStrip.map((item, index) => (
+      <Link
+        key={`mobile-${index}`}
+        href={item.href || "/shop"}
+        className="flex-shrink-0 bg-white rounded-xl border border-gray-200 overflow-hidden"
+        style={{ width: "260px" }}
+      >
         
-        {/* --- MOBILE VERSION (Two-Row Carousel, 88x88 items) --- */}
-        <div className="md:hidden flex flex-col gap-4">
-          {/* First Row */}
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
-            {firstRowItems.map((item, index) => (
-              <Link
-                key={`row1-${index}`}
-                href={item.href || "/shop"}
-                className="flex-shrink-0 relative rounded-xl overflow-hidden"
-                style={{ width: "88px", height: "88px" }}
-              >
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover"
-                  sizes="88px"
-                />
-              </Link>
-            ))}
-          </div>
-          {/* Second Row */}
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth">
-            {secondRowItems.map((item, index) => (
-              <Link
-                key={`row2-${index}`}
-                href={item.href || "/shop"}
-                className="flex-shrink-0 relative rounded-xl overflow-hidden"
-                style={{ width: "88px", height: "88px" }}
-              >
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover"
-                  sizes="88px"
-                />
-              </Link>
-            ))}
-          </div>
+        {/* Single clean image */}
+        <div className="relative w-full h-[330px]">
+          <Image
+            src={item.imageUrl}
+            alt={item.title}
+            fill
+            className="object-cover"
+          />
         </div>
 
-        {/* --- DESKTOP VERSION (Single-Row Carousel) --- */}
+        {/* Title + Count */}
+        <div className="px-4 py-3">
+          <h3 className="text-[16px] italic font-medium text-gray-900 capitalize">
+            {item.title}
+          </h3>
+          <p className="text-[14px]  text-gray-700">
+            {item.description}
+          </p>
+        </div>
+
+      </Link>
+    ))}
+  </div>
+</div>
+
+
+        {/* ---------------- DESKTOP VERSION (UPDATED!) ---------------- */}
         <div className="hidden md:block relative">
+          {/* Left Arrow */}
           <button
             onClick={() => scroll("left")}
             disabled={!canScrollLeft}
@@ -125,6 +121,7 @@ export function DealofTheMonthStrip({
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
 
+          {/* Right Arrow */}
           <button
             onClick={() => scroll("right")}
             disabled={!canScrollRight}
@@ -138,24 +135,39 @@ export function DealofTheMonthStrip({
             <ChevronRight className="w-6 h-6 text-gray-600" />
           </button>
 
+          {/* Scroll Container */}
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+            className="flex gap-8 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
           >
             {marketingStrip.map((item, index) => (
               <div
                 key={index}
-                className="flex-shrink-0 relative rounded-2xl overflow-hidden group cursor-pointer"
-                style={{ width: "230px", height: "230px" }}
+                className="flex-shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden"
+                style={{ width: "372px", height: "566px" }}
               >
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="230px"
-                />
+                {/* Image */}
+                <div className="relative w-full" style={{ height: "486px" }}>
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    fill
+                    className="object-cover"
+                    sizes="372px"
+                  />
+                </div>
+
+                {/* Text Section */}
+                <div className="px-4 pt-4">
+                  <h3 className="text-[18px] font-medium text-gray-900 capitalize">
+                    {item.title}
+                  </h3>
+                  <p className="text-[15px] text-gray-600 italic">
+                    {item.description}
+                  </p>
+                </div>
+
                 <Link href={item.href || "/shop"} className="absolute inset-0" />
               </div>
             ))}

@@ -23,7 +23,7 @@ export function CuratedBanner({ className, banners, ...props }: PageProps) {
       {/* ✅ Use next/image for the background image */}
       <div className="absolute inset-0 -z-10">
         <Image
-          src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNxtBXxk1IezOinSmtdvjDw08UlbRkW2MQqNBX"
+          src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseDlfjon3bApvy2W4lj8UTcEV5GdMa0thXR6"
           alt="Curated banner background"
           fill
           priority
