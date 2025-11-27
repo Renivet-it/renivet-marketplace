@@ -13,6 +13,9 @@ import {
     toggleKidsFetchSection,
     toggleMenStyleWithSubstance,
     toggleWomenStyleWithSubstance,
+    toggleHomeYouMayLoveProduct,
+    toggleHomeYouMayAlsoLikeProduct
+
 } from "@/actions/product-action";
 import {
     ProductActivationModal,
@@ -71,6 +74,8 @@ interface PageProps {
         homeNewArrivalCategory?: string | null;
         isAddedInEventProductPage?: boolean;
         isHomeHeroProducts?: boolean;
+        isHomeLoveTheseProducts?: boolean;
+        isHomeYouMayAlsoLikeTheseProducts?: boolean;
 
     };
 }
@@ -216,6 +221,46 @@ export function ProductAction({ product }: PageProps) {
             const result = await toggleHomeHeroProduct(
                 product.id,
                 product.isHomeHeroProducts ?? false
+            );
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleToggleYouMayLoveThese = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleHomeYouMayLoveProduct(
+                product.id,
+                product.isHomeLoveTheseProducts ?? false
+            );
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleToggleYouMayAlsoLikeThese = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleHomeYouMayAlsoLikeProduct(
+                product.id,
+                product.isHomeYouMayAlsoLikeTheseProducts ?? false
             );
             if (result.success) {
                 refetch();
@@ -475,6 +520,28 @@ export function ProductAction({ product }: PageProps) {
                                 {product.isHomeHeroProducts
                                     ? "Remove from Hero Home Page"
                                     : "Add to Hero Home Page"}
+                            </span>
+                        </DropdownMenuItem>
+                                                              <DropdownMenuItem
+                            onClick={handleToggleYouMayLoveThese}
+                            disabled={isLoading}
+                        >
+                            <Icons.Star className="size-4" />
+                            <span>
+                                {product.isHomeLoveTheseProducts
+                                    ? "Remove from You may love these products Home Page"
+                                    : "Add to You may love these products Home Page"}
+                            </span>
+                        </DropdownMenuItem>
+                                                                                      <DropdownMenuItem
+                            onClick={handleToggleYouMayAlsoLikeThese}
+                            disabled={isLoading}
+                        >
+                            <Icons.Star className="size-4" />
+                            <span>
+                                {product.isHomeYouMayAlsoLikeTheseProducts
+                                    ? "Remove from You may also like these products Home Page"
+                                    : "Add to You may also like these products Home Page"}
                             </span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
