@@ -122,40 +122,89 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
   };
 
   return (
-    <div className="group w-[260px] flex-shrink-0 cursor-pointer">
-      <Link href={productUrl}>
-        {/* Product Image */}
-        <div className="relative w-full h-[350px] bg-gray-50 rounded-md overflow-hidden">
-          <Image src={imageUrl} alt={product.title} fill className="object-cover" />
-        </div>
-      </Link>
+<div
+  className="
+    group
+    flex-shrink-0
+    cursor-pointer
+    w-[146px]
+    md:w-[260px]
 
-      {/* Product Content */}
-      <div className="pt-3 pb-5 text-left">
-        <Link href={productUrl}>
-          <h3 className="text-[15px] font-normal text-gray-700 leading-tight line-clamp-2 h-10">
-            {product.title}
-          </h3>
-        </Link>
+    /* DESKTOP: fix card height for perfect alignment */
+    md:h-[520px]
+    md:flex
+    md:flex-col
+  "
+>
 
-        <div className="mt-1 flex items-baseline gap-2">
-          <span className="text-lg font-semibold text-gray-900">₹{price}</span>
-          {displayPrice && (
-            <span className="text-sm text-gray-400 line-through">₹{displayPrice}</span>
-          )}
-          {discount && <span className="text-sm text-green-600">{discount}% off</span>}
-        </div>
-
-        {/* Add to Cart */}
-        <button
-          onClick={handleAddToCart}
-          disabled={isLoading}
-          className="mt-3 w-full border border-gray-700 text-gray-700 hover:bg-gray-800 hover:text-white text-sm font-medium rounded-md py-2 transition-colors disabled:opacity-50 flex items-center justify-center"
-        >
-          {isLoading ? <Icons.Spinner className="h-4 w-4 animate-spin" /> : "Add to Cart"}
-        </button>
-      </div>
+  <Link href={productUrl}>
+    <div
+      className="
+        relative bg-gray-50 overflow-hidden rounded-md
+        w-[156px] h-[223px]
+        md:w-full md:h-[350px]
+      "
+    >
+      <Image
+        src={imageUrl}
+        alt={product.title}
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 146px, 350px"
+      />
     </div>
+  </Link>
+
+  {/* FIXED HEIGHT TITLE */}
+    <div className="pt-3 pb-2 text-left h-[42px] md:h-[48px] overflow-hidden">
+    <Link href={productUrl}>
+      <h3 className="text-[14px] md:text-[15px] font-normal text-gray-700 leading-tight line-clamp-2">
+        {product.title}
+      </h3>
+    </Link>
+  </div>
+
+  {/* FIXED HEIGHT PRICE ROW */}
+{/* PRICE ROW */}
+{/* PRICE ROW */}
+<div className="flex items-center gap-2 h-[26px]">
+
+  <span className="text-lg font-semibold text-gray-900">₹{price}</span>
+
+  {displayPrice ? (
+    <span className="text-sm text-gray-400 line-through">₹{displayPrice}</span>
+  ) : (
+    <span className="text-sm opacity-0">₹0000</span>
+  )}
+
+  {/* DESKTOP DISCOUNT (same line) */}
+  <span className="hidden md:inline text-sm text-green-600">
+    {discount ? `${discount}% off` : ""}
+  </span>
+</div>
+
+{/* MOBILE DISCOUNT (separate line) */}
+<div className="md:hidden h-[18px]">
+  {discount ? (
+    <span className="text-sm text-green-600">{discount}% off</span>
+  ) : (
+    <span className="opacity-0 text-sm">0% off</span>
+  )}
+</div>
+
+
+
+  {/* BUTTON AREA — CONSISTENT */}
+  <div className="mt-2">
+    <button
+      onClick={handleAddToCart}
+      disabled={isLoading}
+      className="w-full border border-gray-700 text-gray-700 hover:bg-gray-800 hover:text-white text-sm font-medium rounded-md py-2 transition-colors flex items-center justify-center disabled:opacity-50"
+    >
+      {isLoading ? <Icons.Spinner className="h-4 w-4 animate-spin" /> : "Add to Cart"}
+    </button>
+  </div>
+</div>
   );
 };
 
@@ -169,39 +218,40 @@ interface SwapSpaceProps {
 }
 
 export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const desktopRef = useRef<HTMLDivElement>(null);
+  const mobileRef = useRef<HTMLDivElement>(null);
+
   if (!banners.length) return null;
 
-  const scroll = (direction: "left" | "right") => {
-    if (scrollRef.current) {
-      const amount = direction === "left" ? -400 : 400;
-      scrollRef.current.scrollBy({ left: amount, behavior: "smooth" });
+  const scroll = (ref: any, direction: "left" | "right") => {
+    if (ref.current) {
+      ref.current.scrollBy({
+        left: direction === "left" ? -400 : 400,
+        behavior: "smooth",
+      });
     }
   };
 
   return (
-    <section className={cn("w-full py-16 bg-[#FFF9F4]", className)}>
-      {/* Title */}
+    <section className={cn("w-full py-6 bg-[#FFF9F4]", className)}>
+
       <h2 className="text-center text-3xl font-bold text-[#4A453F] mb-12">
         What's New
       </h2>
 
-      {/* DESKTOP CAROUSEL (Not grid anymore) */}
+      {/* ---------------- DESKTOP CAROUSEL ---------------- */}
       <div className="hidden md:block relative max-w-screen-3xl mx-auto px-6">
 
         {/* Left Arrow */}
         <button
-          onClick={() => scroll("left")}
+          onClick={() => scroll(desktopRef, "left")}
           className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
         >
           <Icons.ChevronLeft className="h-6 w-6 text-gray-700" />
         </button>
 
-        {/* Scroll Row */}
-        <div
-          ref={scrollRef}
-          className="overflow-x-auto scrollbar-hide scroll-smooth"
-        >
+        {/* Scroll Container */}
+        <div ref={desktopRef} className="overflow-x-auto scrollbar-hide scroll-smooth">
           <div className="flex space-x-6 w-max">
             {banners.map((item) => (
               <ProductCard key={item.id} banner={item} userId={userId} />
@@ -211,21 +261,23 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
 
         {/* Right Arrow */}
         <button
-          onClick={() => scroll("right")}
+          onClick={() => scroll(desktopRef, "right")}
           className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
         >
           <Icons.ChevronRight className="h-6 w-6 text-gray-700" />
         </button>
       </div>
 
-      {/* MOBILE CAROUSEL */}
+      {/* ---------------- MOBILE CAROUSEL ---------------- */}
       <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
-        <div ref={scrollRef} className="flex space-x-6">
+        <div ref={mobileRef} className="flex space-x-6">
           {banners.map((item) => (
             <ProductCard key={item.id} banner={item} userId={userId} />
           ))}
         </div>
       </div>
+
     </section>
   );
 }
+
