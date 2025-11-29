@@ -175,7 +175,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
   const showGuide = !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
 
   return (
-    <div className=" w-full bg-[#F8F5F2] p-8 lg:p-16">
+    <div className=" w-full bg-[#fcfbf4] p-8 lg:p-16">
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
         <div className="relative mx-auto flex h-[450px] w-full max-w-md items-center justify-center">
           {showGuide && <AnimatedSwipeGuide />}
@@ -236,18 +236,20 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
             );
           })}
         </div>
+<div className="mx-auto w-full max-w-md rounded-2xl border border-white/40 bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7] p-8 text-left shadow-lg backdrop-blur-lg">
+  <h2 className="font-serif text-3xl text-gray-900">
+    Got curiosity?
+  </h2>
 
-        <div className="mx-auto w-full max-w-md rounded-2xl border border-white/40 bg-white/30 p-8 text-left shadow-lg backdrop-blur-lg">
-          <h2 className="font-serif text-3xl text-gray-800">
-            Slow Fashion Guide
-          </h2>
-          <p className="mt-4 text-gray-700">
-            Learn how mindful shopping makes an impact. Read our quick guide.
-          </p>
-          <Link href="/shop" className="mt-6 inline-block">
-            <Icons.ArrowRight className="size-8 text-gray-800 transition-colors hover:text-black" />
-          </Link>
-        </div>
+  <p className="mt-6 text-gray-600 italic">
+    We’ve Got Secrets.
+  </p>
+
+  <Link href="/shop" className="mt-4 inline-block">
+    <Icons.ArrowRight className="size-7 text-gray-800 transition-colors hover:text-black" />
+  </Link>
+</div>
+
       </div>
     </div>
   );

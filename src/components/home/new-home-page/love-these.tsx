@@ -67,11 +67,11 @@ export function LoveThese({ banners }: { banners: Banner[] }) {
       <div className="md:hidden px-4 overflow-x-auto scrollbar-hide">
         <div
           className="
-            grid 
-            grid-flow-col 
-            auto-cols-max 
-            grid-rows-2 
-            gap-x-6 
+            grid
+            grid-flow-col
+            auto-cols-max
+            grid-rows-2
+            gap-x-6
             gap-y-6
             w-max
           "
