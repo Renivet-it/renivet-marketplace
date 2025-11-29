@@ -112,7 +112,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   </div>
 
   {/* 🔵 CTA BUTTON */}
-  <div className="w-full flex justify-center py-6">
+  {/* <div className="w-full flex justify-center py-6">
     <Button
       size="lg"
       className="rounded-full border border-gray-300 bg-white px-8 py-3 text-base font-medium text-black backdrop-blur-sm hover:bg-white"
@@ -120,7 +120,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
     >
       <Link href="/shop">Shop With Purpose</Link>
     </Button>
-  </div>
+  </div> */}
 </div>
 
     </section>

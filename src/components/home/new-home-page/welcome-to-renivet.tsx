@@ -6,8 +6,8 @@ import { Icons } from "@/components/icons";
 
 export function WelcomeRenivet() {
   return (
-    <section className="w-full bg-[#FDF5F2] py-12 px-4">
-      <div className="max-w-[1500px] mx-auto border border-[#D8D2C7] bg-[#F8F4EF] rounded-md px-6 md:px-16 py-12">
+    <section className="w-full bg-[#f4f0ec] py-12 px-4">
+      <div className="max-w-[1600px] mx-auto border border-[#D8D2C7] bg-[#F8F4EF] rounded-md px-6 md:px-16 py-12">
 
         {/* ---------------- DESKTOP ---------------- */}
         <div className="hidden md:flex items-start gap-12">

@@ -64,10 +64,10 @@ export default function Page() {
                             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
-{/* 
+
                            <Suspense>
                 <BrandPromotionFetch />
-            </Suspense> */}
+            </Suspense>
                                                <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>

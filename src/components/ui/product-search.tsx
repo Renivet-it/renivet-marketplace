@@ -344,7 +344,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
       <div
         ref={wrapperRef}
         className={cn(
-          "relative flex w-full items-center gap-1 rounded-full bg-white shadow-md",
+          "relative flex w-full items-center gap-1 rounded-none bg-white shadow-md",
           disabled && "cursor-not-allowed opacity-50",
           classNames?.wrapper
         )}

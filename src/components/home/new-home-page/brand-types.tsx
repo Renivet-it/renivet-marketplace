@@ -31,11 +31,14 @@ export function BrandTypes() {
   ];
 
   return (
-    <section className="w-full bg-[#FFF7F4] py-12 px-4">
+    <section className="w-full bg-[#f4f0ec] py-10 px-4">
       {/* Heading */}
- <h2 className="text-center text-[22px] font-normal tracking-wide text-[#6A4F38] font-serif">
+<h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
   Type of Brands we collaborate with
 </h2>
+
+
+
 
 
       {/* DESKTOP — Single row, 4 images horizontally */}
