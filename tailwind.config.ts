@@ -13,7 +13,7 @@ export default withUt({
     theme: {
         extend: {
                    fontFamily: {
-                sans: ["var(--font-lato)", ...fontFamily.sans],
+                sans: ["var(--font-josefin)", ...fontFamily.sans],
             },
             colors: {
                 "myntra-primary" : "#282c3f",
