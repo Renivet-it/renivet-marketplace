@@ -60,11 +60,11 @@ export function DealofTheMonthStrip({
 
   return (
     <section
-      className={cn("w-full bg-[#F4F0EC] py-10", className)}
+      className={cn("w-full bg-[#fcfbf4] py-6", className)}
       {...props}
     >
       <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
-  <h2 className="text-center text-[22px] sm:text-[26px] md:text-[32px] font-light text-gray-900 mb-8">
+  <h2 className="text-center text-[22px] sm:text-[26px] md:text-[32px] text-gray-900 mb-8">
     Build Your Conscious Closet
   </h2>
         {/* ---------------- MOBILE VERSION (UNCHANGED) ---------------- */}

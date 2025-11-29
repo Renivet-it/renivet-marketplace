@@ -55,6 +55,10 @@ export default function Page() {
                             <Suspense>
                 <WelcomeToRenivetFetch />
             </Suspense>
+                              <Suspense>
+                <BrandPromotionFetch />
+            </Suspense>
+                          
                                {/* <Suspense>
                 <BrandCollaborateFetch />
             </Suspense> */}
@@ -65,10 +69,7 @@ export default function Page() {
                 <DealMarketingStripFetch />
             </Suspense>
 
-                           <Suspense>
-                <BrandPromotionFetch />
-            </Suspense>
-                                               <Suspense>
+                              <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
                                                                      {/* <Suspense>
