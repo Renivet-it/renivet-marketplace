@@ -25,11 +25,22 @@ export function MatchaBag({
   if (!moodboardItems.length) return null;
 
   return (
-    <section className={cn("w-full bg-[#F4F0EC] py-12", className)}>
+    <section className={cn("w-full bg-[#fcfbf4] py-4", className)}>
       <div className="max-w-screen-2xl mx-auto px-4">
 
         {/* Title */}
-        <h2 className="text-center text-3xl font-light text-[#4a463f] mb-10">
+        <h2
+  className="
+    text-center
+    text-[18px]         /* mobile smaller */
+    md:text-[32px]      /* desktop bigger */
+    font-light
+    text-[#3B3B3B]
+    mb-8
+    tracking-wide
+    whitespace-nowrap   /* forces one line */
+  "
+>
           {title}
         </h2>
 

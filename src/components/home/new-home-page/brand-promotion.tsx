@@ -68,7 +68,7 @@ export function BrandPromotion({ moodboardItems, className }: PageProps) {
                 >
                   <Link
                     href={item.url || "/shop"}
-                    className="relative block w-[411px] h-[500px] overflow-hidden rounded-lg border border-[#D8D2C7]"
+                    className="relative block w-[411px] h-[500px] overflow-hidden border border-[#D8D2C7]"
                   >
                     <Image
                       src={item.imageUrl}
@@ -106,7 +106,7 @@ export function BrandPromotion({ moodboardItems, className }: PageProps) {
                 >
                   <Link
                     href={item.url || "/shop"}
-                    className="relative block w-[260px] h-[330px] overflow-hidden rounded-md border border-[#D8D2C7]"
+                    className="relative block w-[260px] h-[330px] overflow-hidden border border-[#D8D2C7]"
                   >
                     <Image
                       src={item.imageUrl}
