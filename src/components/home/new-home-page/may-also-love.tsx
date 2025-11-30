@@ -59,7 +59,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
       </div>
 
       {/* Stock label */}
-      <p className="text-[12px] text-red-500 mt-2">{alert}</p>
+      {/* <p className="text-[12px] text-red-500 mt-2">{alert}</p> */}
 
       {/* Title */}
       <h3 className="mt-1 text-[16px] font-medium text-gray-800 line-clamp-2 h-[42px]">
@@ -89,7 +89,7 @@ export function MayAlsoLoveThese({ banners }: { banners: Banner[] }) {
   const items = banners.slice(0, 18);
 
   return (
-    <section className="w-full py-16 bg-[#FFF9F4]">
+    <section className="w-full py-16 bg-[#fbfaf4]">
       <h2 className="text-center text-4xl font-light text-[#4A453F] mb-12">
         You&apos;ll Love These
       </h2>

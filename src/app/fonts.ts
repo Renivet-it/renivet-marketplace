@@ -1,4 +1,4 @@
-import { DM_Sans, Lato, Rubik } from "next/font/google";
+import { DM_Sans, Lato, Rubik, Josefin_Sans } from "next/font/google";
 
 export const dmsans = DM_Sans({
     subsets: ["latin"],
@@ -20,4 +20,11 @@ export const lato = Lato({
     weight: ["300", "400", "700", "900"], // Choose the weights you need
     display: "swap",
     variable: "--font-lato", // Define the CSS variable
+});
+
+export const josefin = Josefin_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"], // choose what you need
+  display: "swap",
+  variable: "--font-josefin",
 });

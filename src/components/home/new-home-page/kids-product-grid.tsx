@@ -22,14 +22,9 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
   if (!products || !Array.isArray(products)) return null;
 
   return (
-    <div className={cn("bg-[#F4F0EC] py-8", className)} {...props}>
+    <div className={cn("bg-[#fcfbf4] py-8", className)} {...props}>
       <div className="max-w-screen-2xl mx-auto px-6">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-800 border-b-2 border-blue-500 inline-block pb-2">
-            {title}
-          </h1>
-        </div>
 
         {/* 🚀 UNIVERSAL CAROUSEL (Mobile + Desktop) */}
         <div className="overflow-x-auto scrollbar-hide pb-3">
@@ -44,29 +39,38 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
               return (
-                <div key={product.id} className="w-[150px] flex-shrink-0">
-                  <Link href={`/products/${product.slug}`}>
-                    {/* IMAGE */}
-                    <div className="relative w-full h-[200px] bg-white rounded-md overflow-hidden">
-                      <Image
-                        src={imageUrl}
-                        alt={product.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
+               <div
+  key={product.id}
+  className="
+    w-[90px]            /* show 4 cards per view on mobile */
+    sm:w-[120px]        /* tablet */
+    md:w-[150px]        /* desktop - normal */
+    flex-shrink-0
+  "
+>
+  <Link href={`/products/${product.slug}`}>
+    {/* IMAGE */}
+    <div className="relative w-full h-[120px] sm:h-[160px] md:h-[200px] bg-white rounded-md overflow-hidden">
+      <Image
+        src={imageUrl}
+        alt={product.title}
+        fill
+        className="object-cover"
+      />
+    </div>
 
-                    {/* TITLE */}
-                    <h3 className="text-sm mt-2 font-medium text-gray-800 line-clamp-2">
-                      {product.title}
-                    </h3>
+    {/* TITLE */}
+    <h3 className="text-[11px] sm:text-xs md:text-sm mt-2 font-medium text-gray-800 line-clamp-2">
+      {product.title}
+    </h3>
 
-                    {/* PRICE */}
-                    <p className="text-sm font-semibold text-gray-900">
-                      ₹{price}
-                    </p>
-                  </Link>
-                </div>
+    {/* PRICE */}
+    <p className="text-xs md:text-sm font-semibold text-gray-900">
+      ₹{price}
+    </p>
+  </Link>
+</div>
+
               );
             })}
           </div>

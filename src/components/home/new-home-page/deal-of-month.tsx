@@ -60,11 +60,11 @@ export function DealofTheMonthStrip({
 
   return (
     <section
-      className={cn("w-full bg-[#F4F0EC] py-10", className)}
+      className={cn("w-full bg-[#fcfbf4] py-6", className)}
       {...props}
     >
       <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
-  <h2 className="text-center text-[22px] sm:text-[26px] md:text-[32px] font-light text-gray-900 mb-8">
+  <h2 className="text-center text-[22px] sm:text-[26px] md:text-[32px] text-gray-900 mb-8">
     Build Your Conscious Closet
   </h2>
         {/* ---------------- MOBILE VERSION (UNCHANGED) ---------------- */}
@@ -75,7 +75,7 @@ export function DealofTheMonthStrip({
       <Link
         key={`mobile-${index}`}
         href={item.href || "/shop"}
-        className="flex-shrink-0 bg-white rounded-xl border border-gray-200 overflow-hidden"
+        className="flex-shrink-0 bg-white  border border-gray-200 overflow-hidden"
         style={{ width: "260px" }}
       >
         
@@ -144,7 +144,7 @@ export function DealofTheMonthStrip({
             {marketingStrip.map((item, index) => (
               <div
                 key={index}
-                className="flex-shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden"
+                className="flex-shrink-0 bg-white border border-gray-200 overflow-hidden"
                 style={{ width: "372px", height: "566px" }}
               >
                 {/* Image */}

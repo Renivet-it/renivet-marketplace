@@ -28,7 +28,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   ];
 
   return (
-    <section className={cn("bg-[#F4F0EC]", className)} {...props}>
+    <section className={cn("bg-[#fbfaf4]", className)} {...props}>
 
       {/* ✅ DESKTOP CAROUSEL */}
       <div className="hidden md:block">
@@ -62,48 +62,67 @@ export function Landing({ className, banners, ...props }: PageProps) {
       </div>
 
       {/* ✅ MOBILE STATIC BANNER (NO CAROUSEL) */}
-      <div className="block md:hidden relative w-full overflow-hidden bg-gray-100">
-        {/* Image height based on aspect ratio */}
-        <div style={{ paddingBottom: `${(1 / mobileAspectRatio) * 100}%` }} />
-        <Image
-          src={mobileImageUrl}
-          alt="Mobile Banner"
-          fill
-          className="absolute inset-0 h-full w-full object-cover"
-          priority
-        />
+{/* ✅ MOBILE STATIC BANNER (SQUARE SEARCH BAR + ROUNDED CATEGORY IMAGES WITH BG COLOR) */}
+<div className="block md:hidden relative w-full bg-[#fbfaf4]">
 
-        <div className="absolute inset-0 flex flex-col items-center justify-start pt-4 text-center text-black overflow-hidden">
-          {/* Category Circles */}
-          <div className="flex w-full justify-around px-2 py-4">
-            {categories.map((category) => (
-              <Link key={category.name} href={category.href} className="flex flex-col items-center space-y-1">
-                <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-white/50">
-                  <Image src={category.imageUrl} alt={category.name} fill className="object-cover" sizes="64px" />
-                </div>
-                <span className="text-xs font-medium text-white">{category.name}</span>
-              </Link>
-            ))}
-          </div>
+  {/* 🔵 DISCOUNT STRIP */}
+  <div className="w-full bg-[#E4EDF7] text-center text-[13px] font-medium py-2 text-black">
+    Flat 10% Off For Your First Conscious Choice – RENIVET10
+  </div>
 
-          {/* Search Bar */}
-          <div className="relative w-11/12 mt-1 mb-4">
-            <ProductSearch placeholder="Search for products..." />
-          </div>
+  {/* 🔵 SEARCH BAR — NOW SQUARE */}
+  <div className="w-full px-4 pt-4">
+    <div className="rounded-none overflow-hidden">
+      <ProductSearch placeholder="Search For Products And Brands" className="rounded-none" />
+    </div>
+  </div>
 
-          {/* Main Text Content */}
-          <div className="flex flex-col items-center justify-center space-y-6 flex-grow">
- 
-            <Button
-              size="lg"
-              className="rounded-full border border-gray-200 bg-white/50 px-8 py-3 text-base font-medium text-black backdrop-blur-sm hover:bg-white"
-              asChild
-            >
-              <Link href="/shop">shop with purpose</Link>
-            </Button>
-          </div>
+  {/* 🔵 CATEGORY ICONS — ROUNDED + COLORED BACKGROUND */}
+  <div className="w-full flex justify-between px-3 py-4 overflow-x-auto scrollbar-none gap-3">
+    {categories.map((category) => (
+      <Link
+        key={category.name}
+        href={category.href}
+        className="flex flex-col items-center min-w-[60px]"
+      >
+        <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[#F4F0EC] shadow-sm">
+          <Image
+            src={category.imageUrl}
+            alt={category.name}
+            fill
+            className="object-cover"
+            sizes="64px"
+          />
         </div>
-      </div>
+        <span className="text-xs font-medium text-black">{category.name}</span>
+      </Link>
+    ))}
+  </div>
+
+  {/* 🔵 BANNER IMAGE */}
+  <div className="relative w-full overflow-hidden">
+    <div style={{ paddingBottom: `${(1 / mobileAspectRatio) * 100}%` }} />
+    <Image
+      src={mobileImageUrl}
+      alt="Mobile Banner"
+      fill
+      className="absolute inset-0 h-full w-full object-cover"
+      priority
+    />
+  </div>
+
+  {/* 🔵 CTA BUTTON */}
+  {/* <div className="w-full flex justify-center py-6">
+    <Button
+      size="lg"
+      className="rounded-full border border-gray-300 bg-white px-8 py-3 text-base font-medium text-black backdrop-blur-sm hover:bg-white"
+      asChild
+    >
+      <Link href="/shop">Shop With Purpose</Link>
+    </Button>
+  </div> */}
+</div>
+
     </section>
   );
 }

@@ -25,13 +25,25 @@ export function BrandPromotion({ moodboardItems, className }: PageProps) {
   if (!moodboardItems?.length) return null;
 
   return (
-    <section className={cn("w-full bg-[#FDF5F2] py-12 px-4", className)}>
+    <section className={cn("w-full bg-[#fcfbf4] py-8 px-4", className)}>
       <div className="max-w-[1600px] mx-auto">
 
         {/* ========================= TITLE ========================= */}
-        <h2 className="text-center text-[26px] md:text-[32px] font-light text-[#3B3B3B] mb-8 tracking-wide">
-          Handmade Stories from Across India
-        </h2>
+   <h2
+  className="
+    text-center
+    text-[18px]         /* mobile smaller */
+    md:text-[32px]      /* desktop bigger */
+    font-light
+    text-[#3B3B3B]
+    mb-8
+    tracking-wide
+    whitespace-nowrap   /* forces one line */
+  "
+>
+  Handmade Stories from Across India
+</h2>
+
 
         {/* ========================= DESKTOP CAROUSEL ========================= */}
         <div className="hidden md:block">
@@ -56,7 +68,7 @@ export function BrandPromotion({ moodboardItems, className }: PageProps) {
                 >
                   <Link
                     href={item.url || "/shop"}
-                    className="relative block w-[411px] h-[500px] overflow-hidden rounded-lg border border-[#D8D2C7]"
+                    className="relative block w-[411px] h-[500px] overflow-hidden border border-[#D8D2C7]"
                   >
                     <Image
                       src={item.imageUrl}
@@ -94,7 +106,7 @@ export function BrandPromotion({ moodboardItems, className }: PageProps) {
                 >
                   <Link
                     href={item.url || "/shop"}
-                    className="relative block w-[260px] h-[330px] overflow-hidden rounded-md border border-[#D8D2C7]"
+                    className="relative block w-[260px] h-[330px] overflow-hidden border border-[#D8D2C7]"
                   >
                     <Image
                       src={item.imageUrl}

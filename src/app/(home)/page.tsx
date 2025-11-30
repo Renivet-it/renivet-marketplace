@@ -9,6 +9,7 @@ import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
 import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
 import { BrandTypes } from "@/components/home/new-home-page/brand-types";
+import { MobileCategories } from "@/components/home/new-home-page/mobile-categories";
 import { WelcomeRenivet } from "@/components/home/new-home-page/welcome-to-renivet";
 import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
 import { EventSectionOneBanner } from "@/components/home/new-home-page/event-section-one";
@@ -19,6 +20,7 @@ import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
 import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
 import { ConciousClick } from "@/components/home/new-home-page/concious-click";
 import { SwapSpace } from "@/components/home/new-home-page/swap-space";
+import { MobileBottom } from "@/components/home/new-home-page/mobile-bottom-product";
 import { LoveThese } from "@/components/home/new-home-page/love-these";
 import { MayAlsoLoveThese } from "@/components/home/new-home-page/may-also-love";
 import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
@@ -43,6 +45,9 @@ export default function Page() {
                                            <Suspense>
                 <ShopCategoryFetch />
             </Suspense>
+                                                     <Suspense>
+                <MobileCategoriesFetch />
+            </Suspense>
                                                        <Suspense>
                 <BrandTypesFetch />
             </Suspense>
@@ -55,6 +60,10 @@ export default function Page() {
                             <Suspense>
                 <WelcomeToRenivetFetch />
             </Suspense>
+                              <Suspense>
+                <BrandPromotionFetch />
+            </Suspense>
+                          
                                {/* <Suspense>
                 <BrandCollaborateFetch />
             </Suspense> */}
@@ -64,11 +73,8 @@ export default function Page() {
                             <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
-{/* 
-                           <Suspense>
-                <BrandPromotionFetch />
-            </Suspense> */}
-                                               <Suspense>
+
+                              <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
                                                                      {/* <Suspense>
@@ -105,13 +111,16 @@ export default function Page() {
                 <InstaBannerFetch />
             </Suspense> */}
                                                           <Suspense>
-                <ArtisanCollectionFetch />
+                <HomePageMainProductFetch />
             </Suspense>
                 
            
-                 <Suspense>
-                <ShopByNewCategoriesFetch />
-            </Suspense>
+              <div className="hidden md:block">
+  <Suspense>
+    <ShopByNewCategoriesFetch />
+  </Suspense>
+</div>
+
             {/* <Suspense>
                 <BlogsFetch />
             </Suspense> */}
@@ -189,6 +198,14 @@ async function LoveTheseFetch() {
     if (!brandProducts.length) return null;
 
     return <LoveThese banners={brandProducts} />;
+}
+
+async function HomePageMainProductFetch() {
+    const brandProducts =
+        await productQueries.getHomePageProducts();
+    if (!brandProducts.length) return null;
+
+    return <MobileBottom banners={brandProducts} />;
 }
 
 async function MayAlsoLoveTheseFetch() {
@@ -305,6 +322,11 @@ async function BrandTypesFetch() {
     //@ts-ignore
 
     return <BrandTypes />;
+}
+async function MobileCategoriesFetch() {
+    //@ts-ignore
+
+    return <MobileCategories />;
 }
 async function WelcomeToRenivetFetch() {
     //@ts-ignore
