@@ -59,7 +59,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
       </div>
 
       {/* Stock label */}
-      <p className="text-[12px] text-red-500 mt-2">{alert}</p>
+      {/* <p className="text-[12px] text-red-500 mt-2">{alert}</p> */}
 
       {/* Title */}
       <h3 className="mt-1 text-[16px] font-medium text-gray-800 line-clamp-2 h-[42px]">

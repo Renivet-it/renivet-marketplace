@@ -80,7 +80,7 @@ export function MatchaBag({
               href={item.url || "/shop"}
               className="relative w-full"
             >
-              <div className="relative w-full h-[150px] overflow-hidden rounded">
+              <div className="relative w-full h-[150px] overflow-hidden">
                 <Image
                   src={item.imageUrl}
                   alt=""

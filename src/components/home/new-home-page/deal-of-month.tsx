@@ -75,7 +75,7 @@ export function DealofTheMonthStrip({
       <Link
         key={`mobile-${index}`}
         href={item.href || "/shop"}
-        className="flex-shrink-0 bg-white rounded-xl border border-gray-200 overflow-hidden"
+        className="flex-shrink-0 bg-white  border border-gray-200 overflow-hidden"
         style={{ width: "260px" }}
       >
         
@@ -144,7 +144,7 @@ export function DealofTheMonthStrip({
             {marketingStrip.map((item, index) => (
               <div
                 key={index}
-                className="flex-shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden"
+                className="flex-shrink-0 bg-white border border-gray-200 overflow-hidden"
                 style={{ width: "372px", height: "566px" }}
               >
                 {/* Image */}

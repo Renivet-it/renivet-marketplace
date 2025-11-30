@@ -26,7 +26,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
       href={productUrl}
       className="block w-[160px] sm:w-[200px] cursor-pointer"
     >
-      <div className="relative w-full h-[220px] bg-gray-50 rounded-md overflow-hidden">
+      <div className="relative w-full h-[220px] bg-gray-50 overflow-hidden">
         <Image
           src={imageUrl}
           alt={product.title}
