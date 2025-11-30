@@ -28,7 +28,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   ];
 
   return (
-    <section className={cn("bg-[#F4F0EC]", className)} {...props}>
+    <section className={cn("bg-[#fbfaf4]", className)} {...props}>
 
       {/* ✅ DESKTOP CAROUSEL */}
       <div className="hidden md:block">
@@ -63,7 +63,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
 
       {/* ✅ MOBILE STATIC BANNER (NO CAROUSEL) */}
 {/* ✅ MOBILE STATIC BANNER (SQUARE SEARCH BAR + ROUNDED CATEGORY IMAGES WITH BG COLOR) */}
-<div className="block md:hidden relative w-full bg-[#F4F0EC]">
+<div className="block md:hidden relative w-full bg-[#fbfaf4]">
 
   {/* 🔵 DISCOUNT STRIP */}
   <div className="w-full bg-[#E4EDF7] text-center text-[13px] font-medium py-2 text-black">

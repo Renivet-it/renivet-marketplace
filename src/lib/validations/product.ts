@@ -445,6 +445,7 @@ export const productSchema = z.object({
         isHomeHeroProducts: z.boolean().optional().default(false),
         isHomeLoveTheseProducts: z.boolean().optional().default(false),
         isHomeYouMayAlsoLikeTheseProducts: z.boolean().optional().default(false),
+        isHomePageProduct: z.boolean().optional().default(false),
 });
 
 export const productOptionSchema = z.object({

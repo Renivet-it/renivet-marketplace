@@ -58,7 +58,7 @@ export function LoveThese({ banners }: { banners: Banner[] }) {
   const shownProducts = banners.slice(0, 18);
 
   return (
-    <section className="w-full py-16 bg-[#FFF9F4]">
+    <section className="w-full py-16 bg-[#fbfaf4]">
       <h2 className="text-center text-4xl font-light text-[#4A453F] mb-14">
         You May Like
       </h2>

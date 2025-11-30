@@ -110,13 +110,16 @@ export default function Page() {
                 <InstaBannerFetch />
             </Suspense> */}
                                                           <Suspense>
-                <ArtisanCollectionFetch />
+                <HomePageMainProductFetch />
             </Suspense>
                 
            
-                 <Suspense>
-                <ShopByNewCategoriesFetch />
-            </Suspense>
+              <div className="hidden md:block">
+  <Suspense>
+    <ShopByNewCategoriesFetch />
+  </Suspense>
+</div>
+
             {/* <Suspense>
                 <BlogsFetch />
             </Suspense> */}
@@ -191,6 +194,14 @@ async function SwapSpaceBannerFetch() {
 async function LoveTheseFetch() {
     const brandProducts =
         await productQueries.getHomeLoveTheseProducts();
+    if (!brandProducts.length) return null;
+
+    return <LoveThese banners={brandProducts} />;
+}
+
+async function HomePageMainProductFetch() {
+    const brandProducts =
+        await productQueries.getHomePageProducts();
     if (!brandProducts.length) return null;
 
     return <LoveThese banners={brandProducts} />;

@@ -90,6 +90,7 @@ export const productsRouter = createTRPCRouter({
                         isAddedInEventProductPage: productSchema.shape.isAddedInEventProductPage,
                         isHomeHeroProducts: productSchema.shape.isHomeHeroProducts,
                         isHomeYouMayAlsoLikeTheseProducts: productSchema.shape.isHomeYouMayAlsoLikeTheseProducts,
+                        isHomePageProduct: productSchema.shape.isHomePageProduct,
                         isHomeLoveTheseProducts: productSchema.shape.isHomeLoveTheseProducts,
         colors: z.array(z.string()).optional(),
         sizes: z.array(z.string()).optional(),
@@ -132,6 +133,7 @@ export const productsRouter = createTRPCRouter({
             isAddedInEventProductPage: productSchema.shape.isAddedInEventProductPage,
             isHomeHeroProducts:  productSchema.shape.isHomeHeroProducts,
             isHomeYouMayAlsoLikeTheseProducts: productSchema.shape.isHomeYouMayAlsoLikeTheseProducts,
+            isHomePageProduct: productSchema.shape.isHomePageProduct,
             isHomeLoveTheseProducts: productSchema.shape.isHomeLoveTheseProducts,
         })
     )

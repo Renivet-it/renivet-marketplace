@@ -47,7 +47,7 @@ export function MobileCategories() {
   ];
 
   return (
-    <section className="w-full bg-[#f4f0ec] py-6 px-4 block md:hidden">
+    <section className="w-full bg-[#fbfaf4] py-6 px-4 block md:hidden">
       <div className="grid grid-cols-4 gap-y-6 gap-x-3 place-items-center">
         {categories.map((item, index) => (
           <div key={index} className="flex flex-col items-center">

@@ -94,6 +94,8 @@ isAddedInEventProductPage: boolean("is_added_in_event_product_page").default(fal
 isHomeHeroProducts: boolean("is_home_hero_products").default(false),
 isHomeLoveTheseProducts: boolean("is_home_love_these_products").default(false),
 isHomeYouMayAlsoLikeTheseProducts: boolean("is_home_may_also_like_these_products").default(false),
+isHomePageProduct: boolean("is_home_page_product").default(false),
+
         embeddings: vector("embeddings", { dimensions: 384 }),
         ...timestamps,
     },
@@ -287,6 +289,19 @@ export const homeProductLoveTheseSection = pgTable(
     },
 );
 
+export const homeProductPageList = pgTable(
+    "home_product_page_list",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        productId: uuid("product_id")
+            .notNull()
+            .references(() => products.id, { onDelete: "cascade" }),
+        category: text("category"),
+        isDeleted: boolean("is_deleted").default(false).notNull(),
+        deletedAt: timestamp("deleted_at"),
+        ...timestamps,
+    },
+);
 export const homeProductMayAlsoLikeThese = pgTable(
     "home_product__may_also_like_these_Section",
     {
@@ -562,6 +577,15 @@ export const homeProductLoveTheseSectionRelation = relations(homeProductLoveThes
     references: [products.id],
   }),
 }));
+
+
+export const homeProductPageListRelation = relations(homeProductPageList, ({ one }) => ({
+  product: one(products, {
+    fields: [homeProductPageList.productId],
+    references: [products.id],
+  }),
+}));
+
 
 
 export const homeProductMayAlsoLikeTheseRelation = relations(homeProductMayAlsoLikeThese, ({ one }) => ({

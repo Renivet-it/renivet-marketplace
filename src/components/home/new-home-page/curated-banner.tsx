@@ -14,7 +14,7 @@ interface PageProps extends GenericProps {
 export function CuratedBanner({ className, banners, ...props }: PageProps) {
   return (
     <>
-<h2 className="text-center  bg-[#f4f0ec] font-[400] text-[20px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#6A4F38] font-playfair pb-6 pt-6">
+<h2 className="text-center  bg-[#fbfaf4] font-[400] text-[20px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#6A4F38] font-playfair pb-6 pt-6">
   Under ₹2,000 – Effortless
   <br className="block md:hidden" />  {/* break only on mobile */}
   <span className="italic">Essentials.</span>
