@@ -14,7 +14,8 @@ import {
     toggleMenStyleWithSubstance,
     toggleWomenStyleWithSubstance,
     toggleHomeYouMayLoveProduct,
-    toggleHomeYouMayAlsoLikeProduct
+    toggleHomeYouMayAlsoLikeProduct,
+    toggleHomePageProduct
 
 } from "@/actions/product-action";
 import {
@@ -76,7 +77,7 @@ interface PageProps {
         isHomeHeroProducts?: boolean;
         isHomeLoveTheseProducts?: boolean;
         isHomeYouMayAlsoLikeTheseProducts?: boolean;
-
+isHomePageProduct?: boolean;
     };
 }
 
@@ -274,6 +275,27 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
+
+      const handleToggleHomePageMainProduct = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleHomePageProduct(
+                product.id,
+                product.isHomePageProduct ?? false
+            );
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleToggleMenStyleWithSubstance = async () => {
         setIsLoading(true);
         try {
@@ -542,6 +564,17 @@ export function ProductAction({ product }: PageProps) {
                                 {product.isHomeYouMayAlsoLikeTheseProducts
                                     ? "Remove from You may also like these products Home Page"
                                     : "Add to You may also like these products Home Page"}
+                            </span>
+                        </DropdownMenuItem>
+                                                                                                 <DropdownMenuItem
+                            onClick={handleToggleHomePageMainProduct}
+                            disabled={isLoading}
+                        >
+                            <Icons.Star className="size-4" />
+                            <span>
+                                {product.isHomePageProduct
+                                    ? "Remove from bottom products Home Page"
+                                    : "Add to bottom products Home Page"}
                             </span>
                         </DropdownMenuItem>
                         <DropdownMenuItem

@@ -20,6 +20,7 @@ import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
 import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
 import { ConciousClick } from "@/components/home/new-home-page/concious-click";
 import { SwapSpace } from "@/components/home/new-home-page/swap-space";
+import { MobileBottom } from "@/components/home/new-home-page/mobile-bottom-product";
 import { LoveThese } from "@/components/home/new-home-page/love-these";
 import { MayAlsoLoveThese } from "@/components/home/new-home-page/may-also-love";
 import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
@@ -204,7 +205,7 @@ async function HomePageMainProductFetch() {
         await productQueries.getHomePageProducts();
     if (!brandProducts.length) return null;
 
-    return <LoveThese banners={brandProducts} />;
+    return <MobileBottom banners={brandProducts} />;
 }
 
 async function MayAlsoLoveTheseFetch() {
