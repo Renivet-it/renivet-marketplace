@@ -3,6 +3,7 @@ import { BitFieldBrandPermission } from "@/config/permissions";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { BrandVerificationtSubmitted } from "@/lib/resend/emails";
+import { createClientWarehouse } from "@/lib/delhivery/warehouse";
 import { shiprocket } from "@/lib/shiprocket";
 import {
     createTRPCRouter,
@@ -61,7 +62,42 @@ export const confidentialsRouter = createTRPCRouter({
                 country: "India",
             });
             if (!status) throw new TRPCError({ code: "BAD_REQUEST", message });
+            const pickupLocationCode = generatePickupLocationCode({
+                brandId: existingBrand.id,
+                brandName: existingBrand.name,
+            });
+             const phone = String(
+                getRawNumberFromPhone(input.authorizedSignatoryPhone) ??
+                    "9999999999"
+            );
 
+            const delhiveryPayload = {
+                name: pickupLocationCode,
+                registered_name: existingBrand.name,
+                phone,
+                email: input.authorizedSignatoryEmail,
+                address: input.warehouseAddressLine1 ?? input.addressLine1,
+                city: input.warehouseCity ?? input.city,
+                pin: String(input.warehousePostalCode ?? input.postalCode),
+                country: "India",
+                return_address:
+                    input.warehouseAddressLine1 ?? input.addressLine1,
+                return_city: input.warehouseCity ?? input.city,
+                return_pin: String(input.warehousePostalCode ?? input.postalCode),
+                return_state: input.warehouseState ?? input.state,
+                return_country: "India",
+            };
+
+            const delhiveryResult = await createClientWarehouse(delhiveryPayload);
+
+            if (!delhiveryResult.success) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        delhiveryResult.error ||
+                        "Delhivery warehouse creation failed",
+                });
+            }
             const [data] = await Promise.all([
                 queries.brandConfidentials.createBrandConfidential(input),
                 queries.brands.updateBrandConfidentialStatus({
