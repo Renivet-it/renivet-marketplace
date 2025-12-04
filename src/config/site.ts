@@ -867,5 +867,42 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                 },
             ],
         },
+        {
+            title: "Orders",
+            url: "#",
+            icon: "Store",
+            items: [
+                {
+                    title: "New Orders",
+                    url: `/dashboard/brands/${brandId}/orders/new`,
+                    permissions: BitFieldBrandPermission.MANAGE_BRANDING,
+                },
+                {
+                    title: "Added to Pickup",
+                    url: `/dashboard/brands/${brandId}/orders/added-to-pickup`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Shipped Orders",
+                    url: `/dashboard/brands/${brandId}/orders/shipped`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Delivered Orders",
+                    url: `/dashboard/brands/${brandId}/orders/delivered`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "RTO Orders",
+                    url: `/dashboard/brands/${brandId}/orders/rto`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Cancelled Orders",
+                    url: `/dashboard/brands/${brandId}/orders/cancelled`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+            ],
+        },
     ];
 }
