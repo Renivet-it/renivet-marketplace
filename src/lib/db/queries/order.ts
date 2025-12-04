@@ -268,10 +268,9 @@ extras: {
     //     const data = await ordersForBrand;
     //     return data;
     // }
-async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10) {
+async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10, shipmentStatus?: string) {
   try {
     const offset = (page - 1) * limit;
-
     // Step 1: Get all products for this brand
     const filteredProducts = db
       .select({ id: products.id })
@@ -288,17 +287,35 @@ async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10) 
       )
       .as("filtered_order_items");
 
+
+        // EXTRA FILTER if shipmentStatus is passed
+    const extraShipmentFilter = shipmentStatus
+      ? sql`AND ${orderShipments.status} = ${shipmentStatus}`
+      : sql``;
+
+
     // Step 3: Count total matching orders
-  const totalResult = await db
-    .with(filteredProducts, filteredOrderItems)
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(orders)
-    .where(
-      sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
-    );
+//   const totalResult = await db
+//     .with(filteredProducts, filteredOrderItems)
+//     .select({ count: sql<number>`COUNT(*)` })
+//     .from(orders)
+// .where(
+//   sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter}`
+// )
+// ;
+
+const totalResult = await db
+  .with(filteredProducts, filteredOrderItems)
+  .select({ count: sql<number>`COUNT(*)` })
+  .from(orders)
+  .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
+  .where(
+    sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter}`
+  );
+console.log(totalResult, "shipmentStatusshipmentStatus");
+
   // Convert count to number explicitly
   const total = Number(totalResult[0]?.count) || 0;
-console.log(total, "toitalsc");
     // Step 4: Get paginated orders
     const ordersForBrand = await db
       .with(filteredProducts, filteredOrderItems)
@@ -343,11 +360,12 @@ console.log(total, "toitalsc");
       .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
       .leftJoin(addresses, eq(orders.addressId, addresses.id)) // ⭐ NEW JOIN
       .where(
-        sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)`
-      )
+  sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter}`
+)
       .orderBy(desc(orders.createdAt))
       .limit(limit)
       .offset(offset);
+console.log(ordersForBrand, "ordersForBrandordersForBrand");
 
     return {
       data: ordersForBrand.map((item) => ({

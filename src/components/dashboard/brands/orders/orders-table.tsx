@@ -105,9 +105,10 @@ interface PageProps {
     initialData: Order[];
     brandId: string;
     totalCount: number;
+    shipmentStatus?: string;
 }
 
-export function OrdersTable({ initialData, brandId, totalCount }: PageProps) {
+export function OrdersTable({ initialData, brandId, totalCount, shipmentStatus }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [sorting, setSorting] = useState<SortingState>([]);
@@ -116,7 +117,7 @@ export function OrdersTable({ initialData, brandId, totalCount }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const { data, refetch } = trpc.brands.orders.getOrdersByBrandId.useQuery(
-        { brandId, page, limit },
+        { brandId, page, limit, shipmentStatus },
         {
             initialData: page === 1 ? { data: initialData, total: totalCount } : undefined,
         }
