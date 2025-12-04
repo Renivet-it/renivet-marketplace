@@ -45,20 +45,25 @@ export default function Page(props: PageProps) {
 
 async function OrdersFetch({ params }: PageProps) {
   const { bId } = await params;
+  const shipmentStatus = "pending"; // ← CUSTOMIZE PAGE
 
   // PASS THE STATUS VARIABLE HERE
   // Ensure your query accepts this second argument
-  const { data, total } = await orderQueries.getOrdersByBrandId(bId, PAGE_STATUS);
+  const { data, total } = await orderQueries.getOrdersByBrandId(
+    bId,
+    1,
+    10,
+   shipmentStatus,
 
+  );
   const parsedData = z.array(orderSchema).parse(data);
 
   return (
-    <OrdersTable 
+    <OrdersTable
       initialData={parsedData}
       brandId={bId}
       totalCount={total}
-      // Optional: You might want to pass the status to the table to hide/show specific columns
-      // currentStatus={PAGE_STATUS}
+      shipmentStatus={shipmentStatus} // ⭐ REQUIRED
     />
   );
 }
