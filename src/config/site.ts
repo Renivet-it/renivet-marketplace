@@ -799,6 +799,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     url: `/dashboard/brands/${brandId}/analytics`,
                     permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
                 },
+                {
+                    title: "New Analytics",
+                    url: `/dashboard/brands/${brandId}/new-analytics`,
+                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                },
             ],
         },
         {

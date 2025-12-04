@@ -22,7 +22,7 @@ interface PageProps extends GenericProps {
 }
 
 export function AnalyticsPage({ className, brandId, ...props }: PageProps) {
-    const [timeRange, setTimeRange] = useState("7");
+    const [timeRange, setTimeRange] = useState("270");
 
     const revenueQuery = trpc.brands.revenue.getRevenue.useQuery({
         brandId,
@@ -117,6 +117,8 @@ export function AnalyticsPage({ className, brandId, ...props }: PageProps) {
                         <SelectItem value="7">Last 7 days</SelectItem>
                         <SelectItem value="14">Last 14 days</SelectItem>
                         <SelectItem value="30">Last 30 days</SelectItem>
+                        <SelectItem value="300">Last 365 days</SelectItem>
+
                     </SelectContent>
                 </Select>
             </div>

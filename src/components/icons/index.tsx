@@ -117,6 +117,7 @@ import {
     Users,
     ChartNoAxesColumn,
     Layers,
+    TrendingDown,
     StarHalf,
         Recycle,
     RotateCw,
@@ -248,6 +249,7 @@ export const Icons = {
     Megaphone,
     StarHalf,
     ChartNoAxesColumn,
+    TrendingDown,
     X_Twitter: (props: LucideProps) => (
         <svg
             aria-hidden="true"
