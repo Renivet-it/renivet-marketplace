@@ -50,15 +50,15 @@ async function OrdersFetch({ params }: PageProps) {
   // Ensure your query accepts this second argument
   const { data, total } = await orderQueries.getOrdersByBrandId(bId, PAGE_STATUS);
 
-  const parsedData = z.array(orderSchema).parse(data); 
+  const parsedData = z.array(orderSchema).parse(data);
 
   return (
     <OrdersTable 
-      initialData={parsedData} 
-      brandId={bId} 
-      totalCount={total} 
+      initialData={parsedData}
+      brandId={bId}
+      totalCount={total}
       // Optional: You might want to pass the status to the table to hide/show specific columns
-      // currentStatus={PAGE_STATUS} 
+      // currentStatus={PAGE_STATUS}
     />
   );
 }

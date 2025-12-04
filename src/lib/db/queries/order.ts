@@ -333,6 +333,7 @@ console.log(total, "toitalsc");
           zip: addresses.zip,
           brandId: orderShipments.brandId,
           productId: orderItems.productId,
+          shipmentStatus: orderShipments.status,
         createdAt: orders.createdAt,
         updatedAt: orders.updatedAt,
       })
@@ -380,6 +381,7 @@ console.log(total, "toitalsc");
           zip: item.zip,
           brandId: item.brandId,
           productId: item.productId,
+          shipmentStatus: item.shipmentStatus,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       })),
