@@ -82,7 +82,7 @@ getOverview: protectedProcedure
 
       return {
           totalOrders: Number(ordersCount[0]?.count ?? 0),
-          totalRevenue: Number(revenue[0]?.sum ?? 0),
+          totalRevenue: Number(revenue[0]?.sum ?? 0) / 100,
           returnRate: Number(returns[0]?.count ?? 0),
           activeProducts: Number(activeProducts[0]?.count ?? 0),
       };
@@ -95,21 +95,23 @@ getOverview: protectedProcedure
     getMonthlySales: protectedProcedure
         .input(z.object({ brandId: z.string().uuid() }))
         .query(async ({ input }) => {
-            const { brandId } = input;
-
-            const result = await db.execute(sql`
+            const rows = await db.execute(sql`
                 SELECT 
                     DATE_TRUNC('month', o.created_at) AS month,
-                    SUM(o.total_amount)::numeric AS revenue,
+                    SUM(o.total_amount)::numeric AS paise,
                     COUNT(*)::int AS orders
                 FROM ${orderShipments} os
                 JOIN ${orders} o ON os.order_id = o.id
-                WHERE os.brand_id = ${brandId}
+                WHERE os.brand_id = ${input.brandId}
                 GROUP BY month
                 ORDER BY month ASC
             `);
 
-            return result; // FIXED: NO `.rows`
+            return rows.map((r) => ({
+                month: r.month,
+                revenue: Number(r.paise) / 100, // 💰 to rupees
+                orders: r.orders,
+            }));
         }),
 
     // ------------------------------------------------------
@@ -135,28 +137,56 @@ getOverview: protectedProcedure
     // ------------------------------------------------------
     // ⭐ TOP PRODUCTS (BRAND → SHIPMENTS → ORDERS → ITEMS → PRODUCTS)
     // ------------------------------------------------------
+//     getTopProducts: protectedProcedure
+//         .input(z.object({
+//             brandId: z.string().uuid(),
+//             limit: z.number().default(5)
+//         }))
+//         .query(async ({ input }) => {
+
+//             const result = await db.execute(sql`
+//                 SELECT 
+//                     p.title AS name,
+//                     SUM(o.total_amount)::numeric AS sales,
+//                     COUNT(*)::int AS orders
+//                 FROM ${orderShipments} os
+//                 JOIN ${orders} o ON os.order_id = o.id
+//                 JOIN ${orderItems} oi ON oi.order_id = o.id
+//                 JOIN ${products} p ON oi.product_id = p.id
+//                 WHERE os.brand_id = ${input.brandId}
+//                 GROUP BY p.title
+//                 ORDER BY sales DESC
+//                 LIMIT ${input.limit}
+//             `);
+
+//             return result; // FIXED
+//         }),
+// });
+ // ⭐ TOP PRODUCTS (USING o.total_amount if 1 order = 1 product)
     getTopProducts: protectedProcedure
         .input(z.object({
             brandId: z.string().uuid(),
-            limit: z.number().default(5)
+            limit: z.number().default(5),
         }))
         .query(async ({ input }) => {
-
-            const result = await db.execute(sql`
+            const rows = await db.execute(sql`
                 SELECT 
                     p.title AS name,
-                    SUM(o.total_amount)::numeric AS sales,
+                    SUM(o.total_amount)::numeric AS paise,
                     COUNT(*)::int AS orders
                 FROM ${orderShipments} os
                 JOIN ${orders} o ON os.order_id = o.id
-                JOIN ${orderItems} oi ON oi.order_id = o.id
-                JOIN ${products} p ON oi.product_id = p.id
+                JOIN ${products} p ON o.product_id = p.id -- ❗ only works if orders have product_id
                 WHERE os.brand_id = ${input.brandId}
                 GROUP BY p.title
-                ORDER BY sales DESC
+                ORDER BY paise DESC
                 LIMIT ${input.limit}
             `);
 
-            return result; // FIXED
+            return rows.map((r) => ({
+                name: r.name,
+                sales: Number(r.paise) / 100, // 💰 convert to rupees
+                orders: r.orders,
+            }));
         }),
 });
