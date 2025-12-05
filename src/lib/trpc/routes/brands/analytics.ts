@@ -176,7 +176,8 @@ getOverview: protectedProcedure
                     COUNT(*)::int AS orders
                 FROM ${orderShipments} os
                 JOIN ${orders} o ON os.order_id = o.id
-                JOIN ${products} p ON o.product_id = p.id -- ❗ only works if orders have product_id
+                JOIN ${orderItems} oi ON oi.order_id = o.id
+                JOIN ${products} p ON oi.product_id = p.id
                 WHERE os.brand_id = ${input.brandId}
                 GROUP BY p.title
                 ORDER BY paise DESC
