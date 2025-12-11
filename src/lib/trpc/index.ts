@@ -12,6 +12,7 @@ import {
     productsRouter as brandProductsRouter,
     revenueRouter as brandRevenueRouter,
     rolesRouter as brandRolesRouter,
+    brandSupportRouter
 } from "./routes/brands";
 import {
     blogsRouter,
@@ -34,7 +35,8 @@ import {
     OrderReturnRouter,
     ReasonRouter,
     orderIntentRouter,
-    returnReplaceRouter
+    returnReplaceRouter,
+    adminSupportRouter,
 } from "./routes/general";
 import { addressesRouter } from "./routes/general/address";
 import { createTRPCRouter } from "./trpc";
@@ -62,7 +64,8 @@ export const appRouter = createTRPCRouter({
         addresses: addressesRouter,
         orderReturns: OrderReturnRouter,
         returnExchangeReasons: ReasonRouter,
-        returnReplace: returnReplaceRouter
+        returnReplace: returnReplaceRouter,
+       adminSupportRouter: adminSupportRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,
@@ -78,6 +81,7 @@ export const appRouter = createTRPCRouter({
         products: brandProductsRouter,
         revenue: brandRevenueRouter,
         roles: brandRolesRouter,
+        brandSupportRouter: brandSupportRouter,
     }),
 });
 

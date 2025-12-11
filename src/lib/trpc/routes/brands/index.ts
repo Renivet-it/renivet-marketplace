@@ -11,3 +11,4 @@ export * from "./orders";
 export * from "./products";
 export * from "./revenue";
 export * from "./roles";
+export * from "./support";
