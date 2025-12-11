@@ -58,8 +58,7 @@ export const supportMessages = pgTable("support_messages", {
     .references(() => supportTickets.id),
 
   sender: text("sender").notNull(), // brand | admin
-  senderId: uuid("sender_id"), // FK to brand user or admin user table
-
+senderId: text("sender_id").notNull(),
   text: text("text").notNull(),
 
   ...timestamps,
