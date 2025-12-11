@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { trpc } from "@/lib/trpc/client";
+
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
@@ -8,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+
 import {
   Dialog,
   DialogHeader,
@@ -15,6 +18,7 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog-dash";
+
 import {
   Select,
   SelectTrigger,
@@ -24,123 +28,110 @@ import {
 } from "@/components/ui/select-dash";
 
 export default function BrandSupportPage() {
-  // -------------------------------
-  // Tickets
-  // -------------------------------
-  const [tickets, setTickets] = useState(
-    Array.from({ length: 12 }).map((_, i) => ({
-      id: `${i + 1}`,
-      title: `Support Ticket #${i + 1}`,
-      issueType: i % 2 ? "orders" : "payouts",
-      status: i % 3 ? "open" : "resolved",
-      createdAt: new Date().toISOString(),
-    }))
-  );
-
+  // ------------------------------------------------
+  // FILTER STATE
+  // ------------------------------------------------
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredTickets = tickets.filter((t) => {
-    const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = statusFilter === "all" || t.status === statusFilter;
-    return matchesSearch && matchesFilter;
+  // ------------------------------------------------
+  // TRPC → LIST TICKETS
+  // ------------------------------------------------
+  const ticketsQuery = trpc.brands.brandSupportRouter.listTickets.useQuery({
+    limit: 50,
+    page: 1,
+    search,
+    status: statusFilter,
   });
 
-  const [selectedTicketId, setSelectedTicketId] = useState("1");
+  const tickets = ticketsQuery.data?.data ?? [];
 
-  // -------------------------------
-  // Messages
-  // -------------------------------
-  const [messages, setMessages] = useState([
-    {
-      id: "m1",
-      ticketId: "1",
-      sender: "brand",
-      text: "Hello, payout still not received.",
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: "m2",
-      ticketId: "1",
-      sender: "admin",
-      text: "We are checking your issue.",
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
-  const msgList = messages.filter((m) => m.ticketId === selectedTicketId);
+  // auto-select first ticket
+  useEffect(() => {
+    if (!selectedTicketId && tickets?.length > 0) {
+      setSelectedTicketId(tickets[0].id);
+    }
+  }, [tickets, selectedTicketId]);
 
+  // ------------------------------------------------
+  // TRPC → GET TICKET DETAILS
+  // ------------------------------------------------
+  const ticketQuery = trpc.brands.brandSupportRouter.getTicket.useQuery(
+    selectedTicketId ?? "",
+    { enabled: !!selectedTicketId }
+  );
+
+  const selectedTicket = ticketQuery.data;
+  const isResolved = selectedTicket?.status === "resolved";
+
+  // ------------------------------------------------
+  // TRPC → GET MESSAGES
+  // ------------------------------------------------
+  const messagesQuery = trpc.brands.brandSupportRouter.getMessages.useQuery(
+    selectedTicketId ?? "",
+    { enabled: !!selectedTicketId }
+  );
+
+  const messages = messagesQuery.data ?? [];
+
+  // scroll bottom
   const chatRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     chatRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgList]);
+  }, [messages]);
+
+  // ------------------------------------------------
+  // TRPC → SEND MESSAGE
+  // ------------------------------------------------
+  const sendMessageMutation = trpc.brands.brandSupportRouter.sendMessage.useMutation({
+    onSuccess: () => {
+      messagesQuery.refetch();
+      setMsgText("");
+    },
+  });
 
   const [msgText, setMsgText] = useState("");
 
   function sendMessage() {
-    if (!msgText.trim()) return;
+    if (!msgText.trim() || !selectedTicketId) return;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        ticketId: selectedTicketId,
-        sender: "brand",
-        text: msgText,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-
-    setMsgText("");
+    sendMessageMutation.mutate({
+      ticketId: selectedTicketId,
+      text: msgText,
+    });
   }
 
-  // -------------------------------
-  // Create Ticket
-  // -------------------------------
+  // ------------------------------------------------
+  // TRPC → CREATE TICKET
+  // ------------------------------------------------
+  const createTicketMutation = trpc.brands.brandSupportRouter.createTicket.useMutation({
+    onSuccess: async (ticket) => {
+      await ticketsQuery.refetch();
+      setSelectedTicketId(ticket.id);
+      setNewOpen(false);
+      setNewTitle("");
+      setNewDesc("");
+    },
+  });
+
   const [newOpen, setNewOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newIssue, setNewIssue] = useState("orders");
   const [newDesc, setNewDesc] = useState("");
 
   function createTicket() {
-    const id = Math.random().toString();
-
-    setTickets((prev) => [
-      {
-        id,
-        title: newTitle,
-        issueType: newIssue,
-        status: "open",
-        createdAt: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: "msg_" + Math.random(),
-        ticketId: id,
-        sender: "brand",
-        text: newDesc,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-
-    setSelectedTicketId(id);
-    setNewOpen(false);
+    createTicketMutation.mutate({
+      title: newTitle,
+      issueType: newIssue,
+      description: newDesc,
+    });
   }
 
-  // -------------------------------
-  // Resolved Check
-  // -------------------------------
-  const selectedTicket = tickets.find((t) => t.id === selectedTicketId);
-  const isResolved = selectedTicket?.status === "resolved";
-
-  // -------------------------------
+  // ------------------------------------------------
   // UI
-  // -------------------------------
+  // ------------------------------------------------
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
 
@@ -150,6 +141,7 @@ export default function BrandSupportPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Support</h2>
 
+            {/* CREATE TICKET MODAL */}
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">New</Button>
@@ -168,7 +160,7 @@ export default function BrandSupportPage() {
                   />
 
                   <Select value={newIssue} onValueChange={setNewIssue}>
-                    <SelectTrigger><SelectValue placeholder="Issue type" /></SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="orders">Orders</SelectItem>
                       <SelectItem value="payouts">Payouts</SelectItem>
@@ -178,9 +170,9 @@ export default function BrandSupportPage() {
                   </Select>
 
                   <Textarea
-                    placeholder="Describe your issue"
-                    value={newDesc}
+                    placeholder="Describe your issue..."
                     rows={4}
+                    value={newDesc}
                     onChange={(e) => setNewDesc(e.target.value)}
                   />
 
@@ -192,7 +184,7 @@ export default function BrandSupportPage() {
             </Dialog>
           </div>
 
-          {/* 🔥 FILTERS ADDED BACK HERE */}
+          {/* FILTERS */}
           <div className="mt-4 space-y-3">
             <Input
               placeholder="Search tickets..."
@@ -213,9 +205,10 @@ export default function BrandSupportPage() {
 
         <Separator />
 
+        {/* TICKET LIST */}
         <ScrollArea className="flex-1 p-3">
           <div className="space-y-2">
-            {filteredTickets.map((t) => (
+            {tickets.map((t) => (
               <div
                 key={t.id}
                 onClick={() => setSelectedTicketId(t.id)}
@@ -242,9 +235,10 @@ export default function BrandSupportPage() {
 
         <Separator />
 
+        {/* CHAT LOG */}
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
-            {msgList.map((m) => (
+            {(messages ?? []).map((m) => (
               <div
                 key={m.id}
                 className={`p-3 rounded-lg max-w-xl text-sm ${
@@ -259,14 +253,15 @@ export default function BrandSupportPage() {
                 </div>
               </div>
             ))}
+
             <div ref={chatRef} />
           </div>
         </ScrollArea>
 
-        {/* SHOW RESOLVED NOTICE */}
+        {/* IF RESOLVED SHOW LOCK */}
         {isResolved ? (
           <div className="p-4 border-t bg-muted text-center text-sm font-medium">
-            This ticket has been resolved by the admin. You cannot send more messages.
+            This ticket has been resolved. You cannot send more messages.
           </div>
         ) : (
           <div className="p-4 border-t flex gap-2">
