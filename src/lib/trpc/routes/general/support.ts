@@ -58,7 +58,20 @@ export const adminSupportRouter = createTRPCRouter({
       };
     }),
 
+  resolveTicket: protectedProcedure
+    .input(
+      z.object({
+        ticketId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await db
+        .update(supportTickets)
+        .set({ status: "resolved" })
+        .where(eq(supportTickets.id, input.ticketId));
 
+      return { success: true };
+    }),
   // ------------------------------------------------------
   // GET A SINGLE TICKET
   // ------------------------------------------------------
