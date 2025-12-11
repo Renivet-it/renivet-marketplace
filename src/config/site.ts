@@ -801,11 +801,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
             url: "#",
             icon: "LayoutDashboard",
             items: [
-                {
-                    title: "Analytics",
-                    url: `/dashboard/brands/${brandId}/analytics`,
-                    permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
-                },
+                // {
+                //     title: "Analytics",
+                //     url: `/dashboard/brands/${brandId}/analytics`,
+                //     permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                // },
                 {
                     title: "New Analytics",
                     url: `/dashboard/brands/${brandId}/new-analytics`,
