@@ -248,6 +248,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
+                title: "Supports",
+                url: "/dashboard/general/support",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
                 title: "Subscribers",
                 url: "/dashboard/general/subscribers",
                 permissions:
@@ -817,6 +824,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
+                    title: "Support Requests",
+                    url: `/dashboard/brands/${brandId}/support`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
                     title: "Verification",
                     url: `/dashboard/brands/${brandId}/verification`,
                     permissions: BitFieldBrandPermission.ADMINISTRATOR,
@@ -872,6 +884,7 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                 },
             ],
         },
+        
         {
             title: "Orders",
             url: "#",
