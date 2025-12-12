@@ -91,9 +91,9 @@ export function MobileBottom({ banners }: { banners: Banner[] }) {
   const shownProducts = banners.slice(0, 18);
 
   return (
-    <section className="w-full py-16 bg-[#fbfaf4]">
-      <h2 className="text-center text-4xl font-light text-[#4A453F] mb-14">
-        You May Like
+    <section className="w-full py-8 bg-[#fbfaf4] md:hidden">
+      <h2 className="text-center text-2xl font-light text-[#4A453F] mb-4">
+        Intentional finds
       </h2>
 
       {/* ⭐ MOBILE — HORIZONTAL SCROLL */}
@@ -115,7 +115,7 @@ export function MobileBottom({ banners }: { banners: Banner[] }) {
         </div>
       </div>
 
-      {/* ⭐ DESKTOP GRID */}
+      {/* ⭐ DESKTOP GRID
       <div className="hidden md:block max-w-screen-2xl mx-auto px-6">
         <div
           className="
@@ -131,7 +131,7 @@ export function MobileBottom({ banners }: { banners: Banner[] }) {
             <ProductCard key={item.id} banner={item} />
           ))}
         </div>
-      </div>
+      </div> */}
     </section>
   );
 }
