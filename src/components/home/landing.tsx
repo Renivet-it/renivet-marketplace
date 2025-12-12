@@ -107,7 +107,7 @@ useEffect(() => {
 
   {/* 🔵 SEARCH BAR — NOW SQUARE */}
 <div className="w-full px-4 pt-4">
-  <div className="border border-black rounded-md overflow-hidden">
+  <div className="border border-black overflow-hidden">
 <ProductSearch
   placeholder={displayText}
   className="rounded-none"
@@ -121,8 +121,14 @@ useEffect(() => {
 </div>
 
 
-  {/* 🔵 CATEGORY ICONS — ROUNDED + COLORED BACKGROUND */}
-  <div className="w-full flex justify-between px-3 py-4 overflow-x-auto scrollbar-none gap-3">
+  <div
+  className="w-full flex justify-between px-3 py-4 overflow-x-auto scrollbar-none gap-3 mt-3 mb-3"
+  style={{
+    backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }}
+>
     {categories.map((category) => (
       <Link
         key={category.name}

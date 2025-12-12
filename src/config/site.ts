@@ -30,7 +30,7 @@ export const siteConfig: SiteConfig = {
     links: {
         Facebook: "#",
         Twitter: "#",
-        Instagram: "https://www.instagram.com/renivet__",
+        Instagram: "https://www.instagram.com/shop.renivet?igsh=Z2FhM3dxbm11eno=",
         Linkedin: "https://www.linkedin.com/company/renivet/",
         Youtube: "#",
     },

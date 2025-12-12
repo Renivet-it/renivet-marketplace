@@ -43,7 +43,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
   return (
     <Link href={productUrl} className="block w-[173px] cursor-pointer">
       {/* IMAGE */}
-      <div className="relative w-full h-[230px] bg-gray-50 overflow-hidden rounded-md">
+      <div className="relative w-full h-[230px] bg-gray-50 overflow-hidden">
         <Image
           src={imageUrl}
           alt={product.title}

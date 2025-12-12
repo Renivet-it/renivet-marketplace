@@ -8,30 +8,30 @@ export function BrandTypes() {
       title: "Homegrown",
       subtitle: "Locally crafted, authentic.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPUzUsWO9kwm36pdODjHU0ryYqC2xJehFZ5Q7",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqj8zK6NGz8F0U3cHoOhlNY6tCDW7PIAe4fpJ",
     },
     {
       title: "Sustainable",
       subtitle: "Eco-friendly, conscious.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNsFy8G1n3bApvy2W4lj8UTcEV5GdMa0thXR6o",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNr1GWiuXUoqs7VCFLby0kp1MDitmaOjJgfeBl",
     },
     {
       title: "Sustainable Drops",
       subtitle: "Limited, eco-focused releases.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPUzUsWO9kwm36pdODjHU0ryYqC2xJehFZ5Q7",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg0oQIZ2ENPRLZdGUpA0elOxytCDfJibYIko7",
     },
     {
       title: "Artisan-led",
       subtitle: "Crafted by artisans.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNsFy8G1n3bApvy2W4lj8UTcEV5GdMa0thXR6o",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvacgFkdPZsh5fuDbkAelMyqICmp3NU7X4nHY",
     },
   ];
 
   return (
-    <section className="w-full bg-[#fbfaf4] py-10 px-4">
+    <section className="w-full bg-[#fbfaf4] py-2 px-4">
       {/* Heading */}
 <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
   Type of Brands we collaborate with

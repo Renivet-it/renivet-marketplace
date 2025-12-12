@@ -140,7 +140,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
   <Link href={productUrl}>
     <div
       className="
-        relative bg-gray-50 overflow-hidden rounded-md
+        relative bg-gray-50 overflow-hidden
         w-[156px] h-[223px]
         md:w-full md:h-[350px]
       "
@@ -199,7 +199,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
     <button
       onClick={handleAddToCart}
       disabled={isLoading}
-      className="w-full border border-gray-700 text-gray-700 hover:bg-gray-800 hover:text-white text-sm font-medium rounded-md py-2 transition-colors flex items-center justify-center disabled:opacity-50"
+      className="w-full border border-gray-700 text-gray-700 hover:bg-gray-800 hover:text-white text-sm font-medium py-2 transition-colors flex items-center justify-center disabled:opacity-50"
     >
       {isLoading ? <Icons.Spinner className="h-4 w-4 animate-spin" /> : "Add to Cart"}
     </button>
@@ -235,7 +235,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
   return (
     <section className={cn("w-full py-6 bg-[#FFF9F4]", className)}>
 
-      <h2 className="text-center text-3xl font-bold text-[#4A453F] mb-12">
+      <h2 className="text-center text-3xl font-bold text-[#4A453F] mb-4">
         What's New
       </h2>
 
@@ -245,7 +245,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
         {/* Left Arrow */}
         <button
           onClick={() => scroll(desktopRef, "left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
+          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md w-10 h-10 flex items-center justify-center z-20"
         >
           <Icons.ChevronLeft className="h-6 w-6 text-gray-700" />
         </button>
@@ -262,20 +262,37 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
         {/* Right Arrow */}
         <button
           onClick={() => scroll(desktopRef, "right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full w-10 h-10 flex items-center justify-center z-20"
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md w-10 h-10 flex items-center justify-center z-20"
         >
           <Icons.ChevronRight className="h-6 w-6 text-gray-700" />
         </button>
       </div>
 
       {/* ---------------- MOBILE CAROUSEL ---------------- */}
-      <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
-        <div ref={mobileRef} className="flex space-x-6">
-          {banners.map((item) => (
-            <ProductCard key={item.id} banner={item} userId={userId} />
-          ))}
+{/* ---------------- MOBILE CAROUSEL ---------------- */}
+<div className="md:hidden overflow-x-auto scrollbar-hide px-4">
+  <div
+    ref={mobileRef}
+    className="flex space-x-4"
+    style={{ scrollSnapType: "x mandatory" }}
+  >
+    {banners.map((item) => (
+      <div
+        key={item.id}
+        className="flex-shrink-0"
+        style={{
+          width: "calc(50% - 8px)", // ⭐ two cards fill the screen evenly
+          scrollSnapAlign: "start",
+        }}
+      >
+        <div className="w-full">
+          <ProductCard banner={item} userId={userId} />
         </div>
       </div>
+    ))}
+  </div>
+</div>
+
 
     </section>
   );
