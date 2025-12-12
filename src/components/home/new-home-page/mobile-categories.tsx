@@ -62,7 +62,7 @@ export function MobileCategories() {
           <Link
             key={index}
             href={item.link}
-            className="flex flex-col items-center"
+            className="flex flex-col items-center "
           >
             <div className="w-[78px] h-[78px] relative overflow-hidden">
               <Image
