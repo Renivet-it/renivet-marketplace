@@ -63,6 +63,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ banner, userId }: ProductCardProps) => {
+  const [isWishlisted, setIsWishlisted] = useState(false);
   const { product } = banner;
   const router = useRouter();
   const { addToGuestCart } = useGuestCart();
@@ -138,21 +139,59 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 >
 
   <Link href={productUrl}>
-    <div
-      className="
-        relative bg-gray-50 overflow-hidden
-        w-[156px] h-[223px]
-        md:w-full md:h-[350px]
-      "
-    >
-      <Image
-        src={imageUrl}
-        alt={product.title}
-        fill
-        className="object-cover"
-        sizes="(max-width: 768px) 146px, 350px"
-      />
-    </div>
+<div
+  className="
+    relative bg-gray-50 overflow-hidden
+    w-[156px] h-[223px]
+    md:w-full md:h-[350px]
+  "
+>
+
+  {/* ❤️ MOBILE WISHLIST BUTTON */}
+  <button
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsWishlisted((prev) => !prev);
+      toast.success(
+        !isWishlisted ? "Added to Wishlist!" : "Removed from Wishlist"
+      );
+    }}
+    className="
+      md:hidden
+      absolute top-2 right-2 z-20
+      bg-white/80 backdrop-blur-md
+      p-2 rounded-full shadow-md
+      flex items-center justify-center
+    "
+  >
+{isWishlisted ? (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-5 h-5 text-red-500"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
+    4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81
+    14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
+    3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+  </svg>
+) : (
+  <Icons.Heart className="w-5 h-5 text-gray-700" />
+)}
+
+  </button>
+
+  <Image
+    src={imageUrl}
+    alt={product.title}
+    fill
+    className="object-cover"
+    sizes="(max-width: 768px) 146px, 350px"
+  />
+</div>
+
   </Link>
 
   {/* FIXED HEIGHT TITLE */}
@@ -201,7 +240,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
       disabled={isLoading}
       className="w-full border border-gray-700 text-gray-700 hover:bg-gray-800 hover:text-white text-sm font-medium py-2 transition-colors flex items-center justify-center disabled:opacity-50"
     >
-      {isLoading ? <Icons.Spinner className="h-4 w-4 animate-spin" /> : "Add to Cart"}
+      {isLoading ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : "Add to Cart"}
     </button>
   </div>
 </div>
@@ -273,17 +312,14 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
 <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
   <div
     ref={mobileRef}
-    className="flex space-x-4"
+    className="flex space-x-6"
     style={{ scrollSnapType: "x mandatory" }}
   >
     {banners.map((item) => (
       <div
         key={item.id}
         className="flex-shrink-0"
-        style={{
-          width: "calc(50% - 8px)", // ⭐ two cards fill the screen evenly
-          scrollSnapAlign: "start",
-        }}
+
       >
         <div className="w-full">
           <ProductCard banner={item} userId={userId} />
