@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { ProductSearch } from "@/components/ui/product-search";
+import { useEffect, useState } from "react";
 
 interface PageProps extends GenericProps {
   banners: Banner[];
@@ -18,6 +19,40 @@ export function Landing({ className, banners, ...props }: PageProps) {
   const mobileAspectRatio = 375 / 487;
   const mobileImageUrl =
     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNL8xWHSUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW";
+const placeholders = ["Search For Products And Brands"];
+
+const [displayText, setDisplayText] = useState("");
+const [runCount, setRunCount] = useState(0); // how many times finished typing
+const maxRuns = 4; // number of times animation should repeat
+
+useEffect(() => {
+  if (runCount >= maxRuns) {
+    // After finishing animation 4 times → keep full text permanently
+    setDisplayText(placeholders[0]);
+    return;
+  }
+
+  const sentence = placeholders[0];
+  let charIndex = 0;
+
+  const typeInterval = setInterval(() => {
+    setDisplayText(sentence.slice(0, charIndex + 1));
+    charIndex++;
+
+    if (charIndex === sentence.length) {
+      clearInterval(typeInterval);
+
+      // Wait before restarting typing
+      setTimeout(() => {
+        setRunCount((prev) => prev + 1); // count completed animation
+        setDisplayText(""); // restart typing
+      }, 1000);
+    }
+  }, 70);
+
+  return () => clearInterval(typeInterval);
+}, [runCount]);
+
 
   const categories = [
     { name: "Men", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcdSN8FeO4H8MeNYoyJQSarWCqgVpRxP5lDBu", href: "/men" },
@@ -66,19 +101,34 @@ export function Landing({ className, banners, ...props }: PageProps) {
 <div className="block md:hidden relative w-full bg-[#fbfaf4]">
 
   {/* 🔵 DISCOUNT STRIP */}
-  <div className="w-full bg-[#E4EDF7] text-center text-[13px] font-medium py-2 text-black">
+  <div className="w-full bg-[#E4EDF7] text-center text-[11px] font-medium py-1.5 text-black">
     Flat 10% Off For Your First Conscious Choice – RENIVET10
   </div>
 
   {/* 🔵 SEARCH BAR — NOW SQUARE */}
-  <div className="w-full px-4 pt-4">
-    <div className="rounded-none overflow-hidden">
-      <ProductSearch placeholder="Search For Products And Brands" className="rounded-none" />
-    </div>
-  </div>
+<div className="w-full px-4 pt-4">
+  <div className="border border-black overflow-hidden">
+<ProductSearch
+  placeholder={displayText}
+  className="rounded-none"
+  style={{
+    transition: "opacity .3s ease",
+    opacity: displayText ? 1 : 0.6,
+  }}
+/>
 
-  {/* 🔵 CATEGORY ICONS — ROUNDED + COLORED BACKGROUND */}
-  <div className="w-full flex justify-between px-3 py-4 overflow-x-auto scrollbar-none gap-3">
+  </div>
+</div>
+
+
+  <div
+  className="w-full flex justify-between px-3 py-4 overflow-x-auto scrollbar-none gap-3 mt-3 mb-3"
+  style={{
+    backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  }}
+>
     {categories.map((category) => (
       <Link
         key={category.name}

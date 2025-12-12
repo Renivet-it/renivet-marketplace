@@ -50,7 +50,7 @@ export function ProductGrid({ className, products, title = "Kids", ...props }: P
 >
   <Link href={`/products/${product.slug}`}>
     {/* IMAGE */}
-    <div className="relative w-full h-[120px] sm:h-[160px] md:h-[200px] bg-white rounded-md overflow-hidden">
+    <div className="relative w-full h-[120px] sm:h-[160px] md:h-[200px] bg-white overflow-hidden">
       <Image
         src={imageUrl}
         alt={product.title}

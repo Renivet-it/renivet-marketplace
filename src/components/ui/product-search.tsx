@@ -344,20 +344,20 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
       <div
         ref={wrapperRef}
         className={cn(
-          "relative flex w-full items-center gap-1 rounded-none bg-white shadow-md",
+          "relative flex w-full items-center bg-[#fbfaf4] gap-1 rounded-none shadow-md",
           disabled && "cursor-not-allowed opacity-50",
           classNames?.wrapper
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-2 pl-3">
-          <Icons.Search className="size-5 opacity-60" />
+        <div className="p-2 pl-3 bg-[#fbfaf4]">
+          <Icons.Search className="bg-[#fbfaf4] size-5 opacity" />
         </div>
 
         <input
           type="text"
           className={cn(
-            "flex h-9 w-full bg-transparent pr-10 text-sm text-gray-700 placeholder-gray-500 focus:outline-none",
+            "flex h-9 w-full pr-10 text-sm bg-[#fbfaf4] text-gray-700 placeholder-gray-500 focus:outline-none",
             className,
             classNames?.input
           )}
