@@ -7,7 +7,7 @@ export const planSchema = z.object({
             required_error: "ID is required",
             invalid_type_error: "ID must be a string",
         })
-        .min(1, "ID is invalid"),
+        .min(1, "ID  is invalid"),
     interval: z
         .number({
             required_error: "Interval is required",
