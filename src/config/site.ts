@@ -248,6 +248,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
+                title: "Supports",
+                url: "/dashboard/general/support",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
                 title: "Subscribers",
                 url: "/dashboard/general/subscribers",
                 permissions:
@@ -794,9 +801,14 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
             url: "#",
             icon: "LayoutDashboard",
             items: [
+                // {
+                //     title: "Analytics",
+                //     url: `/dashboard/brands/${brandId}/analytics`,
+                //     permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
+                // },
                 {
-                    title: "Analytics",
-                    url: `/dashboard/brands/${brandId}/analytics`,
+                    title: "New Analytics",
+                    url: `/dashboard/brands/${brandId}/new-analytics`,
                     permissions: BitFieldBrandPermission.VIEW_ANALYTICS,
                 },
             ],
@@ -810,6 +822,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     title: "Invites",
                     url: `/dashboard/brands/${brandId}/invites`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Support Requests",
+                    url: `/dashboard/brands/${brandId}/support`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
                 {
                     title: "Verification",
@@ -863,6 +880,44 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                 {
                     title: "Orders",
                     url: `/dashboard/brands/${brandId}/orders`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+            ],
+        },
+        
+        {
+            title: "Orders",
+            url: "#",
+            icon: "Package",
+            items: [
+                {
+                    title: "New Orders",
+                    url: `/dashboard/brands/${brandId}/orders/new`,
+                    permissions: BitFieldBrandPermission.MANAGE_BRANDING,
+                },
+                // {
+                //     title: "Added to Pickup",
+                //     url: `/dashboard/brands/${brandId}/orders/added-to-pickup`,
+                //     permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                // },
+                {
+                    title: "Shipped Orders",
+                    url: `/dashboard/brands/${brandId}/orders/shipped`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Delivered Orders",
+                    url: `/dashboard/brands/${brandId}/orders/delivered`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "RTO Orders",
+                    url: `/dashboard/brands/${brandId}/orders/rto`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Cancelled Orders",
+                    url: `/dashboard/brands/${brandId}/orders/cancelled`,
                     permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
             ],

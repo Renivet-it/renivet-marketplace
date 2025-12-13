@@ -19,3 +19,4 @@ export * from "./order-return";
 export * from "./return-exchange-reason";
 export * from "./orders-intent";
 export * from "./returnReplace";
+export * from "./support";

@@ -155,6 +155,7 @@ export const updateBrandSchema = brandSchema.pick({
     coverUrl: true,
     logoUrl: true,
     website: true,
+    rzpAccountId: true,
 });
 
 export const updateBrandConfidentialStatusSchema = brandSchema

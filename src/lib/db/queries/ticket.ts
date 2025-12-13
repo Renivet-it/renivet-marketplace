@@ -2,6 +2,7 @@ import { CreateTicket, ticketSchema } from "@/lib/validations";
 import { desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { tickets } from "../schema";
+import { supportTickets, supportMessages } from "../schema";
 
 class TicketQuery {
     async getCount() {
@@ -71,6 +72,8 @@ class TicketQuery {
 
         return data;
     }
+
+    
 }
 
 export const ticketQueries = new TicketQuery();

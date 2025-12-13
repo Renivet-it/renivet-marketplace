@@ -222,7 +222,7 @@ console.log(order, "orders");
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
                     <DropdownMenuGroup>
-                        {!isShipmentGenerated && (
+                        {!isShipmentGenerated && order.status !== "cancelled" && order.status !== "delivered" && order.status !== "shipped" && (
                             <DropdownMenuItem
                                 onClick={() => setIsSheetOpen(true)}
                             >

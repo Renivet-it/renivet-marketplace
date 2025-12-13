@@ -14,6 +14,7 @@ getOrdersByBrandId: protectedProcedure
       brandId: z.string(),
       page: z.number().min(1).default(1),
       limit: z.number().min(1).default(10),
+      shipmentStatus: z.string().optional(), // NEW optional filter
     })
   )
   .output(
@@ -29,7 +30,8 @@ getOrdersByBrandId: protectedProcedure
     const { data, total } = await queries.orders.getOrdersByBrandId(
       input.brandId,
       input.page,
-      input.limit
+      input.limit,
+      input.shipmentStatus
     );
     return { data, total };
   }),
