@@ -66,7 +66,7 @@ function NotSubscribedCard({ bId }: { bId: string }) {
 
                 <Button asChild size="sm">
                     <Link href={`/dashboard/brands/${bId}/memberships`}>
-                        Manage Subscriptions
+                        Manage Subscription
                     </Link>
                 </Button>
             </EmptyPlaceholder>
