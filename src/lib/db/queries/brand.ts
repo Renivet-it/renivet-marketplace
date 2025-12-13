@@ -370,7 +370,7 @@ class BrandQuery {
                     gst: values.gstin,
                 },
             });
-
+console.log(account, "account razorpay request");
             const data = await db
                 .update(brands)
                 .set({
@@ -380,9 +380,12 @@ class BrandQuery {
                 .where(eq(brands.id, values.id))
                 .returning()
                 .then((res) => res[0]);
+console.log(data, "account razorpay response update");
 
             return data;
         } catch (error) {
+console.log(error, "account razorpay error");
+
             if (
                 Object.prototype.hasOwnProperty.call(error, "error") &&
                 Object.prototype.hasOwnProperty.call(
