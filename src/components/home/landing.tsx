@@ -150,16 +150,47 @@ useEffect(() => {
   </div>
 
   {/* 🔵 BANNER IMAGE */}
-  <div className="relative w-full overflow-hidden">
-    <div style={{ paddingBottom: `${(1 / mobileAspectRatio) * 100}%` }} />
-    <Image
-      src={mobileImageUrl}
-      alt="Mobile Banner"
-      fill
-      className="absolute inset-0 h-full w-full object-cover"
-      priority
-    />
+  {/* 🔵 BANNER IMAGE WITH CENTER CTA */}
+<div className="relative w-full overflow-hidden">
+  <div style={{ paddingBottom: `${(1 / mobileAspectRatio) * 100}%` }} />
+
+  <Image
+    src={mobileImageUrl}
+    alt="Mobile Banner"
+    fill
+    className="absolute inset-0 h-full w-full object-cover"
+    priority
+  />
+
+  {/* 🔵 CENTER BUTTON — MOBILE ONLY */}
+<div className="absolute inset-0 flex justify-center md:hidden">
+<div className="absolute inset-0 flex justify-center md:hidden">
+  <div className="absolute bottom-16">
+    <Button
+      size="lg"
+      className="
+        rounded-full
+        border border-[#C7BEB2]
+        bg-[#F6F2EC]
+        px-9 py-3
+        text-sm font-medium
+        text-[#3E3A34]
+        shadow-sm
+        backdrop-blur
+        transition
+        hover:bg-[#ECE6DD]
+        hover:text-[#2E2A25]
+      "
+      asChild
+    >
+      <Link href="/shop">Shop With Purpose</Link>
+    </Button>
   </div>
+</div>
+</div>
+</div>
+
+
 
   {/* 🔵 CTA BUTTON */}
   {/* <div className="w-full flex justify-center py-6">
