@@ -11,8 +11,8 @@ import { z } from "zod";
 // CONFIGURATION: Change these two lines for each folder/page
 // ---------------------------------------------------------
 const PAGE_STATUS = "new"; // Match this to your DB Enum (e.g., 'new', 'shipped', 'delivered')
-const PAGE_TITLE = "New Orders";
-const PAGE_DESC = "View all new orders placed by customers";
+const PAGE_TITLE = "Shipped Orders";
+const PAGE_DESC = "View all shipped orders";
 // ---------------------------------------------------------
 
 export const metadata: Metadata = {

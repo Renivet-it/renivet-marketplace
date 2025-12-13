@@ -16,6 +16,6 @@ export default function Page(props: PageProps) {
 async function BrandFetch({ params }: PageProps) {
     const { bId } = await params;
 
-    redirect(`/dashboard/brands/${bId}/analytics`);
+    redirect(`/dashboard/brands/${bId}/new-analytics`);
     return null;
 }
