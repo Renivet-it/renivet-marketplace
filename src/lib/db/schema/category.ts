@@ -42,7 +42,6 @@ export const productTypes = pgTable("product_types", {
             onDelete: "cascade",
         }),
           packingTypeId: uuid("packing_type_id")
-    .notNull()
     .references(() => packingTypes.id, {
       onDelete: "cascade", // safer than cascade
     }),
