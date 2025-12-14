@@ -87,7 +87,7 @@ export function PackingTypesTable({ initialData }: PageProps) {
 
   const {
     data: { data: dataRaw, count },
-  } = trpc.general.packingTypes.getPackingTypes.useQuery(undefined, {
+  } = trpc.general.packingTypes.getAll.useQuery(undefined, {
     initialData,
   });
 

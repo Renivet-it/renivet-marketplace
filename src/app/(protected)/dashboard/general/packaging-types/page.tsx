@@ -1,7 +1,7 @@
 import {
   PackingTypesPage,
   PackingTypesTable,
-} from "@/components/dashboard/general/packaing-types";
+} from "@/components/dashboard/general/packing-types";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { orderQueries } from "@/lib/db/queries";

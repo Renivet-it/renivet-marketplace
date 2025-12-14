@@ -255,7 +255,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
-                title: "Packaging Types",
+                title: "Packing Types",
                 url: "/dashboard/general/packaging-types",
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |

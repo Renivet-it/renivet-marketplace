@@ -37,6 +37,7 @@ import {
     orderIntentRouter,
     returnReplaceRouter,
     adminSupportRouter,
+    packingTypesRouter
 } from "./routes/general";
 import { addressesRouter } from "./routes/general/address";
 import { createTRPCRouter } from "./trpc";
@@ -66,6 +67,7 @@ export const appRouter = createTRPCRouter({
         returnExchangeReasons: ReasonRouter,
         returnReplace: returnReplaceRouter,
        adminSupportRouter: adminSupportRouter,
+       packingTypes: packingTypesRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,
