@@ -22,6 +22,7 @@ import {
     returnReasonDetails,
 } from "./order-return-exchange";
 import { users } from "./user";
+import { productTypes } from "./category";
 
 export const orderShipments = pgTable(
     "order_shipments",
@@ -219,7 +220,23 @@ export const exchangeShipments = pgTable(
         }).onDelete("cascade"),
     })
 );
+export const packingTypes = pgTable("packing_types", {
+  id: uuid("id").defaultRandom().primaryKey(),
 
+  // Packing Type Name
+  name: text("hs_code"),
+
+  // Base dimensions (cm)
+  baseLength: integer("base_length").notNull(),
+  baseWidth: integer("base_width").notNull(),
+  baseHeight: integer("base_height").notNull(),
+
+  // Extra CM logic (0 for soft, 2 for box, 3 for fragile)
+  extraCm: integer("extra_cm").default(0),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 export const orderShipmentsRelations = relations(
     orderShipments,
     ({ one, many }) => ({
@@ -325,4 +342,11 @@ export const exchangeShipmentMediaRelation = relations(
     ({ many }) => ({
         mediaReturn: many(mediaExchangeShipment),
     })
+);
+
+export const packingTypesRelations = relations(
+  packingTypes,
+  ({ many }) => ({
+    productTypes: many(productTypes),
+  })
 );

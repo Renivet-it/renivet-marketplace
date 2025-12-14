@@ -5,6 +5,7 @@ import { brands } from "./brand";
 import { coupons } from "./coupon";
 import { products } from "./product";
 import { users } from "./user";
+import { packingTypes } from "./order-shipment";
 
 export const categories = pgTable("categories", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
@@ -40,6 +41,12 @@ export const productTypes = pgTable("product_types", {
         .references(() => subCategories.id, {
             onDelete: "cascade",
         }),
+          packingTypeId: uuid("packing_type_id")
+    .notNull()
+    .references(() => packingTypes.id, {
+      onDelete: "cascade", // safer than cascade
+    }),
+
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
@@ -98,6 +105,11 @@ export const productTypesRelations = relations(
             fields: [productTypes.categoryId],
             references: [categories.id],
         }),
+            // ✅ NEW: Packing Type relation
+    packingType: one(packingTypes, {
+      fields: [productTypes.packingTypeId],
+      references: [packingTypes.id],
+    }),
         products: many(products),
         coupons: many(coupons),
     })
