@@ -227,9 +227,9 @@ export const packingTypes = pgTable("packing_types", {
   name: text("hs_code"),
 
   // Base dimensions (cm)
-  baseLength: integer("base_length").notNull(),
-  baseWidth: integer("base_width").notNull(),
-  baseHeight: integer("base_height").notNull(),
+  baseLength: integer("base_length").default(0),
+  baseWidth: integer("base_width").default(0),
+  baseHeight: integer("base_height").default(0),
 
   // Extra CM logic (0 for soft, 2 for box, 3 for fragile)
   extraCm: integer("extra_cm").default(0),
