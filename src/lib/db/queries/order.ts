@@ -25,6 +25,7 @@ import {
     ordersIntent,
     products as productTable,
     addresses,
+    packingTypes,
 } from "../schema";
 import {
     returnAddressDetails,
@@ -1218,6 +1219,49 @@ async getAllIntents({
 
     return data;
   }
+  async getAllPackingTypes({
+  limit,
+  page,
+  search,
+}: {
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const data = await db.query.packingTypes.findMany({
+      where: search
+        ? ilike(packingTypes.id, `%${search}%`)
+        : undefined,
+
+      limit,
+      offset: (page - 1) * limit,
+
+      orderBy: [desc(packingTypes.createdAt)],
+
+      extras: {
+        count: db
+          .$count(
+            packingTypes,
+            search
+              ? ilike(packingTypes.id, `%${search}%`)
+              : undefined
+          )
+          .as("packing_type_count"),
+      },
+    });
+
+    return {
+      data,
+      count: +data?.[0]?.count || 0,
+    };
+  } catch (error) {
+    console.error("Failed to fetch packing types:", error);
+    throw error;
+  }
 }
+
+}
+
 
 export const orderQueries = new OrderQuery();
