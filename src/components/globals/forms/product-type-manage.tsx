@@ -40,6 +40,10 @@ export function ProductTypeManageForm({ productType, setIsOpen }: PageProps) {
             description: productType?.description ?? "",
             categoryId: productType?.categoryId ?? "",
             subCategoryId: productType?.subCategoryId ?? "",
+            isFragile: productType?.isFragile ?? false,
+            override: productType?.override ?? false,
+            shipsInOwnBox: productType?.shipsInOwnBox ?? false,
+            packingTypeId: productType?.packingTypeId ?? null,
         },
     });
 
@@ -48,7 +52,11 @@ export function ProductTypeManageForm({ productType, setIsOpen }: PageProps) {
         trpc.general.categories.getCategories.useQuery();
     const { data: subCategoryData } =
         trpc.general.subCategories.getSubCategories.useQuery();
-
+    const { data: packingTypesData } =
+        trpc.general.packingTypes.getAll.useQuery({
+            page: 1,
+            limit: 100,
+        });
     const { mutate: createProductType, isPending: isProductTypeCreating } =
         trpc.general.productTypes.createProductType.useMutation({
             onMutate: () => {
@@ -239,6 +247,70 @@ export function ProductTypeManageForm({ productType, setIsOpen }: PageProps) {
                         </FormItem>
                     )}
                 />
+
+                 {/* PACKING TYPE */}
+                <FormField
+                    control={form.control}
+                    name="packingTypeId"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Packing Type</FormLabel>
+                            <Select
+                                value={field.value ?? undefined}
+                                onValueChange={field.onChange}
+                            >
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select packing type" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {packingTypesData?.data?.map((p) => (
+                                        <SelectItem key={p.id} value={p.id}>
+                                            {p.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                {/* FLAGS */}
+                <div className="rounded-md border p-4 space-y-3">
+                    {(
+                        [
+                            ["isFragile", "Is Fragile"],
+                            ["shipsInOwnBox", "Ships in own box"],
+                            ["override", "Allow override"],
+                        ] as const
+                    ).map(([name, label]) => (
+                        <FormField
+                            key={name}
+                            control={form.control}
+                            name={name}
+                            render={({ field }) => (
+                                <FormItem className="flex items-center gap-2">
+                                    <FormControl>
+                                        <input
+                                            type="checkbox"
+                                            checked={field.value}
+                                            onChange={(e) =>
+                                                field.onChange(
+                                                    e.target.checked
+                                                )
+                                            }
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="m-0">
+                                        {label}
+                                    </FormLabel>
+                                </FormItem>
+                            )}
+                        />
+                    ))}
+                </div>
 
                 <DialogFooter>
                     <DialogClose asChild>

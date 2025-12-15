@@ -150,6 +150,11 @@ export const productTypeSchema = z.object({
             .nullable()
     ),
     productCount: z.number().optional(),
+packingTypeId: z.string().uuid().nullable().optional(),
+
+  isFragile: z.boolean().default(false),
+  shipsInOwnBox: z.boolean().default(false),
+  override: z.boolean().default(false),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
