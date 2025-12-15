@@ -43,13 +43,8 @@ export function BrandProductPackingForm({
     },
   });
 
-  /* ===================== QUERIES ===================== */
-
   const { data: brands } =
-    trpc.general.brands.getBrands.useQuery({
-      page: 1,
-      limit: 1000,
-    });
+    trpc.general.brands.getBrands.useQuery({ page: 1, limit: 1000 });
 
   const { data: productTypes } =
     trpc.general.productTypes.getProductTypes.useQuery();
@@ -58,10 +53,7 @@ export function BrandProductPackingForm({
     trpc.general.subCategories.getSubCategories.useQuery();
 
   const { data: packingTypes } =
-    trpc.general.packingTypes.getAll.useQuery({
-      page: 1,
-      limit: 1000,
-    });
+    trpc.general.packingTypes.getAll.useQuery({ page: 1, limit: 100 });
 
   const { data } =
     trpc.general.brandProductTypePacking.getById.useQuery(
@@ -69,21 +61,13 @@ export function BrandProductPackingForm({
       { enabled: !!id }
     );
 
-  /* ===================== SUBCATEGORY MAP ===================== */
-
   const subCategoryMap = useMemo(() => {
-    return new Map(
-      subCategories?.data.map((s) => [s.id, s.name])
-    );
+    return new Map(subCategories?.data.map((s) => [s.id, s.name]));
   }, [subCategories]);
-
-  /* ===================== EDIT MODE ===================== */
 
   useEffect(() => {
     if (data) form.reset(data);
   }, [data, form]);
-
-  /* ===================== MUTATIONS ===================== */
 
   const create =
     trpc.general.brandProductTypePacking.create.useMutation({
@@ -104,19 +88,15 @@ export function BrandProductPackingForm({
     });
 
   const onSubmit = (values: FormValues) =>
-    id
-      ? update.mutate({ id, ...values })
-      : create.mutate(values);
-
-  /* ===================== UI ===================== */
+    id ? update.mutate({ id, ...values }) : create.mutate(values);
 
   return (
-    <form
-      onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-4"
-    >
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       {/* BRAND */}
-      <Select onValueChange={(v) => form.setValue("brandId", v)}>
+      <Select
+        value={form.watch("brandId")}
+        onValueChange={(v) => form.setValue("brandId", v)}
+      >
         <SelectTrigger>
           <SelectValue placeholder="Select Brand" />
         </SelectTrigger>
@@ -129,29 +109,22 @@ export function BrandProductPackingForm({
         </SelectContent>
       </Select>
 
-      {/* PRODUCT TYPE (WITH SUBCATEGORY) */}
+      {/* PRODUCT TYPE */}
       <Select
-        onValueChange={(v) =>
-          form.setValue("productTypeId", v)
-        }
+        value={form.watch("productTypeId")}
+        onValueChange={(v) => form.setValue("productTypeId", v)}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select Product Type" />
         </SelectTrigger>
         <SelectContent>
           {productTypes?.data.map((p) => {
-            const subCategoryName = subCategoryMap.get(
-              p.subCategoryId
-            );
-
+            const sub = subCategoryMap.get(p.subCategoryId);
             return (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
-                {subCategoryName && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    ({subCategoryName})
-                  </span>
+                {sub && (
+                  <span className="text-muted-foreground"> ({sub})</span>
                 )}
               </SelectItem>
             );
@@ -161,8 +134,9 @@ export function BrandProductPackingForm({
 
       {/* PACKING TYPE */}
       <Select
+        value={form.watch("packingTypeId") ?? ""}
         onValueChange={(v) =>
-          form.setValue("packingTypeId", v)
+          form.setValue("packingTypeId", v || null)
         }
       >
         <SelectTrigger>
@@ -181,9 +155,7 @@ export function BrandProductPackingForm({
       <label className="flex items-center gap-2">
         <Checkbox
           checked={form.watch("isFragile")}
-          onCheckedChange={(v) =>
-            form.setValue("isFragile", !!v)
-          }
+          onCheckedChange={(v) => form.setValue("isFragile", !!v)}
         />
         Fragile
       </label>
