@@ -24,7 +24,7 @@ import { PackingTypeAction } from "./packing-type-action";
 
 export type TablePackingType = {
   id: string;
-  hsCode: string | null;
+  name: string | null;
   baseLength: number;
   baseWidth: number;
   baseHeight: number;
@@ -84,12 +84,21 @@ export function PackingTypesTable({ initialData }: PageProps) {
   const [columnVisibility, setColumnVisibility] =
     useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+const [search] = useQueryState("search");
 
-  const {
-    data: { data: dataRaw, count },
-  } = trpc.general.packingTypes.getAll.useQuery(undefined, {
+const {
+  data: { data: dataRaw, count },
+} = trpc.general.packingTypes.getAll.useQuery(
+  {
+    page,
+    limit,
+    search: search ?? undefined,
+  },
+  {
     initialData,
-  });
+  }
+);
+
 
   const pages = useMemo(
     () => Math.ceil(count / limit) || 1,
@@ -128,12 +137,12 @@ export function PackingTypesTable({ initialData }: PageProps) {
             placeholder="Search by HS code..."
             value={
               (table
-                .getColumn("hsCode")
+                .getColumn("name")
                 ?.getFilterValue() as string) ?? ""
             }
             onChange={(event) =>
               table
-                .getColumn("hsCode")
+                .getColumn("name")
                 ?.setFilterValue(event.target.value)
             }
           />
