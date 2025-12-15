@@ -1,7 +1,8 @@
 import {
-  PackingTypesPage,
-  PackingTypesTable,
-} from "@/components/dashboard/general/packing-types";
+  BrandProductPackingPage,
+  BrandProductPackingTable,
+} from "@/components/dashboard/general/brand-packing-types";
+
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { orderQueries } from "@/lib/db/queries";
@@ -32,7 +33,7 @@ export default function Page(props: PageProps) {
           </p>
         </div>
 
-        <PackingTypesPage />
+        <BrandProductPackingPage />
       </div>
 
       <Suspense fallback={<TableSkeleton />}>
@@ -65,5 +66,4 @@ async function PackingTypesFetch({ searchParams }: PageProps) {
 
   // same pattern as Orders
   // @ts-ignore
-  return <PackingTypesTable initialData={data} />;
-}
+  return <BrandProductPackingTable initialData={data} />;

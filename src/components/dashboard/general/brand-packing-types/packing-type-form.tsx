@@ -12,7 +12,7 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 type FormValues = {
   brandId: string;
@@ -43,14 +43,24 @@ export function BrandProductPackingForm({
     },
   });
 
+  /* ===================== QUERIES ===================== */
+
   const { data: brands } =
-    trpc.general.brands.getAll.useQuery();
+    trpc.general.brands.getBrands.useQuery({
+      page: 1,
+      limit: 1000,
+    });
+
   const { data: productTypes } =
     trpc.general.productTypes.getProductTypes.useQuery();
+
+  const { data: subCategories } =
+    trpc.general.subCategories.getSubCategories.useQuery();
+
   const { data: packingTypes } =
     trpc.general.packingTypes.getAll.useQuery({
       page: 1,
-      limit: 100,
+      limit: 1000,
     });
 
   const { data } =
@@ -59,9 +69,21 @@ export function BrandProductPackingForm({
       { enabled: !!id }
     );
 
+  /* ===================== SUBCATEGORY MAP ===================== */
+
+  const subCategoryMap = useMemo(() => {
+    return new Map(
+      subCategories?.data.map((s) => [s.id, s.name])
+    );
+  }, [subCategories]);
+
+  /* ===================== EDIT MODE ===================== */
+
   useEffect(() => {
     if (data) form.reset(data);
-  }, [data]);
+  }, [data, form]);
+
+  /* ===================== MUTATIONS ===================== */
 
   const create =
     trpc.general.brandProductTypePacking.create.useMutation({
@@ -86,12 +108,14 @@ export function BrandProductPackingForm({
       ? update.mutate({ id, ...values })
       : create.mutate(values);
 
+  /* ===================== UI ===================== */
+
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
       className="space-y-4"
     >
-      {/* Brand */}
+      {/* BRAND */}
       <Select onValueChange={(v) => form.setValue("brandId", v)}>
         <SelectTrigger>
           <SelectValue placeholder="Select Brand" />
@@ -105,7 +129,7 @@ export function BrandProductPackingForm({
         </SelectContent>
       </Select>
 
-      {/* Product Type */}
+      {/* PRODUCT TYPE (WITH SUBCATEGORY) */}
       <Select
         onValueChange={(v) =>
           form.setValue("productTypeId", v)
@@ -115,15 +139,27 @@ export function BrandProductPackingForm({
           <SelectValue placeholder="Select Product Type" />
         </SelectTrigger>
         <SelectContent>
-          {productTypes?.data.map((p) => (
-            <SelectItem key={p.id} value={p.id}>
-              {p.name}
-            </SelectItem>
-          ))}
+          {productTypes?.data.map((p) => {
+            const subCategoryName = subCategoryMap.get(
+              p.subCategoryId
+            );
+
+            return (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+                {subCategoryName && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({subCategoryName})
+                  </span>
+                )}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
 
-      {/* Packing Type */}
+      {/* PACKING TYPE */}
       <Select
         onValueChange={(v) =>
           form.setValue("packingTypeId", v)
@@ -143,17 +179,32 @@ export function BrandProductPackingForm({
 
       {/* FLAGS */}
       <label className="flex items-center gap-2">
-        <Checkbox {...form.register("isFragile")} />
+        <Checkbox
+          checked={form.watch("isFragile")}
+          onCheckedChange={(v) =>
+            form.setValue("isFragile", !!v)
+          }
+        />
         Fragile
       </label>
 
       <label className="flex items-center gap-2">
-        <Checkbox {...form.register("shipsInOwnBox")} />
+        <Checkbox
+          checked={form.watch("shipsInOwnBox")}
+          onCheckedChange={(v) =>
+            form.setValue("shipsInOwnBox", !!v)
+          }
+        />
         Ships in Own Box
       </label>
 
       <label className="flex items-center gap-2">
-        <Checkbox {...form.register("canOverride")} />
+        <Checkbox
+          checked={form.watch("canOverride")}
+          onCheckedChange={(v) =>
+            form.setValue("canOverride", !!v)
+          }
+        />
         Can Override
       </label>
 
