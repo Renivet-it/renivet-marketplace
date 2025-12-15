@@ -36,8 +36,8 @@ export type TablePackingType = {
 
 const columns: ColumnDef<TablePackingType>[] = [
   {
-    accessorKey: "hsCode",
-    header: "HS Code",
+    accessorKey: "name",
+    header: "Name",
   },
   {
     header: "Base Size (L × W × H)",

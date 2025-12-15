@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { coupons } from "./coupon";
@@ -45,7 +45,11 @@ export const productTypes = pgTable("product_types", {
     .references(() => packingTypes.id, {
       onDelete: "cascade", // safer than cascade
     }),
+ isFragile: boolean("is_fragile").default(false),
 
+  shipsInOwnBox: boolean("ships_in_own_box")
+    .default(false),
+    override:boolean("can_override").default(false),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),

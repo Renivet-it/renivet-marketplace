@@ -17,6 +17,9 @@ const packingTypeBaseSchema = z.object({
   baseWidth: z.number().int().min(0),
   baseHeight: z.number().int().min(0),
   extraCm: z.number().int().min(0),
+    name: z
+    .string()
+    .trim()
 });
 
 const createPackingTypeSchema = packingTypeBaseSchema;
