@@ -39,13 +39,32 @@ const columns: ColumnDef<TablePackingType>[] = [
     accessorKey: "name",
     header: "Name",
   },
+  // {
+  //   header: "Base Size (L × W × H)",
+  //   cell: ({ row }) => {
+  //     const d = row.original;
+  //     return `${d.baseLength} × ${d.baseWidth} × ${d.baseHeight} cm`;
+  //   },
+  // },
   {
-    header: "Base Size (L × W × H)",
-    cell: ({ row }) => {
-      const d = row.original;
-      return `${d.baseLength} × ${d.baseWidth} × ${d.baseHeight} cm`;
-    },
+  header: "Base Size (L × W × H)",
+  cell: ({ row }) => {
+    const { baseLength, baseWidth, baseHeight } = row.original;
+
+    const hasValidSize =
+      baseLength > 0 && baseWidth > 0 && baseHeight > 0;
+
+    if (!hasValidSize) {
+      return (
+        <span className="text-muted-foreground">
+          Box Size
+        </span>
+      );
+    }
+
+    return `${baseLength} × ${baseWidth} × ${baseHeight} cm`;
   },
+},
   {
     accessorKey: "extraCm",
     header: "Extra CM",
