@@ -527,6 +527,68 @@ if (isHardOrFragileBox) {
                         baseHeight,
                         extraCm,
                         });
+try {
+  const reasons: string[] = [];
+  const violatedRules: string[] = [];
+
+  const actualWeight = validatedDimensions.weight; // grams
+  const volumetric = finalVolumetricWeight;
+
+  const { length, width, height } = validatedDimensions;
+
+  // Rule 1: Volumetric < Actual
+  if (volumetric < actualWeight) {
+    reasons.push("Volumetric weight is less than actual weight");
+    violatedRules.push("VOLUMETRIC_LESS_THAN_ACTUAL");
+  }
+
+  // Rule 2: Any dimension > 70 cm
+  if (length > 70 || width > 70 || height > 70) {
+    reasons.push("One or more dimensions exceed 70 cm");
+    violatedRules.push("OVERSIZE_DIMENSION");
+  }
+
+  // Rule 3: Any dimension < 4 cm
+  if (length < 4 || width < 4 || height < 4) {
+    reasons.push("One or more dimensions are less than 4 cm");
+    violatedRules.push("UNDERSIZE_DIMENSION");
+  }
+
+  // Rule 4: Small volume but heavy
+  const volume = length * width * height;
+  if (volume < 1000) {
+    reasons.push("Small volume but high weight");
+    violatedRules.push("HEAVY_SMALL_PACKAGE");
+  }
+
+  // ✅ INSERT ONLY IF VIOLATED
+  if (violatedRules.length > 0) {
+    await db.insert(schemas.shipmentDiscrepancies).values({
+      orderId: newOrder.id,
+      productId: item.productId,
+      brandId: item.brandId,
+      brandPackingId: packingRule?.id ?? null,
+
+      actualWeight,
+      volumetricWeight: volumetric,
+
+      length,
+      width,
+      height,
+
+      reason: reasons.join(" | "),
+      rulesViolated: violatedRules,
+    });
+
+    console.log("🚨 Shipment discrepancy logged", {
+      orderId: newOrder.id,
+      violatedRules,
+    });
+  }
+} catch (discrepancyError) {
+  // 🔥 IMPORTANT: Never break order flow
+  console.error("Discrepancy logging failed:", discrepancyError);
+}
 
                       const delhiveryPayload = {
                         pickup_location: {
