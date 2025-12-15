@@ -748,9 +748,27 @@ export const productVariantGroupSchema = z.object({
 
 export const productWithBrandSchema = productSchema.extend({
     // brand: z.lazy(() => brandSchema),
-        brand: z.lazy(() => brandSchema.extend({
-        confidential: brandConfidentialSchema.nullable().optional()
-    })),
+    //     brand: z.lazy(() => brandSchema.extend({
+    //     confidential: brandConfidentialSchema.nullable().optional()
+    // })),
+     brand: z.lazy(() =>
+    brandSchema.extend({
+      confidential: brandConfidentialSchema.nullable().optional(),
+
+      packingRules: z.array(
+        z.object({
+          id: z.string().uuid(),
+          productTypeId: z.string().uuid(),
+
+          isFragile: z.boolean(),
+          shipsInOwnBox: z.boolean(),
+          canOverride: z.boolean(),
+
+          packingType: packingTypeSchema.nullable(),
+        })
+      ).default([]),
+    })
+  ),
     options: z.array(productOptionSchema),
     variants: z.array(enhancedProductVariantSchema),
     returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),

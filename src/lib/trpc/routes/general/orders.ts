@@ -40,6 +40,14 @@ import { z } from "zod";
 import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
 import { orderShipments } from "@/lib/db/schema/order-shipment";
 
+function resolveBrandPackingRule(product: any) {
+  if (!product?.brand?.packingRules?.length) return null;
+
+  return product.brand.packingRules.find(
+    (rule: any) =>
+      rule.productTypeId === product.productTypeId
+  );
+}
 
 async function createShiprocketOrderWithRetry(
     sr: any,
@@ -438,9 +446,9 @@ export const ordersRouter = createTRPCRouter({
                     // Ensure dimensions meet Shiprocket's minimum requirements
                     const validatedDimensions = {
                         weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams
-                        length: Math.max(orderDimensions.length, 100), // Minimum 100 cm
-                        width: Math.max(orderDimensions.width, 100), // Minimum 100 cm
-                        height: Math.max(orderDimensions.height, 100), // Minimum 100 cm
+                        length: Math.max(orderDimensions.length), // Minimum 100 cm
+                        width: Math.max(orderDimensions.width), // Minimum 100 cm
+                        height: Math.max(orderDimensions.height), // Minimum 100 cm
                     };
                     console.log(
                         `Validated dimensions for brand ${brand.name}:`,
@@ -477,13 +485,49 @@ export const ordersRouter = createTRPCRouter({
                         orderItemsForShiprocket
                     );
 
-const packingType = product?.productType?.packingType;
+                        const packingRule = resolveBrandPackingRule(product);
+                        const packingTypeName =
+                        packingRule?.packingType?.name?.toLowerCase();
 
-const baseLength = packingType?.baseLength ?? 0;
-const baseWidth = packingType?.baseWidth ?? 0;
-const baseHeight = packingType?.baseHeight ?? 0;
-const extraCm = packingType?.extraCm ?? 0;
-const volumetricWeightKg = (baseLength * baseWidth * baseHeight) / 5;
+                        const isHardOrFragileBox =
+                        packingTypeName === "hard box" ||
+                        packingTypeName === "fragile box";
+                        console.log("📦 Resolved packing rule:", packingRule);
+                        const baseLength =
+                        packingRule?.packingType?.baseLength ?? 0;
+
+                        const baseWidth =
+                        packingRule?.packingType?.baseWidth ?? 0;
+
+                        const baseHeight =
+                        packingRule?.packingType?.baseHeight ?? 0;
+
+                        const extraCm =
+                        packingRule?.packingType?.extraCm ?? 0;
+
+const volumetricWeight = (baseLength * baseWidth * baseHeight) / 5;
+let finalVolumetricWeight = volumetricWeight;
+if (isHardOrFragileBox) {
+  const boxLength = packingRule?.packingType?.baseLength ?? 0;
+  const boxWidth = packingRule?.packingType?.baseWidth ?? 0;
+  const boxHeight = packingRule?.packingType?.baseHeight ?? 0;
+
+  const combinedLength = validatedDimensions.length + boxLength;
+  const combinedWidth = validatedDimensions.width + boxWidth;
+  const combinedHeight = validatedDimensions.height + boxHeight;
+
+  // 🔥 ONLY HERE volumetric is recalculated
+  finalVolumetricWeight =
+    (combinedLength * combinedWidth * combinedHeight) / 5;
+}
+
+                        console.log("📐 Packing dimensions resolved:", {
+                        baseLength,
+                        baseWidth,
+                        baseHeight,
+                        extraCm,
+                        });
+
                       const delhiveryPayload = {
                         pickup_location: {
                         name: pickupLocation, // must match registered Delhivery pickup name
@@ -508,7 +552,7 @@ const volumetricWeightKg = (baseLength * baseWidth * baseHeight) / 5;
                             product?.title ||
                             variant?.sku ||
                             "General Product",
-                          weight: validatedDimensions.weight / 1000, // grams → kg
+                          weight: finalVolumetricWeight, // grams → kg
                           shipment_length: validatedDimensions.length / 10, // cm → mm optional
                           shipment_width: validatedDimensions.width / 10,
                           shipment_height: validatedDimensions.height / 10,

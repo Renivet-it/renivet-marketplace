@@ -23,6 +23,7 @@ import {
 } from "./order-return-exchange";
 import { users } from "./user";
 import { productTypes } from "./category";
+import { products } from "./product";
 
 export const orderShipments = pgTable(
     "order_shipments",
@@ -277,6 +278,68 @@ export const brandProductTypePacking = pgTable(
     ).on(table.brandId, table.productTypeId),
   })
 );
+
+export const shipmentDiscrepancies = pgTable(
+  "shipment_discrepancies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+
+    // 🔥 Brand packing rule used at shipment time
+    brandPackingId: uuid("brand_packing_id")
+      .references(() => brandProductTypePacking.id, { onDelete: "set null" }),
+
+    actualWeight: integer("actual_weight").notNull(), // grams
+    volumetricWeight: integer("volumetric_weight").notNull(),
+
+    length: integer("length").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+
+    reason: text("reason").notNull(),
+    rulesViolated: jsonb("rules_violated").notNull(),
+
+    createdAt: timestamp("created_at").defaultNow(),
+  }
+);
+
+export const shipmentDiscrepanciesRelations = relations(
+  shipmentDiscrepancies,
+  ({ one }) => ({
+    order: one(orders, {
+      fields: [shipmentDiscrepancies.orderId],
+      references: [orders.id],
+    }),
+
+    product: one(products, {
+      fields: [shipmentDiscrepancies.productId],
+      references: [products.id],
+    }),
+
+    brand: one(brands, {
+      fields: [shipmentDiscrepancies.brandId],
+      references: [brands.id],
+    }),
+
+    brandProductTypePacking: one(brandProductTypePacking, {
+      fields: [shipmentDiscrepancies.brandPackingId],
+      references: [brandProductTypePacking.id],
+    }),
+  })
+);
+
+
 export const brandProductTypePackingRelations = relations(
   brandProductTypePacking,
   ({ one }) => ({
