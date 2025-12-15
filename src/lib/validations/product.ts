@@ -7,6 +7,7 @@ import {
     productTypeSchema,
     subCategorySchema,
 } from "./category";
+
 import { brandConfidentialSchema } from "./brand-confidential";
 
 export const productOptionValueSchema = z.object({
@@ -757,11 +758,30 @@ export const productWithBrandSchema = productSchema.extend({
     sustainabilityCertificate: cachedBrandMediaItemSchema.nullish(),
     category: categorySchema,
     subcategory: subCategorySchema,
-    productType: productTypeSchema,
+    // productType: productTypeSchema,
+    productType: z.lazy(() =>
+  productTypeSchema.extend({
+    packingType: packingTypeSchema.nullable().optional(),
+  })
+),
+
     journey: productJourneySchema.nullable(),
     values: productValueSchema.nullable(),
         confidentialData: brandConfidentialSchema.optional() // ← Add this line
 
+});
+export const packingTypeSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+
+
+  baseLength: z.number().int(),
+  baseWidth: z.number().int(),
+  baseHeight: z.number().int(),
+  extraCm: z.number().int().optional(),
+
+  createdAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
+  updatedAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
 });
 
 export const createProductSchema = productSchema

@@ -13,7 +13,7 @@ import {
     returnShipmentPayment,
     returnShipmentReason,
 } from "@/lib/validations/order-return";
-import { and, desc, eq, gte, ilike, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "..";
 import {
     orderItems,
@@ -26,6 +26,9 @@ import {
     products as productTable,
     addresses,
     packingTypes,
+    brands,
+    productTypes,
+    brandProductTypePacking,
 } from "../schema";
 import {
     returnAddressDetails,
@@ -1260,6 +1263,66 @@ async getAllIntents({
     throw error;
   }
 }
+
+async getAllBrandProductTypePacking({
+  limit,
+  page,
+  search,
+}: {
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const data = await db.query.brandProductTypePacking.findMany({
+      where: search
+        ? or(
+            ilike(brands.name, `%${search}%`),
+            ilike(productTypes.name, `%${search}%`),
+            ilike(packingTypes.name, `%${search}%`)
+          )
+        : undefined,
+
+      with: {
+        brand: true,
+        productType: true,
+        packingType: true,
+      },
+
+      limit,
+      offset: (page - 1) * limit,
+
+      orderBy: desc(brandProductTypePacking.createdAt),
+
+      extras: {
+        count: db
+          .$count(
+            brandProductTypePacking,
+            search
+              ? or(
+                  ilike(brands.name, `%${search}%`),
+                  ilike(productTypes.name, `%${search}%`),
+                  ilike(packingTypes.name, `%${search}%`)
+                )
+              : undefined
+          )
+          .as("brand_product_type_packing_count"),
+      },
+    });
+
+    return {
+      data,
+      count: Number(data?.[0]?.count) || 0,
+    };
+  } catch (error) {
+    console.error(
+      "Failed to fetch brand-product-type packing configs:",
+      error
+    );
+    throw error;
+  }
+}
+
 
 }
 

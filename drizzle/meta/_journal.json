@@ -1401,6 +1401,13 @@
       "when": 1765806899482,
       "tag": "0199_curly_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 200,
+      "version": "7",
+      "when": 1765826389990,
+      "tag": "0200_red_silhouette",
+      "breakpoints": true
     }
   ]
 }

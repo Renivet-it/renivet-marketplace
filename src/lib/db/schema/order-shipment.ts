@@ -237,6 +237,66 @@ export const packingTypes = pgTable("packing_types", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const brandProductTypePacking = pgTable(
+  "brand_product_type_packing",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    // 🔗 Relations
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+
+    productTypeId: uuid("product_type_id")
+      .notNull()
+      .references(() => productTypes.id, { onDelete: "cascade" }),
+
+    packingTypeId: uuid("packing_type_id")
+      .references(() => packingTypes.id, { onDelete: "set null" }),
+
+    // 🚚 Shipping flags
+    isFragile: boolean("is_fragile").notNull().default(false),
+
+    shipsInOwnBox: boolean("ships_in_own_box")
+      .notNull()
+      .default(false),
+
+    canOverride: boolean("can_override")
+      .notNull()
+      .default(false),
+
+    // 🕒 Meta
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    // 🚨 IMPORTANT: prevent duplicates
+    brandProductTypeUniqueIdx: index(
+      "brand_product_type_unique_idx"
+    ).on(table.brandId, table.productTypeId),
+  })
+);
+export const brandProductTypePackingRelations = relations(
+  brandProductTypePacking,
+  ({ one }) => ({
+    brand: one(brands, {
+      fields: [brandProductTypePacking.brandId],
+      references: [brands.id],
+    }),
+
+    productType: one(productTypes, {
+      fields: [brandProductTypePacking.productTypeId],
+      references: [productTypes.id],
+    }),
+
+    packingType: one(packingTypes, {
+      fields: [brandProductTypePacking.packingTypeId],
+      references: [packingTypes.id],
+    }),
+  })
+);
+
 export const orderShipmentsRelations = relations(
     orderShipments,
     ({ one, many }) => ({

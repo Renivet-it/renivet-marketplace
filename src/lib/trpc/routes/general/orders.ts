@@ -477,47 +477,13 @@ export const ordersRouter = createTRPCRouter({
                         orderItemsForShiprocket
                     );
 
-                    // const srOrderRequest = {
-                    //     order_id: orderId,
-                    //     order_date: format(new Date(), "yyyy-MM-dd"),
-                    //     pickup_location: pickupLocation || "DefaultPickup",
-                    //     billing_customer_name:
-                    //         existingAddress.fullName.split(" ")[0] ||
-                    //         "Customer",
-                    //     billing_last_name:
-                    //         existingAddress.fullName.split(" ")[1] || "",
-                    //     billing_address:
-                    //         existingAddress.street || "Unknown Street",
-                    //     billing_city: existingAddress.city || "Delhi",
-                    //     billing_pincode: +existingAddress.zip || 110001,
-                    //     billing_state: existingAddress.state || "Delhi",
-                    //     billing_country: "India",
-                    //     billing_email: user.email || "test@example.com",
-                    //     billing_phone: getRawNumberFromPhone(
-                    //         existingAddress.phone
-                    //     ),
-                    //     shipping_is_billing: true,
-                    //     order_items: orderItemsForShiprocket,
-                    //     payment_method: (input.paymentMethod === "COD"
-                    //         ? "COD"
-                    //         : "Prepaid") as "COD" | "Prepaid",
-                    //     sub_total: Math.floor(
-                    //         +convertPaiseToRupees(orderValue)
-                    //     ),
-                    //     length: Math.max(orderDimensions.length, 0.5),
-                    //     breadth: Math.max(orderDimensions.width, 0.5),
-                    //     height: Math.max(orderDimensions.height, 0.5),
-                    //     weight: +(
-                    //         Math.max(orderDimensions.weight, 0.1) / 1000
-                    //     ).toFixed(2),
-                    // };
-                    // console.log(
-                    //     `Shiprocket order request for brand ${brand.name}:`,
-                    //     srOrderRequest
-                    // );
-                    // ✅ Step 1: Check if intent exists in last 2 minutes before updating
-                    // ✅ Step 1: Fetch all intents from last 2 minutes
+const packingType = product?.productType?.packingType;
 
+const baseLength = packingType?.baseLength ?? 0;
+const baseWidth = packingType?.baseWidth ?? 0;
+const baseHeight = packingType?.baseHeight ?? 0;
+const extraCm = packingType?.extraCm ?? 0;
+const volumetricWeightKg = (baseLength * baseWidth * baseHeight) / 5;
                       const delhiveryPayload = {
                         pickup_location: {
                         name: pickupLocation, // must match registered Delhivery pickup name

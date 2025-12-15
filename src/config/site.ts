@@ -262,6 +262,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
+                title: "Brand wise Packing Types",
+                url: "/dashboard/general/brand-packaging-types",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
                 title: "Subscribers",
                 url: "/dashboard/general/subscribers",
                 permissions:
