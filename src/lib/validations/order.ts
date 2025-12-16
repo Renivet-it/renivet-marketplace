@@ -61,6 +61,9 @@ export const orderSchema = z.object({
     delhiveryClientId: z.string().nullable().optional(),
     courierName: z.string().nullable().optional(), // Added new field
     delhiverySortCode: z.string().nullable().optional(),
+    givenLength: z.number().nullable().optional(),
+    givenWidth: z.number().nullable().optional(),
+    givenHeight: z.number().nullable().optional(),
     shipmentStatus: z.string().nullable().optional(), // Added new field
     delhiveryTrackingJson: z.object({}).nullable().default({}).optional(),
     street: z.string().nullable().optional(),

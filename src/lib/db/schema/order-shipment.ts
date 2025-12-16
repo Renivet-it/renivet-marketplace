@@ -43,6 +43,9 @@ export const orderShipments = pgTable(
         awbNumber: text("awb_number"),
         uploadWbn: text("upload_wbn"),
         delhiveryClientId: text("delhivery_client_id"),
+        givenLength: integer("given_length"),
+        givenWidth: integer("given_width"),
+        givenHeight: integer("given_height"),
         delhiverySortCode: text("delhivery_sort_code"),
         trackingNumber: text("tracking_number"),
         status: text("status", {

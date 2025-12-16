@@ -675,6 +675,15 @@ try {
                         // );
                     const srOrder = await createDelhiveryOrder(delhiveryPayload);
  console.log("✅ Delhivery Response:", srOrder);
+ let finalLength = baseLength;
+let finalWidth = baseWidth;
+let finalHeight = baseHeight;
+
+if (isHardOrFragileBox) {
+  finalLength = validatedDimensions.length + baseLength;
+  finalWidth = validatedDimensions.width + baseWidth;
+  finalHeight = validatedDimensions.height + baseHeight;
+}
                         if (matchedIntent) {
                             await db
                                 .update(schemas.ordersIntent)
@@ -723,6 +732,9 @@ try {
                                 courierName: "Delhivery", // fixed since courier is always Delhivery
                                 awbNumber: pkg?.waybill || null, // MAIN AWB FROM DELHIVERY
                                 isAwbGenerated: true,
+                                givenLength: finalLength,
+                                givenWidth: finalWidth,
+                                givenHeight: finalHeight,
                             })
                             .returning()
                             .then((res) => res[0]);
