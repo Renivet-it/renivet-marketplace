@@ -219,16 +219,16 @@ import { OrderAction } from "./order-action";
 
 export type TableOrder = Order;
 
-/* --------------------------------------------------
+/* ----------------------------------------
    Helpers
--------------------------------------------------- */
+---------------------------------------- */
 
 const volumetricWeightGrams = (l: number, b: number, h: number) =>
-  Math.round(((l * b * h) / 5) * 1000);
+  Math.round(((l * b * h) / 5));
 
-/* --------------------------------------------------
+/* ----------------------------------------
    Dimension Edit Modal
--------------------------------------------------- */
+---------------------------------------- */
 
 function DimensionEditModal({
   open,
@@ -239,23 +239,43 @@ function DimensionEditModal({
   onClose: () => void;
   order: TableOrder;
 }) {
-  const [length, setLength] = useState(order?.givenLength ?? 0);
-  const [breadth, setBreadth] = useState(order?.givenWidth ?? 0);
-  const [height, setHeight] = useState(order?.givenHeight ?? 0);
+  // ✅ STRING STATE (IMPORTANT)
+  const [length, setLength] = useState(
+    order?.givenLength !== null && order?.givenLength !== undefined
+      ? String(order.givenLength)
+      : ""
+  );
+  const [breadth, setBreadth] = useState(
+    order?.givenWidth !== null && order?.givenWidth !== undefined
+      ? String(order.givenWidth)
+      : ""
+  );
+  const [height, setHeight] = useState(
+    order?.givenHeight !== null && order?.givenHeight !== undefined
+      ? String(order.givenHeight)
+      : ""
+  );
 
-  const volWeight = volumetricWeightGrams(length, breadth, height);
+  // convert safely
+  const l = Number(length);
+  const b = Number(breadth);
+  const h = Number(height);
+
+  const volWeight =
+    l > 0 && b > 0 && h > 0
+      ? Math.round((l * b * h) / 5)
+      : 0;
 
   const handleSave = () => {
     const payload = {
       orderId: order.id,
-      length,
-      breadth,
-      height,
+      givenLength: l || null,
+      givenWidth: b || null,
+      givenHeight: h || null,
       volumetricWeight: volWeight,
     };
 
     console.log("📦 DIMENSION PAYLOAD READY:", payload);
-    // 🔥 API call will go here later
     onClose();
   };
 
@@ -266,26 +286,41 @@ function DimensionEditModal({
           <DialogTitle>Edit Package Dimensions</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3">
-          <Input
-            type="number"
-            placeholder="Length (cm)"
-            value={length}
-            onChange={(e) => setLength(+e.target.value)}
-          />
-          <Input
-            type="number"
-            placeholder="Breadth (cm)"
-            value={breadth}
-            onChange={(e) => setBreadth(+e.target.value)}
-          />
-          <Input
-            type="number"
-            placeholder="Height (cm)"
-            value={height}
-            onChange={(e) => setHeight(+e.target.value)}
-          />
+        <div className="space-y-4">
+          {/* Length */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Length (cm)</label>
+            <Input
+              type="number"
+              value={length}
+              placeholder="Enter length"
+              onChange={(e) => setLength(e.target.value)}
+            />
+          </div>
 
+          {/* Breadth */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Breadth (cm)</label>
+            <Input
+              type="number"
+              value={breadth}
+              placeholder="Enter breadth"
+              onChange={(e) => setBreadth(e.target.value)}
+            />
+          </div>
+
+          {/* Height */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Height (cm)</label>
+            <Input
+              type="number"
+              value={height}
+              placeholder="Enter height"
+              onChange={(e) => setHeight(e.target.value)}
+            />
+          </div>
+
+          {/* Volumetric weight */}
           <div className="text-sm text-muted-foreground">
             Volumetric Weight:{" "}
             <span className="font-semibold text-foreground">
@@ -305,11 +340,15 @@ function DimensionEditModal({
   );
 }
 
-/* --------------------------------------------------
-   Columns
--------------------------------------------------- */
 
-const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
+/* ----------------------------------------
+   Columns
+---------------------------------------- */
+
+const columns = (
+  onAction: () => void,
+  onEdit: (order: TableOrder) => void
+): ColumnDef<TableOrder>[] => [
   {
     accessorKey: "id",
     header: "Order ID",
@@ -345,19 +384,29 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
     header: "Dimensions",
     cell: ({ row }) => {
       const d = row.original;
-      console.log(d, "order data for dimensions");
-      const l = d.givenLength ?? 0;
-      const b = d.givenWidth ?? 0;
-      const h = d.givenHeight ?? 0;
 
-      const canEdit = d.status !== "cancelled" && d.status !== "delivered" && d.status !== "shipped";
+      const l = d?.givenLength ?? 0;
+      const b = d?.givenWidth ?? 0;
+      const h = d?.givenHeight ?? 0;
+
       const vol = volumetricWeightGrams(l, b, h);
+      const canEdit =
+        d.status !== "cancelled" &&
+        d.status !== "delivered" &&
+        d.status !== "shipped";
 
       return (
         <div className="space-y-1 text-xs">
           <div>{`${l} × ${b} × ${h} cm`}</div>
           <div className="text-muted-foreground">{vol} g</div>
-          {canEdit && <span className="text-blue-500">Edit</span>}
+          {canEdit && (
+            <button
+              className="text-blue-500 hover:underline text-xs"
+              onClick={() => onEdit(d)}
+            >
+              Edit
+            </button>
+          )}
         </div>
       );
     },
@@ -383,9 +432,9 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
   },
 ];
 
-/* --------------------------------------------------
-   Table Component
--------------------------------------------------- */
+/* ----------------------------------------
+   Orders Table
+---------------------------------------- */
 
 interface PageProps {
   initialData: Order[];
@@ -402,13 +451,15 @@ export function OrdersTable({
 }: PageProps) {
   const [page] = useQueryState("page", parseAsInteger.withDefault(1));
   const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] =
     useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  const [selectedOrder, setSelectedOrder] = useState<TableOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] =
+    useState<TableOrder | null>(null);
 
   const { data, refetch } =
     trpc.brands.orders.getOrdersByBrandId.useQuery(
@@ -423,7 +474,7 @@ export function OrdersTable({
 
   const table = useReactTable({
     data: data?.data ?? [],
-    columns: columns(refetch),
+    columns: columns(refetch, setSelectedOrder),
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -438,7 +489,7 @@ export function OrdersTable({
   return (
     <>
       <DataTable
-        columns={columns(refetch)}
+        columns={columns(refetch, setSelectedOrder)}
         table={table}
         pages={Math.ceil((data?.total ?? 0) / limit)}
         count={data?.total ?? 0}
