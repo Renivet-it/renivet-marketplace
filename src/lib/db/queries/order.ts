@@ -29,6 +29,7 @@ import {
     brands,
     productTypes,
     brandProductTypePacking,
+    shipmentDiscrepancies,
 } from "../schema";
 import {
     returnAddressDetails,
@@ -1323,6 +1324,60 @@ async getAllBrandProductTypePacking({
   }
 }
 
+
+// lib/db/queries/discrepancy.ts
+
+async getAllShipmentDiscrepancies({
+  page,
+  limit,
+  search,
+}: {
+  page: number;
+  limit: number;
+  search?: string;
+}) {
+  try {
+    const offset = (page - 1) * limit;
+
+    const searchCondition = search
+      ? or(
+          ilike(shipmentDiscrepancies.orderId, `%${search}%`),
+          ilike(brands.name, `%${search}%`),
+          ilike(products.title, `%${search}%`)
+        )
+      : undefined;
+
+    const data = await db.query.shipmentDiscrepancies.findMany({
+      where: searchCondition,
+
+      with: {
+        order: true,
+        product: true,
+        brand: true,
+        brandProductTypePacking: true, // ✅ relation name
+      },
+
+      limit,
+      offset,
+
+      orderBy: desc(shipmentDiscrepancies.createdAt),
+
+      extras: {
+        count: db
+          .$count(shipmentDiscrepancies, searchCondition)
+          .as("shipment_discrepancy_count"),
+      },
+    });
+
+    return {
+      data,
+      count: Number(data?.[0]?.count) || 0,
+    };
+  } catch (error) {
+    console.error("Failed to fetch shipment discrepancies:", error);
+    throw error;
+  }
+}
 
 }
 

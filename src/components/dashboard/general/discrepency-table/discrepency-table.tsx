@@ -15,66 +15,67 @@ import {
   useQueryState,
 } from "nuqs";
 import { useEffect, useMemo } from "react";
-import { BrandProductPackingAction } from "./packing-type-action";
 
 /* ================= TYPES ================= */
 
-export type TableBrandProductPacking = {
+export type TableShipmentDiscrepancy = {
   id: string;
+  orderId: string;
   brand: { id: string; name: string };
-  productType: { id: string; name: string };
-  packingType: { id: string; name: string } | null;
-  isFragile: boolean;
-  shipsInOwnBox: boolean;
-  canOverride: boolean;
+  product: { id: string; title: string };
+  brandProductTypePacking?: {
+    id: string;
+    packingType?: { name: string } | null;
+  } | null;
+  actualWeight: number;
+  volumetricWeight: number;
+  length: number;
+  width: number;
+  height: number;
+  rulesViolated: string[];
   createdAt: Date;
 };
 
 /* ================= COLUMNS ================= */
 
-const columns: ColumnDef<TableBrandProductPacking>[] = [
+const columns: ColumnDef<TableShipmentDiscrepancy>[] = [
+  { accessorKey: "orderId", header: "Order ID" },
   { accessorKey: "brand.name", header: "Brand" },
-  { accessorKey: "productType.name", header: "Product Type" },
+  { accessorKey: "product.title", header: "Product" },
   {
-    header: "Packing Type",
+    header: "Packing Rule",
     cell: ({ row }) =>
-      row.original.packingType?.name ?? "Default",
+      row.original.brandProductTypePacking?.packingType?.name ?? "—",
+  },
+  { header: "Actual (g)", cell: ({ row }) => row.original.actualWeight },
+  {
+    header: "Volumetric (g)",
+    cell: ({ row }) => row.original.volumetricWeight,
   },
   {
-    header: "Fragile",
-    cell: ({ row }) => (row.original.isFragile ? "Yes" : "No"),
+    header: "Dimensions (cm)",
+    cell: ({ row }) =>
+      `${row.original.length} × ${row.original.width} × ${row.original.height}`,
   },
   {
-    header: "Own Box",
-    cell: ({ row }) =>
-      row.original.shipsInOwnBox ? "Yes" : "No",
-  },
-  {
-    header: "Override",
-    cell: ({ row }) =>
-      row.original.canOverride ? "Yes" : "No",
+    header: "Rules Violated",
+    cell: ({ row }) => row.original.rulesViolated.join(", "),
   },
   {
     accessorKey: "createdAt",
-    header: "Created",
+    header: "Detected On",
     cell: ({ row }) =>
-      format(new Date(row.original.createdAt), "MMM dd, yyyy"),
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => (
-      <BrandProductPackingAction row={row.original} />
-    ),
+      format(new Date(row.original.createdAt), "dd MMM yyyy"),
   },
 ];
 
 /* ================= COMPONENT ================= */
 
-export function BrandProductPackingTable({
+export function ShipmentDiscrepancyTable({
   initialData,
 }: {
   initialData: {
-    data: TableBrandProductPacking[];
+    data: TableShipmentDiscrepancy[];
     count: number;
   };
 }) {
@@ -101,16 +102,15 @@ export function BrandProductPackingTable({
     () => Math.ceil(initialData.count / limit),
     [initialData.count, limit]
   );
+const from = useMemo(
+  () => (initialData.count === 0 ? 0 : (page - 1) * limit + 1),
+  [page, limit, initialData.count]
+);
 
-  const from = useMemo(
-    () => (initialData.count === 0 ? 0 : (page - 1) * limit + 1),
-    [page, limit, initialData.count]
-  );
-
-  const to = useMemo(
-    () => Math.min(page * limit, initialData.count),
-    [page, limit, initialData.count]
-  );
+const to = useMemo(
+  () => Math.min(page * limit, initialData.count),
+  [page, limit, initialData.count]
+);
 
   /* ---------------- TABLE ---------------- */
 
@@ -143,19 +143,19 @@ export function BrandProductPackingTable({
     getCoreRowModel: getCoreRowModel(),
   });
 
-  /* 🔥 KEEP TABLE IN SYNC WITH URL */
+  /* 🔥 CRITICAL SYNC FIX */
   useEffect(() => {
     table.setPageIndex(page - 1);
     table.setPageSize(limit);
-  }, [page, limit, search]);
+  }, [page, limit, search]); // 🔥 reacts to URL changes
 
   /* ---------------- UI ---------------- */
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex justify-between gap-2">
         <Input
-          placeholder="Search by brand or product type..."
+          placeholder="Search by order / brand / product…"
           value={search}
           onChange={(e) => {
             setPage(1);
@@ -171,13 +171,13 @@ export function BrandProductPackingTable({
         columns={columns}
         count={initialData.count}
         pages={pages}
-          showResults={false} // 🔥 hides ONLY here
+         showResults={false}
       />
-
       <p className="text-sm text-muted-foreground">
-        Showing <strong>{from}</strong>–<strong>{to}</strong> of{" "}
-        <strong>{initialData.count}</strong> results
-      </p>
+  Showing <strong>{from}</strong>–<strong>{to}</strong> of{" "}
+  <strong>{initialData.count}</strong> results
+</p>
+
     </div>
   );
 }
