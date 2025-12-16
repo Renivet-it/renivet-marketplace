@@ -177,12 +177,10 @@
 //         </div>
 //     );
 // }
-
 "use client";
 
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
-import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
   Dialog,
@@ -214,7 +212,7 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { OrderAction } from "./order-action";
 
 export type TableOrder = Order;
@@ -224,7 +222,7 @@ export type TableOrder = Order;
 ---------------------------------------- */
 
 const volumetricWeightGrams = (l: number, b: number, h: number) =>
-  Math.round(((l * b * h) / 5));
+  Math.round((l * b * h) / 5);
 
 /* ----------------------------------------
    Dimension Edit Modal
@@ -239,44 +237,44 @@ function DimensionEditModal({
   onClose: () => void;
   order: TableOrder;
 }) {
-  // ✅ STRING STATE (IMPORTANT)
+  const utils = trpc.useUtils();
+
+  const updateDimensions =
+    trpc.general.orders.updateDelhiveryDimensions.useMutation({
+      onSuccess: () => {
+        utils.brands.orders.getOrdersByBrandId.invalidate();
+        onClose();
+      },
+    });
+
   const [length, setLength] = useState(
-    order?.givenLength !== null && order?.givenLength !== undefined
-      ? String(order.givenLength)
-      : ""
+    order?.givenLength !== null ? String(order.givenLength) : ""
   );
   const [breadth, setBreadth] = useState(
-    order?.givenWidth !== null && order?.givenWidth !== undefined
-      ? String(order.givenWidth)
-      : ""
+    order?.givenWidth !== null ? String(order.givenWidth) : ""
   );
   const [height, setHeight] = useState(
-    order?.givenHeight !== null && order?.givenHeight !== undefined
-      ? String(order.givenHeight)
-      : ""
+    order?.givenHeight !== null ? String(order.givenHeight) : ""
   );
 
-  // convert safely
   const l = Number(length);
   const b = Number(breadth);
   const h = Number(height);
 
   const volWeight =
-    l > 0 && b > 0 && h > 0
-      ? Math.round((l * b * h) / 5)
-      : 0;
+    l > 0 && b > 0 && h > 0 ? volumetricWeightGrams(l, b, h) : 0;
 
   const handleSave = () => {
-    const payload = {
-      orderId: order.id,
-      givenLength: l || null,
-      givenWidth: b || null,
-      givenHeight: h || null,
-      volumetricWeight: volWeight,
-    };
+    if (!order.awbNumber) return;
 
-    console.log("📦 DIMENSION PAYLOAD READY:", payload);
-    onClose();
+    updateDimensions.mutate({
+      orderId: order.id,
+      awbNumber: order.awbNumber,
+      length: l,
+      width: b,
+      height: h,
+      volumetricWeight: volWeight,
+    });
   };
 
   return (
@@ -287,40 +285,24 @@ function DimensionEditModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Length */}
-          <div className="space-y-1">
+          <div>
             <label className="text-sm font-medium">Length (cm)</label>
-            <Input
-              type="number"
-              value={length}
-              placeholder="Enter length"
-              onChange={(e) => setLength(e.target.value)}
-            />
+            <Input value={length} onChange={(e) => setLength(e.target.value)} />
           </div>
 
-          {/* Breadth */}
-          <div className="space-y-1">
+          <div>
             <label className="text-sm font-medium">Breadth (cm)</label>
             <Input
-              type="number"
               value={breadth}
-              placeholder="Enter breadth"
               onChange={(e) => setBreadth(e.target.value)}
             />
           </div>
 
-          {/* Height */}
-          <div className="space-y-1">
+          <div>
             <label className="text-sm font-medium">Height (cm)</label>
-            <Input
-              type="number"
-              value={height}
-              placeholder="Enter height"
-              onChange={(e) => setHeight(e.target.value)}
-            />
+            <Input value={height} onChange={(e) => setHeight(e.target.value)} />
           </div>
 
-          {/* Volumetric weight */}
           <div className="text-sm text-muted-foreground">
             Volumetric Weight:{" "}
             <span className="font-semibold text-foreground">
@@ -333,13 +315,23 @@ function DimensionEditModal({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button
+            onClick={handleSave}
+            disabled={
+              updateDimensions.isLoading ||
+              !l ||
+              !b ||
+              !h ||
+              !order.awbNumber
+            }
+          >
+            {updateDimensions.isLoading ? "Saving..." : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
 
 /* ----------------------------------------
    Columns
@@ -352,11 +344,9 @@ const columns = (
   {
     accessorKey: "id",
     header: "Order ID",
-    enableHiding: false,
     cell: ({ row }) => {
       const data = row.original;
       const pathname = usePathname();
-
       return (
         <Link
           className="text-blue-500 hover:underline"
@@ -369,39 +359,39 @@ const columns = (
   },
   {
     header: "Customer",
-    cell: ({ row }) => {
-      const d = row.original;
-      return `${d.firstName} ${d.lastName}`;
-    },
+    cell: ({ row }) =>
+      `${row.original.firstName} ${row.original.lastName}`,
   },
   {
     accessorKey: "totalAmount",
     header: "Total",
     cell: ({ row }) =>
-      formatPriceTag(+convertPaiseToRupees(row.original.totalAmount), true),
+      formatPriceTag(
+        +convertPaiseToRupees(row.original.totalAmount),
+        true
+      ),
   },
   {
     header: "Dimensions",
     cell: ({ row }) => {
       const d = row.original;
-
-      const l = d?.givenLength ?? 0;
-      const b = d?.givenWidth ?? 0;
-      const h = d?.givenHeight ?? 0;
-
+      const l = d.givenLength ?? 0;
+      const b = d.givenWidth ?? 0;
+      const h = d.givenHeight ?? 0;
       const vol = volumetricWeightGrams(l, b, h);
+
       const canEdit =
-        d.status !== "cancelled" &&
-        d.status !== "delivered" &&
-        d.status !== "shipped";
+        // Boolean(d.awbNumber) &&
+        d.status !== "cancelled" && d.status !== "shipped" &&
+        d.status !== "delivered";
 
       return (
-        <div className="space-y-1 text-xs">
+        <div className="text-xs space-y-1">
           <div>{`${l} × ${b} × ${h} cm`}</div>
           <div className="text-muted-foreground">{vol} g</div>
           {canEdit && (
             <button
-              className="text-blue-500 hover:underline text-xs"
+              className="text-blue-500 hover:underline"
               onClick={() => onEdit(d)}
             >
               Edit
@@ -451,25 +441,13 @@ export function OrdersTable({
 }: PageProps) {
   const [page] = useQueryState("page", parseAsInteger.withDefault(1));
   const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
-
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] =
-    useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
-
   const [selectedOrder, setSelectedOrder] =
     useState<TableOrder | null>(null);
 
   const { data, refetch } =
     trpc.brands.orders.getOrdersByBrandId.useQuery(
       { brandId, page, limit, shipmentStatus },
-      {
-        initialData:
-          page === 1
-            ? { data: initialData, total: totalCount }
-            : undefined,
-      }
+      { initialData: { data: initialData, total: totalCount } }
     );
 
   const table = useReactTable({
@@ -479,11 +457,7 @@ export function OrdersTable({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    state: { sorting, columnFilters, columnVisibility, rowSelection },
+    state: {},
   });
 
   return (
@@ -497,7 +471,7 @@ export function OrdersTable({
 
       {selectedOrder && (
         <DimensionEditModal
-          open={!!selectedOrder}
+          open
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
         />

@@ -39,6 +39,8 @@ import { z } from "zod";
 
 import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
 import { orderShipments } from "@/lib/db/schema/order-shipment";
+import axios from "axios";
+import { db } from "@/lib/db";
 
 function resolveBrandPackingRule(product: any) {
   if (!product?.brand?.packingRules?.length) return null;
@@ -1415,18 +1417,98 @@ if (isHardOrFragileBox) {
 
             return true;
         }),
-    getOrderShipmentDetailsByShipmentId: protectedProcedure
-        .input(
-            z.object({
-                shipmentId: z.number(),
-            })
-        )
-        .query(async ({ input, ctx }) => {
-            const { queries } = ctx;
+  getOrderShipmentDetailsByShipmentId: protectedProcedure
+  .input(
+    z.object({
+      shipmentId: z.number(),
+    })
+  )
+  .query(async ({ input, ctx }) => {
+    const { queries } = ctx;
 
-            const data = await queries.orders.getShipmentDetailsByShipmentId(
-                input.shipmentId
-            );
-            return data;
-        }),
+    return queries.orders.getShipmentDetailsByShipmentId(
+      input.shipmentId
+    );
+  }),
+
+/* --------------------------------------------------
+   UPDATE DELHIVERY DIMENSIONS
+-------------------------------------------------- */
+
+updateDelhiveryDimensions: protectedProcedure
+  .input(
+    z.object({
+      orderId: z.string(),
+      awbNumber: z.string(), // ✅ SOURCE OF TRUTH
+      length: z.number(),
+      width: z.number(),
+      height: z.number(),
+      volumetricWeight: z.number(), // grams
+    })
+  )
+  .mutation(async ({ input }) => {
+    const {
+      orderId,
+      awbNumber,
+      length,
+      width,
+      height,
+      volumetricWeight,
+    } = input;
+
+    /* -----------------------------
+       0️⃣ BASIC SAFETY CHECK
+    ----------------------------- */
+    if (!awbNumber) {
+      throw new Error("AWB number not found for this shipment");
+    }
+
+    /* -----------------------------
+       1️⃣ CALL DELHIVERY API
+       Delhivery calls AWB as "waybill"
+       Weight must be in KG
+    ----------------------------- */
+
+    const delhiveryResponse = await axios.post(
+      "https://track.delhivery.com/api/p/edit",
+      {
+        waybill: awbNumber,
+        shipment_height: height,
+        shipment_length: length,
+        shipment_width: width,
+        weight: volumetricWeight, // ✅ grams → kg
+      },
+      {
+        headers: {
+          Authorization: `Token ${process.env.DELHIVERY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!delhiveryResponse.data?.success) {
+      throw new Error(
+        delhiveryResponse.data?.message ||
+          "Delhivery update failed"
+      );
+    }
+
+    /* -----------------------------
+       2️⃣ UPDATE DB (ONLY IF SUCCESS)
+    ----------------------------- */
+
+    await db
+      .update(orderShipments)
+      .set({
+        givenLength: length,
+        givenWidth: width,
+        givenHeight: height,
+        updatedAt: new Date(),
+      })
+      .where(eq(orderShipments.orderId, orderId));
+
+    return {
+      success: true,
+    };
+  }),
 });
