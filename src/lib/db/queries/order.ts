@@ -1265,6 +1265,113 @@ async getAllIntents({
   }
 }
 
+// async getAllBrandProductTypePacking({
+//   limit,
+//   page,
+//   search,
+// }: {
+//   limit: number;
+//   page: number;
+//   search?: string;
+// }) {
+//   try {
+//     const data = await db.query.brandProductTypePacking.findMany({
+//       // where: search
+//       //   ? or(
+//       //       ilike(brands.name, `%${search}%`),
+//       //       ilike(productTypes.name, `%${search}%`),
+//       //       ilike(packingTypes.name, `%${search}%`)
+//       //     )
+//       //   : undefined,
+
+//       with: {
+//         brand: true,
+//         productType: true,
+//         packingType: true,
+//       },
+
+//       limit,
+//       offset: (page - 1) * limit,
+
+//       orderBy: desc(brandProductTypePacking.createdAt),
+
+//       extras: {
+//         count: db
+//           .$count(
+//             brandProductTypePacking,
+//           )
+//           .as("brand_product_type_packing_count"),
+//       },
+//     });
+
+//     return {
+//       data,
+//       count: Number(data?.[0]?.count) || 0,
+//     };
+//   } catch (error) {
+//     console.error(
+//       "Failed to fetch brand-product-type packing configs:",
+//       error
+//     );
+//     throw error;
+//   }
+// }
+
+
+// lib/db/queries/discrepancy.ts
+
+// async getAllShipmentDiscrepancies({
+//   page,
+//   limit,
+//   search,
+// }: {
+//   page: number;
+//   limit: number;
+//   search?: string;
+// }) {
+//   try {
+//     const offset = (page - 1) * limit;
+
+//     const searchCondition = search
+//       ? or(
+//           ilike(shipmentDiscrepancies.orderId, `%${search}%`),
+//           ilike(brands.name, `%${search}%`),
+//           ilike(products.title, `%${search}%`)
+//         )
+//       : undefined;
+
+//     const data = await db.query.shipmentDiscrepancies.findMany({
+//       where: searchCondition,
+
+//       with: {
+//         order: true,
+//         product: true,
+//         brand: true,
+//         brandProductTypePacking: true, // ✅ relation name
+//       },
+
+//       limit,
+//       offset,
+
+//       orderBy: desc(shipmentDiscrepancies.createdAt),
+
+//       extras: {
+//         count: db
+//           .$count(shipmentDiscrepancies, searchCondition)
+//           .as("shipment_discrepancy_count"),
+//       },
+//     });
+
+//     return {
+//       data,
+//       count: Number(data?.[0]?.count) || 0,
+//     };
+//   } catch (error) {
+//     console.error("Failed to fetch shipment discrepancies:", error);
+//     throw error;
+//   }
+// }
+
 async getAllBrandProductTypePacking({
   limit,
   page,
@@ -1275,14 +1382,39 @@ async getAllBrandProductTypePacking({
   search?: string;
 }) {
   try {
+    const offset = (page - 1) * limit;
+
+    /* ---------------- BRAND SEARCH ---------------- */
+
+    let brandIds: string[] | undefined = undefined;
+
+    if (search) {
+      const matchedBrands = await db
+        .select({ id: brands.id })
+        .from(brands)
+        .where(ilike(brands.name, `%${search}%`));
+
+      brandIds = matchedBrands.map((b) => b.id);
+
+      // ❗ If no brands match, return empty result early
+      if (brandIds.length === 0) {
+        return {
+          data: [],
+          count: 0,
+        };
+      }
+    }
+
+    /* ---------------- WHERE CONDITION ---------------- */
+
+    const whereCondition = brandIds
+      ? inArray(brandProductTypePacking.brandId, brandIds)
+      : undefined;
+
+    /* ---------------- DATA QUERY ---------------- */
+
     const data = await db.query.brandProductTypePacking.findMany({
-      where: search
-        ? or(
-            ilike(brands.name, `%${search}%`),
-            ilike(productTypes.name, `%${search}%`),
-            ilike(packingTypes.name, `%${search}%`)
-          )
-        : undefined,
+      where: whereCondition,
 
       with: {
         brand: true,
@@ -1291,29 +1423,19 @@ async getAllBrandProductTypePacking({
       },
 
       limit,
-      offset: (page - 1) * limit,
-
+      offset,
       orderBy: desc(brandProductTypePacking.createdAt),
 
       extras: {
         count: db
-          .$count(
-            brandProductTypePacking,
-            search
-              ? or(
-                  ilike(brands.name, `%${search}%`),
-                  ilike(productTypes.name, `%${search}%`),
-                  ilike(packingTypes.name, `%${search}%`)
-                )
-              : undefined
-          )
+          .$count(brandProductTypePacking, whereCondition)
           .as("brand_product_type_packing_count"),
       },
     });
 
     return {
       data,
-      count: Number(data?.[0]?.count) || 0,
+      count: Number(data?.[0]?.count ?? 0),
     };
   } catch (error) {
     console.error(
@@ -1323,9 +1445,6 @@ async getAllBrandProductTypePacking({
     throw error;
   }
 }
-
-
-// lib/db/queries/discrepancy.ts
 
 async getAllShipmentDiscrepancies({
   page,
@@ -1340,11 +1459,7 @@ async getAllShipmentDiscrepancies({
     const offset = (page - 1) * limit;
 
     const searchCondition = search
-      ? or(
-          ilike(shipmentDiscrepancies.orderId, `%${search}%`),
-          ilike(brands.name, `%${search}%`),
-          ilike(products.title, `%${search}%`)
-        )
+      ? ilike(shipmentDiscrepancies.orderId, `%${search}%`)
       : undefined;
 
     const data = await db.query.shipmentDiscrepancies.findMany({
@@ -1354,12 +1469,11 @@ async getAllShipmentDiscrepancies({
         order: true,
         product: true,
         brand: true,
-        brandProductTypePacking: true, // ✅ relation name
+        brandProductTypePacking: true,
       },
 
       limit,
       offset,
-
       orderBy: desc(shipmentDiscrepancies.createdAt),
 
       extras: {
