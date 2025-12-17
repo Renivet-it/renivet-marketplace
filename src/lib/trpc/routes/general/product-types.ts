@@ -148,6 +148,16 @@ export const productTypesRouter = createTRPCRouter({
 
             return updatedProductType;
         }),
+getByBrand: protectedProcedure
+  .input(z.object({ brandId: z.string().uuid() }))
+  .query(async ({ input, ctx }) => {
+    const { queries } = ctx;
+
+    return queries.productTypes.getProductTypesByBrand(
+      input.brandId
+    );
+  }),
+
     deleteProductType: protectedProcedure
         .input(
             z.object({
@@ -199,3 +209,5 @@ export const productTypesRouter = createTRPCRouter({
             return true;
         }),
 });
+
+

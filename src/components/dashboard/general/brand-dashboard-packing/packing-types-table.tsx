@@ -30,10 +30,44 @@ export type TableBrandProductPacking = {
 const columns: ColumnDef<TableBrandProductPacking>[] = [
   { accessorKey: "productType.name", header: "Product Type" },
   {
-    header: "Packing Type",
+    header: "Packaging Delta",
     cell: ({ row }) =>
       row.original.packingType?.name ?? "Default",
   },
+  {
+  header: "Measurement Delta (L × W × H)",
+  cell: ({ row }) => {
+    const packingType = row.original.packingType;
+
+    if (!packingType) return "Default";
+
+    const {
+      name,
+      baseLength,
+      baseWidth,
+      baseHeight,
+      boxSize = "Box Size+", // 👈 assuming this exists
+    } = packingType;
+
+    // Safety check
+    if (!baseLength || !baseWidth || !baseHeight) {
+      return "Default";
+    }
+
+    // ✅ Special case for box-based packing
+    if (
+      name === "Fragile Box" ||
+      name === "Hard Box"
+    ) {
+      if (!boxSize) return "Default";
+
+      return `${boxSize + baseLength} × ${boxSize + baseWidth} × ${boxSize + baseHeight}`;
+    }
+
+    // ✅ Normal case
+    return `${baseLength} × ${baseWidth} × ${baseHeight}`;
+  },
+},
   {
     header: "Fragile",
     cell: ({ row }) => (row.original.isFragile ? "Yes" : "No"),
