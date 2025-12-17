@@ -1439,14 +1439,14 @@ updateDelhiveryDimensions: protectedProcedure
   .input(
     z.object({
       orderId: z.string(),
-      awbNumber: z.string(), // ✅ SOURCE OF TRUTH
+      awbNumber: z.string(),
       length: z.number(),
       width: z.number(),
       height: z.number(),
       volumetricWeight: z.number(), // grams
     })
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     const {
       orderId,
       awbNumber,
@@ -1456,48 +1456,48 @@ updateDelhiveryDimensions: protectedProcedure
       volumetricWeight,
     } = input;
 
-    /* -----------------------------
-       0️⃣ BASIC SAFETY CHECK
-    ----------------------------- */
     if (!awbNumber) {
-      throw new Error("AWB number not found for this shipment");
+      throw new Error("AWB number missing");
     }
 
     /* -----------------------------
-       1️⃣ CALL DELHIVERY API
-       Delhivery calls AWB as "waybill"
-       Weight must be in KG
+       ✅ JSON BODY (NOT FORM DATA)
     ----------------------------- */
+   const volbKg = volumetricWeight;
 
-    const delhiveryResponse = await axios.post(
+// Force non-integer float
+const safeVolb = volbKg % 1 === 0 ? volbKg + 0.001 : volbKg;
+
+const payload = {
+  waybill: awbNumber,
+  shipment_length: length % 1 === 0 ? length + 0.1 : length,
+  shipment_width: width % 1 === 0 ? width + 0.1 : width,
+  shipment_height: height % 1 === 0 ? height + 0.1 : height,
+  weight: safeVolb,
+};
+console.log(payload, "payloadpayloadpayload");
+    const resp = await axios.post(
       "https://track.delhivery.com/api/p/edit",
-      {
-        waybill: awbNumber,
-        shipment_height: height,
-        shipment_length: length,
-        shipment_width: width,
-        weight: volumetricWeight, // ✅ grams → kg
-      },
+      payload,
       {
         headers: {
-          Authorization: `Token ${process.env.DELHIVERY_API_KEY}`,
+          Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
           "Content-Type": "application/json",
         },
       }
     );
 
-    if (!delhiveryResponse.data?.success) {
+    console.log("📦 Delhivery UPDATE response →", resp.data);
+
+    if (!resp.data || resp.data.status === "Failure") {
       throw new Error(
-        delhiveryResponse.data?.message ||
-          "Delhivery update failed"
+        "Delhivery update failed: " +
+          JSON.stringify(resp.data)
       );
     }
 
-    /* -----------------------------
-       2️⃣ UPDATE DB (ONLY IF SUCCESS)
-    ----------------------------- */
-
-    await db
+    // ✅ DB update
+    await ctx.db
       .update(orderShipments)
       .set({
         givenLength: length,
@@ -1507,8 +1507,6 @@ updateDelhiveryDimensions: protectedProcedure
       })
       .where(eq(orderShipments.orderId, orderId));
 
-    return {
-      success: true,
-    };
-  }),
+    return { success: true };
+  })
 });
