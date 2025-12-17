@@ -14,6 +14,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 /* =========================
    FORM VALUES (NO BRAND ID)
@@ -61,6 +62,7 @@ const { data: subCategories } =
       page: 1,
       limit: 100,
     });
+const router = useRouter();
 
   /* =========================
      EDIT MODE (FETCH RULE)
@@ -87,23 +89,22 @@ const subCategoryMap = useMemo(() => {
   /* =========================
      MUTATIONS
   ========================= */
-  const create =
-    trpc.brands.brandPacking.create.useMutation({
-      onSuccess: () => {
-        toast.success("Packing rule created");
-        utils.brands.brandPacking.getAll.invalidate();
-        onSuccess();
-      },
-    });
+const create = trpc.brands.brandPacking.create.useMutation({
+  onSuccess: () => {
+    toast.success("Packing rule created");
+    router.refresh(); // 🔥 THIS reloads table data
+    onSuccess();
+  },
+});
 
-  const update =
-    trpc.brands.brandPacking.update.useMutation({
-      onSuccess: () => {
-        toast.success("Packing rule updated");
-        utils.brands.brandPacking.getAll.invalidate();
-        onSuccess();
-      },
-    });
+const update = trpc.brands.brandPacking.update.useMutation({
+  onSuccess: () => {
+    toast.success("Packing rule updated");
+    router.refresh(); // 🔥 REQUIRED
+    onSuccess();
+  },
+});
+
 
   /* =========================
      SUBMIT
