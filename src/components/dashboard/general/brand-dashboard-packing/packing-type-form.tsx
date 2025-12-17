@@ -12,29 +12,28 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { useEffect } from "react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 /* =========================
    FORM VALUES (NO BRAND ID)
 ========================= */
 type FormValues = {
-  productTypeId: string;// ✅ PRODUCT TYPE (USER SELECTS)
-  packingTypeId: string | null; // ✅ PACKING TYPE (USER SELECTS)
-  isFragile: boolean;// ✅ FLAG
-  shipsInOwnBox: boolean;// ✅ FLAG
-  canOverride: boolean;// ✅ FLAG
+  productTypeId: string;            // ✅ user selects
+  packingTypeId: string | null;     // ✅ user selects
+  isFragile: boolean;               // ✅ user selects
+  shipsInOwnBox: boolean;           // ✅ user selects
+  canOverride: boolean;             // 🔒 always FALSE for brand
 };
 
 export function BrandProductPackingForm({
-  id,// ✅ PACKING RULE ID (ONLY FOR EDIT)
+  id, // ✅ packing rule id (edit only)
   onSuccess,
 }: {
   id?: string;
   onSuccess: () => void;
 }) {
-  const utils = trpc.useUtils();
+  const router = useRouter();
 
   /* =========================
      FORM SETUP
@@ -45,28 +44,36 @@ export function BrandProductPackingForm({
       packingTypeId: null,
       isFragile: false,
       shipsInOwnBox: false,
-      canOverride: false,
+      canOverride: false, // 🔒 enforced
     },
   });
 
   /* =========================
-     MASTER DATA (DROPDOWNS)
+     MASTER DATA
   ========================= */
   const { data: productTypes } =
     trpc.general.productTypes.getProductTypes.useQuery();
-const { data: subCategories } =
-  trpc.general.subCategories.getSubCategories.useQuery();
+
+  const { data: subCategories } =
+    trpc.general.subCategories.getSubCategories.useQuery();
 
   const { data: packingTypes } =
     trpc.general.packingTypes.getAll.useQuery({
       page: 1,
       limit: 100,
     });
-const router = useRouter();
+
+  /* =========================
+     SUBCATEGORY MAP
+  ========================= */
+  const subCategoryMap = useMemo(() => {
+    return new Map(
+      subCategories?.data.map((s) => [s.id, s.name])
+    );
+  }, [subCategories]);
 
   /* =========================
      EDIT MODE (FETCH RULE)
-     🔴 NOT BRAND
   ========================= */
   const { data: packingRule } =
     trpc.brands.brandPacking.getById.useQuery(
@@ -74,45 +81,47 @@ const router = useRouter();
       { enabled: !!id }
     );
 
-const subCategoryMap = useMemo(() => {
-  return new Map(
-    subCategories?.data.map((s) => [s.id, s.name])
-  );
-}, [subCategories]);
-
   useEffect(() => {
     if (packingRule) {
-      form.reset(packingRule);
+      form.reset({
+        ...packingRule,
+        canOverride: false, // 🔒 force even on edit
+      });
     }
   }, [packingRule, form]);
 
   /* =========================
      MUTATIONS
   ========================= */
-const create = trpc.brands.brandPacking.create.useMutation({
-  onSuccess: () => {
-    toast.success("Packing rule created");
-    router.refresh(); // 🔥 THIS reloads table data
-    onSuccess();
-  },
-});
+  const create = trpc.brands.brandPacking.create.useMutation({
+    onSuccess: () => {
+      toast.success("Packing rule created");
+      router.refresh(); // 🔥 refresh server table
+      onSuccess();
+    },
+  });
 
-const update = trpc.brands.brandPacking.update.useMutation({
-  onSuccess: () => {
-    toast.success("Packing rule updated");
-    router.refresh(); // 🔥 REQUIRED
-    onSuccess();
-  },
-});
-
+  const update = trpc.brands.brandPacking.update.useMutation({
+    onSuccess: () => {
+      toast.success("Packing rule updated");
+      router.refresh(); // 🔥 refresh server table
+      onSuccess();
+    },
+  });
 
   /* =========================
-     SUBMIT
+     SUBMIT (FORCE canOverride = false)
   ========================= */
-  const onSubmit = (values: FormValues) =>
+  const onSubmit = (values: FormValues) => {
+    const payload = {
+      ...values,
+      canOverride: false, // 🔒 ALWAYS FALSE
+    };
+
     id
-      ? update.mutate({ id, ...values })
-      : create.mutate(values);
+      ? update.mutate({ id, ...payload })
+      : create.mutate(payload);
+  };
 
   /* =========================
      UI
@@ -122,7 +131,7 @@ const update = trpc.brands.brandPacking.update.useMutation({
       onSubmit={form.handleSubmit(onSubmit)}
       className="space-y-4"
     >
-      {/* PRODUCT TYPE (WHAT PRODUCT?) */}
+      {/* PRODUCT TYPE */}
       <Select
         value={form.watch("productTypeId")}
         onValueChange={(v) =>
@@ -133,26 +142,25 @@ const update = trpc.brands.brandPacking.update.useMutation({
           <SelectValue placeholder="Select Product Type" />
         </SelectTrigger>
         <SelectContent>
-{productTypes?.data.map((p) => {
-  const subCategoryName = subCategoryMap.get(p.subCategoryId);
+          {productTypes?.data.map((p) => {
+            const sub = subCategoryMap.get(p.subCategoryId);
 
-  return (
-    <SelectItem key={p.id} value={p.id}>
-      {p.name}
-      {subCategoryName && (
-        <span className="text-muted-foreground">
-          {" "}
-          ({subCategoryName})
-        </span>
-      )}
-    </SelectItem>
-  );
-})}
-
+            return (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+                {sub && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({sub})
+                  </span>
+                )}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
 
-      {/* PACKING TYPE (HOW TO PACK?) */}
+      {/* PACKING TYPE */}
       <Select
         value={form.watch("packingTypeId") ?? ""}
         onValueChange={(v) =>
@@ -178,11 +186,8 @@ const update = trpc.brands.brandPacking.update.useMutation({
         name="shipsInOwnBox"
         form={form}
       />
-      <CheckboxRow
-        label="Can Override"
-        name="canOverride"
-        form={form}
-      />
+
+      {/* ❌ NO canOverride checkbox for Brand */}
 
       <Button type="submit" className="w-full">
         {id ? "Update Rule" : "Add Rule"}
@@ -192,7 +197,7 @@ const update = trpc.brands.brandPacking.update.useMutation({
 }
 
 /* =========================
-   REUSABLE CHECKBOX
+   CHECKBOX COMPONENT
 ========================= */
 function CheckboxRow({ label, name, form }: any) {
   return (
