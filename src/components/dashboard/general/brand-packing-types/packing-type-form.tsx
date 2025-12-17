@@ -46,8 +46,19 @@ export function BrandProductPackingForm({
   const { data: brands } =
     trpc.general.brands.getBrands.useQuery({ page: 1, limit: 1000 });
 
-  const { data: productTypes } =
-    trpc.general.productTypes.getProductTypes.useQuery();
+  const selectedBrandId = form.watch("brandId");
+
+const { data: productTypes } =
+  trpc.general.productTypes.getByBrand.useQuery(
+    { brandId: selectedBrandId },
+    {
+      enabled: !!selectedBrandId, // 🔥 only run after brand is selected
+    }
+  );
+useEffect(() => {
+  form.setValue("productTypeId", "");
+}, [selectedBrandId]);
+
 
   const { data: subCategories } =
     trpc.general.subCategories.getSubCategories.useQuery();
@@ -118,7 +129,7 @@ export function BrandProductPackingForm({
           <SelectValue placeholder="Select Product Type" />
         </SelectTrigger>
         <SelectContent>
-          {productTypes?.data.map((p) => {
+         {productTypes?.map((p) => {
             const sub = subCategoryMap.get(p.subCategoryId);
             return (
               <SelectItem key={p.id} value={p.id}>
@@ -140,7 +151,7 @@ export function BrandProductPackingForm({
         }
       >
         <SelectTrigger>
-          <SelectValue placeholder="Select Packing Type" />
+          <SelectValue placeholder="Select Packaging Delta" />
         </SelectTrigger>
         <SelectContent>
           {packingTypes?.data.map((p) => (

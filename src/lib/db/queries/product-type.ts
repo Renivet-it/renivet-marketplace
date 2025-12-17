@@ -1,7 +1,7 @@
 import { CreateProductType, UpdateProductType } from "@/lib/validations";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "..";
-import { productTypes } from "../schema";
+import { products, productTypes } from "../schema";
 
 class ProductTypeQuery {
     async getCount() {
@@ -110,6 +110,23 @@ class ProductTypeQuery {
             .then((res) => res[0]);
 
         return data;
+    }
+    async getProductTypesByBrand(brandId: string) {
+    const rows = await db
+        .selectDistinct({
+        productTypeId: products.productTypeId,
+        })
+        .from(products)
+        .where(eq(products.brandId, brandId));
+
+    const ids = rows.map((r) => r.productTypeId);
+
+    if (ids.length === 0) return [];
+
+    return db
+        .select()
+        .from(productTypes)
+        .where(inArray(productTypes.id, ids));
     }
 }
 

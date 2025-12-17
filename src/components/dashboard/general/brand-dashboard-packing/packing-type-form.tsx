@@ -14,16 +14,17 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 /* =========================
    FORM VALUES (NO BRAND ID)
 ========================= */
 type FormValues = {
-  productTypeId: string;            // ✅ user selects
-  packingTypeId: string | null;     // ✅ user selects
-  isFragile: boolean;               // ✅ user selects
-  shipsInOwnBox: boolean;           // ✅ user selects
-  canOverride: boolean;             // 🔒 always FALSE for brand
+  productTypeId: string;// ✅ user selects
+  packingTypeId: string | null;// ✅ user selects
+  isFragile: boolean;// ✅ user selects
+  shipsInOwnBox: boolean;// ✅ user selects
+  canOverride: boolean;// 🔒 always FALSE for brand
 };
 
 export function BrandProductPackingForm({
@@ -51,8 +52,18 @@ export function BrandProductPackingForm({
   /* =========================
      MASTER DATA
   ========================= */
-  const { data: productTypes } =
-    trpc.general.productTypes.getProductTypes.useQuery();
+const params = useParams();
+const brandId = params?.bId as string;
+
+const { data: productTypes } =
+  trpc.general.productTypes.getByBrand.useQuery(
+    { brandId },
+    { enabled: !!brandId }
+  );
+
+useEffect(() => {
+  form.setValue("productTypeId", "");
+}, [brandId]);
 
   const { data: subCategories } =
     trpc.general.subCategories.getSubCategories.useQuery();
@@ -118,6 +129,7 @@ export function BrandProductPackingForm({
       canOverride: false, // 🔒 ALWAYS FALSE
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     id
       ? update.mutate({ id, ...payload })
       : create.mutate(payload);
@@ -142,7 +154,7 @@ export function BrandProductPackingForm({
           <SelectValue placeholder="Select Product Type" />
         </SelectTrigger>
         <SelectContent>
-          {productTypes?.data.map((p) => {
+         {productTypes?.map((p) => {
             const sub = subCategoryMap.get(p.subCategoryId);
 
             return (
@@ -168,7 +180,7 @@ export function BrandProductPackingForm({
         }
       >
         <SelectTrigger>
-          <SelectValue placeholder="Select Packing Type" />
+          <SelectValue placeholder="Select Packaging Delta" />
         </SelectTrigger>
         <SelectContent>
           {packingTypes?.data.map((p) => (
