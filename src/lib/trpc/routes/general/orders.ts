@@ -1473,7 +1473,7 @@ const payload = {
   shipment_length: length % 1 === 0 ? length + 0.1 : length,
   shipment_width: width % 1 === 0 ? width + 0.1 : width,
   shipment_height: height % 1 === 0 ? height + 0.1 : height,
-  weight: 5.9,
+  weight: safeVolb,
 };
 console.log(payload, "payloadpayloadpayload");
     const resp = await axios.post(
