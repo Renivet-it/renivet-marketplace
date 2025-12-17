@@ -87,9 +87,9 @@ export function PackingTypeForm({
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       {/* HS CODE */}
       <div className="space-y-1">
-        <label className="text-sm font-medium">HS Code</label>
+        <label className="text-sm font-medium">Name</label>
         <Input
-          placeholder="e.g. 420292"
+          placeholder="e.g. Soft/Bulky"
           {...form.register("name")}
         />
       </div>

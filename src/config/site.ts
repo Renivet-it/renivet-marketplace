@@ -255,14 +255,14 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
-                title: "Packing Types",
+                title: "Packaging Delta Rules",
                 url: "/dashboard/general/packaging-types",
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
-                title: "Brand wise Packing Types",
+                title: "Product - Packaging Types",
                 url: "/dashboard/general/brand-packaging-types",
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |
@@ -845,7 +845,7 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
-                    title: "Packing Rules",
+                    title: "Product - Packaging Types",
                     url: `/dashboard/brands/${brandId}/packing-rules`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
