@@ -89,7 +89,7 @@ export function PackingTypeForm({
       <div className="space-y-1">
         <label className="text-sm font-medium">Name</label>
         <Input
-          placeholder="e.g.Soft/Bulky"
+          placeholder="e.g. Soft/Bulky"
           {...form.register("name")}
         />
       </div>
