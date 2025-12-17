@@ -51,10 +51,14 @@ async function PackingTypesFetch({ searchParams }: PageProps) {
   } = await searchParams;
 
   const limit =
-    limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
+    limitRaw && !isNaN(parseInt(limitRaw))
+      ? parseInt(limitRaw)
+      : 10;
 
   const page =
-    pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    pageRaw && !isNaN(parseInt(pageRaw))
+      ? parseInt(pageRaw)
+      : 1;
 
   const search = searchRaw?.length ? searchRaw : undefined;
 
@@ -65,5 +69,5 @@ async function PackingTypesFetch({ searchParams }: PageProps) {
   });
 
   // same pattern as Orders
-  // @ts-ignore
   return <BrandProductPackingTable initialData={data} />;
+}
