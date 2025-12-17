@@ -10,8 +10,8 @@ import { Metadata } from "next";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Packing Types",
-  description: "Manage packing types for products",
+  title: "Product- Packaging Types",
+  description: "Manage Product- Packaging Types for products",
 };
 
 interface PageProps {
@@ -27,9 +27,9 @@ export default function Page(props: PageProps) {
     <DashShell>
       <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
         <div className="space-y-1 text-center md:text-start">
-          <h1 className="text-2xl font-bold">Packing Types</h1>
+          <h1 className="text-2xl font-bold">Product - Packaging Types</h1>
           <p className="text-balance text-sm text-muted-foreground">
-            Manage packing types for products
+            Manage Product-Packaging Types for products
           </p>
         </div>
 
