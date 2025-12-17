@@ -12,7 +12,8 @@ import {
     productsRouter as brandProductsRouter,
     revenueRouter as brandRevenueRouter,
     rolesRouter as brandRolesRouter,
-    brandSupportRouter
+    brandSupportRouter,
+    brandPackingRouter
 } from "./routes/brands";
 import {
     blogsRouter,
@@ -37,6 +38,8 @@ import {
     orderIntentRouter,
     returnReplaceRouter,
     adminSupportRouter,
+    packingTypesRouter,
+    brandProductTypePackingRouter
 } from "./routes/general";
 import { addressesRouter } from "./routes/general/address";
 import { createTRPCRouter } from "./trpc";
@@ -66,6 +69,8 @@ export const appRouter = createTRPCRouter({
         returnExchangeReasons: ReasonRouter,
         returnReplace: returnReplaceRouter,
        adminSupportRouter: adminSupportRouter,
+       packingTypes: packingTypesRouter,
+       brandProductTypePacking: brandProductTypePackingRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,
@@ -82,6 +87,7 @@ export const appRouter = createTRPCRouter({
         revenue: brandRevenueRouter,
         roles: brandRolesRouter,
         brandSupportRouter: brandSupportRouter,
+        brandPacking: brandPackingRouter,
     }),
 });
 

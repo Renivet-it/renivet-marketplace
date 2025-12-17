@@ -1,0 +1,1 @@
+ALTER TABLE "product_types" ALTER COLUMN "packing_type_id" DROP NOT NULL;

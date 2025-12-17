@@ -13,7 +13,7 @@ import {
     returnShipmentPayment,
     returnShipmentReason,
 } from "@/lib/validations/order-return";
-import { and, desc, eq, gte, ilike, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { db } from "..";
 import {
     orderItems,
@@ -25,6 +25,11 @@ import {
     ordersIntent,
     products as productTable,
     addresses,
+    packingTypes,
+    brands,
+    productTypes,
+    brandProductTypePacking,
+    shipmentDiscrepancies,
 } from "../schema";
 import {
     returnAddressDetails,
@@ -330,6 +335,9 @@ console.log(totalResult, "shipmentStatusshipmentStatus");
         awbNumber: orderShipments.awbNumber,
         uploadWbn: orderShipments.uploadWbn,
         delhiveryClientId: orderShipments.delhiveryClientId,
+        givenLength: orderShipments.givenLength,
+        givenWidth: orderShipments.givenWidth,
+        givenHeight: orderShipments.givenHeight,
         delhiverySortCode: orderShipments.delhiverySortCode,
         isAwbGenerated: orderShipments.isAwbGenerated,
         receiptId: orders.receiptId,
@@ -380,6 +388,9 @@ console.log(ordersForBrand, "ordersForBrandordersForBrand");
         uploadWbn: item.uploadWbn ?? undefined,
         delhiveryClientId: item.delhiveryClientId ?? undefined,
         delhiverySortCode: item.delhiverySortCode ?? undefined,
+        givenLength: item.givenLength,
+        givenWidth: item.givenWidth,
+        givenHeight: item.givenHeight,
         isAwbGenerated: item.isAwbGenerated,
         courierName: item.courierName ?? undefined,
         receiptId: item.receiptId,
@@ -1218,6 +1229,327 @@ async getAllIntents({
 
     return data;
   }
+  async getAllPackingTypes({
+  limit,
+  page,
+  search,
+}: {
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const data = await db.query.packingTypes.findMany({
+      where: search
+        ? ilike(packingTypes.id, `%${search}%`)
+        : undefined,
+
+      limit,
+      offset: (page - 1) * limit,
+
+      orderBy: [desc(packingTypes.createdAt)],
+
+      extras: {
+        count: db
+          .$count(
+            packingTypes,
+            search
+              ? ilike(packingTypes.id, `%${search}%`)
+              : undefined
+          )
+          .as("packing_type_count"),
+      },
+    });
+
+    return {
+      data,
+      count: +data?.[0]?.count || 0,
+    };
+  } catch (error) {
+    console.error("Failed to fetch packing types:", error);
+    throw error;
+  }
 }
+
+// async getAllBrandProductTypePacking({
+//   limit,
+//   page,
+//   search,
+// }: {
+//   limit: number;
+//   page: number;
+//   search?: string;
+// }) {
+//   try {
+//     const data = await db.query.brandProductTypePacking.findMany({
+//       // where: search
+//       //   ? or(
+//       //       ilike(brands.name, `%${search}%`),
+//       //       ilike(productTypes.name, `%${search}%`),
+//       //       ilike(packingTypes.name, `%${search}%`)
+//       //     )
+//       //   : undefined,
+
+//       with: {
+//         brand: true,
+//         productType: true,
+//         packingType: true,
+//       },
+
+//       limit,
+//       offset: (page - 1) * limit,
+
+//       orderBy: desc(brandProductTypePacking.createdAt),
+
+//       extras: {
+//         count: db
+//           .$count(
+//             brandProductTypePacking,
+//           )
+//           .as("brand_product_type_packing_count"),
+//       },
+//     });
+
+//     return {
+//       data,
+//       count: Number(data?.[0]?.count) || 0,
+//     };
+//   } catch (error) {
+//     console.error(
+//       "Failed to fetch brand-product-type packing configs:",
+//       error
+//     );
+//     throw error;
+//   }
+// }
+
+
+// lib/db/queries/discrepancy.ts
+
+// async getAllShipmentDiscrepancies({
+//   page,
+//   limit,
+//   search,
+// }: {
+//   page: number;
+//   limit: number;
+//   search?: string;
+// }) {
+//   try {
+//     const offset = (page - 1) * limit;
+
+//     const searchCondition = search
+//       ? or(
+//           ilike(shipmentDiscrepancies.orderId, `%${search}%`),
+//           ilike(brands.name, `%${search}%`),
+//           ilike(products.title, `%${search}%`)
+//         )
+//       : undefined;
+
+//     const data = await db.query.shipmentDiscrepancies.findMany({
+//       where: searchCondition,
+
+//       with: {
+//         order: true,
+//         product: true,
+//         brand: true,
+//         brandProductTypePacking: true, // ✅ relation name
+//       },
+
+//       limit,
+//       offset,
+
+//       orderBy: desc(shipmentDiscrepancies.createdAt),
+
+//       extras: {
+//         count: db
+//           .$count(shipmentDiscrepancies, searchCondition)
+//           .as("shipment_discrepancy_count"),
+//       },
+//     });
+
+//     return {
+//       data,
+//       count: Number(data?.[0]?.count) || 0,
+//     };
+//   } catch (error) {
+//     console.error("Failed to fetch shipment discrepancies:", error);
+//     throw error;
+//   }
+// }
+
+async getAllBrandProductTypePacking({
+  limit,
+  page,
+  search,
+}: {
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const offset = (page - 1) * limit;
+
+    /* ---------------- BRAND SEARCH ---------------- */
+
+    let brandIds: string[] | undefined = undefined;
+
+    if (search) {
+      const matchedBrands = await db
+        .select({ id: brands.id })
+        .from(brands)
+        .where(ilike(brands.name, `%${search}%`));
+
+      brandIds = matchedBrands.map((b) => b.id);
+
+      // ❗ If no brands match, return empty result early
+      if (brandIds.length === 0) {
+        return {
+          data: [],
+          count: 0,
+        };
+      }
+    }
+
+    /* ---------------- WHERE CONDITION ---------------- */
+
+    const whereCondition = brandIds
+      ? inArray(brandProductTypePacking.brandId, brandIds)
+      : undefined;
+
+    /* ---------------- DATA QUERY ---------------- */
+
+    const data = await db.query.brandProductTypePacking.findMany({
+      where: whereCondition,
+
+      with: {
+        brand: true,
+        productType: true,
+        packingType: true,
+      },
+
+      limit,
+      offset,
+      orderBy: desc(brandProductTypePacking.createdAt),
+
+      extras: {
+        count: db
+          .$count(brandProductTypePacking, whereCondition)
+          .as("brand_product_type_packing_count"),
+      },
+    });
+
+    return {
+      data,
+      count: Number(data?.[0]?.count ?? 0),
+    };
+  } catch (error) {
+    console.error(
+      "Failed to fetch brand-product-type packing configs:",
+      error
+    );
+    throw error;
+  }
+}
+async getBrandProductTypePackingByBrand({
+  brandId,
+  limit,
+  page,
+  search,
+}: {
+  brandId: string;
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const offset = (page - 1) * limit;
+
+    const whereCondition = and(
+      eq(brandProductTypePacking.brandId, brandId),
+      search
+        ? ilike(productTypes.name, `%${search}%`)
+        : undefined
+    );
+
+    const data = await db.query.brandProductTypePacking.findMany({
+      where: whereCondition,
+      with: {
+        productType: true,
+        packingType: true,
+      },
+      limit,
+      offset,
+      orderBy: desc(brandProductTypePacking.createdAt),
+      extras: {
+        count: db
+          .$count(brandProductTypePacking, whereCondition)
+          .as("count"),
+      },
+    });
+
+    return {
+      data,
+      count: Number(data?.[0]?.count ?? 0),
+    };
+  } catch (error) {
+    console.error(
+      "Failed to fetch brand packing rules:",
+      error
+    );
+    throw error;
+  }
+}
+
+
+async getAllShipmentDiscrepancies({
+  page,
+  limit,
+  search,
+}: {
+  page: number;
+  limit: number;
+  search?: string;
+}) {
+  try {
+    const offset = (page - 1) * limit;
+
+    const searchCondition = search
+      ? ilike(shipmentDiscrepancies.orderId, `%${search}%`)
+      : undefined;
+
+    const data = await db.query.shipmentDiscrepancies.findMany({
+      where: searchCondition,
+
+      with: {
+        order: true,
+        product: true,
+        brand: true,
+        brandProductTypePacking: true,
+      },
+
+      limit,
+      offset,
+      orderBy: desc(shipmentDiscrepancies.createdAt),
+
+      extras: {
+        count: db
+          .$count(shipmentDiscrepancies, searchCondition)
+          .as("shipment_discrepancy_count"),
+      },
+    });
+
+    return {
+      data,
+      count: Number(data?.[0]?.count) || 0,
+    };
+  } catch (error) {
+    console.error("Failed to fetch shipment discrepancies:", error);
+    throw error;
+  }
+}
+
+}
+
 
 export const orderQueries = new OrderQuery();

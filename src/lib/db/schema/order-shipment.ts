@@ -22,6 +22,8 @@ import {
     returnReasonDetails,
 } from "./order-return-exchange";
 import { users } from "./user";
+import { productTypes } from "./category";
+import { products } from "./product";
 
 export const orderShipments = pgTable(
     "order_shipments",
@@ -41,6 +43,9 @@ export const orderShipments = pgTable(
         awbNumber: text("awb_number"),
         uploadWbn: text("upload_wbn"),
         delhiveryClientId: text("delhivery_client_id"),
+        givenLength: integer("given_length"),
+        givenWidth: integer("given_width"),
+        givenHeight: integer("given_height"),
         delhiverySortCode: text("delhivery_sort_code"),
         trackingNumber: text("tracking_number"),
         status: text("status", {
@@ -219,6 +224,144 @@ export const exchangeShipments = pgTable(
         }).onDelete("cascade"),
     })
 );
+export const packingTypes = pgTable("packing_types", {
+  id: uuid("id").defaultRandom().primaryKey(),
+
+  // Packing Type Name
+  name: text("hs_code"),
+
+  // Base dimensions (cm)
+  baseLength: integer("base_length").default(0),
+  baseWidth: integer("base_width").default(0),
+  baseHeight: integer("base_height").default(0),
+
+  // Extra CM logic (0 for soft, 2 for box, 3 for fragile)
+  extraCm: integer("extra_cm").default(0),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const brandProductTypePacking = pgTable(
+  "brand_product_type_packing",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    // 🔗 Relations
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+
+    productTypeId: uuid("product_type_id")
+      .notNull()
+      .references(() => productTypes.id, { onDelete: "cascade" }),
+
+    packingTypeId: uuid("packing_type_id")
+      .references(() => packingTypes.id, { onDelete: "set null" }),
+
+    // 🚚 Shipping flags
+    isFragile: boolean("is_fragile").notNull().default(false),
+
+    shipsInOwnBox: boolean("ships_in_own_box")
+      .notNull()
+      .default(false),
+
+    canOverride: boolean("can_override")
+      .notNull()
+      .default(false),
+
+    // 🕒 Meta
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    // 🚨 IMPORTANT: prevent duplicates
+    brandProductTypeUniqueIdx: index(
+      "brand_product_type_unique_idx"
+    ).on(table.brandId, table.productTypeId),
+  })
+);
+
+export const shipmentDiscrepancies = pgTable(
+  "shipment_discrepancies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+
+    brandId: uuid("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+
+    // 🔥 Brand packing rule used at shipment time
+    brandPackingId: uuid("brand_packing_id")
+      .references(() => brandProductTypePacking.id, { onDelete: "set null" }),
+
+    actualWeight: integer("actual_weight").notNull(), // grams
+    volumetricWeight: integer("volumetric_weight").notNull(),
+
+    length: integer("length").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+
+    reason: text("reason").notNull(),
+    rulesViolated: jsonb("rules_violated").notNull(),
+
+    createdAt: timestamp("created_at").defaultNow(),
+  }
+);
+
+export const shipmentDiscrepanciesRelations = relations(
+  shipmentDiscrepancies,
+  ({ one }) => ({
+    order: one(orders, {
+      fields: [shipmentDiscrepancies.orderId],
+      references: [orders.id],
+    }),
+
+    product: one(products, {
+      fields: [shipmentDiscrepancies.productId],
+      references: [products.id],
+    }),
+
+    brand: one(brands, {
+      fields: [shipmentDiscrepancies.brandId],
+      references: [brands.id],
+    }),
+
+    brandProductTypePacking: one(brandProductTypePacking, {
+      fields: [shipmentDiscrepancies.brandPackingId],
+      references: [brandProductTypePacking.id],
+    }),
+  })
+);
+
+
+export const brandProductTypePackingRelations = relations(
+  brandProductTypePacking,
+  ({ one }) => ({
+    brand: one(brands, {
+      fields: [brandProductTypePacking.brandId],
+      references: [brands.id],
+    }),
+
+    productType: one(productTypes, {
+      fields: [brandProductTypePacking.productTypeId],
+      references: [productTypes.id],
+    }),
+
+    packingType: one(packingTypes, {
+      fields: [brandProductTypePacking.packingTypeId],
+      references: [packingTypes.id],
+    }),
+  })
+);
 
 export const orderShipmentsRelations = relations(
     orderShipments,
@@ -325,4 +468,11 @@ export const exchangeShipmentMediaRelation = relations(
     ({ many }) => ({
         mediaReturn: many(mediaExchangeShipment),
     })
+);
+
+export const packingTypesRelations = relations(
+  packingTypes,
+  ({ many }) => ({
+    productTypes: many(productTypes),
+  })
 );

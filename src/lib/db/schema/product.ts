@@ -407,6 +407,7 @@ export const productVariants = pgTable(
     })
 );
 
+
 export const productsJourney = pgTable(
     "products_journey",
     {

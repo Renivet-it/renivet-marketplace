@@ -12,3 +12,4 @@ export * from "./products";
 export * from "./revenue";
 export * from "./roles";
 export * from "./support";
+export * from "./brand-product-type-packing";

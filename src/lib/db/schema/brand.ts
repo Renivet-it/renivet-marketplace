@@ -19,6 +19,7 @@ import { returnItemDetails, returnPaymentDetails } from "./order-return-exchange
 import { products } from "./product";
 import { brandRoles, roles } from "./role";
 import { users } from "./user";
+import { brandProductTypePacking } from "./order-shipment";
 
 export const brandRequests = pgTable("brand_requests", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
@@ -244,6 +245,7 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     }),
     categoryRequests: many(categoryRequests),
     pageSections: many(brandPageSections),
+      packingRules: many(brandProductTypePacking),
 }));
 
 export const brandConfidentialRelations = relations(

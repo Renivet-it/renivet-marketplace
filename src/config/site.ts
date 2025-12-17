@@ -255,6 +255,27 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
+                title: "Packing Types",
+                url: "/dashboard/general/packaging-types",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Brand wise Packing Types",
+                url: "/dashboard/general/brand-packaging-types",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Discrepency Table",
+                url: "/dashboard/general/discrepency-table",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
                 title: "Subscribers",
                 url: "/dashboard/general/subscribers",
                 permissions:
@@ -821,6 +842,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                 {
                     title: "Invites",
                     url: `/dashboard/brands/${brandId}/invites`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Packing Rules",
+                    url: `/dashboard/brands/${brandId}/packing-rules`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {

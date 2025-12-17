@@ -27,6 +27,9 @@ export const orderShipmentSchema = z.object({
     courierName: z.string().nullable(), // Added new field
     awbNumber: z.string().nullable(),
     trackingNumber: z.string().nullable(),
+    givenLength: z.number().nullable().optional(),
+    givenWidth: z.number().nullable().optional(),
+    givenHeight: z.number().nullable().optional(),
     status: z
         .enum(
             [
@@ -140,6 +143,9 @@ export const createOrderShipmentSchema = orderShipmentSchema.omit({
      delhiveryClientId: true,
      delhiveryTrackingJson: true,
      delhiverySortCode: true,
+        givenHeight: true,
+        givenLength: true,
+        givenWidth: true,
     trackingNumber: true,
     shipmentDate: true,
     estimatedDeliveryDate: true,
@@ -163,6 +169,9 @@ export const updateOrderShipmentSchema = orderShipmentSchema.pick({
      delhiveryClientId: true,
      delhiveryTrackingJson: true,
      delhiverySortCode: true,
+     givenHeight: true,
+     givenLength: true,
+     givenWidth: true,
     trackingNumber: true,
     status: true,
     shipmentDate: true,

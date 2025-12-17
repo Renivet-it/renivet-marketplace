@@ -16,11 +16,15 @@ export function DataTable<T>({
     columns,
     count,
     pages,
+      showResults = true, // 👈 NEW (default ON)
+
 }: {
     table: TTable<T>;
     columns: ColumnDef<T>[];
     count: number;
     pages: number;
+  showResults?: boolean; // 👈 NEW
+
 }) {
     return (
         <>
@@ -79,14 +83,17 @@ export function DataTable<T>({
                 </Table>
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                    Showing {table.getRowModel().rows?.length ?? 0} of{" "}
-                    {count ?? 0} results
-                </p>
+<div className="flex items-center justify-between gap-2">
+  {showResults && (
+    <p className="text-sm text-muted-foreground">
+      Showing {table.getRowModel().rows?.length ?? 0} of{" "}
+      {count ?? 0} results
+    </p>
+  )}
 
-                <Pagination total={pages} />
-            </div>
+  <Pagination total={pages} />
+</div>
+
         </>
     );
 }

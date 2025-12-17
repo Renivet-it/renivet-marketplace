@@ -39,7 +39,17 @@ import { z } from "zod";
 
 import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
 import { orderShipments } from "@/lib/db/schema/order-shipment";
+import axios from "axios";
+import { db } from "@/lib/db";
 
+function resolveBrandPackingRule(product: any) {
+  if (!product?.brand?.packingRules?.length) return null;
+
+  return product.brand.packingRules.find(
+    (rule: any) =>
+      rule.productTypeId === product.productTypeId
+  );
+}
 
 async function createShiprocketOrderWithRetry(
     sr: any,
@@ -438,9 +448,9 @@ export const ordersRouter = createTRPCRouter({
                     // Ensure dimensions meet Shiprocket's minimum requirements
                     const validatedDimensions = {
                         weight: Math.max(orderDimensions.weight, 100), // Minimum 100 grams
-                        length: Math.max(orderDimensions.length, 100), // Minimum 100 cm
-                        width: Math.max(orderDimensions.width, 100), // Minimum 100 cm
-                        height: Math.max(orderDimensions.height, 100), // Minimum 100 cm
+                        length: Math.max(orderDimensions.length), // Minimum 100 cm
+                        width: Math.max(orderDimensions.width), // Minimum 100 cm
+                        height: Math.max(orderDimensions.height), // Minimum 100 cm
                     };
                     console.log(
                         `Validated dimensions for brand ${brand.name}:`,
@@ -477,46 +487,110 @@ export const ordersRouter = createTRPCRouter({
                         orderItemsForShiprocket
                     );
 
-                    // const srOrderRequest = {
-                    //     order_id: orderId,
-                    //     order_date: format(new Date(), "yyyy-MM-dd"),
-                    //     pickup_location: pickupLocation || "DefaultPickup",
-                    //     billing_customer_name:
-                    //         existingAddress.fullName.split(" ")[0] ||
-                    //         "Customer",
-                    //     billing_last_name:
-                    //         existingAddress.fullName.split(" ")[1] || "",
-                    //     billing_address:
-                    //         existingAddress.street || "Unknown Street",
-                    //     billing_city: existingAddress.city || "Delhi",
-                    //     billing_pincode: +existingAddress.zip || 110001,
-                    //     billing_state: existingAddress.state || "Delhi",
-                    //     billing_country: "India",
-                    //     billing_email: user.email || "test@example.com",
-                    //     billing_phone: getRawNumberFromPhone(
-                    //         existingAddress.phone
-                    //     ),
-                    //     shipping_is_billing: true,
-                    //     order_items: orderItemsForShiprocket,
-                    //     payment_method: (input.paymentMethod === "COD"
-                    //         ? "COD"
-                    //         : "Prepaid") as "COD" | "Prepaid",
-                    //     sub_total: Math.floor(
-                    //         +convertPaiseToRupees(orderValue)
-                    //     ),
-                    //     length: Math.max(orderDimensions.length, 0.5),
-                    //     breadth: Math.max(orderDimensions.width, 0.5),
-                    //     height: Math.max(orderDimensions.height, 0.5),
-                    //     weight: +(
-                    //         Math.max(orderDimensions.weight, 0.1) / 1000
-                    //     ).toFixed(2),
-                    // };
-                    // console.log(
-                    //     `Shiprocket order request for brand ${brand.name}:`,
-                    //     srOrderRequest
-                    // );
-                    // ✅ Step 1: Check if intent exists in last 2 minutes before updating
-                    // ✅ Step 1: Fetch all intents from last 2 minutes
+                        const packingRule = resolveBrandPackingRule(product);
+                        const packingTypeName =
+                        packingRule?.packingType?.name?.toLowerCase();
+
+                        const isHardOrFragileBox =
+                        packingTypeName === "hard box" ||
+                        packingTypeName === "fragile box";
+                        console.log("📦 Resolved packing rule:", packingRule);
+                        const baseLength =
+                        packingRule?.packingType?.baseLength ?? 0;
+
+                        const baseWidth =
+                        packingRule?.packingType?.baseWidth ?? 0;
+
+                        const baseHeight =
+                        packingRule?.packingType?.baseHeight ?? 0;
+
+                        const extraCm =
+                        packingRule?.packingType?.extraCm ?? 0;
+
+const volumetricWeight = (baseLength * baseWidth * baseHeight) / 5;
+let finalVolumetricWeight = volumetricWeight;
+if (isHardOrFragileBox) {
+  const boxLength = packingRule?.packingType?.baseLength ?? 0;
+  const boxWidth = packingRule?.packingType?.baseWidth ?? 0;
+  const boxHeight = packingRule?.packingType?.baseHeight ?? 0;
+
+  const combinedLength = validatedDimensions.length + boxLength;
+  const combinedWidth = validatedDimensions.width + boxWidth;
+  const combinedHeight = validatedDimensions.height + boxHeight;
+
+  // 🔥 ONLY HERE volumetric is recalculated
+  finalVolumetricWeight =
+    (combinedLength * combinedWidth * combinedHeight) / 5;
+}
+
+                        console.log("📐 Packing dimensions resolved:", {
+                        baseLength,
+                        baseWidth,
+                        baseHeight,
+                        extraCm,
+                        });
+try {
+  const reasons: string[] = [];
+  const violatedRules: string[] = [];
+
+  const actualWeight = validatedDimensions.weight; // grams
+  const volumetric = finalVolumetricWeight;
+
+  const { length, width, height } = validatedDimensions;
+
+  // Rule 1: Volumetric < Actual
+  if (volumetric < actualWeight) {
+    reasons.push("Volumetric weight is less than actual weight");
+    violatedRules.push("VOLUMETRIC_LESS_THAN_ACTUAL");
+  }
+
+  // Rule 2: Any dimension > 70 cm
+  if (length > 70 || width > 70 || height > 70) {
+    reasons.push("One or more dimensions exceed 70 cm");
+    violatedRules.push("OVERSIZE_DIMENSION");
+  }
+
+  // Rule 3: Any dimension < 4 cm
+  if (length < 4 || width < 4 || height < 4) {
+    reasons.push("One or more dimensions are less than 4 cm");
+    violatedRules.push("UNDERSIZE_DIMENSION");
+  }
+
+  // Rule 4: Small volume but heavy
+  const volume = length * width * height;
+  if (volume < 1000) {
+    reasons.push("Small volume but high weight");
+    violatedRules.push("HEAVY_SMALL_PACKAGE");
+  }
+
+  // ✅ INSERT ONLY IF VIOLATED
+  if (violatedRules.length > 0) {
+    await db.insert(schemas.shipmentDiscrepancies).values({
+      orderId: newOrder.id,
+      productId: item.productId,
+      brandId: item.brandId,
+      brandPackingId: packingRule?.id ?? null,
+
+      actualWeight,
+      volumetricWeight: volumetric,
+
+      length,
+      width,
+      height,
+
+      reason: reasons.join(" | "),
+      rulesViolated: violatedRules,
+    });
+
+    console.log("🚨 Shipment discrepancy logged", {
+      orderId: newOrder.id,
+      violatedRules,
+    });
+  }
+} catch (discrepancyError) {
+  // 🔥 IMPORTANT: Never break order flow
+  console.error("Discrepancy logging failed:", discrepancyError);
+}
 
                       const delhiveryPayload = {
                         pickup_location: {
@@ -542,7 +616,7 @@ export const ordersRouter = createTRPCRouter({
                             product?.title ||
                             variant?.sku ||
                             "General Product",
-                          weight: validatedDimensions.weight / 1000, // grams → kg
+                          weight: finalVolumetricWeight, // grams → kg
                           shipment_length: validatedDimensions.length / 10, // cm → mm optional
                           shipment_width: validatedDimensions.width / 10,
                           shipment_height: validatedDimensions.height / 10,
@@ -603,6 +677,15 @@ export const ordersRouter = createTRPCRouter({
                         // );
                     const srOrder = await createDelhiveryOrder(delhiveryPayload);
  console.log("✅ Delhivery Response:", srOrder);
+ let finalLength = baseLength;
+let finalWidth = baseWidth;
+let finalHeight = baseHeight;
+
+if (isHardOrFragileBox) {
+  finalLength = validatedDimensions.length + baseLength;
+  finalWidth = validatedDimensions.width + baseWidth;
+  finalHeight = validatedDimensions.height + baseHeight;
+}
                         if (matchedIntent) {
                             await db
                                 .update(schemas.ordersIntent)
@@ -651,6 +734,9 @@ export const ordersRouter = createTRPCRouter({
                                 courierName: "Delhivery", // fixed since courier is always Delhivery
                                 awbNumber: pkg?.waybill || null, // MAIN AWB FROM DELHIVERY
                                 isAwbGenerated: true,
+                                givenLength: finalLength,
+                                givenWidth: finalWidth,
+                                givenHeight: finalHeight,
                             })
                             .returning()
                             .then((res) => res[0]);
@@ -1331,18 +1417,98 @@ export const ordersRouter = createTRPCRouter({
 
             return true;
         }),
-    getOrderShipmentDetailsByShipmentId: protectedProcedure
-        .input(
-            z.object({
-                shipmentId: z.number(),
-            })
-        )
-        .query(async ({ input, ctx }) => {
-            const { queries } = ctx;
+  getOrderShipmentDetailsByShipmentId: protectedProcedure
+  .input(
+    z.object({
+      shipmentId: z.number(),
+    })
+  )
+  .query(async ({ input, ctx }) => {
+    const { queries } = ctx;
 
-            const data = await queries.orders.getShipmentDetailsByShipmentId(
-                input.shipmentId
-            );
-            return data;
-        }),
+    return queries.orders.getShipmentDetailsByShipmentId(
+      input.shipmentId
+    );
+  }),
+
+/* --------------------------------------------------
+   UPDATE DELHIVERY DIMENSIONS
+-------------------------------------------------- */
+
+updateDelhiveryDimensions: protectedProcedure
+  .input(
+    z.object({
+      orderId: z.string(),
+      awbNumber: z.string(), // ✅ SOURCE OF TRUTH
+      length: z.number(),
+      width: z.number(),
+      height: z.number(),
+      volumetricWeight: z.number(), // grams
+    })
+  )
+  .mutation(async ({ input }) => {
+    const {
+      orderId,
+      awbNumber,
+      length,
+      width,
+      height,
+      volumetricWeight,
+    } = input;
+
+    /* -----------------------------
+       0️⃣ BASIC SAFETY CHECK
+    ----------------------------- */
+    if (!awbNumber) {
+      throw new Error("AWB number not found for this shipment");
+    }
+
+    /* -----------------------------
+       1️⃣ CALL DELHIVERY API
+       Delhivery calls AWB as "waybill"
+       Weight must be in KG
+    ----------------------------- */
+
+    const delhiveryResponse = await axios.post(
+      "https://track.delhivery.com/api/p/edit",
+      {
+        waybill: awbNumber,
+        shipment_height: height,
+        shipment_length: length,
+        shipment_width: width,
+        weight: volumetricWeight, // ✅ grams → kg
+      },
+      {
+        headers: {
+          Authorization: `Token ${process.env.DELHIVERY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!delhiveryResponse.data?.success) {
+      throw new Error(
+        delhiveryResponse.data?.message ||
+          "Delhivery update failed"
+      );
+    }
+
+    /* -----------------------------
+       2️⃣ UPDATE DB (ONLY IF SUCCESS)
+    ----------------------------- */
+
+    await db
+      .update(orderShipments)
+      .set({
+        givenLength: length,
+        givenWidth: width,
+        givenHeight: height,
+        updatedAt: new Date(),
+      })
+      .where(eq(orderShipments.orderId, orderId));
+
+    return {
+      success: true,
+    };
+  }),
 });
