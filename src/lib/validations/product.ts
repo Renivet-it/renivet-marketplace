@@ -764,7 +764,7 @@ export const productWithBrandSchema = productSchema.extend({
           shipsInOwnBox: z.boolean(),
           canOverride: z.boolean(),
 
-          packingType: packingTypeSchema.nullable(),
+          packingType: packingTypeSchema.nullable().optional(),
         })
       ).default([]),
     })

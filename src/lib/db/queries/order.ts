@@ -52,6 +52,12 @@ class OrderQuery {
                                 brand: {
                                     with: {
                                         confidential: true, // Loads all confidential data
+                      packingRules: {
+          with: {
+            packingType: true,
+          },
+        },
+
                                     },
                                 },
                                 variants: true,
@@ -173,6 +179,12 @@ if (brandIds?.length) {
                                 brand: {
                                     with: {
                                         confidential: true, // Loads all confidential data
+                        packingRules: {
+          with: {
+            packingType: true,
+          },
+        },
+
                                     },
                                 },
                                 variants: true,
@@ -838,6 +850,12 @@ console.log(ordersForBrand, "ordersForBrandordersForBrand");
                 brand: {
                     with: {
                         confidential: true,
+                         packingRules: {
+          with: {
+            packingType: true,
+          },
+        },
+
                     },
                 },
             },

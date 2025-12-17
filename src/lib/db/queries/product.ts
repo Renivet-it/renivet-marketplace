@@ -1052,7 +1052,15 @@ async getAllCatalogueProducts({
     }) {
         const data = await db.query.products.findFirst({
             with: {
-                brand: true,
+               brand: {
+      with: {
+        packingRules: {
+          with: {
+            packingType: true,
+          },
+        },
+      },
+    },
                 variants: true,
                 category: true,
                 subcategory: true,

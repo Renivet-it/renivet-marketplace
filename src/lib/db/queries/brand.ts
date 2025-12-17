@@ -127,6 +127,11 @@ class BrandQuery {
             with: {
                 owner: true,
                 confidential: true,
+                packingRules: {
+          with: {
+            packingType: true,
+          },
+        },
                 members: {
                     with: {
                         member: true,
