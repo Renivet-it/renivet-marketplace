@@ -845,6 +845,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
+                    title: "Packing Rules",
+                    url: `/dashboard/brands/${brandId}/packing-rules`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
                     title: "Support Requests",
                     url: `/dashboard/brands/${brandId}/support`,
                     permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,

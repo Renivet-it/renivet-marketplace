@@ -12,7 +12,8 @@ import {
     productsRouter as brandProductsRouter,
     revenueRouter as brandRevenueRouter,
     rolesRouter as brandRolesRouter,
-    brandSupportRouter
+    brandSupportRouter,
+    brandPackingRouter
 } from "./routes/brands";
 import {
     blogsRouter,
@@ -86,6 +87,7 @@ export const appRouter = createTRPCRouter({
         revenue: brandRevenueRouter,
         roles: brandRolesRouter,
         brandSupportRouter: brandSupportRouter,
+        brandPacking: brandPackingRouter,
     }),
 });
 

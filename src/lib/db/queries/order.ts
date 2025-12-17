@@ -1451,6 +1451,56 @@ async getAllBrandProductTypePacking({
     throw error;
   }
 }
+async getBrandProductTypePackingByBrand({
+  brandId,
+  limit,
+  page,
+  search,
+}: {
+  brandId: string;
+  limit: number;
+  page: number;
+  search?: string;
+}) {
+  try {
+    const offset = (page - 1) * limit;
+
+    const whereCondition = and(
+      eq(brandProductTypePacking.brandId, brandId),
+      search
+        ? ilike(productTypes.name, `%${search}%`)
+        : undefined
+    );
+
+    const data = await db.query.brandProductTypePacking.findMany({
+      where: whereCondition,
+      with: {
+        productType: true,
+        packingType: true,
+      },
+      limit,
+      offset,
+      orderBy: desc(brandProductTypePacking.createdAt),
+      extras: {
+        count: db
+          .$count(brandProductTypePacking, whereCondition)
+          .as("count"),
+      },
+    });
+
+    return {
+      data,
+      count: Number(data?.[0]?.count ?? 0),
+    };
+  } catch (error) {
+    console.error(
+      "Failed to fetch brand packing rules:",
+      error
+    );
+    throw error;
+  }
+}
+
 
 async getAllShipmentDiscrepancies({
   page,
