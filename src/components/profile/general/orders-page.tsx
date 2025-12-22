@@ -61,6 +61,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ReplaceModal } from "./replace-modal";
 import { ReturnModal } from "./return-modal";
+import { differenceInDays } from "date-fns";
 
 interface PageProps extends GenericProps {
     initialData: OrderWithItemAndBrand[];
@@ -327,6 +328,25 @@ function OrderCard({
     >[number];
 const [returnItem, setReturnItem] = useState(null);
 const [replaceItem, setReplaceItem] = useState(null);
+// Use item-level delivered timestamp
+const deliveredAt =
+  order.status === "delivered" && order.shipments[0]?.updatedAt
+    ? new Date(order.shipments[0].updatedAt)
+    : null;
+
+const daysPassed =
+  deliveredAt !== null
+    ? differenceInDays(new Date(), deliveredAt)
+    : null;
+
+const daysLeft =
+  daysPassed !== null ? 7 - daysPassed : null;
+
+const isReturnWindowOpen =
+  order.status === "delivered" &&
+  daysLeft !== null &&
+  daysLeft > 0;
+
 
     const itemsByBrand = availableItems.reduce(
         (acc, item) => {
@@ -435,25 +455,43 @@ const [replaceItem, setReplaceItem] = useState(null);
   </div>
 
   {/* Right: Return + Replace */}
-  {order.status === "delivered" && (
-    <div className="flex gap-3">
-      <Button
-        size="sm"
-        className="bg-orange-500 hover:bg-orange-600 text-white px-5"
-        onClick={() => setReturnItem(order.items[0])}
-      >
-        Return
-      </Button>
+{order.status === "delivered" && (
+  <div className="flex flex-col sm:items-end gap-1">
+    {isReturnWindowOpen ? (
+      <>
+        <p className="text-xs text-gray-500">
+          Return & replacement window open for{" "}
+          <span className="font-semibold">{daysLeft}</span>{" "}
+          more day{daysLeft > 1 ? "s" : ""}
+        </p>
 
-      <Button
-        size="sm"
-        className="bg-blue-600 hover:bg-blue-700 text-white px-5"
-        onClick={() => setReplaceItem(order.items[0])}
-      >
-        Replace
-      </Button>
-    </div>
-  )}
+        <div className="flex gap-3">
+          <Button
+            size="sm"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-5"
+            onClick={() => setReturnItem(order.items[0])}
+          >
+            Return
+          </Button>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5"
+            onClick={() => setReplaceItem(order.items[0])}
+          >
+            Replace
+          </Button>
+        </div>
+      </>
+    ) : (
+      <p className="text-xs text-gray-500">
+        Return & replacement window closed
+      </p>
+    )}
+  </div>
+)}
+
+
+
 
   {/* Modals */}
   {returnItem && (
@@ -566,9 +604,7 @@ function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
                 return "Order Status";
         }
     };
-const [openReturn, setOpenReturn] = useState(false);
-const [openReplace, setOpenReplace] = useState(false);
-    const getStatusMessage = () => {
+const getStatusMessage = () => {
         switch (order.paymentStatus) {
             case "refunded":
                 return `Your refund of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} for the return has been processed successfully.`;
