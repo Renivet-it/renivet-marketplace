@@ -15,6 +15,7 @@ getOrdersByBrandId: protectedProcedure
       page: z.number().min(1).default(1),
       limit: z.number().min(1).default(10),
       shipmentStatus: z.string().optional(), // NEW optional filter
+      isRto: z.boolean().nullable().optional(), // NEW optional filter
     })
   )
   .output(
@@ -31,7 +32,8 @@ getOrdersByBrandId: protectedProcedure
       input.brandId,
       input.page,
       input.limit,
-      input.shipmentStatus
+      input.shipmentStatus,
+      input.isRto
     );
     return { data, total };
   }),

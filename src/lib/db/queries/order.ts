@@ -330,15 +330,17 @@ const extraRtoFilter = isRto
 // )
 // ;
 
+
 const totalResult = await db
   .with(filteredProducts, filteredOrderItems)
-  .select({ count: sql<number>`COUNT(DISTINCT ${orders.id})` })
+  .select({ count: sql<number>`COUNT(*)` })
   .from(orders)
   .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
   .where(
-    sql`${orders.id} IN (SELECT order_id FROM filtered_order_items)
-        ${extraRtoFilter}`
+    sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter} ${extraRtoFilter}
+`
   );
+console.log(totalResult, "shipmentStatusshipmentStatus");
 
 const total = Number(totalResult[0]?.count) || 0;
     // Step 4: Get paginated orders
@@ -394,7 +396,7 @@ const total = Number(totalResult[0]?.count) || 0;
       .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
       .leftJoin(addresses, eq(orders.addressId, addresses.id)) // ⭐ NEW JOIN
       .where(
-  sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter}`
+  sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter} ${extraRtoFilter}`
 )
       .orderBy(desc(orders.createdAt))
       .limit(limit)
