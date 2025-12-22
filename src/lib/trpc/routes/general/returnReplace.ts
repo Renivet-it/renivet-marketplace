@@ -21,6 +21,7 @@ export const returnReplaceRouter = createTRPCRouter({
                 newVariantId: z.string().optional(),
                 reason: z.string().optional(),
                 comment: z.string().optional(),
+                images: z.array(z.string()).optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -104,7 +105,7 @@ export const returnReplaceRouter = createTRPCRouter({
                 comment: r.comment,
                 status: r.status,
                 brandId: r.brandId,
-
+                images: r.images,
                 user: {
                     firstName: r.order.user.firstName,
                     lastName: r.order.user.lastName,
