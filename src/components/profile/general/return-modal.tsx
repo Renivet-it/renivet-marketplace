@@ -20,7 +20,8 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
 import { handleClientError } from "@/lib/utils";
-import { useUploadThing } from "@/lib/uploadthing"; // 👈 UploadThing hook
+import { useUploadThing } from "@/lib/uploadthing";
+import { X, UploadCloud } from "lucide-react";
 
 interface ReturnModalProps {
   orderItem: any;
@@ -34,8 +35,7 @@ export function ReturnModal({ orderItem, isOpen, onClose }: ReturnModalProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  // ✅ UploadThing (endpoint name must match backend)
-const { startUpload } = useUploadThing("brandMediaUploader");
+  const { startUpload } = useUploadThing("brandMediaUploader");
 
   const { mutate, isPending } =
     trpc.general.returnReplace.create.useMutation({
@@ -51,14 +51,10 @@ const { startUpload } = useUploadThing("brandMediaUploader");
   /* -----------------------------
      FILE HANDLERS
   ------------------------------*/
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
     const selected = Array.from(e.target.files);
-
-    // Max 5 images
     const allowed = selected.slice(0, 5 - files.length);
     setFiles((prev) => [...prev, ...allowed]);
   };
@@ -68,28 +64,28 @@ const { startUpload } = useUploadThing("brandMediaUploader");
   };
 
   /* -----------------------------
-     SUBMIT HANDLER
+     SUBMIT (IMAGES REQUIRED)
   ------------------------------*/
   const handleSubmit = async () => {
-    if (!reason) return;
+    if (!reason) {
+      toast.error("Please select a return reason");
+      return;
+    }
+
+    // ✅ Mandatory image validation
+    if (files.length === 0) {
+      toast.error("Please upload at least one image");
+      return;
+    }
 
     try {
       setUploading(true);
 
-      let imageUrls: string[] = [];
+      const uploaded = await startUpload(files);
+      if (!uploaded) throw new Error("Upload failed");
 
-      if (files.length > 0) {
-        const uploaded = await startUpload(files);
+      const imageUrls = uploaded.map((f) => f.url);
 
-        if (!uploaded) {
-          throw new Error("Upload failed");
-        }
-
-        // ✅ Extract UploadThing URLs
-        imageUrls = uploaded.map((file) => file.url);
-      }
-
-      // ✅ Send URLs as JSON (perfect for jsonb)
       mutate({
         orderId: orderItem.orderId,
         orderItemId: orderItem.id,
@@ -97,11 +93,11 @@ const { startUpload } = useUploadThing("brandMediaUploader");
         requestType: "return",
         reason,
         comment,
-        images: imageUrls, // 👈 jsonb column
+        images: imageUrls, // jsonb
       });
     } catch (err) {
+      toast.error("Image upload failed");
       console.error(err);
-      toast.error("Failed to upload images");
     } finally {
       setUploading(false);
     }
@@ -109,85 +105,106 @@ const { startUpload } = useUploadThing("brandMediaUploader");
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="max-w-lg">
+      <AlertDialogContent className="max-w-xl rounded-xl p-6">
         <AlertDialogHeader>
-          <AlertDialogTitle>Return Item</AlertDialogTitle>
-          <AlertDialogDescription>
-            Please tell us why you want to return this item.
+          <AlertDialogTitle className="text-lg font-semibold">
+            Return Item
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm text-muted-foreground">
+            Upload images to help us review your return request.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {/* Reason */}
-        <Select onValueChange={setReason}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select reason" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="wrong_item">Wrong Item</SelectItem>
-            <SelectItem value="damaged">Damaged Product</SelectItem>
-            <SelectItem value="quality_issue">Quality Issue</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="space-y-4 mt-4">
+          {/* Reason */}
+          <Select onValueChange={setReason}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select return reason" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="wrong_item">Wrong Item Received</SelectItem>
+              <SelectItem value="damaged">Product Damaged</SelectItem>
+              <SelectItem value="quality_issue">Quality Issue</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Comment */}
-        <textarea
-          className="w-full border p-2 rounded text-sm"
-          placeholder="Comment (optional)"
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-        />
-
-        {/* Image Upload */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Upload images (optional, max 5)
-          </label>
-
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileChange}
-            className="block w-full text-sm"
+          {/* Comment */}
+          <textarea
+            className="w-full rounded-lg border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            placeholder="Add a comment (optional)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
           />
 
-          {/* 🔍 Bigger previews */}
-          {files.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              {files.map((file, index) => (
-                <div
-                  key={index}
-                  className="relative h-28 w-28 rounded-lg border overflow-hidden"
-                >
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt="preview"
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeFile(index)}
-                    className="absolute top-1 right-1 rounded bg-black/60 px-2 text-xs text-white"
+          {/* Upload Area */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">
+              Upload images <span className="text-red-500">*</span>
+            </p>
+
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted p-6 text-center hover:bg-muted/40 transition">
+              <UploadCloud className="h-6 w-6 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Click to upload or drag & drop
+              </p>
+              <p className="text-xs text-muted-foreground">
+                At least 1 image required • Max 5
+              </p>
+
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+
+            {/* Image previews */}
+            {files.length > 0 && (
+              <div className="grid grid-cols-3 gap-4 pt-2">
+                {files.map((file, index) => (
+                  <div
+                    key={index}
+                    className="relative h-32 w-32 rounded-xl border bg-muted overflow-hidden"
                   >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt="preview"
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Inline validation hint */}
+            {files.length === 0 && (
+              <p className="text-xs text-red-500">
+                Please upload at least one image to proceed
+              </p>
+            )}
+          </div>
         </div>
 
-        <AlertDialogFooter>
+        <AlertDialogFooter className="mt-6">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-
           <Button
-            disabled={!reason || isPending || uploading}
+            disabled={!reason || files.length === 0 || isPending || uploading}
             onClick={handleSubmit}
+            className="min-w-28"
           >
-            {uploading || isPending ? "Submitting..." : "Submit"}
+            {uploading || isPending ? "Submitting..." : "Submit Return"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
