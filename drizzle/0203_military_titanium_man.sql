@@ -1,0 +1,2 @@
+ALTER TABLE "order_shipments" ADD COLUMN "is_return_label_generated" boolean DEFAULT false;--> statement-breakpoint
+ALTER TABLE "order_shipments" ADD COLUMN "is_replacement_label_generated" boolean DEFAULT false;

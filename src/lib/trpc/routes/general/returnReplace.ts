@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq, and, like, sql } from "drizzle-orm";
 
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { orderReturnRequests, orders, orderItems, users } from "@/lib/db/schema";
+import { orderReturnRequests, orders, orderItems, users, orderShipments} from "@/lib/db/schema";
 import { generatePickupLocationCode } from "@/lib/utils";
 import Razorpay from "razorpay";
 
@@ -33,6 +33,14 @@ export const returnReplaceRouter = createTRPCRouter({
                 updatedAt: new Date(),
             });
 
+             // 2️⃣ Update order_shipments flags (🔥 NEW LOGIC)
+        await ctx.db
+          .update(orderShipments)
+          .set({
+            is_return_label_generated: input.requestType === "return",
+            is_replacement_label_generated: input.requestType === "replace",
+          })
+      .where(eq(orderShipments.orderId, input.orderId));
             return { success: true };
         }),
 

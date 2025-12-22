@@ -71,13 +71,13 @@ export function ReturnReplaceDetailsModal({
                 <div className="grid grid-cols-3 gap-4">
                   {images.map((url, index) => (
          <button
-  key={index}
-  onClick={() => {
-    onClose();// 👈 close main modal
-    setPreviewImage(url); // 👈 open zoom
-  }}
-  className="relative h-40 w-40 overflow-hidden rounded-xl border bg-muted hover:opacity-90 transition"
->
+                      key={index}
+                      onClick={() => {
+                        onClose(); // 👈 close main modal
+                        setPreviewImage(url); // 👈 open zoom
+                      }}
+                    className="relative h-40 w-40 overflow-hidden rounded-xl border bg-muted hover:opacity-90 transition"
+                    >
 
                       <img
                         src={url}

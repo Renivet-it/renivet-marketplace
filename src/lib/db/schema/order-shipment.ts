@@ -87,6 +87,8 @@ export const orderShipments = pgTable(
         ).default({}),
         isRtoReturn: boolean("is_rto_return").default(false),
         delhiveryTrackingJson: jsonb("delhivery_tracking_json").default({}),
+        is_return_label_generated: boolean("is_return_label_generated").default(false),
+        is_replacement_label_generated: boolean("is_replacement_label_generated").default(false),
     },
     (table) => ({
         orderShipmentOrderIdIdx: index("order_shipment_order_id_idx").on(
