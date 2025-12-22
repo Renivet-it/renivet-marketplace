@@ -46,6 +46,7 @@ export default function Page(props: PageProps) {
 async function OrdersFetch({ params }: PageProps) {
   const { bId } = await params;
   const shipmentStatus = "rto_initiated"; // ← CUSTOMIZE PAGE
+const isRto = true;
 
   // PASS THE STATUS VARIABLE HERE
   // Ensure your query accepts this second argument
@@ -54,7 +55,7 @@ async function OrdersFetch({ params }: PageProps) {
     1,
     10,
    shipmentStatus,
-
+isRto
   );
   const parsedData = z.array(orderSchema).parse(data);
 
