@@ -45,7 +45,7 @@ export default function Page(props: PageProps) {
 
 async function OrdersFetch({ params }: PageProps) {
   const { bId } = await params;
-  const shipmentStatus = "rto_initiated"; // ← CUSTOMIZE PAGE
+  const shipmentStatus = "delivered"; // ← CUSTOMIZE PAGE
 const isRto = true;
 
   // PASS THE STATUS VARIABLE HERE
@@ -54,8 +54,8 @@ const isRto = true;
     bId,
     1,
     10,
-   shipmentStatus,
-isRto
+   undefined,
+    isRto
   );
   const parsedData = z.array(orderSchema).parse(data);
 
@@ -64,7 +64,8 @@ isRto
       initialData={parsedData}
       brandId={bId}
       totalCount={total}
-      shipmentStatus={shipmentStatus} // ⭐ REQUIRED
+      shipmentStatus={undefined} // ⭐ REQUIRED
+      isRto={isRto}
     />
   );
 }

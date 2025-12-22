@@ -439,6 +439,7 @@ console.log(ordersForBrand, "ordersForBrandordersForBrand");
           brandId: item.brandId,
           productId: item.productId,
           shipmentStatus: item.shipmentStatus,
+            isRto: item.isRto, // ⭐ MAIN FLAG
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       })),
