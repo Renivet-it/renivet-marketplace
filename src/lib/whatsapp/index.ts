@@ -45,6 +45,16 @@ export async function sendWhatsAppMessage({
           contentSid: "HX25bb65cc2fcac32492586d10c86bd5d6",
           parameterCount: 4, // type, orderId, userName, reason
         },
+        return_replace_approved_user: {
+  contentSid: "HX7f048ddcb266cc64d2ca5505fd36fccc",
+  parameterCount: 3,
+},
+
+return_replace_rejected_user: {
+  contentSid: "HX05a499044fb1c0ccb0900e662e39f638",
+  parameterCount: 4,
+},
+
     };
 
     // Validate template existence

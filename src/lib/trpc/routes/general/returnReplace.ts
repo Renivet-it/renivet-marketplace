@@ -22,6 +22,7 @@ function formatIndianWhatsAppNumber(phone: string) {
   throw new Error(`Invalid phone number: ${phone}`);
 }
 
+
 export const returnReplaceRouter = createTRPCRouter({
 
     // -------------------------------------------------------
@@ -186,46 +187,119 @@ const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
     // -------------------------------------------------------
     // 3️⃣ APPROVE REQUEST
     // -------------------------------------------------------
-    approveRequest: protectedProcedure
-        .input(
-            z.object({
-                id: z.string(),
-            })
-        )
-        .mutation(async ({ ctx, input }) => {
-            await ctx.db
-                .update(orderReturnRequests)
-                .set({
-                    status: "approved",
-                    updatedAt: new Date(),
-                })
-                .where(eq(orderReturnRequests.id, input.id));
+    // approveRequest: protectedProcedure
+    //     .input(
+    //         z.object({
+    //             id: z.string(),
+    //         })
+    //     )
+    //     .mutation(async ({ ctx, input }) => {
+    //         await ctx.db
+    //             .update(orderReturnRequests)
+    //             .set({
+    //                 status: "approved",
+    //                 updatedAt: new Date(),
+    //             })
+    //             .where(eq(orderReturnRequests.id, input.id));
 
-            return { success: true };
-        }),
+    //         return { success: true };
+    //     }),
+    approveRequest: protectedProcedure
+  .input(
+    z.object({
+      id: z.string(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    // 1️⃣ Update status
+    const [request] = await ctx.db
+      .update(orderReturnRequests)
+      .set({
+        status: "approved",
+        updatedAt: new Date(),
+      })
+      .where(eq(orderReturnRequests.id, input.id))
+      .returning();
+
+    // 2️⃣ Fetch order + user
+    const [order] = await ctx.db
+      .select({ id: orders.id, userId: orders.userId })
+      .from(orders)
+      .where(eq(orders.id, request.orderId));
+
+    const [user] = await ctx.db
+      .select({ name: users.firstName, phone: users.phone })
+      .from(users)
+      .where(eq(users.id, order.userId));
+const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+
+    // 3️⃣ WhatsApp (NON-BLOCKING)
+    Promise.allSettled([
+      sendWhatsAppMessage({
+        recipientPhoneNumber: formattedUserPhone, // must be +91 format
+        templateName: "return_replace_approved_user",
+        parameters: [
+          user.name,
+          request.requestType.toUpperCase(), // RETURN / REPLACE
+          order.id,
+        ],
+      }),
+    ]);
+
+    return { success: true };
+  }),
+
 
     // -------------------------------------------------------
     // 4️⃣ REJECT REQUEST
     // -------------------------------------------------------
-    rejectRequest: protectedProcedure
-        .input(
-            z.object({
-                id: z.string(),
-                comment: z.string().optional(),
-            })
-        )
-        .mutation(async ({ ctx, input }) => {
-            await ctx.db
-                .update(orderReturnRequests)
-                .set({
-                    status: "rejected",
-                    comment: input.comment ?? null,
-                    updatedAt: new Date(),
-                })
-                .where(eq(orderReturnRequests.id, input.id));
+rejectRequest: protectedProcedure
+  .input(
+    z.object({
+      id: z.string(),
+      comment: z.string().optional(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    // 1️⃣ Update status
+    const [request] = await ctx.db
+      .update(orderReturnRequests)
+      .set({
+        status: "rejected",
+        comment: input.comment ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(orderReturnRequests.id, input.id))
+      .returning();
 
-            return { success: true };
-        }),
+    // 2️⃣ Fetch order + user
+    const [order] = await ctx.db
+      .select({ id: orders.id, userId: orders.userId })
+      .from(orders)
+      .where(eq(orders.id, request.orderId));
+
+    const [user] = await ctx.db
+      .select({ name: users.firstName, phone: users.phone })
+      .from(users)
+      .where(eq(users.id, order.userId));
+const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+    // 3️⃣ WhatsApp with reject comment
+    Promise.allSettled([
+      sendWhatsAppMessage({
+        recipientPhoneNumber: formattedUserPhone,
+        templateName: "return_replace_rejected_user",
+        parameters: [
+          user.name,
+          request.requestType.toUpperCase(),
+          order.id,
+          input.comment ?? "Request does not meet our return policy",
+        ],
+      }),
+    ]);
+
+    return { success: true };
+  }),
+
 
     // -------------------------------------------------------
     // 5️⃣ MARK COMPLETED
