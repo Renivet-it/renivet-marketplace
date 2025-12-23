@@ -41,6 +41,7 @@ export function ReplaceModal({
   const [uploading, setUploading] = useState(false);
 
   const { startUpload } = useUploadThing("brandMediaUploader");
+const utils = trpc.useUtils();
 
   // Fetch product + variants
   const { data: product, isLoading } =
@@ -51,10 +52,14 @@ export function ReplaceModal({
 
   const { mutate, isPending } =
     trpc.general.returnReplace.create.useMutation({
-      onSuccess: () => {
-        toast.success("Replacement request submitted!");
-        onClose();
-      },
+    onSuccess: async () => {
+      toast.success("Replacement request submitted!");
+
+      // 🔥 THIS IS THE FIX
+      await utils.general.orders.getOrdersByUserId.invalidate();
+
+      onClose();
+    },
       onError: handleClientError,
     });
 

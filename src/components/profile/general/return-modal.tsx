@@ -34,17 +34,23 @@ export function ReturnModal({ orderItem, isOpen, onClose }: ReturnModalProps) {
   const [comment, setComment] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+const utils = trpc.useUtils();
 
   const { startUpload } = useUploadThing("brandMediaUploader");
 
-  const { mutate, isPending } =
-    trpc.general.returnReplace.create.useMutation({
-      onSuccess: () => {
-        toast.success("Return request submitted!");
-        onClose();
-      },
-      onError: handleClientError,
-    });
+const { mutate, isPending } =
+  trpc.general.returnReplace.create.useMutation({
+    onSuccess: async () => {
+      toast.success("Return request submitted!");
+
+      // 🔥 THIS IS THE IMPORTANT PART
+      await utils.general.orders.getOrdersByUserId.invalidate();
+
+      onClose();
+    },
+    onError: handleClientError,
+  });
+
 
   if (!orderItem) return null;
 
