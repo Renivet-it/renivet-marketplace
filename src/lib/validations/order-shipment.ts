@@ -81,6 +81,8 @@ export const orderShipmentSchema = z.object({
     pickupTokenNumber: z.string().nullable(),
     isAwbGenerated: z.boolean().default(false),
     isReturnLabelGenerated: z.boolean().default(false).nullable().optional(),
+    is_return_label_generated: z.boolean().default(false).nullable().optional(),
+    is_replacement_label_generated: z.boolean().default(false).nullable().optional(),
     isReplacementLabelGenerated: z.boolean().default(false).nullable().optional(),
     isRto: z.boolean().default(false).nullable().optional(),
     isRtoReturn: z.boolean().default(false),
@@ -161,6 +163,8 @@ export const createOrderShipmentSchema = orderShipmentSchema.omit({
     updatedAt: true,
     awbDetailsShipRocketJson: true,
     isReturnLabelGenerated: true,
+    is_return_label_generated: true,
+    is_replacement_label_generated: true,
     isReplacementLabelGenerated: true,
     isRto: true,
 });
@@ -190,6 +194,8 @@ export const updateOrderShipmentSchema = orderShipmentSchema.pick({
     pickupTokenNumber: true,
     awbDetailsShipRocketJson: true,
     isReturnLabelGenerated: true,
+    is_return_label_generated: true,
+    is_replacement_label_generated: true,
     isReplacementLabelGenerated: true,
     isRto: true,
 });

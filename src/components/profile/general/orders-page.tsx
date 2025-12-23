@@ -329,24 +329,34 @@ function OrderCard({
 const [returnItem, setReturnItem] = useState(null);
 const [replaceItem, setReplaceItem] = useState(null);
 // Use item-level delivered timestamp
+// Delivered date (from shipment)
 const deliveredAt =
-  order.status === "delivered" && order.shipments[0]?.updatedAt
+  order.status === "delivered" && order.shipments?.[0]?.updatedAt
     ? new Date(order.shipments[0].updatedAt)
     : null;
 
+// Days since delivery
 const daysPassed =
-  deliveredAt !== null
-    ? differenceInDays(new Date(), deliveredAt)
-    : null;
+  deliveredAt ? differenceInDays(new Date(), deliveredAt) : null;
 
-const daysLeft =
-  daysPassed !== null ? 7 - daysPassed : null;
-
-const isReturnWindowOpen =
+// Return window
+const isWithinReturnWindow =
   order.status === "delivered" &&
-  daysLeft !== null &&
-  daysLeft > 0;
+  daysPassed !== null &&
+  daysPassed <= 7;
 
+// Already initiated check
+const isReturnOrReplaceInitiated =
+  order.shipments?.[0]?.is_return_label_generated === true ||
+  order.shipments?.[0]?.is_replacement_label_generated === true;
+
+console.log(isReturnOrReplaceInitiated, "isReturnOrReplaceInitiated");
+// Final visibility flags
+const showReturnReplaceSection =
+  order.status === "delivered" && isWithinReturnWindow;
+
+const showReturnReplaceButtons =
+  showReturnReplaceSection && !isReturnOrReplaceInitiated;
 
     const itemsByBrand = availableItems.reduce(
         (acc, item) => {
@@ -454,15 +464,17 @@ const isReturnWindowOpen =
     </button>
   </div>
 
-  {/* Right: Return + Replace */}
-{order.status === "delivered" && (
+{/* Right: Return + Replace */}
+{showReturnReplaceSection && (
   <div className="flex flex-col sm:items-end gap-1">
-    {isReturnWindowOpen ? (
+    {showReturnReplaceButtons ? (
       <>
         <p className="text-xs text-gray-500">
-          Return & replacement window open for{" "}
-          <span className="font-semibold">{daysLeft}</span>{" "}
-          more day{daysLeft > 1 ? "s" : ""}
+          Return & replacement available for{" "}
+          <span className="font-semibold">
+            {7 - daysPassed}
+          </span>{" "}
+          more day{7 - daysPassed > 1 ? "s" : ""}
         </p>
 
         <div className="flex gap-3">
@@ -473,6 +485,7 @@ const isReturnWindowOpen =
           >
             Return
           </Button>
+
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white px-5"
@@ -484,11 +497,12 @@ const isReturnWindowOpen =
       </>
     ) : (
       <p className="text-xs text-gray-500">
-        Return & replacement window closed
+        Return / replacement already initiated
       </p>
     )}
   </div>
 )}
+
 
 
 
@@ -560,6 +574,13 @@ const isReturnWindowOpen =
 }
 
 function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
+    const isReturnOrReplaceInitiated =
+  order.shipments?.some(
+    (s) =>
+      s.is_return_label_generated === true ||
+      s.is_replacement_label_generated === true
+  ) ?? false;
+
     const getStatusIcon = () => {
         if (
             order.status === "cancelled" ||
@@ -586,44 +607,62 @@ function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
             : null;
     };
 
-    const getStatusHeading = () => {
-        switch (order.paymentStatus) {
-            case "refunded":
-                return "Refund Credited";
-            case "refund_pending":
-                return "Refund In Process";
-            case "failed":
-                return "Payment Failed";
-            case "pending":
-                return "Awaiting Payment";
-            case "paid":
-                return order.status === "delivered"
-                    ? "Order Delivered"
-                    : "Order Confirmed";
-            default:
-                return "Order Status";
-        }
-    };
-const getStatusMessage = () => {
-        switch (order.paymentStatus) {
-            case "refunded":
-                return `Your refund of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} for the return has been processed successfully.`;
-            case "refund_pending":
-                return `Your refund of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} is being processed.`;
-            case "failed":
-                return "Your payment failed. Please try again.";
-            case "pending":
-                return `Your payment of ${formatPriceTag(+convertPaiseToRupees(order.totalAmount), true)} is pending. Please complete the payment.`;
-            case "paid":
-                return order.status === "delivered"
-                    ? "Your order has been delivered successfully."
-                    : "Your order has been placed and is being processed.";
-            default:
-                return "Order is being processed.";
-        }
-    };
+const getStatusHeading = () => {
+    if (isReturnOrReplaceInitiated) {
+        return "Return / Replacement Initiated";
+    }
 
- 
+    switch (order.paymentStatus) {
+        case "refunded":
+            return "Refund Credited";
+        case "refund_pending":
+            return "Refund In Process";
+        case "failed":
+            return "Payment Failed";
+        case "pending":
+            return "Awaiting Payment";
+        case "paid":
+            return order.status === "delivered"
+                ? "Order Delivered"
+                : "Order Confirmed";
+        default:
+            return "Order Status";
+    }
+};
+
+const getStatusMessage = () => {
+    if (isReturnOrReplaceInitiated) {
+        return "Your return or replacement request has been successfully initiated.";
+    }
+
+    switch (order.paymentStatus) {
+        case "refunded":
+            return `Your refund of ${formatPriceTag(
+                +convertPaiseToRupees(order.totalAmount),
+                true
+            )} for the return has been processed successfully.`;
+        case "refund_pending":
+            return `Your refund of ${formatPriceTag(
+                +convertPaiseToRupees(order.totalAmount),
+                true
+            )} is being processed.`;
+        case "failed":
+            return "Your payment failed. Please try again.";
+        case "pending":
+            return `Your payment of ${formatPriceTag(
+                +convertPaiseToRupees(order.totalAmount),
+                true
+            )} is pending. Please complete the payment.`;
+        case "paid":
+            return order.status === "delivered"
+                ? "Your order has been delivered successfully."
+                : "Your order has been placed and is being processed.";
+        default:
+            return "Order is being processed.";
+    }
+};
+
+
 
     return (
         <>
