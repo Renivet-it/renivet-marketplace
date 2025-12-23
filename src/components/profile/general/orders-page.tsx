@@ -346,11 +346,11 @@ const isWithinReturnWindow =
   daysPassed <= 7;
 
 // Already initiated check
+
 const isReturnOrReplaceInitiated =
   order.shipments?.[0]?.is_return_label_generated === true ||
   order.shipments?.[0]?.is_replacement_label_generated === true;
 
-console.log(isReturnOrReplaceInitiated, "isReturnOrReplaceInitiated");
 // Final visibility flags
 const showReturnReplaceSection =
   order.status === "delivered" && isWithinReturnWindow;
@@ -574,13 +574,15 @@ const showReturnReplaceButtons =
 }
 
 function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
-    const isReturnOrReplaceInitiated =
+
+const isReturnInitiated =
   order.shipments?.some(
     (s) =>
-      s.is_return_label_generated === true ||
-      s.is_replacement_label_generated === true
+        s.is_return_label_generated === true
   ) ?? false;
-
+const isReplaceInitiated = order.shipments?.some(
+    (s) => s.is_replacement_label_generated === true
+  ) ?? false;
     const getStatusIcon = () => {
         if (
             order.status === "cancelled" ||
@@ -608,8 +610,10 @@ function OrderHeader({ order }: { order: OrderWithItemAndBrand }) {
     };
 
 const getStatusHeading = () => {
-    if (isReturnOrReplaceInitiated) {
-        return "Return / Replacement Initiated";
+    if (isReturnInitiated) {
+        return "Return Initiated";
+    } else if (isReplaceInitiated) {
+        return "Replacement Initiated";
     }
 
     switch (order.paymentStatus) {
@@ -631,10 +635,12 @@ const getStatusHeading = () => {
 };
 
 const getStatusMessage = () => {
-    if (isReturnOrReplaceInitiated) {
-        return "Your return or replacement request has been successfully initiated.";
+    if (isReturnInitiated) {
+        return "Your return  request has been successfully initiated.";
     }
-
+    if (isReplaceInitiated) {
+        return "Your replacement request has been successfully initiated.";
+    }
     switch (order.paymentStatus) {
         case "refunded":
             return `Your refund of ${formatPriceTag(
