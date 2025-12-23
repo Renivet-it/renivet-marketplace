@@ -431,6 +431,7 @@ interface PageProps {
   brandId: string;
   totalCount: number;
   shipmentStatus?: string;
+  isRto?: boolean;
 }
 
 export function OrdersTable({
@@ -438,6 +439,7 @@ export function OrdersTable({
   brandId,
   totalCount,
   shipmentStatus,
+  isRto,
 }: PageProps) {
   const [page] = useQueryState("page", parseAsInteger.withDefault(1));
   const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
@@ -446,7 +448,7 @@ export function OrdersTable({
 
   const { data, refetch } =
     trpc.brands.orders.getOrdersByBrandId.useQuery(
-      { brandId, page, limit, shipmentStatus },
+      { brandId, page, limit, shipmentStatus, isRto },
       { initialData: { data: initialData, total: totalCount } }
     );
 

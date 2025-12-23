@@ -1422,6 +1422,13 @@
       "when": 1765903012232,
       "tag": "0202_military_aaron_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 203,
+      "version": "7",
+      "when": 1766405986961,
+      "tag": "0203_military_titanium_man",
+      "breakpoints": true
     }
   ]
 }

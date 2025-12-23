@@ -285,7 +285,8 @@ extras: {
     //     const data = await ordersForBrand;
     //     return data;
     // }
-async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10, shipmentStatus?: string) {
+async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10, shipmentStatus?: string, isRto?: boolean
+) {
   try {
     const offset = (page - 1) * limit;
     // Step 1: Get all products for this brand
@@ -309,6 +310,14 @@ async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10, 
     const extraShipmentFilter = shipmentStatus
       ? sql`AND ${orderShipments.status} = ${shipmentStatus}`
       : sql``;
+const extraRtoFilter = isRto
+  ? sql`
+      AND (
+        ${orderShipments.is_return_label_generated} = true
+        OR ${orderShipments.is_replacement_label_generated} = true
+      )
+    `
+  : sql``;
 
 
     // Step 3: Count total matching orders
@@ -321,18 +330,19 @@ async getOrdersByBrandId(brandId: string, page: number = 1, limit: number = 10, 
 // )
 // ;
 
+
 const totalResult = await db
   .with(filteredProducts, filteredOrderItems)
   .select({ count: sql<number>`COUNT(*)` })
   .from(orders)
   .leftJoin(orderShipments, eq(orders.id, orderShipments.orderId))
   .where(
-    sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter}`
+    sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter} ${extraRtoFilter}
+`
   );
 console.log(totalResult, "shipmentStatusshipmentStatus");
 
-  // Convert count to number explicitly
-  const total = Number(totalResult[0]?.count) || 0;
+const total = Number(totalResult[0]?.count) || 0;
     // Step 4: Get paginated orders
     const ordersForBrand = await db
       .with(filteredProducts, filteredOrderItems)
@@ -364,6 +374,8 @@ console.log(totalResult, "shipmentStatusshipmentStatus");
         deliveryAmount: orders.deliveryAmount,
         discountAmount: orders.discountAmount,
         totalAmount: orders.totalAmount,
+        isReturnLabelGenerated: orderShipments.is_return_label_generated,
+        isReplacementLabelGenerated: orderShipments.is_replacement_label_generated,
         street: addresses.street,
           city: addresses.city,
           state: addresses.state,
@@ -371,6 +383,10 @@ console.log(totalResult, "shipmentStatusshipmentStatus");
           brandId: orderShipments.brandId,
           productId: orderItems.productId,
           shipmentStatus: orderShipments.status,
+              isRto: sql<boolean>`
+      (${orderShipments.is_return_label_generated} = true
+       OR ${orderShipments.is_replacement_label_generated} = true)
+    `.as("is_rto"),
         createdAt: orders.createdAt,
         updatedAt: orders.updatedAt,
       })
@@ -380,7 +396,7 @@ console.log(totalResult, "shipmentStatusshipmentStatus");
       .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
       .leftJoin(addresses, eq(orders.addressId, addresses.id)) // ⭐ NEW JOIN
       .where(
-  sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter}`
+  sql`${orders.id} IN (SELECT order_id FROM filtered_order_items) ${extraShipmentFilter} ${extraRtoFilter}`
 )
       .orderBy(desc(orders.createdAt))
       .limit(limit)
@@ -416,6 +432,8 @@ console.log(ordersForBrand, "ordersForBrandordersForBrand");
         deliveryAmount: item.deliveryAmount,
         discountAmount: item.discountAmount,
         totalAmount: item.totalAmount,
+        isReturnLabelGenerated: item.isReturnLabelGenerated,
+        isReplacementLabelGenerated: item.isReplacementLabelGenerated,
         street: item.street,
           city: item.city,
           state: item.state,
@@ -423,6 +441,7 @@ console.log(ordersForBrand, "ordersForBrandordersForBrand");
           brandId: item.brandId,
           productId: item.productId,
           shipmentStatus: item.shipmentStatus,
+            isRto: item.isRto, // ⭐ MAIN FLAG
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       })),

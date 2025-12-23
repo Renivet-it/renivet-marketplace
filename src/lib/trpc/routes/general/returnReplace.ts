@@ -1,10 +1,27 @@
 import { z } from "zod";
 import { eq, and, like, sql } from "drizzle-orm";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
 
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { orderReturnRequests, orders, orderItems, users } from "@/lib/db/schema";
+import { orderReturnRequests, orders, orderItems, users, orderShipments} from "@/lib/db/schema";
 import { generatePickupLocationCode } from "@/lib/utils";
 import Razorpay from "razorpay";
+function formatIndianWhatsAppNumber(phone: string) {
+  const cleaned = phone.replace(/\D/g, ""); // remove spaces, dashes
+
+  // Already has country code
+  if (cleaned.startsWith("91") && cleaned.length === 12) {
+    return `+${cleaned}`;
+  }
+
+  // Local Indian number
+  if (cleaned.length === 10) {
+    return `+91${cleaned}`;
+  }
+
+  throw new Error(`Invalid phone number: ${phone}`);
+}
+
 
 export const returnReplaceRouter = createTRPCRouter({
 
@@ -21,6 +38,7 @@ export const returnReplaceRouter = createTRPCRouter({
                 newVariantId: z.string().optional(),
                 reason: z.string().optional(),
                 comment: z.string().optional(),
+                images: z.array(z.string()).optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -32,6 +50,53 @@ export const returnReplaceRouter = createTRPCRouter({
                 updatedAt: new Date(),
             });
 
+             // 2️⃣ Update order_shipments flags (🔥 NEW LOGIC)
+        await ctx.db
+          .update(orderShipments)
+          .set({
+            is_return_label_generated: input.requestType === "return",
+            is_replacement_label_generated: input.requestType === "replace",
+          })
+      .where(eq(orderShipments.orderId, input.orderId));
+
+
+
+        // 3️⃣ Fetch order + user
+  const [order] = await ctx.db
+    .select({ id: orders.id, userId: orders.userId })
+    .from(orders)
+    .where(eq(orders.id, input.orderId));
+
+  const [user] = await ctx.db
+    .select({ name: users.firstName, phone: users.phone })
+    .from(users)
+    .where(eq(users.id, order.userId));
+
+  // 4️⃣ WhatsApp notifications (NON-BLOCKING)
+  const userTemplate =
+    input.requestType === "return"
+      ? "return_initiated_user"
+      : "replace_initiated_user";
+const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+
+  Promise.allSettled([
+    sendWhatsAppMessage({
+      recipientPhoneNumber: formattedUserPhone,
+      templateName: userTemplate,
+      parameters: [user.name, order.id],
+    }),
+
+    sendWhatsAppMessage({
+      recipientPhoneNumber: +918983676772, // Admin number
+      templateName: "return_replace_admin",
+      parameters: [
+        input.requestType.toUpperCase(),
+        order.id,
+        user.name,
+        input.reason ?? "N/A",
+      ],
+    }),
+      ]);
             return { success: true };
         }),
 
@@ -104,7 +169,7 @@ export const returnReplaceRouter = createTRPCRouter({
                 comment: r.comment,
                 status: r.status,
                 brandId: r.brandId,
-
+                images: r.images,
                 user: {
                     firstName: r.order.user.firstName,
                     lastName: r.order.user.lastName,
@@ -122,46 +187,119 @@ export const returnReplaceRouter = createTRPCRouter({
     // -------------------------------------------------------
     // 3️⃣ APPROVE REQUEST
     // -------------------------------------------------------
-    approveRequest: protectedProcedure
-        .input(
-            z.object({
-                id: z.string(),
-            })
-        )
-        .mutation(async ({ ctx, input }) => {
-            await ctx.db
-                .update(orderReturnRequests)
-                .set({
-                    status: "approved",
-                    updatedAt: new Date(),
-                })
-                .where(eq(orderReturnRequests.id, input.id));
+    // approveRequest: protectedProcedure
+    //     .input(
+    //         z.object({
+    //             id: z.string(),
+    //         })
+    //     )
+    //     .mutation(async ({ ctx, input }) => {
+    //         await ctx.db
+    //             .update(orderReturnRequests)
+    //             .set({
+    //                 status: "approved",
+    //                 updatedAt: new Date(),
+    //             })
+    //             .where(eq(orderReturnRequests.id, input.id));
 
-            return { success: true };
-        }),
+    //         return { success: true };
+    //     }),
+    approveRequest: protectedProcedure
+  .input(
+    z.object({
+      id: z.string(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    // 1️⃣ Update status
+    const [request] = await ctx.db
+      .update(orderReturnRequests)
+      .set({
+        status: "approved",
+        updatedAt: new Date(),
+      })
+      .where(eq(orderReturnRequests.id, input.id))
+      .returning();
+
+    // 2️⃣ Fetch order + user
+    const [order] = await ctx.db
+      .select({ id: orders.id, userId: orders.userId })
+      .from(orders)
+      .where(eq(orders.id, request.orderId));
+
+    const [user] = await ctx.db
+      .select({ name: users.firstName, phone: users.phone })
+      .from(users)
+      .where(eq(users.id, order.userId));
+const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+
+    // 3️⃣ WhatsApp (NON-BLOCKING)
+    Promise.allSettled([
+      sendWhatsAppMessage({
+        recipientPhoneNumber: formattedUserPhone, // must be +91 format
+        templateName: "return_replace_approved_user",
+        parameters: [
+          user.name,
+          request.requestType.toUpperCase(), // RETURN / REPLACE
+          order.id,
+        ],
+      }),
+    ]);
+
+    return { success: true };
+  }),
+
 
     // -------------------------------------------------------
     // 4️⃣ REJECT REQUEST
     // -------------------------------------------------------
-    rejectRequest: protectedProcedure
-        .input(
-            z.object({
-                id: z.string(),
-                comment: z.string().optional(),
-            })
-        )
-        .mutation(async ({ ctx, input }) => {
-            await ctx.db
-                .update(orderReturnRequests)
-                .set({
-                    status: "rejected",
-                    comment: input.comment ?? null,
-                    updatedAt: new Date(),
-                })
-                .where(eq(orderReturnRequests.id, input.id));
+rejectRequest: protectedProcedure
+  .input(
+    z.object({
+      id: z.string(),
+      comment: z.string().optional(),
+    })
+  )
+  .mutation(async ({ ctx, input }) => {
+    // 1️⃣ Update status
+    const [request] = await ctx.db
+      .update(orderReturnRequests)
+      .set({
+        status: "rejected",
+        comment: input.comment ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(orderReturnRequests.id, input.id))
+      .returning();
 
-            return { success: true };
-        }),
+    // 2️⃣ Fetch order + user
+    const [order] = await ctx.db
+      .select({ id: orders.id, userId: orders.userId })
+      .from(orders)
+      .where(eq(orders.id, request.orderId));
+
+    const [user] = await ctx.db
+      .select({ name: users.firstName, phone: users.phone })
+      .from(users)
+      .where(eq(users.id, order.userId));
+const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+    // 3️⃣ WhatsApp with reject comment
+    Promise.allSettled([
+      sendWhatsAppMessage({
+        recipientPhoneNumber: formattedUserPhone,
+        templateName: "return_replace_rejected_user",
+        parameters: [
+          user.name,
+          request.requestType.toUpperCase(),
+          order.id,
+          input.comment ?? "Request does not meet our return policy",
+        ],
+      }),
+    ]);
+
+    return { success: true };
+  }),
+
 
     // -------------------------------------------------------
     // 5️⃣ MARK COMPLETED

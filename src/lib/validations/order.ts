@@ -58,6 +58,11 @@ export const orderSchema = z.object({
     shiprocketOrderId: z.number().nullable().optional(), // Changed from string to number
     shiprocketShipmentId: z.number().nullable().optional(), // Added new field
     uploadWbn: z.string().nullable().optional(), // Added new field
+    isReturnLabelGenerated: z.boolean().default(false).nullable().optional(),
+    is_return_label_generated: z.boolean().default(false).nullable().optional(),
+    is_replacement_label_generated: z.boolean().default(false).nullable().optional(),
+    isReplacementLabelGenerated: z.boolean().default(false).nullable().optional(),
+    isRto: z.boolean().nullable().default(false).optional(), // Added new field
     delhiveryClientId: z.string().nullable().optional(),
     courierName: z.string().nullable().optional(), // Added new field
     delhiverySortCode: z.string().nullable().optional(),

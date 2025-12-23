@@ -173,7 +173,18 @@ export function ProductOrderCard({
                         <span className="font-semibold">Added on: </span>
                         {format(new Date(item.createdAt), "MMM dd, yyyy")}
                     </p>{" "}
+                    {/* ✅ Delivered At */}
+{isDelivered && shipmentDetails?.updatedAt && (
+  <p className="text-sm">
+    <span className="font-semibold">Delivered on: </span>
+    {format(new Date(shipmentDetails.updatedAt), "MMM dd, yyyy")}
+  </p>
+)}
                 </div>
+                {/* ✅ Delivered At */}
+
+
+
                 <div className="flex gap-2">
                     {!isRtoReturned && isDelivered && canReturn && (
                         <Button
