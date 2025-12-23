@@ -1,10 +1,26 @@
 import { z } from "zod";
 import { eq, and, like, sql } from "drizzle-orm";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
 
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { orderReturnRequests, orders, orderItems, users, orderShipments} from "@/lib/db/schema";
 import { generatePickupLocationCode } from "@/lib/utils";
 import Razorpay from "razorpay";
+function formatIndianWhatsAppNumber(phone: string) {
+  const cleaned = phone.replace(/\D/g, ""); // remove spaces, dashes
+
+  // Already has country code
+  if (cleaned.startsWith("91") && cleaned.length === 12) {
+    return `+${cleaned}`;
+  }
+
+  // Local Indian number
+  if (cleaned.length === 10) {
+    return `+91${cleaned}`;
+  }
+
+  throw new Error(`Invalid phone number: ${phone}`);
+}
 
 export const returnReplaceRouter = createTRPCRouter({
 
@@ -41,6 +57,45 @@ export const returnReplaceRouter = createTRPCRouter({
             is_replacement_label_generated: input.requestType === "replace",
           })
       .where(eq(orderShipments.orderId, input.orderId));
+
+
+
+        // 3️⃣ Fetch order + user
+  const [order] = await ctx.db
+    .select({ id: orders.id, userId: orders.userId })
+    .from(orders)
+    .where(eq(orders.id, input.orderId));
+
+  const [user] = await ctx.db
+    .select({ name: users.firstName, phone: users.phone })
+    .from(users)
+    .where(eq(users.id, order.userId));
+
+  // 4️⃣ WhatsApp notifications (NON-BLOCKING)
+  const userTemplate =
+    input.requestType === "return"
+      ? "return_initiated_user"
+      : "replace_initiated_user";
+const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+
+  Promise.allSettled([
+    sendWhatsAppMessage({
+      recipientPhoneNumber: formattedUserPhone,
+      templateName: userTemplate,
+      parameters: [user.name, order.id],
+    }),
+
+    sendWhatsAppMessage({
+      recipientPhoneNumber: +918983676772, // Admin number
+      templateName: "return_replace_admin",
+      parameters: [
+        input.requestType.toUpperCase(),
+        order.id,
+        user.name,
+        input.reason ?? "N/A",
+      ],
+    }),
+      ]);
             return { success: true };
         }),
 
