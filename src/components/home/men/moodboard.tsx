@@ -28,10 +28,10 @@ export function MoodboardItemMen({
     <section className={cn("w-full bg-[#F4F0EC] pb-6 md:pb-10", className)}>
       <div className="max-w-screen-2xl mx-auto">
         {/* Title & Subtitle */}
-        <div className="text-center mb-4 md:mb-10 pt-6 md:pt-8 px-4 sm:px-6 lg:px-8">
-          <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">
-            Curated His Essence
-          </h2>
+        <div className="text-center mb-4 md:mb-4 pt-4 md:pt-4 px-2 sm:px-2 lg:px-2">
+          <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair">
+ Curated His Essence
+</h2>
         </div>
 
         {/* Responsive image container */}

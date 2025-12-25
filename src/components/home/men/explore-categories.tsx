@@ -23,87 +23,121 @@ export function ExploreCategories({
   const [isAtEnd, setIsAtEnd] = useState(false);
 
   const checkScrollPosition = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      setIsAtStart(scrollLeft === 0);
-      setIsAtEnd(scrollLeft >= scrollWidth - clientWidth - 1);
-    }
+    if (!scrollContainerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } =
+      scrollContainerRef.current;
+
+    setIsAtStart(scrollLeft <= 0);
+    setIsAtEnd(scrollLeft >= scrollWidth - clientWidth - 1);
   };
 
   const scroll = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = direction === "left" ? -300 : 300;
-      scrollContainerRef.current.scrollBy({
-        left: scrollAmount,
-        behavior: "smooth",
-      });
-    }
+    scrollContainerRef.current?.scrollBy({
+      left: direction === "left" ? -260 : 260,
+      behavior: "smooth",
+    });
   };
 
   return (
     <section
-      className={cn("flex w-full justify-center py-12 bg-[#F4F0EC]", className)}
+      className={cn("w-full bg-[#F4F0EC] py-4 pt-4", className)}
       {...props}
     >
-      <div className="max-w-screen-2xl mx-auto w-full relative">
-        {/* Title */}
-        <h2 className="text-center text-3xl font-bold text-gray-900 mb-8 px-4">
-          {titleData?.title || "Explore Categories"}
-        </h2>
+      <div className="max-w-screen-2xl mx-auto relative">
 
-        {/* Navigation Arrows */}
+        {/* TITLE */}
+
+<h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
+  {titleData?.title || "Explore Categories"}
+</h2>
+        {/* DESKTOP ARROWS */}
         {!isAtStart && (
           <button
             onClick={() => scroll("left")}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 hidden sm:block"
-            aria-label="Scroll left"
+            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow"
           >
-            <ChevronLeft className="w-6 h-6 text-gray-700" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
         )}
 
         {!isAtEnd && (
           <button
             onClick={() => scroll("right")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 hidden sm:block"
-            aria-label="Scroll right"
+            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow"
           >
-            <ChevronRight className="w-6 h-6 text-gray-700" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         )}
 
-        {/* Scrollable Categories Row */}
+        {/* SCROLL CONTAINER */}
         <div
           ref={scrollContainerRef}
           onScroll={checkScrollPosition}
-          className="flex overflow-x-auto gap-6 pl-4 scrollbar-hide relative"
+          className="
+            flex gap-3 sm:gap-6
+            overflow-x-auto
+            px-3 sm:px-6
+            scrollbar-hide
+            scroll-smooth
+          "
         >
           {shopByCategories.map((category, index) => (
             <Link
               key={index}
               href={category.url || "/shop"}
-              className={cn(
-                "flex-shrink-0 group text-center",
-                index === 0 ? "ml-0" : ""
-              )}
+              className="flex-shrink-0"
             >
-              <div className="w-[240px] h-[300px] flex flex-col bg-[#F4F0EC] border border-gray-300">
-                {/* Image Container */}
-                <div className="relative h-[240px] w-full overflow-hidden border-b border-gray-300">
+              {/* CARD */}
+              <div
+                className="
+                  bg-[#F4F0EC]
+                  border border-gray-300
+                  flex flex-col
+                  w-[110px] h-[150px]
+                  sm:w-[200px] sm:h-[260px]
+                  md:w-[240px] md:h-[300px]
+                "
+              >
+                {/* IMAGE */}
+                <div
+                  className="
+                    relative
+                    w-full
+                    h-[110px]
+                    sm:h-[200px]
+                    md:h-[240px]
+                    border-b border-gray-300
+                  "
+                >
                   <Image
                     src={category.imageUrl}
                     alt={category.title || "Category"}
-                    width={240}
-                    height={240}
-                    quality={90}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 110px, 240px"
                   />
                 </div>
 
-                {/* Text Container */}
-                <div className="h-[60px] w-full bg-[#F4F0EC] flex items-center justify-center px-2">
-                  <p className="font-bold text-gray-900 text-lg text-center uppercase tracking-wider">
-                    {category.title || "CATEGORY"}
+                {/* TEXT */}
+                <div
+                  className="
+                    flex items-center justify-center
+                    h-[40px]
+                    sm:h-[60px]
+                    px-2
+                  "
+                >
+                  <p
+                    className="
+                      text-[10px]
+                      sm:text-base
+                      font-bold
+                      uppercase
+                      tracking-wide
+                      text-center
+                    "
+                  >
+                    {category.title || "Category"}
                   </p>
                 </div>
               </div>
@@ -111,12 +145,12 @@ export function ExploreCategories({
           ))}
         </div>
 
-        {/* Mobile indicators */}
-        <div className="flex justify-center mt-4 sm:hidden px-4">
+        {/* MOBILE DOT INDICATORS */}
+        <div className="flex justify-center gap-1 mt-4 sm:hidden">
           {shopByCategories.map((_, index) => (
-            <div
+            <span
               key={index}
-              className="w-2 h-2 rounded-full bg-gray-300 mx-1"
+              className="w-1.5 h-1.5 rounded-full bg-gray-400"
             />
           ))}
         </div>
