@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
+import { url } from "inspector";
 
 export const marketingStripSchema = z.object({
     id: z
@@ -34,6 +35,11 @@ export const marketingStripSchema = z.object({
         required_error: "Is Active is required",
         invalid_type_error: "Is Active must be a boolean",
     }),
+    url: z
+        .string({
+            invalid_type_error: "URL must be a string", })
+        .url("URL is invalid")
+        .nullable().optional(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

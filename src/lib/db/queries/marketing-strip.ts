@@ -67,6 +67,7 @@ class MarketingStripQuery {
     async createMarketingStrip(
         values: CreateMarketingStrip & {
             imageUrl: string;
+            url?: string;
         }
     ) {
         const data = await db
@@ -82,6 +83,7 @@ class MarketingStripQuery {
         id: string,
         values: UpdateMarketingStrip & {
             imageUrl: string;
+            url?: string;
         }
     ) {
         const data = await db

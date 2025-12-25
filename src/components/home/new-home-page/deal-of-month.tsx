@@ -74,7 +74,7 @@ export function DealofTheMonthStrip({
     {marketingStrip.map((item, index) => (
       <Link
         key={`mobile-${index}`}
-        href={item.href || "/shop"}
+        href={item.url || "/shop"}
         className="flex-shrink-0 bg-white  border border-gray-200 overflow-hidden"
         style={{ width: "260px" }}
       >

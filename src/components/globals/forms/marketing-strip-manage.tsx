@@ -55,6 +55,7 @@ export function MarketingStripManageForm({ marketingStrip }: PageProps) {
             description: marketingStrip?.description || "",
             imageUrl: marketingStrip?.imageUrl || null,
             isActive: marketingStrip?.isActive || false,
+            url: marketingStrip?.url || "",
         },
     });
 
@@ -195,6 +196,27 @@ export function MarketingStripManageForm({ marketingStrip }: PageProps) {
                             <FormControl>
                                 <Input
                                     placeholder="Enter a brief description/tagline of the marketing strip (optional)"
+                                    disabled={isCreating || isUpdating}
+                                    {...field}
+                                    value={field.value || ""}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="url"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Redirect URL</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    placeholder="Enter the URL to redirect to (optional)"
                                     disabled={isCreating || isUpdating}
                                     {...field}
                                     value={field.value || ""}
