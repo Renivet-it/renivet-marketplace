@@ -24,9 +24,9 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
   return (
     <Link
       href={productUrl}
-      className="block w-[160px] sm:w-[200px] cursor-pointer"
+      className="block w-[120px] sm:w-[200px] cursor-pointer"
     >
-      <div className="relative w-full h-[220px] bg-gray-50 overflow-hidden">
+      <div className="relative w-full h-[180px] sm:h-[220px] bg-gray-50 overflow-hidden">
         <Image
           src={imageUrl}
           alt={product.title}
@@ -35,12 +35,12 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
         />
       </div>
 
-      <div className="pt-3">
-        <h3 className="text-[14px] text-gray-800 line-clamp-2 h-10 font-normal">
+      <div className="pt-2">
+        <h3 className="text-[12px] sm:text-[14px] text-gray-800 line-clamp-2 h-9 font-normal">
           {product.title}
         </h3>
 
-        <span className="text-[15px] font-semibold text-gray-900">
+        <span className="text-[14px] sm:text-[15px] font-semibold text-gray-900">
           ₹{price}
         </span>
       </div>
@@ -58,8 +58,8 @@ export function LoveThese({ banners }: { banners: Banner[] }) {
   const shownProducts = banners.slice(0, 18);
 
   return (
-    <section className="w-full py-8 bg-[#fbfaf4]">
-      <h2 className="text-center text-4xl font-light text-[#4A453F] mb-4">
+    <section className="w-full py-4 bg-[#fbfaf4]">
+      <h2 className="text-center text-xl text-[#4A453F] mb-4">
         You May Like
       </h2>
 
@@ -71,8 +71,8 @@ export function LoveThese({ banners }: { banners: Banner[] }) {
             grid-flow-col
             auto-cols-max
             grid-rows-2
-            gap-x-6
-            gap-y-6
+            gap-x-4
+            gap-y-5
             w-max
           "
         >

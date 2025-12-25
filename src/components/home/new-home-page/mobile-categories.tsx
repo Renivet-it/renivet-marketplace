@@ -9,7 +9,7 @@ export function MobileCategories() {
       title: "Indian Wear",
       imageUrl:
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNOZuGknHKYuSX87vxCz1aEsjfWTRVJZ9QmtnN",
-      link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=0cb0f01f-4c17-47ff-8251-4ea5a7a65a09",
+      link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=0cb0f01f-4c17-47ff-8251-4ea5a7a65a09&productTypeId=0f13d48d-50de-43ec-8bab-a7bfbbcf8773",
     },
     {
       title: "Western Wear",

@@ -25,34 +25,22 @@ export function MatchaBag({
   if (!moodboardItems.length) return null;
 
   return (
-    <section className={cn("w-full bg-[#fcfbf4] py-4", className)}>
+    <section className={cn("w-full bg-[#fcfbf4] pb-0 mb-0", className)}>
       <div className="max-w-screen-2xl mx-auto px-4">
-
         {/* Title */}
-        <h2
-  className="
-    text-center
-    text-[18px]         /* mobile smaller */
-    md:text-[32px]      /* desktop bigger */
-    font-light
-    text-[#3B3B3B]
-    mb-8
-    tracking-wide
-    whitespace-nowrap   /* forces one line */
-  "
->
+        <h2 className="text-center text-[18px] md:text-[32px] font-light text-[#3B3B3B] mb-3 md:mb-8 tracking-wide">
           {title}
         </h2>
 
-        {/* ---------------------- DESKTOP (unchanged) ---------------------- */}
-<div className="hidden md:grid grid-cols-6 gap-4">
+        {/* ================= DESKTOP ================= */}
+        <div className="hidden md:flex justify-center gap-6">
           {moodboardItems.map((item) => (
             <Link
               key={item.id}
               href={item.url || "/shop"}
-              className="relative w-full"
+              className="relative"
             >
-              <div className="relative w-full h-[235px] overflow-hidden">
+              <div className="relative w-[690px] h-[452px] overflow-hidden rounded-sm">
                 <Image
                   src={item.imageUrl}
                   alt=""
@@ -62,8 +50,8 @@ export function MatchaBag({
               </div>
 
               {item.showButton && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                  <button className="bg-[#3a493f] text-white text-sm px-4 py-1 rounded-sm shadow">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+                  <button className="bg-[#3a493f] text-white text-sm px-6 py-2 rounded-sm shadow">
                     Shop Now
                   </button>
                 </div>
@@ -72,34 +60,35 @@ export function MatchaBag({
           ))}
         </div>
 
-        {/* ----------------------- MOBILE (fixed layout) --------------------- */}
-        <div className="md:hidden grid grid-cols-3 gap-2">
-          {moodboardItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.url || "/shop"}
-              className="relative w-full"
-            >
-              <div className="relative w-full h-[150px] overflow-hidden">
-                <Image
-                  src={item.imageUrl}
-                  alt=""
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              {item.showButton && (
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-                  <button className="bg-[#3a493f] text-white text-[10px] px-2 py-1 rounded shadow">
-                    Shop Now
-                  </button>
+        {/* ================= MOBILE (CAROUSEL) ================= */}
+        <div className="md:hidden overflow-x-auto scrollbar-hide mb-0 pb-0">
+          <div className="flex gap-4 w-max px-2 py-0">
+            {moodboardItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.url || "/shop"}
+                className="relative flex-shrink-0"
+              >
+                <div className="relative w-[360px] h-[240px] overflow-hidden rounded-sm">
+                  <Image
+                    src={item.imageUrl}
+                    alt=""
+                    fill
+                    className="object-contain bg-[#fcfbf4]"
+                  />
                 </div>
-              )}
-            </Link>
-          ))}
-        </div>
 
+                {item.showButton && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                    <button className="bg-[#3a493f] text-white text-xs px-4 py-2 rounded shadow">
+                      Shop Now
+                    </button>
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

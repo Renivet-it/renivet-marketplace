@@ -174,7 +174,7 @@ function ProductCard({ product, userId }: { product: Product; userId?: string })
   };
 
   return (
-    <div className="flex-shrink-0 group cursor-pointer bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg">
+    <div className="flex-shrink-0 group cursor-pointer bg-white shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg">
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative w-full aspect-[1/1]">
           <Image
