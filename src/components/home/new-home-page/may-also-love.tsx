@@ -96,7 +96,7 @@ export function MayAlsoLoveThese({ banners }: { banners: Banner[] }) {
   const items = banners.slice(0, 18);
 
   return (
-    <section className="w-full py-8 bg-[#fbfaf4]">
+    <section className="w-full py-8 bg-[#FCFBF4]">
       <h2 className="text-center text-2xl font-bold text-[#4A453F] mb-8">
         You&apos;ll Love These
       </h2>

@@ -63,7 +63,7 @@ useEffect(() => {
   ];
 
   return (
-    <section className={cn("bg-[#fbfaf4]", className)} {...props}>
+    <section className={cn("bg-[#FCFBF4]", className)} {...props}>
 
       {/* ✅ DESKTOP CAROUSEL */}
       <div className="hidden md:block">

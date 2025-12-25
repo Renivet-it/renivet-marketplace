@@ -6,10 +6,10 @@ import { Icons } from "@/components/icons";
 
 export function WelcomeRenivet() {
   return (
-   <section className="w-full bg-[#fbfaf4] py-6 px-0 md:px-4">
+   <section className="w-full bg-[#FCFBF4] py-6 px-0 md:px-4">
 
       {/* ⬇️ BORDER ONLY ON DESKTOP */}
-      <div className="max-w-[1600px] mx-auto bg-[#fbfaf4] px-6 md:px-16 py-6 md:border md:border-[#D8D2C7] md:rounded-md">
+      <div className="max-w-[1600px] mx-auto bg-[#fbfaf4] px-6 md:px-16 py-6 md:border md:border-[#D8D2C7] ">
 
         {/* ---------------- DESKTOP ---------------- */}
         <div className="hidden md:flex items-start gap-12">
@@ -55,7 +55,7 @@ export function WelcomeRenivet() {
 
             <Link
               href="/about"
-              className="mt-8 px-6 py-2 border border-gray-500 text-gray-700 text-sm rounded-sm hover:bg-gray-100 transition"
+              className="mt-8 px-6 py-2 border border-gray-500 text-gray-700 text-sm  hover:bg-gray-100 transition"
             >
               → Discover Our Story
             </Link>
@@ -100,7 +100,7 @@ export function WelcomeRenivet() {
       </p>
     </div>
 
-    <div className="relative w-[110px] h-[96px] rounded-sm overflow-hidden mb-3">
+    <div className="relative w-[110px] h-[96px]  overflow-hidden mb-3">
       <Image
         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkKIY1exYt1TxMBy6jes3QdWaELUvNIiXHwRO"
         alt="Renivet Circle"
@@ -113,7 +113,7 @@ export function WelcomeRenivet() {
       href="/about"
       className="mt-auto px-4 py-1.5 border border-[#8C8C8C]
                  text-[#3B3B3B] text-[12px]
-                 rounded-sm hover:bg-gray-100 transition"
+                  hover:bg-gray-100 transition"
     >
       → Discover Our Story
     </Link>

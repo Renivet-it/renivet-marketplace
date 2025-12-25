@@ -24,7 +24,7 @@ export function EventSectionTwoBanner({ className, banners, ...props }: PageProp
   }, [banners.length]);
 
   return (
-    <section className={cn("w-full bg-[#F4F0EC]", className)} {...props}>
+    <section className={cn("w-full bg-[#FCFBF4]", className)} {...props}>
       <Carousel
         opts={{
           align: "start",

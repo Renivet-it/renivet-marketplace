@@ -22,7 +22,7 @@ export function ProductGrid({ className, products, title = "Gentle on Skin. Kind
   if (!products || !Array.isArray(products)) return null;
 
   return (
-    <div className={cn("bg-[#fcfbf4] py-8", className)} {...props}>
+    <div className={cn("bg-[#FCFBF4] py-8", className)} {...props}>
       <div className="max-w-screen-2xl mx-auto px-6">
         {/* Header */}
              <h2

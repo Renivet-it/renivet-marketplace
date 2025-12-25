@@ -31,7 +31,7 @@ export function EventSectionOneBanner({ className, banners, ...props }: PageProp
   }
 
   return (
-    <section className={cn("w-full py-2 bg-[#F4F0EC]", className)} {...props}>
+    <section className={cn("w-full py-2 bg-[#FCFBF4]", className)} {...props}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <Carousel
           opts={{

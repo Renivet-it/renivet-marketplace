@@ -151,7 +151,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
 
   return (
-  <section className="w-full bg-[#fcfbf4] px-4 py-10 md:px-16">
+  <section className="w-full bg-[#FCFBF4] px-4 py-10 md:px-16">
 <h2 className="mb-6 text-center font-serif text-xl text-[#7A6A3A] md:mb-10 md:text-3xl py-4">
   Select What Matters
 </h2>
@@ -182,7 +182,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
               }}
             >
               {/* Image */}
-              <div className="relative h-[120px] w-full overflow-hidden rounded-t-xl">
+              <div className="relative h-[120px] w-full overflow-hidden ">
                 <Image
                   src={
                     product.media?.[0]?.mediaItem?.url ||
@@ -225,7 +225,6 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
 <div
   className="
     h-[193px] w-[169px]
-    rounded-2xl
     border border-white/40
     bg-gradient-to-br from-[#B7D3EA] to-[#F7F6E7]
     px-5 pt-6

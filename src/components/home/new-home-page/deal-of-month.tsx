@@ -60,7 +60,7 @@ export function DealofTheMonthStrip({
 
   return (
     <section
-      className={cn("w-full bg-[#fcfbf4] py-6", className)}
+      className={cn("w-full bg-[#FCFBF4] py-6", className)}
       {...props}
     >
       <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">

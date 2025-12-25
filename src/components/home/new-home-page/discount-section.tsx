@@ -11,7 +11,7 @@ interface PageProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function HomeAndLivingectionAdvertisement({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full py-8 md:py-12 bg-[#bcb1a7]", className)} {...props}>
+        <section className={cn("w-full py-8 md:py-12 bg-[#FCFBF4]", className)} {...props}>
             <div className="text-center mb-8 md:mb-12 px-4">
                 <h1 className="text-2xl md:text-4xl font-medium text-gray-900 mb-2">Home & Living</h1>
                 <p className="text-sm md:text-base text-gray-600 max-w-2xl mx-auto">

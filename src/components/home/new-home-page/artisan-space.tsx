@@ -31,7 +31,7 @@ export function ArtisanCollection({
   return (
     // Main section with the page's solid background color
     <section
-      className={cn("w-full bg-[#fbfaf4] py-12", className)}
+      className={cn("w-full bg-[#FCFBF4] py-12", className)}
       {...props}
     >
       <div className="w-full max-w-screen-2xl mx-auto space-y-6">

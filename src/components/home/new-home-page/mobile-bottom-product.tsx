@@ -91,7 +91,7 @@ export function MobileBottom({ banners }: { banners: Banner[] }) {
   const shownProducts = banners.slice(0, 18);
 
   return (
-    <section className="w-full py-8 bg-[#fbfaf4] md:hidden">
+    <section className="w-full py-8 bg-[#FCFBF4] md:hidden">
       <h2 className="text-center text-2xl font-light text-[#4A453F] mb-4">
         Intentional finds
       </h2>

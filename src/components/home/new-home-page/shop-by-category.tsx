@@ -36,7 +36,7 @@ export function ShopCategories() {
   return (
     // This wrapper will hide the entire section on screens smaller than 'xl' (1280px )
     <div className="hidden xl:block">
-      <section className="w-full bg-[#fbfaf4] py-8">
+      <section className="w-full bg-[#FCFBF4] py-8">
         <div className="flex justify-center">
           <div
             className=" rounded-lg shadow-sm border border-gray-200 overflow-hidden"

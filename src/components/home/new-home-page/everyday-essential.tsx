@@ -4,7 +4,7 @@ import Link from "next/link";
 
 const EveryDayEssential = () => {
   return (
-    <div className="bg-[#F4F0EC] relative overflow-hidden">
+    <div className="bg-[#FCFBF4] relative overflow-hidden">
       <div className="w-full px-4 md:px-8 py-8 md:py-16">
         {/* Header */}
         <div className="text-center mb-8 md:mb-12">
