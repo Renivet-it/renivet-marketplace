@@ -1,99 +1,248 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button-general";
-import { convertPaiseToRupees } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Icons } from "@/components/icons";
+import { trpc } from "@/lib/trpc/client";
+import { toast } from "sonner";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 
-interface Variant {
-  id: string;
-  price: number;
-  compareAtPrice: number;
-  costPerItem: number;
-}
+/* ---------------- TYPES ---------------- */
 
 interface Product {
-  id: number;
-  media: { mediaItem: { url: string } }[];
-  brand: { name: string };
-  title: string;
-  variants?: Variant[];
-  originalPrice: number;
-  discountedPrice: number;
-  discount: number;
+  id: string;
   slug: string;
+  title: string;
+  media: { mediaItem: { url: string } }[];
+  brand?: { name: string };
 }
 
-interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
+interface Props {
   products: { product: Product }[];
+  userId?: string;
+  className?: string;
 }
 
-export function StyleWithSubstance({ className, products, ...props }: ProductGridProps) {
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return null;
-  }
+/* ---------------- TAG CONFIG ---------------- */
 
-  const getPricing = (product: Product) => {
-    if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
-      const variant = product.variants[0];
-      const discountedPrice = variant.price || variant.costPerItem;
-      const originalPrice = variant.compareAtPrice || variant.costPerItem;
-      const discount = originalPrice - discountedPrice;
-      return {
-        discountedPrice: convertPaiseToRupees(discountedPrice),
-        originalPrice: convertPaiseToRupees(originalPrice),
-        discount: convertPaiseToRupees(discount)
-      };
+const TAGS = [
+  { label: "Best Seller", tone: "dark" },
+  { label: "100% Vegan", tone: "green" },
+  { label: "Sustainable", tone: "earth" },
+];
+
+function getRandomTags(productId: string) {
+  const hash = productId
+    .split("")
+    .reduce((acc, c) => acc + c.charCodeAt(0), 0);
+
+  return [TAGS[hash % TAGS.length]];
+}
+
+/* ---------------- COMPONENT ---------------- */
+
+export function StyleWithSubstance({
+  products,
+  userId,
+  className,
+}: Props) {
+  const { addToGuestWishlist } = useGuestWishlist();
+
+  const { mutateAsync: addToWishlist } =
+    trpc.general.users.wishlist.addProductInWishlist.useMutation({
+      onSuccess: () => toast.success("Added to Wishlist"),
+    });
+
+  const handleWishlist = async (
+    e: React.MouseEvent,
+    product: Product
+  ) => {
+    e.preventDefault();
+
+    if (userId) {
+      await addToWishlist({ productId: product.id });
+    } else {
+      addToGuestWishlist({
+        productId: product.id,
+        variantId: null,
+        title: product.title,
+        brand: product.brand?.name,
+        price: null,
+        image: product.media?.[0]?.mediaItem?.url ?? null,
+        sku: null,
+        fullProduct: product,
+      });
+      toast.success("Added to Wishlist");
     }
-    return {
-      discountedPrice: convertPaiseToRupees(product.discountedPrice),
-      originalPrice: convertPaiseToRupees(product.originalPrice),
-      discount: convertPaiseToRupees(product.discount),
-    };
   };
 
-  const visibleProducts = products.slice(0, 3);
+  if (!products?.length) return null;
+
+  /* -------- MOBILE SLIDES (2 × 2) -------- */
+  const mobileSlides: Product[][] = [];
+  for (let i = 0; i < products.length; i += 4) {
+    mobileSlides.push(products.slice(i, i + 4).map(p => p.product));
+  }
 
   return (
-    <section className={cn("p-8 pt-10", className)}
-      style={{ backgroundColor: "#ded6d6" }}
-      {...props}>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-black">Style, With Substance</h2>
-        <Link href="/products">
-          <Button className="bg-gray-800 text-white px-6 py-2 rounded-md hover:bg-gray-700 text-sm">
-            Show all
-          </Button>
-        </Link>
-      </div>
+    <section className={cn("bg-[#F4F0EC] py-2 pt-4", className)}>
+      {/* TITLE */}
+      <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
+        Best Sellers
+      </h2>
 
-      <div className="flex flex-row gap-4 overflow-x-auto pb-2">
-        {visibleProducts.map((item) => {
-          const { discountedPrice } = getPricing(item.product);
-          return (
-            <Link
-              key={item.product.id}
-              href={`/products/${item.product.slug}`}
-              className="min-w-[455px] h-[145px] bg-white rounded-lg shadow-sm overflow-hidden flex flex-row flex-shrink-0"
-            >
-              <div className="w-[145px] h-full relative flex-shrink-0">
-                <Image
-                  src={item.product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
-                  alt={item.product.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw"
+      {/* ================= MOBILE ================= */}
+     {/* ================= MOBILE ================= */}
+<div className="md:hidden px-2">
+  <Carousel>
+    <CarouselContent>
+      <CarouselItem>
+        <div
+          className="grid gap-x-3 gap-y-5 justify-center"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, max-content))",
+          }}
+        >
+          {products.map(({ product }) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onWishlist={handleWishlist}
+              variant="mobile"
+            />
+          ))}
+        </div>
+      </CarouselItem>
+    </CarouselContent>
+  </Carousel>
+</div>
+
+
+      {/* ================= DESKTOP (DO NOT TOUCH) ================= */}
+      <div className="hidden md:block">
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+        >
+          <CarouselContent className="gap-6 px-12">
+            {products.map(({ product }) => (
+              <CarouselItem key={product.id} className="basis-auto">
+                <ProductCard
+                  product={product}
+                  onWishlist={handleWishlist}
+                  variant="desktop"
                 />
-              </div>
-              <div className="flex-1 p-4 flex flex-col justify-center" style={{ backgroundColor: "#ede6df" }}>
-                <h3 className="text-lg font-medium text-gray-800 mb-2">{item.product.title}</h3>
-                <p className="text-xl font-bold text-black">₹{discountedPrice}</p>
-              </div>
-            </Link>
-          );
-        })}
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
       </div>
     </section>
+  );
+}
+
+/* ---------------- PRODUCT CARD ---------------- */
+
+function ProductCard({
+  product,
+  onWishlist,
+  variant,
+}: {
+  product: Product;
+  onWishlist: (e: React.MouseEvent, product: Product) => void;
+  variant: "mobile" | "desktop";
+}) {
+  const isMobile = variant === "mobile";
+
+  return (
+    <Link
+      href={`/products/${product.slug}`}
+      className={cn(
+        "group block",
+        isMobile ? "w-[110px]" : "w-[240px]"
+      )}
+    >
+      {/* IMAGE */}
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-md bg-[#EFE9DF]",
+          isMobile
+            ? "h-[185px]"
+            : "aspect-[3/4] transition-transform duration-300 group-hover:scale-[1.02]"
+        )}
+      >
+        <Image
+          src={
+            product.media?.[0]?.mediaItem?.url ||
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+          }
+          alt={product.title}
+          fill
+          className="object-cover"
+        />
+
+        {/* TAG */}
+        <div className={cn(
+          "absolute z-10",
+          isMobile ? "top-2 left-2" : "top-3 left-3"
+        )}>
+          {getRandomTags(product.id).map((tag) => (
+            <span
+              key={tag.label}
+              className={cn(
+                "rounded-full backdrop-blur-md border font-medium tracking-wide",
+                isMobile
+                  ? "px-2 py-[2px] text-[9px]"
+                  : "px-3 py-1 text-[11px]",
+                tag.tone === "dark" &&
+                  "bg-black/50 text-white border-white/20",
+                tag.tone === "green" &&
+                  "bg-emerald-600/70 text-white border-emerald-300/40",
+                tag.tone === "earth" &&
+                  "bg-[#7a6a4f]/70 text-white border-[#d6c7a1]/40"
+              )}
+            >
+              {tag.label}
+            </span>
+          ))}
+        </div>
+
+        {/* ❤️ WISHLIST */}
+        <button
+          onClick={(e) => onWishlist(e, product)}
+          className={cn(
+            "absolute rounded-full backdrop-blur-md border shadow-sm transition bg-white/30 border-white/40 hover:bg-white/40",
+            isMobile ? "top-2 right-2 p-1.5" : "top-3 right-3 p-2"
+          )}
+        >
+          <Icons.Heart
+            className={cn(
+              isMobile ? "h-3 w-3" : "h-4 w-4",
+              "text-neutral-900"
+            )}
+          />
+        </button>
+      </div>
+
+      {/* TITLE */}
+      <p
+        className={cn(
+          "mt-2 text-neutral-900 leading-snug",
+          isMobile
+            ? "text-[12px] font-normal line-clamp-2"
+            : "text-sm font-medium mt-4"
+        )}
+      >
+        {product.title}
+      </p>
+    </Link>
   );
 }
