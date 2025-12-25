@@ -97,7 +97,7 @@ export function ProductGridNewArrivals({
   const filteredProducts = products.filter((item) => item.category === activeTab);
 
   return (
-    <section className={cn("w-full py-8 bg-[#fcfbf4]", className)} {...props}>
+    <section className={cn("w-full py-8 bg-[#FCFBF4]", className)} {...props}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-center border-b border-gray-200 mb-8">
           <div className="flex space-x-4 sm:space-x-8 overflow-x-auto pb-1 scrollbar-hide">
@@ -174,7 +174,7 @@ function ProductCard({ product, userId }: { product: Product; userId?: string })
   };
 
   return (
-    <div className="flex-shrink-0 group cursor-pointer bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg">
+    <div className="flex-shrink-0 group cursor-pointer bg-white shadow-sm overflow-hidden transition-all duration-300 hover:shadow-lg">
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative w-full aspect-[1/1]">
           <Image

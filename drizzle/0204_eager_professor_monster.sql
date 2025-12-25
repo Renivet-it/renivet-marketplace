@@ -1,0 +1,1 @@
+ALTER TABLE "marketing_strip" ADD COLUMN "url" text;

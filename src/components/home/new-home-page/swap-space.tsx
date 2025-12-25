@@ -272,9 +272,9 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
   };
 
   return (
-    <section className={cn("w-full py-6 bg-[#FFF9F4]", className)}>
+    <section className={cn("w-full py-6 bg-[#FCFBF4]", className)}>
 
-      <h2 className="text-center text-3xl font-bold text-[#4A453F] mb-4">
+      <h2 className="text-center text-xl font-bold text-[#4A453F] mb-4">
         What's New
       </h2>
 

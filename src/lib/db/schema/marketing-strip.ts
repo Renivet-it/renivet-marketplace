@@ -6,6 +6,7 @@ export const marketingStrip = pgTable("marketing_strip", {
     title: text("title").notNull(),
     description: text("description"),
     imageUrl: text("image_url").notNull(),
+    url: text("url"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,
 });

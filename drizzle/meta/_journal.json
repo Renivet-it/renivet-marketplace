@@ -1429,6 +1429,13 @@
       "when": 1766405986961,
       "tag": "0203_military_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 204,
+      "version": "7",
+      "when": 1766653120176,
+      "tag": "0204_eager_professor_monster",
+      "breakpoints": true
     }
   ]
 }

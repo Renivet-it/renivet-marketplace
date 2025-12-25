@@ -29,7 +29,7 @@ export function BagSection({
   }
 
   return (
-    <section className={cn("w-full bg-[#F4F0EC] pt-16 pb-12 md:pt-24 md:pb-16", className)}>
+    <section className={cn("w-full bg-[#FCFBF4] pt-16 pb-12 md:pt-24 md:pb-16", className)}>
       <div className="relative mx-auto max-w-[1300px] px-4">
 
         {/* ========================================================== */}

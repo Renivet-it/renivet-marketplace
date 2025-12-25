@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useSprings, animated, to as interpolate } from "@react-spring/web";
 import { useDrag } from "react-use-gesture";
 import Image from "next/image";
@@ -10,9 +10,9 @@ import { trpc } from "@/lib/trpc/client";
 import { toast } from "sonner";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 
-// ==========================================================
-// 🔹 1. Types
-// ==========================================================
+/* --------------------------------------------------------
+   TYPES
+-------------------------------------------------------- */
 interface Product {
   id: string;
   slug: string;
@@ -30,21 +30,21 @@ interface SwipeableProductCardProps {
   userId?: string;
 }
 
-// ==========================================================
-// 🔹 2. Animated Text Guide
-// ==========================================================
+/* --------------------------------------------------------
+   SWIPE GUIDE
+-------------------------------------------------------- */
 const AnimatedSwipeGuide = () => (
-  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-    <div className="flex items-center space-x-2 p-2 bg-black/50 text-white rounded-full text-sm font-medium animate-pulse">
+  <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+    <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white animate-pulse">
       <Icons.MoreHorizontal className="h-4 w-4" />
-      <span>Swipe left or right</span>
+      Swipe left or right
     </div>
   </div>
 );
 
-// ==========================================================
-// 🔹 3. SwipeCard Component (Updated with Toast)
-// ==========================================================
+/* --------------------------------------------------------
+   MAIN COMPONENT
+-------------------------------------------------------- */
 export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
   const { addToGuestWishlist } = useGuestWishlist();
 
@@ -71,83 +71,62 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     from: from(i),
   }));
 
-  // ✅ Corrected tRPC hook name and added toast on success
   const { mutateAsync: addToWishlist } =
     trpc.general.users.wishlist.addProductInWishlist.useMutation({
-      onSuccess: () => {
-        toast.success("Added to Wishlist!");
-      },
-      onError: (err) => {
-        toast.error(err.message || "Could not add to wishlist.");
-      },
+      onSuccess: () => toast.success("Added to Wishlist!"),
+      onError: (err) =>
+        toast.error(err.message || "Could not add to wishlist."),
     });
 
   const handleSwipe = async (index: number, dir: number) => {
     if (goneCards.has(index)) return;
-    if (!hasInteracted) setHasInteracted(true);
-    setGoneCards((prev) => new Set([...prev, index]));
+    setHasInteracted(true);
+    setGoneCards((prev) => new Set(prev).add(index));
 
     const product = filteredProducts[index]?.product;
     if (!product) return;
 
-    api.start((i) => {
-      if (i !== index) return;
-      const x = (200 + window.innerWidth) * dir;
-      const rot = dir * 20;
-      return {
-        x,
-        rot,
-        scale: 1,
-        config: { friction: 50, tension: 200 },
-      };
-    });
+    api.start((i) =>
+      i === index
+        ? {
+            x: (window.innerWidth + 200) * dir,
+            rot: dir * 20,
+            scale: 1,
+            config: { tension: 200, friction: 40 },
+          }
+        : {}
+    );
 
-    if (dir === 1) { // On right swipe, add to wishlist
-      try {
-        if (userId) {
-          await addToWishlist({ productId: product.id });
-        } else {
-          addToGuestWishlist({
-            productId: product.id,
-            variantId: null,
-            title: product.title,
-            brand: product.brand?.name,
-            price: product.price,
-            image: product.media?.[0]?.mediaItem?.url ?? null,
-            sku: null,
-            fullProduct: product,
-          });
-          // ✅ Manually trigger toast for guest users
-          toast.success("Added to Wishlist!");
-        }
-      } catch (err: any) {
-        // This will now primarily catch errors from the guest wishlist logic
-        toast.error(err.message || "Could not add to wishlist.");
+    if (dir === 1) {
+      if (userId) {
+        await addToWishlist({ productId: product.id });
+      } else {
+        addToGuestWishlist({
+          productId: product.id,
+          variantId: null,
+          title: product.title,
+          brand: product.brand?.name,
+          price: product.price,
+          image: product.media?.[0]?.mediaItem?.url ?? null,
+          sku: null,
+          fullProduct: product,
+        });
+        toast.success("Added to Wishlist!");
       }
     }
 
     setTimeout(() => {
       api.start((i) =>
-        i === index
-          ? {
-              display: "none",
-              immediate: true,
-            }
-          : {}
+        i === index ? { display: "none", immediate: true } : {}
       );
     }, 400);
   };
 
   const bind = useDrag(
-    ({
-      args: [index],
-      down,
-      movement: [mx],
-      direction: [xDir],
-      velocity,
-    }) => {
+    ({ args: [index], down, movement: [mx], direction: [xDir], velocity }) => {
       if (goneCards.has(index)) return;
-      if (down && !hasInteracted) setHasInteracted(true);
+      setHasInteracted(true);
+
       const trigger = velocity > 0.2;
       const dir = xDir < 0 ? -1 : 1;
 
@@ -156,101 +135,201 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
         return;
       }
 
-      api.start((i) => {
-        if (i !== index) return;
-        const isActive = down && !goneCards.has(index);
-        const x = isActive ? mx : 0;
-        const rot = mx / 20;
-        const scale = isActive ? 1.05 : 1;
-        return {
-          x,
-          rot,
-          scale,
-          config: { friction: 50, tension: isActive ? 800 : 500 },
-        };
-      });
+      api.start((i) =>
+        i === index
+          ? {
+              x: down ? mx : 0,
+              rot: mx / 15,
+              scale: down ? 1.05 : 1,
+            }
+          : {}
+      );
     }
   );
 
-  const showGuide = !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
+  const showGuide =
+    !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
 
   return (
-    <div className=" w-full bg-[#fcfbf4] p-8 lg:p-16">
-      <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-        <div className="relative mx-auto flex h-[450px] w-full max-w-md items-center justify-center">
-          {showGuide && <AnimatedSwipeGuide />}
+  <section className="w-full bg-[#FCFBF4] px-4 py-10 md:px-16">
+<h2 className="mb-6 text-center font-serif text-xl text-[#7A6A3A] md:mb-10 md:text-3xl py-4">
+  Select What Matters
+</h2>
 
-          {springs.map(({ x, y, rot, scale }, i) => {
-            const product = filteredProducts[i]?.product;
-            if (!product || goneCards.has(i)) return null;
+    {/* ================= MOBILE ================= */}
+      <div className="grid grid-cols-2 gap-4 md:hidden justify-center items-start">
 
-            return (
-              <animated.div
-                key={product.id}
-                {...bind(i)}
-                className="absolute flex size-full max-w-sm cursor-grab flex-col rounded-2xl bg-white shadow-lg active:cursor-grabbing"
-                style={{
-                  transform: interpolate(
-                    [x, y, rot, scale],
-                    (x, y, r, s) =>
-                      `translate3d(${x}px,${y}px,0) rotate(${r}deg) scale(${s})`
-                  ),
-                }}
-              >
-                <div className="relative w-full grow overflow-hidden rounded-t-2xl">
-                  <Image
-                    src={
-                      product.media[0]?.mediaItem?.url ||
-                      "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                    }
-                    alt={product.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    draggable={false}
-                  />
+
+      {/* --- MOBILE SWIPE CARD --- */}
+      <div className="relative h-[203px] w-[139px] mx-auto">
+        {showGuide && <AnimatedSwipeGuide />}
+
+        {springs.map(({ x, y, rot, scale }, i) => {
+          const product = filteredProducts[i]?.product;
+          if (!product || goneCards.has(i)) return null;
+
+          return (
+            <animated.div
+              key={product.id}
+              {...bind(i)}
+              className="absolute h-[203px] w-[139px] rounded-xl bg-white shadow-lg"
+              style={{
+                transform: interpolate(
+                  [x, y, rot, scale],
+                  (x, y, r, s) =>
+                    `translate3d(${x}px,${y}px,0) rotate(${r}deg) scale(${s})`
+                ),
+              }}
+            >
+              {/* Image */}
+              <div className="relative h-[120px] w-full overflow-hidden ">
+                <Image
+                  src={
+                    product.media?.[0]?.mediaItem?.url ||
+                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                  }
+                  alt={product.title}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              {/* Content */}
+              <div className="p-2">
+                <h3 className="text-xs font-semibold leading-tight">
+                  {product.title}
+                </h3>
+
+                <div className="mt-2 flex items-center justify-between">
+                  <button
+                    onClick={() => handleSwipe(i, -1)}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white"
+                  >
+                    <Icons.X className="h-3 w-3" />
+                  </button>
+
+                  <button
+                    onClick={() => handleSwipe(i, 1)}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white"
+                  >
+                    <Icons.Heart className="h-3 w-3" />
+                  </button>
                 </div>
+              </div>
+            </animated.div>
+          );
+        })}
+      </div>
 
-                <div className="p-6">
-                  <h3 className="text-2xl font-bold capitalize text-gray-900">
-                    {product.title}
-                  </h3>
-                  <div className="mt-4 flex items-center justify-between">
-                    <button
-                      onClick={() => handleSwipe(i, -1)}
-                      className="flex size-10 items-center justify-center rounded-full bg-red-500 text-white shadow-md transition-transform hover:scale-110 hover:bg-red-600"
-                      aria-label="Dislike"
-                    >
-                      <Icons.X className="size-5" />
-                    </button>
-                    <button
-                      onClick={() => handleSwipe(i, 1)}
-                      className="flex size-10 items-center justify-center rounded-full bg-green-500 text-white shadow-md transition-transform hover:scale-110 hover:bg-green-600"
-                      aria-label="Like"
-                    >
-                      <Icons.Heart className="size-5" />
-                    </button>
-                  </div>
-                </div>
-              </animated.div>
-            );
-          })}
-        </div>
-<div className="mx-auto w-full max-w-md rounded-2xl border border-white/40 bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7] p-8 text-left shadow-lg backdrop-blur-lg">
-  <h2 className="font-serif text-3xl text-gray-900">
-    Got curiosity?
+{/* --- MOBILE CTA CARD --- */}
+<div
+  className="
+    h-[193px] w-[169px]
+    border border-white/40
+    bg-gradient-to-br from-[#B7D3EA] to-[#F7F6E7]
+    px-5 pt-6
+    shadow-lg
+  "
+>
+  {/* Title */}
+  <h2 className="font-serif text-xl font-semibold leading-tight text-gray-900">
+    Got <br />
+    curiosity?
   </h2>
+<br />
+  {/* Subtitle block — intentionally NOT flex */}
+  <div className=" flex items-center gap-3">
+    <p className="text-sm italic leading-snug text-gray-600">
+      We’ve Got <br /> Secrets.
+    </p>
 
-  <p className="mt-6 text-gray-600 italic">
-    We’ve Got Secrets.
-  </p>
-
-  <Link href="/shop" className="mt-4 inline-block">
-    <Icons.ArrowRight className="size-7 text-gray-800 transition-colors hover:text-black" />
-  </Link>
+    <Link href="/shop">
+      <Icons.ArrowRight className="h-5 w-5 text-gray-800" />
+    </Link>
+  </div>
 </div>
 
-      </div>
+
+
+
     </div>
+
+    {/* ================= DESKTOP ================= */}
+    <div className="hidden md:grid grid-cols-2 gap-12 items-center">
+
+      {/* Desktop Swipe Cards */}
+      <div className="relative mx-auto flex h-[450px] w-full max-w-md items-center justify-center">
+        {showGuide && <AnimatedSwipeGuide />}
+
+        {springs.map(({ x, y, rot, scale }, i) => {
+          const product = filteredProducts[i]?.product;
+          if (!product || goneCards.has(i)) return null;
+
+          return (
+            <animated.div
+              key={product.id}
+              {...bind(i)}
+              className="absolute flex size-full max-w-sm cursor-grab flex-col rounded-2xl bg-white shadow-lg"
+              style={{
+                transform: interpolate(
+                  [x, y, rot, scale],
+                  (x, y, r, s) =>
+                    `translate3d(${x}px,${y}px,0) rotate(${r}deg) scale(${s})`
+                ),
+              }}
+            >
+              <div className="relative h-[65%] w-full overflow-hidden rounded-t-2xl">
+                <Image
+                  src={
+                    product.media?.[0]?.mediaItem?.url ||
+                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                  }
+                  alt={product.title}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              <div className="p-6">
+                <h3 className="text-2xl font-bold capitalize">
+                  {product.title}
+                </h3>
+
+                <div className="mt-4 flex justify-between">
+                  <button
+                    onClick={() => handleSwipe(i, -1)}
+                    className="h-10 w-10 rounded-full bg-red-500 text-white"
+                  >
+                    <Icons.X className="h-5 w-5 mx-auto" />
+                  </button>
+
+                  <button
+                    onClick={() => handleSwipe(i, 1)}
+                    className="h-10 w-10 rounded-full bg-green-500 text-white"
+                  >
+                    <Icons.Heart className="h-5 w-5 mx-auto" />
+                  </button>
+                </div>
+              </div>
+            </animated.div>
+          );
+        })}
+      </div>
+
+      {/* Desktop CTA */}
+      <div className="mx-auto w-full max-w-md rounded-2xl border bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7] p-8 shadow-lg">
+        <h2 className="font-serif text-3xl text-gray-900">
+          Got curiosity?
+        </h2>
+        <p className="mt-6 italic text-gray-600">
+          We’ve Got Secrets.
+        </p>
+        <Link href="/shop" className="mt-4 inline-block">
+          <Icons.ArrowRight className="h-7 w-7" />
+        </Link>
+      </div>
+
+    </div>
+  </section>
   );
 }

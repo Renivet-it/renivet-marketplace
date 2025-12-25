@@ -4,14 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { Banner } from "@/lib/validations";
 import { convertPaiseToRupees } from "@/lib/utils";
-import React from "react";
+import React, { useState } from "react";
+import { Heart } from "lucide-react";
 
 const PLACEHOLDER_IMAGE_URL =
   "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
 // ⭐ PRODUCT CARD — NO GAP VERSION
-const ProductCard = ({ banner }: { banner: Banner }) => {
+const ProductCard = ({ banner }: { banner: Banner } ) => {
   const { product } = banner;
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
   if (!product) return null;
 
   const imageUrl = product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
@@ -25,55 +28,59 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
 
   const displayCompare = compareAt ? convertPaiseToRupees(compareAt) : null;
 
-  const alerts = ["only 2 left!", "only 5 left!", "10% off"];
-  const alert = alerts[Math.floor(Math.random() * alerts.length)];
-
   const productUrl = `/products/${product.slug}`;
+
+  const toggleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation when clicking the heart
+    setIsWishlisted(!isWishlisted);
+  };
 
   return (
     <Link
       href={productUrl}
-      className="block  w-[266px] 
-  md:w-full        
-  flex-shrink-0 
-  md:flex-shrink  
-  text-center
-"
-
+      className="block w-[180px] md:w-full flex-shrink-0 md:flex-shrink text-center group"
     >
       {/* Vegan Tag */}
-      <div className="flex justify-between items-center px-1 mb-1">
-        <span className="text-[12px] text-green-700 font-medium">
+      <div className="flex justify-start items-center px-1 mb-1">
+        <span className="text-[10px] md:text-[12px] text-green-700 font-medium uppercase tracking-wider">
           100%vegan
         </span>
       </div>
 
-      {/* IMAGE FULL COVER */}
-      <div className="relative w-full h-[350px] bg-white overflow-hidden ">
+      {/* IMAGE CONTAINER */}
+      <div className="relative w-full h-[240px] md:h-[350px] overflow-hidden rounded-sm">
         <Image
           src={imageUrl}
           alt={product.title}
           fill
-          className="object-cover"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
+        
+        {/* Wishlist Button Overlay */}
+        <button 
+          onClick={toggleWishlist}
+          className="absolute top-3 right-3 z-10 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors"
+        >
+          <Heart 
+            className={isWishlisted ? "w-4 h-4 fill-red-500 text-red-500" : "w-4 h-4 text-gray-600"} 
+            strokeWidth={isWishlisted ? 0 : 1.5} 
+          />
+        </button>
       </div>
 
-      {/* Stock label */}
-      {/* <p className="text-[12px] text-red-500 mt-2">{alert}</p> */}
-
       {/* Title */}
-      <h3 className="mt-1 text-[16px] font-medium text-gray-800 line-clamp-2 h-[42px]">
+      <h3 className="mt-3 text-[14px] md:text-[16px] font-medium text-gray-800 line-clamp-2 h-[42px]">
         {product.title}
       </h3>
 
       {/* Price */}
       <div className="mt-1 flex justify-center items-center gap-2">
-        <span className="text-[18px] font-semibold text-gray-900">
+        <span className="text-[16px] md:text-[18px] font-semibold text-gray-900">
           ₹{price}
         </span>
 
         {displayCompare && (
-          <span className="text-[13px] line-through text-gray-400">
+          <span className="text-[12px] md:text-[13px] line-through text-gray-400">
             ₹{displayCompare}
           </span>
         )}
@@ -89,21 +96,19 @@ export function MayAlsoLoveThese({ banners }: { banners: Banner[] }) {
   const items = banners.slice(0, 18);
 
   return (
-    <section className="w-full py-2 bg-[#fbfaf4]">
-      <h2 className="text-center text-2xl font-bold text-[#4A453F] mb-2">
+    <section className="w-full py-8 bg-[#FCFBF4]">
+      <h2 className="text-center text-2xl font-bold text-[#4A453F] mb-8">
         You&apos;ll Love These
       </h2>
 
-      {/* 📱 MOBILE — 2-ROW CAROUSEL, ZERO GAP */}
-{/* 📱 MOBILE — SINGLE ROW HORIZONTAL SCROLL */}
-<div className="md:hidden overflow-x-auto scrollbar-hide px-2">
-  <div className="flex gap-4 w-max">
-    {items.map((item) => (
-      <ProductCard key={item.id} banner={item} />
-    ))}
-  </div>
-</div>
-
+      {/* 📱 MOBILE — SINGLE ROW HORIZONTAL SCROLL */}
+      <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
+        <div className="flex gap-4 w-max">
+          {items.map((item) => (
+            <ProductCard key={item.id} banner={item} />
+          ))}
+        </div>
+      </div>
 
       {/* 🖥 DESKTOP — 6 COLUMN GRID */}
       <div className="hidden md:block max-w-screen-2xl mx-auto px-6">

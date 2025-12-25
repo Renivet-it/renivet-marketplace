@@ -60,7 +60,7 @@ export function DealofTheMonthStrip({
 
   return (
     <section
-      className={cn("w-full bg-[#fcfbf4] py-6", className)}
+      className={cn("w-full bg-[#FCFBF4] py-6", className)}
       {...props}
     >
       <div className="max-w-screen-3xl mx-auto px-4 sm:px-6">
@@ -74,7 +74,7 @@ export function DealofTheMonthStrip({
     {marketingStrip.map((item, index) => (
       <Link
         key={`mobile-${index}`}
-        href={item.href || "/shop"}
+        href={item.url || "/shop"}
         className="flex-shrink-0 bg-white  border border-gray-200 overflow-hidden"
         style={{ width: "260px" }}
       >

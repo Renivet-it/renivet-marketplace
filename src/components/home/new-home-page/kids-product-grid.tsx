@@ -18,14 +18,27 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string;
 }
 
-export function ProductGrid({ className, products, title = "Kids", ...props }: ProductGridProps) {
+export function ProductGrid({ className, products, title = "Gentle on Skin. Kinder to Earth", ...props }: ProductGridProps) {
   if (!products || !Array.isArray(products)) return null;
 
   return (
-    <div className={cn("bg-[#fcfbf4] py-8", className)} {...props}>
+    <div className={cn("bg-[#FCFBF4] py-8", className)} {...props}>
       <div className="max-w-screen-2xl mx-auto px-6">
         {/* Header */}
-
+             <h2
+  className="
+    text-center
+    text-[18px]         /* mobile smaller */
+    md:text-[32px]      /* desktop bigger */
+    font-light
+    text-[#3B3B3B]
+    mb-8
+    tracking-wide
+    whitespace-nowrap   /* forces one line */
+  "
+>
+          {title}
+        </h2>
         {/* 🚀 UNIVERSAL CAROUSEL (Mobile + Desktop) */}
         <div className="overflow-x-auto scrollbar-hide pb-3">
           <div className="flex gap-4 w-max">

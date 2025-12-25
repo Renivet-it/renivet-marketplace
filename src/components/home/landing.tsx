@@ -55,15 +55,15 @@ useEffect(() => {
 
 
   const categories = [
-    { name: "Men", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcdSN8FeO4H8MeNYoyJQSarWCqgVpRxP5lDBu", href: "/men" },
-    { name: "Women", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPKE1D2O9kwm36pdODjHU0ryYqC2xJehFZ5Q7", href: "/women" },
+    { name: "Men", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2BY4DgQOYTpvrXwqtZHon4P85jVxyMmDkf3s", href: "/men" },
+    { name: "Women", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXsTugR3We049OUSYNxCLnRIka3FhcqBZlbsP", href: "/women" },
     { name: "Kids", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF", href: "/kids" },
     { name: "Living", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF", href: "/home-living" },
     { name: "Beauty", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG", href: "/beauty-personal" },
   ];
 
   return (
-    <section className={cn("bg-[#fbfaf4]", className)} {...props}>
+    <section className={cn("bg-[#FCFBF4]", className)} {...props}>
 
       {/* ✅ DESKTOP CAROUSEL */}
       <div className="hidden md:block">
@@ -101,9 +101,45 @@ useEffect(() => {
 <div className="block md:hidden relative w-full bg-[#fbfaf4]">
 
   {/* 🔵 DISCOUNT STRIP */}
-  <div className="w-full bg-[#E4EDF7] text-center text-[11px] font-medium py-1.5 text-black">
-    Flat 10% Off For Your First Conscious Choice – RENIVET10
+{/* 🔵 DISCOUNT STRIP — MOVING LOOP */}
+{/* 🔵 DISCOUNT STRIP — INLINE ANIMATION */}
+<div
+  style={{
+    width: "100%",
+    backgroundColor: "#E4EDF7",
+    overflow: "hidden",
+  }}
+>
+  {/* Inject keyframes inline */}
+  <style>
+    {`
+      @keyframes discountMarquee {
+        0% { transform: translateX(0%); }
+        100% { transform: translateX(-50%); }
+      }
+    `}
+  </style>
+
+  <div
+    style={{
+      display: "inline-flex",
+      whiteSpace: "nowrap",
+      gap: "40px",
+      padding: "6px 0",
+      fontSize: "11px",
+      fontWeight: 500,
+      color: "#000",
+      animation: "discountMarquee 25s linear infinite", // 🔥 FAST
+    }}
+  >
+    {Array.from({ length: 12 }).map((_, i) => (
+      <span key={i}>
+        Flat 10% Off For Your First Conscious Choice –{" "}
+        <strong>RENIVET10</strong>
+      </span>
+    ))}
   </div>
+</div>
 
   {/* 🔵 SEARCH BAR — NOW SQUARE */}
 <div className="w-full px-4 pt-4">
@@ -166,25 +202,49 @@ useEffect(() => {
 <div className="absolute inset-0 flex justify-center md:hidden">
 <div className="absolute inset-0 flex justify-center md:hidden">
   <div className="absolute bottom-16">
-    <Button
-      size="lg"
-      className="
-        rounded-full
-        border border-[#C7BEB2]
-        bg-[#F6F2EC]
-        px-9 py-3
-        text-sm font-medium
-        text-[#3E3A34]
-        shadow-sm
-        backdrop-blur
-        transition
-        hover:bg-[#ECE6DD]
-        hover:text-[#2E2A25]
-      "
-      asChild
-    >
-      <Link href="/shop">Shop With Purpose</Link>
-    </Button>
+<Link
+  href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
+  className="
+    relative
+    inline-flex
+    items-center
+    justify-center
+    overflow-hidden
+    border border-black
+    bg-transparent
+    px-10 py-3
+    text-sm font-medium
+    text-black
+    transition-colors
+    duration-300
+    group
+  "
+>
+  {/* Text */}
+  <span className="relative z-10 transition-colors duration-300 group-hover:text-white">
+    Shop With Purpose
+  </span>
+
+  {/* Hover background */}
+  <span
+    aria-hidden
+    className="
+      absolute
+      inset-0
+      bg-black
+      translate-y-full
+      transition-transform
+      duration-300
+      ease-out
+      group-hover:translate-y-0
+    "
+  />
+</Link>
+
+
+
+
+
   </div>
 </div>
 </div>
