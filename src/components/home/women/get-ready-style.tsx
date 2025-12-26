@@ -14,7 +14,10 @@ interface PageProps extends GenericProps {
 
 export function GetReadySection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full pt-8 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+        <section className={cn("w-full md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+                  <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair">
+            Quiet Luxury for Daily Wear
+      </h2>
             <Carousel
                 opts={{
                     align: "start",
@@ -35,7 +38,7 @@ export function GetReadySection({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full h-[60vw] md:h-[700px] md:aspect-[1380/600]">
+                            <div className="relative w-full h-[50vw] md:h-[700px] md:aspect-[1380/600]">
                                 <Link href={item.url || "/shop"} className="block w-full h-full">
                                     <Image
                                         src={item.imageUrl}

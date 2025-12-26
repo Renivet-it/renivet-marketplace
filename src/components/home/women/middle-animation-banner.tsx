@@ -5,60 +5,57 @@ import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
-import { Icons } from "../../icons";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
-import { Button } from "../../ui/button-general"; // Assuming a Button component exists
 
 interface PageProps extends GenericProps {
-    banners: Banner[];
+  banners: Banner[];
 }
 
-export function MiddleAnimationSection({ className, banners, ...props }: PageProps) {
-    return (
-        <section className={cn(className)} {...props}>
-            <Carousel
-                opts={{
-                    align: "start",
-                    loop: true,
-                }}
-                plugins={[
-                    Autoplay({
-                        delay: 5000,
-                    }),
-                ]}
-                className="w-full aspect-[3/1] bg-[#F4F0EC]"
-            >
-                <CarouselContent
-                    classNames={{
-                        wrapper: "size-full",
-                        inner: "size-full ml-0",
-                    }}
-                >
-                    {banners.map((item, index) => (
-                        <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative size-full">
-                                <Link href={item.url || "/shop"}>
-                                    <Image
-                                        src={item.imageUrl}
-                                        alt={item.title}
-                                        width={1200}
-                                        height={300}
-                                        className="size-full object-contain brightness-100"
-                                        priority={index === 0}
-                                    />
-                                </Link>
-                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                    <Button className="bg-[#F4F0EC] text-black font-semibold px-6 py-3 rounded-md shadow hover:bg-gray-200 transition" asChild variant="default" size="lg">
-                                        <Link href={item.url || "/shop"}>
-                                            Explore Now
-                                        </Link>
-                                    </Button>
-                                </div>
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-            </Carousel>
-        </section>
-    );
+export function MiddleAnimationSection({
+  className,
+  banners,
+  ...props
+}: PageProps) {
+  return (
+    <section className={cn("w-full bg-[#F4F0EC]", className)} {...props}>
+      <Carousel
+        opts={{ align: "start", loop: true }}
+        plugins={[Autoplay({ delay: 5000 })]}
+        className="
+          w-full
+          aspect-[16/6]        /* desktop */
+          sm:aspect-[16/5]
+          md:aspect-[3/1]
+        "
+      >
+        <CarouselContent
+          classNames={{
+            wrapper: "h-full",
+            inner: "h-full ml-0",
+          }}
+        >
+          {banners.map((item, index) => (
+            <CarouselItem key={index} className="h-full p-0">
+              <Link
+                href={item.url || "/shop"}
+                className="relative block h-full w-full"
+              >
+                <Image
+                  src={item.imageUrl}
+                  alt={item.title}
+                  fill
+                  priority={index === 0}
+                  className="
+                    object-cover      /* mobile */
+                    md:object-contain /* desktop */
+                  "
+                  sizes="(max-width: 768px) 100vw, 1200px"
+                />
+              </Link>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+      </Carousel>
+    </section>
+  );
 }
