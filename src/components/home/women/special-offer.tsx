@@ -13,9 +13,12 @@ interface PageProps {
 export function SpecialOffer({ className, banners }: PageProps) {
   return (
     <section
-      className={cn("w-full py-8 md:py-12", className)}
+      className={cn("w-full py-4 md:py-12", className)}
       style={{ backgroundColor: "#f4f0ec" }}
     >
+                        <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-4">
+      Thoughtfully Chosen Essentials
+      </h2>
       <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
           {banners.map((item: any) => (

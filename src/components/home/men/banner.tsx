@@ -6,15 +6,21 @@ import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 import { ProductSearch } from "@/components/ui/product-search";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface PageProps extends GenericProps {
   banners: Banner[];
 }
 
 export function Landing({ className, banners, ...props }: PageProps) {
+  const pathname = usePathname(); // ✅ route aware
   const desktopAspectRatio = 1440 / 500;
   const mobileAspectRatio = 375 / 487;
 
@@ -56,26 +62,57 @@ export function Landing({ className, banners, ...props }: PageProps) {
      🧭 CATEGORIES
   ---------------------------------- */
   const categories = [
-    { name: "Men", href: "/men", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2BY4DgQOYTpvrXwqtZHon4P85jVxyMmDkf3s" },
-    { name: "Women", href: "/women", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXsTugR3We049OUSYNxCLnRIka3FhcqBZlbsP" },
-    { name: "Kids", href: "/kids", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF" },
-    { name: "Living", href: "/home-living", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF" },
-    { name: "Beauty", href: "/beauty-personal", imageUrl: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG" },
+    {
+      name: "Men",
+      href: "/men",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2BY4DgQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
+    },
+    {
+      name: "Women",
+      href: "/women",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXsTugR3We049OUSYNxCLnRIka3FhcqBZlbsP",
+    },
+    {
+      name: "Kids",
+      href: "/kids",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
+    },
+    {
+      name: "Living",
+      href: "/home-living",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
+    },
+    {
+      name: "Beauty",
+      href: "/beauty-personal",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
+    },
   ];
 
   return (
     <section className={cn("bg-[#FCFBF4]", className)} {...props}>
-
       {/* ======================================================
          🖥 DESKTOP — CAROUSEL
       ====================================================== */}
       <div className="hidden md:block">
-        <Carousel opts={{ align: "start", loop: true }} plugins={[Autoplay({ delay: 5000 })]}>
+        <Carousel
+          opts={{ align: "start", loop: true }}
+          plugins={[Autoplay({ delay: 5000 })]}
+        >
           <CarouselContent>
             {banners.map((item, index) => (
               <CarouselItem key={index}>
                 <div className="relative w-full overflow-hidden">
-                  <div style={{ paddingBottom: `${(1 / desktopAspectRatio) * 100}%` }} />
+                  <div
+                    style={{
+                      paddingBottom: `${(1 / desktopAspectRatio) * 100}%`,
+                    }}
+                  />
                   <Image
                     src={item.imageUrl}
                     alt={item.title}
@@ -90,7 +127,9 @@ export function Landing({ className, banners, ...props }: PageProps) {
                       className="border-2 border-black bg-transparent px-8 py-3 text-sm uppercase tracking-wide text-black hover:bg-black hover:text-white"
                       asChild
                     >
-                      <Link href={item.url || "/shop"}>{">"} Explore Now</Link>
+                      <Link href={item.url || "/shop"}>
+                        {">"} Explore Now
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -103,79 +142,90 @@ export function Landing({ className, banners, ...props }: PageProps) {
       {/* ======================================================
          📱 MOBILE — STATIC LAYOUT
       ====================================================== */}
-  {/* ======================================================
-   📱 MOBILE — STATIC LAYOUT
-====================================================== */}
-<div className="block md:hidden">
+      <div key={pathname} className="block md:hidden">
+        {/* 🧭 CATEGORIES */}
+        <div
+          className="grid grid-cols-5 gap-2 px-3 py-4 bg-cover bg-center"
+          style={{
+            backgroundImage:
+              "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
+          }}
+        >
+{categories.map((cat) => {
+  const isActive = window.location.pathname === cat.href;
 
-  {/* 🧭 CATEGORIES — FIXED ALIGNMENT */}
-  <div
-    className="
-      grid grid-cols-5
-      gap-2
-      px-3 py-4
-      bg-cover bg-center
-    "
-    style={{
-      backgroundImage:
-        "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
-    }}
-  >
-    {categories.map((cat) => (
-      <Link
-        key={cat.name}
-        href={cat.href}
-        className="flex flex-col items-center text-center"
+  return (
+    <Link
+      key={cat.name}
+      href={cat.href}
+      className="flex flex-col items-center text-center"
+      onClick={(e) => {
+        e.preventDefault();
+        window.location.href = cat.href; // ✅ HARD RELOAD (FIX)
+      }}
+    >
+      <div
+        className={cn(
+          "relative h-14 w-14 rounded-full overflow-hidden bg-[#F4F0EC] transition",
+          isActive && "ring-2 ring-black scale-105"
+        )}
       >
-        <div className="relative h-14 w-14 rounded-full bg-[#F4F0EC] overflow-hidden">
-          <Image
-            src={cat.imageUrl}
-            alt={cat.name}
-            fill
-            className="object-cover"
-            sizes="56px"
-          />
+        <Image
+          src={cat.imageUrl}
+          alt={cat.name}
+          fill
+          className="object-cover"
+          sizes="56px"
+        />
+      </div>
+
+      <p
+        className={cn(
+          "mt-1 text-[11px] leading-tight",
+          isActive ? "font-semibold text-black" : "font-medium"
+        )}
+      >
+        {cat.name}
+      </p>
+
+      {isActive && (
+        <span className="mt-0.5 h-1 w-1 rounded-full bg-black" />
+      )}
+    </Link>
+  );
+})}
+
         </div>
-        <p className="mt-1 text-[11px] font-medium leading-tight">
-          {cat.name}
-        </p>
-      </Link>
-    ))}
-  </div>
 
-  {/* 🖼 MOBILE BANNER */}
-  <div className="relative w-full overflow-hidden">
-    <div style={{ paddingBottom: `${(1 / mobileAspectRatio) * 100}%` }} />
-    <Image
-      src={mobileImageUrl}
-      alt="Mobile Banner"
-      fill
-      className="absolute inset-0 object-cover"
-      priority
-    />
+        {/* 🖼 MOBILE BANNER */}
+        <div className="relative w-full overflow-hidden">
+          <div
+            style={{
+              paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
+            }}
+          />
+          <Image
+            src={mobileImageUrl}
+            alt="Mobile Banner"
+            fill
+            className="absolute inset-0 object-cover"
+            priority
+          />
 
-    {/* CTA */}
-    <div className="absolute bottom-16 w-full flex justify-center">
-      <Link
-        href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
-        className="
-          relative inline-flex items-center justify-center
-          border border-black
-          px-8 py-3
-          text-sm font-medium
-          text-black
-          overflow-hidden group
-        "
-      >
-        <span className="relative z-10 group-hover:text-white transition">
-          Shop With Purpose
-        </span>
-        <span className="absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-      </Link>
-    </div>
-  </div>
-</div>
-
+          {/* CTA */}
+          <div className="absolute bottom-16 w-full flex justify-center">
+            <Link
+              href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
+              className="relative inline-flex items-center justify-center border border-black px-8 py-3 text-sm font-medium text-black overflow-hidden group"
+            >
+              <span className="relative z-10 group-hover:text-white transition">
+                Shop With Purpose
+              </span>
+              <span className="absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            </Link>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

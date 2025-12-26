@@ -32,32 +32,34 @@ export function MatchaBag({
           {title}
         </h2>
 
-        {/* ================= DESKTOP ================= */}
-        <div className="hidden md:flex justify-center gap-6">
-          {moodboardItems.map((item) => (
-            <Link
-              key={item.id}
-              href={item.url || "/shop"}
-              className="relative"
-            >
-              <div className="relative w-[690px] h-[452px] overflow-hidden rounded-sm">
-                <Image
-                  src={item.imageUrl}
-                  alt=""
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              {item.showButton && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-                  <button className="bg-[#3a493f] text-white text-sm px-6 py-2 rounded-sm shadow">
-                    Shop Now
-                  </button>
+        {/* ================= DESKTOP (CAROUSEL ADDED) ================= */}
+        <div className="hidden md:block overflow-x-auto scrollbar-hide">
+          <div className="flex gap-6 w-max">
+            {moodboardItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.url || "/shop"}
+                className="relative flex-shrink-0"
+              >
+                <div className="relative w-[690px] h-[452px] overflow-hidden rounded-sm">
+                  <Image
+                    src={item.imageUrl}
+                    alt=""
+                    fill
+                    className="object-cover"
+                  />
                 </div>
-              )}
-            </Link>
-          ))}
+
+                {item.showButton && (
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+                    <button className="bg-[#3a493f] text-white text-sm px-6 py-2 rounded-sm shadow">
+                      Shop Now
+                    </button>
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* ================= MOBILE (CAROUSEL) ================= */}
