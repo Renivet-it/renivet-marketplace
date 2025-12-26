@@ -1,217 +1,230 @@
 "use client";
 
-import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button-general";
-import { Star } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Icons } from "@/components/icons";
+import { trpc } from "@/lib/trpc/client";
+import { toast } from "sonner";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+
+/* ---------------- TYPES ---------------- */
 
 interface Product {
-  slug: any;
   id: string;
-  media: { mediaItem: { url: string } }[];
-  brand: { name: string };
+  slug: string;
   title: string;
-  variants?: {
-    price: number;
-    compareAtPrice?: number;
-  }[];
-  price?: number;
-  compareAtPrice?: number;
-  rating?: number;
-  reviewCount?: number;
-  status?: string;
-  tags?: string[];
+  media: { mediaItem: { url: string } }[];
+  brand?: { name: string };
 }
 
-interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ProductGridProps {
   products: { product: Product }[];
   title?: string;
+  userId?: string;
+  className?: string;
 }
 
-export function ProductGrid({ className, products, title = "Little Reinivet", ...props }: ProductGridProps) {
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return null;
-  }
+/* ---------------- TAG CONFIG ---------------- */
 
-  const getProductData = (product: Product) => {
-    const priceInPaise = product.variants?.[0]?.price || product.price || 0;
-    const originalPriceInPaise = product.variants?.[0]?.compareAtPrice || product.compareAtPrice;
-    const price = convertPaiseToRupees(priceInPaise);
-    const originalPrice = originalPriceInPaise ? convertPaiseToRupees(originalPriceInPaise) : undefined;
+const TAGS = [
+  { label: "Best Seller", tone: "dark" },
+  { label: "Sustainable", tone: "earth" },
+];
 
-    return {
-      price,
-      originalPrice,
-      rating: product.rating,
-      reviews: product.reviewCount,
-      status: product.status,
-      isBestSeller: product.tags?.includes("Best Seller"),
-      isSolo: product.tags?.includes("Solo")
-    };
+function getRandomTag(productId: string) {
+  const hash = productId
+    .split("")
+    .reduce((acc, c) => acc + c.charCodeAt(0), 0);
+
+  return TAGS[hash % TAGS.length];
+}
+
+/* ---------------- COMPONENT ---------------- */
+
+export function ProductGrid({
+  products,
+  title = "Best Sellers",
+  userId,
+  className,
+}: ProductGridProps) {
+  if (!products?.length) return null;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { addToGuestWishlist } = useGuestWishlist();
+
+  const { mutateAsync: addToWishlist } =
+    trpc.general.users.wishlist.addProductInWishlist.useMutation({
+      onSuccess: () => toast.success("Added to Wishlist"),
+    });
+
+  const handleWishlist = async (
+    e: React.MouseEvent,
+    product: Product
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (userId) {
+      await addToWishlist({ productId: product.id });
+    } else {
+      addToGuestWishlist({
+        productId: product.id,
+        variantId: null,
+        title: product.title,
+        brand: product.brand?.name ?? "",
+        price: null,
+        image: product.media?.[0]?.mediaItem?.url ?? null,
+        sku: null,
+        fullProduct: product,
+      });
+      toast.success("Added to Wishlist");
+    }
   };
 
   return (
-    <section className={cn("w-full px-4 py-6 bg-[#d0d7cf]", className)} {...props}>
-      <div className="max-w-[1280px] mx-auto">
-        <div className="flex justify-between items-center mb-4 px-1">
-          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-          <Link href="/products" className="text-xs font-medium text-gray-600 hover:text-gray-900 underline">
-            View all
-          </Link>
-        </div>
+    <section className={cn("bg-[#F4F0EC] py-4", className)}>
+      {/* TITLE */}
+      <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
+        {title}
+      </h2>
 
-        {/* Mobile: Horizontal scroll with 3 cards in view */}
-        <div className="md:hidden overflow-x-auto pb-2 -mx-2 px-2">
-          <div className="flex space-x-3 w-max">
-            {products.slice(0, 3).map(({ product }) => {
-              const {
-                price,
-                originalPrice,
-                rating,
-                reviews,
-                status,
-                isBestSeller,
-                isSolo
-              } = getProductData(product);
-
-              return (
-                <div key={product.id} className="w-[140px] flex-shrink-0">
-                  <Card className="border border-gray-200 rounded-lg shadow-xs h-full flex flex-col">
-                    <CardHeader className="p-0 relative aspect-square">
-                      <Link href={`/products/${product.slug}`} className="block h-full">
-                        <div className="relative w-full h-full">
-                          <Image
-                            src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
-                            alt={product.title}
-                            fill
-                            className="object-cover"
-                            sizes="140px"
-                          />
-                        </div>
-                      </Link>
-                      {isSolo && (
-                        <div className="absolute top-1 left-1 bg-white text-[8px] font-bold px-1 py-0.5 rounded-xs">
-                          SOLO
-                        </div>
-                      )}
-                    </CardHeader>
-
-                    <CardContent className="p-2 flex-grow flex flex-col">
-                      <div className="mb-1">
-                        <p className="text-[10px] text-gray-500 truncate">{product.brand.name}</p>
-                        <h3 className="text-xs font-medium text-gray-900 line-clamp-2 leading-tight">
-                          {product.title}
-                        </h3>
-                      </div>
-
-                      <div className="mt-auto">
-                        <div className="text-xs font-bold text-gray-900">
-            {/* @ts-ignore */}
-
-                          ₹{typeof price === "number" ? price.toFixed(0) : price}
-                        </div>
-                        {originalPrice && (
-                          <div className="text-[10px] text-gray-500 line-through">
-            {/* @ts-ignore */}
-
-                            ₹{typeof originalPrice === "number" ? originalPrice.toFixed(0) : originalPrice}
-                          </div>
-                        )}
-
-                        <Button className="w-full mt-1 bg-black text-white rounded-sm py-1 text-[10px] font-medium">
-                          Add
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Desktop: Normal grid */}
-        <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {products.slice(0, 3).map(({ product }) => {
-            const {
-              price,
-              originalPrice,
-              rating,
-              reviews,
-              status,
-              isBestSeller,
-              isSolo
-            } = getProductData(product);
-
-            return (
-              <div key={product.id} className="w-full">
-                <Card className="border border-gray-200 rounded-lg shadow-sm overflow-hidden h-full flex flex-col">
-                  <CardHeader className="p-0 relative group aspect-square">
-                    <Link href={`/products/${product.slug}`} className="block h-full">
-                      <div className="relative w-full h-full">
-                        <Image
-                          src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
-                          alt={product.title}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                          sizes="(max-width: 1024px) 50vw, 33vw"
-                        />
-                      </div>
-                    </Link>
-
-                    <div className="absolute top-2 left-2 space-y-1">
-                      {isSolo && (
-                        <div className="bg-white text-xs font-bold px-2 py-1 rounded-sm">
-                          SOLO 50%
-                        </div>
-                      )}
-                      {isBestSeller && (
-                        <div className="bg-black text-white text-xs font-bold px-2 py-1 rounded-sm">
-                          BEST SELLER
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="p-4 flex-grow flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900 mb-1">{product.title}</h3>
-                        <p className="text-xs text-gray-500">{product.brand.name}</p>
-                      </div>
-                      {rating && (
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-                          {rating}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-auto">
-                      <div className="text-base font-bold text-gray-900">
-            {/* @ts-ignore */}
-                        ₹{typeof price === "number" ? price.toFixed(2) : price}
-                      </div>
-                      {originalPrice && (
-                        <div className="text-xs text-gray-500 line-through">
-            {/* @ts-ignore */}
-                          ₹{typeof originalPrice === "number" ? originalPrice.toFixed(2) : originalPrice}
-                        </div>
-                      )}
-
-                      <Button className="w-full mt-3 bg-black hover:bg-gray-800 text-white rounded-md py-2 text-sm font-medium">
-                        Add to Cart
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
+      {/* ================= MOBILE ================= */}
+      <div className="md:hidden px-2">
+        <div
+          className="grid gap-x-3 gap-y-5 justify-center"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, max-content))",
+          }}
+        >
+          {products.map(({ product }) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              variant="mobile"
+              onWishlist={handleWishlist}
+            />
+          ))}
         </div>
       </div>
+
+      {/* ================= DESKTOP ================= */}
+      <div className="hidden md:block">
+        <Carousel opts={{ align: "start", loop: true }}>
+          <CarouselContent className="gap-6 px-12">
+            {products.map(({ product }) => (
+              <CarouselItem key={product.id} className="basis-auto">
+                <ProductCard
+                  product={product}
+                  variant="desktop"
+                  onWishlist={handleWishlist}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
     </section>
+  );
+}
+
+/* ---------------- PRODUCT CARD ---------------- */
+
+function ProductCard({
+  product,
+  variant,
+  onWishlist,
+}: {
+  product: Product;
+  variant: "mobile" | "desktop";
+  onWishlist: (e: React.MouseEvent, product: Product) => void;
+}) {
+  const isMobile = variant === "mobile";
+  const tag = getRandomTag(product.id);
+
+  return (
+    <Link
+      href={`/products/${product.slug}`}
+      className={cn(
+        "group block",
+        isMobile ? "w-[110px]" : "w-[240px]"
+      )}
+    >
+      {/* IMAGE */}
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-md bg-[#EFE9DF]",
+          isMobile
+            ? "h-[185px]"
+            : "aspect-[3/4] transition-transform duration-300 group-hover:scale-[1.02]"
+        )}
+      >
+        <Image
+          src={
+            product.media?.[0]?.mediaItem?.url ||
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+          }
+          alt={product.title}
+          fill
+          className="object-cover"
+        />
+
+        {/* TAG */}
+        <div
+          className={cn(
+            "absolute z-10",
+            isMobile ? "top-2 left-2" : "top-3 left-3"
+          )}
+        >
+          <span
+            className={cn(
+              "rounded-full backdrop-blur-md border font-medium tracking-wide",
+              isMobile
+                ? "px-2 py-[2px] text-[9px]"
+                : "px-3 py-1 text-[11px]",
+              tag.tone === "dark" &&
+                "bg-black/50 text-white border-white/20",
+              tag.tone === "earth" &&
+                "bg-[#7a6a4f]/70 text-white border-[#d6c7a1]/40"
+            )}
+          >
+            {tag.label}
+          </span>
+        </div>
+
+        {/* ❤️ WISHLIST */}
+        <button
+          onClick={(e) => onWishlist(e, product)}
+          className={cn(
+            "absolute rounded-full backdrop-blur-md border shadow-sm transition bg-white/30 border-white/40 hover:bg-white/40",
+            isMobile ? "top-2 right-2 p-1.5" : "top-3 right-3 p-2"
+          )}
+        >
+          <Icons.Heart
+            className={cn(
+              isMobile ? "h-3 w-3" : "h-4 w-4",
+              "text-neutral-900"
+            )}
+          />
+        </button>
+      </div>
+
+      {/* TITLE */}
+      <p
+        className={cn(
+          "mt-2 text-neutral-900 leading-snug",
+          isMobile
+            ? "text-[12px] font-normal line-clamp-2"
+            : "text-sm font-medium mt-4"
+        )}
+      >
+        {product.title}
+      </p>
+    </Link>
   );
 }

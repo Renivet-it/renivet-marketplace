@@ -14,7 +14,10 @@ interface PageProps extends GenericProps {
 
 export function TwiningSection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full pt-8 mb-10 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+        <section className={cn("w-full pb-4 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+                        <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-4 pt-4">
+              Moments That Match
+</h2>
             <Carousel
                 opts={{
                     align: "start",
