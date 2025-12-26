@@ -13,7 +13,7 @@ interface PageProps {
 export function SpecialOffer({ className, banners }: PageProps) {
   return (
     <section
-      className={cn("w-full py-4 md:py-12", className)}
+      className={cn("w-full py-2 md:py-12", className)}
       style={{ backgroundColor: "#f4f0ec" }}
     >
                         <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-4">

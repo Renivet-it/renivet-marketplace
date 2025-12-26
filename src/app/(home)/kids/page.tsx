@@ -230,21 +230,21 @@ export default function Page() {
 {/*@ts-ignore*/}
         {specialCare && <SpecialCare banners={specialCare} />}
       </Suspense>
+            <Suspense>
+{/*@ts-ignore*/}
+        {productGrid && <ProductGrid products={productGrid} />}
+      </Suspense>
       <Suspense>
         {sustainableBatch && <ElavateLooksPage />}
       </Suspense>
-      <Suspense>
-{/*@ts-ignore*/}
+      {/* <Suspense>
         {dollBanner && <DollBanner banners={dollBanner} />}
-      </Suspense>
+      </Suspense> */}
       <Suspense>
 {/*@ts-ignore*/}
         {discountOffer && <DiscountOffer advertisements={discountOffer} />}
       </Suspense>
-      <Suspense>
-{/*@ts-ignore*/}
-        {productGrid && <ProductGrid products={productGrid} />}
-      </Suspense>
+
       <Suspense>
 {/*@ts-ignore*/}
         {kidTwining && <TwiningSection banners={kidTwining} />}

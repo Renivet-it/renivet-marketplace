@@ -14,7 +14,10 @@ export function DiscountOffer({ advertisements }: PageProps) {
   if (!advertisements.length) return null;
 
   return (
-    <section className="w-full pb-10 pt-20 mt-20 bg-[#F4F0EC]">
+    <section className="w-full bg-[#F4F0EC]">
+                  <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-2">
+Tradition, Tailored for Children
+</h2>
       <Carousel
         opts={{
           align: "start",
@@ -25,7 +28,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
             delay: 5000,
           }),
         ]}
-        className="w-full bg-[#F4F0EC] aspect-[1440/700] min-h-[250px] sm:min-h-[400px] lg:min-h-[700px]"
+        className="w-full bg-[#F4F0EC] aspect-[1440/700] sm:min-h-[400px] lg:min-h-[700px]"
       >
         <CarouselContent className="ml-0">
           {advertisements.map((ad, index) => (
