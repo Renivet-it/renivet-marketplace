@@ -298,22 +298,22 @@ export default function Page() {
         {/*@ts-ignore*/}
         {beautySkinCareBanner && <SkinCareBanner banners={beautySkinCareBanner} />}
       </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
+      {/* <Suspense>
         {beautyCareRoutine && <BeautyCareSection shopByCategories={beautyCareRoutine} />}
-      </Suspense>
-      <Suspense>
+      </Suspense> */}
+            <Suspense>
         {/*@ts-ignore*/}
+        {productGridTopPicks && <ProductGrid products={productGridTopPicks} />}
+      </Suspense>
+      {/* <Suspense>
         {productGridNewArrivals && <ProductGridNewArrivals products={productGridNewArrivals} />}
-      </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
+      </Suspense> */}
+      {/* <Suspense>
         {nurtureBanner && <NurtureBanner banners={nurtureBanner} />}
-      </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
+      </Suspense> */}
+      {/* <Suspense>
         {beautyDiscount && <DiscountOffer advertisements={beautyDiscount} />}
-      </Suspense>
+      </Suspense> */}
       <Suspense>
         {/*@ts-ignore*/}
         {bestSellerBanner && <BestSellerBanner banners={bestSellerBanner} />}
@@ -325,14 +325,10 @@ export default function Page() {
       <Suspense>
         {sustainableBatch && <ElavateLooksPage />}
       </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
-        {productGridTopPicks && <ProductGrid products={productGridTopPicks} />}
-      </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
+
+      {/* <Suspense>
         {beautySkinQuiz && <SkinQuizBanner banners={beautySkinQuiz} />}
-      </Suspense>
+      </Suspense> */}
     </>
   );
 }

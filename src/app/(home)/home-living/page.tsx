@@ -284,6 +284,10 @@ export default function Page() {
 {/*@ts-ignore*/}
         {newCollection && <NewCollection banners={newCollection} />}
       </Suspense>
+            <Suspense>
+        {/*@ts-ignore*/}
+        {productGridTopPicks && <ProductGrid products={productGridTopPicks} />}
+      </Suspense>
       <Suspense>
         {/*@ts-ignore*/}
         {curateSection && <CurateConcious banners={curateSection} />}
@@ -291,28 +295,20 @@ export default function Page() {
       <Suspense>
         {sustainableBatch && <ElevateLooksPage />}
       </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
-        {productGridTopPicks && <ProductGrid products={productGridTopPicks} />}
-      </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
+
+      {/* <Suspense>
         {productGridNewArrivals && <ProductGridNewArrivals products={productGridNewArrivals} />}
-      </Suspense>
-      <Suspense>
-        {/*@ts-ignore*/}
+      </Suspense> */}
+      {/* <Suspense>
         {middleBanner && <MiddleBannerSection banners={middleBanner} />}
       </Suspense>
       <Suspense>
-        {/*@ts-ignore*/}
         {ecoBanner && <EcoBannerSectionComponent banners={ecoBanner} />}
-      </Suspense>
-      <div className="pb-10">
+      </Suspense> */}
         <Suspense>
         {/*@ts-ignore*/}
           {brandSection && <BrandSection banners={brandSection} />}
         </Suspense>
-      </div>
     </>
   );
 }

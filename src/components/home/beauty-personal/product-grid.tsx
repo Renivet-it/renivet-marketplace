@@ -1,203 +1,232 @@
 "use client";
 
-import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button-general";
-import { useRouter } from "next/navigation";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
+import { Icons } from "@/components/icons";
+import { trpc } from "@/lib/trpc/client";
+import { toast } from "sonner";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+
+/* ---------------- TYPES ---------------- */
 
 interface Product {
-  slug: string;
   id: string;
-  media: { mediaItem: { url: string } }[];
+  slug: string;
   title: string;
-  subtitle?: string;
-  description?: string;
-  variants?: {
-    price: number;
-  }[];
-  price?: number;
+  media: { mediaItem: { url: string } }[];
+  brand?: { name: string };
 }
 
-interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ProductGridProps {
   products: { product: Product }[];
   title?: string;
+  userId?: string;
+  className?: string;
 }
 
+/* ---------------- TAG CONFIG ---------------- */
+
+const TAGS = [
+  { label: "Best Seller", tone: "dark" },
+  { label: "100% Vegan", tone: "green" },
+  { label: "Sustainable", tone: "earth" },
+];
+
+function getRandomTag(productId: string) {
+  const hash = productId
+    .split("")
+    .reduce((acc, c) => acc + c.charCodeAt(0), 0);
+
+  return TAGS[hash % TAGS.length];
+}
+
+/* ---------------- COMPONENT ---------------- */
+
 export function ProductGrid({
-  className,
   products,
-  title = "NEW ARRIVALS",
-  ...props
+  title = "Top Picks for You",
+  userId,
+  className,
 }: ProductGridProps) {
-  if (!products || !Array.isArray(products) || products.length === 0) {
-    return null;
-  }
+  if (!products?.length) return null;
+
+  const { addToGuestWishlist } = useGuestWishlist();
+
+  const { mutateAsync: addToWishlist } =
+    trpc.general.users.wishlist.addProductInWishlist.useMutation({
+      onSuccess: () => toast.success("Added to Wishlist"),
+    });
+
+  const handleWishlist = async (
+    e: React.MouseEvent,
+    product: Product
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (userId) {
+      await addToWishlist({ productId: product.id });
+    } else {
+      addToGuestWishlist({
+        productId: product.id,
+        variantId: null,
+        title: product.title,
+        brand: product.brand?.name ?? "",
+        price: null,
+        image: product.media?.[0]?.mediaItem?.url ?? null,
+        sku: null,
+        fullProduct: product,
+      });
+      toast.success("Added to Wishlist");
+    }
+  };
 
   return (
-    <section className={cn("w-full px-4 py-8 bg-[#F4F0EC]", className)} {...props}>
-      <div className="max-w-[1360px] mx-auto">
-        {/* Header with View All link */}
-        <div className="flex justify-between items-center mb-6 px-2">
-          <Link href="#" className="text-sm font-medium underline hover:text-gray-600">
-            See All
-          </Link>
-        </div>
+    <section className={cn("bg-[#F4F0EC] py-4", className)}>
+      {/* TITLE */}
+      <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
+        {title}
+      </h2>
 
-        {/* Mobile Carousel */}
-        <div className="md:hidden">
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            className="w-full"
-          >
-            <CarouselContent>
-              {products.map(({ product }) => (
-                <CarouselItem key={product.id} className="basis-[80%] pl-4">
-                  <MobileProductCard product={product} />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
+      {/* ================= MOBILE ================= */}
+      <div className="md:hidden px-2">
+        <div
+          className="grid gap-x-3 gap-y-5 justify-center"
+          style={{
+            gridTemplateColumns: "repeat(auto-fit, minmax(110px, max-content))",
+          }}
+        >
+          {products.map(({ product }) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              variant="mobile"
+              onWishlist={handleWishlist}
+            />
+          ))}
         </div>
+      </div>
 
-        {/* Desktop Carousel */}
-        <div className="hidden md:block">
-          <Carousel
-            opts={{
-              align: "start",
-              loop: true,
-            }}
-            className="w-full"
-          >
-            <CarouselContent>
-              {products.map(({ product }) => (
-                <CarouselItem key={product.id} className="basis-[25%] pl-4">
-                  <ProductCard product={product} />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-          </Carousel>
-        </div>
+      {/* ================= DESKTOP ================= */}
+      <div className="hidden md:block">
+        <Carousel opts={{ align: "start", loop: true }}>
+          <CarouselContent className="gap-6 px-12">
+            {products.map(({ product }) => (
+              <CarouselItem key={product.id} className="basis-auto">
+                <ProductCard
+                  product={product}
+                  variant="desktop"
+                  onWishlist={handleWishlist}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
       </div>
     </section>
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const router = useRouter();
-  const price = convertPaiseToRupees(product.variants?.[0]?.price || product.price || 0);
+/* ---------------- PRODUCT CARD ---------------- */
 
-  const handleAddToBag = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/products/${product.slug}`);
-  };
-
-  return (
-    <Link href={`/products/${product.slug}`} passHref>
-      <Card className="border-0 shadow-none p-0 bg-transparent hover:cursor-pointer h-full flex flex-col">
-        {/* Product Image */}
-        <div className="relative aspect-square mb-4 overflow-hidden">
-          <Image
-            src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
-            alt={product.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 1024px) 50vw, 33vw"
-          />
-        </div>
-
-        {/* Product Info */}
-        <CardContent className="flex flex-col flex-1 justify-between items-center p-0">
-          <div className="w-full flex flex-col items-center">
-            {/* Product Name */}
-            <h3 className="text-base font-semibold text-gray-900 text-center mb-2">
-              {product.title}
-            </h3>
-            {/* Price */}
-            <div className="text-lg font-bold text-gray-900 text-center mb-6">
-              {/* @ts-ignore */}
-              {typeof price === "number" ? price.toFixed(2) : price}
-            </div>
-          </div>
-          {/* Full-width View Button */}
-          <Button
-            variant="outline"
-            className="w-full text-base py-2 px-3 h-12 border border-black hover:bg-[#F4F0EC] hover:text-black"
-            onClick={handleAddToBag}
-          >
-            View
-          </Button>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
-
-function MobileProductCard({ product }: { product: Product }) {
-  const router = useRouter();
-  const price = convertPaiseToRupees(product.variants?.[0]?.price || product.price || 0);
-
-  const handleAddToBag = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/products/${product.slug}`);
-  };
+function ProductCard({
+  product,
+  variant,
+  onWishlist,
+}: {
+  product: Product;
+  variant: "mobile" | "desktop";
+  onWishlist: (e: React.MouseEvent, product: Product) => void;
+}) {
+  const isMobile = variant === "mobile";
+  const tag = getRandomTag(product.id);
 
   return (
-    <Link href={`/products/${product.slug}`} passHref>
-      <Card className="border-0 shadow-none p-0 bg-transparent hover:cursor-pointer">
-        {/* Product Image */}
-        <div className="relative aspect-square mb-3 overflow-hidden">
-          <Image
-            src={product.media[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
-            alt={product.title}
-            fill
-            className="object-cover"
-            sizes="80vw"
-          />
-        </div>
+    <Link
+      href={`/products/${product.slug}`}
+      className={cn(
+        "group block",
+        isMobile ? "w-[110px]" : "w-[240px]"
+      )}
+    >
+      {/* IMAGE */}
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-md bg-[#EFE9DF]",
+          isMobile
+            ? "h-[185px]"
+            : "aspect-[3/4] transition-transform duration-300 group-hover:scale-[1.02]"
+        )}
+      >
+        <Image
+          src={
+            product.media?.[0]?.mediaItem?.url ||
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+          }
+          alt={product.title}
+          fill
+          className="object-cover"
+        />
 
-        {/* Product Info */}
-        <CardContent className="p-0">
-          {/* Brand Name */}
-          <div className="text-xs font-bold uppercase tracking-wider mb-1">
-            {product.title.split(" ")[0]}
-          </div>
-
-          {/* Product Name */}
-          <h3 className="text-sm font-medium text-gray-900 mb-1">
-            {product.subtitle || product.title}
-          </h3>
-
-          {/* Description */}
-          {product.description && (
-            <p className="text-xs text-gray-500 mb-2 line-clamp-2">
-              {product.description}
-            </p>
+        {/* TAG */}
+        <div
+          className={cn(
+            "absolute z-10",
+            isMobile ? "top-2 left-2" : "top-3 left-3"
           )}
+        >
+          <span
+            className={cn(
+              "rounded-full backdrop-blur-md border font-medium tracking-wide",
+              isMobile
+                ? "px-2 py-[2px] text-[9px]"
+                : "px-3 py-1 text-[11px]",
+              tag.tone === "dark" &&
+                "bg-black/50 text-white border-white/20",
+              tag.tone === "green" &&
+                "bg-emerald-600/70 text-white border-emerald-300/40",
+              tag.tone === "earth" &&
+                "bg-[#7a6a4f]/70 text-white border-[#d6c7a1]/40"
+            )}
+          >
+            {tag.label}
+          </span>
+        </div>
 
-          {/* Price and Add to Bag - INLINE */}
-          <div className="flex justify-between items-center">
-            <div className="text-base font-bold text-gray-900">
-              {/* @ts-ignore */}
-              ${typeof price === "number" ? price.toFixed(2) : price}
-            </div>
-            <Button
-              variant="outline"
-              className="text-xs py-1 px-3 h-8 border border-black hover:bg-black hover:text-white"
-              onClick={handleAddToBag}
-            >
-              Add To Bag
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        {/* ❤️ WISHLIST */}
+        <button
+          onClick={(e) => onWishlist(e, product)}
+          className={cn(
+            "absolute rounded-full backdrop-blur-md border shadow-sm transition bg-white/30 border-white/40 hover:bg-white/40",
+            isMobile ? "top-2 right-2 p-1.5" : "top-3 right-3 p-2"
+          )}
+        >
+          <Icons.Heart
+            className={cn(
+              isMobile ? "h-3 w-3" : "h-4 w-4",
+              "text-neutral-900"
+            )}
+          />
+        </button>
+      </div>
+
+      {/* TITLE */}
+      <p
+        className={cn(
+          "mt-2 text-neutral-900 leading-snug",
+          isMobile
+            ? "text-[12px] font-normal line-clamp-2"
+            : "text-sm font-medium mt-4"
+        )}
+      >
+        {product.title}
+      </p>
     </Link>
   );
 }
