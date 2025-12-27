@@ -6,105 +6,194 @@ import { Banner } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
-import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
-import { Home, ChevronRight } from "lucide-react";
-import { Icons } from "@/components/icons";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+import { usePathname } from "next/navigation";
 
 interface PageProps extends GenericProps {
-    banners: Banner[];
+  banners: Banner[];
 }
 
 export function Landing({ className, banners, ...props }: PageProps) {
-    const aspectRatio = 1440 / 500; // Calculate the aspect ratio
+  const pathname = usePathname(); // ✅ route aware
 
-    return (
-        <section className={cn("", className)} {...props}>
-            <nav className="flex justify-around items-center p-4 bg-gray-100 md:hidden">
-                <Link href="/women" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
-      e.preventDefault();
-      window.location.href = "/women"; // ✅ full page reload
-    }}>
-                    <Icons.Venus className="w-6 h-6" />
-                    <span className="text-xs">Women</span>
-                </Link>
-                <Link href="/men" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
-      e.preventDefault();
-      window.location.href = "/men"; // ✅ full page reload
-    }}>
-                    <Icons.Mars className="w-6 h-6" />
-                    <span className="text-xs">Men</span>
-                </Link>
-                <Link href="/kids" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
-      e.preventDefault();
-      window.location.href = "/kids"; // ✅ full page reload
-    }}>
-                    <Icons.Users className="w-6 h-6" />
-                    <span className="text-xs">Kids</span>
-                </Link>
-                <Link href="/home-living" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
-      e.preventDefault();
-      window.location.href = "/home-living"; // ✅ full page reload
-    }}>
-                    <Icons.House className="w-6 h-6" />
-                    <span className="text-xs">Home & Living</span>
-                </Link>
-                <Link href="/beauty-personal" className="flex flex-col items-center text-gray-700 hover:text-green-600" onClick={(e) => {
-      e.preventDefault();
-      window.location.href = "/beauty-personal"; // ✅ full page reload
-    }}>
-                    <Icons.Droplet className="w-6 h-6" />
-                    <span className="text-xs">Beauty</span>
-                </Link>
-            </nav>
-            <Carousel
-                opts={{
-                    align: "start",
-                    loop: true,
-                }}
-                plugins={[
-                    Autoplay({
-                        delay: 5000,
-                    }),
-                ]}
-                className="w-full"
-            >
-                <CarouselContent
-                    classNames={{
-                        wrapper: "size-full",
-                        inner: "size-full ml-0",
+  const desktopAspectRatio = 1440 / 500;
+  const mobileAspectRatio = 375 / 487;
+
+  const mobileImageUrl =
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNL8xWHSUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW";
+
+  /* ----------------------------------
+     🧭 CATEGORIES
+  ---------------------------------- */
+  const categories = [
+    {
+      name: "Men",
+      href: "/men",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2BY4DgQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
+    },
+    {
+      name: "Women",
+      href: "/women",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXsTugR3We049OUSYNxCLnRIka3FhcqBZlbsP",
+    },
+    {
+      name: "Kids",
+      href: "/kids",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSLbuHrVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
+    },
+    {
+      name: "Living",
+      href: "/home-living",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNScHcA6Vko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
+    },
+    {
+      name: "Beauty",
+      href: "/beauty-personal",
+      imageUrl:
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdBqjKmb4imNMJ6l9SbIRxWLcDyX3vTqk2UVG",
+    },
+  ];
+
+  return (
+    <section className={cn("bg-[#FCFBF4]", className)} {...props}>
+      {/* ======================================================
+         🖥 DESKTOP — CAROUSEL
+      ====================================================== */}
+      <div className="hidden md:block">
+        <Carousel
+          opts={{ align: "start", loop: true }}
+          plugins={[Autoplay({ delay: 5000 })]}
+        >
+          <CarouselContent>
+            {banners.map((item, index) => (
+              <CarouselItem key={index}>
+                <div className="relative w-full overflow-hidden">
+                  <div
+                    style={{
+                      paddingBottom: `${(1 / desktopAspectRatio) * 100}%`,
                     }}
-                >
-                    {banners.map((item, index) => (
-                        <CarouselItem key={index} className="px-0 py-0">
-                            <div
-                                className="relative w-full overflow-hidden bg-gray-100"
-                                style={{
-                                    // Maintain the aspect ratio
-                                    paddingBottom: `${(1 / aspectRatio) * 100}%`
-                                }}
-                            >
-                                <Image
-                                    src={item.imageUrl}
-                                    alt={item.title}
-                                    width={1440}
-                                    height={550}
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                    priority={index === 0}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center p-6">
-                                    <Button
-                                        size="lg"
-                                        className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-6"
-                                        asChild
-                                    >
-                                        <Link href={item.url || "/shop"}>Shop Now</Link>
-                                    </Button>
-                                </div>
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-            </Carousel>
-        </section>
-    );
+                  />
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    fill
+                    className="absolute inset-0 object-cover"
+                    priority={index === 0}
+                  />
+
+                  <div className="absolute bottom-16 w-full flex justify-center">
+                    <Button
+                      size="lg"
+                      className="border-2 border-black bg-transparent px-8 py-3 text-sm uppercase tracking-wide text-black hover:bg-black hover:text-white"
+                      asChild
+                    >
+                      <Link href={item.url || pathname}>
+                        {">"} Explore Now
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
+
+      {/* ======================================================
+         📱 MOBILE — STATIC LAYOUT
+      ====================================================== */}
+      <div key={pathname} className="block md:hidden">
+        {/* 🧭 CATEGORIES */}
+        <div
+          className="grid grid-cols-5 gap-2 px-3 py-4 bg-cover bg-center"
+          style={{
+            backgroundImage:
+              "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
+          }}
+        >
+{categories.map((cat) => {
+  const isActive = window.location.pathname === cat.href;
+
+  return (
+    <Link
+      key={cat.name}
+      href={cat.href}
+      className="flex flex-col items-center text-center"
+      onClick={(e) => {
+        e.preventDefault();
+        window.location.href = cat.href; // ✅ HARD RELOAD (FIX)
+      }}
+    >
+      <div
+        className={cn(
+          "relative h-14 w-14 rounded-full overflow-hidden bg-[#F4F0EC] transition",
+          isActive && "ring-2 ring-black scale-105"
+        )}
+      >
+        <Image
+          src={cat.imageUrl}
+          alt={cat.name}
+          fill
+          className="object-cover"
+          sizes="56px"
+        />
+      </div>
+
+      <p
+        className={cn(
+          "mt-1 text-[11px] leading-tight",
+          isActive ? "font-semibold text-black" : "font-medium"
+        )}
+      >
+        {cat.name}
+      </p>
+
+      {isActive && (
+        <span className="mt-0.5 h-1 w-1 rounded-full bg-black" />
+      )}
+    </Link>
+  );
+})}
+
+        </div>
+
+        {/* 🖼 MOBILE BANNER */}
+        <div className="relative w-full overflow-hidden">
+          <div
+            style={{
+              paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
+            }}
+          />
+          <Image
+            src={mobileImageUrl}
+            alt="Mobile Banner"
+            fill
+            className="absolute inset-0 object-cover"
+            priority
+          />
+
+          {/* CTA */}
+          <div className="absolute bottom-16 w-full flex justify-center">
+            <Link
+              href={pathname}
+              className="relative inline-flex items-center justify-center border border-black px-8 py-3 text-sm font-medium text-black overflow-hidden group"
+            >
+              <span className="relative z-10 group-hover:text-white transition">
+                Shop {pathname.replace("/", "") || "Now"}
+              </span>
+              <span className="absolute inset-0 bg-black translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }

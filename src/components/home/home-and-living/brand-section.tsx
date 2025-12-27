@@ -14,7 +14,10 @@ interface PageProps extends GenericProps {
 
 export function BrandSection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full pt-8 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+        <section className={cn("w-full pt-2 pb-6 md:pt-4 bg-[#F4F0EC]", className)} {...props}>
+            <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-2">
+ Timeless Pieces for Thoughtful Homes
+</h2>
             <Carousel
                 opts={{
                     align: "start",
