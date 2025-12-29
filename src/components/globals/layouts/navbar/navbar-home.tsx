@@ -236,7 +236,13 @@ const wishlistCount = user
                 duration: 0.35,
                 ease: "easeInOut",
             }}
-            className="sticky inset-x-0 top-0 z-50 flex h-auto w-full items-center justify-center bg-background"
+             className="
+    sticky inset-x-0 top-0 z-50
+    flex h-auto w-full items-center justify-center
+    bg-white/60
+    backdrop-blur-lg
+    border-b border-white/20
+  "
             data-menu-open={isMenuOpen}
         >
             <nav
