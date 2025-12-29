@@ -250,7 +250,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
           <span className="text-sm opacity-0">₹0000</span>
         )}
 
-        <span className="hidden md:inline text-sm text-green-600">
+        <span className="hidden md:inline text-sm text-red-600">
           {discount ? `${discount}% off` : ""}
         </span>
       </div>
@@ -258,7 +258,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
       {/* MOBILE DISCOUNT */}
       <div className="md:hidden h-[18px]">
         {discount ? (
-          <span className="text-sm text-green-600">{discount}% off</span>
+          <span className="text-sm text-red-600">{discount}% off</span>
         ) : (
           <span className="opacity-0 text-sm">0% off</span>
         )}
@@ -309,7 +309,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
 
   return (
     <section className={cn("w-full py-6 bg-[#FCFBF4]", className)}>
-      <h2 className="text-center text-xl font-bold text-[#4A453F] mb-4">
+<h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
         What's New
       </h2>
 

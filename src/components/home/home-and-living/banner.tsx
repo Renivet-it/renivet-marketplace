@@ -183,7 +183,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
           {/* CTA */}
           <div className="absolute bottom-16 w-full flex justify-center">
             <Link
-              href={pathname}
+              href="https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf"
               className="relative inline-flex items-center justify-center border border-black px-8 py-3 text-sm font-medium text-black overflow-hidden group"
             >
               <span className="relative z-10 group-hover:text-white transition">

@@ -97,7 +97,7 @@ export function MayAlsoLoveThese({ banners }: { banners: Banner[] }) {
 
   return (
     <section className="w-full py-8 bg-[#FCFBF4]">
-      <h2 className="text-center text-2xl font-bold text-[#4A453F] mb-8">
+<h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
         You&apos;ll Love These
       </h2>
 

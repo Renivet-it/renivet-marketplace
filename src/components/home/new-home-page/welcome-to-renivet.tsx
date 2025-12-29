@@ -6,7 +6,7 @@ import { Icons } from "@/components/icons";
 
 export function WelcomeRenivet() {
   return (
-   <section className="w-full bg-[#FCFBF4] py-6 px-0 md:px-4">
+   <section className="w-full bg-[#FCFBF4] py-4 px-0 md:px-4">
 
       {/* ⬇️ BORDER ONLY ON DESKTOP */}
       <div className="max-w-[1600px] mx-auto bg-[#fbfaf4] px-6 md:px-16 py-6 md:border md:border-[#D8D2C7] ">

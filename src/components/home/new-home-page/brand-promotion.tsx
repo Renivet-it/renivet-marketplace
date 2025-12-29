@@ -29,18 +29,7 @@ export function BrandPromotion({ moodboardItems, className }: PageProps) {
       <div className="max-w-[1600px] mx-auto">
 
         {/* ========================= TITLE ========================= */}
-   <h2
-  className="
-    text-center
-    text-[18px]         /* mobile smaller */
-    md:text-[32px]      /* desktop bigger */
-    font-light
-    text-[#3B3B3B]
-    mb-8
-    tracking-wide
-    whitespace-nowrap   /* forces one line */
-  "
->
+<h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
   Handmade Stories from Across India
 </h2>
 

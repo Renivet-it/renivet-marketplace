@@ -196,9 +196,10 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
 
               {/* Content */}
               <div className="p-2">
-                <h3 className="text-xs font-semibold leading-tight">
-                  {product.title}
-                </h3>
+     <h3 className="text-[10px] font-medium tracking-tight leading-tight text-muted-foreground">
+  {product.title}
+</h3>
+
 
                 <div className="mt-2 flex items-center justify-between">
                   <button

@@ -190,7 +190,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 "transition-all duration-500 ease-in-out",
                 "h-0 data-[menu-open=true]:h-screen",
                 "-top-1/2 bottom-0 data-[menu-open=true]:top-0",
-                "bg-background md:hidden",
++ "bg-white/70 backdrop-blur-xl border border-white/20 md:hidden",
                 "flex flex-col justify-between gap-4",
                 className
             )}
