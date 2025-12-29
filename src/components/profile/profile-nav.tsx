@@ -24,7 +24,7 @@ interface Item {
 const personalNavItems: Item[] = [
     {
         icon: "User",
-        name: "general",
+        name: "Your Profile",
         href: "/",
     },
     {

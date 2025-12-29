@@ -8,49 +8,49 @@ export function MobileCategories() {
     {
       title: "Indian Wear",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNOZuGknHKYuSX87vxCz1aEsjfWTRVJZ9QmtnN",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNzQ7NO8wvAfHxUCD4uo0de9jTMakKRhw8ctYL",
       link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=0cb0f01f-4c17-47ff-8251-4ea5a7a65a09&productTypeId=0f13d48d-50de-43ec-8bab-a7bfbbcf8773",
     },
     {
       title: "Western Wear",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQYQ3xig0rgXZuWwadPABUqnljV5RbJMFsx1",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhPFJaWb4imNMJ6l9SbIRxWLcDyX3vTqk2UV",
       link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=f050d1bc-f435-45fc-ac22-47942a4d4a74",
     },
     {
       title: "Foot Wear",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkGqI6DxYt1TxMBy6jes3QdWaELUvNIiXHwRO",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN8g1QARjj1qpSPZJEOTHVgaenl2yArM78zCkm",
       link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=4489ecbd-cb3e-47f0-aced-defcf134629b",
     },
     {
       title: "Shirts",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHt3Y72cpctzNSTlLa4Po2KvFZm05urDqnVsw",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvWCA90dPZsh5fuDbkAelMyqICmp3NU7X4nHY",
       link: "https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02&subcategoryId=7f1e41e3-e7a9-46ef-aaf6-f0e0a37a971d&productTypeId=e027b0df-5287-4114-849d-1f3bfc05e594",
     },
     {
       title: "Accessories",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNZTPHusI6Gw03SBYgknrdpcjuJ8IvhPb5W9zy",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNawKqqt9B8YEoL1wGJl0ZibnpvNAMuVzCFqKc",
       link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=32674fe3-d167-4b48-914b-0819b17a2292",
     },
     {
       title: "Home Decor",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNp9XWJrYoKFqlYMSWzhgNZG6Cm5OtIUjre39T",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNhlQssEPAwZ71xI8cmpPRY6WBO42eGEJfosyi",
       link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
     },
     {
       title: "Handbags",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN4VgCB4KTrA2wJk4WKdFytgsaQSNjmBo8I5CG",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNVZ18VKBbpNcg6ZSKi0IGkAsjuLwQox3znmlt",
       link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=711eac71-1676-40eb-b637-7e4074d542d0",
     },
     {
       title: "Kids",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXLfwmU3We049OUSYNxCLnRIka3FhcqBZlbsP",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjgHih7umPpnZoHc5f2E4rFNLugdK3ty9ObjY",
       link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
     },
   ];

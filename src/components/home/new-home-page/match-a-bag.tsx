@@ -28,7 +28,7 @@ export function MatchaBag({
     <section className={cn("w-full bg-[#FCFBF4] pb-0 mb-0", className)}>
       <div className="max-w-screen-2xl mx-auto px-4">
         {/* Title */}
-        <h2 className="text-center text-[18px] md:text-[32px] font-light text-[#3B3B3B] mb-3 md:mb-8 tracking-wide">
+       <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-3">
           {title}
         </h2>
 

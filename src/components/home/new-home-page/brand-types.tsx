@@ -8,25 +8,25 @@ export function BrandTypes() {
       title: "Homegrown",
       subtitle: "Locally crafted, authentic.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqj8zK6NGz8F0U3cHoOhlNY6tCDW7PIAe4fpJ",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmxSQIcNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
     },
     {
       title: "Sustainable",
       subtitle: "Eco-friendly, conscious.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNr1GWiuXUoqs7VCFLby0kp1MDitmaOjJgfeBl",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcV44IPLeO4H8MeNYoyJQSarWCqgVpRxP5lDB",
     },
     {
       title: "Sustainable Drops",
       subtitle: "Limited, eco-focused releases.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg0oQIZ2ENPRLZdGUpA0elOxytCDfJibYIko7",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2RP7nQOYTpvrXwqtZHon4P85jVxyMmDkf3sz",
     },
     {
       title: "Artisan-led",
       subtitle: "Crafted by artisans.",
       imageUrl:
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvacgFkdPZsh5fuDbkAelMyqICmp3NU7X4nHY",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN81PIEujj1qpSPZJEOTHVgaenl2yArM78zCkm",
     },
   ];
 

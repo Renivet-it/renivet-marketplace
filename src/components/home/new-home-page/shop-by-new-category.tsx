@@ -39,7 +39,7 @@ export function ShopByNewCategories({
         >
             <div className="w-full space-y-8 max-w-screen-2xl mx-auto px-4">
                 {/* Title */}
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 border-gray-300 pb-2 px-4">
+             <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
                     {titleData?.title || "Shop by Category"}
                 </h2>
 
