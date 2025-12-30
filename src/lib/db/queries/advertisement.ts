@@ -2611,6 +2611,10 @@ console.log("test");
 
         async getmenStyleWithSubstanceMiddleSection() {
         const data = await db.query.menCuratedHerEssence.findMany({
+                 where: eq(
+        menCuratedHerEssence.isDeleted,
+        false
+      ),
             orderBy: [asc(menCuratedHerEssence.createdAt)],
                 with: {
                   product: {
@@ -2666,6 +2670,10 @@ console.log("test");
     }
         async getWomenStyleWithSubstanceMiddleSection() {
         const data = await db.query.womenStyleWithSubstanceMiddlePageSection.findMany({
+                 where: eq(
+        womenStyleWithSubstanceMiddlePageSection.isDeleted,
+        false
+      ),
             orderBy: [asc(womenStyleWithSubstanceMiddlePageSection.createdAt)],
                 with: {
                   product: {

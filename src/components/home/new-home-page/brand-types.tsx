@@ -55,11 +55,6 @@ export function BrandTypes() {
               className="object-cover group-hover:scale-105 transition-all duration-300"
             />
 
-            {/* Overlay text */}
-            <div className="absolute bottom-4 left-4 text-white drop-shadow-lg">
-              <h3 className="text-[26px] font-light">{item.title}</h3>
-              <p className="text-sm italic">{item.subtitle}</p>
-            </div>
           </div>
         ))}
       </div>
