@@ -18,7 +18,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   const desktopAspectRatio = 1440 / 500;
   const mobileAspectRatio = 375 / 487;
   const mobileImageUrl =
-    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNL8xWHSUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW";
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP";
 const placeholders = ["Search For Products And Brands"];
 
 const [displayText, setDisplayText] = useState("");
@@ -158,7 +158,7 @@ useEffect(() => {
 
 
   <div
-  className="w-full flex justify-between px-3 py-4 overflow-x-auto scrollbar-none gap-3 mt-3 mb-3"
+  className="w-full flex justify-between px-3 py-4 overflow-x-auto scrollbar-none gap-3 mt-3"
   style={{
     backgroundImage: "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
     backgroundSize: "cover",

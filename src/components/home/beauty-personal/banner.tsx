@@ -24,7 +24,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   const mobileAspectRatio = 375 / 487;
 
   const mobileImageUrl =
-    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNL8xWHSUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW";
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXR5b1o3We049OUSYNxCLnRIka3FhcqBZlbsP";
 
   /* ----------------------------------
      🧭 CATEGORIES

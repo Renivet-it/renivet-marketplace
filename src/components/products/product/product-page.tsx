@@ -13,6 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog-general";
+import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -21,13 +22,13 @@ import {
     ProductWithBrand,
 } from "@/lib/validations";
 import Autoplay from "embla-carousel-autoplay";
+import { ZoomIn } from "lucide-react";
 import Image from "next/image";
 import { useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductContent } from "./product-content";
 import { ProductDetails } from "./product-detais";
 import YouMayAlsoLike from "./product-recommendation";
-import { Separator } from "@/components/ui/separator";
 
 interface PageProps extends GenericProps {
     product: ProductWithBrand;
@@ -126,18 +127,18 @@ export function ProductPage({
                 {...props}
             >
                 {/* Desktop Layout */}
-                <div className="hidden lg:block w-1/2">
-                    <div className="border border-gray-300 rounded-md p-4 flex bg-[#f4f0ec]">
+                <div className="hidden w-1/2 lg:block">
+                    <div className="flex justify-center gap-12 rounded-md border border-gray-300 bg-[#f4f0ec] p-4">
                         {/* Thumbnails */}
-                        <div className="flex flex-col gap-3 w-24 items-center">
+                        <div className="scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent flex max-h-[485px] w-24 shrink-0 flex-col items-center gap-3 overflow-y-auto py-2 pr-2">
                             {isEmptyArray(sortedImages) ? (
-                                <div className="border border-gray-300 rounded-md overflow-hidden">
+                                <div className="overflow-hidden rounded-md border border-gray-300">
                                     <Image
                                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
                                         alt="Default Thumbnail"
                                         width={80}
                                         height={80}
-                                        className="w-full h-24 object-contain"
+                                        className="h-24 w-full object-contain"
                                     />
                                 </div>
                             ) : (
@@ -145,19 +146,22 @@ export function ProductPage({
                                     <div
                                         key={image.id}
                                         className={cn(
-                                            "cursor-pointer overflow-hidden rounded-md border transition-all duration-200",
+                                            "cursor-pointer overflow-hidden rounded-md border transition-all duration-300 hover:scale-105",
                                             i === selectedImage
-                                                ? "border-black ring-2 ring-gray-400"
-                                                : "border-gray-300 hover:border-gray-500"
+                                                ? "scale-105 border-black ring-2 ring-gray-400"
+                                                : "border-gray-300 hover:border-gray-500 hover:shadow-md"
                                         )}
                                         onClick={() => setSelectedImage(i)}
                                     >
                                         <Image
                                             src={image.url}
-                                            alt={image.alt || `Thumbnail ${i + 1}`}
+                                            alt={
+                                                image.alt ||
+                                                `Thumbnail ${i + 1}`
+                                            }
                                             width={80}
                                             height={80}
-                                            className="w-full h-24 object-contain"
+                                            className="h-24 w-full object-contain"
                                         />
                                     </div>
                                 ))
@@ -165,43 +169,50 @@ export function ProductPage({
                         </div>
 
                         {/* Main Image */}
-<div
-    className="ml-4 flex items-center justify-center rounded-md"
-    style={{ width: "485px", height: "485px" }}
->
-    <div
-        className="cursor-pointer relative"
-        onClick={() => setIsImageModalOpen(true)}
-        style={{ width: "100%", height: "100%" }}
-    >
-        <Image
-            src={
-                isEmptyArray(sortedImages)
-                    ? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                    : sortedImages[selectedImage]?.url
-            }
-            alt={
-                isEmptyArray(sortedImages)
-                    ? "Default Product Image"
-                    : sortedImages[selectedImage]?.alt || "Product image"
-            }
-            fill
-            className="object-contain"
-        />
-    </div>
-</div>
+                        <div
+                            className="group relative flex cursor-pointer items-center justify-center bg-transparent transition-all duration-300"
+                            style={{ width: "485px", height: "485px" }}
+                            onClick={() => setIsImageModalOpen(true)}
+                        >
+                            <div className="flex size-full items-center justify-center">
+                                <Image
+                                    src={
+                                        isEmptyArray(sortedImages)
+                                            ? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                            : sortedImages[selectedImage]?.url
+                                    }
+                                    alt={
+                                        isEmptyArray(sortedImages)
+                                            ? "Default Product Image"
+                                            : sortedImages[selectedImage]
+                                                  ?.alt || "Product image"
+                                    }
+                                    width={485}
+                                    height={485}
+                                    className="mx-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                                    style={{
+                                        maxWidth: "100%",
+                                        maxHeight: "100%",
+                                        height: "auto",
+                                        width: "auto",
+                                    }}
+                                />
+                            </div>
+                            {/* Zoom Indicator */}
+                            <div className="absolute bottom-4 right-4 rounded-full bg-black/60 p-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                                <ZoomIn className="size-5 text-white" />
+                            </div>
+                        </div>
                     </div>
 
                     {/* Bottom Info Strip */}
-                    <div className="border-t border-gray-300 bg-[#C2CDD0] text-sm text-gray-700 flex justify-around py-3 mt-3 rounded-b-md">
+                    <div className="mt-3 flex justify-around rounded-b-md border-t border-gray-300 bg-[#C2CDD0] py-3 text-sm text-gray-700">
                         <span>100% Genuine Products</span>
                         <span>Easy Return Policy</span>
                         <span>Mindful Materials</span>
                     </div>
-                <ProductDetails product={product} />
-
+                    <ProductDetails product={product} />
                 </div>
-
 
                 {/* Mobile Carousel */}
                 <Carousel
@@ -225,7 +236,10 @@ export function ProductPage({
                                 <div className="aspect-[3/4] size-full overflow-hidden">
                                     <Image
                                         src={image.url}
-                                        alt={image.alt || `Product image ${i + 1}`}
+                                        alt={
+                                            image.alt ||
+                                            `Product image ${i + 1}`
+                                        }
                                         width={1000}
                                         height={1000}
                                         className="size-full object-contain"
@@ -245,17 +259,16 @@ export function ProductPage({
                     isWishlisted={isWishlisted}
                     userId={userId}
                 />
-           <div className="block md:hidden">
-  <ProductDetails product={product} />
-</div>
-
+                <div className="block md:hidden">
+                    <ProductDetails product={product} />
+                </div>
             </div>
-             <Separator />
-   <YouMayAlsoLike
-        categoryId={product.categoryId}
-        excludeProductId={product.id}
-        className="mt-12"
-      />
+            <Separator />
+            <YouMayAlsoLike
+                categoryId={product.categoryId}
+                excludeProductId={product.id}
+                className="mt-12"
+            />
             {/* Modal */}
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogContent className="p-0">
@@ -283,7 +296,10 @@ export function ProductPage({
                                     <div className="aspect-[3/4] size-full overflow-hidden">
                                         <Image
                                             src={image.url}
-                                            alt={image.alt || `Product image ${i + 1}`}
+                                            alt={
+                                                image.alt ||
+                                                `Product image ${i + 1}`
+                                            }
                                             width={1000}
                                             height={1000}
                                             className="size-full object-contain"
