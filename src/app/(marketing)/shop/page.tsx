@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
 import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
-import { SearchableProductTypes } from "./search-component";
 import AutoRefresher from "./AutoRefresher";
+import { SearchableProductTypes } from "./search-component";
 
 interface PageProps {
     searchParams: Promise<{
@@ -38,179 +38,195 @@ interface PageProps {
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  // const productTypes = await productTypeCache.getAll();
+    // const productTypes = await productTypeCache.getAll();
     const params = await searchParams;
- const [productTypes, data] = await Promise.all([
-    productTypeCache.getAll(),
-    productQueries.getProducts({
-      page: parseInt(params.page || "1"),
-      limit: parseInt(params.limit || "30"),
-      search: params.search,
-      isAvailable: true,
-      isActive: true,
-      isPublished: true,
-      isDeleted: false,
-      verificationStatus: "approved",
-      brandIds: params.brandIds?.split(","),
-      minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
-      maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 10000,
-      categoryId: params.categoryId,
-      subcategoryId: params.subCategoryId,
-      productTypeId: params.productTypeId,
-      sortBy: params.sortBy,
-      sortOrder: params.sortOrder,
-      colors: params.colors?.split(","),
-      sizes: params.sizes?.split(","),
-    }),
-  ]);
+    const [productTypes, data] = await Promise.all([
+        productTypeCache.getAll(),
+        productQueries.getProducts({
+            page: parseInt(params.page || "1"),
+            limit: parseInt(params.limit || "30"),
+            search: params.search,
+            isAvailable: true,
+            isActive: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            brandIds: params.brandIds?.split(","),
+            minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
+            maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 10000,
+            categoryId: params.categoryId,
+            subcategoryId: params.subCategoryId,
+            productTypeId: params.productTypeId,
+            sortBy: params.sortBy,
+            sortOrder: params.sortOrder,
+            colors: params.colors?.split(","),
+            sizes: params.sizes?.split(","),
+        }),
+    ]);
 
-  return (
-    <GeneralShell>
-<AutoRefresher />
+    return (
+        <GeneralShell>
+            <AutoRefresher />
 
-      <div className="flex flex-col gap-5 md:flex-row">
-        {/* Desktop filters - Fixed sidebar */}
-        <aside className="hidden md:block md:basis-1/5 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto">
-          <Suspense fallback={<ShopFiltersSkeleton />}>
-            <ShopFiltersFetch className="space-y-4 pr-2" />
-          </Suspense>
-        </aside>
+            <div className="flex flex-col gap-5 md:flex-row">
+                {/* Desktop filters - Fixed sidebar */}
+                <aside className="hidden md:sticky md:top-4 md:block md:max-h-[calc(100vh-2rem)] md:basis-1/5 md:self-start md:overflow-y-auto">
+                    <Suspense fallback={<ShopFiltersSkeleton />}>
+                        <ShopFiltersFetch
+                            className="space-y-4 pr-2"
+                            categoryId={params.categoryId}
+                            subCategoryId={params.subCategoryId}
+                            productTypeId={params.productTypeId}
+                        />
+                    </Suspense>
+                </aside>
 
-        {/* Divider */}
-        <div className="hidden w-px bg-border md:inline-block" />
+                {/* Divider */}
+                <div className="hidden w-px bg-border md:inline-block" />
 
-        {/* Main content */}
-        <main className="w-full md:basis-4/5 space-y-5">
-          {/* Mobile search, filters, and sort */}
-          <div className="block md:hidden space-y-4">
-            <SearchInput
-              type="search"
-              placeholder="Search for a product..."
-              className="h-12 text-base"
-            />
-            {/* --- MODIFIED SECTION --- */}
-            <div className="grid grid-cols-2 gap-2">
-              <Suspense fallback={<Skeleton className="h-10 w-full" />}>
-                <ShopFiltersFetch isMobileFullWidth={true} />
-              </Suspense>
-              <ShopSortBy />
+                {/* Main content */}
+                <main className="w-full space-y-5 md:basis-4/5">
+                    {/* Mobile search, filters, and sort */}
+                    <div className="block space-y-4 md:hidden">
+                        <SearchInput
+                            type="search"
+                            placeholder="Search for a product..."
+                            className="h-12 text-base"
+                        />
+                        {/* --- MODIFIED SECTION --- */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <Suspense
+                                fallback={<Skeleton className="h-10 w-full" />}
+                            >
+                                <ShopFiltersFetch
+                                    isMobileFullWidth={true}
+                                    categoryId={params.categoryId}
+                                    subCategoryId={params.subCategoryId}
+                                    productTypeId={params.productTypeId}
+                                />
+                            </Suspense>
+                            <ShopSortBy />
+                        </div>
+                        {/* --- END MODIFICATION --- */}
+                    </div>
+
+                    {/* Desktop search and sort */}
+                    <div className="hidden md:flex md:items-center md:justify-between md:gap-4">
+                        {/* This div will now take up all available space */}
+                        <div className="flex-1">
+                            {/* Your Search Input component would go here */}
+                            {/* e.g., <ShopSearch /> */}
+                        </div>
+
+                        {/* This component will be pushed to the right */}
+                        <ShopSortBy />
+                    </div>
+
+                    {/* Mobile Product Types */}
+                    <div className="block md:hidden">
+                        <SearchableProductTypes
+                            productTypes={productTypes}
+                            productTypeId={
+                                (await searchParams).productTypeId ?? ""
+                            }
+                            initialProducts={data?.data ?? []} // 👈 renamed prop
+                        />
+                    </div>
+
+                    {/* Desktop Product Types */}
+                    <div className="hidden md:block">
+                        <SearchableProductTypes
+                            productTypes={productTypes.slice(0, 10)}
+                            productTypeId={
+                                (await searchParams).productTypeId ?? ""
+                            }
+                            initialProducts={data?.data ?? []} // 👈 renamed prop
+                            isDesktop
+                        />
+                    </div>
+
+                    <Separator />
+
+                    <Suspense fallback={<ShopProductsSkeleton />}>
+                        <ShopProductsFetch searchParams={searchParams} />
+                    </Suspense>
+                </main>
             </div>
-            {/* --- END MODIFICATION --- */}
-          </div>
-
-       {/* Desktop search and sort */}
-<div className="hidden md:flex md:items-center md:justify-between md:gap-4">
-  {/* This div will now take up all available space */}
-  <div className="flex-1">
-    {/* Your Search Input component would go here */}
-    {/* e.g., <ShopSearch /> */}
-  </div>
-
-  {/* This component will be pushed to the right */}
-  <ShopSortBy />
-
-</div>
-
-
-          {/* Mobile Product Types */}
-<div className="block md:hidden">
-  <SearchableProductTypes
-    productTypes={productTypes}
-    productTypeId={(await searchParams).productTypeId ?? ""}
-    initialProducts={data?.data ?? []} // 👈 renamed prop
-
-  />
-</div>
-
-{/* Desktop Product Types */}
-<div className="hidden md:block">
-  <SearchableProductTypes
-    productTypes={productTypes.slice(0, 10)}
-    productTypeId={(await searchParams).productTypeId ?? ""}
-    initialProducts={data?.data ?? []} // 👈 renamed prop
-    isDesktop
-  />
-</div>
-
-          <Separator />
-
-          <Suspense fallback={<ShopProductsSkeleton />}>
-            <ShopProductsFetch searchParams={searchParams} />
-          </Suspense>
-        </main>
-      </div>
-    </GeneralShell>
-  );
+        </GeneralShell>
+    );
 }
 
 function ProductTypesRowDesktop({
-  productTypes,
-  productTypeId,
+    productTypes,
+    productTypeId,
 }: {
-  productTypes: { id: string; name: string }[];
-  productTypeId?: string;
+    productTypes: { id: string; name: string }[];
+    productTypeId?: string;
 }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <a
-        href="?productTypeId="
-        className={cn(
-          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
-          productTypeId === "" && "bg-black text-white border-black hover:bg-gray-900"
-        )}
-      >
-        All Items
-      </a>
+    return (
+        <div className="flex flex-wrap gap-2">
+            <a
+                href="?productTypeId="
+                className={cn(
+                    "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
+                    productTypeId === "" &&
+                        "border-black bg-black text-white hover:bg-gray-900"
+                )}
+            >
+                All Items
+            </a>
 
-      {productTypes.map((type) => (
-        <a
-          key={type.id}
-          href={`?productTypeId=${type.id}`}
-          className={cn(
-            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
-            productTypeId === type.id && "bg-black text-white border-black hover:bg-gray-900"
-          )}
-        >
-          {type.name}
-        </a>
-      ))}
-    </div>
-  );
+            {productTypes.map((type) => (
+                <a
+                    key={type.id}
+                    href={`?productTypeId=${type.id}`}
+                    className={cn(
+                        "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
+                        productTypeId === type.id &&
+                            "border-black bg-black text-white hover:bg-gray-900"
+                    )}
+                >
+                    {type.name}
+                </a>
+            ))}
+        </div>
+    );
 }
 
 function ProductTypesRow({
-  productTypes,
-  productTypeId,
+    productTypes,
+    productTypeId,
 }: {
-  productTypes: { id: string; name: string }[];
-  productTypeId?: string;
+    productTypes: { id: string; name: string }[];
+    productTypeId?: string;
 }) {
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-      <a
-        href="?productTypeId="
-        className={cn(
-          "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
-          productTypeId === "" && "bg-black text-white border-black"
-        )}
-      >
-        All Items
-      </a>
+    return (
+        <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-2">
+            <a
+                href="?productTypeId="
+                className={cn(
+                    "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
+                    productTypeId === "" && "border-black bg-black text-white"
+                )}
+            >
+                All Items
+            </a>
 
-      {productTypes.map((type) => (
-        <a
-          key={type.id}
-          href={`?productTypeId=${type.id}`}
-          className={cn(
-            "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
-            productTypeId === type.id && "bg-black text-white border-black"
-          )}
-        >
-          {type.name}
-        </a>
-      ))}
-    </div>
-  );
+            {productTypes.map((type) => (
+                <a
+                    key={type.id}
+                    href={`?productTypeId=${type.id}`}
+                    className={cn(
+                        "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
+                        productTypeId === type.id &&
+                            "border-black bg-black text-white"
+                    )}
+                >
+                    {type.name}
+                </a>
+            ))}
+        </div>
+    );
 }
 
 // --- MODIFIED SECTION ---
@@ -220,17 +236,43 @@ interface GenericProps {
     [key: string]: any;
 }
 
-async function ShopFiltersFetch(props: GenericProps) {
-    const [categories, subCategories, productTypes, allBrands, colors, alphaSize, numSize] =
-        await Promise.all([
-            categoryCache.getAll(),
-            subCategoryCache.getAll(),
-            productTypeCache.getAll(),
-            brandCache.getAll(),
-            productQueries.getUniqueColors(),
-            productQueries.getAlphaSizes(),
-            productQueries.getNumericSizes(),
-        ]);
+async function ShopFiltersFetch(
+    props: GenericProps & {
+        categoryId?: string;
+        subCategoryId?: string;
+        productTypeId?: string;
+    }
+) {
+    const { categoryId, subCategoryId, productTypeId, ...rest } = props;
+    const [
+        categories,
+        subCategories,
+        productTypes,
+        allBrands,
+        colors,
+        alphaSize,
+        numSize,
+    ] = await Promise.all([
+        categoryCache.getAll(),
+        subCategoryCache.getAll(),
+        productTypeCache.getAll(),
+        brandCache.getAll(),
+        productQueries.getUniqueColors({
+            categoryId,
+            subcategoryId: subCategoryId,
+            productTypeId,
+        }),
+        productQueries.getAlphaSizes({
+            categoryId,
+            subcategoryId: subCategoryId,
+            productTypeId,
+        }),
+        productQueries.getNumericSizes({
+            categoryId,
+            subcategoryId: subCategoryId,
+            productTypeId,
+        }),
+    ]);
 
     const brandsMeta = brandMetaSchema.array().parse(allBrands);
 
@@ -244,7 +286,7 @@ async function ShopFiltersFetch(props: GenericProps) {
             colors={colors}
             alphaSize={alphaSize}
             numSize={numSize}
-            {...props}
+            {...rest}
         />
     );
 }
@@ -321,16 +363,16 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         }),
         userId ? userWishlistCache.get(userId) : undefined,
     ]);
-console.log(data.data, "data");
+    console.log(data.data, "data");
     return (
-<ShopProducts
-    initialData={{
-        ...data,
-        data: data?.data?.filter((p: any) => !p.isDeleted) ?? [],
-    }}
-    initialWishlist={userWishlist}
-    userId={userId ?? undefined}
-/>
+        <ShopProducts
+            initialData={{
+                ...data,
+                data: data?.data?.filter((p: any) => !p.isDeleted) ?? [],
+            }}
+            initialWishlist={userWishlist}
+            userId={userId ?? undefined}
+        />
     );
 }
 
@@ -345,21 +387,27 @@ function ShopFiltersSkeleton() {
             <Separator />
 
             <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide">Category</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide">
+                    Category
+                </Label>
                 <Skeleton className="h-10" />
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide">Brand</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide">
+                    Brand
+                </Label>
                 <Skeleton className="h-10" />
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide">Price Range</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide">
+                    Price Range
+                </Label>
                 <div className="space-y-2">
                     <Skeleton className="h-6" />
                     <div className="flex gap-2">
@@ -372,14 +420,18 @@ function ShopFiltersSkeleton() {
             <Separator />
 
             <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide">Colors</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide">
+                    Colors
+                </Label>
                 <Skeleton className="h-20" />
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide">Sizes</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide">
+                    Sizes
+                </Label>
                 <Skeleton className="h-24" />
             </div>
         </div>
