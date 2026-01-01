@@ -393,7 +393,7 @@ function CategoryFilter({
           className="max-h-48 space-y-2 overflow-y-auto"
         >
           {subCategories
-            .filter((s) => (categoryId ? String(s.categoryId) === String(categoryId) : true))
+            .filter((s) => s.productCount > 0 && (categoryId ? String(s.categoryId) === String(categoryId) : true))
             .map((sub) => (
               <div key={sub.id} className="flex items-center space-x-2">
                 <RadioGroupItem value={sub.id} id={`sub-${sub.id}`} />
