@@ -70,10 +70,6 @@ export function BrandTypes() {
               className="object-cover"
             />
 
-            <div className="absolute bottom-2 left-2 text-white drop-shadow-lg">
-              <h3 className="text-lg font-light leading-tight">{item.title}</h3>
-              <p className="text-[10px] italic leading-tight">{item.subtitle}</p>
-            </div>
           </div>
         ))}
       </div>

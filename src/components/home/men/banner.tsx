@@ -25,7 +25,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
   const mobileAspectRatio = 375 / 487;
 
   const mobileImageUrl =
-    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNL8xWHSUt5ndSiE7wT2jaklrZXQ6vYpAbfHyW";
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuOYYftYhnjfTvXWe4YdlSzoaZPyC7xGVghID";
 
   /* ----------------------------------
      🔎 SEARCH TYPING EFFECT
@@ -215,7 +215,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
           {/* CTA */}
           <div className="absolute bottom-16 w-full flex justify-center">
             <Link
-              href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
+              href="https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02"
               className="relative inline-flex items-center justify-center border border-black px-8 py-3 text-sm font-medium text-black overflow-hidden group"
             >
               <span className="relative z-10 group-hover:text-white transition">
