@@ -1,11 +1,15 @@
+import { courierService } from "@/actions/shiprocket/couriers";
+import { is } from "drizzle-orm";
 import { z } from "zod";
+import { addressSchema } from "./address";
 import { orderItemSchema } from "./order-item";
 import { orderShipmentSchema } from "./order-shipment";
-import { productVariantSchema, productWithBrandSchema, returnExchangePolicySchema } from "./product";
-import { addressSchema } from "./address";
+import {
+    productVariantSchema,
+    productWithBrandSchema,
+    returnExchangePolicySchema,
+} from "./product";
 import { userSchema } from "./user";
-import { is } from "drizzle-orm";
-import { courierService } from "@/actions/shiprocket/couriers";
 
 export const orderSchema = z.object({
     id: z
@@ -60,8 +64,16 @@ export const orderSchema = z.object({
     uploadWbn: z.string().nullable().optional(), // Added new field
     isReturnLabelGenerated: z.boolean().default(false).nullable().optional(),
     is_return_label_generated: z.boolean().default(false).nullable().optional(),
-    is_replacement_label_generated: z.boolean().default(false).nullable().optional(),
-    isReplacementLabelGenerated: z.boolean().default(false).nullable().optional(),
+    is_replacement_label_generated: z
+        .boolean()
+        .default(false)
+        .nullable()
+        .optional(),
+    isReplacementLabelGenerated: z
+        .boolean()
+        .default(false)
+        .nullable()
+        .optional(),
     isRto: z.boolean().nullable().default(false).optional(), // Added new field
     delhiveryClientId: z.string().nullable().optional(),
     courierName: z.string().nullable().optional(), // Added new field
@@ -99,10 +111,15 @@ export const orderSchema = z.object({
         .union([z.string(), z.number()])
         .transform((val) => Number(val))
         .pipe(z.number().min(0, "Delivery Amount must be a positive number")),
-    discountAmount: z
-        .union([z.string(), z.number()])
-        .transform((val) => Number(val))
-        .pipe(z.number().min(0, "Discount Amount must be a positive number")),
+discountAmount: z
+  .union([z.string(), z.number()])
+  .transform((val) => Math.round(Number(val)))
+  .pipe(
+    z
+      .number()
+      .int("Discount Amount must be an integer")
+      .min(0, "Discount Amount must be a positive number")
+  ),
     totalAmount: z
         .union([z.string(), z.number()])
         .transform((val) => Number(val))
@@ -119,13 +136,12 @@ export const orderSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
-            // Optional fields
-        firstName: z.string().optional(),
-        lastName: z.string().optional(),
-        brandId: z.string().nullable().optional(),
-        productId: z.string().nullable().optional(),
-        razorpayOrderId: z.string().optional(),
-
+    // Optional fields
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    brandId: z.string().nullable().optional(),
+    productId: z.string().nullable().optional(),
+    razorpayOrderId: z.string().optional(),
 });
 
 export const orderWithItemAndBrandSchema = orderSchema.extend({
@@ -136,7 +152,9 @@ export const orderWithItemAndBrandSchema = orderSchema.extend({
                 journey: true,
             }),
             variant: productVariantSchema.nullable(),
-            returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
+            returnExchangePolicy: returnExchangePolicySchema
+                .nullable()
+                .optional(),
         })
     ),
     shipments: z.array(orderShipmentSchema),
