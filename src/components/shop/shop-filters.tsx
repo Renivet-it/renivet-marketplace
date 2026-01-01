@@ -419,7 +419,7 @@ function CategoryFilter({
       >
         {productTypes
           .filter(
-            (t) => String(t.subCategoryId) === String(subCategoryId)
+            (t) => t.productCount > 0 && String(t.subCategoryId) === String(subCategoryId)
           )
           .map((t) => (
             <div key={t.id} className="flex items-center space-x-2">
