@@ -114,7 +114,7 @@ export const siteConfig: SiteConfig = {
                     },
                     {
                         name: "Instagram",
-                        href: "https://www.instagram.com/renivet__",
+                        href: "https://www.instagram.com/shop.renivet?igsh=NGNzamtsZ25qaDU1",
                     },
                     {
                         name: "Linkedin",
@@ -122,7 +122,7 @@ export const siteConfig: SiteConfig = {
                     },
                     {
                         name: "Youtube",
-                        href: "/soon",
+                        href: "https://www.youtube.com/@Renivet",
                     },
                 ],
             },
