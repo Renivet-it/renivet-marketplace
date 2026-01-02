@@ -2,24 +2,59 @@ import { CreateSubCategory, UpdateSubCategory } from "@/lib/validations";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "..";
 import { subCategories } from "../schema";
+import { sql } from "drizzle-orm";
+import { products } from "../schema";
 
 class SubCategoryQuery {
     async getCount() {
         const data = await db.$count(subCategories);
         return +data || 0;
     }
+private async getProductCountMap() {
+    const rows = await db
+        .select({
+            subCategoryId: products.subcategoryId,
+            productCount: sql<number>`count(*)`,
+        })
+        .from(products)
+        .groupBy(products.subcategoryId);
 
-    async getSubCategories() {
-        const data = await db.query.subCategories.findMany({
-            with: {
-                productTypes: true,
-            },
-            orderBy: [desc(subCategories.createdAt)],
-        });
+    return new Map(
+        rows.map((r) => [
+            String(r.subCategoryId),
+            Number(r.productCount) || 0, // ✅ FORCE NUMBER
+        ])
+    );
+}
 
-        return data;
+
+    // async getSubCategories() {
+    //     const data = await db.query.subCategories.findMany({
+    //         with: {
+    //             productTypes: true,
+    //         },
+    //         orderBy: [desc(subCategories.createdAt)],
+    //     });
+
+    //     return data;
+    // }
+
+        async getSubCategories() {
+        const [data, productCountMap] = await Promise.all([
+            db.query.subCategories.findMany({
+                with: {
+                    productTypes: true,
+                },
+                orderBy: [desc(subCategories.createdAt)],
+            }),
+            this.getProductCountMap(),
+        ]);
+
+        return data.map((sub) => ({
+            ...sub,
+           productCount: Number(productCountMap.get(String(sub.id)) ?? 0), // ✅ SAFE
+        }));
     }
-
     async getSubCategoriesByCategory(categoryId: string) {
         const data = await db.query.subCategories.findMany({
             where: eq(subCategories.categoryId, categoryId),

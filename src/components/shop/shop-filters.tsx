@@ -393,7 +393,7 @@ function CategoryFilter({
           className="max-h-48 space-y-2 overflow-y-auto"
         >
           {subCategories
-            .filter((s) => (categoryId ? String(s.categoryId) === String(categoryId) : true))
+            .filter((s) => s.productCount > 0 && (categoryId ? String(s.categoryId) === String(categoryId) : true))
             .map((sub) => (
               <div key={sub.id} className="flex items-center space-x-2">
                 <RadioGroupItem value={sub.id} id={`sub-${sub.id}`} />
@@ -405,25 +405,35 @@ function CategoryFilter({
         </RadioGroup>
       </div>
       <Separator />
-      <div className="space-y-2">
-        <Label className="font-semibold uppercase">Type</Label>
-        <RadioGroup
-          value={productTypeId}
-          onValueChange={(id) => setProductTypeId(id === productTypeId ? "" : id)}
-          className="max-h-48 space-y-2 overflow-y-auto"
-        >
-          {productTypes
-            .filter((t) => (subCategoryId ? String(t.subCategoryId) === String(subCategoryId) : true))
-            .map((t) => (
-              <div key={t.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={t.id} id={`type-${t.id}`} />
-                <Label htmlFor={`type-${t.id}`} className="font-normal">
-                  {t.name}
-                </Label>
-              </div>
-            ))}
-        </RadioGroup>
-      </div>
+{subCategoryId && (
+  <>
+    <Separator />
+    <div className="space-y-2">
+      <Label className="font-semibold uppercase">Type</Label>
+      <RadioGroup
+        value={productTypeId}
+        onValueChange={(id) =>
+          setProductTypeId(id === productTypeId ? "" : id)
+        }
+        className="max-h-48 space-y-2 overflow-y-auto"
+      >
+        {productTypes
+          .filter(
+            (t) => t.productCount > 0 && String(t.subCategoryId) === String(subCategoryId)
+          )
+          .map((t) => (
+            <div key={t.id} className="flex items-center space-x-2">
+              <RadioGroupItem value={t.id} id={`type-${t.id}`} />
+              <Label htmlFor={`type-${t.id}`} className="font-normal">
+                {t.name}
+              </Label>
+            </div>
+          ))}
+      </RadioGroup>
+    </div>
+  </>
+)}
+
     </div>
   );
 }

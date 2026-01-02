@@ -27,6 +27,7 @@ class SubCategoryCache {
                     .map((sub) => ({
                         ...sub,
                         productTypes: sub.productTypes.length,
+                        productCount: Number(sub.productCount),
                     }))
                     .sort(
                         (a, b) =>

@@ -1,4 +1,5 @@
 import { hasMedia, noMedia } from "@/lib/db/helperfilter";
+import { getEmbedding } from "@/lib/python/sematic-search";
 import { mediaCache } from "@/lib/redis/methods";
 import { convertPriceToPaise } from "@/lib/utils";
 import {
@@ -11,13 +12,43 @@ import {
     ReturnExchangePolicy,
     UpdateProduct,
     UpdateProductJourney,
+    UpdateProductMediaInput,
     UpdateProductValue,
-    UpdateProductMediaInput
 } from "@/lib/validations";
-import { and, asc, count, desc, eq, exists, gte, ilike, inArray, or, sql, sum } from "drizzle-orm";
+import { InferenceClient } from "@huggingface/inference";
+import {
+    and,
+    asc,
+    count,
+    desc,
+    eq,
+    exists,
+    gte,
+    ilike,
+    inArray,
+    or,
+    sql,
+    sum,
+} from "drizzle-orm";
 import { db } from "..";
 import {
+    beautyNewArrivals,
+    beautyTopPicks,
     brands,
+    categories,
+    homeandlivingNewArrival,
+    homeandlivingTopPicks,
+    homeNewArrivals,
+    homeProductLoveTheseSection,
+    homeProductMayAlsoLikeThese,
+    homeProductPageList,
+    homeProductSection,
+    kidsFreshCollectionSection,
+    menPageFeaturedProducts,
+    newProductEventPage,
+    orderItems,
+    orders,
+    productEvents,
     productOptions,
     products,
     productsJourney,
@@ -26,46 +57,26 @@ import {
     productVariants,
     returnExchangePolicy,
     womenPageFeaturedProducts,
-    menPageFeaturedProducts,
-    kidsFreshCollectionSection,
-    homeandlivingTopPicks,
-    homeandlivingNewArrival,
-    beautyNewArrivals,
-    beautyTopPicks,
-    homeNewArrivals,
-    productEvents,
-    orders,
-    orderItems,
-    categories,
-    newProductEventPage,
-    homeProductSection,
-    homeProductLoveTheseSection,
-    homeProductMayAlsoLikeThese,
-    homeProductPageList
-    
-
 } from "../schema";
+import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
 import { productTypeQueries } from "./product-type";
 import { subCategoryQueries } from "./sub-category";
-import { brandQueries } from "./brand";
-import { InferenceClient } from "@huggingface/inference";
-import { getEmbedding } from "@/lib/python/sematic-search";
 
 const token = process.env.HF_TOKEN;
 type EventFilters = {
-  page?: number;
-  limit?: number;
-  search?: string;
-  brandIds?: string[];
-  colors?: string[];
-  minPrice?: number | undefined;
-  maxPrice?: number | undefined;
-  categoryId?: string | undefined;
-  subCategoryId?: string | undefined;
-  productTypeId?: string | undefined;
-  sortBy?: "price" | "createdAt" | undefined;
-  sortOrder?: "asc" | "desc" | undefined;
+    page?: number;
+    limit?: number;
+    search?: string;
+    brandIds?: string[];
+    colors?: string[];
+    minPrice?: number | undefined;
+    maxPrice?: number | undefined;
+    categoryId?: string | undefined;
+    subCategoryId?: string | undefined;
+    productTypeId?: string | undefined;
+    sortBy?: "price" | "createdAt" | undefined;
+    sortOrder?: "asc" | "desc" | undefined;
 };
 
 const hf = new InferenceClient(token);
@@ -249,342 +260,360 @@ class ProductQuery {
         return parsed;
     }
 
-// async getProducts({
-//     limit,
-//     page,
-//     search,
-//     brandIds,
-//     minPrice,
-//     maxPrice,
-//     categoryId,
-//     subcategoryId,
-//     productTypeId,
-//     isActive,
-//     isAvailable,
-//     isPublished,
-//     isDeleted,
-//     verificationStatus,
-//     sortBy = "createdAt",
-//     sortOrder = "desc",
-//     productImage,
-//     productVisiblity,
-//         colors,
-//     sizes,
-// }: {
-//     limit: number;
-//     page: number;
-//     search?: string;
-//     brandIds?: string[];
-//     minPrice?: number | null;
-//     maxPrice?: number | null;
-//     categoryId?: string;
-//     subcategoryId?: string;
-//     productTypeId?: string;
-//     isActive?: boolean;
-//     isAvailable?: boolean;
-//     isPublished?: boolean;
-//     isDeleted?: boolean;
-//     verificationStatus?: Product["verificationStatus"];
-//     sortBy?: "price" | "createdAt";
-//     sortOrder?: "asc" | "desc";
-//     productImage?: Product["productImageFilter"];
-//     productVisiblity?: Product["productVisiblityFilter"];
-//         colors?: string[];
-//     sizes?: string[];
-// }) {
-//     // Price conversions
-//     minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
-//     maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
+    // async getProducts({
+    //     limit,
+    //     page,
+    //     search,
+    //     brandIds,
+    //     minPrice,
+    //     maxPrice,
+    //     categoryId,
+    //     subcategoryId,
+    //     productTypeId,
+    //     isActive,
+    //     isAvailable,
+    //     isPublished,
+    //     isDeleted,
+    //     verificationStatus,
+    //     sortBy = "createdAt",
+    //     sortOrder = "desc",
+    //     productImage,
+    //     productVisiblity,
+    //         colors,
+    //     sizes,
+    // }: {
+    //     limit: number;
+    //     page: number;
+    //     search?: string;
+    //     brandIds?: string[];
+    //     minPrice?: number | null;
+    //     maxPrice?: number | null;
+    //     categoryId?: string;
+    //     subcategoryId?: string;
+    //     productTypeId?: string;
+    //     isActive?: boolean;
+    //     isAvailable?: boolean;
+    //     isPublished?: boolean;
+    //     isDeleted?: boolean;
+    //     verificationStatus?: Product["verificationStatus"];
+    //     sortBy?: "price" | "createdAt";
+    //     sortOrder?: "asc" | "desc";
+    //     productImage?: Product["productImageFilter"];
+    //     productVisiblity?: Product["productVisiblityFilter"];
+    //         colors?: string[];
+    //     sizes?: string[];
+    // }) {
+    //     // Price conversions
+    //     minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
+    //     maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
 
-//     let searchQuery;
-//     if (search?.length) {
-//         const searchEmbedding = await getEmbedding(search);
-//         const highRelevanceThreshold = 0.6;
-//         const lowRelevanceThreshold = 0.8;
-//         const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
-//         const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-//         searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
-//     }
-//    const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
-//     const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
-//     const normalizedColors = colors?.map(c => c.toLowerCase());
-// const normalizedSizes = sizes?.map(s => s.toLowerCase());
-//     const filters = [
-//         searchQuery,
-//         !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
-//         !!minPrice
-//             ? sql`(
-//                 COALESCE(${products.price}, 0) >= ${minPrice} 
-//                 OR EXISTS (
-//                     SELECT 1 FROM ${productVariants} pv
-//                     WHERE pv.product_id = ${products.id}
-//                     AND COALESCE(pv.price, 0) >= ${minPrice}
-//                     AND pv.is_deleted = false
-//                 )
-//             )`
-//             : undefined,
-//         !!maxPrice
-//             ? sql`(
-//                 COALESCE(${products.price}, 0) <= ${maxPrice}
-//                 OR EXISTS (
-//                     SELECT 1 FROM ${productVariants} pv
-//                     WHERE pv.product_id = ${products.id}
-//                     AND COALESCE(pv.price, 0) <= ${maxPrice}
-//                     AND pv.is_deleted = false
-//                 )
-//             )`
-//             : undefined,
-//         isActive !== undefined ? eq(products.isActive, isActive) : undefined,
-//         isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
-//         isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
-//         isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
-//         categoryId ? eq(products.categoryId, categoryId) : undefined,
-//         subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
-//         productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
-//         verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
-//         productImage
-//             ? productImage === "with"
-//                 ? hasMedia(products, "media")
-//                 : productImage === "without"
-//                   ? noMedia(products, "media")
-//                   : undefined
-//             : undefined,
-//         productVisiblity
-//             ? productVisiblity === "public"
-//               ? eq(products.isDeleted, false)
-//               : productVisiblity === "private"
-//               ? eq(products.isDeleted, true)
-//               : undefined
-//             : undefined,
-//              // 🟦 Color filter (for JSON object format)
-//   !!colors?.length
-//     ? sql`
-//         EXISTS (
-//           SELECT 1
-//           FROM ${productOptions} po,
-//                jsonb_to_recordset(po.values) AS item(name text)
-//           WHERE po.product_id = ${products.id}
-//             AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
-//             AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
-//         )
-//       `
-//     : undefined,
+    //     let searchQuery;
+    //     if (search?.length) {
+    //         const searchEmbedding = await getEmbedding(search);
+    //         const highRelevanceThreshold = 0.6;
+    //         const lowRelevanceThreshold = 0.8;
+    //         const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
+    //         const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+    //         searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+    //     }
+    //    const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
+    //     const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
+    //     const normalizedColors = colors?.map(c => c.toLowerCase());
+    // const normalizedSizes = sizes?.map(s => s.toLowerCase());
+    //     const filters = [
+    //         searchQuery,
+    //         !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
+    //         !!minPrice
+    //             ? sql`(
+    //                 COALESCE(${products.price}, 0) >= ${minPrice}
+    //                 OR EXISTS (
+    //                     SELECT 1 FROM ${productVariants} pv
+    //                     WHERE pv.product_id = ${products.id}
+    //                     AND COALESCE(pv.price, 0) >= ${minPrice}
+    //                     AND pv.is_deleted = false
+    //                 )
+    //             )`
+    //             : undefined,
+    //         !!maxPrice
+    //             ? sql`(
+    //                 COALESCE(${products.price}, 0) <= ${maxPrice}
+    //                 OR EXISTS (
+    //                     SELECT 1 FROM ${productVariants} pv
+    //                     WHERE pv.product_id = ${products.id}
+    //                     AND COALESCE(pv.price, 0) <= ${maxPrice}
+    //                     AND pv.is_deleted = false
+    //                 )
+    //             )`
+    //             : undefined,
+    //         isActive !== undefined ? eq(products.isActive, isActive) : undefined,
+    //         isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
+    //         isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
+    //         isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
+    //         categoryId ? eq(products.categoryId, categoryId) : undefined,
+    //         subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
+    //         productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
+    //         verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
+    //         productImage
+    //             ? productImage === "with"
+    //                 ? hasMedia(products, "media")
+    //                 : productImage === "without"
+    //                   ? noMedia(products, "media")
+    //                   : undefined
+    //             : undefined,
+    //         productVisiblity
+    //             ? productVisiblity === "public"
+    //               ? eq(products.isDeleted, false)
+    //               : productVisiblity === "private"
+    //               ? eq(products.isDeleted, true)
+    //               : undefined
+    //             : undefined,
+    //              // 🟦 Color filter (for JSON object format)
+    //   !!colors?.length
+    //     ? sql`
+    //         EXISTS (
+    //           SELECT 1
+    //           FROM ${productOptions} po,
+    //                jsonb_to_recordset(po.values) AS item(name text)
+    //           WHERE po.product_id = ${products.id}
+    //             AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+    //             AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
+    //         )
+    //       `
+    //     : undefined,
 
-//   // 🟩 Size filter (for JSON object format)
-//   !!sizes?.length
-//     ? sql`
-//         EXISTS (
-//           SELECT 1
-//           FROM ${productOptions} po,
-//                jsonb_to_recordset(po.values) AS item(name text)
-//           WHERE po.product_id = ${products.id}
-//             AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
-//             AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
-//         )
-//       `
-//     : undefined,
-//               // +++ ADDED: Conditionally push the new color and size filters +++
-//     ].filter(Boolean);
-// if (colors?.length) {
-//   filters.push(sql`
-//     EXISTS (
-//       SELECT 1
-//       FROM ${productOptions} po,
-//            jsonb_to_recordset(po.values) AS item(name text)
-//       WHERE po.product_id = ${products.id}
-//         AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
-//         AND LOWER(item.name) IN (${sql.join(colors.map(c => c.toLowerCase()), sql`, `)})
-//     )
-//   `);
-// }
+    //   // 🟩 Size filter (for JSON object format)
+    //   !!sizes?.length
+    //     ? sql`
+    //         EXISTS (
+    //           SELECT 1
+    //           FROM ${productOptions} po,
+    //                jsonb_to_recordset(po.values) AS item(name text)
+    //           WHERE po.product_id = ${products.id}
+    //             AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+    //             AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
+    //         )
+    //       `
+    //     : undefined,
+    //               // +++ ADDED: Conditionally push the new color and size filters +++
+    //     ].filter(Boolean);
+    // if (colors?.length) {
+    //   filters.push(sql`
+    //     EXISTS (
+    //       SELECT 1
+    //       FROM ${productOptions} po,
+    //            jsonb_to_recordset(po.values) AS item(name text)
+    //       WHERE po.product_id = ${products.id}
+    //         AND LOWER(po.name) IN (${sql.join(colorOptionNames.map(c => c.toLowerCase()), sql`, `)})
+    //         AND LOWER(item.name) IN (${sql.join(colors.map(c => c.toLowerCase()), sql`, `)})
+    //     )
+    //   `);
+    // }
 
-// if (sizes?.length) {
-//   filters.push(sql`
-//     EXISTS (
-//       SELECT 1
-//       FROM ${productOptions} po,
-//            jsonb_to_recordset(po.values) AS item(name text)
-//       WHERE po.product_id = ${products.id}
-//         AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
-//         AND LOWER(item.name) IN (${sql.join(sizes.map(s => s.toLowerCase()), sql`, `)})
-//     )
-//   `);
-// }
-//     const orderBy = [];
+    // if (sizes?.length) {
+    //   filters.push(sql`
+    //     EXISTS (
+    //       SELECT 1
+    //       FROM ${productOptions} po,
+    //            jsonb_to_recordset(po.values) AS item(name text)
+    //       WHERE po.product_id = ${products.id}
+    //         AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map(c => c.toLowerCase()), sql`, `)})
+    //         AND LOWER(item.name) IN (${sql.join(sizes.map(s => s.toLowerCase()), sql`, `)})
+    //     )
+    //   `);
+    // }
+    //     const orderBy = [];
 
-//     if (search?.length) {
-//         const searchEmbedding = await getEmbedding(search);
-//         const highRelevanceThreshold = 0.6;
-//         orderBy.push(
-//             sql`CASE 
-//                 WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0 
-//                 ELSE 1 
-//             END ASC`,
-//             sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
-//         );
-//     }
+    //     if (search?.length) {
+    //         const searchEmbedding = await getEmbedding(search);
+    //         const highRelevanceThreshold = 0.6;
+    //         orderBy.push(
+    //             sql`CASE
+    //                 WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0
+    //                 ELSE 1
+    //             END ASC`,
+    //             sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+    //         );
+    //     }
 
-//     if (sortBy && sortOrder) {
-//         orderBy.push(
-//             sortBy === "price"
-//                 ? sql`
-//                     (
-//                         SELECT COALESCE(
-//                             MIN(COALESCE(pv.price, ${products.price}, 0)),
-//                             COALESCE(${products.price}, 0)
-//                         )
-//                         FROM ${productVariants} pv
-//                         WHERE pv.product_id = ${products.id}
-//                         AND pv.is_deleted = false
-//                     ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
-//                 `
-//                 : sortOrder === "asc"
-//                   ? asc(products[sortBy])
-//                   : desc(products[sortBy])
-//         );
-//     }
+    //     if (sortBy && sortOrder) {
+    //         orderBy.push(
+    //             sortBy === "price"
+    //                 ? sql`
+    //                     (
+    //                         SELECT COALESCE(
+    //                             MIN(COALESCE(pv.price, ${products.price}, 0)),
+    //                             COALESCE(${products.price}, 0)
+    //                         )
+    //                         FROM ${productVariants} pv
+    //                         WHERE pv.product_id = ${products.id}
+    //                         AND pv.is_deleted = false
+    //                     ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
+    //                 `
+    //                 : sortOrder === "asc"
+    //                   ? asc(products[sortBy])
+    //                   : desc(products[sortBy])
+    //         );
+    //     }
 
-//     const data = await db.query.products.findMany({
-//         with: {
-//             brand: true,
-//             variants: true,
-//             category: true,
-//             subcategory: true,
-//             productType: true,
-//             options: true,
-//             journey: true,
-//             values: true,
-//             returnExchangePolicy: true,
-//             specifications: {
-//                 columns: {
-//                     key: true,
-//                     value: true,
-//                 },
-//             },
-//         },
-//         where: and(...filters),
-//         limit,
-//         offset: (page - 1) * limit,
-//         orderBy,
-//         extras: {
-//             count: db.$count(products, and(...filters)).as("product_count"),
-//         },
-//     });
+    //     const data = await db.query.products.findMany({
+    //         with: {
+    //             brand: true,
+    //             variants: true,
+    //             category: true,
+    //             subcategory: true,
+    //             productType: true,
+    //             options: true,
+    //             journey: true,
+    //             values: true,
+    //             returnExchangePolicy: true,
+    //             specifications: {
+    //                 columns: {
+    //                     key: true,
+    //                     value: true,
+    //                 },
+    //             },
+    //         },
+    //         where: and(...filters),
+    //         limit,
+    //         offset: (page - 1) * limit,
+    //         orderBy,
+    //         extras: {
+    //             count: db.$count(products, and(...filters)).as("product_count"),
+    //         },
+    //     });
 
-//     // Media handling remains the same
-//     const mediaIds = new Set<string>();
-//     for (const product of data) {
-//         product.media.forEach((media) => mediaIds.add(media.id));
-//         product.variants.forEach((variant) => {
-//             if (variant.image) mediaIds.add(variant.image);
-//         });
-//         if (product.sustainabilityCertificate)
-//             mediaIds.add(product.sustainabilityCertificate);
-//     }
-//     const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-//     const mediaMap = new Map(
-//         mediaItems.data.map((item) => [item.id, item])
-//     );
+    //     // Media handling remains the same
+    //     const mediaIds = new Set<string>();
+    //     for (const product of data) {
+    //         product.media.forEach((media) => mediaIds.add(media.id));
+    //         product.variants.forEach((variant) => {
+    //             if (variant.image) mediaIds.add(variant.image);
+    //         });
+    //         if (product.sustainabilityCertificate)
+    //             mediaIds.add(product.sustainabilityCertificate);
+    //     }
+    //     const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+    //     const mediaMap = new Map(
+    //         mediaItems.data.map((item) => [item.id, item])
+    //     );
 
-//     const enhancedData = data.map((product) => ({
-//         ...product,
-//         media: product.media.map((media) => ({
-//             ...media,
-//             mediaItem: mediaMap.get(media.id),
-//         })),
-//         sustainabilityCertificate: product.sustainabilityCertificate
-//             ? mediaMap.get(product.sustainabilityCertificate)
-//             : null,
-//         variants: product.variants.map((variant) => ({
-//             ...variant,
-//             mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-//         })),
-//         returnable: product.returnExchangePolicy?.returnable ?? false,
-//         returnDescription:
-//             product.returnExchangePolicy?.returnDescription ?? null,
-//         exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-//         exchangeDescription:
-//             product.returnExchangePolicy?.exchangeDescription ?? null,
-//         specifications: product.specifications.map((spec) => ({
-//             key: spec.key,
-//             value: spec.value,
-//         })),
-//     }));
+    //     const enhancedData = data.map((product) => ({
+    //         ...product,
+    //         media: product.media.map((media) => ({
+    //             ...media,
+    //             mediaItem: mediaMap.get(media.id),
+    //         })),
+    //         sustainabilityCertificate: product.sustainabilityCertificate
+    //             ? mediaMap.get(product.sustainabilityCertificate)
+    //             : null,
+    //         variants: product.variants.map((variant) => ({
+    //             ...variant,
+    //             mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+    //         })),
+    //         returnable: product.returnExchangePolicy?.returnable ?? false,
+    //         returnDescription:
+    //             product.returnExchangePolicy?.returnDescription ?? null,
+    //         exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+    //         exchangeDescription:
+    //             product.returnExchangePolicy?.exchangeDescription ?? null,
+    //         specifications: product.specifications.map((spec) => ({
+    //             key: spec.key,
+    //             value: spec.value,
+    //         })),
+    //     }));
 
-//     const parsed: ProductWithBrand[] = productWithBrandSchema
-//         .array()
-//         .parse(enhancedData);
-//     return {
-//         data: parsed,
-//         count: +data?.[0]?.count || 0,
-//     };
-// }
+    //     const parsed: ProductWithBrand[] = productWithBrandSchema
+    //         .array()
+    //         .parse(enhancedData);
+    //     return {
+    //         data: parsed,
+    //         count: +data?.[0]?.count || 0,
+    //     };
+    // }
 
+    // Database query method
+    async getProducts({
+        limit,
+        page,
+        search,
+        brandIds,
+        minPrice,
+        maxPrice,
+        categoryId,
+        subcategoryId,
+        productTypeId,
+        isActive,
+        isAvailable,
+        isPublished,
+        isDeleted,
+        verificationStatus,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+        productImage,
+        productVisiblity,
+        colors,
+        sizes,
+    }: {
+        limit: number;
+        page: number;
+        search?: string;
+        brandIds?: string[];
+        minPrice?: number | null;
+        maxPrice?: number | null;
+        categoryId?: string;
+        subcategoryId?: string;
+        productTypeId?: string;
+        isActive?: boolean;
+        isAvailable?: boolean;
+        isPublished?: boolean;
+        isDeleted?: boolean;
+        verificationStatus?: Product["verificationStatus"];
+        sortBy?: "price" | "createdAt";
+        sortOrder?: "asc" | "desc";
+        productImage?: Product["productImageFilter"];
+        productVisiblity?: Product["productVisiblityFilter"];
+        colors?: string[];
+        sizes?: string[];
+    }) {
+        // --- Price conversions ---
+        minPrice = !!minPrice
+            ? minPrice < 0
+                ? 0
+                : convertPriceToPaise(minPrice)
+            : null;
+        maxPrice = !!maxPrice
+            ? maxPrice > 10000
+                ? null
+                : convertPriceToPaise(maxPrice)
+            : null;
 
-// Database query method
-async getProducts({
-  limit,
-  page,
-  search,
-  brandIds,
-  minPrice,
-  maxPrice,
-  categoryId,
-  subcategoryId,
-  productTypeId,
-  isActive,
-  isAvailable,
-  isPublished,
-  isDeleted,
-  verificationStatus,
-  sortBy = "createdAt",
-  sortOrder = "desc",
-  productImage,
-  productVisiblity,
-  colors,
-  sizes,
-}: {
-  limit: number;
-  page: number;
-  search?: string;
-  brandIds?: string[];
-  minPrice?: number | null;
-  maxPrice?: number | null;
-  categoryId?: string;
-  subcategoryId?: string;
-  productTypeId?: string;
-  isActive?: boolean;
-  isAvailable?: boolean;
-  isPublished?: boolean;
-  isDeleted?: boolean;
-  verificationStatus?: Product["verificationStatus"];
-  sortBy?: "price" | "createdAt";
-  sortOrder?: "asc" | "desc";
-  productImage?: Product["productImageFilter"];
-  productVisiblity?: Product["productVisiblityFilter"];
-  colors?: string[];
-  sizes?: string[];
-}) {
-  // --- Price conversions ---
-  minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
-  maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
+        // --- Constants ---
+        const colorOptionNames = [
+            "Colour",
+            "Color",
+            "colour",
+            "color",
+            "COLOUR",
+            "COLOR",
+        ];
+        const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
+        const normalizedColors = colors?.map((c) => c.toLowerCase());
+        const normalizedSizes = sizes?.map((s) => s.toLowerCase());
+        const BRAND_MATCH_THRESHOLD = 0.28;
 
-  // --- Constants ---
-  const colorOptionNames = ["Colour", "Color", "colour", "color", "COLOUR", "COLOR"];
-  const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
-  const normalizedColors = colors?.map((c) => c.toLowerCase());
-  const normalizedSizes = sizes?.map((s) => s.toLowerCase());
-  const BRAND_MATCH_THRESHOLD = 0.28;
+        let searchEmbedding: number[] | null = null;
+        let topBrandMatch: {
+            id: string;
+            name: string;
+            distance: number;
+        } | null = null;
 
-  let searchEmbedding: number[] | null = null;
-  let topBrandMatch: { id: string; name: string; distance: number } | null = null;
+        // --- Search embedding (semantic) ---
+        if (search?.length) {
+            searchEmbedding = await getEmbedding(search);
 
-  // --- Search embedding (semantic) ---
-  if (search?.length) {
-    searchEmbedding = await getEmbedding(search);
-
-    // 🔍 Detect brand intent
-    const brandResult = await db.execute(sql`
+            // 🔍 Detect brand intent
+            const brandResult = await db.execute(sql`
       SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
       FROM brands
       WHERE embeddings IS NOT NULL
@@ -592,35 +621,39 @@ async getProducts({
       LIMIT 1
     `);
 
-    const brandRow = Array.isArray(brandResult)
-      ? brandResult[0]
-      : brandResult?.rows?.[0];
-    if (brandRow && Number(brandRow.distance) < BRAND_MATCH_THRESHOLD) {
-      topBrandMatch = {
-        id: brandRow.id,
-        name: brandRow.name,
-        distance: Number(brandRow.distance),
-      };
-      console.log(`🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`);
-    }
-  }
+            const brandRow = Array.isArray(brandResult)
+                ? brandResult[0]
+                : brandResult?.rows?.[0];
+            if (brandRow && Number(brandRow.distance) < BRAND_MATCH_THRESHOLD) {
+                topBrandMatch = {
+                    id: brandRow.id,
+                    name: brandRow.name,
+                    distance: Number(brandRow.distance),
+                };
+                console.log(
+                    `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
+                );
+            }
+        }
 
-  // --- Search relevance filters ---
-  let searchQuery;
-  if (searchEmbedding) {
-    const highRelevanceThreshold = 0.6;
-    const lowRelevanceThreshold = 0.99;
-    const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
-    const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-    searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
-  }
+        // --- Search relevance filters ---
+        let searchQuery;
+        if (searchEmbedding) {
+            const highRelevanceThreshold = 0.6;
+            const lowRelevanceThreshold = 0.99;
+            const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
+            const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+            searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+        }
 
-  // --- Build filters ---
-  const filters = [
-    searchQuery,
-    !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
-    !!minPrice
-      ? sql`(
+        // --- Build filters ---
+        const filters = [
+            searchQuery,
+            !!brandIds?.length
+                ? inArray(products.brandId, brandIds)
+                : undefined,
+            !!minPrice
+                ? sql`(
           COALESCE(${products.price}, 0) >= ${minPrice}
           OR EXISTS (
             SELECT 1 FROM ${productVariants} pv
@@ -629,9 +662,9 @@ async getProducts({
             AND pv.is_deleted = false
           )
         )`
-      : undefined,
-    !!maxPrice
-      ? sql`(
+                : undefined,
+            !!maxPrice
+                ? sql`(
           COALESCE(${products.price}, 0) <= ${maxPrice}
           OR EXISTS (
             SELECT 1 FROM ${productVariants} pv
@@ -640,77 +673,97 @@ async getProducts({
             AND pv.is_deleted = false
           )
         )`
-      : undefined,
-    isActive !== undefined ? eq(products.isActive, isActive) : undefined,
-    isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
-    isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
-    isDeleted !== undefined ? eq(products.isDeleted, isDeleted) : undefined,
-    categoryId ? eq(products.categoryId, categoryId) : undefined,
-    subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
-    productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
-    verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
-    productImage
-      ? productImage === "with"
-        ? hasMedia(products, "media")
-        : productImage === "without"
-        ? noMedia(products, "media")
-        : undefined
-      : undefined,
-    productVisiblity
-      ? productVisiblity === "public"
-        ? eq(products.isDeleted, false)
-        : productVisiblity === "private"
-        ? eq(products.isDeleted, true)
-        : undefined
-      : undefined,
-    !!colors?.length
-      ? sql`
+                : undefined,
+            isActive !== undefined
+                ? eq(products.isActive, isActive)
+                : undefined,
+            isAvailable !== undefined
+                ? eq(products.isAvailable, isAvailable)
+                : undefined,
+            isPublished !== undefined
+                ? eq(products.isPublished, isPublished)
+                : undefined,
+            isDeleted !== undefined
+                ? eq(products.isDeleted, isDeleted)
+                : undefined,
+            categoryId ? eq(products.categoryId, categoryId) : undefined,
+            subcategoryId
+                ? eq(products.subcategoryId, subcategoryId)
+                : undefined,
+            productTypeId
+                ? eq(products.productTypeId, productTypeId)
+                : undefined,
+            verificationStatus
+                ? eq(products.verificationStatus, verificationStatus)
+                : undefined,
+            productImage
+                ? productImage === "with"
+                    ? hasMedia(products, "media")
+                    : productImage === "without"
+                      ? noMedia(products, "media")
+                      : undefined
+                : undefined,
+            productVisiblity
+                ? productVisiblity === "public"
+                    ? eq(products.isDeleted, false)
+                    : productVisiblity === "private"
+                      ? eq(products.isDeleted, true)
+                      : undefined
+                : undefined,
+            !!colors?.length
+                ? sql`
           EXISTS (
             SELECT 1
             FROM ${productOptions} po,
                  jsonb_to_recordset(po.values) AS item(name text)
             WHERE po.product_id = ${products.id}
-              AND LOWER(po.name) IN (${sql.join(colorOptionNames.map((c) => c.toLowerCase()), sql`, `)})
+              AND LOWER(po.name) IN (${sql.join(
+                  colorOptionNames.map((c) => c.toLowerCase()),
+                  sql`, `
+              )})
               AND LOWER(item.name) IN (${sql.join(normalizedColors!, sql`, `)})
           )
         `
-      : undefined,
-    !!sizes?.length
-      ? sql`
+                : undefined,
+            !!sizes?.length
+                ? sql`
           EXISTS (
             SELECT 1
             FROM ${productOptions} po,
                  jsonb_to_recordset(po.values) AS item(name text)
             WHERE po.product_id = ${products.id}
-              AND LOWER(po.name) IN (${sql.join(sizeOptionNames.map((c) => c.toLowerCase()), sql`, `)})
+              AND LOWER(po.name) IN (${sql.join(
+                  sizeOptionNames.map((c) => c.toLowerCase()),
+                  sql`, `
+              )})
               AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
           )
         `
-      : undefined,
-  ].filter(Boolean);
+                : undefined,
+        ].filter(Boolean);
 
-  // --- OrderBy construction ---
-  const orderBy: any[] = [];
+        // --- OrderBy construction ---
+        const orderBy: any[] = [];
 
-  // 🟦 Step 1: prioritize matched brand
-  if (topBrandMatch) {
-    orderBy.push(
-      sql`CASE WHEN ${products.brandId} = ${topBrandMatch.id} THEN 0 ELSE 1 END ASC`
-    );
-  }
+        // 🟦 Step 1: prioritize matched brand
+        if (topBrandMatch) {
+            orderBy.push(
+                sql`CASE WHEN ${products.brandId} = ${topBrandMatch.id} THEN 0 ELSE 1 END ASC`
+            );
+        }
 
-  // 🟩 Step 2: semantic relevance (embedding distance)
-  if (searchEmbedding) {
-    orderBy.push(
-      sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
-    );
-  }
+        // 🟩 Step 2: semantic relevance (embedding distance)
+        if (searchEmbedding) {
+            orderBy.push(
+                sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+            );
+        }
 
-  // 🟨 Step 3: user-selected sorting (price or createdAt)
-  if (sortBy && sortOrder) {
-    orderBy.push(
-      sortBy === "price"
-        ? sql`
+        // 🟨 Step 3: user-selected sorting (price or createdAt)
+        if (sortBy && sortOrder) {
+            orderBy.push(
+                sortBy === "price"
+                    ? sql`
             (
               SELECT COALESCE(
                 MIN(COALESCE(pv.price, ${products.price}, 0)),
@@ -721,160 +774,172 @@ async getProducts({
               AND pv.is_deleted = false
             ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
           `
-        : sortOrder === "asc"
-        ? asc(products[sortBy])
-        : desc(products[sortBy])
-    );
-  }
+                    : sortOrder === "asc"
+                      ? asc(products[sortBy])
+                      : desc(products[sortBy])
+            );
+        }
 
-  // --- Query the DB ---
-  const data = await db.query.products.findMany({
-    with: {
-      brand: true,
-      variants: true,
-      category: true,
-      subcategory: true,
-      productType: true,
-      options: true,
-      journey: true,
-      values: true,
-      returnExchangePolicy: true,
-      specifications: {
-        columns: { key: true, value: true },
-      },
-    },
-    where: and(...filters),
-    limit,
-    offset: (page - 1) * limit,
-    orderBy,
-    extras: {
-      count: db.$count(products, and(...filters)).as("product_count"),
-    },
-  });
+        // --- Query the DB ---
+        const data = await db.query.products.findMany({
+            with: {
+                brand: true,
+                variants: true,
+                category: true,
+                subcategory: true,
+                productType: true,
+                options: true,
+                journey: true,
+                values: true,
+                returnExchangePolicy: true,
+                specifications: {
+                    columns: { key: true, value: true },
+                },
+            },
+            where: and(...filters),
+            limit,
+            offset: (page - 1) * limit,
+            orderBy,
+            extras: {
+                count: db.$count(products, and(...filters)).as("product_count"),
+            },
+        });
 
-  // --- Media mapping ---
-  const mediaIds = new Set<string>();
-  for (const product of data) {
-    product.media.forEach((m) => mediaIds.add(m.id));
-    product.variants.forEach((v) => {
-      if (v.image) mediaIds.add(v.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
+        // --- Media mapping ---
+        const mediaIds = new Set<string>();
+        for (const product of data) {
+            product.media.forEach((m) => mediaIds.add(m.id));
+            product.variants.forEach((v) => {
+                if (v.image) mediaIds.add(v.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
 
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
 
-  const enhancedData = data.map((product) => ({
-    ...product,
-    media: product.media.map((m) => ({
-      ...m,
-      mediaItem: mediaMap.get(m.id),
-    })),
-    sustainabilityCertificate: product.sustainabilityCertificate
-      ? mediaMap.get(product.sustainabilityCertificate)
-      : null,
-    variants: product.variants.map((v) => ({
-      ...v,
-      mediaItem: v.image ? mediaMap.get(v.image) : null,
-    })),
-    returnable: product.returnExchangePolicy?.returnable ?? false,
-    returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-    exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-    exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-    specifications: product.specifications.map((s) => ({
-      key: s.key,
-      value: s.value,
-    })),
-  }));
+        const enhancedData = data.map((product) => ({
+            ...product,
+            media: product.media.map((m) => ({
+                ...m,
+                mediaItem: mediaMap.get(m.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((v) => ({
+                ...v,
+                mediaItem: v.image ? mediaMap.get(v.image) : null,
+            })),
+            returnable: product.returnExchangePolicy?.returnable ?? false,
+            returnDescription:
+                product.returnExchangePolicy?.returnDescription ?? null,
+            exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+            exchangeDescription:
+                product.returnExchangePolicy?.exchangeDescription ?? null,
+            specifications: product.specifications.map((s) => ({
+                key: s.key,
+                value: s.value,
+            })),
+        }));
 
-  const parsed: ProductWithBrand[] = productWithBrandSchema
-    .array()
-    .parse(enhancedData);
+        const parsed: ProductWithBrand[] = productWithBrandSchema
+            .array()
+            .parse(enhancedData);
 
-  return {
-    data: parsed,
-    count: +data?.[0]?.count || 0,
-    topBrandMatch, // optional — can show in frontend
-  };
-}
-
-async getAllCatalogueProducts({
-    search,
-    brandIds,
-    minPrice,
-    maxPrice,
-    categoryId,
-    subcategoryId,
-    productTypeId,
-    isActive,
-    isAvailable,
-    isPublished,
-    verificationStatus,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-    productImage,
-    productVisiblity,
-    isFeaturedWomen,
-    isFeaturedMen,
-    isStyleWithSubstanceWoMen,
-    isStyleWithSubstanceMen,
-    iskidsFetchSection,
-    isHomeAndLivingSectionNewArrival,
-    isHomeAndLivingSectionTopPicks,
-    isBeautyNewArrival,
-    isBeautyTopPicks,
-    isHomeNewArrival,
-    isAddedInEventProductPage,
-}: {
-    search?: string;
-    brandIds?: string[];
-    minPrice?: number | null;
-    maxPrice?: number | null;
-    categoryId?: string;
-    subcategoryId?: string;
-    productTypeId?: string;
-    isActive?: boolean;
-    isAvailable?: boolean;
-    isPublished?: boolean;
-    verificationStatus?: Product["verificationStatus"];
-    sortBy?: "price" | "createdAt";
-    sortOrder?: "asc" | "desc";
-    productImage?: Product["productImageFilter"];
-    productVisiblity?: Product["productVisiblityFilter"];
-    isFeaturedWomen?: Product["isFeaturedWomen"];
-    isFeaturedMen?: Product["isFeaturedMen"];
-    isStyleWithSubstanceWoMen?: Product["isStyleWithSubstanceWoMen"];
-    isStyleWithSubstanceMen?: Product["isStyleWithSubstanceMen"];
-    iskidsFetchSection?: Product["iskidsFetchSection"];
-    isHomeAndLivingSectionNewArrival?: Product["isHomeAndLivingSectionNewArrival"];
-    isHomeAndLivingSectionTopPicks?: Product["isHomeAndLivingSectionTopPicks"];
-    isBeautyNewArrival?: Product["isBeautyNewArrival"];
-    isBeautyTopPicks?: Product["isBeautyTopPicks"];
-    isHomeNewArrival?: Product["isHomeNewArrival"];
-    isAddedInEventProductPage?: Product["isAddedInEventProductPage"];
-}) {
-    // Price conversions
-    minPrice = !!minPrice ? (minPrice < 0 ? 0 : convertPriceToPaise(minPrice)) : null;
-    maxPrice = !!maxPrice ? (maxPrice > 10000 ? null : convertPriceToPaise(maxPrice)) : null;
-
-    let searchQuery;
-    if (search?.length) {
-        const searchEmbedding = await getEmbedding(search);
-        const highRelevanceThreshold = 0.6;
-        const lowRelevanceThreshold = 0.8;
-        const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
-        const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-        searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+        return {
+            data: parsed,
+            count: +data?.[0]?.count || 0,
+            topBrandMatch, // optional — can show in frontend
+        };
     }
 
-    const filters = [
-        // Always exclude deleted products (assuming you have deletedAt field)
-        searchQuery,
-        !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
-        !!minPrice
-            ? sql`(
+    async getAllCatalogueProducts({
+        search,
+        brandIds,
+        minPrice,
+        maxPrice,
+        categoryId,
+        subcategoryId,
+        productTypeId,
+        isActive,
+        isAvailable,
+        isPublished,
+        verificationStatus,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+        productImage,
+        productVisiblity,
+        isFeaturedWomen,
+        isFeaturedMen,
+        isStyleWithSubstanceWoMen,
+        isStyleWithSubstanceMen,
+        iskidsFetchSection,
+        isHomeAndLivingSectionNewArrival,
+        isHomeAndLivingSectionTopPicks,
+        isBeautyNewArrival,
+        isBeautyTopPicks,
+        isHomeNewArrival,
+        isAddedInEventProductPage,
+    }: {
+        search?: string;
+        brandIds?: string[];
+        minPrice?: number | null;
+        maxPrice?: number | null;
+        categoryId?: string;
+        subcategoryId?: string;
+        productTypeId?: string;
+        isActive?: boolean;
+        isAvailable?: boolean;
+        isPublished?: boolean;
+        verificationStatus?: Product["verificationStatus"];
+        sortBy?: "price" | "createdAt";
+        sortOrder?: "asc" | "desc";
+        productImage?: Product["productImageFilter"];
+        productVisiblity?: Product["productVisiblityFilter"];
+        isFeaturedWomen?: Product["isFeaturedWomen"];
+        isFeaturedMen?: Product["isFeaturedMen"];
+        isStyleWithSubstanceWoMen?: Product["isStyleWithSubstanceWoMen"];
+        isStyleWithSubstanceMen?: Product["isStyleWithSubstanceMen"];
+        iskidsFetchSection?: Product["iskidsFetchSection"];
+        isHomeAndLivingSectionNewArrival?: Product["isHomeAndLivingSectionNewArrival"];
+        isHomeAndLivingSectionTopPicks?: Product["isHomeAndLivingSectionTopPicks"];
+        isBeautyNewArrival?: Product["isBeautyNewArrival"];
+        isBeautyTopPicks?: Product["isBeautyTopPicks"];
+        isHomeNewArrival?: Product["isHomeNewArrival"];
+        isAddedInEventProductPage?: Product["isAddedInEventProductPage"];
+    }) {
+        // Price conversions
+        minPrice = !!minPrice
+            ? minPrice < 0
+                ? 0
+                : convertPriceToPaise(minPrice)
+            : null;
+        maxPrice = !!maxPrice
+            ? maxPrice > 10000
+                ? null
+                : convertPriceToPaise(maxPrice)
+            : null;
+
+        let searchQuery;
+        if (search?.length) {
+            const searchEmbedding = await getEmbedding(search);
+            const highRelevanceThreshold = 0.6;
+            const lowRelevanceThreshold = 0.8;
+            const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
+            const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+            searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+        }
+
+        const filters = [
+            // Always exclude deleted products (assuming you have deletedAt field)
+            searchQuery,
+            !!brandIds?.length
+                ? inArray(products.brandId, brandIds)
+                : undefined,
+            !!minPrice
+                ? sql`(
                 COALESCE(${products.price}, 0) >= ${minPrice} 
                 OR EXISTS (
                     SELECT 1 FROM ${productVariants} pv
@@ -883,9 +948,9 @@ async getAllCatalogueProducts({
                     AND pv.is_deleted = false
                 )
             )`
-            : undefined,
-        !!maxPrice
-            ? sql`(
+                : undefined,
+            !!maxPrice
+                ? sql`(
                 COALESCE(${products.price}, 0) <= ${maxPrice}
                 OR EXISTS (
                     SELECT 1 FROM ${productVariants} pv
@@ -894,59 +959,105 @@ async getAllCatalogueProducts({
                     AND pv.is_deleted = false
                 )
             )`
-            : undefined,
-        isActive !== undefined ? eq(products.isActive, isActive) : undefined,
-        isAvailable !== undefined ? eq(products.isAvailable, isAvailable) : undefined,
-        isPublished !== undefined ? eq(products.isPublished, isPublished) : undefined,
-        categoryId ? eq(products.categoryId, categoryId) : undefined,
-        subcategoryId ? eq(products.subcategoryId, subcategoryId) : undefined,
-        productTypeId ? eq(products.productTypeId, productTypeId) : undefined,
-        verificationStatus ? eq(products.verificationStatus, verificationStatus) : undefined,
-        productImage
-            ? productImage === "with"
-                ? hasMedia(products, "media")
-                : productImage === "without"
-                  ? noMedia(products, "media")
-                  : undefined
-            : undefined,
-        productVisiblity
-            ? productVisiblity === "public"
-              ? eq(products.isDeleted, false)
-              : productVisiblity === "private"
-              ? eq(products.isDeleted, true)
-              : undefined
-            : undefined,
-        isFeaturedWomen !== undefined ? eq(products.isFeaturedWomen, isFeaturedWomen) : undefined,
-        isFeaturedMen !== undefined ? eq(products.isFeaturedMen, isFeaturedMen) : undefined,
-        isStyleWithSubstanceWoMen !== undefined ? eq(products.isStyleWithSubstanceWoMen, isStyleWithSubstanceWoMen) : undefined,
-        isStyleWithSubstanceMen !== undefined ? eq(products.isStyleWithSubstanceMen, isStyleWithSubstanceMen) : undefined,
-        iskidsFetchSection !== undefined ? eq(products.iskidsFetchSection, iskidsFetchSection) : undefined,
-        isHomeAndLivingSectionNewArrival !== undefined ? eq(products.isHomeAndLivingSectionNewArrival, isHomeAndLivingSectionNewArrival) : undefined,
-        isHomeAndLivingSectionTopPicks !== undefined ? eq(products.isHomeAndLivingSectionTopPicks, isHomeAndLivingSectionTopPicks) : undefined,
-        isBeautyNewArrival !== undefined ? eq(products.isBeautyNewArrival, isBeautyNewArrival) : undefined,
-        isBeautyTopPicks !== undefined ? eq(products.isBeautyTopPicks, isBeautyTopPicks) : undefined,
-        isHomeNewArrival !== undefined ? eq(products.isHomeNewArrival, isHomeNewArrival) : undefined,
-        isAddedInEventProductPage !== undefined ? eq(products.isAddedInEventProductPage, isAddedInEventProductPage) : undefined,
-    ].filter(Boolean);
+                : undefined,
+            isActive !== undefined
+                ? eq(products.isActive, isActive)
+                : undefined,
+            isAvailable !== undefined
+                ? eq(products.isAvailable, isAvailable)
+                : undefined,
+            isPublished !== undefined
+                ? eq(products.isPublished, isPublished)
+                : undefined,
+            categoryId ? eq(products.categoryId, categoryId) : undefined,
+            subcategoryId
+                ? eq(products.subcategoryId, subcategoryId)
+                : undefined,
+            productTypeId
+                ? eq(products.productTypeId, productTypeId)
+                : undefined,
+            verificationStatus
+                ? eq(products.verificationStatus, verificationStatus)
+                : undefined,
+            productImage
+                ? productImage === "with"
+                    ? hasMedia(products, "media")
+                    : productImage === "without"
+                      ? noMedia(products, "media")
+                      : undefined
+                : undefined,
+            productVisiblity
+                ? productVisiblity === "public"
+                    ? eq(products.isDeleted, false)
+                    : productVisiblity === "private"
+                      ? eq(products.isDeleted, true)
+                      : undefined
+                : undefined,
+            isFeaturedWomen !== undefined
+                ? eq(products.isFeaturedWomen, isFeaturedWomen)
+                : undefined,
+            isFeaturedMen !== undefined
+                ? eq(products.isFeaturedMen, isFeaturedMen)
+                : undefined,
+            isStyleWithSubstanceWoMen !== undefined
+                ? eq(
+                      products.isStyleWithSubstanceWoMen,
+                      isStyleWithSubstanceWoMen
+                  )
+                : undefined,
+            isStyleWithSubstanceMen !== undefined
+                ? eq(products.isStyleWithSubstanceMen, isStyleWithSubstanceMen)
+                : undefined,
+            iskidsFetchSection !== undefined
+                ? eq(products.iskidsFetchSection, iskidsFetchSection)
+                : undefined,
+            isHomeAndLivingSectionNewArrival !== undefined
+                ? eq(
+                      products.isHomeAndLivingSectionNewArrival,
+                      isHomeAndLivingSectionNewArrival
+                  )
+                : undefined,
+            isHomeAndLivingSectionTopPicks !== undefined
+                ? eq(
+                      products.isHomeAndLivingSectionTopPicks,
+                      isHomeAndLivingSectionTopPicks
+                  )
+                : undefined,
+            isBeautyNewArrival !== undefined
+                ? eq(products.isBeautyNewArrival, isBeautyNewArrival)
+                : undefined,
+            isBeautyTopPicks !== undefined
+                ? eq(products.isBeautyTopPicks, isBeautyTopPicks)
+                : undefined,
+            isHomeNewArrival !== undefined
+                ? eq(products.isHomeNewArrival, isHomeNewArrival)
+                : undefined,
+            isAddedInEventProductPage !== undefined
+                ? eq(
+                      products.isAddedInEventProductPage,
+                      isAddedInEventProductPage
+                  )
+                : undefined,
+        ].filter(Boolean);
 
-    const orderBy = [];
+        const orderBy = [];
 
-    if (search?.length) {
-        const searchEmbedding = await getEmbedding(search);
-        const highRelevanceThreshold = 0.6;
-        orderBy.push(
-            sql`CASE 
+        if (search?.length) {
+            const searchEmbedding = await getEmbedding(search);
+            const highRelevanceThreshold = 0.6;
+            orderBy.push(
+                sql`CASE 
                 WHEN ${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold} THEN 0 
                 ELSE 1 
             END ASC`,
-            sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
-        );
-    }
+                sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+            );
+        }
 
-    if (sortBy && sortOrder) {
-        orderBy.push(
-            sortBy === "price"
-                ? sql`
+        if (sortBy && sortOrder) {
+            orderBy.push(
+                sortBy === "price"
+                    ? sql`
                     (
                         SELECT COALESCE(
                             MIN(COALESCE(pv.price, ${products.price}, 0)),
@@ -957,84 +1068,84 @@ async getAllCatalogueProducts({
                         AND pv.is_deleted = false
                     ) ${sortOrder === "asc" ? sql`ASC` : sql`DESC`} NULLS LAST
                 `
-                : sortOrder === "asc"
-                  ? asc(products[sortBy])
-                  : desc(products[sortBy])
-        );
-    }
+                    : sortOrder === "asc"
+                      ? asc(products[sortBy])
+                      : desc(products[sortBy])
+            );
+        }
 
-    // Use the same query structure as getProducts, but without limit and offset
-    const data = await db.query.products.findMany({
-        with: {
-            brand: true,
-            variants: true,
-            category: true,
-            subcategory: true,
-            productType: true,
-            options: true,
-            journey: true,
-            values: true,
-            returnExchangePolicy: true,
-            specifications: {
-                columns: {
-                    key: true,
-                    value: true,
+        // Use the same query structure as getProducts, but without limit and offset
+        const data = await db.query.products.findMany({
+            with: {
+                brand: true,
+                variants: true,
+                category: true,
+                subcategory: true,
+                productType: true,
+                options: true,
+                journey: true,
+                values: true,
+                returnExchangePolicy: true,
+                specifications: {
+                    columns: {
+                        key: true,
+                        value: true,
+                    },
                 },
             },
-        },
-        where: and(...filters),
-        // Remove limit and offset for getting all products
-        orderBy,
-    });
-
-    // Media handling - same as getProducts
-    const mediaIds = new Set<string>();
-    for (const product of data) {
-        product.media.forEach((media) => mediaIds.add(media.id));
-        product.variants.forEach((variant) => {
-            if (variant.image) mediaIds.add(variant.image);
+            where: and(...filters),
+            // Remove limit and offset for getting all products
+            orderBy,
         });
-        if (product.sustainabilityCertificate)
-            mediaIds.add(product.sustainabilityCertificate);
+
+        // Media handling - same as getProducts
+        const mediaIds = new Set<string>();
+        for (const product of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map((product) => ({
+            ...product,
+            media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sustainabilityCertificate: product.sustainabilityCertificate
+                ? mediaMap.get(product.sustainabilityCertificate)
+                : null,
+            variants: product.variants.map((variant) => ({
+                ...variant,
+                mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+            })),
+            returnable: product.returnExchangePolicy?.returnable ?? false,
+            returnDescription:
+                product.returnExchangePolicy?.returnDescription ?? null,
+            exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+            exchangeDescription:
+                product.returnExchangePolicy?.exchangeDescription ?? null,
+            specifications: product.specifications.map((spec) => ({
+                key: spec.key,
+                value: spec.value,
+            })),
+        }));
+
+        const parsed: ProductWithBrand[] = productWithBrandSchema
+            .array()
+            .parse(enhancedData);
+        return {
+            data: parsed,
+            total: parsed.length,
+        };
     }
-    const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-    const mediaMap = new Map(
-        mediaItems.data.map((item) => [item.id, item])
-    );
-
-    const enhancedData = data.map((product) => ({
-        ...product,
-        media: product.media.map((media) => ({
-            ...media,
-            mediaItem: mediaMap.get(media.id),
-        })),
-        sustainabilityCertificate: product.sustainabilityCertificate
-            ? mediaMap.get(product.sustainabilityCertificate)
-            : null,
-        variants: product.variants.map((variant) => ({
-            ...variant,
-            mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        })),
-        returnable: product.returnExchangePolicy?.returnable ?? false,
-        returnDescription:
-            product.returnExchangePolicy?.returnDescription ?? null,
-        exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-        exchangeDescription:
-            product.returnExchangePolicy?.exchangeDescription ?? null,
-        specifications: product.specifications.map((spec) => ({
-            key: spec.key,
-            value: spec.value,
-        })),
-    }));
-
-    const parsed: ProductWithBrand[] = productWithBrandSchema
-        .array()
-        .parse(enhancedData);
-    return {
-        data: parsed,
-        total: parsed.length,
-    };
-}
     async getProduct({
         productId,
         isDeleted,
@@ -1052,15 +1163,15 @@ async getAllCatalogueProducts({
     }) {
         const data = await db.query.products.findFirst({
             with: {
-               brand: {
-      with: {
-        packingRules: {
-          with: {
-            packingType: true,
-          },
-        },
-      },
-    },
+                brand: {
+                    with: {
+                        packingRules: {
+                            with: {
+                                packingType: true,
+                            },
+                        },
+                    },
+                },
                 variants: true,
                 category: true,
                 subcategory: true,
@@ -1354,89 +1465,105 @@ async getAllCatalogueProducts({
         }
     ) {
         const data = await db.transaction(async (tx) => {
+            let categoryName = "";
+            let subcategoryName = "";
+            let productTypeName = "";
+            let brandName = "";
 
-        let categoryName = "";
-        let subcategoryName = "";
-        let productTypeName = "";
-        let brandName = "";
-
-    if (values.categoryId) {
-          const category = await categoryQueries.getCategory(values.categoryId);
-          categoryName = category?.name || "";
-        }
+            if (values.categoryId) {
+                const category = await categoryQueries.getCategory(
+                    values.categoryId
+                );
+                categoryName = category?.name || "";
+            }
             if (values.brandId) {
-          const brand = await brandQueries.getBrand(values.brandId);
-          brandName = brand?.name || "";
-        }
-                    if (values.subcategoryId) {
-          const subcategory = await subCategoryQueries.getSubCategory(values.subcategoryId);
-          subcategoryName = subcategory?.name || "";
-        }
+                const brand = await brandQueries.getBrand(values.brandId);
+                brandName = brand?.name || "";
+            }
+            if (values.subcategoryId) {
+                const subcategory = await subCategoryQueries.getSubCategory(
+                    values.subcategoryId
+                );
+                subcategoryName = subcategory?.name || "";
+            }
             if (values.productTypeId) {
-          const productType = await productTypeQueries.getProductType(values.productTypeId);
-          productTypeName = productType?.name || "";
-        }
-    // Combine fields for embedding
-    const specsText = (values.specifications ?? [])
-      .map((spec) => `${spec.key}:${spec.value}`)
-      .join(" ");
+                const productType = await productTypeQueries.getProductType(
+                    values.productTypeId
+                );
+                productTypeName = productType?.name || "";
+            }
+            // Combine fields for embedding
+            const specsText = (values.specifications ?? [])
+                .map((spec) => `${spec.key}:${spec.value}`)
+                .join(" ");
 
-    const text = [
-      values.title,
-      values.description || "",
-      values.sizeAndFit || "",
-      values.metaTitle || "",
-      values.metaDescription || "",
-      values.materialAndCare || "",
-      brandName,
-      categoryName || "",
-      subcategoryName,
-      productTypeName,
-      specsText,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
+            const text = [
+                values.title,
+                values.description || "",
+                values.sizeAndFit || "",
+                values.metaTitle || "",
+                values.metaDescription || "",
+                values.materialAndCare || "",
+                brandName,
+                categoryName || "",
+                subcategoryName,
+                productTypeName,
+                specsText,
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
 
+            let embeddings: number[] | null = null;
+            if (text) {
+                try {
+                    //         console.log("Calling Hugging Face API for feature extraction...");
+                    //         const response = await hf.featureExtraction({
+                    //           model: "sentence-transformers/all-MiniLM-L6-v2",
+                    //    inputs: text,
+                    //         });
 
-    let embeddings: number[] | null = null;
-    if (text) {
-      try {
-//         console.log("Calling Hugging Face API for feature extraction...");
-//         const response = await hf.featureExtraction({
-//           model: "sentence-transformers/all-MiniLM-L6-v2",
-//    inputs: text,
-//         });
+                    //         console.log("Hugging Face API response:", response);
 
-//         console.log("Hugging Face API response:", response);
+                    // Extract the embedding array
+                    // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+                    const embeddingArray = await getEmbedding(text);
+                    if (
+                        !Array.isArray(embeddingArray) ||
+                        embeddingArray.length !== 384
+                    ) {
+                        console.error(
+                            `Invalid embedding for product with title ${values.title}. Response length: ${embeddingArray?.length}`
+                        );
+                    } else {
+                        embeddings = embeddingArray;
+                        console.log(
+                            `Generated embedding for product ${values.title}: ${embeddings.length} dimensions`
+                        );
+                    }
+                } catch (error) {
+                    console.error(
+                        `Error generating embedding for product with title ${values.title}:`,
+                        error
+                    );
+                }
+            } else {
+                console.warn(
+                    `No text available for embedding generation for product with title ${values.title}`
+                );
+            }
 
-        // Extract the embedding array
-        // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
-        const embeddingArray = await getEmbedding(text);
-        if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
-          console.error(`Invalid embedding for product with title ${values.title}. Response length: ${embeddingArray?.length}`);
-        } else {
-          embeddings = embeddingArray;
-          console.log(`Generated embedding for product ${values.title}: ${embeddings.length} dimensions`);
-        }
-      } catch (error) {
-        console.error(`Error generating embedding for product with title ${values.title}:`, error);
-      }
-    } else {
-      console.warn(`No text available for embedding generation for product with title ${values.title}`);
-    }
+            // Insert the new product with embeddings
+            const newProduct = await tx
+                .insert(products)
+                .values({
+                    ...values,
+                    embeddings, // Include embeddings in the initial insert
+                })
+                .returning()
+                .then((res) => res[0]);
 
-    // Insert the new product with embeddings
-    const newProduct = await tx
-      .insert(products)
-      .values({
-        ...values,
-        embeddings, // Include embeddings in the initial insert
-      })
-      .returning()
-      .then((res) => res[0]);
-
-    console.log("Inserted product:", newProduct);
+            console.log("Inserted product:", newProduct);
 
             console.log("Return/Exchange Policy Fields:", {
                 returnable: values.returnable,
@@ -1517,12 +1644,14 @@ async getAllCatalogueProducts({
             //     .values(values)
             //     .returning()
             //     .then((res) => res);
-                const newProducts = await tx
+            const newProducts = await tx
                 .insert(products)
-                .values(values.map((value) => ({
-                    ...value,
-                    embeddings: value.embeddings, // Include embeddings
-                })))
+                .values(
+                    values.map((value) => ({
+                        ...value,
+                        embeddings: value.embeddings, // Include embeddings
+                    }))
+                )
                 .returning()
                 .then((res) => res);
 
@@ -1759,88 +1888,119 @@ async getAllCatalogueProducts({
         try {
             const data = await db.transaction(async (tx) => {
                 try {
-               // Strict validation for media: ensure it's always an array
-                const validatedMedia = Array.isArray(values.media) && values.media.every(
-                    (item) => item && typeof item === "object" && "id" in item && "position" in item
-                ) ? values.media : [];
+                    // Strict validation for media: ensure it's always an array
+                    const validatedMedia =
+                        Array.isArray(values.media) &&
+                        values.media.every(
+                            (item) =>
+                                item &&
+                                typeof item === "object" &&
+                                "id" in item &&
+                                "position" in item
+                        )
+                            ? values.media
+                            : [];
 
-                // If media is empty or invalid, log a warning and use a default value
-                if (!values.media || values.media.length === 0) {
-                    console.warn(`Media field is empty or missing for product ${productId}. Using default empty array.`);
-                }
-        let categoryName = "";
-        let subcategoryName = "";
-        let productTypeName = "";
-        let brandName = "";
+                    // If media is empty or invalid, log a warning and use a default value
+                    if (!values.media || values.media.length === 0) {
+                        console.warn(
+                            `Media field is empty or missing for product ${productId}. Using default empty array.`
+                        );
+                    }
+                    let categoryName = "";
+                    let subcategoryName = "";
+                    let productTypeName = "";
+                    let brandName = "";
 
-    if (values.categoryId) {
-          const category = await categoryQueries.getCategory(values.categoryId);
-          categoryName = category?.name || "";
-        }
-            if (values.subcategoryId) {
-          const subcategory = await subCategoryQueries.getSubCategory(values.subcategoryId);
-          subcategoryName = subcategory?.name || "";
-        }
-            if (values.productTypeId) {
-          const productType = await productTypeQueries.getProductType(values.productTypeId);
-          productTypeName = productType?.name || "";
-        }
-            if (values.brandId) {
-          const brand = await brandQueries.getBrand(values.brandId);
-          brandName = brand?.name || "";
-        }
+                    if (values.categoryId) {
+                        const category = await categoryQueries.getCategory(
+                            values.categoryId
+                        );
+                        categoryName = category?.name || "";
+                    }
+                    if (values.subcategoryId) {
+                        const subcategory =
+                            await subCategoryQueries.getSubCategory(
+                                values.subcategoryId
+                            );
+                        subcategoryName = subcategory?.name || "";
+                    }
+                    if (values.productTypeId) {
+                        const productType =
+                            await productTypeQueries.getProductType(
+                                values.productTypeId
+                            );
+                        productTypeName = productType?.name || "";
+                    }
+                    if (values.brandId) {
+                        const brand = await brandQueries.getBrand(
+                            values.brandId
+                        );
+                        brandName = brand?.name || "";
+                    }
 
-                        // Combine fields for embedding
-        const specsText = (values.specifications ?? [])
-          .map((spec) => `${spec.key}:${spec.value}`)
-          .join(" ");
+                    // Combine fields for embedding
+                    const specsText = (values.specifications ?? [])
+                        .map((spec) => `${spec.key}:${spec.value}`)
+                        .join(" ");
 
-        const text = [
-          values.title || "",
-          values.description || "",
-          values.sizeAndFit || "",
-          values.metaTitle || "",
-          values.metaDescription || "",
-          values.materialAndCare || "",
-          brandName,
-          categoryName,
-          subcategoryName,
-          productTypeName,
-          specsText,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .trim();
+                    const text = [
+                        values.title || "",
+                        values.description || "",
+                        values.sizeAndFit || "",
+                        values.metaTitle || "",
+                        values.metaDescription || "",
+                        values.materialAndCare || "",
+                        brandName,
+                        categoryName,
+                        subcategoryName,
+                        productTypeName,
+                        specsText,
+                    ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim();
 
-        console.log("Text for embedding:", text);
+                    console.log("Text for embedding:", text);
 
-        let embeddings: number[] | null = null;
-        if (text) {
-          try {
-            // console.log("Calling Hugging Face API for feature extraction...");
-            // const response = await hf.featureExtraction({
-            //   model: "sentence-transformers/all-MiniLM-L6-v2",
-            //   inputs: text,
-            // });
+                    let embeddings: number[] | null = null;
+                    if (text) {
+                        try {
+                            // console.log("Calling Hugging Face API for feature extraction...");
+                            // const response = await hf.featureExtraction({
+                            //   model: "sentence-transformers/all-MiniLM-L6-v2",
+                            //   inputs: text,
+                            // });
 
-            // console.log("Hugging Face API response:", response);
+                            // console.log("Hugging Face API response:", response);
 
-            // Extract the embedding array
-            // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
-            const embeddingArray = await getEmbedding(text);
-            if (!Array.isArray(embeddingArray) || embeddingArray.length !== 384) {
-              console.error(`Invalid embedding for product ${productId}. Response length: ${embeddingArray?.length}`);
-            } else {
-              embeddings = embeddingArray;
-              console.log(`Generated embedding for product ${productId}: ${embeddings.length} dimensions`);
-            }
-          } catch (error) {
-            console.error(`Error generating embedding for product ${productId}:`, error);
-          }
-        } else {
-          console.warn(`No text available for embedding generation for product ${productId}`);
-        }
-
+                            // Extract the embedding array
+                            // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
+                            const embeddingArray = await getEmbedding(text);
+                            if (
+                                !Array.isArray(embeddingArray) ||
+                                embeddingArray.length !== 384
+                            ) {
+                                console.error(
+                                    `Invalid embedding for product ${productId}. Response length: ${embeddingArray?.length}`
+                                );
+                            } else {
+                                embeddings = embeddingArray;
+                                console.log(
+                                    `Generated embedding for product ${productId}: ${embeddings.length} dimensions`
+                                );
+                            }
+                        } catch (error) {
+                            console.error(
+                                `Error generating embedding for product ${productId}:`,
+                                error
+                            );
+                        }
+                    } else {
+                        console.warn(
+                            `No text available for embedding generation for product ${productId}`
+                        );
+                    }
 
                     // Update product
                     let updatedProduct = await tx
@@ -1856,41 +2016,60 @@ async getAllCatalogueProducts({
                         .then((res) => res[0]);
 
                     if (!updatedProduct) {
-                        throw new Error(`Product with ID ${productId} not found or failed to update`);
+                        throw new Error(
+                            `Product with ID ${productId} not found or failed to update`
+                        );
                     }
-                // Post-update verification: Check if media was saved correctly
-                const maxRetries = 3;
-                let retryCount = 0;
-                while (retryCount < maxRetries) {
-                    if (JSON.stringify(updatedProduct.media) === JSON.stringify(validatedMedia)) {
-                        break; // Media was saved correctly
+                    // Post-update verification: Check if media was saved correctly
+                    const maxRetries = 3;
+                    let retryCount = 0;
+                    while (retryCount < maxRetries) {
+                        if (
+                            JSON.stringify(updatedProduct.media) ===
+                            JSON.stringify(validatedMedia)
+                        ) {
+                            break; // Media was saved correctly
+                        }
+
+                        console.warn(
+                            `Media not saved correctly for product ${productId}. Retrying (${retryCount + 1}/${maxRetries})...`
+                        );
+                        updatedProduct = await tx
+                            .update(products)
+                            .set({
+                                ...values,
+                                media: validatedMedia,
+                                updatedAt: new Date(),
+                            })
+                            .where(eq(products.id, productId))
+                            .returning()
+                            .then((res) => res[0]);
+
+                        if (!updatedProduct) {
+                            throw new Error(
+                                `Product with ID ${productId} not found during retry`
+                            );
+                        }
+
+                        retryCount++;
                     }
 
-                    console.warn(`Media not saved correctly for product ${productId}. Retrying (${retryCount + 1}/${maxRetries})...`);
-                    updatedProduct = await tx
-                        .update(products)
-                        .set({
-                            ...values,
-                            media: validatedMedia,
-                            updatedAt: new Date(),
-                        })
-                        .where(eq(products.id, productId))
-                        .returning()
-                        .then((res) => res[0]);
-
-                    if (!updatedProduct) {
-                        throw new Error(`Product with ID ${productId} not found during retry`);
+                    // Final check after retries
+                    if (
+                        JSON.stringify(updatedProduct.media) !==
+                        JSON.stringify(validatedMedia)
+                    ) {
+                        throw new Error(
+                            `Failed to save media for product ${productId} after ${maxRetries} retries`
+                        );
                     }
-
-                    retryCount++;
-                }
-
-                // Final check after retries
-                if (JSON.stringify(updatedProduct.media) !== JSON.stringify(validatedMedia)) {
-                    throw new Error(`Failed to save media for product ${productId} after ${maxRetries} retries`);
-                }
                     // Handle return/exchange policy
-                    const { returnable, returnDescription, exchangeable, exchangeDescription } = values;
+                    const {
+                        returnable,
+                        returnDescription,
+                        exchangeable,
+                        exchangeDescription,
+                    } = values;
 
                     const existingPolicy = await tx
                         .select({ id: returnExchangePolicy.id })
@@ -1906,10 +2085,13 @@ async getAllCatalogueProducts({
                                 returnable: returnable ?? false,
                                 returnDescription: returnDescription ?? null,
                                 exchangeable: exchangeable ?? false,
-                                exchangeDescription: exchangeDescription ?? null,
+                                exchangeDescription:
+                                    exchangeDescription ?? null,
                                 updatedAt: new Date(),
                             })
-                            .where(eq(returnExchangePolicy.id, existingPolicy.id));
+                            .where(
+                                eq(returnExchangePolicy.id, existingPolicy.id)
+                            );
                     } else {
                         await tx.insert(returnExchangePolicy).values({
                             productId,
@@ -1923,74 +2105,127 @@ async getAllCatalogueProducts({
                     }
 
                     // Fetch existing options and variants
-                    const [existingOptions, existingVariants] = await Promise.all([
-                        tx.query.productOptions.findMany({
-                            where: eq(productOptions.productId, productId),
-                        }).catch((err) => {
-                            throw new Error(`Failed to fetch product options: ${err.message}`);
-                        }),
-                        tx.query.productVariants.findMany({
-                            where: eq(productVariants.productId, productId),
-                        }).catch((err) => {
-                            throw new Error(`Failed to fetch product variants: ${err.message}`);
-                        }),
-                    ]);
+                    const [existingOptions, existingVariants] =
+                        await Promise.all([
+                            tx.query.productOptions
+                                .findMany({
+                                    where: eq(
+                                        productOptions.productId,
+                                        productId
+                                    ),
+                                })
+                                .catch((err) => {
+                                    throw new Error(
+                                        `Failed to fetch product options: ${err.message}`
+                                    );
+                                }),
+                            tx.query.productVariants
+                                .findMany({
+                                    where: eq(
+                                        productVariants.productId,
+                                        productId
+                                    ),
+                                })
+                                .catch((err) => {
+                                    throw new Error(
+                                        `Failed to fetch product variants: ${err.message}`
+                                    );
+                                }),
+                        ]);
 
                     // Handle specifications
                     await tx
                         .delete(productSpecifications)
                         .where(eq(productSpecifications.productId, productId))
                         .catch((err) => {
-                            throw new Error(`Failed to delete product specifications: ${err.message}`);
+                            throw new Error(
+                                `Failed to delete product specifications: ${err.message}`
+                            );
                         });
 
                     const specifications = values.specifications ?? [];
                     if (specifications.length) {
-                        await tx.insert(productSpecifications).values(
-                            specifications.map((spec) => ({
-                                productId,
-                                key: spec.key,
-                                value: spec.value,
-                                createdAt: new Date(),
-                                updatedAt: new Date(),
-                            }))
-                        ).catch((err) => {
-                            throw new Error(`Failed to insert product specifications: ${err.message}`);
-                        });
+                        await tx
+                            .insert(productSpecifications)
+                            .values(
+                                specifications.map((spec) => ({
+                                    productId,
+                                    key: spec.key,
+                                    value: spec.value,
+                                    createdAt: new Date(),
+                                    updatedAt: new Date(),
+                                }))
+                            )
+                            .catch((err) => {
+                                throw new Error(
+                                    `Failed to insert product specifications: ${err.message}`
+                                );
+                            });
                     }
 
                     // Handle options and variants
                     const optionsToBeAdded = values.options.filter(
-                        (option) => !existingOptions.find((o) => o.id === option.id)
+                        (option) =>
+                            !existingOptions.find((o) => o.id === option.id)
                     );
-                    const optionsToBeUpdated = values.options.filter((option) => {
-                        const existing = existingOptions.find((o) => o.id === option.id);
-                        return existing && JSON.stringify(option) !== JSON.stringify(existing);
-                    });
+                    const optionsToBeUpdated = values.options.filter(
+                        (option) => {
+                            const existing = existingOptions.find(
+                                (o) => o.id === option.id
+                            );
+                            return (
+                                existing &&
+                                JSON.stringify(option) !==
+                                    JSON.stringify(existing)
+                            );
+                        }
+                    );
                     const optionsToBeDeleted = existingOptions.filter(
-                        (option) => !values.options.find((o) => o.id === option.id)
+                        (option) =>
+                            !values.options.find((o) => o.id === option.id)
                     );
 
                     const variantsToBeAdded = values.variants.filter(
-                        (variant) => !existingVariants.find((v) => v.id === variant.id)
+                        (variant) =>
+                            !existingVariants.find((v) => v.id === variant.id)
                     );
-                    const variantsToBeUpdated = values.variants.filter((variant) => {
-                        const existing = existingVariants.find((v) => v.id === variant.id);
-                        return existing && JSON.stringify(variant) !== JSON.stringify(existing);
-                    });
+                    const variantsToBeUpdated = values.variants.filter(
+                        (variant) => {
+                            const existing = existingVariants.find(
+                                (v) => v.id === variant.id
+                            );
+                            return (
+                                existing &&
+                                JSON.stringify(variant) !==
+                                    JSON.stringify(existing)
+                            );
+                        }
+                    );
                     const variantsToBeDeleted = existingVariants.filter(
-                        (variant) => !values.variants.find((v) => v.id === variant.id)
+                        (variant) =>
+                            !values.variants.find((v) => v.id === variant.id)
                     );
 
                     await Promise.all([
                         optionsToBeAdded.length &&
-                            tx.insert(productOptions).values(optionsToBeAdded).catch((err) => {
-                                throw new Error(`Failed to insert product options: ${err.message}`);
-                            }),
+                            tx
+                                .insert(productOptions)
+                                .values(optionsToBeAdded)
+                                .catch((err) => {
+                                    throw new Error(
+                                        `Failed to insert product options: ${err.message}`
+                                    );
+                                }),
                         variantsToBeAdded.length &&
-                            tx.insert(productVariants).values(variantsToBeAdded).returning().catch((err) => {
-                                throw new Error(`Failed to insert product variants: ${err.message}`);
-                            }),
+                            tx
+                                .insert(productVariants)
+                                .values(variantsToBeAdded)
+                                .returning()
+                                .catch((err) => {
+                                    throw new Error(
+                                        `Failed to insert product variants: ${err.message}`
+                                    );
+                                }),
                         ...optionsToBeUpdated.map((option) =>
                             tx
                                 .update(productOptions)
@@ -2002,7 +2237,9 @@ async getAllCatalogueProducts({
                                     )
                                 )
                                 .catch((err) => {
-                                    throw new Error(`Failed to update product option ${option.id}: ${err.message}`);
+                                    throw new Error(
+                                        `Failed to update product option ${option.id}: ${err.message}`
+                                    );
                                 })
                         ),
                         ...variantsToBeUpdated.map((variant) =>
@@ -2011,12 +2248,17 @@ async getAllCatalogueProducts({
                                 .set(variant)
                                 .where(
                                     and(
-                                        eq(productVariants.productId, productId),
+                                        eq(
+                                            productVariants.productId,
+                                            productId
+                                        ),
                                         eq(productVariants.id, variant.id)
                                     )
                                 )
                                 .catch((err) => {
-                                    throw new Error(`Failed to update product variant ${variant.id}: ${err.message}`);
+                                    throw new Error(
+                                        `Failed to update product variant ${variant.id}: ${err.message}`
+                                    );
                                 })
                         ),
                     ]);
@@ -2038,7 +2280,9 @@ async getAllCatalogueProducts({
                                 )
                             )
                             .catch((err) => {
-                                throw new Error(`Failed to delete product options: ${err.message}`);
+                                throw new Error(
+                                    `Failed to delete product options: ${err.message}`
+                                );
                             }),
                         tx
                             .update(productVariants)
@@ -2057,55 +2301,82 @@ async getAllCatalogueProducts({
                                 )
                             )
                             .catch((err) => {
-                                throw new Error(`Failed to delete product variants: ${err.message}`);
+                                throw new Error(
+                                    `Failed to delete product variants: ${err.message}`
+                                );
                             }),
                     ]);
-                        const [updatedOptions, updatedVariants] = await Promise.all([
-                        tx.query.productOptions.findMany({
-                            where: eq(productOptions.productId, productId),
-                        }).catch((err) => {
-                            throw new Error(`Failed to fetch updated product options: ${err.message}`);
-                        }),
-                        tx.query.productVariants.findMany({
-                            where: eq(productVariants.productId, productId),
-                        }).catch((err) => {
-                            throw new Error(`Failed to fetch updated product variants: ${err.message}`);
-                        }),
-                    ]);
+                    const [updatedOptions, updatedVariants] = await Promise.all(
+                        [
+                            tx.query.productOptions
+                                .findMany({
+                                    where: eq(
+                                        productOptions.productId,
+                                        productId
+                                    ),
+                                })
+                                .catch((err) => {
+                                    throw new Error(
+                                        `Failed to fetch updated product options: ${err.message}`
+                                    );
+                                }),
+                            tx.query.productVariants
+                                .findMany({
+                                    where: eq(
+                                        productVariants.productId,
+                                        productId
+                                    ),
+                                })
+                                .catch((err) => {
+                                    throw new Error(
+                                        `Failed to fetch updated product variants: ${err.message}`
+                                    );
+                                }),
+                        ]
+                    );
 
                     return {
                         ...updatedProduct,
                         options: updatedOptions,
                         variants: updatedVariants,
                     };
-                } catch (error:any) {
+                } catch (error: any) {
                     // Log the error to the server console
-                    console.error(`Transaction error for product ${productId}:`, error.message);
+                    console.error(
+                        `Transaction error for product ${productId}:`,
+                        error.message
+                    );
                     throw new Error(`Transaction failed: ${error.message}`);
                 }
             });
 
             return data;
-        } catch (error:any) {
+        } catch (error: any) {
             // Log the error to the server console
-            console.error(`Failed to update product ${productId}:`, error.message);
+            console.error(
+                `Failed to update product ${productId}:`,
+                error.message
+            );
             // Throw a clear error to be caught by the API handler
             throw new Error(`Unable to update product: ${error.message}`);
         }
     }
 
-    async updateProductMedia(productId: string, media: UpdateProductMediaInput["media"]) {
+    async updateProductMedia(
+        productId: string,
+        media: UpdateProductMediaInput["media"]
+    ) {
         const data = await db
-        .update(products)
-        .set({
-            media,
-            updatedAt: new Date(),
-        })
-        .where(eq(products.id, productId))
-        .returning()
-        .then((res) => res[0]);
+            .update(products)
+            .set({
+                media,
+                updatedAt: new Date(),
+            })
+            .where(eq(products.id, productId))
+            .returning()
+            .then((res) => res[0]);
 
-    return data;
+        return data;
     }
 
     async updateProductAvailability(productId: string, isAvailable: boolean) {
@@ -2129,8 +2400,8 @@ async getAllCatalogueProducts({
                 isPublished,
                 publishedAt: isPublished ? new Date() : null,
                 isDeleted: false,
-                 isActive: true,
-                 isAvailable: true,
+                isActive: true,
+                isAvailable: true,
                 updatedAt: new Date(),
             })
             .where(eq(products.id, productId))
@@ -2202,73 +2473,78 @@ async getAllCatalogueProducts({
     //     return updatedData;
     // }
 
-async updateProductStock(
-    data: {
-        productId: string;
-        variantId?: string;
-        quantity: number;
-    }[]
-) {
-    try {
-        const updatedData = await db.transaction(async (tx) => {
-            const results = await Promise.all(
-                data.map(async (item) => {
-                    try {
-                        if (item.variantId) {
-                            const [result] = await tx
-                                .update(productVariants)
-                                .set({
-                                    quantity: sql`${productVariants.quantity} - ${item.quantity}`,
-                                    updatedAt: new Date(),
-                                })
-                                .where(
-                                    and(
-                                        eq(productVariants.productId, item.productId),
-                                        eq(productVariants.id, item.variantId)
+    async updateProductStock(
+        data: {
+            productId: string;
+            variantId?: string;
+            quantity: number;
+        }[]
+    ) {
+        try {
+            const updatedData = await db.transaction(async (tx) => {
+                const results = await Promise.all(
+                    data.map(async (item) => {
+                        try {
+                            if (item.variantId) {
+                                const [result] = await tx
+                                    .update(productVariants)
+                                    .set({
+                                        quantity: sql`${productVariants.quantity} - ${item.quantity}`,
+                                        updatedAt: new Date(),
+                                    })
+                                    .where(
+                                        and(
+                                            eq(
+                                                productVariants.productId,
+                                                item.productId
+                                            ),
+                                            eq(
+                                                productVariants.id,
+                                                item.variantId
+                                            )
+                                        )
                                     )
-                                )
-                                .returning();
-                            return { success: true, data: result };
-                        } else {
-                            const [result] = await tx
-                                .update(products)
-                                .set({
-                                    quantity: sql`${products.quantity} - ${item.quantity}`,
-                                    updatedAt: new Date(),
-                                })
-                                .where(eq(products.id, item.productId))
-                                .returning();
-                            return { success: true, data: result };
+                                    .returning();
+                                return { success: true, data: result };
+                            } else {
+                                const [result] = await tx
+                                    .update(products)
+                                    .set({
+                                        quantity: sql`${products.quantity} - ${item.quantity}`,
+                                        updatedAt: new Date(),
+                                    })
+                                    .where(eq(products.id, item.productId))
+                                    .returning();
+                                return { success: true, data: result };
+                            }
+                        } catch (error) {
+                            return {
+                                success: false,
+                                productId: item.productId,
+                                variantId: item.variantId,
+                                error: "Update failed (silenced)",
+                            };
                         }
-                    } catch (error) {
-                        return {
-                            success: false,
-                            productId: item.productId,
-                            variantId: item.variantId,
-                            error: "Update failed (silenced)"
-                        };
-                    }
-                })
-            );
-            return results;
-        });
+                    })
+                );
+                return results;
+            });
 
-        return {
-            updated: updatedData.filter((x) => x.success),
-            failed: updatedData.filter((x) => !x.success)
-        };
-
-    } catch (error) {
-        return {
-            updated: [],
-            failed: data.map((item) => ({
-                productId: item.productId,
-                variantId: item.variantId,
-                error: "Transaction failed (silenced)"
-            }))
-        };
+            return {
+                updated: updatedData.filter((x) => x.success),
+                failed: updatedData.filter((x) => !x.success),
+            };
+        } catch (error) {
+            return {
+                updated: [],
+                failed: data.map((item) => ({
+                    productId: item.productId,
+                    variantId: item.variantId,
+                    error: "Transaction failed (silenced)",
+                })),
+            };
+        }
     }
-}
 
     async sendProductForReview(productId: string) {
         const data = await db
@@ -2363,21 +2639,23 @@ async updateProductStock(
         return data;
     }
 
-        async createWomenPageFeaturedProduct(values: CreateWomenPageFeaturedProduct) {
-            const data = await db
-                .insert(womenPageFeaturedProducts)
-                .values({
-                    productId: values.productId,
-                    isDeleted: false,
-                    deletedAt: null,
-                })
-                .returning()
-                .then((res) => res[0]);
+    async createWomenPageFeaturedProduct(
+        values: CreateWomenPageFeaturedProduct
+    ) {
+        const data = await db
+            .insert(womenPageFeaturedProducts)
+            .values({
+                productId: values.productId,
+                isDeleted: false,
+                deletedAt: null,
+            })
+            .returning()
+            .then((res) => res[0]);
 
-            return data;
-        }
+        return data;
+    }
 
-        async removeWomenPageFeaturedProduct(productId: string) {
+    async removeWomenPageFeaturedProduct(productId: string) {
         const data = await db
             .update(womenPageFeaturedProducts)
             .set({ isDeleted: true, deletedAt: new Date() })
@@ -2388,23 +2666,21 @@ async updateProductStock(
         return data;
     }
 
+    async createMenPageFeaturedProduct(values: CreateMenPageFeaturedProduct) {
+        const data = await db
+            .insert(menPageFeaturedProducts)
+            .values({
+                productId: values.productId,
+                isDeleted: false,
+                deletedAt: null,
+            })
+            .returning()
+            .then((res) => res[0]);
 
+        return data;
+    }
 
-            async createMenPageFeaturedProduct(values: CreateMenPageFeaturedProduct) {
-            const data = await db
-                .insert(menPageFeaturedProducts)
-                .values({
-                    productId: values.productId,
-                    isDeleted: false,
-                    deletedAt: null,
-                })
-                .returning()
-                .then((res) => res[0]);
-
-            return data;
-        }
-
-        async removeMenPageFeaturedProduct(productId: string) {
+    async removeMenPageFeaturedProduct(productId: string) {
         const data = await db
             .update(menPageFeaturedProducts)
             .set({ isDeleted: true, deletedAt: new Date() })
@@ -2415,8 +2691,7 @@ async updateProductStock(
         return data;
     }
 
-
-           async removeStyleWithSubstanceWomenProduct(productId: string) {
+    async removeStyleWithSubstanceWomenProduct(productId: string) {
         const data = await db
             .update(menPageFeaturedProducts)
             .set({ isDeleted: true, deletedAt: new Date() })
@@ -2426,20 +2701,20 @@ async updateProductStock(
 
         return data;
     }
-            async createKidsFeaturedProduct(values: CreateKidsFeaturedProduct) {
-            const data = await db
-                .insert(kidsFreshCollectionSection)
-                .values({
-                    productId: values.productId,
-                    isDeleted: false,
-                    deletedAt: null,
-                })
-                .returning()
-                .then((res) => res[0]);
+    async createKidsFeaturedProduct(values: CreateKidsFeaturedProduct) {
+        const data = await db
+            .insert(kidsFreshCollectionSection)
+            .values({
+                productId: values.productId,
+                isDeleted: false,
+                deletedAt: null,
+            })
+            .returning()
+            .then((res) => res[0]);
 
-            return data;
-        }
-        async removeKidsFeaturedProduct(productId: string) {
+        return data;
+    }
+    async removeKidsFeaturedProduct(productId: string) {
         const data = await db
             .update(kidsFreshCollectionSection)
             .set({ isDeleted: true, deletedAt: new Date() })
@@ -2449,7 +2724,6 @@ async updateProductStock(
 
         return data;
     }
-
 
     async getProductValue(id: string) {
         const data = await db.query.productValues.findFirst({
@@ -2469,1006 +2743,1138 @@ async updateProductStock(
         return data;
     }
 
- async getWomenPageFeaturedProducts() {
-  const data = await db.query.womenPageFeaturedProducts.findMany({
-    where: eq(womenPageFeaturedProducts.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
+    async getWomenPageFeaturedProducts() {
+        const data = await db.query.womenPageFeaturedProducts.findMany({
+            where: eq(womenPageFeaturedProducts.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
         }
-      }
-    },
-  });
 
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-async getMenPageFeaturedProducts() {
-  const data = await db.query.menPageFeaturedProducts.findMany({
-    where: eq(menPageFeaturedProducts.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-async getKidsPageFeaturedProducts() {
-  const data = await db.query.kidsFreshCollectionSection.findMany({
-    where: eq(kidsFreshCollectionSection.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-
-async getHomePageFeaturedProducts() {
-  const data = await db.query.homeNewArrivals.findMany({
-    where: eq(homeNewArrivals.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-async getHomeHeroProducts() {
-  const data = await db.query.homeProductSection.findMany({
-    where: eq(homeProductSection.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-async getHomeLoveTheseProducts() {
-  const data = await db.query.homeProductLoveTheseSection.findMany({
-    where: eq(homeProductLoveTheseSection.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-
-async getHomePageProducts() {
-  const data = await db.query.homeProductPageList.findMany({
-    where: eq(homeProductPageList.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-async getHomeYouMayAlsoLikeProducts() {
-  const data = await db.query.homeProductMayAlsoLikeThese.findMany({
-    where: eq(homeProductMayAlsoLikeThese.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-async getHomeAndLivingTopPicks() {
-  const data = await db.query.homeandlivingTopPicks.findMany({
-    where: eq(homeandlivingTopPicks.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-async getHomeAndLivingNewArrivals() {
-  const data = await db.query.homeandlivingNewArrival.findMany({
-    where: eq(homeandlivingNewArrival.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-
-async getBeautyNewArrivals() {
-  const data = await db.query.beautyNewArrivals.findMany({
-    where: eq(beautyNewArrivals.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-
-async getBeautyTopPicks() {
-  const data = await db.query.beautyTopPicks.findMany({
-    where: eq(beautyTopPicks.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-  const mediaIds = new Set<string>();
-  for (const { product } of data) {
-    product.media.forEach((media) => mediaIds.add(media.id));
-    product.variants.forEach((variant) => {
-      if (variant.image) mediaIds.add(variant.image);
-    });
-    if (product.sustainabilityCertificate)
-      mediaIds.add(product.sustainabilityCertificate);
-  }
-
-  const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-  const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-  const enhancedData = data.map(({ product, ...rest }) => ({
-    ...rest,
-    product: {
-      ...product,
-      media: product.media.map((media) => ({
-        ...media,
-        mediaItem: mediaMap.get(media.id),
-        url: mediaMap.get(media.id)?.url ?? null,
-      })),
-      sustainabilityCertificate: product.sustainabilityCertificate
-        ? mediaMap.get(product.sustainabilityCertificate)
-        : null,
-      variants: product.variants.map((variant) => ({
-        ...variant,
-        mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-        url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-      })),
-      returnable: product.returnExchangePolicy?.returnable ?? false,
-      returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-      exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-      exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-      specifications: product.specifications.map((spec) => ({
-        key: spec.key,
-        value: spec.value,
-      })),
-    },
-  }));
-
-  return enhancedData;
-}
-
-
-// async getNewEventPage() {
-//   const data = await db.query.newProductEventPage.findMany({
-//     where: eq(newProductEventPage.isDeleted, false),
-//     with: {
-//       product: {
-//         with: {
-//           brand: true,
-//           variants: true,
-//           returnExchangePolicy: true,
-//           specifications: true
-//         }
-//       }
-//     },
-//   });
-
-//   const mediaIds = new Set<string>();
-//   for (const { product } of data) {
-//     product.media.forEach((media) => mediaIds.add(media.id));
-//     product.variants.forEach((variant) => {
-//       if (variant.image) mediaIds.add(variant.image);
-//     });
-//     if (product.sustainabilityCertificate)
-//       mediaIds.add(product.sustainabilityCertificate);
-//   }
-
-//   const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-//   const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
-
-//   const enhancedData = data.map(({ product, ...rest }) => ({
-//     ...rest,
-//     product: {
-//       ...product,
-//       media: product.media.map((media) => ({
-//         ...media,
-//         mediaItem: mediaMap.get(media.id),
-//         url: mediaMap.get(media.id)?.url ?? null,
-//       })),
-//       sustainabilityCertificate: product.sustainabilityCertificate
-//         ? mediaMap.get(product.sustainabilityCertificate)
-//         : null,
-//       variants: product.variants.map((variant) => ({
-//         ...variant,
-//         mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-//         url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-//       })),
-//       returnable: product.returnExchangePolicy?.returnable ?? false,
-//       returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-//       exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-//       exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-//       specifications: product.specifications.map((spec) => ({
-//         key: spec.key,
-//         value: spec.value,
-//       })),
-//     },
-//   }));
-
-//   return enhancedData;
-// }
-
-//  async getProductClicks() {
-//   return db
-//     .select({
-//       productId: productEvents.productId,
-//       clicks: count(productEvents.id).as("clicks"),
-//     })
-//     .from(productEvents)
-//     .where(eq(productEvents.event, "click"))
-//     .groupBy(productEvents.productId)
-//     .orderBy(desc(count(productEvents.id)));
-// }
-
-
-// @/lib/db/queries.ts (or the file you keep productQueries in)
-
-
-  async getNewEventPage(filters: EventFilters = {}) {
-
-      const data = await db.query.newProductEventPage.findMany({
-    where: eq(newProductEventPage.isDeleted, false),
-    with: {
-      product: {
-        with: {
-          brand: true,
-          variants: true,
-          returnExchangePolicy: true,
-          specifications: true
-        }
-      }
-    },
-  });
-
-    // 2) Collect media IDs
-    const mediaIds = new Set<string>();
-    for (const { product } of data) {
-      product.media?.forEach((m) => mediaIds.add(m.id));
-      product.variants?.forEach((variant: any) => {
-        if (variant.image) mediaIds.add(variant.image);
-      });
-      if (product.sustainabilityCertificate) {
-        mediaIds.add(product.sustainabilityCertificate);
-      }
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
     }
 
-    // 3) Resolve media from cache
-    const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
-    const mediaMap = new Map(mediaItems.data.map((item: any) => [item.id, item]));
+    async getMenPageFeaturedProducts() {
+        const data = await db.query.menPageFeaturedProducts.findMany({
+            where: eq(menPageFeaturedProducts.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
 
-    // 4) Enhance products with media + policies
-    const enhancedData = data.map(({ product, ...rest }: any) => ({
-      ...rest,
-      product: {
-        ...product,
-        media: (product.media || []).map((media: any) => ({
-          ...media,
-          mediaItem: mediaMap.get(media.id),
-          url: mediaMap.get(media.id)?.url ?? null,
-        })),
-        sustainabilityCertificate: product.sustainabilityCertificate
-          ? mediaMap.get(product.sustainabilityCertificate)
-          : null,
-        variants: (product.variants || []).map((variant: any) => ({
-          ...variant,
-          mediaItem: variant.image ? mediaMap.get(variant.image) : null,
-          url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
-        })),
-        returnable: product.returnExchangePolicy?.returnable ?? false,
-        returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
-        exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
-        exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
-        specifications: (product.specifications || []).map((spec: any) => ({
-          key: spec.key,
-          value: spec.value,
-        })),
-      },
-    }));
-
-    // helper: compute min/max price for a product
-    const getPriceRange = (product: any) => {
-      const prices = (product.variants || [])
-        .map((v: any) =>
-          Number(v.price ?? v.sellingPrice ?? v.mrp ?? 0)
-        )
-        .filter((p: number) => !isNaN(p) && p > 0);
-      if (!prices.length) return { min: 0, max: 0 };
-      return { min: Math.min(...prices), max: Math.max(...prices) };
-    };
-
-    // 5) Apply in-memory filters
-    const filtered = enhancedData.filter((row) => {
-      const product = row.product;
-
-      // search
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        const hay = [
-          product.name,
-          product.description,
-          product.shortDescription,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-
-      // brand
-      if (filters.brandIds?.length) {
-        if (!filters.brandIds.includes(product.brandId)) return false;
-      }
-
-      // category / subcategory / product type
-      if (filters.categoryId && product.categoryId !== filters.categoryId)
-        return false;
-      if (filters.subCategoryId && product.subCategoryId !== filters.subCategoryId)
-        return false;
-      if (filters.productTypeId && product.productTypeId !== filters.productTypeId)
-        return false;
-
-      // colors
-      if (filters.colors?.length) {
-        const hasColor =
-          (product.variants || []).some((v: any) =>
-            v.color ? filters.colors!.includes(String(v.color)) : false
-          ) ||
-          (product.media || []).some((m: any) =>
-            m.color ? filters.colors!.includes(String(m.color)) : false
-          );
-        if (!hasColor) return false;
-      }
-
-      // price range
-      if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-        const pr = getPriceRange(product);
-        if (
-          filters.minPrice !== undefined &&
-          pr.max < (filters.minPrice ?? 0)
-        ) {
-          return false;
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
         }
-        if (
-          filters.maxPrice !== undefined &&
-          pr.min > (filters.maxPrice ?? Number.MAX_SAFE_INTEGER)
-        ) {
-          return false;
-        }
-      }
 
-      return true;
-    });
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
 
-    // 6) Sorting
-    if (filters.sortBy === "price") {
-      filtered.sort((a: any, b: any) => {
-        const aMin = getPriceRange(a.product).min;
-        const bMin = getPriceRange(b.product).min;
-        return (filters.sortOrder === "asc" ? 1 : -1) * (aMin - bMin);
-      });
-    } else {
-      // default: createdAt
-      filtered.sort((a: any, b: any) => {
-        const aDate = new Date(a.product.createdAt ?? a.createdAt ?? 0).getTime();
-        const bDate = new Date(b.product.createdAt ?? b.createdAt ?? 0).getTime();
-        return (filters.sortOrder === "asc" ? 1 : -1) * (aDate - bDate);
-      });
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
     }
 
-    // 7) Pagination
-    const page = filters.page && filters.page > 0 ? filters.page : 1;
-    const limit = filters.limit && filters.limit > 0 ? filters.limit : 24;
-    const start = (page - 1) * limit;
-    const paginated = filtered.slice(start, start + limit);
+    async getKidsPageFeaturedProducts() {
+        const data = await db.query.kidsFreshCollectionSection.findMany({
+            where: eq(kidsFreshCollectionSection.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
 
-    return paginated;
-  }
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
 
-async trackProductClick(productId: string, brandId: string, userId?: string) {
-    return db
-        .insert(productEvents)
-        .values({
-            productId,
-            brandId,
-            userId: userId ?? null,
-            event: "click",
-            createdAt: new Date(),
-        })
-        .returning()
-        .then((res) => res[0]);
-}
-async trackAddToCart(productId: string, brandId: string, userId?: string) {
-    return db
-        .insert(productEvents)
-        .values({
-            productId,
-            brandId,
-            userId: userId ?? null,
-            event: "add_to_cart",
-            createdAt: new Date(),
-        })
-        .returning()
-        .then((res) => res[0]);
-}
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
 
-async trackPurchase(productId: string, brandId: string, userId?: string) {
-    return db
-        .insert(productEvents)
-        .values({
-            productId,
-            brandId,
-            userId: userId ?? null,
-            event: "purchase",
-            createdAt: new Date(),
-        })
-        .returning()
-        .then((res) => res[0]);
-}
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
 
-// ✅ Get clicks per brand
-// async getBrandClicks() {
-//   return db
-//     .select({
-//       brandId: productEvents.brandId,
-//       clicks: count(productEvents.id).as("clicks"),
-//     })
-//     .from(productEvents)
-//     .where(eq(productEvents.event, "click"))
-//     .groupBy(productEvents.brandId);
-// }
+        return enhancedData;
+    }
+
+    async getHomePageFeaturedProducts() {
+        const data = await db.query.homeNewArrivals.findMany({
+            where: eq(homeNewArrivals.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getHomeHeroProducts() {
+        const data = await db.query.homeProductSection.findMany({
+            where: eq(homeProductSection.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getHomeLoveTheseProducts() {
+        const data = await db.query.homeProductLoveTheseSection.findMany({
+            where: eq(homeProductLoveTheseSection.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getHomePageProducts() {
+        const data = await db.query.homeProductPageList.findMany({
+            where: eq(homeProductPageList.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getHomeYouMayAlsoLikeProducts() {
+        const data = await db.query.homeProductMayAlsoLikeThese.findMany({
+            where: eq(homeProductMayAlsoLikeThese.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getHomeAndLivingTopPicks() {
+        const data = await db.query.homeandlivingTopPicks.findMany({
+            where: eq(homeandlivingTopPicks.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getHomeAndLivingNewArrivals() {
+        const data = await db.query.homeandlivingNewArrival.findMany({
+            where: eq(homeandlivingNewArrival.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getBeautyNewArrivals() {
+        const data = await db.query.beautyNewArrivals.findMany({
+            where: eq(beautyNewArrivals.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    async getBeautyTopPicks() {
+        const data = await db.query.beautyTopPicks.findMany({
+            where: eq(beautyTopPicks.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media.forEach((media) => mediaIds.add(media.id));
+            product.variants.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate)
+                mediaIds.add(product.sustainabilityCertificate);
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item) => [item.id, item])
+        );
+
+        const enhancedData = data.map(({ product, ...rest }) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: product.media.map((media) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: product.variants.map((variant) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: product.specifications.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })),
+            },
+        }));
+
+        return enhancedData;
+    }
+
+    // async getNewEventPage() {
+    //   const data = await db.query.newProductEventPage.findMany({
+    //     where: eq(newProductEventPage.isDeleted, false),
+    //     with: {
+    //       product: {
+    //         with: {
+    //           brand: true,
+    //           variants: true,
+    //           returnExchangePolicy: true,
+    //           specifications: true
+    //         }
+    //       }
+    //     },
+    //   });
+
+    //   const mediaIds = new Set<string>();
+    //   for (const { product } of data) {
+    //     product.media.forEach((media) => mediaIds.add(media.id));
+    //     product.variants.forEach((variant) => {
+    //       if (variant.image) mediaIds.add(variant.image);
+    //     });
+    //     if (product.sustainabilityCertificate)
+    //       mediaIds.add(product.sustainabilityCertificate);
+    //   }
+
+    //   const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+    //   const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+
+    //   const enhancedData = data.map(({ product, ...rest }) => ({
+    //     ...rest,
+    //     product: {
+    //       ...product,
+    //       media: product.media.map((media) => ({
+    //         ...media,
+    //         mediaItem: mediaMap.get(media.id),
+    //         url: mediaMap.get(media.id)?.url ?? null,
+    //       })),
+    //       sustainabilityCertificate: product.sustainabilityCertificate
+    //         ? mediaMap.get(product.sustainabilityCertificate)
+    //         : null,
+    //       variants: product.variants.map((variant) => ({
+    //         ...variant,
+    //         mediaItem: variant.image ? mediaMap.get(variant.image) : null,
+    //         url: variant.image ? mediaMap.get(variant.image)?.url ?? null : null,
+    //       })),
+    //       returnable: product.returnExchangePolicy?.returnable ?? false,
+    //       returnDescription: product.returnExchangePolicy?.returnDescription ?? null,
+    //       exchangeable: product.returnExchangePolicy?.exchangeable ?? false,
+    //       exchangeDescription: product.returnExchangePolicy?.exchangeDescription ?? null,
+    //       specifications: product.specifications.map((spec) => ({
+    //         key: spec.key,
+    //         value: spec.value,
+    //       })),
+    //     },
+    //   }));
+
+    //   return enhancedData;
+    // }
+
+    //  async getProductClicks() {
+    //   return db
+    //     .select({
+    //       productId: productEvents.productId,
+    //       clicks: count(productEvents.id).as("clicks"),
+    //     })
+    //     .from(productEvents)
+    //     .where(eq(productEvents.event, "click"))
+    //     .groupBy(productEvents.productId)
+    //     .orderBy(desc(count(productEvents.id)));
+    // }
+
+    // @/lib/db/queries.ts (or the file you keep productQueries in)
+
+    async getNewEventPage(filters: EventFilters = {}) {
+        const data = await db.query.newProductEventPage.findMany({
+            where: eq(newProductEventPage.isDeleted, false),
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        // 2) Collect media IDs
+        const mediaIds = new Set<string>();
+        for (const { product } of data) {
+            product.media?.forEach((m) => mediaIds.add(m.id));
+            product.variants?.forEach((variant: any) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+            if (product.sustainabilityCertificate) {
+                mediaIds.add(product.sustainabilityCertificate);
+            }
+        }
+
+        // 3) Resolve media from cache
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item: any) => [item.id, item])
+        );
+
+        // 4) Enhance products with media + policies
+        const enhancedData = data.map(({ product, ...rest }: any) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: (product.media || []).map((media: any) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                sustainabilityCertificate: product.sustainabilityCertificate
+                    ? mediaMap.get(product.sustainabilityCertificate)
+                    : null,
+                variants: (product.variants || []).map((variant: any) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: (product.specifications || []).map(
+                    (spec: any) => ({
+                        key: spec.key,
+                        value: spec.value,
+                    })
+                ),
+            },
+        }));
+
+        // helper: compute min/max price for a product
+        const getPriceRange = (product: any) => {
+            const prices = (product.variants || [])
+                .map((v: any) =>
+                    Number(v.price ?? v.sellingPrice ?? v.mrp ?? 0)
+                )
+                .filter((p: number) => !isNaN(p) && p > 0);
+            if (!prices.length) return { min: 0, max: 0 };
+            return { min: Math.min(...prices), max: Math.max(...prices) };
+        };
+
+        // 5) Apply in-memory filters
+        const filtered = enhancedData.filter((row) => {
+            const product = row.product;
+
+            // search
+            if (filters.search) {
+                const q = filters.search.toLowerCase();
+                const hay = [
+                    product.name,
+                    product.description,
+                    product.shortDescription,
+                ]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+
+            // brand
+            if (filters.brandIds?.length) {
+                if (!filters.brandIds.includes(product.brandId)) return false;
+            }
+
+            // category / subcategory / product type
+            if (filters.categoryId && product.categoryId !== filters.categoryId)
+                return false;
+            if (
+                filters.subCategoryId &&
+                product.subCategoryId !== filters.subCategoryId
+            )
+                return false;
+            if (
+                filters.productTypeId &&
+                product.productTypeId !== filters.productTypeId
+            )
+                return false;
+
+            // colors
+            if (filters.colors?.length) {
+                const hasColor =
+                    (product.variants || []).some((v: any) =>
+                        v.color
+                            ? filters.colors!.includes(String(v.color))
+                            : false
+                    ) ||
+                    (product.media || []).some((m: any) =>
+                        m.color
+                            ? filters.colors!.includes(String(m.color))
+                            : false
+                    );
+                if (!hasColor) return false;
+            }
+
+            // price range
+            if (
+                filters.minPrice !== undefined ||
+                filters.maxPrice !== undefined
+            ) {
+                const pr = getPriceRange(product);
+                if (
+                    filters.minPrice !== undefined &&
+                    pr.max < (filters.minPrice ?? 0)
+                ) {
+                    return false;
+                }
+                if (
+                    filters.maxPrice !== undefined &&
+                    pr.min > (filters.maxPrice ?? Number.MAX_SAFE_INTEGER)
+                ) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        // 6) Sorting
+        if (filters.sortBy === "price") {
+            filtered.sort((a: any, b: any) => {
+                const aMin = getPriceRange(a.product).min;
+                const bMin = getPriceRange(b.product).min;
+                return (filters.sortOrder === "asc" ? 1 : -1) * (aMin - bMin);
+            });
+        } else {
+            // default: createdAt
+            filtered.sort((a: any, b: any) => {
+                const aDate = new Date(
+                    a.product.createdAt ?? a.createdAt ?? 0
+                ).getTime();
+                const bDate = new Date(
+                    b.product.createdAt ?? b.createdAt ?? 0
+                ).getTime();
+                return (filters.sortOrder === "asc" ? 1 : -1) * (aDate - bDate);
+            });
+        }
+
+        // 7) Pagination
+        const page = filters.page && filters.page > 0 ? filters.page : 1;
+        const limit = filters.limit && filters.limit > 0 ? filters.limit : 24;
+        const start = (page - 1) * limit;
+        const paginated = filtered.slice(start, start + limit);
+
+        return paginated;
+    }
+
+    async trackProductClick(
+        productId: string,
+        brandId: string,
+        userId?: string
+    ) {
+        return db
+            .insert(productEvents)
+            .values({
+                productId,
+                brandId,
+                userId: userId ?? null,
+                event: "click",
+                createdAt: new Date(),
+            })
+            .returning()
+            .then((res) => res[0]);
+    }
+    async trackAddToCart(productId: string, brandId: string, userId?: string) {
+        return db
+            .insert(productEvents)
+            .values({
+                productId,
+                brandId,
+                userId: userId ?? null,
+                event: "add_to_cart",
+                createdAt: new Date(),
+            })
+            .returning()
+            .then((res) => res[0]);
+    }
+
+    async trackPurchase(productId: string, brandId: string, userId?: string) {
+        return db
+            .insert(productEvents)
+            .values({
+                productId,
+                brandId,
+                userId: userId ?? null,
+                event: "purchase",
+                createdAt: new Date(),
+            })
+            .returning()
+            .then((res) => res[0]);
+    }
+
+    // ✅ Get clicks per brand
+    // async getBrandClicks() {
+    //   return db
+    //     .select({
+    //       brandId: productEvents.brandId,
+    //       clicks: count(productEvents.id).as("clicks"),
+    //     })
+    //     .from(productEvents)
+    //     .where(eq(productEvents.event, "click"))
+    //     .groupBy(productEvents.brandId);
+    // }
 
     async updateProductValue(id: string, values: UpdateProductValue) {
         const data = await db
@@ -3481,188 +3887,210 @@ async trackPurchase(productId: string, brandId: string, userId?: string) {
         return data;
     }
 
-async getOverviewMetrics(dateRange: string = "30d") {
-  const startDate = this.getStartDate(dateRange);
-  const [totalRevenue, totalSales, totalCustomers, conversionData] = await Promise.all([
-    // Total Revenue (convert from paise to rupees)
-    db
-      .select({ total: sum(orders.totalAmount) })
-      .from(orders)
-      .where(gte(orders.createdAt, startDate))
-      .then((res) => Number(res[0]?.total || 0) / 100),
+    async getOverviewMetrics(dateRange: string = "30d") {
+        const startDate = this.getStartDate(dateRange);
+        const [totalRevenue, totalSales, totalCustomers, conversionData] =
+            await Promise.all([
+                // Total Revenue (convert from paise to rupees)
+                db
+                    .select({ total: sum(orders.totalAmount) })
+                    .from(orders)
+                    .where(gte(orders.createdAt, startDate))
+                    .then((res) => Number(res[0]?.total || 0) / 100),
 
-    // Total Sales (product sales value, convert from paise to rupees)
-    db
-      .select({ total: sum(orders.totalAmount) })
-      .from(orders)
-      .where(gte(orders.createdAt, startDate))
-      .then((res) => Number(res[0]?.total || 0) / 100),
+                // Total Sales (product sales value, convert from paise to rupees)
+                db
+                    .select({ total: sum(orders.totalAmount) })
+                    .from(orders)
+                    .where(gte(orders.createdAt, startDate))
+                    .then((res) => Number(res[0]?.total || 0) / 100),
 
-    // Total Customers
-    db
-      .select({ count: count() })
-      .from(orders)
-      .where(gte(orders.createdAt, startDate))
-      .then((res) => res[0]?.count || 0),
+                // Total Customers
+                db
+                    .select({ count: count() })
+                    .from(orders)
+                    .where(gte(orders.createdAt, startDate))
+                    .then((res) => res[0]?.count || 0),
 
-    // Conversion Data (clicks/views and purchases)
-    Promise.all([
-      // Total clicks/views
-      db
-        .select({ count: count() })
-        .from(productEvents)
-        .where(and(
-          inArray(productEvents.event, ["click", "view"]),
-          gte(productEvents.createdAt, startDate)
-        ))
-        .then((res) => res[0]?.count || 0),
-      // Total purchases (from product_events table)
-      db
-        .select({ count: count() })
-        .from(productEvents)
-        .where(and(
-          eq(productEvents.event, "purchase"),
-          gte(productEvents.createdAt, startDate)
-        ))
-        .then((res) => res[0]?.count || 0)
-    ])
-  ]);
+                // Conversion Data (clicks/views and purchases)
+                Promise.all([
+                    // Total clicks/views
+                    db
+                        .select({ count: count() })
+                        .from(productEvents)
+                        .where(
+                            and(
+                                inArray(productEvents.event, ["click", "view"]),
+                                gte(productEvents.createdAt, startDate)
+                            )
+                        )
+                        .then((res) => res[0]?.count || 0),
+                    // Total purchases (from product_events table)
+                    db
+                        .select({ count: count() })
+                        .from(productEvents)
+                        .where(
+                            and(
+                                eq(productEvents.event, "purchase"),
+                                gte(productEvents.createdAt, startDate)
+                            )
+                        )
+                        .then((res) => res[0]?.count || 0),
+                ]),
+            ]);
 
-  const [totalClicks, totalPurchases] = conversionData;
-  const conversionRate = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
-  console.log("Conversion Metrics:", {
-    totalClicks,
-    totalPurchases,
-    conversionRate
-  });
+        const [totalClicks, totalPurchases] = conversionData;
+        const conversionRate =
+            totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
+        console.log("Conversion Metrics:", {
+            totalClicks,
+            totalPurchases,
+            conversionRate,
+        });
 
-  return {
-    totalRevenue,
-    totalSales,
-    totalCustomers,
-    conversionRate: Number(conversionRate.toFixed(2)),
-    // trends: {
-    //     revenue: this.calculateGrowth(totalRevenue, previousData.revenue),
-    //     sales: this.calculateGrowth(totalSales, previousData.sales),
-    //     customers: this.calculateGrowth(totalCustomers, previousData.customers),
-    //     conversion: this.calculateGrowth(conversionRate, previousData.conversion)
-    // }
-  };
-}
+        return {
+            totalRevenue,
+            totalSales,
+            totalCustomers,
+            conversionRate: Number(conversionRate.toFixed(2)),
+            // trends: {
+            //     revenue: this.calculateGrowth(totalRevenue, previousData.revenue),
+            //     sales: this.calculateGrowth(totalSales, previousData.sales),
+            //     customers: this.calculateGrowth(totalCustomers, previousData.customers),
+            //     conversion: this.calculateGrowth(conversionRate, previousData.conversion)
+            // }
+        };
+    }
 
     // ✅ Get Revenue Trend Data
-async getRevenueTrend(dateRange: string = "7d") {
-    const startDate = this.getStartDate(dateRange);
+    async getRevenueTrend(dateRange: string = "7d") {
+        const startDate = this.getStartDate(dateRange);
 
-    const revenueData = await db
-        .select({
-            date: sql<string>`DATE(${orders.createdAt})`,
-            brand: brands.name,
-            revenue: sum(sql`${orders.totalAmount} / 100`)
-        })
-        .from(orders)
-        .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
-        .leftJoin(products, eq(orderItems.productId, products.id))
-        .leftJoin(brands, eq(products.brandId, brands.id))
-        .where(gte(orders.createdAt, startDate))
-        .groupBy(sql`DATE(${orders.createdAt})`, brands.name)
-        .orderBy(sql`DATE(${orders.createdAt})`);
+        const revenueData = await db
+            .select({
+                date: sql<string>`DATE(${orders.createdAt})`,
+                brand: brands.name,
+                revenue: sum(sql`${orders.totalAmount} / 100`),
+            })
+            .from(orders)
+            .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+            .leftJoin(products, eq(orderItems.productId, products.id))
+            .leftJoin(brands, eq(products.brandId, brands.id))
+            .where(gte(orders.createdAt, startDate))
+            .groupBy(sql`DATE(${orders.createdAt})`, brands.name)
+            .orderBy(sql`DATE(${orders.createdAt})`);
 
-    console.log("Raw SQL data:", revenueData);
-    const formattedData = this.formatRevenueData(revenueData, dateRange);
-    console.log("Formatted data:", formattedData);
-    return formattedData;
-}
+        console.log("Raw SQL data:", revenueData);
+        const formattedData = this.formatRevenueData(revenueData, dateRange);
+        console.log("Formatted data:", formattedData);
+        return formattedData;
+    }
 
     // ✅ Get Brand Performance
-async getBrandPerformance(dateRange: string = "30d") {
-    const startDate = this.getStartDate(dateRange);
+    async getBrandPerformance(dateRange: string = "30d") {
+        const startDate = this.getStartDate(dateRange);
 
-    return db
-        .select({
-            brand: brands.name,
-            clicks: count(productEvents.id),
-            sales: sum(sql`${orders.totalAmount} / 100`),
-            products: count(products.id),
-            totalOrders: count(orders.id) // Added total orders count
-        })
-        .from(brands)
-        .leftJoin(products, eq(products.brandId, brands.id))
-        .leftJoin(orderItems, eq(orderItems.productId, products.id)) // Join through order_items
-        .leftJoin(orders, eq(orders.id, orderItems.orderId)) // Join orders via order_items
-        .leftJoin(productEvents, and(
-            eq(productEvents.productId, products.id),
-            eq(productEvents.event, "click"),
-            gte(productEvents.createdAt, startDate)
-        ))
-        .where(gte(orders.createdAt, startDate))
-        .groupBy(brands.id, brands.name)
-        .orderBy(desc(sum(orders.totalAmount)));
-}
+        return db
+            .select({
+                brand: brands.name,
+                clicks: count(productEvents.id),
+                sales: sum(sql`${orders.totalAmount} / 100`),
+                products: count(products.id),
+                totalOrders: count(orders.id), // Added total orders count
+            })
+            .from(brands)
+            .leftJoin(products, eq(products.brandId, brands.id))
+            .leftJoin(orderItems, eq(orderItems.productId, products.id)) // Join through order_items
+            .leftJoin(orders, eq(orders.id, orderItems.orderId)) // Join orders via order_items
+            .leftJoin(
+                productEvents,
+                and(
+                    eq(productEvents.productId, products.id),
+                    eq(productEvents.event, "click"),
+                    gte(productEvents.createdAt, startDate)
+                )
+            )
+            .where(gte(orders.createdAt, startDate))
+            .groupBy(brands.id, brands.name)
+            .orderBy(desc(sum(orders.totalAmount)));
+    }
 
     // ✅ Get Top Products
-async getTopProducts(limit: number = 5, dateRange: string = "30d") {
-    const startDate = this.getStartDate(dateRange);
+    async getTopProducts(limit: number = 5, dateRange: string = "30d") {
+        const startDate = this.getStartDate(dateRange);
 
-    return db
-        .select({
-            id: products.id,
-            name: products.title,
-            brand: brands.name,
-            sales: sum(sql`${orders.totalAmount} / 100`), // Use the order total amount
-            inventory: products.quantity,
-            price: products.price
-        })
-        .from(products)
-        .innerJoin(brands, eq(products.brandId, brands.id))
-        .innerJoin(orderItems, eq(orderItems.productId, products.id))
-        .innerJoin(orders, eq(orders.id, orderItems.orderId))
-        .where(gte(orders.createdAt, startDate))
-        .groupBy(products.id, products.title, brands.name, products.quantity, products.price)
-        .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
-        .limit(limit);
-}
+        return db
+            .select({
+                id: products.id,
+                name: products.title,
+                brand: brands.name,
+                sales: sum(sql`${orders.totalAmount} / 100`), // Use the order total amount
+                inventory: products.quantity,
+                price: products.price,
+            })
+            .from(products)
+            .innerJoin(brands, eq(products.brandId, brands.id))
+            .innerJoin(orderItems, eq(orderItems.productId, products.id))
+            .innerJoin(orders, eq(orders.id, orderItems.orderId))
+            .where(gte(orders.createdAt, startDate))
+            .groupBy(
+                products.id,
+                products.title,
+                brands.name,
+                products.quantity,
+                products.price
+            )
+            .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+            .limit(limit);
+    }
 
-async getTopProductsbySales(limit: number = 10, dateRange: string = "30d") {
-  const startDate = this.getStartDate(dateRange);
+    async getTopProductsbySales(limit: number = 10, dateRange: string = "30d") {
+        const startDate = this.getStartDate(dateRange);
 
-  return db
-    .select({
-      id: products.id,
-      name: products.title,
-      brand: brands.name,
-      sales: sum(sql`${orders.totalAmount} / 100`),
-      inventory: products.quantity,
-      price: products.price
-    })
-    .from(products)
-    .innerJoin(brands, eq(products.brandId, brands.id))
-    .innerJoin(orderItems, eq(orderItems.productId, products.id))
-    .innerJoin(orders, eq(orders.id, orderItems.orderId))
-    .where(gte(orders.createdAt, startDate))
-    .groupBy(products.id, products.title, brands.name, products.quantity, products.price)
-    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
-    .limit(limit);
-}
+        return db
+            .select({
+                id: products.id,
+                name: products.title,
+                brand: brands.name,
+                sales: sum(sql`${orders.totalAmount} / 100`),
+                inventory: products.quantity,
+                price: products.price,
+            })
+            .from(products)
+            .innerJoin(brands, eq(products.brandId, brands.id))
+            .innerJoin(orderItems, eq(orderItems.productId, products.id))
+            .innerJoin(orders, eq(orders.id, orderItems.orderId))
+            .where(gte(orders.createdAt, startDate))
+            .groupBy(
+                products.id,
+                products.title,
+                brands.name,
+                products.quantity,
+                products.price
+            )
+            .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+            .limit(limit);
+    }
 
+    async getProductsByCategory(dateRange: string = "30d") {
+        const startDate = this.getStartDate(dateRange);
 
-async getProductsByCategory(dateRange: string = "30d") {
-  const startDate = this.getStartDate(dateRange);
-
-  return db
-    .select({
-      category: categories.name, // Get category name instead of ID
-      sales: sum(sql`${orders.totalAmount} / 100`),
-      productsCount: sql`COUNT(DISTINCT ${products.id})`.as("products_count")
-    })
-    .from(products)
-    .innerJoin(categories, eq(products.categoryId, categories.id)) // Join with categories table
-    .innerJoin(orderItems, eq(orderItems.productId, products.id))
-    .innerJoin(orders, eq(orders.id, orderItems.orderId))
-    .where(gte(orders.createdAt, startDate))
-    .groupBy(categories.name) // Group by category name instead of ID
-    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)));
-}
+        return db
+            .select({
+                category: categories.name, // Get category name instead of ID
+                sales: sum(sql`${orders.totalAmount} / 100`),
+                productsCount: sql`COUNT(DISTINCT ${products.id})`.as(
+                    "products_count"
+                ),
+            })
+            .from(products)
+            .innerJoin(categories, eq(products.categoryId, categories.id)) // Join with categories table
+            .innerJoin(orderItems, eq(orderItems.productId, products.id))
+            .innerJoin(orders, eq(orders.id, orderItems.orderId))
+            .where(gte(orders.createdAt, startDate))
+            .groupBy(categories.name) // Group by category name instead of ID
+            .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)));
+    }
 
     // ✅ Get Total Clicks (your existing method)
     async getProductClicks() {
@@ -3689,308 +4117,435 @@ async getProductsByCategory(dateRange: string = "30d") {
             .groupBy(productEvents.brandId);
     }
 
-async getProductsForConversion(limit: number = 10, dateRange: string = "30d") {
-  const startDate = this.getStartDate(dateRange);
+    async getProductsForConversion(
+        limit: number = 10,
+        dateRange: string = "30d"
+    ) {
+        const startDate = this.getStartDate(dateRange);
 
-  const conversionData = await db
-    .select({
-      id: products.id,
-      name: products.title,
-      brand: brands.name,
-      sales: sum(sql`${orders.totalAmount} / 100`),
-      price: products.price,
-      // Count of purchase events
-      purchases: sql`
+        const conversionData = await db
+            .select({
+                id: products.id,
+                name: products.title,
+                brand: brands.name,
+                sales: sum(sql`${orders.totalAmount} / 100`),
+                price: products.price,
+                // Count of purchase events
+                purchases: sql`
         COUNT(DISTINCT CASE 
           WHEN ${productEvents.event} = 'purchase' 
           THEN ${productEvents.id} 
         END)
       `.as("purchases"),
-      // Count of click/view events
-      clicks: sql`
-        COUNT(DISTINCT CASE 
-          WHEN ${productEvents.event} IN ('click', 'view') 
-          THEN ${productEvents.id} 
-        END)
-      `.as("clicks")
-    })
-    .from(products)
-    .innerJoin(brands, eq(products.brandId, brands.id))
-    .innerJoin(productEvents, eq(productEvents.productId, products.id))
-    .leftJoin(orderItems, eq(orderItems.productId, products.id))
-    .leftJoin(orders, eq(orders.id, orderItems.orderId))
-    .where(gte(productEvents.createdAt, startDate))
-    .groupBy(products.id, products.title, brands.name, products.price)
-    .having(sql`COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END) > 0`)
-    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
-    .limit(limit);
-
-  return conversionData.map((product) => ({
-    ...product,
-    sales: Number(product.sales),
-    price: Number(product.price),
-    purchases: Number(product.purchases),
-    clicks: Number(product.clicks),
-    conversionRate: product.clicks > 0 ? (product.purchases / product.clicks) * 100 : 0
-  }));
-}
-
-
-async getTopProductsByClicks(limit: number = 10, dateRange: string = "30d") {
-  const startDate = this.getStartDate(dateRange);
-
-  const clickData = await db
-    .select({
-      id: products.id,
-      name: products.title,
-      brand: brands.name,
-      sales: sum(sql`${orders.totalAmount} / 100`),
-      price: products.price,
-      purchases: sql`
-        COUNT(DISTINCT CASE 
-          WHEN ${productEvents.event} = 'purchase' 
-          THEN ${productEvents.id} 
-        END)
-      `.as("purchases"),
-      clicks: sql`
-        COUNT(DISTINCT CASE 
-          WHEN ${productEvents.event} IN ('click', 'view') 
-          THEN ${productEvents.id} 
-        END)
-      `.as("clicks")
-    })
-    .from(products)
-    .innerJoin(brands, eq(products.brandId, brands.id))
-    .innerJoin(productEvents, eq(productEvents.productId, products.id))
-    .leftJoin(orderItems, eq(orderItems.productId, products.id))
-    .leftJoin(orders, eq(orders.id, orderItems.orderId))
-    .where(gte(productEvents.createdAt, startDate))
-    .groupBy(products.id, products.title, brands.name, products.price)
-    .having(sql`
-      COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END) > 0
-    `)
-    .orderBy(desc(sql`
-      COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END)
-    `)) // ✅ Order by clicks instead of sales
-    .limit(limit);
-
-  return clickData.map((product) => ({
-    ...product,
-    sales: Number(product.sales),
-    price: Number(product.price),
-    purchases: Number(product.purchases),
-    clicks: Number(product.clicks),
-    conversionRate: product.clicks > 0 ? (product.purchases / product.clicks) * 100 : 0
-  }));
-}
-
-async getProductsForFunnel(limit: number = 15, dateRange: string = "30d") {
-  const startDate = this.getStartDate(dateRange);
-
-  const funnelData = await db
-    .select({
-      id: products.id,
-      name: products.title,
-      brand: brands.name,
-      sales: sum(sql`${orders.totalAmount} / 100`),
-      price: products.price,
-      // Count of each event type
-      clicks: sql`
+                // Count of click/view events
+                clicks: sql`
         COUNT(DISTINCT CASE 
           WHEN ${productEvents.event} IN ('click', 'view') 
           THEN ${productEvents.id} 
         END)
       `.as("clicks"),
-      addToCart: sql`
+            })
+            .from(products)
+            .innerJoin(brands, eq(products.brandId, brands.id))
+            .innerJoin(productEvents, eq(productEvents.productId, products.id))
+            .leftJoin(orderItems, eq(orderItems.productId, products.id))
+            .leftJoin(orders, eq(orders.id, orderItems.orderId))
+            .where(gte(productEvents.createdAt, startDate))
+            .groupBy(products.id, products.title, brands.name, products.price)
+            .having(
+                sql`COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END) > 0`
+            )
+            .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+            .limit(limit);
+
+        return conversionData.map((product) => ({
+            ...product,
+            sales: Number(product.sales),
+            price: Number(product.price),
+            purchases: Number(product.purchases),
+            clicks: Number(product.clicks),
+            conversionRate:
+                product.clicks > 0
+                    ? (product.purchases / product.clicks) * 100
+                    : 0,
+        }));
+    }
+
+    async getTopProductsByClicks(
+        limit: number = 10,
+        dateRange: string = "30d"
+    ) {
+        const startDate = this.getStartDate(dateRange);
+
+        const clickData = await db
+            .select({
+                id: products.id,
+                name: products.title,
+                brand: brands.name,
+                sales: sum(sql`${orders.totalAmount} / 100`),
+                price: products.price,
+                purchases: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} = 'purchase' 
+          THEN ${productEvents.id} 
+        END)
+      `.as("purchases"),
+                clicks: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} IN ('click', 'view') 
+          THEN ${productEvents.id} 
+        END)
+      `.as("clicks"),
+            })
+            .from(products)
+            .innerJoin(brands, eq(products.brandId, brands.id))
+            .innerJoin(productEvents, eq(productEvents.productId, products.id))
+            .leftJoin(orderItems, eq(orderItems.productId, products.id))
+            .leftJoin(orders, eq(orders.id, orderItems.orderId))
+            .where(gte(productEvents.createdAt, startDate))
+            .groupBy(products.id, products.title, brands.name, products.price)
+            .having(
+                sql`
+      COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END) > 0
+    `
+            )
+            .orderBy(
+                desc(sql`
+      COUNT(DISTINCT CASE WHEN ${productEvents.event} IN ('click', 'view') THEN ${productEvents.id} END)
+    `)
+            ) // ✅ Order by clicks instead of sales
+            .limit(limit);
+
+        return clickData.map((product) => ({
+            ...product,
+            sales: Number(product.sales),
+            price: Number(product.price),
+            purchases: Number(product.purchases),
+            clicks: Number(product.clicks),
+            conversionRate:
+                product.clicks > 0
+                    ? (product.purchases / product.clicks) * 100
+                    : 0,
+        }));
+    }
+
+    async getProductsForFunnel(limit: number = 15, dateRange: string = "30d") {
+        const startDate = this.getStartDate(dateRange);
+
+        const funnelData = await db
+            .select({
+                id: products.id,
+                name: products.title,
+                brand: brands.name,
+                sales: sum(sql`${orders.totalAmount} / 100`),
+                price: products.price,
+                // Count of each event type
+                clicks: sql`
+        COUNT(DISTINCT CASE 
+          WHEN ${productEvents.event} IN ('click', 'view') 
+          THEN ${productEvents.id} 
+        END)
+      `.as("clicks"),
+                addToCart: sql`
         COUNT(DISTINCT CASE 
           WHEN ${productEvents.event} = 'add_to_cart' 
           THEN ${productEvents.id} 
         END)
       `.as("add_to_cart"),
-      purchases: sql`
+                purchases: sql`
         COUNT(DISTINCT CASE 
           WHEN ${productEvents.event} = 'purchase' 
           THEN ${productEvents.id} 
         END)
-      `.as("purchases")
-    })
-    .from(products)
-    .innerJoin(brands, eq(products.brandId, brands.id))
-    .innerJoin(productEvents, eq(productEvents.productId, products.id))
-    .leftJoin(orderItems, eq(orderItems.productId, products.id))
-    .leftJoin(orders, eq(orders.id, orderItems.orderId))
-    .where(gte(productEvents.createdAt, startDate))
-    .groupBy(products.id, products.title, brands.name, products.price)
-    .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
-    .limit(limit);
+      `.as("purchases"),
+            })
+            .from(products)
+            .innerJoin(brands, eq(products.brandId, brands.id))
+            .innerJoin(productEvents, eq(productEvents.productId, products.id))
+            .leftJoin(orderItems, eq(orderItems.productId, products.id))
+            .leftJoin(orders, eq(orders.id, orderItems.orderId))
+            .where(gte(productEvents.createdAt, startDate))
+            .groupBy(products.id, products.title, brands.name, products.price)
+            .orderBy(desc(sum(sql`${orders.totalAmount} / 100`)))
+            .limit(limit);
 
-  return funnelData.map((product) => ({
-    ...product,
-    sales: Number(product.sales),
-    price: Number(product.price),
-    clicks: Number(product.clicks),
-    addToCart: Number(product.addToCart),
-    purchases: Number(product.purchases),
-    ctcRate: product.clicks > 0 ? (product.addToCart / product.clicks) * 100 : 0,
-    ctpRate: product.addToCart > 0 ? (product.purchases / product.addToCart) * 100 : 0
-  }));
-}
+        return funnelData.map((product) => ({
+            ...product,
+            sales: Number(product.sales),
+            price: Number(product.price),
+            clicks: Number(product.clicks),
+            addToCart: Number(product.addToCart),
+            purchases: Number(product.purchases),
+            ctcRate:
+                product.clicks > 0
+                    ? (product.addToCart / product.clicks) * 100
+                    : 0,
+            ctpRate:
+                product.addToCart > 0
+                    ? (product.purchases / product.addToCart) * 100
+                    : 0,
+        }));
+    }
 
+    async getUniqueColors(filters?: {
+        categoryId?: string;
+        subcategoryId?: string;
+        productTypeId?: string;
+    }) {
+        try {
+            const whereConditions = [
+                or(
+                    ilike(productOptions.name, "%color%"),
+                    ilike(productOptions.name, "%colour%"),
+                    sql`LOWER(${productOptions.name}) = 'color'`,
+                    sql`LOWER(${productOptions.name}) = 'colour'`
+                ),
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+            ];
 
-async getUniqueColors() {
-  try {
-    const colorOptions = await db
-      .select({
-        values: productOptions.values,
-      })
-      .from(productOptions)
-      .where(
-        or(
-          ilike(productOptions.name, "%color%"),
-          ilike(productOptions.name, "%colour%"),
-          sql`LOWER(${productOptions.name}) = 'color'`,
-          sql`LOWER(${productOptions.name}) = 'colour'`
-        )
-      );
-
-    const uniqueColorsMap = new Map<string, string>();
-
-    colorOptions.forEach((option) => {
-      if (option.values && Array.isArray(option.values)) {
-        (option.values as any[]).forEach((colorObj: any) => {
-          if (colorObj?.name && typeof colorObj.name === "string") {
-            const normalized = colorObj.name.trim().toLowerCase(); // ✅ normalize
-            if (!uniqueColorsMap.has(normalized)) {
-              // ✅ store original casing for display
-              uniqueColorsMap.set(normalized, colorObj.name.trim());
+            if (filters?.categoryId) {
+                whereConditions.push(
+                    eq(products.categoryId, filters.categoryId)
+                );
             }
-          }
-        });
-      }
-    });
-
-    return Array.from(uniqueColorsMap.values()).sort((a, b) =>
-      a.localeCompare(b)
-    );
-  } catch (error) {
-    console.error("Error fetching unique colors:", error);
-    return [];
-  }
-}
-
-private normalizeSizeName(val: string): string {
-  let str = val.trim().toLowerCase();
-
-  // Replace underscores with space
-  str = str.replace(/_/g, " ");
-
-  // Normalize months
-  str = str.replace(/\b(m|months?)\b/gi, "Months");
-
-  // Normalize years
-  str = str.replace(/\b(y|years?)\b/gi, "Years");
-
-  // Remove hyphen before "Years" or "Months" if exists
-  str = str.replace(/-(Years|Months)/gi, " $1");
-
-  // Collapse multiple spaces
-  str = str.replace(/\s+/g, " ").trim();
-
-  // Capitalize first letters
-  str = str.replace(/\b\w/g, (c) => c.toUpperCase());
-
-  return str;
-}
-
-
-async getNumericSizes() {
-  try {
-    const sizeOptions = await db
-      .select({ values: productOptions.values })
-      .from(productOptions)
-      .where(
-        or(
-          ilike(productOptions.name, "%size%"),
-          sql`LOWER(${productOptions.name}) = 'size'`,
-          sql`LOWER(${productOptions.name}) = 'sizes'`
-        )
-      );
-
-    const uniqueSizesMap = new Map<string, string>();
-
-    sizeOptions.forEach((option) => {
-      if (option.values && Array.isArray(option.values)) {
-        (option.values as any[]).forEach((sizeObj: any) => {
-          if (sizeObj?.name && typeof sizeObj.name === "string") {
-            const normalized = this.normalizeSizeName(sizeObj.name);
-            if (!uniqueSizesMap.has(normalized)) {
-              uniqueSizesMap.set(normalized, normalized);
+            if (filters?.subcategoryId) {
+                whereConditions.push(
+                    eq(products.subcategoryId, filters.subcategoryId)
+                );
             }
-          }
-        });
-      }
-    });
-
-    const numericSizes = Array.from(uniqueSizesMap.values()).filter((val) =>
-      /(\d|\d+-\d+|\d+\s?(Months|Years)|\d{2}[A-D])/i.test(val)
-    );
-
-    return numericSizes.sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true })
-    );
-  } catch (error) {
-    console.error("Error fetching numeric sizes:", error);
-    return [];
-  }
-}
-
-
-async getAlphaSizes() {
-  try {
-    const sizeOptions = await db
-      .select({
-        values: productOptions.values,
-      })
-      .from(productOptions)
-      .where(
-        or(
-          ilike(productOptions.name, "%size%"),
-          sql`LOWER(${productOptions.name}) = 'size'`,
-          sql`LOWER(${productOptions.name}) = 'sizes'`
-        )
-      );
-
-    const uniqueSizesMap = new Map<string, string>();
-
-    sizeOptions.forEach((option) => {
-      if (option.values && Array.isArray(option.values)) {
-        (option.values as any[]).forEach((sizeObj: any) => {
-          if (sizeObj?.name && typeof sizeObj.name === "string") {
-            const normalized = sizeObj.name.trim().toLowerCase();
-            if (!uniqueSizesMap.has(normalized)) {
-              uniqueSizesMap.set(normalized, sizeObj.name.trim());
+            if (filters?.productTypeId) {
+                whereConditions.push(
+                    eq(products.productTypeId, filters.productTypeId)
+                );
             }
-          }
-        });
-      }
-    });
 
-    // Only keep alpha sizes (XS, S, M, L, XL, XXL, Free Size)
-    const alphaSizes = Array.from(uniqueSizesMap.values()).filter((val) =>
-      /^(xxxl|xxl|xl|l|m|s|xs|free size)$/i.test(val.trim())
-    );
+            const colorOptions = await db
+                .select({
+                    values: productOptions.values,
+                })
+                .from(productOptions)
+                .innerJoin(products, eq(productOptions.productId, products.id))
+                .where(and(...whereConditions));
 
-    // Custom order for XS → S → M → L → XL → XXL → XXXL → Free Size
-    const order = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"];
-    return alphaSizes.sort(
-      (a, b) => order.indexOf(a.toUpperCase()) - order.indexOf(b.toUpperCase())
-    );
-  } catch (error) {
-    console.error("Error fetching alpha sizes:", error);
-    return [];
-  }
-}
+            const uniqueColorsMap = new Map<string, string>();
 
+            colorOptions.forEach((option) => {
+                if (option.values && Array.isArray(option.values)) {
+                    (option.values as any[]).forEach((colorObj: any) => {
+                        if (
+                            colorObj?.name &&
+                            typeof colorObj.name === "string"
+                        ) {
+                            const normalized = colorObj.name
+                                .trim()
+                                .toLowerCase(); // ✅ normalize
+                            if (!uniqueColorsMap.has(normalized)) {
+                                // ✅ store original casing for display
+                                uniqueColorsMap.set(
+                                    normalized,
+                                    colorObj.name.trim()
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+
+            return Array.from(uniqueColorsMap.values()).sort((a, b) =>
+                a.localeCompare(b)
+            );
+        } catch (error) {
+            console.error("Error fetching unique colors:", error);
+            return [];
+        }
+    }
+
+    private normalizeSizeName(val: string): string {
+        let str = val.trim().toLowerCase();
+
+        // Replace underscores with space
+        str = str.replace(/_/g, " ");
+
+        // Normalize months
+        str = str.replace(/\b(m|months?)\b/gi, "Months");
+
+        // Normalize years
+        str = str.replace(/\b(y|years?)\b/gi, "Years");
+
+        // Remove hyphen before "Years" or "Months" if exists
+        str = str.replace(/-(Years|Months)/gi, " $1");
+
+        // Collapse multiple spaces
+        str = str.replace(/\s+/g, " ").trim();
+
+        // Capitalize first letters
+        str = str.replace(/\b\w/g, (c) => c.toUpperCase());
+
+        return str;
+    }
+
+    async getNumericSizes(filters?: {
+        categoryId?: string;
+        subcategoryId?: string;
+        productTypeId?: string;
+    }) {
+        try {
+            const whereConditions = [
+                or(
+                    ilike(productOptions.name, "%size%"),
+                    sql`LOWER(${productOptions.name}) = 'size'`,
+                    sql`LOWER(${productOptions.name}) = 'sizes'`
+                ),
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+            ];
+
+            if (filters?.categoryId) {
+                whereConditions.push(
+                    eq(products.categoryId, filters.categoryId)
+                );
+            }
+            if (filters?.subcategoryId) {
+                whereConditions.push(
+                    eq(products.subcategoryId, filters.subcategoryId)
+                );
+            }
+            if (filters?.productTypeId) {
+                whereConditions.push(
+                    eq(products.productTypeId, filters.productTypeId)
+                );
+            }
+
+            const sizeOptions = await db
+                .select({ values: productOptions.values })
+                .from(productOptions)
+                .innerJoin(products, eq(productOptions.productId, products.id))
+                .where(and(...whereConditions));
+
+            const uniqueSizesMap = new Map<string, string>();
+
+            sizeOptions.forEach((option) => {
+                if (option.values && Array.isArray(option.values)) {
+                    (option.values as any[]).forEach((sizeObj: any) => {
+                        if (sizeObj?.name && typeof sizeObj.name === "string") {
+                            const normalized = this.normalizeSizeName(
+                                sizeObj.name
+                            );
+                            if (!uniqueSizesMap.has(normalized)) {
+                                uniqueSizesMap.set(normalized, normalized);
+                            }
+                        }
+                    });
+                }
+            });
+
+            const numericSizes = Array.from(uniqueSizesMap.values()).filter(
+                (val) =>
+                    /(\d|\d+-\d+|\d+\s?(Months|Years)|\d{2}[A-D])/i.test(val)
+            );
+
+            return numericSizes.sort((a, b) =>
+                a.localeCompare(b, undefined, { numeric: true })
+            );
+        } catch (error) {
+            console.error("Error fetching numeric sizes:", error);
+            return [];
+        }
+    }
+
+    async getAlphaSizes(filters?: {
+        categoryId?: string;
+        subcategoryId?: string;
+        productTypeId?: string;
+    }) {
+        try {
+            const whereConditions = [
+                or(
+                    ilike(productOptions.name, "%size%"),
+                    sql`LOWER(${productOptions.name}) = 'size'`,
+                    sql`LOWER(${productOptions.name}) = 'sizes'`
+                ),
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+            ];
+
+            if (filters?.categoryId) {
+                whereConditions.push(
+                    eq(products.categoryId, filters.categoryId)
+                );
+            }
+            if (filters?.subcategoryId) {
+                whereConditions.push(
+                    eq(products.subcategoryId, filters.subcategoryId)
+                );
+            }
+            if (filters?.productTypeId) {
+                whereConditions.push(
+                    eq(products.productTypeId, filters.productTypeId)
+                );
+            }
+
+            const sizeOptions = await db
+                .select({
+                    values: productOptions.values,
+                })
+                .from(productOptions)
+                .innerJoin(products, eq(productOptions.productId, products.id))
+                .where(and(...whereConditions));
+
+            const uniqueSizesMap = new Map<string, string>();
+
+            sizeOptions.forEach((option) => {
+                if (option.values && Array.isArray(option.values)) {
+                    (option.values as any[]).forEach((sizeObj: any) => {
+                        if (sizeObj?.name && typeof sizeObj.name === "string") {
+                            const normalized = sizeObj.name
+                                .trim()
+                                .toLowerCase();
+                            if (!uniqueSizesMap.has(normalized)) {
+                                uniqueSizesMap.set(
+                                    normalized,
+                                    sizeObj.name.trim()
+                                );
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Only keep alpha sizes (XS, S, M, L, XL, XXL, Free Size)
+            const alphaSizes = Array.from(uniqueSizesMap.values()).filter(
+                (val) => /^(xxxl|xxl|xl|l|m|s|xs|free size)$/i.test(val.trim())
+            );
+
+            // Custom order for XS → S → M → L → XL → XXL → XXXL → Free Size
+            const order = [
+                "XS",
+                "S",
+                "M",
+                "L",
+                "XL",
+                "XXL",
+                "XXXL",
+                "Free Size",
+            ];
+            return alphaSizes.sort(
+                (a, b) =>
+                    order.indexOf(a.toUpperCase()) -
+                    order.indexOf(b.toUpperCase())
+            );
+        } catch (error) {
+            console.error("Error fetching alpha sizes:", error);
+            return [];
+        }
+    }
 
     // ✅ Helper: Get Start Date based on range
     private getStartDate(dateRange: string): Date {
@@ -4015,47 +4570,49 @@ async getAlphaSizes() {
     }
 
     // ✅ Helper: Format Revenue Data
-private formatRevenueData(data: any[], dateRange: string) {
-  const result: any[] = [];
+    private formatRevenueData(data: any[], dateRange: string) {
+        const result: any[] = [];
 
-  // ✅ Convert dateRange into days
-  let days = 7; // default
-  if (dateRange.endsWith("d")) {
-    days = parseInt(dateRange.replace("d", ""), 10);
-  } else if (dateRange.endsWith("m")) {
-    const months = parseInt(dateRange.replace("m", ""), 10);
-    days = months * 30; // Approximate for now
-  } else if (dateRange.endsWith("y")) {
-    const years = parseInt(dateRange.replace("y", ""), 10);
-    days = years * 365; // Approximate for now
-  }
+        // ✅ Convert dateRange into days
+        let days = 7; // default
+        if (dateRange.endsWith("d")) {
+            days = parseInt(dateRange.replace("d", ""), 10);
+        } else if (dateRange.endsWith("m")) {
+            const months = parseInt(dateRange.replace("m", ""), 10);
+            days = months * 30; // Approximate for now
+        } else if (dateRange.endsWith("y")) {
+            const years = parseInt(dateRange.replace("y", ""), 10);
+            days = years * 365; // Approximate for now
+        }
 
-  // ✅ Extract all unique brands
-  const brands = new Set(data.map((item) => item.brand));
+        // ✅ Extract all unique brands
+        const brands = new Set(data.map((item) => item.brand));
 
-  // ✅ Generate list of dates for the range
-  const dates = Array.from({ length: days }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i - 1));
-    return date.toISOString().split("T")[0];
-  });
+        // ✅ Generate list of dates for the range
+        const dates = Array.from({ length: days }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (days - i - 1));
+            return date.toISOString().split("T")[0];
+        });
 
-  console.log("Available brands:", Array.from(brands)); // Debug brands
-  console.log("Date range:", dates); // Debug generated dates
+        console.log("Available brands:", Array.from(brands)); // Debug brands
+        console.log("Date range:", dates); // Debug generated dates
 
-  dates.forEach((date) => {
-    const entry: any = { date };
-    brands.forEach((brand) => {
-      const brandData = data.find((d) => d.date === date && d.brand === brand);
-      entry[brand as string] = brandData ? Number(brandData.revenue) : 0;
-    });
-    result.push(entry);
-  });
+        dates.forEach((date) => {
+            const entry: any = { date };
+            brands.forEach((brand) => {
+                const brandData = data.find(
+                    (d) => d.date === date && d.brand === brand
+                );
+                entry[brand as string] = brandData
+                    ? Number(brandData.revenue)
+                    : 0;
+            });
+            result.push(entry);
+        });
 
-  return result;
-}
-
-
+        return result;
+    }
 
     // ✅ Helper: Calculate Growth Percentage
     private calculateGrowth(current: number, previous: number): number {
@@ -4067,43 +4624,48 @@ private formatRevenueData(data: any[], dateRange: string) {
     private async getPreviousPeriodData(startDate: Date, dateRange: string) {
         // This is a simplified version - you might want to store historical data
         const previousStart = new Date(startDate);
-        previousStart.setDate(previousStart.getDate() - (dateRange === "7d" ? 7 : 30));
+        previousStart.setDate(
+            previousStart.getDate() - (dateRange === "7d" ? 7 : 30)
+        );
         const previousEnd = new Date(startDate);
         const [revenue, sales, customers, conversion] = await Promise.all([
             db
                 .select({ total: sum(orders.totalAmount) })
                 .from(orders)
-                .where(and(
-                    gte(orders.createdAt, previousStart),
-                    gte(previousEnd, orders.createdAt)
-                ))
-                .then(res => Number(res[0]?.total || 0)),
+                .where(
+                    and(
+                        gte(orders.createdAt, previousStart),
+                        gte(previousEnd, orders.createdAt)
+                    )
+                )
+                .then((res) => Number(res[0]?.total || 0)),
             db
                 .select({ total: sum(orders.totalAmount) })
                 .from(orders)
-                .where(and(
-                    gte(orders.createdAt, previousStart),
-                    gte(previousEnd, orders.createdAt)
-                ))
-                .then(res => Number(res[0]?.total || 0)),
+                .where(
+                    and(
+                        gte(orders.createdAt, previousStart),
+                        gte(previousEnd, orders.createdAt)
+                    )
+                )
+                .then((res) => Number(res[0]?.total || 0)),
             db
                 .select({ count: count() })
                 .from(orders)
-                .where(and(
-                    gte(orders.createdAt, previousStart),
-                    gte(previousEnd, orders.createdAt)
-                ))
-                .then(res => res[0]?.count || 0),
-            Promise.resolve(0) // Simplified conversion rate
+                .where(
+                    and(
+                        gte(orders.createdAt, previousStart),
+                        gte(previousEnd, orders.createdAt)
+                    )
+                )
+                .then((res) => res[0]?.count || 0),
+            Promise.resolve(0), // Simplified conversion rate
         ]);
 
         return { revenue, sales, customers, conversion };
     }
 
-    async getProcuctReturnExchangePolicyByProductId(){}
+    async getProcuctReturnExchangePolicyByProductId() {}
 }
-
-
-
 
 export const productQueries = new ProductQuery();

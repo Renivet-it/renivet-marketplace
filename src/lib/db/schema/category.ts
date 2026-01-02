@@ -94,6 +94,7 @@ export const subCategoriesRelations = relations(
         }),
         productTypes: many(productTypes),
         coupons: many(coupons),
+        products: many(products),
     })
 );
 
