@@ -56,29 +56,114 @@ export function MobileCategories() {
   ];
 
   return (
-    <section className="w-full bg-[#FCFBF4] py-6 px-4 block md:hidden">
-      <div className="grid grid-cols-4 gap-y-6 gap-x-3 place-items-center">
-        {categories.map((item, index) => (
-          <Link
-            key={index}
-            href={item.link}
-            className="flex flex-col items-center "
-          >
-            <div className="w-[78px] h-[78px] relative overflow-hidden">
-              <Image
-                src={item.imageUrl}
-                alt={item.title}
-                fill
-                className="object-cover"
-              />
-            </div>
+    <>
+      <section className="w-full bg-[#FCFBF4] py-6 px-4 block md:hidden">
+        <div className="grid grid-cols-4 gap-y-6 gap-x-3 place-items-center">
+          {categories.map((item, index) => (
+            <Link
+              key={index}
+              href={item.link}
+              className="flex flex-col items-center"
+            >
+              {/* IMAGE / FLIP CARD */}
+              {item.title === "Accessories" ? (
+                <div className="w-[78px] h-[78px] perspective">
+                  <div className="flip-card">
+                    {/* FRONT */}
+                    <div className="card-face card-front">
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
 
-            <p className="text-[12px] mt-2 text-center text-[#333] leading-tight">
-              {item.title}
-            </p>
-          </Link>
-        ))}
-      </div>
-    </section>
+                    {/* BACK */}
+                    <div className="card-face card-back">
+                      <p className="text-[10px] text-[#333] leading-tight">
+                        Buy Any 2
+                      </p>
+                      <p className="text-[11px] font-semibold text-[#000]">
+                        Get 15% Off
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-[78px] h-[78px] relative overflow-hidden">
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+
+              <p className="text-[12px] mt-2 text-center text-[#333] leading-tight">
+                {item.title}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ✅ CSS INSIDE SAME FILE */}
+      <style jsx>{`
+        .perspective {
+          perspective: 1000px;
+        }
+
+    .flip-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: flip 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes flip {
+  0% {
+    transform: rotateY(0deg);
+  }
+  25% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(180deg);
+  }
+  75% {
+    transform: rotateY(180deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+
+        .card-face {
+          position: absolute;
+          inset: 0;
+          backface-visibility: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+        }
+
+        .card-front {
+          background: transparent;
+        }
+
+        .card-back {
+          background: #efe7da;
+          transform: rotateY(180deg);
+          flex-direction: column;
+        }
+
+       
+      `}</style>
+    </>
   );
 }
