@@ -284,10 +284,22 @@ export const cachedSubCategorySchema = subCategorySchema.extend({
         required_error: "Product types is required",
         invalid_type_error: "Product types must be a number",
     }),
-    productCount: z.coerce.number({
-        required_error: "Product count is required",
-        invalid_type_error: "Product count must be a number",
-    }),
+    // productCount: z.coerce.number({
+    //     required_error: "Product count is required",
+    //     invalid_type_error: "Product count must be a number",
+    // }),
+     productCount: z.preprocess(
+    (val) => {
+      const num = Number(val);
+
+      // Convert anything invalid to 0
+      if (!Number.isFinite(num)) return 0;
+
+      // Force integer
+      return Math.floor(num);
+    },
+    z.number().nonnegative()
+  ),
 });
 export const cachedProductTypeSchema = productTypeSchema;
 
