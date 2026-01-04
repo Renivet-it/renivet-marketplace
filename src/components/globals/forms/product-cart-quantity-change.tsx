@@ -88,66 +88,56 @@ export function ProductCartQuantityChangeForm({ item, userId }: PageProps) {
 
                             <FormControl>
                                 <div>
-                                    <div className="inline-flex -space-x-px shadow-sm shadow-black/5 rtl:space-x-reverse">
-                                        <div>
-                                            <Button
-                                                type="button"
-                                                className="rounded-none shadow-none"
-                                                variant="outline"
-                                                size="icon"
-                                                aria-label="Increment quantity"
-                                                disabled={
-                                                    isUpdating ||
-                                                    field.value >= maxQuantity
-                                                }
-                                                onClick={() =>
-                                                    field.onChange(
-                                                        Math.min(
-                                                            field.value + 1,
-                                                            maxQuantity
-                                                        )
-                                                    )
-                                                }
-                                            >
-                                                <Icons.ChevronUp
-                                                    size={16}
-                                                    strokeWidth={2}
-                                                    aria-hidden="true"
-                                                />
-                                            </Button>
-                                        </div>
+                                    <div className="flex h-10 w-fit items-center overflow-hidden rounded-md border border-input shadow-sm">
+                                        <Button
+                                            type="button"
+                                            className="h-full rounded-none border-0 border-r border-input bg-transparent px-3 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+                                            variant="ghost"
+                                            size="icon"
+                                            aria-label="Decrement quantity"
+                                            disabled={
+                                                isUpdating || field.value <= 1
+                                            }
+                                            onClick={() =>
+                                                field.onChange(
+                                                    Math.max(field.value - 1, 1)
+                                                )
+                                            }
+                                        >
+                                            <Icons.Minus
+                                                size={16}
+                                                strokeWidth={2}
+                                            />
+                                        </Button>
 
-                                        <div className="flex w-16 items-center justify-center border border-input text-sm">
+                                        <div className="flex min-w-12 items-center justify-center px-2 text-sm font-medium tabular-nums">
                                             {field.value}
                                         </div>
 
-                                        <div>
-                                            <Button
-                                                type="button"
-                                                className="rounded-none shadow-none"
-                                                variant="outline"
-                                                size="icon"
-                                                aria-label="Decrement quantity"
-                                                disabled={
-                                                    isUpdating ||
-                                                    field.value <= 1
-                                                }
-                                                onClick={() =>
-                                                    field.onChange(
-                                                        Math.max(
-                                                            field.value - 1,
-                                                            1
-                                                        )
+                                        <Button
+                                            type="button"
+                                            className="h-full rounded-none border-0 border-l border-input bg-transparent px-3 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+                                            variant="ghost"
+                                            size="icon"
+                                            aria-label="Increment quantity"
+                                            disabled={
+                                                isUpdating ||
+                                                field.value >= maxQuantity
+                                            }
+                                            onClick={() =>
+                                                field.onChange(
+                                                    Math.min(
+                                                        field.value + 1,
+                                                        maxQuantity
                                                     )
-                                                }
-                                            >
-                                                <Icons.ChevronDown
-                                                    size={16}
-                                                    strokeWidth={2}
-                                                    aria-hidden="true"
-                                                />
-                                            </Button>
-                                        </div>
+                                                )
+                                            }
+                                        >
+                                            <Icons.Plus
+                                                size={16}
+                                                strokeWidth={2}
+                                            />
+                                        </Button>
                                     </div>
                                 </div>
                             </FormControl>
