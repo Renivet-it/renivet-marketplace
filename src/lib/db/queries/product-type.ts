@@ -23,6 +23,12 @@ class ProductTypeQuery {
         const data = await db.query.productTypes.findMany({
             orderBy: [desc(productTypes.createdAt)],
             with: {
+                subCategory: {
+                    columns: {
+                        id: true,
+                        name: true,
+                    },
+                },
                 products: {
                     columns: {
                         id: true, // just need one field to count
@@ -112,21 +118,21 @@ class ProductTypeQuery {
         return data;
     }
     async getProductTypesByBrand(brandId: string) {
-    const rows = await db
-        .selectDistinct({
-        productTypeId: products.productTypeId,
-        })
-        .from(products)
-        .where(eq(products.brandId, brandId));
+        const rows = await db
+            .selectDistinct({
+                productTypeId: products.productTypeId,
+            })
+            .from(products)
+            .where(eq(products.brandId, brandId));
 
-    const ids = rows.map((r) => r.productTypeId);
+        const ids = rows.map((r) => r.productTypeId);
 
-    if (ids.length === 0) return [];
+        if (ids.length === 0) return [];
 
-    return db
-        .select()
-        .from(productTypes)
-        .where(inArray(productTypes.id, ids));
+        return db
+            .select()
+            .from(productTypes)
+            .where(inArray(productTypes.id, ids));
     }
 }
 

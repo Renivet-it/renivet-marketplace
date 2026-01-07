@@ -44,7 +44,7 @@ export default async function Page({ searchParams }: PageProps) {
         productTypeCache.getAll(),
         productQueries.getProducts({
             page: parseInt(params.page || "1"),
-            limit: parseInt(params.limit || "30"),
+            limit: parseInt(params.limit || "28"),
             search: params.search,
             isAvailable: true,
             isActive: true,
@@ -312,7 +312,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
     } = await searchParams;
 
     const limit =
-        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 30;
+        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 28;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const search = !!searchRaw?.length ? searchRaw : undefined;
     const brandIds = !!brandIdsRaw?.length ? brandIdsRaw.split(",") : undefined;

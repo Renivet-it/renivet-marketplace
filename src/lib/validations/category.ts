@@ -155,6 +155,12 @@ export const productTypeSchema = z.object({
     isFragile: z.boolean().default(false),
     shipsInOwnBox: z.boolean().default(false),
     override: z.boolean().default(false),
+    subCategory: z
+        .object({
+            id: z.string().uuid(),
+            name: z.string(),
+        })
+        .optional(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -288,18 +294,15 @@ export const cachedSubCategorySchema = subCategorySchema.extend({
     //     required_error: "Product count is required",
     //     invalid_type_error: "Product count must be a number",
     // }),
-     productCount: z.preprocess(
-    (val) => {
-      const num = Number(val);
+    productCount: z.preprocess((val) => {
+        const num = Number(val);
 
-      // Convert anything invalid to 0
-      if (!Number.isFinite(num)) return 0;
+        // Convert anything invalid to 0
+        if (!Number.isFinite(num)) return 0;
 
-      // Force integer
-      return Math.floor(num);
-    },
-    z.number().nonnegative()
-  ),
+        // Force integer
+        return Math.floor(num);
+    }, z.number().nonnegative()),
 });
 export const cachedProductTypeSchema = productTypeSchema;
 
