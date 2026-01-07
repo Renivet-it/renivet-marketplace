@@ -263,9 +263,9 @@ interface PageProps extends GenericProps {
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
     colors: string[];
-    alphaSize: string[];
-    numSize: string[];
-    sizes: string[];
+    alphaSize?: string[];
+    numSize?: string[];
+    sizes?: string[];
 }
 
 // --- MAIN COMPONENT ---
@@ -282,6 +282,7 @@ export function ShopFilters({
     ...props
 }: PageProps) {
     const isMobile = useMediaQuery("(max-width: 768px)");
+    const [search, setSearch] = useQueryState("search", { defaultValue: "" });
     const [activeFilter, setActiveFilter] = useState<ActiveFilter>("brand");
 
     // Use useMemo to prevent re-calculating on every render
@@ -289,17 +290,6 @@ export function ShopFilters({
         () => [...new Set([...alphaSize, ...numSize, ...sizes])],
         [alphaSize, numSize, sizes]
     );
-
-    const filterProps = {
-        className,
-        brandsMeta,
-        categories,
-        subCategories,
-        productTypes,
-        colors,
-        allSizes,
-        ...props,
-    };
 
     return isMobile ? (
         <>
@@ -351,19 +341,22 @@ export function ShopFilters({
                         </nav>
                         <div className="w-2/3 overflow-y-auto p-4">
                             {activeFilter === "brand" && (
-                                <BrandFilter {...filterProps} />
+                                <BrandFilter brandsMeta={brandsMeta} />
                             )}
                             {activeFilter === "category" && (
-                                <CategoryFilter {...filterProps} />
+                                <CategoryFilter
+                                    categories={categories}
+                                    subCategories={subCategories}
+                                    productTypes={productTypes}
+                                    setSearch={setSearch}
+                                />
                             )}
-                            {activeFilter === "price" && (
-                                <PriceFilter {...filterProps} />
-                            )}
+                            {activeFilter === "price" && <PriceFilter />}
                             {activeFilter === "color" && (
-                                <ColorFilter {...filterProps} />
+                                <ColorFilter colors={colors} />
                             )}
                             {activeFilter === "size" && (
-                                <SizeFilter {...filterProps} />
+                                <SizeFilter allSizes={allSizes} />
                             )}
                         </div>
                     </div>
@@ -379,7 +372,18 @@ export function ShopFilters({
             </Sheet>
         </>
     ) : (
-        <ShopFiltersSection {...filterProps} />
+        <ShopFiltersSection
+            className={className}
+            brandsMeta={brandsMeta}
+            categories={categories}
+            subCategories={subCategories}
+            productTypes={productTypes}
+            colors={colors}
+            allSizes={allSizes}
+            search={search}
+            setSearch={setSearch}
+            {...props}
+        />
     );
 }
 
@@ -423,8 +427,20 @@ function ShopFiltersSection({
     productTypes,
     colors,
     allSizes,
+    setSearch,
     ...props
-}: PageProps & { allSizes: string[] }) {
+}: {
+    className?: string;
+    brandsMeta: BrandMeta[];
+    categories: CachedCategory[];
+    subCategories: CachedSubCategory[];
+    productTypes: CachedProductType[];
+    colors: string[];
+    allSizes: string[];
+    search?: string;
+    setSearch?: (value: string | null) => void;
+    [key: string]: any;
+}) {
     return (
         <div className={cn("space-y-6", className)} {...props}>
             <div className="flex items-center justify-between">
@@ -439,6 +455,7 @@ function ShopFiltersSection({
                 categories={categories}
                 subCategories={subCategories}
                 productTypes={productTypes}
+                setSearch={setSearch}
             />
             <Separator />
             <BrandFilter brandsMeta={brandsMeta} />
@@ -459,6 +476,7 @@ function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
+    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [showAllBrands, setShowAllBrands] = useState(false);
     const visibleBrands = showAllBrands ? brandsMeta : brandsMeta.slice(0, 10);
 
@@ -471,13 +489,14 @@ function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
                         <Checkbox
                             id={`brand-${brand.id}`}
                             checked={brandIds.includes(brand.id)}
-                            onCheckedChange={() =>
+                            onCheckedChange={() => {
                                 setBrandIds(
                                     brandIds.includes(brand.id)
                                         ? brandIds.filter((b) => b !== brand.id)
                                         : [...brandIds, brand.id]
-                                )
-                            }
+                                );
+                                setPage(1);
+                            }}
                         />
                         <Label
                             htmlFor={`brand-${brand.id}`}
@@ -504,10 +523,12 @@ function CategoryFilter({
     categories,
     subCategories,
     productTypes,
+    setSearch,
 }: {
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
+    setSearch?: (value: string | null) => void;
 }) {
     const [categoryId, setCategoryId] = useQueryState("categoryId", {
         defaultValue: "",
@@ -518,6 +539,7 @@ function CategoryFilter({
     const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
         defaultValue: "",
     });
+    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
     return (
         <div className="space-y-4">
@@ -529,6 +551,8 @@ function CategoryFilter({
                         setCategoryId(id === categoryId ? "" : id);
                         setSubCategoryId("");
                         setProductTypeId("");
+                        setPage(1);
+                        if (setSearch) setSearch("");
                     }}
                     className="space-y-2"
                 >
@@ -559,6 +583,8 @@ function CategoryFilter({
                     onValueChange={(id) => {
                         setSubCategoryId(id === subCategoryId ? "" : id);
                         setProductTypeId("");
+                        setPage(1);
+                        if (setSearch) setSearch("");
                     }}
                     className="max-h-48 space-y-2 overflow-y-auto"
                 >
@@ -598,15 +624,19 @@ function CategoryFilter({
                         <Label className="font-semibold uppercase">Type</Label>
                         <RadioGroup
                             value={productTypeId}
-                            onValueChange={(id) =>
-                                setProductTypeId(id === productTypeId ? "" : id)
-                            }
+                            onValueChange={(id) => {
+                                setProductTypeId(
+                                    id === productTypeId ? "" : id
+                                );
+                                setPage(1);
+                                if (setSearch) setSearch("");
+                            }}
                             className="max-h-48 space-y-2 overflow-y-auto"
                         >
                             {productTypes
                                 .filter(
                                     (t) =>
-                                        t.productCount > 0 &&
+                                        (t.productCount ?? 0) > 0 &&
                                         String(t.subCategoryId) ===
                                             String(subCategoryId)
                                 )
@@ -644,6 +674,7 @@ function PriceFilter() {
         "maxPrice",
         parseAsInteger.withDefault(10000)
     );
+    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [priceRange, setPriceRange] = useState<number[]>([
         minPrice,
         maxPrice,
@@ -661,6 +692,7 @@ function PriceFilter() {
                 onValueCommit={(values) => {
                     setMinPrice(values[0]);
                     setMaxPrice(values[1]);
+                    setPage(1);
                 }}
             />
             <p className="text-sm tabular-nums">
@@ -677,6 +709,7 @@ function ColorFilter({ colors }: { colors: string[] }) {
         "colors",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
+    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [showAllColors, setShowAllColors] = useState(false);
     const visibleColors = showAllColors ? colors : colors.slice(0, 21);
 
@@ -690,15 +723,16 @@ function ColorFilter({ colors }: { colors: string[] }) {
                         <div
                             key={colorName}
                             className="flex cursor-pointer flex-col items-center gap-2"
-                            onClick={() =>
+                            onClick={() => {
                                 setColorFilters(
                                     colorFilters.includes(colorName)
                                         ? colorFilters.filter(
                                               (c) => c !== colorName
                                           )
                                         : [...colorFilters, colorName]
-                                )
-                            }
+                                );
+                                setPage(1);
+                            }}
                         >
                             <button
                                 type="button"
@@ -782,6 +816,7 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
         "sizes",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
+    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
     // Categorize sizes
     const categorized = useMemo(() => categorizeSizes(allSizes), [allSizes]);
@@ -792,6 +827,7 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
                 ? sizeFilters.filter((s) => s !== size)
                 : [...sizeFilters, size]
         );
+        setPage(1);
     };
 
     // Helper to render a group of size buttons
