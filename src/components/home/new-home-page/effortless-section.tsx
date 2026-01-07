@@ -78,7 +78,7 @@ export function EffortlessElegance({
                 {item.subtitle && <p className="text-xl mb-6">{item.subtitle}</p>}
                 <Link
                   href={item.url ?? "/shop"}
-                  className="px-6 py-2 bg-white text-gray-800 text-sm rounded-md shadow hover:bg-gray-100 transition"
+                  className="px-6 py-2 bg-white text-gray-800 text-sm shadow hover:bg-gray-100 transition"
                 >
                   Shop The Edit
                 </Link>
