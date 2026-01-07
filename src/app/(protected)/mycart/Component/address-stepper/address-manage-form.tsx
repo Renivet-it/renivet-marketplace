@@ -161,7 +161,7 @@ export function AddressManageForm({
                                 name="fullName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-xs text-gray-600">Name*</FormLabel>
+                                        <FormLabel className="text-xs text-gray-600">FullName*</FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="John Doe"

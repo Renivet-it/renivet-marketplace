@@ -120,7 +120,7 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                 name="fullName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-sm text-gray-600">Name*</FormLabel>
+                                        <FormLabel className="text-sm text-gray-600">Full Name*</FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="Name"
