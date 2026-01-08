@@ -1,11 +1,20 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Globe, Infinity, RefreshCw, ShoppingBag, Sprout } from "lucide-react";
 import Image from "next/image";
 
 interface AboutCoreValuesProps {
     className?: string;
 }
+
+const icons = [
+    { Icon: Sprout, label: "Eco Friendly" },
+    { Icon: ShoppingBag, label: "Ethical Sourcing" },
+    { Icon: RefreshCw, label: "Circular Economy" },
+    { Icon: Infinity, label: "Artisan Support" },
+    { Icon: Globe, label: "Global Impact" },
+];
 
 export function AboutCoreValues({ className }: AboutCoreValuesProps) {
     return (
@@ -49,14 +58,14 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
             </div>
 
             {/* Content */}
-            <div className="container relative mx-auto max-w-7xl space-y-16 text-center md:space-y-24">
+            <div className="container relative mx-auto max-w-[1100px] space-y-16 text-center md:space-y-24">
                 {/* WHAT RENIVET IS */}
-                <div className="mx-auto max-w-5xl">
-                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#3d3d3d] md:text-3xl">
+                <div className="mx-auto max-w-[1100px]">
+                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:text-3xl">
                         WHAT RENIVET IS
                     </h2>
 
-                    <p className="font-worksans text-16 font-normal leading-relaxed text-[#5c5c5c] md:text-[18px] md:leading-[1.7]">
+                    <p className="font-worksans text-[20px] font-normal leading-snug tracking-normal text-[#1c1c1c]">
                         <span className="block">
                             Renivet Is Not Just Another Marketplace.
                         </span>
@@ -72,12 +81,12 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                 </div>
 
                 {/* HOW WE OPERATE */}
-                <div className="mx-auto max-w-6xl">
-                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#3d3d3d] md:text-3xl">
+                <div className="mx-auto max-w-[1100px]">
+                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:text-3xl">
                         HOW WE OPERATE
                     </h2>
 
-                    <p className="font-worksans text-16 font-normal leading-relaxed text-[#5c5c5c] md:text-[18px] md:leading-[1.7]">
+                    <p className="font-worksans text-[20px] font-normal leading-snug tracking-normal text-[#1c1c1c]">
                         <span className="block">
                             Every Product On Renivet Is Intentionally
                             Chosen—Based On Quality, Craftsmanship, Values, And
@@ -92,12 +101,12 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                 </div>
 
                 {/* VALUE CREATED */}
-                <div className="mx-auto max-w-6xl">
-                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#3d3d3d] md:text-3xl">
+                <div className="mx-auto max-w-[1100px]">
+                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:text-3xl">
                         VALUE CREATED
                     </h2>
 
-                    <p className="font-worksans text-16 font-normal leading-relaxed text-[#5c5c5c] md:text-[18px] md:leading-[1.7]">
+                    <p className="font-worksans text-[20px] font-normal leading-snug tracking-normal text-[#1c1c1c]">
                         <span className="block">
                             By Removing Noise And Prioritising Trust, Renivet
                             Makes It Easier For Brands To Scale Without
@@ -108,6 +117,23 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                             And Purpose.
                         </span>
                     </p>
+                </div>
+
+                {/* Icons Grid */}
+                <div className="pt-8">
+                    <div className="flex flex-wrap items-center justify-center gap-12 md:gap-24">
+                        {icons.map((item, idx) => (
+                            <div
+                                key={idx}
+                                className="flex flex-col items-center gap-3"
+                            >
+                                <item.Icon
+                                    strokeWidth={1}
+                                    className="h-[82px] w-[84px] text-[#1c1c1c]"
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </section>
