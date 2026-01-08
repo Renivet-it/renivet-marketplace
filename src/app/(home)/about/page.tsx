@@ -25,7 +25,7 @@ export default function Page() {
                 <AboutFrustration />
                 <AboutCoreValues />
                 <AboutMissionVision />
-                <Team className="container mx-auto py-20" />
+                {/* <Team className="container mx-auto py-20" /> */}
             </div>
         </GeneralShell>
     );
