@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
-import { dmsans, josefin, lato, playfair, rubik } from "./fonts";
+import { dmsans, josefin, playfair, rubik, worksans } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -180,7 +180,8 @@ export default function RootLayout({ children }: LayoutProps) {
                 josefin.variable,
                 dmsans.variable,
                 rubik.variable,
-                playfair.variable
+                playfair.variable,
+                worksans.variable
             )}
         >
             <head>

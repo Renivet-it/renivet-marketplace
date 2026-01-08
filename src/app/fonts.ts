@@ -4,6 +4,7 @@ import {
     Lato,
     Playfair_Display,
     Rubik,
+    Work_Sans,
 } from "next/font/google";
 
 export const dmsans = DM_Sans({
@@ -11,6 +12,13 @@ export const dmsans = DM_Sans({
     weight: ["400", "500", "600", "800"],
     display: "swap",
     variable: "--font-dmsans",
+});
+
+export const worksans = Work_Sans({
+    subsets: ["latin"],
+    weight: ["300", "400", "500", "600", "700"],
+    display: "swap",
+    variable: "--font-work-sans",
 });
 
 export const rubik = Rubik({
