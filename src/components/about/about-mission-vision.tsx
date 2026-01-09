@@ -30,17 +30,6 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                 />
             </div>
 
-            {/* Vision – Leaf (Bottom Right) */}
-            <div className="pointer-events-none absolute bottom-32 right-8 hidden lg:block">
-                <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuMb9SOhnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
-                    alt=""
-                    width={160}
-                    height={125}
-                    className="-rotate-90 opacity-80"
-                />
-            </div>
-
             {/* ===================== */}
             {/* MISSION SECTION */}
             {/* ===================== */}
@@ -75,9 +64,9 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
             </div>
 
             {/* ================================================= */}
-            {/* TRANSITION SPACER — THIS FIXES EVERYTHING */}
+            {/* TRANSITION SPACER — NEEDLE LIVES HERE */}
             {/* ================================================= */}
-            <div className="relative hidden lg:block h-40">
+            <div className="relative hidden h-40 lg:block">
                 <div className="pointer-events-none absolute left-[-28px] top-1/2 -translate-y-1/2">
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXIPEGo3We049OUSYNxCLnRIka3FhcqBZlbsP"
@@ -93,6 +82,17 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
             {/* VISION SECTION */}
             {/* ===================== */}
             <div className="relative flex flex-col lg:flex-row-reverse lg:items-center">
+                {/* Vision – Leaf near heading */}
+                <div className="pointer-events-none absolute right-8 top-[-48px] hidden lg:block">
+                    <Image
+                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuMb9SOhnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
+                        alt=""
+                        width={150}
+                        height={120}
+                        className="opacity-80"
+                    />
+                </div>
+
                 <div className="relative flex w-full flex-1 items-center justify-center lg:min-h-[495px]">
                     <div className="flex flex-col items-end p-8 xl:pr-12">
                         <div className="lg:max-w-[420px]">
