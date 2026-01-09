@@ -30,17 +30,6 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                 />
             </div>
 
-            {/* Needle – ABOVE OUR VISION (IMPORTANT FIX) */}
-            <div className="pointer-events-none absolute left-[-24px] top-[640px] hidden lg:block">
-                <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXIPEGo3We049OUSYNxCLnRIka3FhcqBZlbsP"
-                    alt=""
-                    width={260}
-                    height={52}
-                    className="opacity-70"
-                />
-            </div>
-
             {/* Vision – Leaf (Bottom Right) */}
             <div className="pointer-events-none absolute bottom-32 right-8 hidden lg:block">
                 <Image
@@ -85,10 +74,25 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                 </div>
             </div>
 
+            {/* ================================================= */}
+            {/* TRANSITION SPACER — THIS FIXES EVERYTHING */}
+            {/* ================================================= */}
+            <div className="relative hidden lg:block h-40">
+                <div className="pointer-events-none absolute left-[-28px] top-1/2 -translate-y-1/2">
+                    <Image
+                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXIPEGo3We049OUSYNxCLnRIka3FhcqBZlbsP"
+                        alt=""
+                        width={260}
+                        height={52}
+                        className="opacity-70"
+                    />
+                </div>
+            </div>
+
             {/* ===================== */}
             {/* VISION SECTION */}
             {/* ===================== */}
-            <div className="relative mt-32 flex flex-col lg:flex-row-reverse lg:items-center">
+            <div className="relative flex flex-col lg:flex-row-reverse lg:items-center">
                 <div className="relative flex w-full flex-1 items-center justify-center lg:min-h-[495px]">
                     <div className="flex flex-col items-end p-8 xl:pr-12">
                         <div className="lg:max-w-[420px]">
