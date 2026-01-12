@@ -17,7 +17,8 @@ export default function Page() {
     return (
         <GeneralShell
             classNames={{
-                innerWrapper: "p-0",
+                mainWrapper: "p-0",
+                innerWrapper: "!p-0 !max-w-none !space-y-0",
             }}
         >
             <div className="bg-[#F9F6F1]">
