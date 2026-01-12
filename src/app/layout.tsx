@@ -3,14 +3,14 @@ import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
-import { dmsans, rubik, lato, josefin } from "./fonts";
+import { dmsans, josefin, playfair, rubik, worksans } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
-import FacebookPixel from "./facebook-pixel"; // ✅ add this
-import { MergeGuestCart } from "../components/globals/layouts/guest/merge-guest-cart"; 
+import { MergeGuestCart } from "../components/globals/layouts/guest/merge-guest-cart";
 import { MergeGuestWishlist } from "../components/globals/layouts/guest/merge-guest-wishlist";
+import FacebookPixel from "./facebook-pixel"; // ✅ add this
 
 const FB_PIXEL_ID = "618442627790500"; // ✅
 
@@ -176,7 +176,13 @@ export default function RootLayout({ children }: LayoutProps) {
         <html
             lang="en"
             suppressHydrationWarning
-            className={cn(josefin.variable, dmsans.variable, rubik.variable)}
+            className={cn(
+                josefin.variable,
+                dmsans.variable,
+                rubik.variable,
+                playfair.variable,
+                worksans.variable
+            )}
         >
             <head>
                 {FB_PIXEL_ID && (
@@ -218,7 +224,7 @@ export default function RootLayout({ children }: LayoutProps) {
                     className={cn("min-h-screen overflow-x-hidden antialiased")}
                 >
                     <ClientProvider>
-                         <MergeGuestCart />
+                        <MergeGuestCart />
                         <MergeGuestWishlist />
                         {children}
                         <Toaster />

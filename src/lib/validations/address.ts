@@ -25,12 +25,11 @@ export const addressSchema = z.object({
             invalid_type_error: "Full name must be a string",
         })
         .min(5, "Full name is required")
-        .refine(
-            (value) =>
-                value.includes(" ") &&
-                value.split(" ").every((part) => part.length >= 2),
-            "Full name must contain first and last name, each at least 2 characters long"
-        ),
+        .refine((value) => {
+            const trimmed = value.trim();
+            const parts = trimmed.split(" ").filter((part) => part.length > 0);
+            return parts.length >= 2 && parts.every((part) => part.length >= 2);
+        }, "Full name must contain first and last name, each at least 2 characters long"),
     street: z
         .string({
             required_error: "Street is required",

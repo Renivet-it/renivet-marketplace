@@ -57,7 +57,7 @@ export function Team({ className, ...props }: GenericProps) {
             className={cn("space-y-5 pb-10 md:space-y-10", className)}
             {...props}
         >
-            <h2 className="text-balance text-center text-2xl font-semibold uppercase md:text-3xl">
+            <h2 className="font-playfair text-balance text-center text-2xl font-semibold uppercase md:text-3xl">
                 Meet our Team
             </h2>
 

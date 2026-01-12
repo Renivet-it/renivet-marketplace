@@ -1,4 +1,10 @@
-import { AboutTiles } from "@/components/about";
+import {
+    AboutCoreValues,
+    AboutFrustration,
+    AboutHero,
+    AboutMissionVision,
+    Team,
+} from "@/components/about";
 import { GeneralShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
 
@@ -11,12 +17,17 @@ export default function Page() {
     return (
         <GeneralShell
             classNames={{
-                innerWrapper: "space-y-10 md:space-y-20 p-0",
+                mainWrapper: "p-0",
+                innerWrapper: "!p-0 !max-w-none !space-y-0",
             }}
         >
-            <AboutTiles className="mb-10 md:mb-20" />
-            {/* <HowWeWork /> */}
-            {/* <Team /> */}
+            <div className="bg-[#F9F6F1]">
+                <AboutHero />
+                <AboutFrustration />
+                <AboutCoreValues />
+                <AboutMissionVision />
+                {/* <Team className="container mx-auto py-20" /> */}
+            </div>
         </GeneralShell>
     );
 }

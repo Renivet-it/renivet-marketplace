@@ -8,7 +8,10 @@ import {
     CachedSubCategory,
 } from "@/lib/validations";
 import { useMediaQuery } from "@mantine/hooks";
+import convert from "color-convert";
 import parse from "color-parse";
+// @ts-ignore
+import colornames from "colornames";
 import {
     parseAsArrayOf,
     parseAsInteger,
@@ -17,6 +20,7 @@ import {
     useQueryState,
 } from "nuqs";
 import { useMemo, useState } from "react";
+import { findBestMatch } from "string-similarity";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
 import { Checkbox } from "../ui/checkbox";
@@ -42,23 +46,9 @@ function rgbaToHex(rgba: number[]): string {
     return `#${toHex(rgba[0])}${toHex(rgba[1])}${toHex(rgba[2])}`;
 }
 
-// Unique string hash to color
-function stringToColor(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        hash = hash & hash;
-    }
-    const r = (hash >> 16) & 0xff;
-    const g = (hash >> 8) & 0xff;
-    const b = hash & 0xff;
-    return `#${r.toString(16).padStart(2, "0")}${g
-        .toString(16)
-        .padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-}
-
 // --- All CSS Named Colors ---
 const ALL_COLORS: Record<string, string> = {
+    // Standard CSS Colors
     aliceblue: "#f0f8ff",
     antiquewhite: "#faebd7",
     aqua: "#00ffff",
@@ -199,44 +189,172 @@ const ALL_COLORS: Record<string, string> = {
     whitesmoke: "#f5f5f5",
     yellow: "#ffff00",
     yellowgreen: "#9acd32",
+
+    // Custom Fashion & Textile Colors
+    ashbrown: "#9a8b7c",
+    babypink: "#f4c2c2",
+    bamboogreen: "#8fb13b",
+    bamboogreytiedye: "#a0a4a7",
+    bamboopinktiedye: "#f1d4d4",
+    blushingpeach: "#fcc6b4",
+    bottlegreen: "#006a4e",
+    braziliansand: "#c3b091",
+    brightwhite: "#fdfdfd",
+    burgundy: "#800020",
+    burntrusset: "#7d3221",
+    cannolicream: "#f0ebe1",
+    denim: "#1560bd",
+    mustard: "#e1ad01",
+    navyblue: "#000080",
+    olivegrey: "#7a7a61",
+    offwhite: "#faf9f6",
+    sagegreen: "#9c9f84",
+    terracotta: "#e2725b",
+    wine: "#722f37",
+    charcoal: "#36454f",
+    mauve: "#e0b0ff",
+    rust: "#b7410e",
+    tealblue: "#367588",
+    emerald: "#50c878",
+    marigold: "#eaa221",
+    lavendergrey: "#c4c3d0",
+    khakigreen: "#8a865d",
+    creampuff: "#fffdd0",
+    dustypink: "#dcae96",
+    powderblue: "#b0e0e6",
+    mint: "#98ff98",
+    blush: "#de5d83",
+    camel: "#c19a6b",
+    tanbrown: "#91672c",
+    mochabrown: "#a38068",
+    midnight: "#2c3e50",
+    forest: "#228b22",
+    oatmeal: "#dfd7d2",
+    sand: "#c2b280",
+    stone: "#a19b91",
+    slate: "#708090",
+    lilac: "#c8a2c8",
+    peachesncream: "#f9e0b1",
 };
 
-// Find closest color by RGB distance
-function getClosestColor(hex: string): string {
-    const r = parseInt(hex.substring(1, 3), 16);
-    const g = parseInt(hex.substring(3, 5), 16);
-    const b = parseInt(hex.substring(5, 7), 16);
+// --- DYNAMIC COLOR LOGIC ---
 
-    let closest = "#000000";
-    let minDist = Infinity;
+// Helper to adjust hex color (lightness/saturation)
+function adjustColor(hex: string, modifiers: string[]): string {
+    try {
+        const [h, s, l] = convert.hex.hsl(hex);
+        let newS = s;
+        let newL = l;
 
-    for (const colorHex of Object.values(ALL_COLORS)) {
-        const cr = parseInt(colorHex.substring(1, 3), 16);
-        const cg = parseInt(colorHex.substring(3, 5), 16);
-        const cb = parseInt(colorHex.substring(5, 7), 16);
-
-        const dist = Math.sqrt((r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2);
-        if (dist < minDist) {
-            minDist = dist;
-            closest = colorHex;
+        if (Array.isArray(modifiers)) {
+            for (const mod of modifiers) {
+                switch (mod) {
+                    case "light":
+                    case "pale":
+                    case "soft":
+                    case "pastel":
+                    case "sky":
+                        newL = Math.min(newL + 20, 95);
+                        break;
+                    case "dark":
+                    case "deep":
+                    case "midnight":
+                    case "forest":
+                        newL = Math.max(newL - 20, 5);
+                        break;
+                    case "bright":
+                    case "vivid":
+                    case "neon":
+                        newS = Math.min(newS + 30, 100);
+                        break;
+                    case "muted":
+                    case "dusty":
+                    case "ash":
+                    case "smoked":
+                        newS = Math.max(newS - 30, 10);
+                        newL = Math.min(Math.max(newL, 30), 70); // Bring towards middle gray
+                        break;
+                }
+            }
         }
+
+        return `#${convert.hsl.hex([h, newS, newL])}`;
+    } catch {
+        return hex;
     }
-    return closest;
 }
 
-// Updated getColorHex
+// Master list of known color names for fuzzy matching
+const KNOWN_COLOR_NAMES = Object.keys(ALL_COLORS);
+
 const getColorHex = (colorName: string): string => {
     if (!colorName) return "#CCCCCC";
 
-    const cleaned = colorName.toLowerCase().replace(/[\s&_-]+/g, "");
+    const normalized = colorName.toLowerCase().trim();
+    const words = normalized.split(/[\s&_-]+/);
+
+    // 1. Exact Match (cleaned)
+    const cleaned = normalized.replace(/[\s&_-]+/g, "");
     if (ALL_COLORS[cleaned]) return ALL_COLORS[cleaned];
 
+    // 2. Colornames Library Lookup
+    const libColor = colornames(normalized);
+    if (libColor) return libColor;
+
+    // 3. Modifier-based Heuristic
+    // We look for a base color and modifiers
+    const modifiersList = [
+        "light",
+        "dark",
+        "pale",
+        "deep",
+        "soft",
+        "bright",
+        "vivid",
+        "muted",
+        "dusty",
+        "ash",
+        "sky",
+        "midnight",
+        "forest",
+        "neon",
+        "pastel",
+        "smoked",
+    ];
+    const foundModifiers = words.filter((w) => modifiersList.includes(w));
+    const potentialBaseColors = words.filter((w) => !modifiersList.includes(w));
+
+    // Try to find a base color in our list or colornames
+    for (const base of potentialBaseColors) {
+        const baseHex = ALL_COLORS[base] || colornames(base);
+        if (baseHex) {
+            return adjustColor(baseHex, foundModifiers);
+        }
+    }
+
+    // 4. Fuzzy Matching (if it sounds like something we know)
     try {
-        const parsed = parse(colorName);
-        if (parsed.space) return getClosestColor(rgbaToHex(parsed.values));
+        const matches = findBestMatch(cleaned, KNOWN_COLOR_NAMES);
+        if (matches.bestMatch.rating > 0.6) {
+            return ALL_COLORS[matches.bestMatch.target];
+        }
     } catch {}
 
-    return stringToColor(colorName);
+    // 5. Word-by-word fallback
+    for (const word of words) {
+        if (ALL_COLORS[word]) return ALL_COLORS[word];
+        const wordLib = colornames(word);
+        if (wordLib) return wordLib;
+    }
+
+    // 6. Check color-parse as a last attempt for standard strings
+    try {
+        const parsed = parse(colorName);
+        if (parsed.space) return rgbaToHex(parsed.values);
+    } catch {}
+
+    // 7. Stable neutral fallback
+    return "#E5E5E5";
 };
 
 // Checkmark contrast color

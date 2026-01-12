@@ -1,6 +1,6 @@
 import tAnimate from "tailwindcss-animate";
-import { withUt } from "uploadthing/tw";
 import { fontFamily } from "tailwindcss/defaultTheme"; // ✅ 1. Import fontFamily
+import { withUt } from "uploadthing/tw";
 
 export default withUt({
     darkMode: ["class"],
@@ -12,11 +12,13 @@ export default withUt({
     ],
     theme: {
         extend: {
-                   fontFamily: {
+            fontFamily: {
                 sans: ["var(--font-josefin)", ...fontFamily.sans],
+                worksans: ["var(--font-work-sans)", ...fontFamily.sans],
+                playfair: ["var(--font-playfair)", ...fontFamily.serif],
             },
             colors: {
-                "myntra-primary" : "#282c3f",
+                "myntra-primary": "#282c3f",
                 "myntra-label": "#7e818c",
                 "radical-red": "#ff3f6c",
                 background: "hsl(var(--background))",
@@ -107,13 +109,13 @@ export default withUt({
                 "accordion-down": "accordion-down 0.2s ease-out",
                 "accordion-up": "accordion-up 0.2s ease-out",
             },
-            fontSize:{
+            fontSize: {
                 "11": "11px",
                 "12": "12px",
                 "13": "13px",
                 "14": "14px",
-                "16": "16px"
-            }
+                "16": "16px",
+            },
         },
     },
     plugins: [tAnimate],

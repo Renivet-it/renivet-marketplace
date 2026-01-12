@@ -72,17 +72,17 @@ export function UnavailableItemsModal({
 
                 <div className="space-y-5">
                     {unavailableCart?.map((item) => {
-                        const itemMedia =
+                        const variant =
                             item.variantId && item.product.variants.length > 0
-                                ? !!item.product.variants.find(
-                                      (variant) => variant.id === item.variantId
+                                ? item.product.variants.find(
+                                      (v) => v.id === item.variantId
                                   )
-                                    ? item.product.variants.find(
-                                          (variant) =>
-                                              variant.id === item.variantId
-                                      )!.mediaItem!
-                                    : item.product.media![0].mediaItem!
-                                : item.product.media![0].mediaItem!;
+                                : null;
+
+                        const itemMedia =
+                            variant?.mediaItem ??
+                            item.product.media?.[0]?.mediaItem ??
+                            null;
 
                         const itemPrice =
                             item.variantId && item.product.variants.length > 0
@@ -103,9 +103,12 @@ export function UnavailableItemsModal({
                             >
                                 <div className="group relative aspect-[4/5] size-full max-w-36 shrink-0">
                                     <Image
-                                        src={itemMedia.url}
+                                        src={
+                                            itemMedia?.url ??
+                                            "/images/placeholder.png"
+                                        }
                                         alt={
-                                            itemMedia.alt ?? item.product.title
+                                            itemMedia?.alt ?? item.product.title
                                         }
                                         width={1000}
                                         height={1000}
