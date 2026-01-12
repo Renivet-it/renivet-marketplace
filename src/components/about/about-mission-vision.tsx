@@ -19,7 +19,7 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
             {/* DECORATIVE ELEMENTS */}
             {/* ===================== */}
 
-            {/* Mission – Leaf (Top Left) */}
+            {/* Mission – Leaf */}
             <div className="pointer-events-none absolute left-4 top-8 md:left-8 md:top-24">
                 <Image
                     src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdFtqD9b4imNMJ6l9SbIRxWLcDyX3vTqk2UVG"
@@ -63,20 +63,10 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                 </div>
             </div>
 
-            {/* ================================================= */}
-            {/* TRANSITION SPACER — NEEDLE LIVES HERE */}
-            {/* ================================================= */}
-            <div className="relative my-8 flex justify-center md:my-0 md:block md:h-40">
-                {/* Mobile Needle */}
-                <div className="pointer-events-none md:hidden">
-                    <Image
-                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXIPEGo3We049OUSYNxCLnRIka3FhcqBZlbsP"
-                        alt=""
-                        width={100}
-                        height={20}
-                        className="opacity-70"
-                    />
-                </div>
+            {/* ===================== */}
+            {/* TRANSITION NEEDLE */}
+            {/* ===================== */}
+            <div className="relative my-8 flex justify-center md:block md:h-40">
                 {/* Desktop Needle */}
                 <div className="pointer-events-none absolute left-[-28px] top-1/2 hidden -translate-y-1/2 md:block">
                     <Image
@@ -93,7 +83,7 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
             {/* VISION SECTION */}
             {/* ===================== */}
             <div className="relative flex flex-col lg:flex-row-reverse lg:items-center">
-                {/* Vision – Leaf near heading */}
+                {/* Vision – Leaf */}
                 <div className="pointer-events-none absolute right-4 top-[-20px] md:right-8 md:top-[-48px]">
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuMb9SOhnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
@@ -104,18 +94,39 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                     />
                 </div>
 
-                <div className="relative flex w-full flex-1 items-center justify-center lg:min-h-[495px]">
+                <div className="relative flex w-full flex-1 items-center justify-left lg:min-h-[495px]">
                     <div className="flex flex-col items-start p-6 md:items-end md:p-8 xl:pr-12">
                         <div className="lg:max-w-[420px]">
-                            <h2 className="mb-4 font-playfair text-[22px] font-semibold uppercase tracking-[0.05em] text-[#3d3d3d] md:mb-6 md:text-4xl">
+                            {/* MOBILE: Pin + Title side by side */}
+                            {/* MOBILE: Pin + Title */}
+                            <div className="mb-2 flex items-center gap-4 md:hidden">
+                                <Image
+                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXIPEGo3We049OUSYNxCLnRIka3FhcqBZlbsP"
+        alt=""
+        width={90}
+        height={44}
+        className="opacity-70"
+    />
+    <h2 className="font-playfair text-[22px] font-semibold uppercase tracking-[0.08em] text-[#3d3d3d]">
+        OUR VISION
+    </h2>
+</div>
+
+
+                            {/* DESKTOP: Normal heading */}
+                            <h2 className="mb-4 hidden font-playfair text-[22px] font-semibold uppercase tracking-[0.05em] text-[#3d3d3d] md:mb-6 md:block md:text-4xl">
                                 OUR VISION
                             </h2>
 
-                            <p className="mb-4 font-worksans text-[15px] text-[#5c5c5c] md:mb-6 md:text-xl">
+                            <p className="mb-4 ml-[73px] font-worksans text-[15px] text-[#5c5c5c] md:mb-6 md:text-xl">
                                 We Envision A Market Where:
                             </p>
 
-                            <ul className="space-y-3 font-worksans text-[15px] text-[#5c5c5c] md:space-y-4 md:text-xl">
+<ul className="ml-auto mr-[-100px] w-[260px] font-worksans text-[14px] text-[#5c5c5c] md:mr-0 md:w-full md:text-xl">
+
+
+
+
                                 {[
                                     "Quality Is Visible, Not Buried",
                                     "Small Creators Rise Instead Of Getting Drowned Out",
@@ -123,27 +134,45 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                                     "Trust Replaces Greenwashing",
                                     "Meaningful Products Replace Mass-Produced Sameness",
                                 ].map((item) => (
-                                    <li
-                                        key={item}
-                                        className="flex items-start gap-2 md:gap-3"
-                                    >
-                                        <span className="mt-1.5 size-1 shrink-0 rounded-full bg-stone-400 md:mt-2.5 md:size-1.5" />
-                                        <span>{item}</span>
-                                    </li>
+<li
+    key={item}
+    className="flex items-start gap-3"
+>
+    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-stone-400" />
+    <span className="leading-[1.7]">
+        {item}
+    </span>
+</li>
+
+
                                 ))}
                             </ul>
                         </div>
                     </div>
                 </div>
 
-                <div className="relative ml-6 mr-auto mt-6 h-[220px] w-[320px] overflow-hidden rounded-[20px] md:mx-0 md:mt-12 md:h-auto md:w-full md:rounded-r-3xl lg:mt-0 lg:aspect-[720/495] lg:h-[495px] lg:w-[720px] lg:shrink-0 lg:rounded-r-[2.5rem]">
-                    <Image
-                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNVzRb6KBbpNcg6ZSKi0IGkAsjuLwQox3znmlt"
-                        alt="Our Vision"
-                        fill
-                        className="object-cover"
-                    />
-                </div>
+<div className="relative ml-6 mr-auto mt-6 h-[220px] w-[320px] overflow-hidden rounded-[20px] md:mx-0 md:mt-12 md:h-auto md:w-full md:rounded-r-3xl lg:mt-0 lg:aspect-[720/495] lg:h-[495px] lg:w-[720px] lg:shrink-0 lg:rounded-r-[2.5rem]">
+    
+    {/* Mobile decorative leaf beside image */}
+    <div className="pointer-events-none absolute -right-6 top-6 md:hidden">
+        <Image
+            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuMb9SOhnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
+            alt=""
+            width={34}
+            height={34}
+            className="opacity-80"
+        />
+    </div>
+
+    <Image
+        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNVzRb6KBbpNcg6ZSKi0IGkAsjuLwQox3znmlt"
+        alt="Our Vision"
+        fill
+        className="object-cover"
+    />
+</div>
+
+
             </div>
 
             {/* ===================== */}
