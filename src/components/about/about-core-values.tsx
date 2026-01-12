@@ -26,16 +26,40 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
         >
             {/* Background Glow */}
             <div className="pointer-events-none absolute inset-0">
+                {/* Mobile Background */}
+                <div className="absolute left-0 top-0 h-full w-full md:hidden">
+                    <Image
+                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNPm9P4GO9kwm36pdODjHU0ryYqC2xJehFZ5Q7"
+                        alt="Background Glow"
+                        fill
+                        className="object-cover object-[center_-50px] opacity-60"
+                        priority
+                    />
+                </div>
+                {/* Desktop Background */}
+                <div className="hidden h-full w-full md:block">
+                    <Image
+                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNZ7keRPI6Gw03SBYgknrdpcjuJ8IvhPb5W9zy"
+                        alt="Background Glow"
+                        fill
+                        className="object-cover opacity-60"
+                        priority
+                    />
+                </div>
+            </div>
+
+            {/* Left Illustration - Mobile version (visible only on mobile) */}
+            <div className="pointer-events-none absolute left-2 top-[6%] md:hidden">
                 <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNZ7keRPI6Gw03SBYgknrdpcjuJ8IvhPb5W9zy"
-                    alt="Background Glow"
-                    fill
-                    className="object-cover opacity-60"
-                    priority
+                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvD0uVndPZsh5fuDbkAelMyqICmp3NU7X4nHY"
+                    alt="Decorative Pin"
+                    width={22}
+                    height={58}
+                    className="rotate-[-10deg] opacity-90"
                 />
             </div>
 
-            {/* Left Illustration - Hidden on mobile */}
+            {/* Left Illustration - Desktop version (visible only on desktop) */}
             <div className="pointer-events-none absolute left-0 top-[12%] hidden md:block">
                 <Image
                     src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvD0uVndPZsh5fuDbkAelMyqICmp3NU7X4nHY"
@@ -46,8 +70,19 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                 />
             </div>
 
-            {/* Right Illustration - Hidden on mobile */}
-            <div className="pointer-events-none absolute bottom-[12%] right-0 hidden md:block">
+            {/* Right Illustration - Mobile version (visible only on mobile) */}
+            <div className="pointer-events-none absolute bottom-[24%] right-4 md:hidden">
+                <Image
+                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNV4NdgTmBbpNcg6ZSKi0IGkAsjuLwQox3znml"
+                    alt="Decorative Yarn"
+                    width={70}
+                    height={70}
+                    className="rotate-[-15deg] opacity-90"
+                />
+            </div>
+
+            {/* Right Illustration - Desktop version (visible only on desktop) */}
+            <div className="pointer-events-none absolute bottom-[16%] right-0 hidden md:block">
                 <Image
                     src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNV4NdgTmBbpNcg6ZSKi0IGkAsjuLwQox3znml"
                     alt="Decorative Yarn"
@@ -65,7 +100,7 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                         WHAT RENIVET IS
                     </h2>
 
-                    <p className="font-worksans text-xs leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
+                    <p className="font-worksans text-[15px] leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
                         <span className="block">
                             Renivet Is Not Just Another Marketplace.
                         </span>
@@ -86,7 +121,7 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                         HOW WE OPERATE
                     </h2>
 
-                    <p className="font-worksans text-xs leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
+                    <p className="font-worksans text-[15px] leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
                         <span className="block">
                             Every Product On Renivet Is Intentionally
                             Chosen—Based On Quality, Craftsmanship, Values, And
@@ -106,7 +141,7 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                         VALUE CREATED
                     </h2>
 
-                    <p className="font-worksans text-xs leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
+                    <p className="font-worksans text-[15px] leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
                         <span className="block">
                             By Removing Noise And Prioritising Trust, Renivet
                             Makes It Easier For Brands To Scale Without
@@ -120,16 +155,50 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                 </div>
 
                 {/* Icons Grid */}
-                <div className="pt-4 md:pt-8">
-                    <div className="flex flex-wrap items-center justify-center gap-6 md:gap-24">
+                <div className="pt-6 md:pt-8">
+                    {/* Mobile Layout - 3 icons + 2 icons in two rows */}
+                    <div className="flex flex-col items-center gap-10 md:hidden">
+                        {/* First Row - 3 icons */}
+                        <div className="flex items-center justify-center gap-16">
+                            {icons.slice(0, 3).map((item, idx) => (
+                                <div
+                                    key={idx}
+                                    className="flex flex-col items-center gap-2"
+                                >
+                                    <item.Icon
+                                        strokeWidth={1.5}
+                                        className="h-[52px] w-[52px] text-[#1c1c1c]"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Second Row - 2 icons */}
+                        <div className="flex items-center justify-center gap-16">
+                            {icons.slice(3, 5).map((item, idx) => (
+                                <div
+                                    key={idx}
+                                    className="flex flex-col items-center gap-2"
+                                >
+                                    <item.Icon
+                                        strokeWidth={1.5}
+                                        className="h-[52px] w-[52px] text-[#1c1c1c]"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Desktop Layout - All 5 icons in one row */}
+                    <div className="hidden items-center justify-center gap-24 md:flex">
                         {icons.map((item, idx) => (
                             <div
                                 key={idx}
-                                className="flex flex-col items-center gap-2 md:gap-3"
+                                className="flex flex-col items-center gap-2"
                             >
                                 <item.Icon
                                     strokeWidth={1}
-                                    className="h-12 w-12 text-[#1c1c1c] md:h-[82px] md:w-[84px]"
+                                    className="h-[82px] w-[84px] text-[#1c1c1c]"
                                 />
                             </div>
                         ))}

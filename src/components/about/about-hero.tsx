@@ -35,8 +35,8 @@ export function AboutHero({ className }: AboutHeroProps) {
             />
 
             {/* Mobile Text */}
-            <div className="absolute inset-0 bg-black/15 md:hidden">
-                <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+            <div className="absolute inset-0  md:hidden">
+                <div className="flex h-full flex-col items-center justify-end px-4 pb-24 text-center">
                     <h1 className="font-playfair text-[20px] font-semibold leading-[1.35] text-white">
                         The World Doesn't Need More Products.
                         <br />
