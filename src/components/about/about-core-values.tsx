@@ -20,7 +20,7 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
     return (
         <section
             className={cn(
-                "relative overflow-hidden bg-[#F9F6F1] px-4 py-24 md:py-32",
+                "relative overflow-hidden bg-[#F9F6F1] px-4 py-12 md:py-32",
                 className
             )}
         >
@@ -35,7 +35,7 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                 />
             </div>
 
-            {/* Left Illustration */}
+            {/* Left Illustration - Hidden on mobile */}
             <div className="pointer-events-none absolute left-0 top-[12%] hidden md:block">
                 <Image
                     src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvD0uVndPZsh5fuDbkAelMyqICmp3NU7X4nHY"
@@ -46,7 +46,7 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                 />
             </div>
 
-            {/* Right Illustration */}
+            {/* Right Illustration - Hidden on mobile */}
             <div className="pointer-events-none absolute bottom-[12%] right-0 hidden md:block">
                 <Image
                     src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNV4NdgTmBbpNcg6ZSKi0IGkAsjuLwQox3znml"
@@ -58,14 +58,14 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
             </div>
 
             {/* Content */}
-            <div className="container relative mx-auto max-w-[1100px] space-y-16 text-center md:space-y-24">
+            <div className="container relative mx-auto max-w-[1100px] space-y-8 text-center md:space-y-24">
                 {/* WHAT RENIVET IS */}
                 <div className="mx-auto max-w-[1100px]">
-                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:text-3xl">
+                    <h2 className="mb-3 font-worksans text-lg font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:mb-6 md:text-3xl">
                         WHAT RENIVET IS
                     </h2>
 
-                    <p className="font-worksans text-[20px] font-normal leading-snug tracking-normal text-[#1c1c1c]">
+                    <p className="font-worksans text-xs leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
                         <span className="block">
                             Renivet Is Not Just Another Marketplace.
                         </span>
@@ -82,18 +82,18 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
 
                 {/* HOW WE OPERATE */}
                 <div className="mx-auto max-w-[1100px]">
-                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:text-3xl">
+                    <h2 className="mb-3 font-worksans text-lg font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:mb-6 md:text-3xl">
                         HOW WE OPERATE
                     </h2>
 
-                    <p className="font-worksans text-[20px] font-normal leading-snug tracking-normal text-[#1c1c1c]">
+                    <p className="font-worksans text-xs leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
                         <span className="block">
                             Every Product On Renivet Is Intentionally
                             Chosen—Based On Quality, Craftsmanship, Values, And
                             The
                         </span>
                         <span className="block">
-                            Story Behind It. We Don’t Chase Trends Or Quantity.
+                            Story Behind It. We Don't Chase Trends Or Quantity.
                             We Focus On Credibility, Clarity, And Conscious
                         </span>
                         <span className="block">Creation.</span>
@@ -102,11 +102,11 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
 
                 {/* VALUE CREATED */}
                 <div className="mx-auto max-w-[1100px]">
-                    <h2 className="font-worksans mb-6 text-2xl font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:text-3xl">
+                    <h2 className="mb-3 font-worksans text-lg font-bold uppercase tracking-[0.15em] text-[#1c1c1c] md:mb-6 md:text-3xl">
                         VALUE CREATED
                     </h2>
 
-                    <p className="font-worksans text-[20px] font-normal leading-snug tracking-normal text-[#1c1c1c]">
+                    <p className="font-worksans text-xs leading-relaxed tracking-normal text-[#1c1c1c] sm:text-sm md:text-[20px] md:leading-snug">
                         <span className="block">
                             By Removing Noise And Prioritising Trust, Renivet
                             Makes It Easier For Brands To Scale Without
@@ -120,16 +120,16 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                 </div>
 
                 {/* Icons Grid */}
-                <div className="pt-8">
-                    <div className="flex flex-wrap items-center justify-center gap-12 md:gap-24">
+                <div className="pt-4 md:pt-8">
+                    <div className="flex flex-wrap items-center justify-center gap-6 md:gap-24">
                         {icons.map((item, idx) => (
                             <div
                                 key={idx}
-                                className="flex flex-col items-center gap-3"
+                                className="flex flex-col items-center gap-2 md:gap-3"
                             >
                                 <item.Icon
                                     strokeWidth={1}
-                                    className="h-[82px] w-[84px] text-[#1c1c1c]"
+                                    className="h-12 w-12 text-[#1c1c1c] md:h-[82px] md:w-[84px]"
                                 />
                             </div>
                         ))}
