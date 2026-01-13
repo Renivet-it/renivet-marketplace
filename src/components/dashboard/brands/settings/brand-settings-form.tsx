@@ -322,24 +322,31 @@ export function BrandSettingsForm({
         // If same as warehouse, copy office address to warehouse
         const finalValues = {
             ...values,
+            // Ensure nullable fields are null instead of undefined
+            addressLine2: values.addressLine2 ?? null,
+            iecCertificate: values.iecCertificate ?? null,
+            udyamRegistrationCertificate:
+                values.udyamRegistrationCertificate ?? null,
+            bankAccountVerificationDocument:
+                values.bankAccountVerificationDocument ?? "",
             warehouseAddressLine1: values.isSameAsWarehouseAddress
                 ? values.addressLine1
-                : values.warehouseAddressLine1,
+                : (values.warehouseAddressLine1 ?? null),
             warehouseAddressLine2: values.isSameAsWarehouseAddress
-                ? values.addressLine2
-                : values.warehouseAddressLine2,
+                ? (values.addressLine2 ?? null)
+                : (values.warehouseAddressLine2 ?? null),
             warehouseCity: values.isSameAsWarehouseAddress
                 ? values.city
-                : values.warehouseCity,
+                : (values.warehouseCity ?? null),
             warehouseState: values.isSameAsWarehouseAddress
                 ? values.state
-                : values.warehouseState,
+                : (values.warehouseState ?? null),
             warehousePostalCode: values.isSameAsWarehouseAddress
                 ? values.postalCode
-                : values.warehousePostalCode,
+                : (values.warehousePostalCode ?? null),
             warehouseCountry: values.isSameAsWarehouseAddress
                 ? values.country
-                : values.warehouseCountry,
+                : (values.warehouseCountry ?? null),
         };
 
         updateConfidential({
