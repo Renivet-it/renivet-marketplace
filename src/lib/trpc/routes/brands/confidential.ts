@@ -1,9 +1,9 @@
 import { env } from "@/../env";
 import { BitFieldBrandPermission } from "@/config/permissions";
+import { createClientWarehouse } from "@/lib/delhivery/warehouse";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { BrandVerificationtSubmitted } from "@/lib/resend/emails";
-import { createClientWarehouse } from "@/lib/delhivery/warehouse";
 import { shiprocket } from "@/lib/shiprocket";
 import {
     createTRPCRouter,
@@ -66,7 +66,7 @@ export const confidentialsRouter = createTRPCRouter({
                 brandId: existingBrand.id,
                 brandName: existingBrand.name,
             });
-             const phone = String(
+            const phone = String(
                 getRawNumberFromPhone(input.authorizedSignatoryPhone) ??
                     "9999999999"
             );
@@ -83,12 +83,15 @@ export const confidentialsRouter = createTRPCRouter({
                 return_address:
                     input.warehouseAddressLine1 ?? input.addressLine1,
                 return_city: input.warehouseCity ?? input.city,
-                return_pin: String(input.warehousePostalCode ?? input.postalCode),
+                return_pin: String(
+                    input.warehousePostalCode ?? input.postalCode
+                ),
                 return_state: input.warehouseState ?? input.state,
                 return_country: "India",
             };
 
-            const delhiveryResult = await createClientWarehouse(delhiveryPayload);
+            const delhiveryResult =
+                await createClientWarehouse(delhiveryPayload);
 
             if (!delhiveryResult.success) {
                 throw new TRPCError({
@@ -195,6 +198,36 @@ export const confidentialsRouter = createTRPCRouter({
                     confidentialVerificationRejectedAt: null,
                     confidentialVerificationRejectedReason: null,
                 }),
+                brandCache.remove(id),
+                userCache.remove(existingBrandConfidential.brand.ownerId),
+            ]);
+
+            return data;
+        }),
+    // New endpoint: Update confidential details without affecting verification status
+    updateConfidentialDetails: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateBrandConfidentialSchema,
+            })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input, ctx }) => {
+            const { queries } = ctx;
+            const { id, values } = input;
+
+            const existingBrandConfidential =
+                await queries.brandConfidentials.getBrandConfidential(id);
+            if (!existingBrandConfidential)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Confidential not found",
+                });
+
+            // Update without changing verification status
+            const [data] = await Promise.all([
+                queries.brandConfidentials.updateBrandConfidential(id, values),
                 brandCache.remove(id),
                 userCache.remove(existingBrandConfidential.brand.ownerId),
             ]);

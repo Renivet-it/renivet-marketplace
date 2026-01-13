@@ -845,6 +845,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
+                    title: "Brand Settings",
+                    url: `/dashboard/brands/${brandId}/settings`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
                     title: "Product - Packaging Types",
                     url: `/dashboard/brands/${brandId}/packing-rules`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
@@ -857,7 +862,7 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                 {
                     title: "Verification",
                     url: `/dashboard/brands/${brandId}/verification`,
-                    permissions: BitFieldBrandPermission.ADMINISTRATOR,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
                     title: "Roles",
