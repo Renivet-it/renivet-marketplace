@@ -84,9 +84,10 @@ class BrandConfidentialQuery {
 
         const enhancedData = data.map((item) => ({
             ...item,
-            bankAccountVerificationDocument: mediaMap.get(
+            bankAccountVerificationDocument:
                 item.bankAccountVerificationDocument
-            ),
+                    ? mediaMap.get(item.bankAccountVerificationDocument)
+                    : null,
             udyamRegistrationCertificate: item.udyamRegistrationCertificate
                 ? mediaMap.get(item.udyamRegistrationCertificate)
                 : null,
@@ -128,9 +129,10 @@ class BrandConfidentialQuery {
 
         const enhancedData = {
             ...data,
-            bankAccountVerificationDocument: mediaMap.get(
+            bankAccountVerificationDocument:
                 data.bankAccountVerificationDocument
-            ),
+                    ? mediaMap.get(data.bankAccountVerificationDocument)
+                    : null,
             udyamRegistrationCertificate: data.udyamRegistrationCertificate
                 ? mediaMap.get(data.udyamRegistrationCertificate)
                 : null,
@@ -172,6 +174,28 @@ class BrandConfidentialQuery {
             .update(brandConfidentials)
             .set(values)
             .where(eq(brandConfidentials.id, id))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async upsertBrandConfidentialByAdmin(
+        id: string,
+        values: UpdateBrandConfidentialByAdmin
+    ) {
+        const data = await db
+            .insert(brandConfidentials)
+            .values({
+                id,
+                ...values,
+                bankAccountVerificationDocument:
+                    values.bankAccountVerificationDocument,
+            })
+            .onConflictDoUpdate({
+                target: brandConfidentials.id,
+                set: values,
+            })
             .returning()
             .then((res) => res[0]);
 
