@@ -11,7 +11,7 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
     return (
         <section
             className={cn(
-                "relative overflow-hidden bg-[#F9F6F1] py-12 md:py-24",
+                "relative overflow-hidden bg-[#fcfbf4] py-12 md:py-24",
                 className
             )}
         >

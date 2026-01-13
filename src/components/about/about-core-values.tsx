@@ -9,18 +9,34 @@ interface AboutCoreValuesProps {
 }
 
 const icons = [
-    { Icon: Sprout, label: "Eco Friendly" },
-    { Icon: ShoppingBag, label: "Ethical Sourcing" },
-    { Icon: RefreshCw, label: "Circular Economy" },
-    { Icon: Infinity, label: "Artisan Support" },
-    { Icon: Globe, label: "Global Impact" },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNw3U5csrQTkEsKW16AOLVjr8DhmeCypgUGfJz",
+        alt: "Eco Friendly",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN4iJMgcKTrA2wJk4WKdFytgsaQSNjmBo8I5CG",
+        alt: "Ethical Sourcing",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjgOYT4fmPpnZoHc5f2E4rFNLugdK3ty9ObjY",
+        alt: "Circular Economy",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNyax3gRp5TEHko4KfX8CDn1z7Q2migSIjw0ds",
+        alt: "Artisan Support",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoOEp2o0WvnGEidmOVIP6xXt4S7befYUykMJq",
+        alt: "Global Impact",
+    },
 ];
+
 
 export function AboutCoreValues({ className }: AboutCoreValuesProps) {
     return (
         <section
             className={cn(
-                "relative overflow-hidden bg-[#F9F6F1] px-4 py-12 md:py-32",
+                "relative overflow-hidden bg-[#fcfbf4] px-4 py-12 md:py-32",
                 className
             )}
         >
@@ -165,10 +181,13 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                                     key={idx}
                                     className="flex flex-col items-center gap-2"
                                 >
-                                    <item.Icon
-                                        strokeWidth={1.5}
-                                        className="h-[52px] w-[52px] text-[#1c1c1c]"
-                                    />
+                               <Image
+    src={item.src}
+    alt={item.alt}
+    width={62}
+    height={62}
+    className="h-[62px] w-[62px] object-contain"
+/>
                                 </div>
                             ))}
                         </div>
@@ -180,10 +199,13 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                                     key={idx}
                                     className="flex flex-col items-center gap-2"
                                 >
-                                    <item.Icon
-                                        strokeWidth={1.5}
-                                        className="h-[52px] w-[52px] text-[#1c1c1c]"
-                                    />
+                               <Image
+    src={item.src}
+    alt={item.alt}
+    width={62}
+    height={62}
+    className="h-[62px] w-[62px] object-contain"
+/>
                                 </div>
                             ))}
                         </div>
@@ -196,10 +218,13 @@ export function AboutCoreValues({ className }: AboutCoreValuesProps) {
                                 key={idx}
                                 className="flex flex-col items-center gap-2"
                             >
-                                <item.Icon
-                                    strokeWidth={1}
-                                    className="h-[82px] w-[84px] text-[#1c1c1c]"
-                                />
+                          <Image
+    src={item.src}
+    alt={item.alt}
+    width={62}
+    height={62}
+    className="h-[62px] w-[62px] object-contain"
+/>
                             </div>
                         ))}
                     </div>
