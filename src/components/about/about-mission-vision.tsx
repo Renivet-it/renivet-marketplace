@@ -46,7 +46,7 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                             <h2 className="mb-4 font-playfair text-[25px] font-semibold uppercase tracking-[0.05em] text-[#3d3d3d] md:mb-6 md:text-4xl">
                                 OUR MISSION
                             </h2>
-                            <p className="font-worksans text-[15px] leading-[1.7] text-[#5c5c5c] md:text-xl">
+                            <p className="font-worksans text-[15px] leading-[1.7] text-stone-900 md:text-xl">
                                 To Declutter The Market And Build A Trusted
                                 Growth Platform Where Homegrown, Artisan-Led,
                                 And Sustainable Brands Can Scale Without
@@ -137,11 +137,11 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                                 OUR VISION
                             </h2>
 
-                            <p className="mb-4 ml-[73px] font-worksans text-[15px] text-[#5c5c5c] sm:ml-0 md:mb-6 md:text-xl">
+                            <p className="mb-4 ml-[73px] font-worksans text-[15px] text-stone-900 sm:ml-0 md:mb-6 md:text-xl">
                                 We Envision A Market Where:
                             </p>
 
-                            <ul className="ml-auto mr-[-80px] w-[260px] font-worksans text-[15px] text-[#5c5c5c] md:mr-0 md:w-full md:text-xl">
+                            <ul className="ml-auto mr-[-80px] w-[260px] font-worksans text-[15px] text-stone-900 md:mr-0 md:w-full md:text-xl">
                                 {[
                                     "Quality Is Visible, Not Buried",
                                     "Small Creators Rise Instead Of Getting Drowned Out",
@@ -153,8 +153,8 @@ export function AboutMissionVision({ className }: AboutMissionVisionProps) {
                                         key={item}
                                         className="flex items-start gap-3"
                                     >
-                                        <span className="mt-2 size-1.5 shrink-0 rounded-full bg-stone-400" />
-                                        <span className="leading-[1.7]">
+                                        <span className="mt-2 size-1.5 shrink-0 rounded-full bg-stone-400 text-stone-900  " />
+                                        <span className="leading-[1.7] text-stone-900">
                                             {item}
                                         </span>
                                     </li>
