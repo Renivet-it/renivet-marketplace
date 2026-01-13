@@ -1,5 +1,8 @@
 "use client";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button-general";
+import { Card } from "@/components/ui/card";
 import {
     Form,
     FormControl,
@@ -19,9 +22,7 @@ import {
 } from "@/components/ui/select-general";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button-general";
-import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { trpc } from "@/lib/trpc/client";
 import { cn, convertValueToLabel, handleClientError } from "@/lib/utils";
 import {
     CreateAddress,
@@ -33,7 +34,25 @@ import { State } from "country-state-city";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { trpc } from "@/lib/trpc/client";
+import { z } from "zod";
+
+// Extended schema with firstName and lastName validation
+const addAddressFormSchema = createAddressSchema
+    .omit({ fullName: true })
+    .extend({
+        firstName: z
+            .string({
+                required_error: "First name is required",
+            })
+            .min(2, "First name must be at least 2 characters"),
+        lastName: z
+            .string({
+                required_error: "Last name is required",
+            })
+            .min(2, "Last name must be at least 2 characters"),
+    });
+
+type AddAddressFormValues = z.infer<typeof addAddressFormSchema>;
 
 interface AddAddressFormProps {
     user: UserWithAddressesRolesAndBrand;
@@ -41,15 +60,20 @@ interface AddAddressFormProps {
     onSuccess: () => void;
 }
 
-export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddressFormProps) {
+export default function AddAddressForm({
+    user,
+    onSuccess,
+    onCancel,
+}: AddAddressFormProps) {
     const { refetch } = trpc.general.users.currentUser.useQuery();
     const states = useMemo(() => State.getStatesOfCountry("IN"), []);
 
-    const form = useForm<CreateAddress>({
-        resolver: zodResolver(createAddressSchema),
+    const form = useForm<AddAddressFormValues>({
+        resolver: zodResolver(addAddressFormSchema),
         defaultValues: {
             alias: "",
-            fullName: "",
+            firstName: "",
+            lastName: "",
             street: "",
             city: "",
             state: "",
@@ -78,9 +102,11 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
             },
         });
 
-    const onSubmit = (data: CreateAddress) => {
-        console.log("Form submitted with data:", data); // Debug log
-        addAddress(data);
+    const onSubmit = (data: AddAddressFormValues) => {
+        const { firstName, lastName, ...rest } = data;
+        const fullName = `${firstName} ${lastName}`.trim();
+        console.log("Form submitted with data:", { ...rest, fullName }); // Debug log
+        addAddress({ ...rest, fullName });
     };
 
     const onError = (errors: any) => {
@@ -91,23 +117,30 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit, onError)}>
-                <Card className="bg-white rounded-lg shadow-lg w-full max-w-3xl mx-auto">
-                    <div className="space-y-3 p-4 sm:p-5"> {/* Balanced padding */}
-
+                <Card className="mx-auto w-full max-w-3xl rounded-lg bg-white shadow-lg">
+                    <div className="space-y-3 p-4 sm:p-5">
+                        {" "}
+                        {/* Balanced padding */}
                         {/* Contact Details Section */}
-                        <div className="space-y-2 sm:space-y-2"> {/* Balanced spacing */}
-                            <h3 className="text-sm font-semibold text-gray-700 uppercase">Contact Details</h3>
+                        <div className="space-y-2 sm:space-y-2">
+                            {" "}
+                            {/* Balanced spacing */}
+                            <h3 className="text-sm font-semibold uppercase text-gray-700">
+                                Contact Details
+                            </h3>
                             <FormField
                                 control={form.control}
                                 name="alias"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-sm text-gray-600">Address Name</FormLabel>
+                                        <FormLabel className="text-sm text-gray-600">
+                                            Address Name
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="Address Name (e.g., Home, Office)"
                                                 disabled={isAddressAdding}
-                                                className="border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-pink-500 w-full" // Balanced for mobile
+                                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500" // Balanced for mobile
                                                 {...field}
                                             />
                                         </FormControl>
@@ -115,39 +148,69 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                     </FormItem>
                                 )}
                             />
-                            <FormField
-                                control={form.control}
-                                name="fullName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-sm text-gray-600">Full Name*</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="Name"
-                                                disabled={isAddressAdding}
-                                                className="border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-pink-500 w-full" // Balanced for mobile
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage className="text-xs" />
-                                    </FormItem>
-                                )}
-                            />
+                            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                                <FormField
+                                    control={form.control}
+                                    name="firstName"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <FormLabel className="text-sm text-gray-600">
+                                                First Name*
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="First Name"
+                                                    disabled={isAddressAdding}
+                                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="lastName"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <FormLabel className="text-sm text-gray-600">
+                                                Last Name*
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Last Name"
+                                                    disabled={isAddressAdding}
+                                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                             <FormField
                                 control={form.control}
                                 name="phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-sm text-gray-600">Mobile No*</FormLabel>
+                                        <FormLabel className="text-sm text-gray-600">
+                                            Mobile No*
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 inputMode="tel"
                                                 placeholder="Mobile No"
                                                 disabled={isAddressAdding}
-                                                className="border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-pink-500 w-full" // Balanced for mobile
+                                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500" // Balanced for mobile
                                                 {...field}
                                                 onChange={(e) => {
-                                                    const value = e.target.value.replace(/[^0-9-+]/g, "");
+                                                    const value =
+                                                        e.target.value.replace(
+                                                            /[^0-9-+]/g,
+                                                            ""
+                                                        );
                                                     field.onChange(value);
                                                 }}
                                             />
@@ -157,25 +220,34 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                 )}
                             />
                         </div>
-
                         {/* Address Section */}
-                        <div className="space-y-2 sm:space-y-2"> {/* Balanced spacing */}
-                            <h3 className="text-sm font-semibold text-gray-700 uppercase">Address</h3>
+                        <div className="space-y-2 sm:space-y-2">
+                            {" "}
+                            {/* Balanced spacing */}
+                            <h3 className="text-sm font-semibold uppercase text-gray-700">
+                                Address
+                            </h3>
                             <FormField
                                 control={form.control}
                                 name="zip"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-sm text-gray-600">Pin Code*</FormLabel>
+                                        <FormLabel className="text-sm text-gray-600">
+                                            Pin Code*
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 inputMode="numeric"
                                                 placeholder="Pin Code"
                                                 disabled={isAddressAdding}
-                                                className="border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-pink-500 w-full" // Balanced for mobile
+                                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500" // Balanced for mobile
                                                 {...field}
                                                 onChange={(e) => {
-                                                    const value = e.target.value.replace(/[^0-9]/g, "");
+                                                    const value =
+                                                        e.target.value.replace(
+                                                            /[^0-9]/g,
+                                                            ""
+                                                        );
                                                     field.onChange(value);
                                                 }}
                                             />
@@ -190,13 +262,14 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-sm text-gray-600">
-                                            Address (House No, Building, Street, Area)*
+                                            Address (House No, Building, Street,
+                                            Area)*
                                         </FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="Please update flat/house no and society/apartment details"
                                                 disabled={isAddressAdding}
-                                                className="border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-pink-500 w-full" // Balanced for mobile
+                                                className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500" // Balanced for mobile
                                                 {...field}
                                             />
                                         </FormControl>
@@ -204,18 +277,22 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                     </FormItem>
                                 )}
                             />
-                            <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row"> {/* Balanced gap */}
+                            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                                {" "}
+                                {/* Balanced gap */}
                                 <FormField
                                     control={form.control}
                                     name="city"
                                     render={({ field }) => (
                                         <FormItem className="w-full">
-                                            <FormLabel className="text-sm text-gray-600">City/District*</FormLabel>
+                                            <FormLabel className="text-sm text-gray-600">
+                                                City/District*
+                                            </FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder="City/District"
                                                     disabled={isAddressAdding}
-                                                    className="border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-pink-500 w-full" // Balanced for mobile
+                                                    className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500" // Balanced for mobile
                                                     {...field}
                                                     value={field.value ?? ""}
                                                 />
@@ -229,20 +306,30 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                     name="state"
                                     render={({ field }) => (
                                         <FormItem className="w-full">
-                                            <FormLabel className="text-sm text-gray-600">State*</FormLabel>
+                                            <FormLabel className="text-sm text-gray-600">
+                                                State*
+                                            </FormLabel>
                                             <Select
                                                 onValueChange={field.onChange}
                                                 defaultValue={field.value}
                                                 disabled={isAddressAdding}
                                             >
                                                 <FormControl>
-                                                    <SelectTrigger className="border border-gray-300 rounded-md p-2 text-sm focus:ring-1 focus:ring-pink-500 w-full"> {/* Balanced for mobile */}
+                                                    <SelectTrigger className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-1 focus:ring-pink-500">
+                                                        {" "}
+                                                        {/* Balanced for mobile */}
                                                         <SelectValue placeholder="State" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
                                                     {states.map((state) => (
-                                                        <SelectItem key={state.isoCode} value={state.isoCode} className="text-sm">
+                                                        <SelectItem
+                                                            key={state.isoCode}
+                                                            value={
+                                                                state.isoCode
+                                                            }
+                                                            className="text-sm"
+                                                        >
                                                             {state.name}
                                                         </SelectItem>
                                                     ))}
@@ -254,10 +341,13 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                 />
                             </div>
                         </div>
-
                         {/* Address Type Section */}
-                        <div className="space-y-2 sm:space-y-2"> {/* Balanced spacing */}
-                            <h3 className="text-sm font-semibold text-gray-700 uppercase">Address Type</h3>
+                        <div className="space-y-2 sm:space-y-2">
+                            {" "}
+                            {/* Balanced spacing */}
+                            <h3 className="text-sm font-semibold uppercase text-gray-700">
+                                Address Type
+                            </h3>
                             <FormField
                                 control={form.control}
                                 name="type"
@@ -268,21 +358,26 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                                 onValueChange={field.onChange}
                                                 defaultValue={field.value}
                                                 disabled={isAddressAdding}
-                                                className="flex flex-col sm:flex-row gap-3 sm:gap-4" // Balanced gap
+                                                className="flex flex-col gap-3 sm:flex-row sm:gap-4" // Balanced gap
                                             >
-                                                {["home", "work", "other"].map((type) => (
-                                                    <FormItem key={type} className="flex items-center space-x-2">
-                                                        <FormControl>
-                                                            <RadioGroupItem
-                                                                value={type}
-                                                                className="h-5 w-5 border-gray-400 text-green-700 focus:ring-pink-500" // Consistent size
-                                                            />
-                                                        </FormControl>
-                                                        <FormLabel className="text-sm text-gray-600 capitalize">
-                                                            {type}
-                                                        </FormLabel>
-                                                    </FormItem>
-                                                ))}
+                                                {["home", "work", "other"].map(
+                                                    (type) => (
+                                                        <FormItem
+                                                            key={type}
+                                                            className="flex items-center space-x-2"
+                                                        >
+                                                            <FormControl>
+                                                                <RadioGroupItem
+                                                                    value={type}
+                                                                    className="h-5 w-5 border-gray-400 text-green-700 focus:ring-pink-500" // Consistent size
+                                                                />
+                                                            </FormControl>
+                                                            <FormLabel className="text-sm capitalize text-gray-600">
+                                                                {type}
+                                                            </FormLabel>
+                                                        </FormItem>
+                                                    )
+                                                )}
                                             </RadioGroup>
                                         </FormControl>
                                         <FormMessage className="text-xs" />
@@ -290,7 +385,6 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                 )}
                             />
                         </div>
-
                         {/* Primary Address Checkbox */}
                         <FormField
                             control={form.control}
@@ -303,8 +397,11 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                                 type="checkbox"
                                                 checked={field.value}
                                                 onChange={field.onChange}
-                                                disabled={isAddressAdding || user.addresses.length === 0}
-                                                className="h-5 w-5 border-gray-300 rounded text-pink-500 focus:ring-pink-500" // Consistent size
+                                                disabled={
+                                                    isAddressAdding ||
+                                                    user.addresses.length === 0
+                                                }
+                                                className="h-5 w-5 rounded border-gray-300 text-pink-500 focus:ring-pink-500" // Consistent size
                                             />
                                         </FormControl>
                                         <FormLabel className="text-sm text-gray-600">
@@ -318,7 +415,9 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                     </div>
 
                     {/* Footer Buttons */}
-                    <div className="flex justify-end gap-3 p-4 sm:p-5 border-t border-gray-200 flex-wrap"> {/* Balanced gap and padding */}
+                    <div className="flex flex-wrap justify-end gap-3 border-t border-gray-200 p-4 sm:p-5">
+                        {" "}
+                        {/* Balanced gap and padding */}
                         <Button
                             type="reset"
                             variant="ghost"
@@ -328,16 +427,23 @@ export default function AddAddressForm({ user, onSuccess, onCancel }: AddAddress
                                 form.reset();
                                 onCancel?.();
                             }}
-                            className="text-gray-600 border hover:bg-green-600 border-gray-300 rounded-md px-4 py-2 text-sm min-w-[80px]" // Improved tap target
+                            className="min-w-[80px] rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-green-600" // Improved tap target
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             size="sm"
-                            disabled={isAddressAdding || !form.formState.isDirty}
-                            onClick={() => console.log("Save button clicked, isDirty:", form.formState.isDirty)} // Debug log
-                            className="bg-green-700 text-white hover:bg-green-600 rounded-md px-4 py-2 text-sm min-w-[80px]" // Improved tap target
+                            disabled={
+                                isAddressAdding || !form.formState.isDirty
+                            }
+                            onClick={() =>
+                                console.log(
+                                    "Save button clicked, isDirty:",
+                                    form.formState.isDirty
+                                )
+                            } // Debug log
+                            className="min-w-[80px] rounded-md bg-green-700 px-4 py-2 text-sm text-white hover:bg-green-600" // Improved tap target
                         >
                             Save
                         </Button>

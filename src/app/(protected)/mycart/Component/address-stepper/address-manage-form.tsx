@@ -35,6 +35,25 @@ import { State } from "country-state-city";
 import { Dispatch, SetStateAction, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
+
+// Extended schema with firstName and lastName validation
+const addressManageFormSchema = createAddressSchema
+    .omit({ fullName: true })
+    .extend({
+        firstName: z
+            .string({
+                required_error: "First name is required",
+            })
+            .min(2, "First name must be at least 2 characters"),
+        lastName: z
+            .string({
+                required_error: "Last name is required",
+            })
+            .min(2, "Last name must be at least 2 characters"),
+    });
+
+type AddressManageFormValues = z.infer<typeof addressManageFormSchema>;
 
 interface PageProps {
     address?: Omit<Address, "createdAt" | "updatedAt">;
@@ -54,11 +73,23 @@ export function AddressManageForm({
     const { refetch } = trpc.general.users.currentUser.useQuery();
     const states = useMemo(() => State.getStatesOfCountry("IN"), []);
 
-    const form = useForm<CreateAddress>({
-        resolver: zodResolver(createAddressSchema),
+    // Split fullName into firstName and lastName for editing
+    const getNameParts = (fullName?: string) => {
+        if (!fullName) return { firstName: "", lastName: "" };
+        const parts = fullName.trim().split(" ");
+        const firstName = parts[0] || "";
+        const lastName = parts.slice(1).join(" ") || "";
+        return { firstName, lastName };
+    };
+
+    const nameParts = getNameParts(address?.fullName);
+
+    const form = useForm<AddressManageFormValues>({
+        resolver: zodResolver(addressManageFormSchema),
         defaultValues: {
             alias: address?.alias ?? "",
-            fullName: address?.fullName ?? "",
+            firstName: nameParts.firstName,
+            lastName: nameParts.lastName,
             street: address?.street ?? "",
             city: address?.city ?? "",
             state: address?.state ?? "",
@@ -71,9 +102,11 @@ export function AddressManageForm({
 
     useEffect(() => {
         if (address) {
+            const nameParts = getNameParts(address.fullName);
             form.reset({
                 alias: address.alias ?? "",
-                fullName: address.fullName,
+                firstName: nameParts.firstName,
+                lastName: nameParts.lastName,
                 street: address.street,
                 city: address.city,
                 state: address.state,
@@ -123,23 +156,32 @@ export function AddressManageForm({
     return (
         <Form {...form}>
             <form
-                onSubmit={form.handleSubmit((data) =>
-                    address
-                        ? updateAddress({ id: address.id, data })
-                        : addAddress(data)
-                )}
+                onSubmit={form.handleSubmit((data) => {
+                    const { firstName, lastName, ...rest } = data;
+                    const fullName = `${firstName} ${lastName}`.trim();
+                    const submitData = { ...rest, fullName };
+                    if (address) {
+                        updateAddress({ id: address.id, data: submitData });
+                    } else {
+                        addAddress(submitData);
+                    }
+                })}
             >
-                <Card className="bg-white rounded-lg shadow-lg w-full max-w-lg mx-auto">
+                <Card className="mx-auto w-full max-w-lg rounded-lg bg-white shadow-lg">
                     <div className="space-y-2 p-3 sm:p-4">
                         {/* Contact Details Section */}
                         <div className="space-y-1 sm:space-y-1">
-                            <h3 className="text-sm font-semibold text-gray-700 uppercase">Contact Details</h3>
+                            <h3 className="text-sm font-semibold uppercase text-gray-700">
+                                Contact Details
+                            </h3>
                             <FormField
                                 control={form.control}
                                 name="alias"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-xs text-gray-600">Address Name</FormLabel>
+                                        <FormLabel className="text-xs text-gray-600">
+                                            Address Name
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="e.g. Home, Work, etc."
@@ -147,7 +189,7 @@ export function AddressManageForm({
                                                     isAddressAdding ||
                                                     isAddressUpdating
                                                 }
-                                                className="border border-gray-300 rounded-md p-1.5 text-xs focus:ring-1 focus:ring-pink-500 w-full"
+                                                className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500"
                                                 {...field}
                                                 value={field.value ?? ""}
                                             />
@@ -156,33 +198,62 @@ export function AddressManageForm({
                                     </FormItem>
                                 )}
                             />
-                            <FormField
-                                control={form.control}
-                                name="fullName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs text-gray-600">FullName*</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                placeholder="John Doe"
-                                                disabled={
-                                                    isAddressAdding ||
-                                                    isAddressUpdating
-                                                }
-                                                className="border border-gray-300 rounded-md p-1.5 text-xs focus:ring-1 focus:ring-pink-500 w-full"
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage className="text-xs" />
-                                    </FormItem>
-                                )}
-                            />
+                            <div className="flex flex-col gap-1 sm:flex-row sm:gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name="firstName"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <FormLabel className="text-xs text-gray-600">
+                                                First Name*
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="First Name"
+                                                    disabled={
+                                                        isAddressAdding ||
+                                                        isAddressUpdating
+                                                    }
+                                                    className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="lastName"
+                                    render={({ field }) => (
+                                        <FormItem className="w-full">
+                                            <FormLabel className="text-xs text-gray-600">
+                                                Last Name*
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    placeholder="Last Name"
+                                                    disabled={
+                                                        isAddressAdding ||
+                                                        isAddressUpdating
+                                                    }
+                                                    className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage className="text-xs" />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                             <FormField
                                 control={form.control}
                                 name="phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-xs text-gray-600">Mobile No*</FormLabel>
+                                        <FormLabel className="text-xs text-gray-600">
+                                            Mobile No*
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 inputMode="tel"
@@ -191,13 +262,14 @@ export function AddressManageForm({
                                                     isAddressAdding ||
                                                     isAddressUpdating
                                                 }
-                                                className="border border-gray-300 rounded-md p-1.5 text-xs focus:ring-1 focus:ring-pink-500 w-full"
+                                                className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500"
                                                 {...field}
                                                 onChange={(e) => {
-                                                    const value = e.target.value.replace(
-                                                        /[^0-9-+]/g,
-                                                        ""
-                                                    );
+                                                    const value =
+                                                        e.target.value.replace(
+                                                            /[^0-9-+]/g,
+                                                            ""
+                                                        );
                                                     field.onChange(value);
                                                 }}
                                             />
@@ -210,13 +282,17 @@ export function AddressManageForm({
 
                         {/* Address Section */}
                         <div className="space-y-1 sm:space-y-1">
-                            <h3 className="text-sm font-semibold text-gray-700 uppercase">Address</h3>
+                            <h3 className="text-sm font-semibold uppercase text-gray-700">
+                                Address
+                            </h3>
                             <FormField
                                 control={form.control}
                                 name="zip"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-xs text-gray-600">Pin Code*</FormLabel>
+                                        <FormLabel className="text-xs text-gray-600">
+                                            Pin Code*
+                                        </FormLabel>
                                         <FormControl>
                                             <Input
                                                 inputMode="numeric"
@@ -225,13 +301,14 @@ export function AddressManageForm({
                                                     isAddressAdding ||
                                                     isAddressUpdating
                                                 }
-                                                className="border border-gray-300 rounded-md p-1.5 text-xs focus:ring-1 focus:ring-pink-500 w-full"
+                                                className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500"
                                                 {...field}
                                                 onChange={(e) => {
-                                                    const value = e.target.value.replace(
-                                                        /[^0-9]/g,
-                                                        ""
-                                                    );
+                                                    const value =
+                                                        e.target.value.replace(
+                                                            /[^0-9]/g,
+                                                            ""
+                                                        );
                                                     field.onChange(value);
                                                 }}
                                             />
@@ -246,15 +323,17 @@ export function AddressManageForm({
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-xs text-gray-600">
-                                            Address (House No, Building, Street, Area)*
+                                            Address (House No, Building, Street,
+                                            Area)*
                                         </FormLabel>
                                         <FormControl>
                                             <Input
                                                 placeholder="1234 Main St."
                                                 disabled={
-                                                    isAddressAdding || isAddressUpdating
+                                                    isAddressAdding ||
+                                                    isAddressUpdating
                                                 }
-                                                className="border border-gray-300 rounded-md p-1.5 text-xs focus:ring-1 focus:ring-pink-500 w-full"
+                                                className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500"
                                                 {...field}
                                             />
                                         </FormControl>
@@ -262,13 +341,15 @@ export function AddressManageForm({
                                     </FormItem>
                                 )}
                             />
-                            <div className="flex flex-col gap-1 sm:gap-2 sm:flex-row">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:gap-2">
                                 <FormField
                                     control={form.control}
                                     name="city"
                                     render={({ field }) => (
                                         <FormItem className="w-full">
-                                            <FormLabel className="text-xs text-gray-600">City/District*</FormLabel>
+                                            <FormLabel className="text-xs text-gray-600">
+                                                City/District*
+                                            </FormLabel>
                                             <FormControl>
                                                 <Input
                                                     placeholder="City"
@@ -276,7 +357,7 @@ export function AddressManageForm({
                                                         isAddressAdding ||
                                                         isAddressUpdating
                                                     }
-                                                    className="border border-gray-300 rounded-md p-1.5 text-xs focus:ring-1 focus:ring-pink-500 w-full"
+                                                    className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500"
                                                     {...field}
                                                     value={field.value ?? ""}
                                                 />
@@ -290,16 +371,19 @@ export function AddressManageForm({
                                     name="state"
                                     render={({ field }) => (
                                         <FormItem className="w-full">
-                                            <FormLabel className="text-xs text-gray-600">State*</FormLabel>
+                                            <FormLabel className="text-xs text-gray-600">
+                                                State*
+                                            </FormLabel>
                                             <Select
                                                 onValueChange={field.onChange}
                                                 defaultValue={field.value}
                                                 disabled={
-                                                    isAddressAdding || isAddressUpdating
+                                                    isAddressAdding ||
+                                                    isAddressUpdating
                                                 }
                                             >
                                                 <FormControl>
-                                                    <SelectTrigger className="border border-gray-300 rounded-md p-1.5 text-xs focus:ring-1 focus:ring-pink-500 w-full">
+                                                    <SelectTrigger className="w-full rounded-md border border-gray-300 p-1.5 text-xs focus:ring-1 focus:ring-pink-500">
                                                         <SelectValue placeholder="Select State" />
                                                     </SelectTrigger>
                                                 </FormControl>
@@ -307,7 +391,9 @@ export function AddressManageForm({
                                                     {states.map((state) => (
                                                         <SelectItem
                                                             key={state.isoCode}
-                                                            value={state.isoCode}
+                                                            value={
+                                                                state.isoCode
+                                                            }
                                                             className="text-xs"
                                                         >
                                                             {state.name}
@@ -324,7 +410,9 @@ export function AddressManageForm({
 
                         {/* Address Type Section */}
                         <div className="space-y-1 sm:space-y-1">
-                            <h3 className="text-sm font-semibold text-gray-700 uppercase">Address Type</h3>
+                            <h3 className="text-sm font-semibold uppercase text-gray-700">
+                                Address Type
+                            </h3>
                             <FormField
                                 control={form.control}
                                 name="type"
@@ -335,23 +423,31 @@ export function AddressManageForm({
                                                 onValueChange={field.onChange}
                                                 defaultValue={field.value}
                                                 disabled={
-                                                    isAddressAdding || isAddressUpdating
+                                                    isAddressAdding ||
+                                                    isAddressUpdating
                                                 }
-                                                className="flex flex-col sm:flex-row gap-2 sm:gap-3"
+                                                className="flex flex-col gap-2 sm:flex-row sm:gap-3"
                                             >
-                                                {["home", "work", "other"].map((type) => (
-                                                    <FormItem key={type} className="flex items-center space-x-2">
-                                                        <FormControl>
-                                                            <RadioGroupItem
-                                                                value={type}
-                                                                className="h-4 w-4 border-gray-400 text-green-700 focus:ring-pink-500"
-                                                            />
-                                                        </FormControl>
-                                                        <FormLabel className="text-xs text-gray-600 capitalize">
-                                                            {convertValueToLabel(type)}
-                                                        </FormLabel>
-                                                    </FormItem>
-                                                ))}
+                                                {["home", "work", "other"].map(
+                                                    (type) => (
+                                                        <FormItem
+                                                            key={type}
+                                                            className="flex items-center space-x-2"
+                                                        >
+                                                            <FormControl>
+                                                                <RadioGroupItem
+                                                                    value={type}
+                                                                    className="h-4 w-4 border-gray-400 text-green-700 focus:ring-pink-500"
+                                                                />
+                                                            </FormControl>
+                                                            <FormLabel className="text-xs capitalize text-gray-600">
+                                                                {convertValueToLabel(
+                                                                    type
+                                                                )}
+                                                            </FormLabel>
+                                                        </FormItem>
+                                                    )
+                                                )}
                                             </RadioGroup>
                                         </FormControl>
                                         <FormMessage className="text-xs" />
@@ -375,10 +471,11 @@ export function AddressManageForm({
                                                 disabled={
                                                     isAddressAdding ||
                                                     isAddressUpdating ||
-                                                    (address && address.isPrimary) ||
+                                                    (address &&
+                                                        address.isPrimary) ||
                                                     user.addresses.length === 0
                                                 }
-                                                className="h-4 w-4 border-gray-300 rounded text-pink-500 focus:ring-pink-500"
+                                                className="h-4 w-4 rounded border-gray-300 text-pink-500 focus:ring-pink-500"
                                             />
                                         </FormControl>
                                         <FormLabel className="text-xs text-gray-600">
@@ -392,7 +489,7 @@ export function AddressManageForm({
                     </div>
 
                     {/* Footer Buttons */}
-                    <div className="flex justify-end gap-2 p-3 sm:p-4 border-t border-gray-200 flex-wrap">
+                    <div className="flex flex-wrap justify-end gap-2 border-t border-gray-200 p-3 sm:p-4">
                         <Button
                             type="reset"
                             variant="ghost"
@@ -403,7 +500,7 @@ export function AddressManageForm({
                                 setFormOpen(false);
                                 setSelectedAddress(undefined);
                             }}
-                            className="text-gray-600 border hover:bg-green-600 border-gray-300 rounded-md px-3 py-1 text-xs min-w-[70px]"
+                            className="min-w-[70px] rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-600 hover:bg-green-600"
                         >
                             Cancel
                         </Button>
@@ -415,7 +512,7 @@ export function AddressManageForm({
                                 isAddressUpdating ||
                                 !form.formState.isDirty
                             }
-                            className="bg-green-700 text-white hover:bg-green-600 rounded-md px-3 py-1 text-xs min-w-[70px]"
+                            className="min-w-[70px] rounded-md bg-green-700 px-3 py-1 text-xs text-white hover:bg-green-600"
                         >
                             {address ? "Update" : "Add"} Address
                         </Button>
