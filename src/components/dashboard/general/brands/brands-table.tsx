@@ -19,6 +19,7 @@ import {
 import { format } from "date-fns";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
+import { BrandAction } from "./brand-action";
 
 export type TableBrand = CachedBrand & {
     ownerName: string;
@@ -67,6 +68,10 @@ const columns: ColumnDef<TableBrand>[] = [
             const waitlist = row.original;
             return format(new Date(waitlist.createdAt), "MMM dd, yyyy");
         },
+    },
+    {
+        id: "actions",
+        cell: ({ row }) => <BrandAction brand={row.original} />,
     },
 ];
 

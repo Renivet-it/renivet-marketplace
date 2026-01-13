@@ -15,11 +15,14 @@ import { brandMediaItems } from "./brand-media-item";
 import { brandPageSections } from "./brand-page";
 import { brandSubscriptions } from "./brand-subscription";
 import { categoryRequests } from "./category";
-import { returnItemDetails, returnPaymentDetails } from "./order-return-exchange";
+import {
+    returnItemDetails,
+    returnPaymentDetails,
+} from "./order-return-exchange";
+import { brandProductTypePacking } from "./order-shipment";
 import { products } from "./product";
 import { brandRoles, roles } from "./role";
 import { users } from "./user";
-import { brandProductTypePacking } from "./order-shipment";
 
 export const brandRequests = pgTable("brand_requests", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
@@ -77,7 +80,7 @@ export const brands = pgTable(
         confidentialVerificationRejectedAt: timestamp(
             "confidential_verification_rejected_at"
         ),
-                embeddings: vector("embeddings", { dimensions: 384 }),
+        embeddings: vector("embeddings", { dimensions: 384 }),
 
         ...timestamps,
     },
@@ -106,7 +109,7 @@ export const brandConfidentials = pgTable(
         bankIfscCode: text("bank_ifsc_code").notNull(),
         bankAccountVerificationDocument: text(
             "bank_account_verification_document"
-        ).notNull(),
+        ),
         authorizedSignatoryName: text("authorized_signatory_name").notNull(),
         authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
         authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
@@ -245,7 +248,7 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     }),
     categoryRequests: many(categoryRequests),
     pageSections: many(brandPageSections),
-      packingRules: many(brandProductTypePacking),
+    packingRules: many(brandProductTypePacking),
 }));
 
 export const brandConfidentialRelations = relations(

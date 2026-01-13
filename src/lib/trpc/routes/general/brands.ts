@@ -467,6 +467,22 @@ export const brandVerificationsRouter = createTRPCRouter({
 
             return data;
         }),
+    getBrandConfidential: protectedProcedure
+        .input(
+            z.object({
+                id: z.string().uuid("Invalid brand ID"),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .query(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const data =
+                await queries.brandConfidentials.getBrandConfidential(id);
+
+            return data;
+        }),
     editDetails: protectedProcedure
         .input(
             z.object({
@@ -479,33 +495,13 @@ export const brandVerificationsRouter = createTRPCRouter({
             const { queries } = ctx;
             const { id, values } = input;
 
-            const existingBrandConfidential =
-                await queries.brandConfidentials.getBrandConfidential(id);
-            if (!existingBrandConfidential)
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Brand verification not found",
-                });
-
-            if (existingBrandConfidential.verificationStatus === "approved")
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Brand verification is already approved",
-                });
-
-            if (existingBrandConfidential.verificationStatus === "rejected")
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: "Brand verification is already rejected",
-                });
-
+            // Admin can edit or initialize regardless of verification status or existence
             const updatedBrandConfidential = await Promise.all([
-                queries.brandConfidentials.updateBrandConfidentialByAdmin(
+                queries.brandConfidentials.upsertBrandConfidentialByAdmin(
                     id,
                     values
                 ),
-                brandCache.remove(existingBrandConfidential.brand.id),
-                userCache.remove(existingBrandConfidential.brand.ownerId),
+                brandCache.remove(id),
             ]);
 
             return updatedBrandConfidential;

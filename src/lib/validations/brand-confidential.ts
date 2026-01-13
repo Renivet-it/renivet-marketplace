@@ -46,13 +46,17 @@ export const brandConfidentialSchema = z.object({
             invalid_type_error: "Bank IFSC Code must be a string",
         })
         .min(1, "Bank IFSC Code must be at least 1 characters long"),
-    bankAccountVerificationDocument: z
-        .string({
-            required_error: "Bank Account Verification Document is required",
-            invalid_type_error:
-                "Bank Account Verification Document must be a string",
-        })
-        .uuid("ID is invalid"),
+    bankAccountVerificationDocument: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error:
+                    "Bank Account Verification Document must be a string",
+            })
+            .uuid("ID is invalid")
+            .nullable()
+            .optional()
+    ),
     authorizedSignatoryName: z
         .string({
             required_error: "Authorized Signatory Name is required",
@@ -355,7 +359,6 @@ export const brandDetailsAddressWithSafeSchema = addressWithSafeSchema.extend({
     ),
 });
 
-
 export const createBrandConfidentialSchema = brandConfidentialSchema
     .omit({
         verificationStatus: true,
@@ -393,9 +396,6 @@ export const updateBrandConfidentialByAdminSchema =
     brandConfidentialSchema.omit({
         id: true,
         verificationStatus: true,
-        bankAccountVerificationDocument: true,
-        iecCertificate: true,
-        udyamRegistrationCertificate: true,
         createdAt: true,
         updatedAt: true,
     });
@@ -463,11 +463,10 @@ export const linkBrandToRazorpaySchema = brandConfidentialSchema
                 invalid_type_error: "ID must be a string",
             })
             .uuid("ID is invalid"),
-        name: z
-            .string({
-                required_error: "Name is required",
-                invalid_type_error: "Name must be a string",
-            }),
+        name: z.string({
+            required_error: "Name is required",
+            invalid_type_error: "Name must be a string",
+        }),
         email: z
             .string({
                 required_error: "Email is required",
@@ -502,4 +501,6 @@ export type UpdateBrandConfidential = z.infer<
     typeof updateBrandConfidentialSchema
 >;
 export type LinkBrandToRazorpay = z.infer<typeof linkBrandToRazorpaySchema>;
-export type BrandAddressWithSafe = z.infer<typeof brandDetailsAddressWithSafeSchema>;
+export type BrandAddressWithSafe = z.infer<
+    typeof brandDetailsAddressWithSafeSchema
+>;
