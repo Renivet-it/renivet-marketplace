@@ -36,7 +36,7 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FAFAF8] px-4 py-10">
+        <div className="min-h-screen bg-[#fcfbf4] px-4 py-10">
             {/* Header */}
             <div className="mb-10 text-center">
                 <h1
@@ -163,7 +163,7 @@ export default function ContactPage() {
                             >
                                 Based In
                             </h3>
-                            <p>Bangalore Xyz</p>
+                            <p>Bangalore</p>
                         </div>
 
                         <div>
