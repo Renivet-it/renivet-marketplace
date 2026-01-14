@@ -60,7 +60,7 @@ export default function ContactPage() {
             >
                 {/* ================= FORM BOX ================= */}
                 <div
-                    className="ml-auto flex border border-gray-400"
+                    className=" flex border border-gray-400"
                     style={{
                         width: "947px",
                         height: "553px",
@@ -186,10 +186,10 @@ export default function ContactPage() {
                 <div
                     className="absolute"
                     style={{
-                        width: "740px",
+                        width: "760px",
                         height: "613px",
-                        left: "-215px",
-                        bottom: "-470px",
+                        left: "-550px",
+                        bottom: "-567px",
                     }}
                 >
                     <Image
@@ -204,15 +204,6 @@ export default function ContactPage() {
 
                 {/* Submit Button */}
                 <div className="mt-10 pl-14">
-                    <button
-                        onClick={handleSubmit}
-                        className={cn(
-                            "bg-[#1a1a2e] px-14 py-4 text-sm uppercase tracking-widest text-white",
-                            isSubmitting && "opacity-70"
-                        )}
-                    >
-                        {isSubmitting ? "Sending..." : "Submit"}
-                    </button>
                 </div>
             </div>
 
