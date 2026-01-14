@@ -357,16 +357,6 @@ const getColorHex = (colorName: string): string => {
     return "#E5E5E5";
 };
 
-// Checkmark contrast color
-const getCheckmarkColor = (hex: string): string => {
-    if (!hex || hex.length !== 7) return "black";
-    const r = parseInt(hex.substring(1, 3), 16);
-    const g = parseInt(hex.substring(3, 5), 16);
-    const b = parseInt(hex.substring(5, 7), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance < 0.5 ? "white" : "black";
-};
-
 // --- TYPE DEFINITIONS ---
 type ActiveFilter = "category" | "brand" | "price" | "color" | "size";
 
@@ -380,7 +370,7 @@ interface PageProps extends GenericProps {
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
-    colors: string[];
+    colors: { name: string; count: number }[];
     alphaSize?: string[];
     numSize?: string[];
     sizes?: string[];
@@ -553,7 +543,7 @@ function ShopFiltersSection({
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
-    colors: string[];
+    colors: { name: string; count: number }[];
     allSizes: string[];
     search?: string;
     setSearch?: (value: string | null) => void;
@@ -822,69 +812,79 @@ function PriceFilter() {
     );
 }
 
-function ColorFilter({ colors }: { colors: string[] }) {
+function ColorFilter({
+    colors,
+}: {
+    colors: { name: string; count: number }[];
+}) {
     const [colorFilters, setColorFilters] = useQueryState(
         "colors",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
     const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [showAllColors, setShowAllColors] = useState(false);
-    const visibleColors = showAllColors ? colors : colors.slice(0, 21);
+    const INITIAL_VISIBLE_COUNT = 7;
+    const visibleColors = showAllColors
+        ? colors
+        : colors.slice(0, INITIAL_VISIBLE_COUNT);
+    const remainingCount = colors.length - INITIAL_VISIBLE_COUNT;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <Label className="font-semibold uppercase">Color</Label>
-            <div className="grid grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-4 md:grid-cols-3">
-                {visibleColors.map((colorName) => {
-                    const hex = getColorHex(colorName);
+            <div className="space-y-2">
+                {visibleColors.map((color) => {
+                    const hex = getColorHex(color.name);
+                    const isSelected = colorFilters.includes(color.name);
                     return (
                         <div
-                            key={colorName}
-                            className="flex cursor-pointer flex-col items-center gap-2"
+                            key={color.name}
+                            className="flex cursor-pointer items-center gap-3"
                             onClick={() => {
                                 setColorFilters(
-                                    colorFilters.includes(colorName)
+                                    isSelected
                                         ? colorFilters.filter(
-                                              (c) => c !== colorName
+                                              (c) => c !== color.name
                                           )
-                                        : [...colorFilters, colorName]
+                                        : [...colorFilters, color.name]
                                 );
                                 setPage(1);
                             }}
                         >
-                            <button
-                                type="button"
-                                className={cn(
-                                    "flex size-8 items-center justify-center rounded-full border",
-                                    colorFilters.includes(colorName)
-                                        ? "ring-2 ring-black ring-offset-1"
-                                        : ""
-                                )}
-                                title={colorName}
+                            <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => {
+                                    setColorFilters(
+                                        isSelected
+                                            ? colorFilters.filter(
+                                                  (c) => c !== color.name
+                                              )
+                                            : [...colorFilters, color.name]
+                                    );
+                                    setPage(1);
+                                }}
+                                className="size-4 rounded border-gray-300"
+                            />
+                            <span
+                                className="size-5 shrink-0 rounded-full border border-gray-200"
                                 style={{ backgroundColor: hex }}
-                            >
-                                {colorFilters.includes(colorName) && (
-                                    <Icons.Check
-                                        className="size-4"
-                                        style={{
-                                            color: getCheckmarkColor(hex),
-                                        }}
-                                    />
-                                )}
-                            </button>
-                            <span className="text-center text-sm capitalize">
-                                {colorName}
+                            />
+                            <span className="text-sm capitalize text-gray-700">
+                                {color.name}
+                            </span>
+                            <span className="text-sm text-gray-400">
+                                ({color.count.toLocaleString()})
                             </span>
                         </div>
                     );
                 })}
             </div>
-            {colors.length > 21 && (
+            {colors.length > INITIAL_VISIBLE_COUNT && (
                 <button
-                    className="mt-2 text-sm text-blue-600 hover:underline"
+                    className="text-sm font-medium text-accent hover:underline"
                     onClick={() => setShowAllColors(!showAllColors)}
                 >
-                    {showAllColors ? "View Less -" : "View More +"}
+                    {showAllColors ? "Show less" : `+${remainingCount} more`}
                 </button>
             )}
         </div>
