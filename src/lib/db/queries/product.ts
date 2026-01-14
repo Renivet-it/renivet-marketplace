@@ -4291,7 +4291,7 @@ class ProductQuery {
         categoryId?: string;
         subcategoryId?: string;
         productTypeId?: string;
-    }) {
+    }): Promise<{ name: string; count: number }[]> {
         try {
             const whereConditions = [
                 or(
@@ -4324,13 +4324,18 @@ class ProductQuery {
 
             const colorOptions = await db
                 .select({
+                    productId: products.id,
                     values: productOptions.values,
                 })
                 .from(productOptions)
                 .innerJoin(products, eq(productOptions.productId, products.id))
                 .where(and(...whereConditions));
 
-            const uniqueColorsMap = new Map<string, string>();
+            // Map: normalized color name -> { displayName, productIds Set }
+            const colorDataMap = new Map<
+                string,
+                { displayName: string; productIds: Set<string> }
+            >();
 
             colorOptions.forEach((option) => {
                 if (option.values && Array.isArray(option.values)) {
@@ -4341,22 +4346,30 @@ class ProductQuery {
                         ) {
                             const normalized = colorObj.name
                                 .trim()
-                                .toLowerCase(); // ✅ normalize
-                            if (!uniqueColorsMap.has(normalized)) {
-                                // ✅ store original casing for display
-                                uniqueColorsMap.set(
-                                    normalized,
-                                    colorObj.name.trim()
-                                );
+                                .toLowerCase();
+
+                            if (!colorDataMap.has(normalized)) {
+                                colorDataMap.set(normalized, {
+                                    displayName: colorObj.name.trim(),
+                                    productIds: new Set([option.productId]),
+                                });
+                            } else {
+                                colorDataMap
+                                    .get(normalized)!
+                                    .productIds.add(option.productId);
                             }
                         }
                     });
                 }
             });
 
-            return Array.from(uniqueColorsMap.values()).sort((a, b) =>
-                a.localeCompare(b)
-            );
+            // Convert to array with counts and sort by count descending
+            return Array.from(colorDataMap.values())
+                .map(({ displayName, productIds }) => ({
+                    name: displayName,
+                    count: productIds.size,
+                }))
+                .sort((a, b) => b.count - a.count);
         } catch (error) {
             console.error("Error fetching unique colors:", error);
             return [];
