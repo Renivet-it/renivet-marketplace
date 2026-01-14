@@ -274,7 +274,9 @@ async function ShopFiltersFetch(
         }),
     ]);
 
-    const brandsMeta = brandMetaSchema.array().parse(allBrands);
+    const brandsMeta = brandMetaSchema
+        .array()
+        .parse(allBrands.filter((brand) => brand.isActive !== false));
 
     return (
         <ShopFilters

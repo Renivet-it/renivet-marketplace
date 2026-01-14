@@ -28,6 +28,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
@@ -231,6 +232,25 @@ export function BrandAction({ brand }: PageProps) {
             },
         });
 
+    const { mutate: updateActiveStatus, isPending: isUpdatingActiveStatus } =
+        trpc.general.brands.updateBrandActiveStatus.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Updating brand status...");
+                return { toastId };
+            },
+            onSuccess: (data, _, { toastId }) => {
+                toast.success(
+                    `Brand ${data.isActive ? "activated" : "deactivated"} successfully`,
+                    { id: toastId }
+                );
+                router.refresh();
+                refetch();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
     const handleBrandSubmit = (values: EditBrandData) => {
         updateBrand({
             id: brand.id,
@@ -413,6 +433,28 @@ export function BrandAction({ brand }: PageProps) {
                             </span>
                         </div>
                     </div>
+                </div>
+
+                {/* Brand Status Toggle */}
+                <div className="mb-4 flex items-center justify-between rounded-md border p-3">
+                    <div>
+                        <p className="text-sm font-medium">Brand Status</p>
+                        <p className="text-xs text-muted-foreground">
+                            {brand.isActive
+                                ? "Brand is currently active and visible"
+                                : "Brand is deactivated and hidden"}
+                        </p>
+                    </div>
+                    <Switch
+                        checked={brand.isActive}
+                        disabled={isUpdatingActiveStatus}
+                        onCheckedChange={(checked) => {
+                            updateActiveStatus({
+                                id: brand.id,
+                                isActive: checked,
+                            });
+                        }}
+                    />
                 </div>
 
                 <Tabs defaultValue="brand" className="w-full">

@@ -395,7 +395,13 @@ export function ShopFilters({
 
     // Use useMemo to prevent re-calculating on every render
     const allSizes = useMemo(
-        () => [...new Set([...alphaSize, ...numSize, ...sizes])],
+        () => [
+            ...new Set([
+                ...(alphaSize ?? []),
+                ...(numSize ?? []),
+                ...(sizes ?? []),
+            ]),
+        ],
         [alphaSize, numSize, sizes]
     );
 

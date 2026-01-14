@@ -60,6 +60,24 @@ const columns: ColumnDef<TableBrand>[] = [
         accessorKey: "phone",
         header: "Phone Number",
     },
+    {
+        accessorKey: "isActive",
+        header: "Status",
+        cell: ({ row }) => {
+            const isActive = row.original.isActive;
+            return (
+                <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        isActive
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                    }`}
+                >
+                    {isActive ? "Active" : "Inactive"}
+                </span>
+            );
+        },
+    },
 
     {
         accessorKey: "createdAt",
