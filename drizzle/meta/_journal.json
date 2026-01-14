@@ -1436,6 +1436,13 @@
       "when": 1766653120176,
       "tag": "0204_eager_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 205,
+      "version": "7",
+      "when": 1768400992388,
+      "tag": "0205_complete_mandrill",
+      "breakpoints": true
     }
   ]
 }

@@ -688,4 +688,28 @@ export const brandsRouter = createTRPCRouter({
 
             return data;
         }),
+    updateBrandActiveStatus: protectedProcedure
+        .input(
+            z.object({
+                id: z.string().uuid("Invalid brand ID"),
+                isActive: z.boolean(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id, isActive } = input;
+
+            const existingBrand = await brandCache.get(id);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            await queries.brands.updateBrand(id, { isActive });
+            await brandCache.remove(id);
+
+            return { success: true, isActive };
+        }),
 });

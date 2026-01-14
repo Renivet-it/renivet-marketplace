@@ -68,6 +68,7 @@ export const brands = pgTable(
                 onDelete: "cascade",
             }),
         bio: text("bio"),
+        isActive: boolean("is_active").notNull().default(true),
         confidentialVerificationStatus: text(
             "confidential_verification_status",
             { enum: ["idle", "pending", "approved", "rejected"] }

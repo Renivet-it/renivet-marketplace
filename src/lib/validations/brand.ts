@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
 import { bannedBrandMemberSchema } from "./banned-brand-member";
+import { brandConfidentialSchema } from "./brand-confidential";
 import { brandInviteSchema } from "./brand-invite";
 import {
     brandPageSectionProductSchema,
@@ -15,7 +16,6 @@ import {
 } from "./product";
 import { roleSchema } from "./role";
 import { safeUserSchema } from "./user";
-import { brandConfidentialSchema } from "./brand-confidential";
 
 export const brandSchema = z.object({
     id: z
@@ -98,6 +98,11 @@ export const brandSchema = z.object({
             })
             .nullable()
     ),
+    isActive: z
+        .boolean({
+            invalid_type_error: "Active status must be a boolean",
+        })
+        .default(true),
     confidentialVerificationStatus: z.enum(
         ["idle", "pending", "approved", "rejected"],
         {
@@ -143,6 +148,7 @@ export const createBrandSchema = brandSchema.omit({
     id: true,
     rzpAccountId: true,
     slug: true,
+    isActive: true,
     confidentialVerificationStatus: true,
     confidentialVerificationRejectedReason: true,
     confidentialVerificationRejectedAt: true,
