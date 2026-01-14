@@ -40,43 +40,48 @@ export default function ContactPage() {
             {/* Header */}
             <div className="mb-10 text-center">
                 <h1
-                    className="mb-3 text-4xl font-medium tracking-wide"
-                    style={{ fontFamily: "josephine sans", fontSize: "40px" }}
+                    className="mb-3 text-2xl font-medium tracking-wide md:text-4xl"
+                    style={{
+                        fontFamily: "josephine sans",
+                        fontSize: "clamp(28px, 5vw, 40px)",
+                    }}
                 >
                     Contact Us
                 </h1>
                 <p
-                    className="text-lg text-gray-600"
-                    style={{ fontFamily: "josephine sans", fontSize: "32px" }}
+                    className="text-base text-gray-600 md:text-lg"
+                    style={{
+                        fontFamily: "josephine sans",
+                        fontSize: "clamp(20px, 4vw, 32px)",
+                    }}
                 >
                     We&apos;d Love To Hear From You.
                 </p>
             </div>
 
-            {/* Main Container - shifted right */}
+            {/* Main Container */}
             <div
-                className="relative ml-auto"
-                style={{ maxWidth: "947px", marginRight: "120px" }}
+                className="relative mx-auto lg:ml-auto lg:mr-[120px]"
+                style={{ maxWidth: "947px" }}
             >
                 {/* ================= FORM BOX ================= */}
                 <div
-                    className="flex border border-gray-400"
+                    className="flex flex-col border border-gray-400 md:flex-row"
                     style={{
-                        width: "947px",
-                        height: "553px",
                         maxWidth: "100%",
+                        minHeight: "auto",
                     }}
                 >
                     {/* Left Form */}
-                    <div className="flex-1 px-14 py-14">
+                    <div className="flex-1 px-6 py-8 md:px-14 md:py-14">
                         <form
                             onSubmit={handleSubmit}
                             className="flex h-full flex-col justify-between"
                         >
-                            <div className="space-y-14">
+                            <div className="space-y-8 md:space-y-14">
                                 <div>
                                     <label
-                                        className="mb-3 block text-base"
+                                        className="mb-3 block text-sm md:text-base"
                                         style={{ fontFamily: "serif" }}
                                     >
                                         Full Name
@@ -91,7 +96,7 @@ export default function ContactPage() {
 
                                 <div>
                                     <label
-                                        className="mb-3 block text-base"
+                                        className="mb-3 block text-sm md:text-base"
                                         style={{ fontFamily: "serif" }}
                                     >
                                         Email
@@ -106,7 +111,7 @@ export default function ContactPage() {
 
                                 <div>
                                     <label
-                                        className="mb-3 block text-base"
+                                        className="mb-3 block text-sm md:text-base"
                                         style={{ fontFamily: "serif" }}
                                     >
                                         Message
@@ -126,7 +131,7 @@ export default function ContactPage() {
                                 type="submit"
                                 disabled={isSubmitting}
                                 className={cn(
-                                    "mt-8 w-full bg-[#1a1a2e] py-4 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-[#0f0f1a]",
+                                    "mt-8 w-full bg-[#1a1a2e] py-3 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-[#0f0f1a] md:py-4",
                                     isSubmitting &&
                                         "cursor-not-allowed opacity-70"
                                 )}
@@ -136,21 +141,21 @@ export default function ContactPage() {
                         </form>
                     </div>
 
-                    {/* Divider */}
-                    <div className="w-px bg-gray-400" />
+                    {/* Divider - horizontal on mobile, vertical on desktop */}
+                    <div className="h-px w-full bg-gray-400 md:h-auto md:w-px" />
 
                     {/* Right Info */}
-                    <div className="w-[280px] space-y-14 px-12 py-14">
+                    <div className="w-full space-y-8 px-6 py-8 md:w-[280px] md:space-y-14 md:px-12 md:py-14">
                         <div>
                             <h3
-                                className="mb-2 text-base font-semibold"
+                                className="mb-2 text-sm font-semibold md:text-base"
                                 style={{ fontFamily: "serif" }}
                             >
                                 Contact
                             </h3>
                             <a
                                 href={`mailto:${siteConfig.contact?.email}`}
-                                className="underline"
+                                className="text-sm underline md:text-base"
                             >
                                 Support@Renivet.Com
                             </a>
@@ -158,22 +163,22 @@ export default function ContactPage() {
 
                         <div>
                             <h3
-                                className="mb-2 text-base font-semibold"
+                                className="mb-2 text-sm font-semibold md:text-base"
                                 style={{ fontFamily: "serif" }}
                             >
                                 Based In
                             </h3>
-                            <p>Bangalore</p>
+                            <p className="text-sm md:text-base">Bangalore</p>
                         </div>
 
                         <div>
                             <h3
-                                className="mb-2 text-base font-semibold"
+                                className="mb-2 text-sm font-semibold md:text-base"
                                 style={{ fontFamily: "serif" }}
                             >
                                 Office Hours:
                             </h3>
-                            <p>
+                            <p className="text-sm md:text-base">
                                 Monday - Friday,
                                 <br />
                                 9:00 AM - 5:00 PM
@@ -183,40 +188,30 @@ export default function ContactPage() {
                 </div>
 
                 {/* ================= IMAGE ================= */}
-                <div
-                    className="absolute"
-                    style={{
-                        width: "760px",
-                        height: "613px",
-                        left: "-494px",
-                        bottom: "-567px",
-                    }}
-                >
+                {/* Mobile: relative, flows naturally. Desktop: absolute positioned */}
+                <div className="relative ml-4 mt-8 w-[70%] max-w-[500px] md:ml-20 md:w-[55%] lg:absolute lg:bottom-[-567px] lg:left-[-494px] lg:ml-0 lg:mt-0 lg:h-[613px] lg:w-[760px] lg:max-w-none">
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                         alt="Leaf person"
                         width={784}
                         height={613}
-                        className="object-cover"
+                        className="h-auto w-full object-cover"
                         priority
                     />
                 </div>
-
-                {/* Submit Button */}
-                <div className="mt-10 pl-14"></div>
             </div>
 
-            {/* Spacer */}
-            <div style={{ height: "500px" }} />
+            {/* Spacer - less on mobile */}
+            <div className="h-8 lg:h-[500px]" />
 
             {/* Footer */}
-            <div className="mt-16 mb-16 text-center">
+            <div className="mb-16 mt-8 text-center md:mb-16 md:mt-16">
                 <p
-                    className="text-lg leading-relaxed text-gray-600 md:text-lg"
+                    className="text-base leading-relaxed text-gray-600"
                     style={{
                         fontFamily: "josephine sans",
                         letterSpacing: "0.02em",
-                        fontSize: "32px",
+                        fontSize: "clamp(18px, 4vw, 32px)",
                     }}
                 >
                     Every Conversation Begins With A Pause.
