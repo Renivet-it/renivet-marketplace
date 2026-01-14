@@ -36,18 +36,18 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FAFAF8] px-4 py-20">
+        <div className="min-h-screen bg-[#FAFAF8] px-4 py-10">
             {/* Header */}
-            <div className="mb-20 text-center">
+            <div className="mb-10 text-center">
                 <h1
                     className="mb-3 text-4xl font-medium tracking-wide"
-                    style={{ fontFamily: "serif" }}
+                    style={{ fontFamily: "josephine sans", fontSize: "40px" }}
                 >
                     Contact Us
                 </h1>
                 <p
-                    className="text-lg italic text-gray-600"
-                    style={{ fontFamily: "serif" }}
+                    className="text-lg text-gray-600"
+                    style={{ fontFamily: "josephine sans", fontSize: "32px" }}
                 >
                     We&apos;d Love To Hear From You.
                 </p>
@@ -55,12 +55,12 @@ export default function ContactPage() {
 
             {/* Main Container - shifted right */}
             <div
-                className="relative ml-auto mr-4 md:mr-8"
-                style={{ maxWidth: "947px" }}
+                className="relative ml-auto"
+                style={{ maxWidth: "947px", marginRight: "120px" }}
             >
                 {/* ================= FORM BOX ================= */}
                 <div
-                    className=" flex border border-gray-400"
+                    className="flex border border-gray-400"
                     style={{
                         width: "947px",
                         height: "553px",
@@ -188,7 +188,7 @@ export default function ContactPage() {
                     style={{
                         width: "760px",
                         height: "613px",
-                        left: "-550px",
+                        left: "-494px",
                         bottom: "-567px",
                     }}
                 >
@@ -203,18 +203,21 @@ export default function ContactPage() {
                 </div>
 
                 {/* Submit Button */}
-                <div className="mt-10 pl-14">
-                </div>
+                <div className="mt-10 pl-14"></div>
             </div>
 
             {/* Spacer */}
-            <div style={{ height: "360px" }} />
+            <div style={{ height: "500px" }} />
 
             {/* Footer */}
-            <div className="mt-20 text-center">
+            <div className="mt-16 mb-16 text-center">
                 <p
-                    className="text-lg italic text-gray-600"
-                    style={{ fontFamily: "serif" }}
+                    className="text-lg leading-relaxed text-gray-600 md:text-lg"
+                    style={{
+                        fontFamily: "josephine sans",
+                        letterSpacing: "0.02em",
+                        fontSize: "32px",
+                    }}
                 >
                     Every Conversation Begins With A Pause.
                     <br />
