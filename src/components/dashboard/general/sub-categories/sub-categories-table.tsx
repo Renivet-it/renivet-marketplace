@@ -41,6 +41,10 @@ const columns: ColumnDef<TableSubCategory>[] = [
         header: "Product Types",
     },
     {
+        accessorKey: "rank",
+        header: "Rank",
+    },
+    {
         accessorKey: "createdAt",
         header: "Created At",
         cell: ({ row }) => {

@@ -94,6 +94,7 @@ export const subCategorySchema = z.object({
             .min(3, "Description must be at least 3 characters long")
             .nullable()
     ),
+    rank: z.number().int().nonnegative().default(0),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
@@ -290,6 +291,7 @@ export const cachedSubCategorySchema = subCategorySchema.extend({
         required_error: "Product types is required",
         invalid_type_error: "Product types must be a number",
     }),
+    rank: z.number().int().nonnegative().default(0),
     // productCount: z.coerce.number({
     //     required_error: "Product count is required",
     //     invalid_type_error: "Product count must be a number",

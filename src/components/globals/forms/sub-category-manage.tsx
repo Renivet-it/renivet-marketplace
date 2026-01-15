@@ -39,6 +39,7 @@ export function SubCategoryManageForm({ subCategory, setIsOpen }: PageProps) {
             name: subCategory?.name ?? "",
             description: subCategory?.description ?? "",
             categoryId: subCategory?.categoryId ?? "",
+            rank: subCategory?.rank ?? 0,
         },
     });
 
@@ -174,6 +175,33 @@ export function SubCategoryManageForm({ subCategory, setIsOpen }: PageProps) {
                                     ))}
                                 </SelectContent>
                             </Select>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="rank"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Rank</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="Enter rank (0 for default)"
+                                    disabled={
+                                        isSubCategoryCreating ||
+                                        isSubCategoryUpdating
+                                    }
+                                    {...field}
+                                    onChange={(e) =>
+                                        field.onChange(Number(e.target.value))
+                                    }
+                                />
+                            </FormControl>
 
                             <FormMessage />
                         </FormItem>

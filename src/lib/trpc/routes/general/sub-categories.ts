@@ -18,7 +18,15 @@ export const subCategoriesRouter = createTRPCRouter({
     getSubCategories: publicProcedure.query(async () => {
         const subCategories = await subCategoryCache.getAll();
         return {
-            data: subCategories,
+            data: subCategories.sort((a, b) => {
+                if ((a.rank ?? 0) !== (b.rank ?? 0)) {
+                    return (b.rank ?? 0) - (a.rank ?? 0);
+                }
+                return (
+                    new Date(b.updatedAt).getTime() -
+                    new Date(a.updatedAt).getTime()
+                );
+            }),
             count: subCategories.length,
         };
     }),
@@ -58,6 +66,7 @@ export const subCategoriesRouter = createTRPCRouter({
                 subCategoryCache.add({
                     ...newSubCategory,
                     productTypes: 0,
+                    productCount: 0,
                 }),
                 categoryCache.remove(newSubCategory.categoryId),
             ]);

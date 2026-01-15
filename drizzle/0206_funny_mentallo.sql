@@ -1,0 +1,1 @@
+ALTER TABLE "sub_categories" ADD COLUMN "rank" integer DEFAULT 0 NOT NULL;

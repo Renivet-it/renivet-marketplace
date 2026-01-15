@@ -1,32 +1,29 @@
 import { CreateSubCategory, UpdateSubCategory } from "@/lib/validations";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "..";
-import { subCategories } from "../schema";
-import { sql } from "drizzle-orm";
-import { products } from "../schema";
+import { products, subCategories } from "../schema";
 
 class SubCategoryQuery {
     async getCount() {
         const data = await db.$count(subCategories);
         return +data || 0;
     }
-private async getProductCountMap() {
-    const rows = await db
-        .select({
-            subCategoryId: products.subcategoryId,
-            productCount: sql<number>`count(*)`,
-        })
-        .from(products)
-        .groupBy(products.subcategoryId);
+    private async getProductCountMap() {
+        const rows = await db
+            .select({
+                subCategoryId: products.subcategoryId,
+                productCount: sql<number>`count(*)`,
+            })
+            .from(products)
+            .groupBy(products.subcategoryId);
 
-    return new Map(
-        rows.map((r) => [
-            String(r.subCategoryId),
-            Number(r.productCount) || 0, // ✅ FORCE NUMBER
-        ])
-    );
-}
-
+        return new Map(
+            rows.map((r) => [
+                String(r.subCategoryId),
+                Number(r.productCount) || 0, // ✅ FORCE NUMBER
+            ])
+        );
+    }
 
     // async getSubCategories() {
     //     const data = await db.query.subCategories.findMany({
@@ -39,20 +36,23 @@ private async getProductCountMap() {
     //     return data;
     // }
 
-        async getSubCategories() {
+    async getSubCategories() {
         const [data, productCountMap] = await Promise.all([
             db.query.subCategories.findMany({
                 with: {
                     productTypes: true,
                 },
-                orderBy: [desc(subCategories.createdAt)],
+                orderBy: [
+                    asc(subCategories.rank),
+                    desc(subCategories.createdAt),
+                ],
             }),
             this.getProductCountMap(),
         ]);
 
         return data.map((sub) => ({
             ...sub,
-           productCount: Number(productCountMap.get(String(sub.id)) ?? 0), // ✅ SAFE
+            productCount: Number(productCountMap.get(String(sub.id)) ?? 0), // ✅ SAFE
         }));
     }
     async getSubCategoriesByCategory(categoryId: string) {
@@ -61,7 +61,7 @@ private async getProductCountMap() {
             with: {
                 productTypes: true,
             },
-            orderBy: [desc(subCategories.createdAt)],
+            orderBy: [desc(subCategories.rank), desc(subCategories.updatedAt)],
         });
 
         return data;
