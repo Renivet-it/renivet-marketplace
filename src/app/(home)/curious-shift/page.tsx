@@ -157,18 +157,16 @@ export default function CuriousShiftPage() {
     </div>
 </section>
 {/* FACT TAGS SECTION */}
-<section className="mx-auto mt-48 max-w-[1400px] px-6 md:px-12">
+{/* FACT TAGS SECTION */}
+<section className="mt-32 flex justify-center">
     <div
         className="
             grid
-            grid-cols-1
-            gap-y-20
-            md:grid-cols-2
-            md:gap-x-16
-            md:gap-y-24
-            lg:grid-cols-3
-            lg:gap-x-20
+            grid-cols-3
+            gap-x-[64px]
+            gap-y-[72px]
         "
+        style={{ width: "calc(542px * 3 + 64px * 2)" }}
     >
         {[
             "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
@@ -180,13 +178,7 @@ export default function CuriousShiftPage() {
         ].map((src, i) => (
             <div
                 key={i}
-                className="
-                    relative
-                    mx-auto
-                    h-[838px]
-                    w-[542px]
-                    max-w-full
-                "
+                className="relative h-[838px] w-[542px]"
             >
                 <Image
                     src={src}
@@ -198,6 +190,7 @@ export default function CuriousShiftPage() {
         ))}
     </div>
 </section>
+
 
             </main>
         </GeneralShell>
