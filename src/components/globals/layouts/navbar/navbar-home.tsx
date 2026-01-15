@@ -23,6 +23,7 @@ import {
 import { ProductSearch } from "@/components/ui/product-search";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -41,72 +42,71 @@ import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 
 function useGuestCart() {
-  const [guestCart, setGuestCart] = useState<any[]>([]);
+    const [guestCart, setGuestCart] = useState<any[]>([]);
 
-  // Load guest cart from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("guest_cart");
-    if (stored) setGuestCart(JSON.parse(stored));
-  }, []);
+    // Load guest cart from localStorage
+    useEffect(() => {
+        const stored = localStorage.getItem("guest_cart");
+        if (stored) setGuestCart(JSON.parse(stored));
+    }, []);
 
-  // 🔥 Listen for custom events to update cart
-  useEffect(() => {
-    const handleCartUpdate = () => {
-      const stored = localStorage.getItem("guest_cart");
-      setGuestCart(stored ? JSON.parse(stored) : []);
+    // 🔥 Listen for custom events to update cart
+    useEffect(() => {
+        const handleCartUpdate = () => {
+            const stored = localStorage.getItem("guest_cart");
+            setGuestCart(stored ? JSON.parse(stored) : []);
+        };
+
+        window.addEventListener("guestCartUpdated", handleCartUpdate);
+        window.addEventListener("storage", handleCartUpdate);
+        return () => {
+            window.removeEventListener("guestCartUpdated", handleCartUpdate);
+            window.removeEventListener("storage", handleCartUpdate);
+        };
+    }, []);
+
+    const addToGuestCart = (item: any) => {
+        setGuestCart((prev) => {
+            const existing = prev.find(
+                (x) =>
+                    x.productId === item.productId &&
+                    (x.variantId || null) === (item.variantId || null)
+            );
+            let updated;
+            if (existing) {
+                updated = prev.map((x) =>
+                    x.productId === item.productId &&
+                    (x.variantId || null) === (item.variantId || null)
+                        ? { ...x, quantity: x.quantity + item.quantity }
+                        : x
+                );
+            } else {
+                updated = [...prev, item];
+            }
+            localStorage.setItem("guest_cart", JSON.stringify(updated));
+            // 🔥 Dispatch event to notify other components
+            window.dispatchEvent(new Event("guestCartUpdated"));
+            return updated;
+        });
     };
 
-    window.addEventListener("guestCartUpdated", handleCartUpdate);
-    window.addEventListener("storage", handleCartUpdate);
-    return () => {
-      window.removeEventListener("guestCartUpdated", handleCartUpdate);
-      window.removeEventListener("storage", handleCartUpdate);
+    const clearGuestCart = () => {
+        localStorage.removeItem("guest_cart");
+        setGuestCart([]);
+        window.dispatchEvent(new Event("guestCartUpdated"));
     };
-  }, []);
 
-  const addToGuestCart = (item: any) => {
-    setGuestCart((prev) => {
-      const existing = prev.find(
-        (x) =>
-          x.productId === item.productId &&
-          (x.variantId || null) === (item.variantId || null)
-      );
-      let updated;
-      if (existing) {
-        updated = prev.map((x) =>
-          x.productId === item.productId &&
-          (x.variantId || null) === (item.variantId || null)
-            ? { ...x, quantity: x.quantity + item.quantity }
-            : x
-        );
-      } else {
-        updated = [...prev, item];
-      }
-      localStorage.setItem("guest_cart", JSON.stringify(updated));
-      // 🔥 Dispatch event to notify other components
-      window.dispatchEvent(new Event("guestCartUpdated"));
-      return updated;
-    });
-  };
-
-  const clearGuestCart = () => {
-    localStorage.removeItem("guest_cart");
-    setGuestCart([]);
-    window.dispatchEvent(new Event("guestCartUpdated"));
-  };
-
-  return { guestCart, addToGuestCart, clearGuestCart };
+    return { guestCart, addToGuestCart, clearGuestCart };
 }
 export function NavbarHome() {
     const [isMenuHidden, setIsMenuHidden] = useState(false);
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
     const setIsMenuOpen = useNavbarStore((state) => state.setIsOpen);
-const { guestCart } = useGuestCart();
-const { guestWishlist } = useGuestWishlist();
+    const { guestCart } = useGuestCart();
+    const { guestWishlist } = useGuestWishlist();
     const { scrollY } = useScroll();
 
     // useMotionValueEvent(scrollY, "change", (latest) => {
@@ -184,10 +184,10 @@ const { guestWishlist } = useGuestWishlist();
         return `/shop?categoryId=${categoryId}&subcategoryId=${subcategoryId}&productTypeId=${productTypeId}`;
     };
 
-const cartCount = user ? (availableCart ?? []).length : guestCart.length;
-const wishlistCount = user
-  ? (userWishlist?.length ?? 0)
-  : guestWishlist.length;
+    const cartCount = user ? (availableCart ?? []).length : guestCart.length;
+    const wishlistCount = user
+        ? (userWishlist?.length ?? 0)
+        : guestWishlist.length;
 
     const { signOut } = useAuth();
     const posthog = usePostHog();
@@ -236,13 +236,7 @@ const wishlistCount = user
                 duration: 0.35,
                 ease: "easeInOut",
             }}
-             className="
-    sticky inset-x-0 top-0 z-50
-    flex h-auto w-full items-center justify-center
-    bg-white/60
-    backdrop-blur-lg
-    border-b border-white/20
-  "
+            className="sticky inset-x-0 top-0 z-50 flex h-auto w-full items-center justify-center border-b border-white/20 bg-white/60 backdrop-blur-lg"
             data-menu-open={isMenuOpen}
         >
             <nav
@@ -270,7 +264,7 @@ const wishlistCount = user
                     </Link>
 
                     <div className="hidden items-center gap-1 lg:flex">
-                        <NavigationMenu>
+                        <NavigationMenu className="static h-full max-w-none">
                             {/* <NavigationMenuList>
                                 {isCategoriesLoading ? (
                                     <></>
@@ -337,6 +331,7 @@ const wishlistCount = user
                                                                                         pt.subCategoryId ===
                                                                                         subcategory.id && (pt.productCount ?? 0) > 0
                                                                                 )
+                                                                                .sort((a, b) => a.name.localeCompare(b.name))
                                                                                 .map(
                                                                                     (
                                                                                         productType
@@ -375,122 +370,247 @@ const wishlistCount = user
                                         ))
                                 )}
                             </NavigationMenuList> */}
-        <NavigationMenuList>
-            {isCategoriesLoading ? (
-                <></>
-            ) : (
-                categories &&
-                subcategories &&
-                productTypes &&
-                categories.data
-                    .sort((a, b) =>
-                        a.createdAt.getTime() > b.createdAt.getTime() ? 1 : -1
-                    )
-                    .slice(0, 5)
-                    .map((category) => (
-                        <NavigationMenuItem key={category.id}>
-                            {/* Special handling for Men and Women categories */}
-                            {category.name === "Men" || category.name === "Kids" || category.name === "Women" || category.name === "Home and Living" || category.name === "Beauty and Personal Care"? (
-                                <div className="relative">
-                            <NavigationMenuTrigger
-                                className="bg-transparent hover:bg-transparent"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    let path;
-                                    switch (category.name) {
-                                        case "Home and Living":
-                                            path = "/home-living";
-                                            break;
-                                        case "Beauty and Personal Care":
-                                            path = "/beauty-personal";
-                                            break;
-                                        default:
-                                            path = `/${category.name.toLowerCase()}`;
-                                    }
-                                    window.location.href = path;
-                                }}
-                            >
- <Link
-                                    href={
-                                        category.name === "Home and Living"
-                                            ? "/home-living"
-                                            : category.name === "Beauty and Personal Care"
-                                            ? "/beauty-personal"
-                                            : `/${category.name.toLowerCase()}`
-                                    }
-                                    className="absolute inset-0"
-                                    aria-hidden="true"
-                                />
-            {category.name}
-        </NavigationMenuTrigger>
-                                    <NavigationMenuContent>
-                                        <div className="grid w-[1200px] grid-cols-5 gap-3 p-4 px-6">
-                                            {subcategories.data
-                                                .filter(
-                                                    (sub) =>
-                                                        sub.categoryId === category.id &&
-                                                        productTypes.data.some(
-                                                            (pt) =>
-                                                                pt.subCategoryId === sub.id &&
-                                                                (pt.productCount ?? 0) > 0
-                                                        )
-                                                )
-                                                .map((subcategory) => (
-                                                    <div
-                                                        key={subcategory.id}
-                                                        className="space-y-2"
-                                                    >
-                                                        <Link
-                                                            href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
-                                                            className="block hover:opacity-80"
+                            <NavigationMenuList>
+                                {isCategoriesLoading ? (
+                                    <></>
+                                ) : (
+                                    categories &&
+                                    subcategories &&
+                                    productTypes &&
+                                    categories.data
+                                        .sort((a, b) =>
+                                            a.createdAt.getTime() >
+                                            b.createdAt.getTime()
+                                                ? 1
+                                                : -1
+                                        )
+                                        .slice(0, 5)
+                                        .map((category) => (
+                                            <NavigationMenuItem
+                                                key={category.id}
+                                            >
+                                                {/* Special handling for Men and Women categories */}
+                                                {category.name === "Men" ||
+                                                category.name === "Kids" ||
+                                                category.name === "Women" ||
+                                                category.name ===
+                                                    "Home and Living" ||
+                                                category.name ===
+                                                    "Beauty and Personal Care" ? (
+                                                    <>
+                                                        <NavigationMenuTrigger
+                                                            className="relative bg-transparent hover:bg-transparent"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                let path;
+                                                                switch (
+                                                                    category.name
+                                                                ) {
+                                                                    case "Home and Living":
+                                                                        path =
+                                                                            "/home-living";
+                                                                        break;
+                                                                    case "Beauty and Personal Care":
+                                                                        path =
+                                                                            "/beauty-personal";
+                                                                        break;
+                                                                    default:
+                                                                        path = `/${category.name.toLowerCase()}`;
+                                                                }
+                                                                window.location.href =
+                                                                    path;
+                                                            }}
                                                         >
-                                                            <h3 className="font-medium text-primary">
-                                                                {subcategory.name}
-                                                            </h3>
-                                                        </Link>
-                                                        <ul className="space-y-1">
-                                                            {productTypes.data
-                                                                .filter(
-                                                                    (pt) =>
-                                                                        pt.subCategoryId === subcategory.id &&
-                                                                        (pt.productCount ?? 0) > 0
-                                                                )
-                                                                .map((productType) => (
-                                                                    <li key={productType.id}>
-                                                                        <NavigationMenuLink asChild>
-                                                                            <Link
-                                                                                href={handleNavigate(
-                                                                                    category.id,
-                                                                                    subcategory.id,
-                                                                                    productType.id
+                                                            {category.name}
+                                                        </NavigationMenuTrigger>
+                                                        <NavigationMenuContent>
+                                                            <div className="font-dmsans grid w-[1200px] max-w-[95vw] grid-cols-5 border border-gray-100 bg-white shadow-2xl">
+                                                                {(() => {
+                                                                    const filteredSubCategories =
+                                                                        subcategories.data
+                                                                            .filter(
+                                                                                (
+                                                                                    sub
+                                                                                ) =>
+                                                                                    sub.categoryId ===
+                                                                                        category.id &&
+                                                                                    productTypes.data.some(
+                                                                                        (
+                                                                                            pt
+                                                                                        ) =>
+                                                                                            pt.subCategoryId ===
+                                                                                                sub.id &&
+                                                                                            (pt.productCount ??
+                                                                                                0) >
+                                                                                                0
+                                                                                    )
+                                                                            )
+                                                                            .sort(
+                                                                                (
+                                                                                    a,
+                                                                                    b
+                                                                                ) => {
+                                                                                    const rankA =
+                                                                                        a.rank ||
+                                                                                        Infinity;
+                                                                                    const rankB =
+                                                                                        b.rank ||
+                                                                                        Infinity;
+                                                                                    if (
+                                                                                        rankA !==
+                                                                                        rankB
+                                                                                    ) {
+                                                                                        return (
+                                                                                            rankA -
+                                                                                            rankB
+                                                                                        );
+                                                                                    }
+                                                                                    return (
+                                                                                        new Date(
+                                                                                            b.updatedAt
+                                                                                        ).getTime() -
+                                                                                        new Date(
+                                                                                            a.updatedAt
+                                                                                        ).getTime()
+                                                                                    );
+                                                                                }
+                                                                            );
+
+                                                                    // Split into 5 columns
+                                                                    const columns: (typeof filteredSubCategories)[] =
+                                                                        [
+                                                                            [],
+                                                                            [],
+                                                                            [],
+                                                                            [],
+                                                                            [],
+                                                                        ];
+                                                                    filteredSubCategories.forEach(
+                                                                        (
+                                                                            sub,
+                                                                            i
+                                                                        ) => {
+                                                                            columns[
+                                                                                i %
+                                                                                    5
+                                                                            ].push(
+                                                                                sub
+                                                                            );
+                                                                        }
+                                                                    );
+
+                                                                    return columns.map(
+                                                                        (
+                                                                            col,
+                                                                            colIdx
+                                                                        ) => (
+                                                                            <div
+                                                                                key={
+                                                                                    colIdx
+                                                                                }
+                                                                                className={cn(
+                                                                                    "flex flex-col gap-10 px-7 pb-10 pt-5",
+                                                                                    colIdx %
+                                                                                        2 ===
+                                                                                        1
+                                                                                        ? "bg-gray-50/40"
+                                                                                        : "bg-white"
                                                                                 )}
-                                                                                className="block text-sm text-muted-foreground hover:font-semibold hover:text-foreground"
                                                                             >
-                                                                                {productType.name}
-                                                                            </Link>
-                                                                        </NavigationMenuLink>
-                                                                    </li>
-                                                                ))}
-                                                        </ul>
-                                                    </div>
-                                                ))}
-                                        </div>
-                                    </NavigationMenuContent>
-                                </div>
-                            ) : (
-                                <>
-                                    <NavigationMenuTrigger className="bg-transparent">
-                                        {category.name}
-                                    </NavigationMenuTrigger>
-                                    <NavigationMenuContent>
-                                        {/* ... existing content for other categories ... */}
-                                    </NavigationMenuContent>
-                                </>
-                            )}
-                        </NavigationMenuItem>
-                    ))
-            )}
-        </NavigationMenuList>
+                                                                                {col.map(
+                                                                                    (
+                                                                                        subcategory
+                                                                                    ) => (
+                                                                                        <div
+                                                                                            key={
+                                                                                                subcategory.id
+                                                                                            }
+                                                                                            className="space-y-2.5"
+                                                                                        >
+                                                                                            <Link
+                                                                                                href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                                                                                className="block border-b border-gray-100 pb-1 transition-opacity hover:opacity-80"
+                                                                                            >
+                                                                                                <h3 className="font-lato text-13 font-bold uppercase tracking-wide text-myntra-primary">
+                                                                                                    {
+                                                                                                        subcategory.name
+                                                                                                    }
+                                                                                                </h3>
+                                                                                            </Link>
+                                                                                            <ul className="space-y-1.5">
+                                                                                                {productTypes.data
+                                                                                                    .filter(
+                                                                                                        (
+                                                                                                            pt
+                                                                                                        ) =>
+                                                                                                            pt.subCategoryId ===
+                                                                                                                subcategory.id &&
+                                                                                                            (pt.productCount ??
+                                                                                                                0) >
+                                                                                                                0
+                                                                                                    )
+                                                                                                    .sort(
+                                                                                                        (
+                                                                                                            a,
+                                                                                                            b
+                                                                                                        ) =>
+                                                                                                            a.name.localeCompare(
+                                                                                                                b.name
+                                                                                                            )
+                                                                                                    )
+                                                                                                    .map(
+                                                                                                        (
+                                                                                                            productType
+                                                                                                        ) => (
+                                                                                                            <li
+                                                                                                                key={
+                                                                                                                    productType.id
+                                                                                                                }
+                                                                                                            >
+                                                                                                                <NavigationMenuLink
+                                                                                                                    asChild
+                                                                                                                >
+                                                                                                                    <Link
+                                                                                                                        href={handleNavigate(
+                                                                                                                            category.id,
+                                                                                                                            subcategory.id,
+                                                                                                                            productType.id
+                                                                                                                        )}
+                                                                                                                        className="block text-13 font-normal text-myntra-label transition-all [transition-duration:0ms] hover:font-bold hover:text-myntra-primary"
+                                                                                                                    >
+                                                                                                                        {
+                                                                                                                            productType.name
+                                                                                                                        }
+                                                                                                                    </Link>
+                                                                                                                </NavigationMenuLink>
+                                                                                                            </li>
+                                                                                                        )
+                                                                                                    )}
+                                                                                            </ul>
+                                                                                        </div>
+                                                                                    )
+                                                                                )}
+                                                                            </div>
+                                                                        )
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        </NavigationMenuContent>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <NavigationMenuTrigger className="bg-transparent">
+                                                            {category.name}
+                                                        </NavigationMenuTrigger>
+                                                        <NavigationMenuContent>
+                                                            {/* ... existing content for other categories ... */}
+                                                        </NavigationMenuContent>
+                                                    </>
+                                                )}
+                                            </NavigationMenuItem>
+                                        ))
+                                )}
+                            </NavigationMenuList>
                         </NavigationMenu>
                     </div>
                 </div>
@@ -500,50 +620,45 @@ const wishlistCount = user
                         placeholder="Search for products..."
                         classNames={{ wrapper: "min-w-80 hidden xl:flex" }}
                     />
-  {/* ✅ Guest-only Wishlist & Cart */}
-  {!user && (
-    <>
-      <Link
-        href="/guestWishlist"
-        className="relative"
-      >
-        {wishlistCount > 0 && (
-          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2
-                          items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-            {wishlistCount}
-          </div>
-        )}
-        <Icons.Heart className="size-5" />
-        <span className="sr-only">Wishlist</span>
-      </Link>
+                    {/* ✅ Guest-only Wishlist & Cart */}
+                    {!user && (
+                        <>
+                            <Link href="/guestWishlist" className="relative">
+                                {wishlistCount > 0 && (
+                                    <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                        {wishlistCount}
+                                    </div>
+                                )}
+                                <Icons.Heart className="size-5" />
+                                <span className="sr-only">Wishlist</span>
+                            </Link>
 
-      <Link href="/mycart" className="relative">
-        {cartCount > 0 && (
-          <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2
-                          items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-            {cartCount}
-          </div>
-        )}
-        <Icons.ShoppingCart className="size-5" />
-        <span className="sr-only">Cart</span>
-      </Link>
-    </>
-  )}
+                            <Link href="/mycart" className="relative">
+                                {cartCount > 0 && (
+                                    <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                        {cartCount}
+                                    </div>
+                                )}
+                                <Icons.ShoppingCart className="size-5" />
+                                <span className="sr-only">Cart</span>
+                            </Link>
+                        </>
+                    )}
 
                     {user ? (
                         <div className="flex items-center">
                             <Link
-                            aria-label="Mobile Cart Button"
-                            className="relative sm:hidden"
-                            href="/mycart"
-                            prefetch
+                                aria-label="Mobile Cart Button"
+                                className="relative sm:hidden"
+                                href="/mycart"
+                                prefetch
                             >
-                           {(availableCart ?? []).length > 0 && (
-                            <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                                {(availableCart ?? []).length}
-                            </div>
-                            )}
-                            <Icons.ShoppingCart className="size-6" />
+                                {(availableCart ?? []).length > 0 && (
+                                    <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                        {(availableCart ?? []).length}
+                                    </div>
+                                )}
+                                <Icons.ShoppingCart className="size-6" />
                             </Link>
 
                             <div className="hidden items-center gap-5 md:flex">

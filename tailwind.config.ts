@@ -15,6 +15,8 @@ export default withUt({
             fontFamily: {
                 sans: ["var(--font-josefin)", ...fontFamily.sans],
                 worksans: ["var(--font-work-sans)", ...fontFamily.sans],
+                dmsans: ["var(--font-dmsans)", ...fontFamily.sans],
+                lato: ["var(--font-lato)", ...fontFamily.sans],
                 playfair: ["var(--font-playfair)", ...fontFamily.serif],
             },
             colors: {

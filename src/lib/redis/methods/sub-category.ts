@@ -29,11 +29,17 @@ class SubCategoryCache {
                         productTypes: sub.productTypes.length,
                         productCount: Number(sub.productCount),
                     }))
-                    .sort(
-                        (a, b) =>
-                            new Date(b.createdAt).getTime() -
-                            new Date(a.createdAt).getTime()
-                    )
+                    .sort((a, b) => {
+                        const rankA = a.rank || Infinity;
+                        const rankB = b.rank || Infinity;
+                        if (rankA !== rankB) {
+                            return rankA - rankB;
+                        }
+                        return (
+                            new Date(b.updatedAt).getTime() -
+                            new Date(a.updatedAt).getTime()
+                        );
+                    })
             );
 
             await this.addBulk(cachedSubCategories);
@@ -46,11 +52,17 @@ class SubCategoryCache {
             cachedCategories
                 .map((sub) => parseToJSON<CachedSubCategory>(sub))
                 .filter((sub): sub is CachedSubCategory => sub !== null)
-                .sort(
-                    (a, b) =>
-                        new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime()
-                )
+                .sort((a, b) => {
+                    const rankA = a.rank || Infinity;
+                    const rankB = b.rank || Infinity;
+                    if (rankA !== rankB) {
+                        return rankA - rankB;
+                    }
+                    return (
+                        new Date(b.updatedAt).getTime() -
+                        new Date(a.updatedAt).getTime()
+                    );
+                })
         );
     }
 

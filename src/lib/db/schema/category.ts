@@ -1,11 +1,18 @@
 import { relations } from "drizzle-orm";
-import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+    boolean,
+    integer,
+    pgTable,
+    text,
+    timestamp,
+    uuid,
+} from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { coupons } from "./coupon";
+import { packingTypes } from "./order-shipment";
 import { products } from "./product";
 import { users } from "./user";
-import { packingTypes } from "./order-shipment";
 
 export const categories = pgTable("categories", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
@@ -26,6 +33,7 @@ export const subCategories = pgTable("sub_categories", {
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
+    rank: integer("rank").notNull().default(0),
     ...timestamps,
 });
 
@@ -41,15 +49,13 @@ export const productTypes = pgTable("product_types", {
         .references(() => subCategories.id, {
             onDelete: "cascade",
         }),
-          packingTypeId: uuid("packing_type_id")
-    .references(() => packingTypes.id, {
-      onDelete: "cascade", // safer than cascade
+    packingTypeId: uuid("packing_type_id").references(() => packingTypes.id, {
+        onDelete: "cascade", // safer than cascade
     }),
- isFragile: boolean("is_fragile").default(false),
+    isFragile: boolean("is_fragile").default(false),
 
-  shipsInOwnBox: boolean("ships_in_own_box")
-    .default(false),
-    override:boolean("can_override").default(false),
+    shipsInOwnBox: boolean("ships_in_own_box").default(false),
+    override: boolean("can_override").default(false),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
@@ -109,11 +115,11 @@ export const productTypesRelations = relations(
             fields: [productTypes.categoryId],
             references: [categories.id],
         }),
-            // ✅ NEW: Packing Type relation
-    packingType: one(packingTypes, {
-      fields: [productTypes.packingTypeId],
-      references: [packingTypes.id],
-    }),
+        // ✅ NEW: Packing Type relation
+        packingType: one(packingTypes, {
+            fields: [productTypes.packingTypeId],
+            references: [packingTypes.id],
+        }),
         products: many(products),
         coupons: many(coupons),
     })
