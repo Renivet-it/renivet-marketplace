@@ -65,7 +65,7 @@ export default function ContactPage() {
                 <div
                     className="mx-auto flex border border-gray-400"
                     style={{
-                        width: "320px",
+                        width: "300px",
                         minHeight: "169px",
                         marginLeft: "75px",
                     }}
@@ -344,8 +344,8 @@ export default function ContactPage() {
                         </div>
                     </div>
 
-                    {/* Desktop Image - Absolute positioned */}
-                    <div className="absolute bottom-[-567px] left-[-494px] h-[613px] w-[760px]">
+                    {/* Desktop Image - Absolute positioned, responsive for screen sizes */}
+                    <div className="absolute bottom-[-350px] left-[-200px] h-[400px] w-[500px] lg:bottom-[-450px] lg:left-[-120px] lg:h-[500px] lg:w-[620px] xl:bottom-[-567px] xl:left-[-310px] xl:h-[613px] xl:w-[760px] 2xl:left-[-494px]">
                         <Image
                             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                             alt="Leaf person"
