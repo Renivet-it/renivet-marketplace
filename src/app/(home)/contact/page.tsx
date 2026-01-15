@@ -36,7 +36,7 @@ export default function ContactPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#fcfbf4] px-4 py-10">
+        <div className="bg-[#fcfbf4] px-4 py-10 md:min-h-screen">
             {/* Header */}
             <div className="mb-6 text-center md:mb-10">
                 <h1
@@ -65,8 +65,9 @@ export default function ContactPage() {
                 <div
                     className="mx-auto flex border border-gray-400"
                     style={{
-                        width: "289px",
+                        width: "320px",
                         minHeight: "169px",
+                        marginLeft: "75px",
                     }}
                 >
                     {/* Left Form - Mobile */}
@@ -122,11 +123,24 @@ export default function ContactPage() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Small Submit Button - Mobile */}
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className={cn(
+                                    "mt-3 w-full bg-[#1a1a2e] py-1.5 text-[8px] font-medium uppercase tracking-widest text-white transition-colors hover:bg-[#0f0f1a]",
+                                    isSubmitting &&
+                                        "cursor-not-allowed opacity-70"
+                                )}
+                            >
+                                {isSubmitting ? "Sending..." : "Submit"}
+                            </button>
                         </form>
                     </div>
 
                     {/* Vertical Divider - Mobile */}
-                    <div className="w-px bg-gray-400" />
+                    {/* <div className="w-px bg-gray-400" /> */}
 
                     {/* Right Info - Mobile */}
                     <div className="w-[100px] space-y-3 px-2 py-3">
@@ -171,20 +185,20 @@ export default function ContactPage() {
                     </div>
                 </div>
 
-                {/* Mobile Image - 214x167 */}
-                <div className="ml-4 mt-6">
+                {/* Mobile Image - 214x167, showing top portion */}
+                <div className="ml-4 mt-[-0.5]">
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                         alt="Leaf person"
                         width={214}
                         height={167}
-                        className="h-[167px] w-[214px] object-cover"
+                        className="h-[167px] w-[214px] object-cover object-top"
                         priority
                     />
                 </div>
 
                 {/* Mobile Footer */}
-                <div className="mb-8 mt-10 text-center">
+                <div className="mt-6 text-center">
                     <p
                         className="text-sm leading-relaxed text-gray-600"
                         style={{
