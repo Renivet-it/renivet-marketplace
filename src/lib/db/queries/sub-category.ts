@@ -61,7 +61,7 @@ class SubCategoryQuery {
             with: {
                 productTypes: true,
             },
-            orderBy: [desc(subCategories.rank), desc(subCategories.updatedAt)],
+            orderBy: [asc(subCategories.rank), desc(subCategories.updatedAt)],
         });
 
         return data;

@@ -450,17 +450,19 @@ export function NavbarHome() {
                                                                                     a,
                                                                                     b
                                                                                 ) => {
+                                                                                    const rankA =
+                                                                                        a.rank ||
+                                                                                        Infinity;
+                                                                                    const rankB =
+                                                                                        b.rank ||
+                                                                                        Infinity;
                                                                                     if (
-                                                                                        (a.rank ??
-                                                                                            0) !==
-                                                                                        (b.rank ??
-                                                                                            0)
+                                                                                        rankA !==
+                                                                                        rankB
                                                                                     ) {
                                                                                         return (
-                                                                                            (b.rank ??
-                                                                                                0) -
-                                                                                            (a.rank ??
-                                                                                                0)
+                                                                                            rankA -
+                                                                                            rankB
                                                                                         );
                                                                                     }
                                                                                     return (
@@ -507,7 +509,7 @@ export function NavbarHome() {
                                                                                     colIdx
                                                                                 }
                                                                                 className={cn(
-                                                                                    "flex flex-col gap-8 p-8",
+                                                                                    "flex flex-col gap-10 px-7 pb-10 pt-5",
                                                                                     colIdx %
                                                                                         2 ===
                                                                                         1
@@ -523,13 +525,13 @@ export function NavbarHome() {
                                                                                             key={
                                                                                                 subcategory.id
                                                                                             }
-                                                                                            className="space-y-4"
+                                                                                            className="space-y-2.5"
                                                                                         >
                                                                                             <Link
                                                                                                 href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
                                                                                                 className="block border-b border-gray-100 pb-1 transition-opacity hover:opacity-80"
                                                                                             >
-                                                                                                <h3 className="text-13 font-bold uppercase tracking-wider text-myntra-primary">
+                                                                                                <h3 className="font-lato text-13 font-bold uppercase tracking-wide text-myntra-primary">
                                                                                                     {
                                                                                                         subcategory.name
                                                                                                     }

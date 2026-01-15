@@ -19,8 +19,10 @@ export const subCategoriesRouter = createTRPCRouter({
         const subCategories = await subCategoryCache.getAll();
         return {
             data: subCategories.sort((a, b) => {
-                if ((a.rank ?? 0) !== (b.rank ?? 0)) {
-                    return (b.rank ?? 0) - (a.rank ?? 0);
+                const rankA = a.rank || Infinity;
+                const rankB = b.rank || Infinity;
+                if (rankA !== rankB) {
+                    return rankA - rankB;
                 }
                 return (
                     new Date(b.updatedAt).getTime() -
