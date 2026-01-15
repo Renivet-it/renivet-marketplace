@@ -59,13 +59,13 @@ export default function ContactPage() {
                 </p>
             </div>
 
-            {/* ================= MOBILE LAYOUT ================= */}
-            <div className="block md:hidden">
-                {/* Mobile Form Box - 289x169 aspect ratio */}
+            {/* ================= MOBILE LAYOUT (up to lg/1024px) ================= */}
+            <div className="block lg:hidden">
+                {/* Mobile Form Box - Left on phones, centered on iPad */}
                 <div
-                    className="mx-auto flex border border-gray-400"
+                    className="flex border border-gray-400 md:mx-auto"
                     style={{
-                        width: "320px",
+                        width: "280px",
                         minHeight: "169px",
                         marginLeft: "75px",
                     }}
@@ -185,8 +185,8 @@ export default function ContactPage() {
                     </div>
                 </div>
 
-                {/* Mobile Image - 214x167, showing top portion */}
-                <div className="ml-4 mt-[-0.5]">
+                {/* Mobile Image - Left on phones, centered on iPad */}
+                <div className="ml-4 mt-[-0.5] md:mx-auto md:w-fit">
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                         alt="Leaf person"
@@ -214,8 +214,8 @@ export default function ContactPage() {
                 </div>
             </div>
 
-            {/* ================= DESKTOP LAYOUT ================= */}
-            <div className="hidden md:block">
+            {/* ================= DESKTOP LAYOUT (lg/1024px and above) ================= */}
+            <div className="hidden lg:block">
                 {/* Main Container */}
                 <div
                     className="relative mx-auto lg:ml-auto lg:mr-[120px]"
@@ -344,8 +344,8 @@ export default function ContactPage() {
                         </div>
                     </div>
 
-                    {/* Desktop Image - Absolute positioned */}
-                    <div className="absolute bottom-[-567px] left-[-494px] h-[613px] w-[760px]">
+                    {/* Desktop Image - Absolute positioned, responsive for screen sizes */}
+                    <div className="absolute bottom-[-350px] left-[-200px] h-[400px] w-[500px] lg:bottom-[-450px] lg:left-[-120px] lg:h-[500px] lg:w-[620px] xl:bottom-[-567px] xl:left-[-310px] xl:h-[613px] xl:w-[760px] 2xl:left-[-494px]">
                         <Image
                             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                             alt="Leaf person"
