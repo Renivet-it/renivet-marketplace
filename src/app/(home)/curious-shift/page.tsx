@@ -2,13 +2,7 @@
 
 import { GeneralShell } from "@/components/globals/layouts";
 import Image from "next/image";
-import {
-    Leaf,
-    RefreshCw,
-    Globe,
-    Scissors,
-    Handshake,
-} from "lucide-react";
+
 const icons = [
     {
         src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNw3U5csrQTkEsKW16AOLVjr8DhmeCypgUGfJz",
@@ -40,213 +34,163 @@ export default function CuriousShiftPage() {
                 innerWrapper: "!p-0 !max-w-none",
             }}
         >
-            <main className="min-h-screen bg-[#fcfbf4] py-24 font-sans">
+            <main className="min-h-screen bg-[#fcfbf4] py-10 font-sans">
                 {/* TEXT SECTION */}
                 <section
-    className="
-        text-[#1A1A1A]
-        pl-6
-        md:pl-20
-        lg:pl-24
-        xl:pl-28
-        max-w-[1200px]
-    "
->
-
-                    {/* TITLE */}
-                    <h1 className="mb-14 text-[44px] font-normal tracking-[-0.02em] md:text-[56px]">
+                    className="
+                        text-[#1A1A1A]
+                        px-6
+                        md:pl-20
+                        lg:pl-24
+                        xl:pl-28
+                        max-w-[1200px]
+                    "
+                >
+                    <h1 className="mb-4 text-[44px] md:text-[56px] font-normal tracking-[-0.02em]">
                         A Curious Shift
                     </h1>
 
-                    {/* BODY */}
-<div className="space-y-10 text-[26px] leading-[1.7] tracking-[-0.01em] md:text-[32px]">
-
-    <p>
-        there was a time — not very long ago — when fashion colleges proudly
-        taught the supply chains of fast fashion brands.
-    </p>
-
-    <p>
-        how fast designs moved. how efficiently factories produced. how
-        brilliantly inventory was turned over.
-    </p>
-
-    <p>
-        speed was the flex. scale was the success metric.
-    </p>
-
-    <p>
-        students were trained to admire systems built for maximum output,
-        minimum pause. today, those same colleges teach sustainability.
-        ethics. lifecycle thinking. impact beyond margins.
-    </p>
-
-    <p>
-        not because trends changed — but because the old system cracked under
-        its own weight.
-    </p>
-
-    <p className="pt-6 text-[40px] italic md:text-[40px]">
-        the irony?
-    </p>
-
-    <p>
-        the industry already knows something is broken. the institutions have
-        adapted. the curriculum has evolved.
-    </p>
-
-    <p className="pt-4 text-[28px] md:text-[34px]">
-        but consumer behaviour?
-    </p>
-</div>
-
-
+                    <div className="space-y-10 text-[20px] md:text-[32px] leading-[1.7] tracking-[-0.01em]">
+                        <p>
+                            there was a time — not very long ago — when fashion colleges proudly
+                            taught the supply chains of fast fashion brands.
+                        </p>
+                        <p>
+                            how fast designs moved. how efficiently factories produced. how
+                            brilliantly inventory was turned over.
+                        </p>
+                        <p>speed was the flex. scale was the success metric.</p>
+                        <p>
+                            students were trained to admire systems built for maximum output,
+                            minimum pause. today, those same colleges teach sustainability.
+                            ethics. lifecycle thinking. impact beyond margins.
+                        </p>
+                        <p>
+                            not because trends changed — but because the old system cracked under
+                            its own weight.
+                        </p>
+                        <p className="pt-6 text-[32px] md:text-[40px] italic">
+                            the irony?
+                        </p>
+                        <p>
+                            the industry already knows something is broken. the institutions have
+                            adapted. the curriculum has evolved.
+                        </p>
+                        <p className="pt-4 text-[22px] md:text-[34px]">
+                            but consumer behaviour?
+                        </p>
+                    </div>
                 </section>
 
                 {/* VISUAL COMPARISON */}
-{/* VISUAL COMPARISON */}
-<section className="relative mx-auto mt-40 max-w-[1400px]">
-    <div className="relative flex items-end justify-center gap-[140px]">
+                <section className="relative mx-auto mt-32 md:mt-40 max-w-[1400px]">
+                    <div className="relative flex flex-col md:flex-row items-center md:items-end justify-center gap-24 md:gap-[140px]">
 
-        {/* THEN */}
-        <div className="relative flex w-[360px] flex-col items-center">
-              <div className="absolute inset-[-90px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,225,170,0.55)_0%,rgba(170,225,170,0.32)_35%,rgba(170,225,170,0.15)_55%,rgba(170,225,170,0.06)_70%,transparent_80%)]" />
-            <div className="relative h-[420px] w-[340px] overflow-hidden rounded-sm shadow-lg">
-                <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
-                    alt="Then"
-                    fill
-                    className="object-cover"
-                />
-            </div>
+                        {/* THEN */}
+                        <div className="relative flex w-[260px] md:w-[360px] flex-col items-center">
+                            <div className="relative">
+                                <div className="pointer-events-none absolute inset-[-60px] md:inset-[-90px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,225,170,0.35)_0%,rgba(170,225,170,0.2)_40%,rgba(170,225,170,0.08)_60%,transparent_75%)]" />
+                                <div className="relative h-[320px] w-[260px] md:h-[420px] md:w-[340px] overflow-hidden rounded-sm shadow-lg">
+                                    <Image
+                                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
+                                        alt="Then"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </div>
+                            </div>
 
-            {/* Clothes pile (LEFT) */}
-                     <div className="absolute -bottom-40 left-1/2 -translate-x-1/2">
-                <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbd5ZtauZc50VbmLPHAdU9KwxEkCINyqDWJRr"
-                    alt="Grass and flowers"
-                    width={531}
-                    height={288}
-                    className="max-w-none"
-                />
-            </div>
-        </div>
+                            <div className="absolute -bottom-32 md:-bottom-40 left-1/2 -translate-x-1/2">
+                                <Image
+                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbd5ZtauZc50VbmLPHAdU9KwxEkCINyqDWJRr"
+                                    alt="Clothes pile"
+                                    width={531}
+                                    height={288}
+                                    className="max-w-none scale-75 md:scale-100"
+                                />
+                            </div>
+                        </div>
 
-        {/* ICONS CENTER */}
-{/* ICONS CENTER */}
-<div className="relative mb-32 flex flex-col items-center gap-14 opacity-80">
-    {/* Top row (3 icons) */}
-    <div className="flex gap-12">
-        {icons.slice(0, 3).map((icon, i) => (
-            <div key={i} className="relative h-12 w-12">
-                <Image
-                    src={icon.src}
-                    alt={icon.alt}
-                    fill
-                    className="object-contain"
-                />
-            </div>
-        ))}
-    </div>
+                        {/* ICONS CENTER */}
+                        <div className="relative flex flex-wrap md:flex-col items-center justify-center gap-6 md:gap-14 opacity-80 max-w-[260px] md:max-w-none">
+                            <div className="flex gap-6 md:gap-12">
+                                {icons.slice(0, 3).map((icon, i) => (
+                                    <div key={i} className="relative h-10 w-10 md:h-12 md:w-12">
+                                        <Image src={icon.src} alt={icon.alt} fill className="object-contain" />
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-6 md:gap-12">
+                                {icons.slice(3).map((icon, i) => (
+                                    <div key={i} className="relative h-10 w-10 md:h-12 md:w-12">
+                                        <Image src={icon.src} alt={icon.alt} fill className="object-contain" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
 
-    {/* Bottom row (2 icons) */}
-    <div className="flex gap-12">
-        {icons.slice(3).map((icon, i) => (
-            <div key={i} className="relative h-12 w-12">
-                <Image
-                    src={icon.src}
-                    alt={icon.alt}
-                    fill
-                    className="object-contain"
-                />
-            </div>
-        ))}
-    </div>
-</div>
+                        {/* NOW */}
+                        <div className="relative flex w-[260px] md:w-[360px] flex-col items-center">
+                            <div className="relative">
+                                <div className="pointer-events-none absolute inset-[-70px] md:inset-[-100px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,230,170,0.45)_0%,rgba(170,230,170,0.25)_40%,rgba(170,230,170,0.12)_60%,transparent_75%)]" />
+                                <div className="relative h-[320px] w-[260px] md:h-[420px] md:w-[340px] overflow-hidden rounded-sm shadow-lg">
+                                    <Image
+                                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcsUQGDeO4H8MeNYoyJQSarWCqgVpRxP5lDBu"
+                                        alt="Now"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                </div>
+                            </div>
 
+                            <div className="absolute -bottom-28 md:-bottom-36 left-1/2 -translate-x-1/2">
+                                <Image
+                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNh983pfPAwZ71xI8cmpPRY6WBO42eGEJfosyi"
+                                    alt="Grass"
+                                    width={585}
+                                    height={412}
+                                    className="max-w-none scale-75 md:scale-100"
+                                />
+                            </div>
+                        </div>
 
-        {/* NOW */}
-        <div className="relative flex w-[360px] flex-col items-center">
-            <div className="relative h-[420px] w-[340px] overflow-hidden rounded-sm shadow-lg">
-                <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcsUQGDeO4H8MeNYoyJQSarWCqgVpRxP5lDBu"
-                    alt="Now"
-                    fill
-                    className="object-cover"
-                />
-            </div>
+                    </div>
+                </section>
 
-            {/* Grass / flowers (RIGHT) */}
-         <div className="absolute -bottom-36 left-1/2 -translate-x-1/2">
-                <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNh983pfPAwZ71xI8cmpPRY6WBO42eGEJfosyi"
-                    alt="Discarded clothes"
-                    width={585}
-                    height={412}
-                    className="max-w-none"
-                />
-            </div>
-        </div>
+                {/* FACT TAGS */}
+                <section className="mt-32 w-full flex justify-center">
+                    <div className="flex flex-wrap md:flex-nowrap justify-center">
+                        {[
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrC2RWkzxCX9qouDwr5d6fTcizLeZ0I4snJv",
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseeY93bn3bApvy2W4lj8UTcEV5GdMa0thXR6",
+                        ].map((src, i) => (
+                            <div
+                                key={i}
+                                className={`relative h-[420px] md:h-[838px] w-[260px] md:w-[542px] ${i !== 0 ? "md:-ml-[48px]" : ""}`}
+                            >
+                                <Image src={src} alt={`Fact ${i + 1}`} fill className="object-contain" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
 
-    </div>
-</section>
-{/* FACT TAGS SECTION */}
-<section className="mt-32 w-full flex justify-center">
-    <div className="flex">
-        {[
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrC2RWkzxCX9qouDwr5d6fTcizLeZ0I4snJv",
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseeY93bn3bApvy2W4lj8UTcEV5GdMa0thXR6",
-        ].map((src, i) => (
-            <div
-                key={i}
-                className={`
-                    relative
-                    h-[838px]
-                    w-[542px]
-                    flex-shrink-0
-                    ${i !== 0 ? "-ml-[48px]" : ""}
-                `}
-            >
-                <Image
-                    src={src}
-                    alt={`Fact ${i + 1}`}
-                    fill
-                    className="object-contain"
-                />
-            </div>
-        ))}
-    </div>
-</section>
-
-<section className="mt-10 w-full flex justify-center">
-    <div className="flex">
-        {[
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
-        ].map((src, i) => (
-            <div
-                key={i}
-                className={`
-                    relative
-                    h-[838px]
-                    w-[542px]
-                    flex-shrink-0
-                    ${i !== 0 ? "-ml-[48px]" : ""}
-                `}
-            >
-                <Image
-                    src={src}
-                    alt={`Fact ${i + 1}`}
-                    fill
-                    className="object-contain"
-                />
-            </div>
-        ))}
-    </div>
-</section>
-
+                <section className="mt-10 w-full flex justify-center">
+                    <div className="flex flex-wrap md:flex-nowrap justify-center">
+                        {[
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
+                        ].map((src, i) => (
+                            <div
+                                key={i}
+                                className={`relative h-[420px] md:h-[838px] w-[260px] md:w-[542px] ${i !== 0 ? "md:-ml-[48px]" : ""}`}
+                            >
+                                <Image src={src} alt={`Fact ${i + 4}`} fill className="object-contain" />
+                            </div>
+                        ))}
+                    </div>
+                </section>
             </main>
         </GeneralShell>
     );
