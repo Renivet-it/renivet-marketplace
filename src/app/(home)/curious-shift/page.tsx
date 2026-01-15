@@ -83,76 +83,105 @@ export default function CuriousShiftPage() {
                 </section>
 
                 {/* VISUAL COMPARISON */}
-                <section className="relative mx-auto mt-32 md:mt-40 max-w-[1400px]">
-                    <div className="relative flex flex-col md:flex-row items-center md:items-end justify-center gap-24 md:gap-[140px]">
+                <section className="relative mx-auto mt-16 md:mt-40 max-w-[1400px]">
+
+                <div className="relative flex flex-col md:flex-row items-center md:items-end justify-center gap-12 md:gap-[140px]">
+
 
                         {/* THEN */}
-                        <div className="relative flex w-[260px] md:w-[360px] flex-col items-center">
-                            <div className="relative">
-                                <div className="pointer-events-none absolute inset-[-60px] md:inset-[-90px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,225,170,0.35)_0%,rgba(170,225,170,0.2)_40%,rgba(170,225,170,0.08)_60%,transparent_75%)]" />
-                                <div className="relative h-[320px] w-[260px] md:h-[420px] md:w-[340px] overflow-hidden rounded-sm shadow-lg">
-                                    <Image
-                                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
-                                        alt="Then"
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                            </div>
+{/* THEN */}
+<div className="relative flex w-[230px] md:w-[300px] flex-col items-center">
+    <div className="relative">
+        <div className="pointer-events-none absolute inset-[-60px] md:inset-[-90px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,225,170,0.35)_0%,rgba(170,225,170,0.2)_40%,rgba(170,225,170,0.08)_60%,transparent_75%)]" />
+        <div className="relative h-[280px] w-[230px] md:h-[380px] md:w-[300px] overflow-hidden rounded-sm shadow-lg">
+            <Image
+                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
+                alt="Then"
+                fill
+                className="object-cover"
+            />
+        </div>
+    </div>
 
-                            <div className="absolute -bottom-32 md:-bottom-40 left-1/2 -translate-x-1/2">
-                                <Image
-                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbd5ZtauZc50VbmLPHAdU9KwxEkCINyqDWJRr"
-                                    alt="Clothes pile"
-                                    width={531}
-                                    height={288}
-                                    className="max-w-none scale-75 md:scale-100"
-                                />
-                            </div>
-                        </div>
+   <div className="absolute -bottom-16 md:-bottom-40 left-1/2 -translate-x-1/2">
 
-                        {/* ICONS CENTER */}
-                        <div className="relative flex flex-wrap md:flex-col items-center justify-center gap-6 md:gap-14 opacity-80 max-w-[260px] md:max-w-none">
-                            <div className="flex gap-6 md:gap-12">
-                                {icons.slice(0, 3).map((icon, i) => (
-                                    <div key={i} className="relative h-10 w-10 md:h-12 md:w-12">
-                                        <Image src={icon.src} alt={icon.alt} fill className="object-contain" />
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="flex gap-6 md:gap-12">
-                                {icons.slice(3).map((icon, i) => (
-                                    <div key={i} className="relative h-10 w-10 md:h-12 md:w-12">
-                                        <Image src={icon.src} alt={icon.alt} fill className="object-contain" />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+        <Image
+            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbd5ZtauZc50VbmLPHAdU9KwxEkCINyqDWJRr"
+            alt="Clothes pile"
+            width={531}
+            height={288}
+            className="max-w-none scale-75 md:scale-100"
+        />
+    </div>
+</div>
+
+
+                   {/* ICONS CENTER */}
+<div className="relative opacity-80 max-w-[260px] md:max-w-none">
+
+    {/* -------- MOBILE: CLEAN CENTERED ROW -------- */}
+    <div className="md:hidden flex justify-center">
+        <div className="flex items-center gap-6">
+            {icons.map((icon, i) => (
+                <div key={i} className="relative h-8 w-8">
+                    <Image
+                        src={icon.src}
+                        alt={icon.alt}
+                        fill
+                        className="object-contain"
+                    />
+                </div>
+            ))}
+        </div>
+    </div>
+
+    {/* -------- DESKTOP: ORIGINAL LAYOUT (UNCHANGED) -------- */}
+    <div className="hidden md:flex flex-wrap md:flex-col items-center justify-center gap-6 md:gap-14">
+        <div className="flex gap-6 md:gap-12">
+            {icons.slice(0, 3).map((icon, i) => (
+                <div key={i} className="relative h-10 w-10 md:h-12 md:w-12">
+                    <Image src={icon.src} alt={icon.alt} fill className="object-contain" />
+                </div>
+            ))}
+        </div>
+        <div className="flex gap-6 md:gap-12">
+            {icons.slice(3).map((icon, i) => (
+                <div key={i} className="relative h-10 w-10 md:h-12 md:w-12">
+                    <Image src={icon.src} alt={icon.alt} fill className="object-contain" />
+                </div>
+            ))}
+        </div>
+    </div>
+
+</div>
+
 
                         {/* NOW */}
-                        <div className="relative flex w-[260px] md:w-[360px] flex-col items-center">
-                            <div className="relative">
-                                <div className="pointer-events-none absolute inset-[-70px] md:inset-[-100px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,230,170,0.45)_0%,rgba(170,230,170,0.25)_40%,rgba(170,230,170,0.12)_60%,transparent_75%)]" />
-                                <div className="relative h-[320px] w-[260px] md:h-[420px] md:w-[340px] overflow-hidden rounded-sm shadow-lg">
-                                    <Image
-                                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcsUQGDeO4H8MeNYoyJQSarWCqgVpRxP5lDBu"
-                                        alt="Now"
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                            </div>
+  {/* NOW */}
+<div className="relative flex w-[230px] md:w-[300px] flex-col items-center">
+    <div className="relative">
+        <div className="pointer-events-none absolute inset-[-70px] md:inset-[-100px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,230,170,0.45)_0%,rgba(170,230,170,0.25)_40%,rgba(170,230,170,0.12)_60%,transparent_75%)]" />
+        <div className="relative h-[280px] w-[230px] md:h-[380px] md:w-[300px] overflow-hidden rounded-sm shadow-lg">
+            <Image
+                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcsUQGDeO4H8MeNYoyJQSarWCqgVpRxP5lDBu"
+                alt="Now"
+                fill
+                className="object-cover"
+            />
+        </div>
+    </div>
 
-                            <div className="absolute -bottom-28 md:-bottom-36 left-1/2 -translate-x-1/2">
-                                <Image
-                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNh983pfPAwZ71xI8cmpPRY6WBO42eGEJfosyi"
-                                    alt="Grass"
-                                    width={585}
-                                    height={412}
-                                    className="max-w-none scale-75 md:scale-100"
-                                />
-                            </div>
-                        </div>
+    <div className="absolute -bottom-28 md:-bottom-36 left-1/2 -translate-x-1/2">
+        <Image
+            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNh983pfPAwZ71xI8cmpPRY6WBO42eGEJfosyi"
+            alt="Grass"
+            width={585}
+            height={412}
+            className="max-w-none scale-75 md:scale-100"
+        />
+    </div>
+</div>
+
 
                     </div>
                 </section>
