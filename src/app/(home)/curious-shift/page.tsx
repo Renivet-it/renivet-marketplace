@@ -156,6 +156,48 @@ export default function CuriousShiftPage() {
 
     </div>
 </section>
+{/* FACT TAGS SECTION */}
+<section className="mx-auto mt-48 max-w-[1400px] px-6 md:px-12">
+    <div
+        className="
+            grid
+            grid-cols-1
+            gap-y-20
+            md:grid-cols-2
+            md:gap-x-16
+            md:gap-y-24
+            lg:grid-cols-3
+            lg:gap-x-20
+        "
+    >
+        {[
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrC2RWkzxCX9qouDwr5d6fTcizLeZ0I4snJv",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseeY93bn3bApvy2W4lj8UTcEV5GdMa0thXR6",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
+        ].map((src, i) => (
+            <div
+                key={i}
+                className="
+                    relative
+                    mx-auto
+                    h-[838px]
+                    w-[542px]
+                    max-w-full
+                "
+            >
+                <Image
+                    src={src}
+                    alt={`Fact ${i + 1}`}
+                    fill
+                    className="object-contain"
+                />
+            </div>
+        ))}
+    </div>
+</section>
 
             </main>
         </GeneralShell>
