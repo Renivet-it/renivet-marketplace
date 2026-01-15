@@ -331,6 +331,7 @@ export function NavbarHome() {
                                                                                         pt.subCategoryId ===
                                                                                         subcategory.id && (pt.productCount ?? 0) > 0
                                                                                 )
+                                                                                .sort((a, b) => a.name.localeCompare(b.name))
                                                                                 .map(
                                                                                     (
                                                                                         productType
@@ -423,7 +424,7 @@ export function NavbarHome() {
                                                             {category.name}
                                                         </NavigationMenuTrigger>
                                                         <NavigationMenuContent>
-                                                            <div className="grid w-[1200px] max-w-[95vw] grid-cols-5 border border-gray-100 bg-white shadow-2xl">
+                                                            <div className="font-dmsans grid w-[1200px] max-w-[95vw] grid-cols-5 border border-gray-100 bg-white shadow-2xl">
                                                                 {(() => {
                                                                     const filteredSubCategories =
                                                                         subcategories.data
@@ -528,7 +529,7 @@ export function NavbarHome() {
                                                                                                 href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
                                                                                                 className="block border-b border-gray-100 pb-1 transition-opacity hover:opacity-80"
                                                                                             >
-                                                                                                <h3 className="text-13 font-bold uppercase tracking-wider text-primary">
+                                                                                                <h3 className="text-13 font-bold uppercase tracking-wider text-myntra-primary">
                                                                                                     {
                                                                                                         subcategory.name
                                                                                                     }
@@ -545,6 +546,15 @@ export function NavbarHome() {
                                                                                                             (pt.productCount ??
                                                                                                                 0) >
                                                                                                                 0
+                                                                                                    )
+                                                                                                    .sort(
+                                                                                                        (
+                                                                                                            a,
+                                                                                                            b
+                                                                                                        ) =>
+                                                                                                            a.name.localeCompare(
+                                                                                                                b.name
+                                                                                                            )
                                                                                                     )
                                                                                                     .map(
                                                                                                         (
@@ -564,7 +574,7 @@ export function NavbarHome() {
                                                                                                                             subcategory.id,
                                                                                                                             productType.id
                                                                                                                         )}
-                                                                                                                        className="block text-13 font-medium text-gray-700 transition-all hover:font-bold hover:text-gray-900"
+                                                                                                                        className="block text-13 font-normal text-myntra-label transition-all [transition-duration:0ms] hover:font-bold hover:text-myntra-primary"
                                                                                                                     >
                                                                                                                         {
                                                                                                                             productType.name
