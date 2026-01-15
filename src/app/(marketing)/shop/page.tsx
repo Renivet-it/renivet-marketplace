@@ -6,14 +6,12 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries } from "@/lib/db/queries";
 import {
-    brandCache,
     categoryCache,
     productTypeCache,
     subCategoryCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
-import { brandMetaSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import AutoRefresher from "./AutoRefresher";
@@ -248,7 +246,7 @@ async function ShopFiltersFetch(
         categories,
         subCategories,
         productTypes,
-        allBrands,
+        brandsMeta,
         colors,
         alphaSize,
         numSize,
@@ -256,7 +254,11 @@ async function ShopFiltersFetch(
         categoryCache.getAll(),
         subCategoryCache.getAll(),
         productTypeCache.getAll(),
-        brandCache.getAll(),
+        productQueries.getUniqueBrands({
+            categoryId,
+            subcategoryId: subCategoryId,
+            productTypeId,
+        }),
         productQueries.getUniqueColors({
             categoryId,
             subcategoryId: subCategoryId,
@@ -273,10 +275,6 @@ async function ShopFiltersFetch(
             productTypeId,
         }),
     ]);
-
-    const brandsMeta = brandMetaSchema
-        .array()
-        .parse(allBrands.filter((brand) => brand.isActive !== false));
 
     return (
         <ShopFilters

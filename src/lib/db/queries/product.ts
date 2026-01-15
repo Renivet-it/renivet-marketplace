@@ -4376,6 +4376,66 @@ class ProductQuery {
         }
     }
 
+    async getUniqueBrands(filters?: {
+        categoryId?: string;
+        subcategoryId?: string;
+        productTypeId?: string;
+    }): Promise<{ id: string; name: string; slug: string; count: number }[]> {
+        try {
+            const whereConditions = [
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+                eq(brands.isActive, true),
+            ];
+
+            if (filters?.categoryId) {
+                whereConditions.push(
+                    eq(products.categoryId, filters.categoryId)
+                );
+            }
+            if (filters?.subcategoryId) {
+                whereConditions.push(
+                    eq(products.subcategoryId, filters.subcategoryId)
+                );
+            }
+            if (filters?.productTypeId) {
+                whereConditions.push(
+                    eq(products.productTypeId, filters.productTypeId)
+                );
+            }
+
+            const brandsData = await db
+                .select({
+                    id: brands.id,
+                    name: brands.name,
+                    slug: brands.slug,
+                    count: sql<number>`COUNT(${products.id})`.as(
+                        "product_count"
+                    ),
+                })
+                .from(products)
+                .innerJoin(brands, eq(products.brandId, brands.id))
+                .where(and(...whereConditions))
+                .groupBy(brands.id, brands.name, brands.slug)
+                .having(sql`COUNT(${products.id}) > 0`)
+                .orderBy(sql`COUNT(${products.id}) DESC`);
+
+            return brandsData
+                .map((brand) => ({
+                    id: brand.id,
+                    name: brand.name,
+                    slug: brand.slug,
+                    count: Number(brand.count),
+                }))
+                .filter((brand) => brand.count > 0);
+        } catch (error) {
+            console.error("Error fetching unique brands:", error);
+            return [];
+        }
+    }
+
     private normalizeSizeName(val: string): string {
         let str = val.trim().toLowerCase();
 
