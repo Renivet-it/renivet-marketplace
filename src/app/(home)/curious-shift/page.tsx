@@ -158,27 +158,24 @@ export default function CuriousShiftPage() {
 </section>
 {/* FACT TAGS SECTION */}
 {/* FACT TAGS SECTION */}
-<section className="mt-32 flex justify-center">
-    <div
-        className="
-            grid
-            grid-cols-3
-            gap-x-[64px]
-            gap-y-[72px]
-        "
-        style={{ width: "calc(542px * 3 + 64px * 2)" }}
-    >
+{/* FACT TAGS SECTION */}
+{/* FACT TAGS SECTION */}
+<section className="mt-32 w-full flex justify-center">
+    <div className="flex">
         {[
             "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
             "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrC2RWkzxCX9qouDwr5d6fTcizLeZ0I4snJv",
             "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseeY93bn3bApvy2W4lj8UTcEV5GdMa0thXR6",
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
-            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
         ].map((src, i) => (
             <div
                 key={i}
-                className="relative h-[838px] w-[542px]"
+                className={`
+                    relative
+                    h-[838px]
+                    w-[542px]
+                    flex-shrink-0
+                    ${i !== 0 ? "-ml-[48px]" : ""}
+                `}
             >
                 <Image
                     src={src}
@@ -191,6 +188,33 @@ export default function CuriousShiftPage() {
     </div>
 </section>
 
+<section className="mt-10 w-full flex justify-center">
+    <div className="flex">
+        {[
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
+        ].map((src, i) => (
+            <div
+                key={i}
+                className={`
+                    relative
+                    h-[838px]
+                    w-[542px]
+                    flex-shrink-0
+                    ${i !== 0 ? "-ml-[48px]" : ""}
+                `}
+            >
+                <Image
+                    src={src}
+                    alt={`Fact ${i + 1}`}
+                    fill
+                    className="object-contain"
+                />
+            </div>
+        ))}
+    </div>
+</section>
 
             </main>
         </GeneralShell>
