@@ -9,6 +9,28 @@ import {
     Scissors,
     Handshake,
 } from "lucide-react";
+const icons = [
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNw3U5csrQTkEsKW16AOLVjr8DhmeCypgUGfJz",
+        alt: "Eco Friendly",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN4iJMgcKTrA2wJk4WKdFytgsaQSNjmBo8I5CG",
+        alt: "Ethical Sourcing",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjgOYT4fmPpnZoHc5f2E4rFNLugdK3ty9ObjY",
+        alt: "Circular Economy",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNyax3gRp5TEHko4KfX8CDn1z7Q2migSIjw0ds",
+        alt: "Artisan Support",
+    },
+    {
+        src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoOEp2o0WvnGEidmOVIP6xXt4S7befYUykMJq",
+        alt: "Global Impact",
+    },
+];
 
 export default function CuriousShiftPage() {
     return (
@@ -18,7 +40,7 @@ export default function CuriousShiftPage() {
                 innerWrapper: "!p-0 !max-w-none",
             }}
         >
-            <main className="min-h-screen bg-[#FBF8F1] py-24 font-sans">
+            <main className="min-h-screen bg-[#fcfbf4] py-24 font-sans">
                 {/* TEXT SECTION */}
                 <section
     className="
@@ -84,14 +106,11 @@ export default function CuriousShiftPage() {
                 {/* VISUAL COMPARISON */}
 {/* VISUAL COMPARISON */}
 <section className="relative mx-auto mt-40 max-w-[1400px]">
-    <div className="relative flex items-end justify-between">
+    <div className="relative flex items-end justify-center gap-[140px]">
 
         {/* THEN */}
         <div className="relative flex w-[360px] flex-col items-center">
-            <div className="mb-6 text-[18px] font-medium tracking-[0.25em] text-[#555]">
-                THEN
-            </div>
-
+              <div className="absolute inset-[-90px] -z-10 rounded-full bg-[radial-gradient(circle,rgba(170,225,170,0.55)_0%,rgba(170,225,170,0.32)_35%,rgba(170,225,170,0.15)_55%,rgba(170,225,170,0.06)_70%,transparent_80%)]" />
             <div className="relative h-[420px] w-[340px] overflow-hidden rounded-sm shadow-lg">
                 <Image
                     src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
@@ -111,28 +130,43 @@ export default function CuriousShiftPage() {
                     className="max-w-none"
                 />
             </div>
-      
         </div>
 
         {/* ICONS CENTER */}
-        <div className="relative mb-32 flex flex-col items-center gap-14 opacity-70">
-            <div className="flex gap-12">
-                <Leaf />
-                <Handshake />
-                <RefreshCw />
+{/* ICONS CENTER */}
+<div className="relative mb-32 flex flex-col items-center gap-14 opacity-80">
+    {/* Top row (3 icons) */}
+    <div className="flex gap-12">
+        {icons.slice(0, 3).map((icon, i) => (
+            <div key={i} className="relative h-12 w-12">
+                <Image
+                    src={icon.src}
+                    alt={icon.alt}
+                    fill
+                    className="object-contain"
+                />
             </div>
-            <div className="flex gap-12">
-                <Scissors />
-                <Globe />
+        ))}
+    </div>
+
+    {/* Bottom row (2 icons) */}
+    <div className="flex gap-12">
+        {icons.slice(3).map((icon, i) => (
+            <div key={i} className="relative h-12 w-12">
+                <Image
+                    src={icon.src}
+                    alt={icon.alt}
+                    fill
+                    className="object-contain"
+                />
             </div>
-        </div>
+        ))}
+    </div>
+</div>
+
 
         {/* NOW */}
         <div className="relative flex w-[360px] flex-col items-center">
-            <div className="mb-6 text-[18px] font-medium tracking-[0.25em] text-[#555]">
-                NOW
-            </div>
-
             <div className="relative h-[420px] w-[340px] overflow-hidden rounded-sm shadow-lg">
                 <Image
                     src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcsUQGDeO4H8MeNYoyJQSarWCqgVpRxP5lDBu"
@@ -156,9 +190,6 @@ export default function CuriousShiftPage() {
 
     </div>
 </section>
-{/* FACT TAGS SECTION */}
-{/* FACT TAGS SECTION */}
-{/* FACT TAGS SECTION */}
 {/* FACT TAGS SECTION */}
 <section className="mt-32 w-full flex justify-center">
     <div className="flex">
