@@ -37,7 +37,8 @@ export default function CuriousShiftPage() {
                     </h1>
 
                     {/* BODY */}
-<div className="space-y-14 text-[26px] leading-[1.7] tracking-[-0.01em] md:text-[32px]">
+<div className="space-y-10 text-[26px] leading-[1.7] tracking-[-0.01em] md:text-[32px]">
+
     <p>
         there was a time — not very long ago — when fashion colleges proudly
         taught the supply chains of fast fashion brands.
@@ -63,7 +64,7 @@ export default function CuriousShiftPage() {
         its own weight.
     </p>
 
-    <p className="pt-6 text-[28px] italic md:text-[34px]">
+    <p className="pt-6 text-[40px] italic md:text-[40px]">
         the irony?
     </p>
 
@@ -81,54 +82,81 @@ export default function CuriousShiftPage() {
                 </section>
 
                 {/* VISUAL COMPARISON */}
-                <section className="relative mx-auto mt-40 max-w-6xl">
-                    <div className="relative flex flex-col items-center justify-between gap-24 md:flex-row">
-                        {/* THEN */}
-                        <div className="relative flex flex-col items-center">
-                            <div className="mb-4 text-[18px] font-medium tracking-[0.25em] text-[#555]">
-                                THEN
-                            </div>
-                            <div className="relative h-[380px] w-[300px] overflow-hidden rounded-sm shadow-lg">
-                                <Image
-                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
-                                    alt="Then"
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            <div className="absolute -bottom-20 left-1/2 h-28 w-56 -translate-x-1/2 bg-gradient-to-t from-gray-300 to-transparent opacity-60 blur-2xl" />
-                        </div>
+{/* VISUAL COMPARISON */}
+<section className="relative mx-auto mt-40 max-w-[1400px]">
+    <div className="relative flex items-end justify-between">
 
-                        {/* ICONS */}
-                        <div className="flex flex-col items-center gap-12 opacity-60">
-                            <div className="flex gap-10">
-                                <Leaf />
-                                <Handshake />
-                                <RefreshCw />
-                            </div>
-                            <div className="flex gap-10">
-                                <Scissors />
-                                <Globe />
-                            </div>
-                        </div>
+        {/* THEN */}
+        <div className="relative flex w-[360px] flex-col items-center">
+            <div className="mb-6 text-[18px] font-medium tracking-[0.25em] text-[#555]">
+                THEN
+            </div>
 
-                        {/* NOW */}
-                        <div className="relative flex flex-col items-center">
-                            <div className="mb-4 text-[18px] font-medium tracking-[0.25em] text-[#555]">
-                                NOW
-                            </div>
-                            <div className="relative h-[380px] w-[300px] overflow-hidden rounded-sm shadow-lg">
-                                <Image
-                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
-                                    alt="Now"
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            <div className="absolute -bottom-20 left-1/2 h-28 w-64 -translate-x-1/2 bg-gradient-to-t from-green-200 to-transparent opacity-70 blur-2xl" />
-                        </div>
-                    </div>
-                </section>
+            <div className="relative h-[420px] w-[340px] overflow-hidden rounded-sm shadow-lg">
+                <Image
+                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN5TVhQ6CWDjbFJxNetTcSvR3ghpVaAzdGolkH"
+                    alt="Then"
+                    fill
+                    className="object-cover"
+                />
+            </div>
+
+            {/* Clothes pile (LEFT) */}
+                     <div className="absolute -bottom-40 left-1/2 -translate-x-1/2">
+                <Image
+                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbd5ZtauZc50VbmLPHAdU9KwxEkCINyqDWJRr"
+                    alt="Grass and flowers"
+                    width={531}
+                    height={288}
+                    className="max-w-none"
+                />
+            </div>
+      
+        </div>
+
+        {/* ICONS CENTER */}
+        <div className="relative mb-32 flex flex-col items-center gap-14 opacity-70">
+            <div className="flex gap-12">
+                <Leaf />
+                <Handshake />
+                <RefreshCw />
+            </div>
+            <div className="flex gap-12">
+                <Scissors />
+                <Globe />
+            </div>
+        </div>
+
+        {/* NOW */}
+        <div className="relative flex w-[360px] flex-col items-center">
+            <div className="mb-6 text-[18px] font-medium tracking-[0.25em] text-[#555]">
+                NOW
+            </div>
+
+            <div className="relative h-[420px] w-[340px] overflow-hidden rounded-sm shadow-lg">
+                <Image
+                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNcsUQGDeO4H8MeNYoyJQSarWCqgVpRxP5lDBu"
+                    alt="Now"
+                    fill
+                    className="object-cover"
+                />
+            </div>
+
+            {/* Grass / flowers (RIGHT) */}
+         <div className="absolute -bottom-36 left-1/2 -translate-x-1/2">
+                <Image
+                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNh983pfPAwZ71xI8cmpPRY6WBO42eGEJfosyi"
+                    alt="Discarded clothes"
+                    width={585}
+                    height={412}
+                    className="max-w-none"
+                />
+            </div>
+        </div>
+
+    </div>
+</section>
+
             </main>
         </GeneralShell>
     );
