@@ -38,12 +38,12 @@ export default function ContactPage() {
     return (
         <div className="min-h-screen bg-[#fcfbf4] px-4 py-10">
             {/* Header */}
-            <div className="mb-10 text-center">
+            <div className="mb-6 text-center md:mb-10">
                 <h1
-                    className="mb-3 text-2xl font-medium tracking-wide md:text-4xl"
+                    className="mb-2 text-2xl font-medium tracking-wide md:mb-3 md:text-4xl"
                     style={{
                         fontFamily: "josephine sans",
-                        fontSize: "clamp(28px, 5vw, 40px)",
+                        fontSize: "clamp(24px, 5vw, 40px)",
                     }}
                 >
                     Contact Us
@@ -52,36 +52,33 @@ export default function ContactPage() {
                     className="text-base text-gray-600 md:text-lg"
                     style={{
                         fontFamily: "josephine sans",
-                        fontSize: "clamp(20px, 4vw, 32px)",
+                        fontSize: "clamp(16px, 4vw, 32px)",
                     }}
                 >
                     We&apos;d Love To Hear From You.
                 </p>
             </div>
 
-            {/* Main Container */}
-            <div
-                className="relative mx-auto lg:ml-auto lg:mr-[120px]"
-                style={{ maxWidth: "947px" }}
-            >
-                {/* ================= FORM BOX ================= */}
+            {/* ================= MOBILE LAYOUT ================= */}
+            <div className="block md:hidden">
+                {/* Mobile Form Box - 289x169 aspect ratio */}
                 <div
-                    className="flex flex-col border border-gray-400 md:flex-row"
+                    className="mx-auto flex border border-gray-400"
                     style={{
-                        maxWidth: "100%",
-                        minHeight: "auto",
+                        width: "289px",
+                        minHeight: "169px",
                     }}
                 >
-                    {/* Left Form */}
-                    <div className="flex-1 px-6 py-8 md:px-14 md:py-14">
+                    {/* Left Form - Mobile */}
+                    <div className="flex-1 px-3 py-3">
                         <form
                             onSubmit={handleSubmit}
                             className="flex h-full flex-col justify-between"
                         >
-                            <div className="space-y-8 md:space-y-14">
+                            <div className="space-y-3">
                                 <div>
                                     <label
-                                        className="mb-3 block text-sm md:text-base"
+                                        className="mb-1 block text-[10px]"
                                         style={{ fontFamily: "serif" }}
                                     >
                                         Full Name
@@ -90,13 +87,13 @@ export default function ContactPage() {
                                         name="fullName"
                                         value={formData.fullName}
                                         onChange={handleChange}
-                                        className="w-full border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
+                                        className="w-full border-0 border-b border-gray-500 bg-transparent py-0.5 text-[10px] focus:outline-none"
                                     />
                                 </div>
 
                                 <div>
                                     <label
-                                        className="mb-3 block text-sm md:text-base"
+                                        className="mb-1 block text-[10px]"
                                         style={{ fontFamily: "serif" }}
                                     >
                                         Email
@@ -105,13 +102,13 @@ export default function ContactPage() {
                                         name="email"
                                         value={formData.email}
                                         onChange={handleChange}
-                                        className="w-full border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
+                                        className="w-full border-0 border-b border-gray-500 bg-transparent py-0.5 text-[10px] focus:outline-none"
                                     />
                                 </div>
 
                                 <div>
                                     <label
-                                        className="mb-3 block text-sm md:text-base"
+                                        className="mb-1 block text-[10px]"
                                         style={{ fontFamily: "serif" }}
                                     >
                                         Message
@@ -121,41 +118,28 @@ export default function ContactPage() {
                                         rows={1}
                                         value={formData.message}
                                         onChange={handleChange}
-                                        className="w-full resize-none border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
+                                        className="w-full resize-none border-0 border-b border-gray-500 bg-transparent py-0.5 text-[10px] focus:outline-none"
                                     />
                                 </div>
                             </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className={cn(
-                                    "mt-8 w-full bg-[#1a1a2e] py-3 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-[#0f0f1a] md:py-4",
-                                    isSubmitting &&
-                                        "cursor-not-allowed opacity-70"
-                                )}
-                            >
-                                {isSubmitting ? "Sending..." : "Submit"}
-                            </button>
                         </form>
                     </div>
 
-                    {/* Divider - horizontal on mobile, vertical on desktop */}
-                    <div className="h-px w-full bg-gray-400 md:h-auto md:w-px" />
+                    {/* Vertical Divider - Mobile */}
+                    <div className="w-px bg-gray-400" />
 
-                    {/* Right Info */}
-                    <div className="w-full space-y-8 px-6 py-8 md:w-[280px] md:space-y-14 md:px-12 md:py-14">
+                    {/* Right Info - Mobile */}
+                    <div className="w-[100px] space-y-3 px-2 py-3">
                         <div>
                             <h3
-                                className="mb-2 text-sm font-semibold md:text-base"
+                                className="text-[9px] font-semibold"
                                 style={{ fontFamily: "serif" }}
                             >
                                 Contact
                             </h3>
                             <a
                                 href={`mailto:${siteConfig.contact?.email}`}
-                                className="text-sm underline md:text-base"
+                                className="text-[8px] underline"
                             >
                                 Support@Renivet.Com
                             </a>
@@ -163,22 +147,22 @@ export default function ContactPage() {
 
                         <div>
                             <h3
-                                className="mb-2 text-sm font-semibold md:text-base"
+                                className="text-[9px] font-semibold"
                                 style={{ fontFamily: "serif" }}
                             >
                                 Based In
                             </h3>
-                            <p className="text-sm md:text-base">Bangalore</p>
+                            <p className="text-[8px]">Bangalore Xyz</p>
                         </div>
 
                         <div>
                             <h3
-                                className="mb-2 text-sm font-semibold md:text-base"
+                                className="text-[9px] font-semibold"
                                 style={{ fontFamily: "serif" }}
                             >
                                 Office Hours:
                             </h3>
-                            <p className="text-sm md:text-base">
+                            <p className="text-[8px] leading-tight">
                                 Monday - Friday,
                                 <br />
                                 9:00 AM - 5:00 PM
@@ -187,37 +171,196 @@ export default function ContactPage() {
                     </div>
                 </div>
 
-                {/* ================= IMAGE ================= */}
-                {/* Mobile: relative, flows naturally. Desktop: absolute positioned */}
-                <div className="relative ml-4 mt-8 w-[70%] max-w-[500px] md:ml-20 md:w-[55%] lg:absolute lg:bottom-[-567px] lg:left-[-494px] lg:ml-0 lg:mt-0 lg:h-[613px] lg:w-[760px] lg:max-w-none">
+                {/* Mobile Image - 214x167 */}
+                <div className="ml-4 mt-6">
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                         alt="Leaf person"
-                        width={784}
-                        height={613}
-                        className="h-auto w-full object-cover"
+                        width={214}
+                        height={167}
+                        className="h-[167px] w-[214px] object-cover"
                         priority
                     />
                 </div>
+
+                {/* Mobile Footer */}
+                <div className="mb-8 mt-10 text-center">
+                    <p
+                        className="text-sm leading-relaxed text-gray-600"
+                        style={{
+                            fontFamily: "josephine sans",
+                            letterSpacing: "0.02em",
+                            fontSize: "16px",
+                        }}
+                    >
+                        Every Conversation Begins With A Pause.
+                        <br />
+                        Thanks For Starting One.
+                    </p>
+                </div>
             </div>
 
-            {/* Spacer - less on mobile */}
-            <div className="h-8 lg:h-[500px]" />
-
-            {/* Footer */}
-            <div className="mb-16 mt-8 text-center md:mb-16 md:mt-16">
-                <p
-                    className="text-base leading-relaxed text-gray-600"
-                    style={{
-                        fontFamily: "josephine sans",
-                        letterSpacing: "0.02em",
-                        fontSize: "clamp(18px, 4vw, 32px)",
-                    }}
+            {/* ================= DESKTOP LAYOUT ================= */}
+            <div className="hidden md:block">
+                {/* Main Container */}
+                <div
+                    className="relative mx-auto lg:ml-auto lg:mr-[120px]"
+                    style={{ maxWidth: "947px" }}
                 >
-                    Every Conversation Begins With A Pause.
-                    <br />
-                    Thanks For Starting One.
-                </p>
+                    {/* Form Box */}
+                    <div
+                        className="flex flex-row border border-gray-400"
+                        style={{
+                            maxWidth: "100%",
+                            minHeight: "auto",
+                        }}
+                    >
+                        {/* Left Form */}
+                        <div className="flex-1 px-14 py-14">
+                            <form
+                                onSubmit={handleSubmit}
+                                className="flex h-full flex-col justify-between"
+                            >
+                                <div className="space-y-14">
+                                    <div>
+                                        <label
+                                            className="mb-3 block text-base"
+                                            style={{ fontFamily: "serif" }}
+                                        >
+                                            Full Name
+                                        </label>
+                                        <input
+                                            name="fullName"
+                                            value={formData.fullName}
+                                            onChange={handleChange}
+                                            className="w-full border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            className="mb-3 block text-base"
+                                            style={{ fontFamily: "serif" }}
+                                        >
+                                            Email
+                                        </label>
+                                        <input
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            className="w-full border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            className="mb-3 block text-base"
+                                            style={{ fontFamily: "serif" }}
+                                        >
+                                            Message
+                                        </label>
+                                        <textarea
+                                            name="message"
+                                            rows={1}
+                                            value={formData.message}
+                                            onChange={handleChange}
+                                            className="w-full resize-none border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Submit Button */}
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className={cn(
+                                        "mt-8 w-full bg-[#1a1a2e] py-4 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-[#0f0f1a]",
+                                        isSubmitting &&
+                                            "cursor-not-allowed opacity-70"
+                                    )}
+                                >
+                                    {isSubmitting ? "Sending..." : "Submit"}
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* Vertical Divider */}
+                        <div className="w-px bg-gray-400" />
+
+                        {/* Right Info */}
+                        <div className="w-[280px] space-y-14 px-12 py-14">
+                            <div>
+                                <h3
+                                    className="mb-2 text-base font-semibold"
+                                    style={{ fontFamily: "serif" }}
+                                >
+                                    Contact
+                                </h3>
+                                <a
+                                    href={`mailto:${siteConfig.contact?.email}`}
+                                    className="text-base underline"
+                                >
+                                    Support@Renivet.Com
+                                </a>
+                            </div>
+
+                            <div>
+                                <h3
+                                    className="mb-2 text-base font-semibold"
+                                    style={{ fontFamily: "serif" }}
+                                >
+                                    Based In
+                                </h3>
+                                <p className="text-base">Bangalore</p>
+                            </div>
+
+                            <div>
+                                <h3
+                                    className="mb-2 text-base font-semibold"
+                                    style={{ fontFamily: "serif" }}
+                                >
+                                    Office Hours:
+                                </h3>
+                                <p className="text-base">
+                                    Monday - Friday,
+                                    <br />
+                                    9:00 AM - 5:00 PM
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Image - Absolute positioned */}
+                    <div className="absolute bottom-[-567px] left-[-494px] h-[613px] w-[760px]">
+                        <Image
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
+                            alt="Leaf person"
+                            width={784}
+                            height={613}
+                            className="h-auto w-full object-cover"
+                            priority
+                        />
+                    </div>
+                </div>
+
+                {/* Desktop Spacer */}
+                <div className="h-[500px]" />
+
+                {/* Desktop Footer */}
+                <div className="mb-16 mt-16 text-center">
+                    <p
+                        className="text-base leading-relaxed text-gray-600"
+                        style={{
+                            fontFamily: "josephine sans",
+                            letterSpacing: "0.02em",
+                            fontSize: "32px",
+                        }}
+                    >
+                        Every Conversation Begins With A Pause.
+                        <br />
+                        Thanks For Starting One.
+                    </p>
+                </div>
             </div>
         </div>
     );
