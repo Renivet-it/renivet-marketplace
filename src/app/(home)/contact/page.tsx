@@ -65,7 +65,7 @@ export default function ContactPage() {
                 <div
                     className="mx-auto flex border border-gray-400"
                     style={{
-                        width: "300px",
+                        width: "280px",
                         minHeight: "169px",
                         marginLeft: "75px",
                     }}
