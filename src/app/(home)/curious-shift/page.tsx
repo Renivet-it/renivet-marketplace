@@ -158,39 +158,76 @@ export default function CuriousShiftPage() {
                 </section>
 
                 {/* FACT TAGS */}
-                <section className="mt-32 w-full flex justify-center">
-                    <div className="flex flex-wrap md:flex-nowrap justify-center">
-                        {[
-                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
-                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrC2RWkzxCX9qouDwr5d6fTcizLeZ0I4snJv",
-                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseeY93bn3bApvy2W4lj8UTcEV5GdMa0thXR6",
-                        ].map((src, i) => (
-                            <div
-                                key={i}
-                                className={`relative h-[420px] md:h-[838px] w-[260px] md:w-[542px] ${i !== 0 ? "md:-ml-[48px]" : ""}`}
-                            >
-                                <Image src={src} alt={`Fact ${i + 1}`} fill className="object-contain" />
-                            </div>
-                        ))}
-                    </div>
-                </section>
+<section className="mt-10 w-full flex justify-center px-4 md:hidden">
+    <div className="grid grid-cols-2 gap-4">
+        {[
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrC2RWkzxCX9qouDwr5d6fTcizLeZ0I4snJv",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseeY93bn3bApvy2W4lj8UTcEV5GdMa0thXR6",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
+        ].map((src, i) => (
+            <div
+                key={i}
+                className="relative h-[316px] w-[204px]"
+            >
+                <Image
+                    src={src}
+                    alt={`Fact ${i + 1}`}
+                    fill
+                    className="object-contain"
+                />
+            </div>
+        ))}
+    </div>
+</section>
 
-                <section className="mt-10 w-full flex justify-center">
-                    <div className="flex flex-wrap md:flex-nowrap justify-center">
-                        {[
-                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
-                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
-                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
-                        ].map((src, i) => (
-                            <div
-                                key={i}
-                                className={`relative h-[420px] md:h-[838px] w-[260px] md:w-[542px] ${i !== 0 ? "md:-ml-[48px]" : ""}`}
-                            >
-                                <Image src={src} alt={`Fact ${i + 4}`} fill className="object-contain" />
-                            </div>
-                        ))}
-                    </div>
-                </section>
+{/* ---------- DESKTOP: ORIGINAL SECTION 1 ---------- */}
+<section className="hidden md:flex mt-32 w-full justify-center px-4">
+    <div className="md:flex md:flex-nowrap md:justify-center md:gap-0">
+        {[
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNk3zT61xYt1TxMBy6jes3QdWaELUvNIiXHwRO",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNRrC2RWkzxCX9qouDwr5d6fTcizLeZ0I4snJv",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNseeY93bn3bApvy2W4lj8UTcEV5GdMa0thXR6",
+        ].map((src, i) => (
+            <div
+                key={i}
+                className="
+                    relative
+                    md:h-[838px] md:w-[542px]
+                    md:-ml-[48px]
+                    first:md:ml-0
+                "
+            >
+                <Image src={src} alt={`Fact ${i + 1}`} fill className="object-contain" />
+            </div>
+        ))}
+    </div>
+</section>
+
+{/* ---------- DESKTOP: ORIGINAL SECTION 2 ---------- */}
+<section className="hidden md:flex mt-10 w-full justify-center px-4">
+    <div className="md:flex md:flex-nowrap md:justify-center md:gap-0">
+        {[
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN95LvTBkHuXil56hen8kSx4MtRwUbOEyZdapz",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNBzfhQg0rgXZuWwadPABUqnljV5RbJMFsx1v",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNHAjek9pctzNSTlLa4Po2KvFZm05urDqnVswb",
+        ].map((src, i) => (
+            <div
+                key={i}
+                className="
+                    relative
+                    md:h-[838px] md:w-[542px]
+                    md:-ml-[48px]
+                    first:md:ml-0
+                "
+            >
+                <Image src={src} alt={`Fact ${i + 4}`} fill className="object-contain" />
+            </div>
+        ))}
+    </div>
+</section>
             </main>
         </GeneralShell>
     );
