@@ -59,11 +59,11 @@ export default function ContactPage() {
                 </p>
             </div>
 
-            {/* ================= MOBILE LAYOUT ================= */}
-            <div className="block md:hidden">
-                {/* Mobile Form Box - 289x169 aspect ratio */}
+            {/* ================= MOBILE LAYOUT (up to lg/1024px) ================= */}
+            <div className="block lg:hidden">
+                {/* Mobile Form Box - Left on phones, centered on iPad */}
                 <div
-                    className="mx-auto flex border border-gray-400"
+                    className="flex border border-gray-400 md:mx-auto"
                     style={{
                         width: "280px",
                         minHeight: "169px",
@@ -185,8 +185,8 @@ export default function ContactPage() {
                     </div>
                 </div>
 
-                {/* Mobile Image - 214x167, showing top portion */}
-                <div className="ml-4 mt-[-0.5]">
+                {/* Mobile Image - Left on phones, centered on iPad */}
+                <div className="ml-4 mt-[-0.5] md:mx-auto md:w-fit">
                     <Image
                         src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                         alt="Leaf person"
@@ -214,8 +214,8 @@ export default function ContactPage() {
                 </div>
             </div>
 
-            {/* ================= DESKTOP LAYOUT ================= */}
-            <div className="hidden md:block">
+            {/* ================= DESKTOP LAYOUT (lg/1024px and above) ================= */}
+            <div className="hidden lg:block">
                 {/* Main Container */}
                 <div
                     className="relative mx-auto lg:ml-auto lg:mr-[120px]"
