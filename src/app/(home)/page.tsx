@@ -83,9 +83,9 @@ export default function Page() {
                                  <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-                                                    <Suspense>
+                                                    {/* <Suspense>
                 <ProductGridFetch />
-            </Suspense>
+            </Suspense> */}
                                                <Suspense>
                 <MatchaBagFetch />
             </Suspense>
