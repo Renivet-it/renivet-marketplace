@@ -154,8 +154,17 @@ export function ProductCartAddForm({
 
     const [isProductWishlisted, setIsProductWishlisted] =
         useState(isWishlisted);
+    // Find the variant with the lowest price to use as default
+    const lowestPriceVariant = useMemo(() => {
+        if (!product.variants?.length) return null;
+        return product.variants.reduce(
+            (min, variant) => (variant.price < min.price ? variant : min),
+            product.variants[0]
+        );
+    }, [product.variants]);
+
     const [selectedSku, setSelectedSku] = useQueryState("sku", {
-        defaultValue: product.variants?.[0]?.nativeSku,
+        defaultValue: lowestPriceVariant?.nativeSku,
     });
     const [isAddedToCart, setIsAddedToCart] = useState(false);
 
