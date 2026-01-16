@@ -129,43 +129,73 @@ export function ProductPage({
                 {/* Desktop Layout */}
                 <div className="hidden w-1/2 lg:block">
                     <div className="flex justify-center gap-12 rounded-md border border-gray-300 bg-[#f4f0ec] p-4">
-                        {/* Thumbnails */}
-                        <div className="scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent flex max-h-[485px] w-24 shrink-0 flex-col items-center gap-3 overflow-y-auto py-2 pr-2">
-                            {isEmptyArray(sortedImages) ? (
-                                <div className="overflow-hidden rounded-md border border-gray-300">
-                                    <Image
-                                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                                        alt="Default Thumbnail"
-                                        width={80}
-                                        height={80}
-                                        className="h-24 w-full object-contain"
-                                    />
-                                </div>
-                            ) : (
-                                sortedImages.map((image, i) => (
-                                    <div
-                                        key={image.id}
-                                        className={cn(
-                                            "cursor-pointer overflow-hidden rounded-md border transition-all duration-300 hover:scale-105",
-                                            i === selectedImage
-                                                ? "scale-105 border-black ring-2 ring-gray-400"
-                                                : "border-gray-300 hover:border-gray-500 hover:shadow-md"
-                                        )}
-                                        onClick={() => setSelectedImage(i)}
-                                    >
-                                        <Image
-                                            src={image.url}
-                                            alt={
-                                                image.alt ||
-                                                `Thumbnail ${i + 1}`
-                                            }
-                                            width={80}
-                                            height={80}
-                                            className="h-24 w-full object-contain"
-                                        />
-                                    </div>
-                                ))
-                            )}
+                        {/* Robustly Fixed Thumbnails Carousel */}
+                        <div className="relative flex w-28 flex-col items-center py-6">
+                            <Carousel
+                                orientation="vertical"
+                                opts={{
+                                    align: "start",
+                                    loop: true,
+                                }}
+                                className="h-[435px] w-full"
+                            >
+                                <CarouselContent
+                                    classNames={{
+                                        wrapper: "h-full overflow-hidden",
+                                    }}
+                                    className="-mt-4 h-full"
+                                >
+                                    {isEmptyArray(sortedImages) ? (
+                                        <CarouselItem className="basis-1/5 pt-4">
+                                            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+                                                <Image
+                                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                                    alt="Default Thumbnail"
+                                                    width={80}
+                                                    height={80}
+                                                    className="aspect-square w-full object-contain"
+                                                />
+                                            </div>
+                                        </CarouselItem>
+                                    ) : (
+                                        sortedImages.map((image, i) => (
+                                            <CarouselItem
+                                                key={image.id}
+                                                className="basis-1/5 pt-4"
+                                            >
+                                                <div
+                                                    className={cn(
+                                                        "group relative aspect-square cursor-pointer overflow-hidden rounded-lg border transition-all duration-300",
+                                                        i === selectedImage
+                                                            ? "scale-[1.02] border-black ring-2 ring-black/10"
+                                                            : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-md"
+                                                    )}
+                                                    onClick={() =>
+                                                        setSelectedImage(i)
+                                                    }
+                                                >
+                                                    <Image
+                                                        src={image.url}
+                                                        alt={
+                                                            image.alt ||
+                                                            `Thumbnail ${i + 1}`
+                                                        }
+                                                        width={100}
+                                                        height={100}
+                                                        className="size-full object-contain p-1 transition-transform duration-300 group-hover:scale-110"
+                                                    />
+                                                </div>
+                                            </CarouselItem>
+                                        ))
+                                    )}
+                                </CarouselContent>
+                                {sortedImages.length > 5 && (
+                                    <>
+                                        <CarouselPrevious className="absolute -top-6 left-1/2 z-10 size-10 -translate-x-1/2 rotate-90 border-gray-200 bg-white shadow-md hover:bg-gray-50 focus:ring-0 active:scale-95" />
+                                        <CarouselNext className="absolute -bottom-6 left-1/2 z-10 size-10 -translate-x-1/2 rotate-90 border-gray-200 bg-white shadow-md hover:bg-gray-50 focus:ring-0 active:scale-95" />
+                                    </>
+                                )}
+                            </Carousel>
                         </div>
 
                         {/* Main Image */}
