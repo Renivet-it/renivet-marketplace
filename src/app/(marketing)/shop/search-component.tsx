@@ -10,6 +10,7 @@ type Product = {
     productType?: {
         id: string;
         name: string;
+        slug: string;
         subCategory?: { name: string };
     };
     subcategory?: { name: string };
@@ -20,12 +21,13 @@ export function SearchableProductTypes({
     productTypes,
     initialProducts = [],
     products: productsProp,
-    productTypeId,
+    productTypeId, // This will now be a slug from the URL
     isDesktop = false,
 }: {
     productTypes: {
         id: string;
         name: string;
+        slug: string;
         subCategory?: { name: string };
     }[];
     initialProducts?: Product[]; // server-passed initial data
@@ -54,10 +56,10 @@ export function SearchableProductTypes({
         const fetchProducts = async () => {
             setLoading(true);
             console.log(
-                "[SearchableProductTypes] fetching /api/products?" + qpString
+                "[SearchableProductTypes] fetching /api/product?" + qpString
             );
             try {
-                const res = await fetch(`/api/products?${qpString}`, {
+                const res = await fetch(`/api/product?${qpString}`, {
                     cache: "no-store",
                 });
                 const json = await res.json();
@@ -90,8 +92,12 @@ export function SearchableProductTypes({
     // 4) compute active types from the (client) products state
     const activeTypes = useMemo(() => {
         const unique = new Set<string>();
-        const types: { id: string; name: string; subCategoryName?: string }[] =
-            [];
+        const types: {
+            id: string;
+            slug: string;
+            name: string;
+            subCategoryName?: string;
+        }[] = [];
 
         for (const p of products) {
             const pt = p.productType;
@@ -99,6 +105,7 @@ export function SearchableProductTypes({
                 unique.add(pt.id);
                 types.push({
                     id: pt.id,
+                    slug: pt.slug,
                     name: pt.name,
                     subCategoryName:
                         pt.subCategory?.name || p.subcategory?.name,
@@ -111,6 +118,7 @@ export function SearchableProductTypes({
             types.length === 0 && !searchTerm
                 ? productTypes.map((pt) => ({
                       id: pt.id,
+                      slug: pt.slug,
                       name: pt.name,
                       subCategoryName: pt.subCategory?.name,
                   }))
@@ -165,10 +173,10 @@ export function SearchableProductTypes({
                     activeTypes.map((type) => (
                         <a
                             key={type.id}
-                            href={`?productTypeId=${type.id}`}
+                            href={`?productTypeId=${type.slug}`}
                             className={cn(
                                 "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
-                                productTypeId === type.id &&
+                                productTypeId === type.slug &&
                                     "border-black bg-black text-white"
                             )}
                         >

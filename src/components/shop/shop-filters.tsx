@@ -221,7 +221,6 @@ const ALL_COLORS: Record<string, string> = {
     khakigreen: "#8a865d",
     creampuff: "#fffdd0",
     dustypink: "#dcae96",
-    powderblue: "#b0e0e6",
     mint: "#98ff98",
     blush: "#de5d83",
     camel: "#c19a6b",
@@ -366,7 +365,7 @@ interface GenericProps {
 }
 
 interface PageProps extends GenericProps {
-    brandsMeta: BrandMeta[];
+    brandsMeta: { id: string; name: string; slug: string; count?: number }[];
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -585,8 +584,12 @@ function ShopFiltersSection({
 
 // --- INDIVIDUAL FILTER COMPONENTS ---
 
-function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
-    const [brandIds, setBrandIds] = useQueryState(
+function BrandFilter({
+    brandsMeta,
+}: {
+    brandsMeta: { id: string; name: string; slug: string; count?: number }[];
+}) {
+    const [brandSlugs, setBrandSlugs] = useQueryState(
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
@@ -601,19 +604,21 @@ function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
                 {visibleBrands.map((brand) => (
                     <div key={brand.id} className="flex items-center space-x-2">
                         <Checkbox
-                            id={`brand-${brand.id}`}
-                            checked={brandIds.includes(brand.id)}
+                            id={`brand-${brand.slug}`}
+                            checked={brandSlugs.includes(brand.slug)}
                             onCheckedChange={() => {
-                                setBrandIds(
-                                    brandIds.includes(brand.id)
-                                        ? brandIds.filter((b) => b !== brand.id)
-                                        : [...brandIds, brand.id]
+                                setBrandSlugs(
+                                    brandSlugs.includes(brand.slug)
+                                        ? brandSlugs.filter(
+                                              (b) => b !== brand.slug
+                                          )
+                                        : [...brandSlugs, brand.slug]
                                 );
                                 setPage(1);
                             }}
                         />
                         <Label
-                            htmlFor={`brand-${brand.id}`}
+                            htmlFor={`brand-${brand.slug}`}
                             className="font-normal"
                         >
                             {brand.name}
@@ -644,27 +649,43 @@ function CategoryFilter({
     productTypes: CachedProductType[];
     setSearch?: (value: string | null) => void;
 }) {
-    const [categoryId, setCategoryId] = useQueryState("categoryId", {
+    const [categorySlug, setCategorySlug] = useQueryState("categoryId", {
         defaultValue: "",
     });
-    const [subCategoryId, setSubCategoryId] = useQueryState("subcategoryId", {
-        defaultValue: "",
-    });
-    const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
-        defaultValue: "",
-    });
+    const [subCategorySlug, setSubCategorySlug] = useQueryState(
+        "subcategoryId",
+        {
+            defaultValue: "",
+        }
+    );
+    const [productTypeSlug, setProductTypeSlug] = useQueryState(
+        "productTypeId",
+        {
+            defaultValue: "",
+        }
+    );
     const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+
+    const activeCategory = useMemo(
+        () => categories.find((c) => c.slug === categorySlug),
+        [categories, categorySlug]
+    );
+
+    const activeSubCategory = useMemo(
+        () => subCategories.find((s) => s.slug === subCategorySlug),
+        [subCategories, subCategorySlug]
+    );
 
     return (
         <div className="space-y-4">
             <div className="space-y-2">
                 <Label className="font-semibold uppercase">Category</Label>
                 <RadioGroup
-                    value={categoryId}
-                    onValueChange={(id) => {
-                        setCategoryId(id === categoryId ? "" : id);
-                        setSubCategoryId("");
-                        setProductTypeId("");
+                    value={categorySlug}
+                    onValueChange={(slug) => {
+                        setCategorySlug(slug === categorySlug ? "" : slug);
+                        setSubCategorySlug("");
+                        setProductTypeSlug("");
                         setPage(1);
                         if (setSearch) setSearch("");
                     }}
@@ -676,11 +697,11 @@ function CategoryFilter({
                             className="flex items-center space-x-2"
                         >
                             <RadioGroupItem
-                                value={cat.id}
-                                id={`cat-${cat.id}`}
+                                value={cat.slug}
+                                id={`cat-${cat.slug}`}
                             />
                             <Label
-                                htmlFor={`cat-${cat.id}`}
+                                htmlFor={`cat-${cat.slug}`}
                                 className="font-normal"
                             >
                                 {cat.name}
@@ -693,10 +714,12 @@ function CategoryFilter({
             <div className="space-y-2">
                 <Label className="font-semibold uppercase">Subcategory</Label>
                 <RadioGroup
-                    value={subCategoryId}
-                    onValueChange={(id) => {
-                        setSubCategoryId(id === subCategoryId ? "" : id);
-                        setProductTypeId("");
+                    value={subCategorySlug}
+                    onValueChange={(slug) => {
+                        setSubCategorySlug(
+                            slug === subCategorySlug ? "" : slug
+                        );
+                        setProductTypeSlug("");
                         setPage(1);
                         if (setSearch) setSearch("");
                     }}
@@ -706,9 +729,8 @@ function CategoryFilter({
                         .filter(
                             (s) =>
                                 s.productCount > 0 &&
-                                (categoryId
-                                    ? String(s.categoryId) ===
-                                      String(categoryId)
+                                (activeCategory
+                                    ? s.categoryId === activeCategory.id
                                     : true)
                         )
                         .map((sub) => (
@@ -717,11 +739,11 @@ function CategoryFilter({
                                 className="flex items-center space-x-2"
                             >
                                 <RadioGroupItem
-                                    value={sub.id}
-                                    id={`sub-${sub.id}`}
+                                    value={sub.slug}
+                                    id={`sub-${sub.slug}`}
                                 />
                                 <Label
-                                    htmlFor={`sub-${sub.id}`}
+                                    htmlFor={`sub-${sub.slug}`}
                                     className="font-normal"
                                 >
                                     {sub.name}
@@ -731,16 +753,16 @@ function CategoryFilter({
                 </RadioGroup>
             </div>
             <Separator />
-            {subCategoryId && (
+            {subCategorySlug && (
                 <>
                     <Separator />
                     <div className="space-y-2">
                         <Label className="font-semibold uppercase">Type</Label>
                         <RadioGroup
-                            value={productTypeId}
-                            onValueChange={(id) => {
-                                setProductTypeId(
-                                    id === productTypeId ? "" : id
+                            value={productTypeSlug}
+                            onValueChange={(slug) => {
+                                setProductTypeSlug(
+                                    slug === productTypeSlug ? "" : slug
                                 );
                                 setPage(1);
                                 if (setSearch) setSearch("");
@@ -751,8 +773,10 @@ function CategoryFilter({
                                 .filter(
                                     (t) =>
                                         (t.productCount ?? 0) > 0 &&
-                                        String(t.subCategoryId) ===
-                                            String(subCategoryId)
+                                        (activeSubCategory
+                                            ? t.subCategoryId ===
+                                              activeSubCategory.id
+                                            : true)
                                 )
                                 .map((t) => (
                                     <div
@@ -760,11 +784,11 @@ function CategoryFilter({
                                         className="flex items-center space-x-2"
                                     >
                                         <RadioGroupItem
-                                            value={t.id}
-                                            id={`type-${t.id}`}
+                                            value={t.slug}
+                                            id={`type-${t.slug}`}
                                         />
                                         <Label
-                                            htmlFor={`type-${t.id}`}
+                                            htmlFor={`type-${t.slug}`}
                                             className="font-normal"
                                         >
                                             {t.name}

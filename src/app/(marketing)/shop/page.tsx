@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries } from "@/lib/db/queries";
 import {
+    brandCache,
     categoryCache,
     productTypeCache,
     subCategoryCache,
@@ -36,31 +37,55 @@ interface PageProps {
 }
 
 export default async function Page({ searchParams }: PageProps) {
-    // const productTypes = await productTypeCache.getAll();
     const params = await searchParams;
-    const [productTypes, data] = await Promise.all([
-        productTypeCache.getAll(),
-        productQueries.getProducts({
-            page: parseInt(params.page || "1"),
-            limit: parseInt(params.limit || "28"),
-            search: params.search,
-            isAvailable: true,
-            isActive: true,
-            isPublished: true,
-            isDeleted: false,
-            verificationStatus: "approved",
-            brandIds: params.brandIds?.split(","),
-            minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
-            maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 10000,
-            categoryId: params.categoryId,
-            subcategoryId: params.subCategoryId,
-            productTypeId: params.productTypeId,
-            sortBy: params.sortBy,
-            sortOrder: params.sortOrder,
-            colors: params.colors?.split(","),
-            sizes: params.sizes?.split(","),
-        }),
-    ]);
+
+    const [allCategories, allSubCategories, allProductTypes, allBrands] =
+        await Promise.all([
+            categoryCache.getAll(),
+            subCategoryCache.getAll(),
+            productTypeCache.getAll(),
+            brandCache.getAll(),
+        ]);
+
+    const activeCategory = allCategories.find(
+        (c) => c.slug === params.categoryId
+    );
+    const activeSubCategory = allSubCategories.find(
+        (s) => s.slug === params.subCategoryId
+    );
+    const activeProductType = allProductTypes.find(
+        (t) => t.slug === params.productTypeId
+    );
+
+    const categoryId = activeCategory?.id;
+    const subcategoryId = activeSubCategory?.id;
+    const productTypeId = activeProductType?.id;
+
+    const brandIds = params.brandIds
+        ?.split(",")
+        .map((slug) => allBrands.find((b) => b.slug === slug)?.id)
+        .filter(Boolean) as string[];
+
+    const data = await productQueries.getProducts({
+        page: parseInt(params.page || "1"),
+        limit: parseInt(params.limit || "28"),
+        search: params.search,
+        isAvailable: true,
+        isActive: true,
+        isPublished: true,
+        isDeleted: false,
+        verificationStatus: "approved",
+        brandIds: brandIds.length > 0 ? brandIds : undefined,
+        minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
+        maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 10000,
+        categoryId,
+        subcategoryId,
+        productTypeId,
+        sortBy: params.sortBy,
+        sortOrder: params.sortOrder,
+        colors: params.colors?.split(","),
+        sizes: params.sizes?.split(","),
+    });
 
     return (
         <GeneralShell>
@@ -123,22 +148,18 @@ export default async function Page({ searchParams }: PageProps) {
                     {/* Mobile Product Types */}
                     <div className="block md:hidden">
                         <SearchableProductTypes
-                            productTypes={productTypes}
-                            productTypeId={
-                                (await searchParams).productTypeId ?? ""
-                            }
-                            initialProducts={data?.data ?? []} // 👈 renamed prop
+                            productTypes={allProductTypes}
+                            productTypeId={params.productTypeId ?? ""}
+                            initialProducts={data?.data ?? []}
                         />
                     </div>
 
                     {/* Desktop Product Types */}
                     <div className="hidden md:block">
                         <SearchableProductTypes
-                            productTypes={productTypes.slice(0, 10)}
-                            productTypeId={
-                                (await searchParams).productTypeId ?? ""
-                            }
-                            initialProducts={data?.data ?? []} // 👈 renamed prop
+                            productTypes={allProductTypes.slice(0, 10)}
+                            productTypeId={params.productTypeId ?? ""}
+                            initialProducts={data?.data ?? []}
                             isDesktop
                         />
                     </div>
@@ -151,79 +172,6 @@ export default async function Page({ searchParams }: PageProps) {
                 </main>
             </div>
         </GeneralShell>
-    );
-}
-
-function ProductTypesRowDesktop({
-    productTypes,
-    productTypeId,
-}: {
-    productTypes: { id: string; name: string }[];
-    productTypeId?: string;
-}) {
-    return (
-        <div className="flex flex-wrap gap-2">
-            <a
-                href="?productTypeId="
-                className={cn(
-                    "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
-                    productTypeId === "" &&
-                        "border-black bg-black text-white hover:bg-gray-900"
-                )}
-            >
-                All Items
-            </a>
-
-            {productTypes.map((type) => (
-                <a
-                    key={type.id}
-                    href={`?productTypeId=${type.id}`}
-                    className={cn(
-                        "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50",
-                        productTypeId === type.id &&
-                            "border-black bg-black text-white hover:bg-gray-900"
-                    )}
-                >
-                    {type.name}
-                </a>
-            ))}
-        </div>
-    );
-}
-
-function ProductTypesRow({
-    productTypes,
-    productTypeId,
-}: {
-    productTypes: { id: string; name: string }[];
-    productTypeId?: string;
-}) {
-    return (
-        <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-2">
-            <a
-                href="?productTypeId="
-                className={cn(
-                    "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
-                    productTypeId === "" && "border-black bg-black text-white"
-                )}
-            >
-                All Items
-            </a>
-
-            {productTypes.map((type) => (
-                <a
-                    key={type.id}
-                    href={`?productTypeId=${type.id}`}
-                    className={cn(
-                        "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors active:scale-95",
-                        productTypeId === type.id &&
-                            "border-black bg-black text-white"
-                    )}
-                >
-                    {type.name}
-                </a>
-            ))}
-        </div>
     );
 }
 
@@ -243,45 +191,57 @@ async function ShopFiltersFetch(
 ) {
     const { categoryId, subCategoryId, productTypeId, ...rest } = props;
     const [
-        categories,
-        subCategories,
-        productTypes,
-        brandsMeta,
-        colors,
-        alphaSize,
-        numSize,
+        allCategories,
+        allSubCategories,
+        allProductTypes,
+        // brandsMeta, // will fetch specifically based on IDs
     ] = await Promise.all([
         categoryCache.getAll(),
         subCategoryCache.getAll(),
         productTypeCache.getAll(),
+    ]);
+
+    const activeCategory = allCategories.find((c) => c.slug === categoryId);
+    const activeSubCategory = allSubCategories.find(
+        (s) => s.slug === subCategoryId
+    );
+    const activeProductType = allProductTypes.find(
+        (t) => t.slug === productTypeId
+    );
+
+    const resolvedCategoryId = activeCategory?.id;
+    const resolvedSubCategoryId = activeSubCategory?.id;
+    const resolvedProductTypeId = activeProductType?.id;
+
+    const [brandsMeta, colors, alphaSize, numSize] = await Promise.all([
         productQueries.getUniqueBrands({
-            categoryId,
-            subcategoryId: subCategoryId,
-            productTypeId,
+            categoryId: resolvedCategoryId,
+            subcategoryId: resolvedSubCategoryId,
+            productTypeId: resolvedProductTypeId,
         }),
         productQueries.getUniqueColors({
-            categoryId,
-            subcategoryId: subCategoryId,
-            productTypeId,
+            categoryId: resolvedCategoryId,
+            subcategoryId: resolvedSubCategoryId,
+            productTypeId: resolvedProductTypeId,
         }),
         productQueries.getAlphaSizes({
-            categoryId,
-            subcategoryId: subCategoryId,
-            productTypeId,
+            categoryId: resolvedCategoryId,
+            subcategoryId: resolvedSubCategoryId,
+            productTypeId: resolvedProductTypeId,
         }),
         productQueries.getNumericSizes({
-            categoryId,
-            subcategoryId: subCategoryId,
-            productTypeId,
+            categoryId: resolvedCategoryId,
+            subcategoryId: resolvedSubCategoryId,
+            productTypeId: resolvedProductTypeId,
         }),
     ]);
 
     return (
         <ShopFilters
             sizes={[]}
-            categories={categories}
-            subCategories={subCategories}
-            productTypes={productTypes}
+            categories={allCategories}
+            subCategories={allSubCategories}
+            productTypes={allProductTypes}
             brandsMeta={brandsMeta}
             colors={colors}
             alphaSize={alphaSize}
@@ -328,17 +288,32 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
                 ? 10000
                 : parseInt(maxPriceRaw)
             : 10000;
-    const categoryId = !!categoryIdRaw?.length ? categoryIdRaw : undefined;
-    const subCategoryId = !!subCategoryIdRaw?.length
-        ? subCategoryIdRaw
+    const [allCategories, allSubCategories, allProductTypes, allBrands] =
+        await Promise.all([
+            categoryCache.getAll(),
+            subCategoryCache.getAll(),
+            productTypeCache.getAll(),
+            brandCache.getAll(),
+        ]);
+
+    const activeCategory = allCategories.find((c) => c.slug === categoryIdRaw);
+    const activeSubCategory = allSubCategories.find(
+        (s) => s.slug === subCategoryIdRaw
+    );
+    const activeProductType = allProductTypes.find(
+        (t) => t.slug === productTypeIdRaw
+    );
+
+    const categoryId = activeCategory?.id;
+    const subCategoryId = activeSubCategory?.id;
+    const productTypeId = activeProductType?.id;
+
+    const brandIds = !!brandIdsRaw?.length
+        ? (brandIdsRaw
+              .split(",")
+              .map((slug) => allBrands.find((b) => b.slug === slug)?.id)
+              .filter(Boolean) as string[])
         : undefined;
-    const productTypeId = !!productTypeIdRaw?.length
-        ? productTypeIdRaw
-        : undefined;
-    const sortBy = !!sortByRaw?.length ? sortByRaw : undefined;
-    const sortOrder = !!sortOrderRaw?.length ? sortOrderRaw : undefined;
-    const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
-    const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
 
     const [data, userWishlist] = await Promise.all([
         productQueries.getProducts({
@@ -353,9 +328,9 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             brandIds,
             minPrice,
             maxPrice,
-            categoryId: !!categoryId?.length ? categoryId : undefined,
-            subcategoryId: !!subCategoryId?.length ? subCategoryId : undefined,
-            productTypeId: !!productTypeId?.length ? productTypeId : undefined,
+            categoryId,
+            subcategoryId: subCategoryId,
+            productTypeId,
             sortBy,
             sortOrder,
             colors,
