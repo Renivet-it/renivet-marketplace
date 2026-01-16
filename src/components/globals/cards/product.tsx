@@ -70,9 +70,21 @@ export function ProductCard({
     }, [isProductHovered, mediaUrls.length]);
 
     let productPrice = 0;
+    let productCompareAtPrice = 0;
 
-    if (!product.productHasVariants) productPrice = product.price || 0;
-    else productPrice = Math.min(...product.variants.map((x) => x.price));
+    if (!product.productHasVariants) {
+        productPrice = product.price || 0;
+        productCompareAtPrice = product.compareAtPrice || 0;
+    } else {
+        // Find the variant with the minimum price
+        const minPriceVariant = product.variants.reduce(
+            (min, variant) => (variant.price < min.price ? variant : min),
+            product.variants[0]
+        );
+
+        productPrice = minPriceVariant?.price || 0;
+        productCompareAtPrice = minPriceVariant?.compareAtPrice || 0;
+    }
 
     return (
         <div
@@ -94,8 +106,8 @@ export function ProductCard({
                     {/* Product default image */}
                     {isEmptyArray(mediaUrls) && (
                         <Image
-                            src='https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1'
-                            alt='default image'
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                            alt="default image"
                             width={1000}
                             height={1000}
                             className={cn(
@@ -201,21 +213,50 @@ export function ProductCard({
 
                 </p> */}
 
-<p className="text-sm font-semibold">
-    <span className="text-gray-900">Rs.{formatPriceTag(parseFloat(convertPaiseToRupees(productPrice)))}</span>
-    {product.compareAtPrice ? (
-        <>
-            {" "}
-            <span className="text-gray-400 line-through">Rs.{formatPriceTag(parseFloat(convertPaiseToRupees(product.compareAtPrice)))}</span>
-            {" "}
-            <span className="text-red-600">({Math.round(
-                ((parseFloat(convertPaiseToRupees(product.compareAtPrice)) -
-                 parseFloat(convertPaiseToRupees(productPrice))) /
-                (parseFloat(convertPaiseToRupees(product.compareAtPrice)) || 1) * 100
-            ))}% OFF)</span>
-        </>
-    ) : null}
-</p>
+                <p className="text-sm font-semibold">
+                    <span className="text-gray-900">
+                        Rs.
+                        {formatPriceTag(
+                            parseFloat(convertPaiseToRupees(productPrice))
+                        )}
+                    </span>
+                    {productCompareAtPrice &&
+                    productCompareAtPrice > productPrice ? (
+                        <>
+                            {" "}
+                            <span className="text-gray-400 line-through">
+                                Rs.
+                                {formatPriceTag(
+                                    parseFloat(
+                                        convertPaiseToRupees(
+                                            productCompareAtPrice
+                                        )
+                                    )
+                                )}
+                            </span>{" "}
+                            <span className="text-red-600">
+                                (
+                                {Math.round(
+                                    ((parseFloat(
+                                        convertPaiseToRupees(
+                                            productCompareAtPrice
+                                        )
+                                    ) -
+                                        parseFloat(
+                                            convertPaiseToRupees(productPrice)
+                                        )) /
+                                        (parseFloat(
+                                            convertPaiseToRupees(
+                                                productCompareAtPrice
+                                            )
+                                        ) || 1)) *
+                                        100
+                                )}
+                                % OFF)
+                            </span>
+                        </>
+                    ) : null}
+                </p>
             </div>
         </div>
     );

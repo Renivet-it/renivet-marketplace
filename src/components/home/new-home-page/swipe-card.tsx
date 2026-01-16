@@ -36,7 +36,7 @@ interface SwipeableProductCardProps {
 const AnimatedSwipeGuide = () => (
     <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
         <div className="flex animate-pulse items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white">
-            <Icons.MoreHorizontal className="h-4 w-4" />
+            <Icons.MoreHorizontal className="size-4" />
             Swipe left or right
         </div>
     </div>
@@ -208,16 +208,16 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                                     <div className="mt-2 flex items-center justify-between">
                                         <button
                                             onClick={() => handleSwipe(i, -1)}
-                                            className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white"
+                                            className="flex size-6 items-center justify-center rounded-full bg-red-500 text-white"
                                         >
-                                            <Icons.X className="h-3 w-3" />
+                                            <Icons.X className="size-3" />
                                         </button>
 
                                         <button
                                             onClick={() => handleSwipe(i, 1)}
-                                            className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white"
+                                            className="flex size-6 items-center justify-center rounded-full bg-green-500 text-white"
                                         >
-                                            <Icons.Heart className="h-3 w-3" />
+                                            <Icons.Heart className="size-3" />
                                         </button>
                                     </div>
                                 </div>
@@ -227,24 +227,37 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                 </div>
 
                 {/* --- MOBILE CTA CARD --- */}
-                <div className="h-[193px] w-[169px] border border-white/40 bg-gradient-to-br from-[#B7D3EA] to-[#F7F6E7] px-5 pt-6 shadow-lg">
-                    {/* Title */}
-                    <h2 className="font-serif text-xl font-semibold leading-tight text-gray-900">
-                        Got <br />
-                        curiosity?
-                    </h2>
-                    <br />
-                    {/* Subtitle block — intentionally NOT flex */}
-                    <div className="flex items-center gap-3">
-                        <p className="text-sm italic leading-snug text-gray-600">
-                            We’ve Got <br /> Secrets.
-                        </p>
 
-                        <Link href="/shop">
-                            <Icons.ArrowRight className="h-5 w-5 text-gray-800" />
-                        </Link>
-                    </div>
-                </div>
+<Link
+  href="/curious-shift" // ✅ redirect changed here
+  className="block h-[193px] w-[169px]
+             border border-white/40
+             bg-gradient-to-br from-[#B7D3EA] to-[#F7F6E7]
+             px-5 pt-6 shadow-lg
+             transition
+             hover:scale-[1.03] hover:shadow-xl
+             focus:outline-none
+             focus:ring-2 focus:ring-black focus:ring-offset-2 active:scale-[0.98]
+             [-webkit-tap-highlight-color:transparent]
+             "
+>
+  {/* Title */}
+  <h2 className="font-serif text-xl font-semibold leading-tight text-gray-900">
+    Got <br />
+    curiosity?
+  </h2>
+
+  <br />
+
+  {/* Subtitle + arrow */}
+  <div className="flex items-center gap-3">
+    <p className="text-sm italic leading-snug text-gray-600">
+      We’ve Got <br /> Secrets.
+    </p>
+
+    <Icons.ArrowRight className="size-5 text-gray-800" />
+  </div>
+</Link>
             </div>
 
             {/* ================= DESKTOP ================= */}
@@ -291,16 +304,16 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                                     <div className="mt-4 flex justify-between">
                                         <button
                                             onClick={() => handleSwipe(i, -1)}
-                                            className="h-10 w-10 rounded-full bg-red-500 text-white"
+                                            className="size-10 rounded-full bg-red-500 text-white"
                                         >
-                                            <Icons.X className="mx-auto h-5 w-5" />
+                                            <Icons.X className="mx-auto size-5" />
                                         </button>
 
                                         <button
                                             onClick={() => handleSwipe(i, 1)}
-                                            className="h-10 w-10 rounded-full bg-green-500 text-white"
+                                            className="size-10 rounded-full bg-green-500 text-white"
                                         >
-                                            <Icons.Heart className="mx-auto h-5 w-5" />
+                                            <Icons.Heart className="mx-auto size-5" />
                                         </button>
                                     </div>
                                 </div>
@@ -310,17 +323,24 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                 </div>
 
                 {/* Desktop CTA */}
-                <div className="mx-auto w-full max-w-md rounded-2xl border bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7] p-8 shadow-lg">
-                    <h2 className="font-serif text-3xl text-gray-900">
-                        Got curiosity?
-                    </h2>
-                    <p className="mt-6 italic text-gray-600">
-                        We’ve Got Secrets.
-                    </p>
-                    <Link href="/curious-shift" className="mt-4 inline-block">
-                        <Icons.ArrowRight className="h-7 w-7" />
-                    </Link>
-                </div>
+              <Link
+  href="/curious-shift"
+  className="mx-auto block w-full max-w-md rounded-2xl border
+             bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7]
+             p-8 shadow-lg transition
+             hover:scale-[1.02] hover:shadow-xl
+             focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2  [-webkit-tap-highlight-color:transparent]"
+>
+  <h2 className="font-serif text-3xl text-gray-900">
+    Got curiosity?
+  </h2>
+
+  <p className="mt-6 italic text-gray-600">
+    We’ve Got Secrets.
+  </p>
+
+  <Icons.ArrowRight className="mt-4 size-7" />
+</Link>
             </div>
         </section>
     );
