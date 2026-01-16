@@ -103,7 +103,8 @@ export default function CuriousShiftPage() {
         </div>
     </div>
 
-   <div className="absolute -bottom-16 md:-bottom-40 left-1/2 -translate-x-1/2">
+<div className="absolute -bottom-32 md:-bottom-40 left-1/2 -translate-x-1/2">
+
 
         <Image
             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNbd5ZtauZc50VbmLPHAdU9KwxEkCINyqDWJRr"
@@ -120,7 +121,7 @@ export default function CuriousShiftPage() {
 <div className="relative opacity-80 max-w-[260px] md:max-w-none">
 
     {/* -------- MOBILE: CLEAN CENTERED ROW -------- */}
-    <div className="md:hidden flex justify-center">
+    <div className="md:hidden mt-4 flex justify-center">
         <div className="flex items-center gap-6">
             {icons.map((icon, i) => (
                 <div key={i} className="relative h-8 w-8">
