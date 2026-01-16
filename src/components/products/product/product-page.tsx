@@ -165,10 +165,10 @@ export function ProductPage({
                                             >
                                                 <div
                                                     className={cn(
-                                                        "group relative aspect-square cursor-pointer overflow-hidden rounded-lg border transition-all duration-300",
+                                                        "aspect-square cursor-pointer overflow-hidden rounded-lg border-2 bg-white transition-all duration-200",
                                                         i === selectedImage
-                                                            ? "scale-[1.02] border-black ring-2 ring-black/10"
-                                                            : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-md"
+                                                            ? "border-gray-800"
+                                                            : "border-transparent hover:border-gray-300"
                                                     )}
                                                     onClick={() =>
                                                         setSelectedImage(i)
@@ -182,7 +182,7 @@ export function ProductPage({
                                                         }
                                                         width={100}
                                                         height={100}
-                                                        className="size-full object-contain p-1 transition-transform duration-300 group-hover:scale-110"
+                                                        className="size-full object-contain p-1"
                                                     />
                                                 </div>
                                             </CarouselItem>
