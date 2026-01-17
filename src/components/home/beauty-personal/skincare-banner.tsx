@@ -13,7 +13,7 @@ interface PageProps extends GenericProps {
 
 export function SkinCareBanner({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full bg-[#F4F0EC]", className)} {...props}>
+        <section className={cn("w-full bg-[#FCFBF4]", className)} {...props}>
             <div className="container mx-auto px-0">
                 <Carousel
                     opts={{
@@ -30,13 +30,16 @@ export function SkinCareBanner({ className, banners, ...props }: PageProps) {
                     <CarouselContent>
                         {banners.map((item, index) => (
                             <CarouselItem key={index} className="p-0">
-                                <div className="relative w-full aspect-[1440/530] md:h-[530px]">
-                                    <Link href={item.url || "/shop"} className="block w-full h-full">
+                                <div className="relative aspect-[1440/530] w-full md:h-[530px]">
+                                    <Link
+                                        href={item.url || "/shop"}
+                                        className="block h-full w-full"
+                                    >
                                         <Image
                                             src={item.imageUrl}
                                             alt={item.title}
                                             fill
-                                            className="object-cover md:object-fill w-full h-full"
+                                            className="h-full w-full object-cover md:object-fill"
                                             priority={index === 0}
                                             sizes="(max-width: 768px) 100vw, 1440px"
                                             quality={100}

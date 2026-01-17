@@ -14,7 +14,10 @@ interface PageProps extends GenericProps {
 
 export function NewCollection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full pt-8 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+        <section
+            className={cn("w-full bg-[#FCFBF4] pt-8 md:pt-12", className)}
+            {...props}
+        >
             <Carousel
                 opts={{
                     align: "start",
@@ -25,7 +28,7 @@ export function NewCollection({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-auto md:h-[600px]"
+                className="h-auto w-full md:h-[600px]"
             >
                 <CarouselContent
                     classNames={{
@@ -35,13 +38,16 @@ export function NewCollection({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full aspect-[1400/600]">
-                                <Link href={item.url || "/shop"} className="block w-full h-full">
+                            <div className="relative aspect-[1400/600] w-full">
+                                <Link
+                                    href={item.url || "/shop"}
+                                    className="block h-full w-full"
+                                >
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
                                         fill
-                                        className="object-cover w-full h-full brightness-100"
+                                        className="h-full w-full object-cover brightness-100"
                                         priority={index === 0}
                                         sizes="(max-width: 768px) 100vw, 1400px"
                                     />

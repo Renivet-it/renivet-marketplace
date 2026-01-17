@@ -14,10 +14,13 @@ interface PageProps extends GenericProps {
 
 export function SpecialCare({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("bg-[#F4F0EC] md:pt-4 lg:pt-4 ", className)} {...props}>
-            <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
-              Special Care for Little Ones
-</h2>
+        <section
+            className={cn("bg-[#FCFBF4] md:pt-4 lg:pt-4", className)}
+            {...props}
+        >
+            <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+                Special Care for Little Ones
+            </h2>
             <Carousel
                 opts={{
                     align: "start",
@@ -38,8 +41,13 @@ export function SpecialCare({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full aspect-[1440/600]"> {/* Maintain 1440:600 aspect ratio */}
-                                <Link href={item.url || "/shop"} className="block size-full">
+                            <div className="relative aspect-[1440/600] w-full">
+                                {" "}
+                                {/* Maintain 1440:600 aspect ratio */}
+                                <Link
+                                    href={item.url || "/shop"}
+                                    className="block size-full"
+                                >
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}

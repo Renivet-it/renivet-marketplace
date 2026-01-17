@@ -17,7 +17,7 @@ export function MiddleAnimationSection({
   ...props
 }: PageProps) {
   return (
-    <section className={cn("w-full bg-[#F4F0EC]", className)} {...props}>
+    <section className={cn("w-full bg-[#FCFBF4]", className)} {...props}>
       <Carousel
         opts={{ align: "start", loop: true }}
         plugins={[Autoplay({ delay: 5000 })]}

@@ -18,21 +18,18 @@ interface PageProps {
     className?: string;
 }
 
-export function WomenBrandProducts({
-    className,
-    brandProducts,
-}: PageProps) {
+export function WomenBrandProducts({ className, brandProducts }: PageProps) {
     return (
         <section
             className={cn(
-                "flex w-full justify-center bg-[#F4F0EC] py-5 md:px-8 md:py-10",
+                "flex w-full justify-center bg-[#FCFBF4] py-5 md:px-8 md:py-10",
                 className
             )}
-            style={{ backgroundColor: "#f4f0ec" }}
+            style={{ backgroundColor: "#FCFBF4" }}
         >
             <div className="container md:hidden">
                 {/* Mobile Header */}
-                <div className="flex flex-col items-center gap-2 mb-4">
+                <div className="mb-4 flex flex-col items-center gap-2">
                     <h2 className="text-2xl font-bold uppercase tracking-wider">
                         OUR&apos;S STORE
                     </h2>
@@ -47,7 +44,7 @@ export function WomenBrandProducts({
             </div>
             <div className="hidden w-full max-w-5xl md:block xl:max-w-[100rem]">
                 {/* Desktop Header */}
-                <div className="flex flex-col items-center gap-2 mb-8">
+                <div className="mb-8 flex flex-col items-center gap-2">
                     <h2 className="text-3xl font-bold uppercase tracking-wider">
                         OUR&apos;S STORE
                     </h2>

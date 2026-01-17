@@ -14,7 +14,10 @@ interface PageProps extends GenericProps {
 
 export function NurtureBanner({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("pt-8 md:pt-12 w-full bg-[#F4F0EC]", className)} {...props}>
+        <section
+            className={cn("w-full bg-[#FCFBF4] pt-8 md:pt-12", className)}
+            {...props}
+        >
             <Carousel
                 opts={{
                     align: "start",
@@ -25,7 +28,7 @@ export function NurtureBanner({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-auto md:h-[500px] max-w-[1380px] mx-auto"
+                className="mx-auto h-auto w-full max-w-[1380px] md:h-[500px]"
             >
                 <CarouselContent
                     classNames={{
@@ -35,13 +38,16 @@ export function NurtureBanner({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full h-[50vw] md:h-[500px] md:aspect-[1380/500]">
-                                <Link href={item.url || "/shop"} className="block w-full h-full">
+                            <div className="relative h-[50vw] w-full md:aspect-[1380/500] md:h-[500px]">
+                                <Link
+                                    href={item.url || "/shop"}
+                                    className="block h-full w-full"
+                                >
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
                                         fill
-                                        className="object-contain md:object-cover w-full h-full brightness-100"
+                                        className="h-full w-full object-contain brightness-100 md:object-cover"
                                         priority={index === 0}
                                         sizes="(max-width: 768px) 100vw, 1380px"
                                     />

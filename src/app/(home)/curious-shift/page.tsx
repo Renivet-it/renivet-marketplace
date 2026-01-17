@@ -46,38 +46,43 @@ export default function CuriousShiftPage() {
                         max-w-[1200px]
                     "
                 >
-                    <h1 className="mb-4 text-[44px] md:text-[56px] font-normal tracking-[-0.02em]">
+                    <h1 className="mb-4 text-[35px] md:text-[56px] font-normal tracking-[-0.02em]">
                         A Curious Shift
                     </h1>
+<div className="
+    space-y-4 md:space-y-10
+    text-[18px] md:text-[32px]
+    leading-[1.45] md:leading-[1.7]
+    tracking-[-0.01em]
+">
 
-                    <div className="space-y-10 text-[20px] md:text-[32px] leading-[1.7] tracking-[-0.01em]">
                         <p>
-                            there was a time — not very long ago — when fashion colleges proudly
+                            There was a time — not very long ago — when fashion colleges proudly
                             taught the supply chains of fast fashion brands.
                         </p>
                         <p>
-                            how fast designs moved. how efficiently factories produced. how
+                            How fast designs moved. How efficiently factories produced. How
                             brilliantly inventory was turned over.
                         </p>
-                        <p>speed was the flex. scale was the success metric.</p>
+                        <p>Speed was the flex. Scale was the success metric.</p>
                         <p>
-                            students were trained to admire systems built for maximum output,
-                            minimum pause. today, those same colleges teach sustainability.
+                            Students were trained to admire systems built for maximum output,
+                            minimum pause. Today, those same colleges teach sustainability.
                             ethics. lifecycle thinking. impact beyond margins.
                         </p>
                         <p>
-                            not because trends changed — but because the old system cracked under
+                            Not because trends changed — but because the old system cracked under
                             its own weight.
                         </p>
-                        <p className="pt-6 text-[32px] md:text-[40px] italic">
-                            the irony?
+                        <p className="text-[20px] md:text-[40px] italic">
+                            The irony?
                         </p>
                         <p>
-                            the industry already knows something is broken. the institutions have
-                            adapted. the curriculum has evolved.
+                            The industry already knows something is broken. The institutions have
+                            adapted. The curriculum has evolved.
                         </p>
-                        <p className="pt-4 text-[22px] md:text-[34px]">
-                            but consumer behaviour?
+                        <p className="text-[20px] md:text-[34px]">
+                            But consumer behaviour?
                         </p>
                     </div>
                 </section>

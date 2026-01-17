@@ -1,76 +1,76 @@
 "use client";
 
-import { Hourglass, Leaf, Clock, Recycle } from "lucide-react";
+import { Clock, Hourglass, Leaf, Recycle } from "lucide-react";
 
 export function BrandsCollaboration() {
-  const brands = [
-    {
-      icon: Hourglass,
-      title: "Homegrown",
-      description: "Locally crafted, authentic."
-    },
-    {
-      icon: Leaf,
-      title: "Sustainable",
-      description: "Eco-friendly, conscious."
-    },
-    {
-      icon: Clock,
-      title: "Artisans-led",
-      description: "Crafted by artisans."
-    },
-    {
-      icon: Recycle,
-      title: "Sustainable Drops",
-      description: "Limited, eco-focused releases"
-    }
-  ];
+    const brands = [
+        {
+            icon: Hourglass,
+            title: "Homegrown",
+            description: "Locally crafted, authentic.",
+        },
+        {
+            icon: Leaf,
+            title: "Sustainable",
+            description: "Eco-friendly, conscious.",
+        },
+        {
+            icon: Clock,
+            title: "Artisans-led",
+            description: "Crafted by artisans.",
+        },
+        {
+            icon: Recycle,
+            title: "Sustainable Drops",
+            description: "Limited, eco-focused releases",
+        },
+    ];
 
-  return (
-    <section className="w-full bg-[#FCFBF4] mb-10">
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6">
-        {/* Section Title */}
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-normal text-gray-800 tracking-tight">
-            Brands We Collaborate With
-          </h2>
-        </div>
-
-        {/* Brands Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-          {brands.map((brand, index) => (
-            <div key={index} className="text-center group px-4">
-              {/* Icon */}
-              <div className="flex justify-center mb-5">
-                <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                  <brand.icon 
-                    className="w-6 h-6 text-gray-600 group-hover:text-gray-800 transition-colors duration-300" 
-                    strokeWidth={1.5}
-                  />
+    return (
+        <section className="mb-10 w-full bg-[#FCFBF4]">
+            <div className="mx-auto max-w-screen-2xl px-4 sm:px-6">
+                {/* Section Title */}
+                <div className="mb-10 text-center">
+                    <h2 className="text-2xl font-normal tracking-tight text-gray-800">
+                        Brands We Collaborate With
+                    </h2>
                 </div>
-              </div>
 
-              {/* Title */}
-              <h3 className="text-lg font-medium text-gray-800 mb-2 tracking-tight">
-                {brand.title}
-              </h3>
+                {/* Brands Grid */}
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:gap-8 lg:grid-cols-4">
+                    {brands.map((brand, index) => (
+                        <div key={index} className="group px-4 text-center">
+                            {/* Icon */}
+                            <div className="mb-5 flex justify-center">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm transition-shadow duration-300 group-hover:shadow-md">
+                                    <brand.icon
+                                        className="h-6 w-6 text-gray-600 transition-colors duration-300 group-hover:text-gray-800"
+                                        strokeWidth={1.5}
+                                    />
+                                </div>
+                            </div>
 
-              {/* Description */}
-              <p className="text-sm text-gray-600 leading-snug">
-                {brand.description}
-              </p>
+                            {/* Title */}
+                            <h3 className="mb-2 text-lg font-medium tracking-tight text-gray-800">
+                                {brand.title}
+                            </h3>
+
+                            {/* Description */}
+                            <p className="text-sm leading-snug text-gray-600">
+                                {brand.description}
+                            </p>
+                        </div>
+                    ))}
+                </div>
             </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+        </section>
+    );
 }
 
 export function Page() {
-  return (
-    <div className="bg-[#F4F0EC]">
-      <BrandsCollaboration />
-    </div>
-  );
+    return (
+        <div className="bg-[#FCFBF4]">
+            <BrandsCollaboration />
+        </div>
+    );
 }

@@ -14,8 +14,11 @@ interface PageProps extends GenericProps {
 
 export function SkinQuizBanner({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full pb-10 bg-[#F4F0EC]", className)} {...props}>
-            <div className="w-full max-w-[1400px] mx-auto">
+        <section
+            className={cn("w-full bg-[#FCFBF4] pb-10", className)}
+            {...props}
+        >
+            <div className="mx-auto w-full max-w-[1400px]">
                 <Carousel
                     opts={{
                         align: "start",
@@ -31,14 +34,14 @@ export function SkinQuizBanner({ className, banners, ...props }: PageProps) {
                     <CarouselContent>
                         {banners.map((item, index) => (
                             <CarouselItem key={index} className="p-0">
-                                <div className="relative w-full h-[1751px]">
+                                <div className="relative h-[1751px] w-full">
                                     {/* Background Image */}
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
                                         width={1400}
                                         height={1751}
-                                        className="w-full h-full object-cover"
+                                        className="h-full w-full object-cover"
                                         priority={index === 0}
                                         quality={100}
                                     />
@@ -46,7 +49,7 @@ export function SkinQuizBanner({ className, banners, ...props }: PageProps) {
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <Button
                                             asChild
-                                            className="bg-white text-black hover:bg-gray-100 px-10 py-4 text-lg font-medium rounded-none"
+                                            className="rounded-none bg-white px-10 py-4 text-lg font-medium text-black hover:bg-gray-100"
                                         >
                                             <Link href={item.url || "/shop"}>
                                                 Explore More

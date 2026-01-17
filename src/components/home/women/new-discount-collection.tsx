@@ -12,9 +12,16 @@ interface PageProps extends GenericProps {
     banners: Banner[];
 }
 
-export function GetNewDiscountCollection({ className, banners, ...props }: PageProps) {
+export function GetNewDiscountCollection({
+    className,
+    banners,
+    ...props
+}: PageProps) {
     return (
-        <section className={cn("pt-8 md:pt-12 bg-[#F4F0EC]", className)} {...props}>
+        <section
+            className={cn("bg-[#FCFBF4] pt-8 md:pt-12", className)}
+            {...props}
+        >
             <Carousel
                 opts={{
                     align: "start",
@@ -25,7 +32,7 @@ export function GetNewDiscountCollection({ className, banners, ...props }: PageP
                         delay: 5000,
                     }),
                 ]}
-                className="max-w-screen-2xl mx-auto w-full h-auto md:h-[500px]"
+                className="mx-auto h-auto w-full max-w-screen-2xl md:h-[500px]"
             >
                 <CarouselContent
                     classNames={{
@@ -35,13 +42,16 @@ export function GetNewDiscountCollection({ className, banners, ...props }: PageP
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full h-[50vw] md:h-[500px] md:aspect-[1380/500]">
-                                <Link href={item.url || "/shop"} className="block w-full h-full">
+                            <div className="relative h-[50vw] w-full md:aspect-[1380/500] md:h-[500px]">
+                                <Link
+                                    href={item.url || "/shop"}
+                                    className="block h-full w-full"
+                                >
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
                                         fill
-                                        className="object-contain md:object-cover w-full h-full brightness-100"
+                                        className="h-full w-full object-contain brightness-100 md:object-cover"
                                         priority={index === 0}
                                         sizes="(max-width: 768px) 100vw, 1380px"
                                     />

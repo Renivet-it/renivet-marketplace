@@ -128,7 +128,7 @@ export function ProductPage({
             >
                 {/* Desktop Layout */}
                 <div className="hidden w-1/2 lg:block">
-                    <div className="flex justify-center gap-12 rounded-md border border-gray-300 bg-[#f4f0ec] p-4">
+                    <div className="flex justify-center gap-12 rounded-md border border-gray-300 bg-[#FCFBF4] p-4">
                         {/* Robustly Fixed Thumbnails Carousel */}
                         <div className="relative flex w-28 flex-col items-center py-6">
                             <Carousel

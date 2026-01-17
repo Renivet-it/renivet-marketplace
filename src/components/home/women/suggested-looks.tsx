@@ -8,60 +8,63 @@ import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem } from "../../ui/carousel";
 
 interface PageProps {
-  banners: Banner[];
-  className?: string;
+    banners: Banner[];
+    className?: string;
 }
 
 export function SuggestedLook({ className, banners }: PageProps) {
-  return (
-    <section
-      className={cn("pt-10 lg:pt-20 w-full bg-[#F4F0EC]", className)}
-      style={{ backgroundColor: "#f4f0ec" }}
-    >
-      {/* Centered Title Section */}
-      <div className="w-full flex justify-center mb-6">
-        <div className="max-w-screen-2xl w-full px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-            Suggested Looks
-          </h2>
-        </div>
-      </div>
-
-      {/* Full-width Carousel */}
-      <div className="w-screen">
-        <Carousel
-          opts={{
-            align: "start",
-            loop: true,
-          }}
-          plugins={[
-            Autoplay({
-              delay: 5000,
-            }),
-          ]}
-          className="w-full"
+    return (
+        <section
+            className={cn("w-full bg-[#FCFBF4] pt-10 lg:pt-20", className)}
+            style={{ backgroundColor: "#FCFBF4" }}
         >
-          <CarouselContent className="ml-0">
-            {banners.map((item, index) => (
-              <CarouselItem key={index} className="h-full p-0">
-                <div className="relative w-full h-full">
-                  <Link href={item.url || "/shop"} className="block size-full">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.title}
-                      width={1440}
-                      height={300}
-                      className="object-cover w-full h-full"
-                      priority={index === 0}
-                      sizes="100vw"
-                    />
-                  </Link>
+            {/* Centered Title Section */}
+            <div className="mb-6 flex w-full justify-center">
+                <div className="w-full max-w-screen-2xl px-4 text-center sm:px-6 lg:px-8">
+                    <h2 className="text-2xl font-bold text-gray-900 md:text-3xl">
+                        Suggested Looks
+                    </h2>
                 </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-        </Carousel>
-      </div>
-    </section>
-  );
+            </div>
+
+            {/* Full-width Carousel */}
+            <div className="w-screen">
+                <Carousel
+                    opts={{
+                        align: "start",
+                        loop: true,
+                    }}
+                    plugins={[
+                        Autoplay({
+                            delay: 5000,
+                        }),
+                    ]}
+                    className="w-full"
+                >
+                    <CarouselContent className="ml-0">
+                        {banners.map((item, index) => (
+                            <CarouselItem key={index} className="h-full p-0">
+                                <div className="relative h-full w-full">
+                                    <Link
+                                        href={item.url || "/shop"}
+                                        className="block size-full"
+                                    >
+                                        <Image
+                                            src={item.imageUrl}
+                                            alt={item.title}
+                                            width={1440}
+                                            height={300}
+                                            className="h-full w-full object-cover"
+                                            priority={index === 0}
+                                            sizes="100vw"
+                                        />
+                                    </Link>
+                                </div>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                </Carousel>
+            </div>
+        </section>
+    );
 }

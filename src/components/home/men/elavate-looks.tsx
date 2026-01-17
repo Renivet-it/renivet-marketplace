@@ -23,7 +23,7 @@ export function ElevateYourLooks({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-12 bg-[#F4F0EC]", // Fixed background color
+                "flex w-full justify-center py-12 bg-[#FCFBF4]", // Fixed background color
                 className
             )}
             {...props}
