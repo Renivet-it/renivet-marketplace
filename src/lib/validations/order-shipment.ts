@@ -1,7 +1,7 @@
+import { is } from "drizzle-orm";
 import { z } from "zod";
 import { brandSchema } from "./brand";
 import { orderSchema } from "./order";
-import { is } from "drizzle-orm";
 
 export const orderShipmentSchema = z.object({
     id: z.string().uuid(),
@@ -71,6 +71,7 @@ export const orderShipmentSchema = z.object({
     labelUrl: z.string().nullable(),
     manifestUrl: z.string().nullable(),
     invoiceUrl: z.string().nullable(),
+    shipmentImageUrl: z.string().nullable().optional(),
     isPickupScheduled: z.boolean().default(false),
     pickupScheduledDate: z
         .union([z.string(), z.date()], {
@@ -82,8 +83,16 @@ export const orderShipmentSchema = z.object({
     isAwbGenerated: z.boolean().default(false),
     isReturnLabelGenerated: z.boolean().default(false).nullable().optional(),
     is_return_label_generated: z.boolean().default(false).nullable().optional(),
-    is_replacement_label_generated: z.boolean().default(false).nullable().optional(),
-    isReplacementLabelGenerated: z.boolean().default(false).nullable().optional(),
+    is_replacement_label_generated: z
+        .boolean()
+        .default(false)
+        .nullable()
+        .optional(),
+    isReplacementLabelGenerated: z
+        .boolean()
+        .default(false)
+        .nullable()
+        .optional(),
     isRto: z.boolean().default(false).nullable().optional(),
     isRtoReturn: z.boolean().default(false),
     createdAt: z
@@ -98,41 +107,43 @@ export const orderShipmentSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
-        // awbDetailsShipRocketJson: z.object({}).nullable().default({}),
-  awbDetailsShipRocketJson: z
-    .object({
-      awb_assign_status: z.number().optional(),
-      no_pickup_popup: z.number().optional(),
-      quick_pick: z.number().optional(),
-      response: z
+    // awbDetailsShipRocketJson: z.object({}).nullable().default({}),
+    awbDetailsShipRocketJson: z
         .object({
-          data: z
-            .object({
-              applied_weight: z.number().optional(),
-              assigned_date_time: z
+            awb_assign_status: z.number().optional(),
+            no_pickup_popup: z.number().optional(),
+            quick_pick: z.number().optional(),
+            response: z
                 .object({
-                  date: z.string().optional(),
-                  timezone: z.string().optional(),
-                  timezone_type: z.number().optional(),
+                    data: z
+                        .object({
+                            applied_weight: z.number().optional(),
+                            assigned_date_time: z
+                                .object({
+                                    date: z.string().optional(),
+                                    timezone: z.string().optional(),
+                                    timezone_type: z.number().optional(),
+                                })
+                                .optional(),
+                            awb_code: z.string().optional(),
+                            awb_code_status: z.number().optional(),
+                            child_courier_name: z
+                                .string()
+                                .nullable()
+                                .optional(),
+                            cod: z.number().optional(),
+                            company_id: z.number().optional(),
+                            courier_company_id: z.number().optional(),
+                            courier_name: z.string().optional(),
+                            freight_charges: z.number().optional(),
+                        })
+                        .optional(),
                 })
                 .optional(),
-              awb_code: z.string().optional(),
-              awb_code_status: z.number().optional(),
-              child_courier_name: z.string().nullable().optional(),
-              cod: z.number().optional(),
-              company_id: z.number().optional(),
-              courier_company_id: z.number().optional(),
-              courier_name: z.string().optional(),
-              freight_charges: z.number().optional(),
-            })
-            .optional(),
         })
-        .optional(),
-    })
-    .nullable()
-    .optional()
-    .default({}),
-
+        .nullable()
+        .optional()
+        .default({}),
 });
 
 export const orderShipmentWithRelationsSchema = orderShipmentSchema.extend({
@@ -145,12 +156,12 @@ export const createOrderShipmentSchema = orderShipmentSchema.omit({
     shiprocketOrderId: true,
     awbNumber: true,
     uploadWbn: true,
-     delhiveryClientId: true,
-     delhiveryTrackingJson: true,
-     delhiverySortCode: true,
-        givenHeight: true,
-        givenLength: true,
-        givenWidth: true,
+    delhiveryClientId: true,
+    delhiveryTrackingJson: true,
+    delhiverySortCode: true,
+    givenHeight: true,
+    givenLength: true,
+    givenWidth: true,
     trackingNumber: true,
     shipmentDate: true,
     estimatedDeliveryDate: true,
@@ -176,12 +187,12 @@ export const updateOrderShipmentSchema = orderShipmentSchema.pick({
     courierName: true,
     awbNumber: true,
     uploadWbn: true,
-     delhiveryClientId: true,
-     delhiveryTrackingJson: true,
-     delhiverySortCode: true,
-     givenHeight: true,
-     givenLength: true,
-     givenWidth: true,
+    delhiveryClientId: true,
+    delhiveryTrackingJson: true,
+    delhiverySortCode: true,
+    givenHeight: true,
+    givenLength: true,
+    givenWidth: true,
     trackingNumber: true,
     status: true,
     shipmentDate: true,

@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
+import { productTypes } from "./category";
 import { mediaExchangeShipment, mediaReturnShipment } from "./media";
 import { orderItems, orders } from "./order";
 import {
@@ -21,9 +22,8 @@ import {
     returnPaymentDetails,
     returnReasonDetails,
 } from "./order-return-exchange";
-import { users } from "./user";
-import { productTypes } from "./category";
 import { products } from "./product";
+import { users } from "./user";
 
 export const orderShipments = pgTable(
     "order_shipments",
@@ -74,6 +74,7 @@ export const orderShipments = pgTable(
         labelUrl: text("label_url"),
         manifestUrl: text("manifest_url"),
         invoiceUrl: text("invoice_url"),
+        shipmentImageUrl: text("shipment_image_url"),
         isPickupScheduled: boolean("is_pickup_scheduled").default(false),
         pickupScheduledDate: timestamp("pickup_scheduled_date"),
         pickupTokenNumber: text("pickup_token_number"),
@@ -87,8 +88,12 @@ export const orderShipments = pgTable(
         ).default({}),
         isRtoReturn: boolean("is_rto_return").default(false),
         delhiveryTrackingJson: jsonb("delhivery_tracking_json").default({}),
-        is_return_label_generated: boolean("is_return_label_generated").default(false),
-        is_replacement_label_generated: boolean("is_replacement_label_generated").default(false),
+        is_return_label_generated: boolean("is_return_label_generated").default(
+            false
+        ),
+        is_replacement_label_generated: boolean(
+            "is_replacement_label_generated"
+        ).default(false),
     },
     (table) => ({
         orderShipmentOrderIdIdx: index("order_shipment_order_id_idx").on(
@@ -102,42 +107,39 @@ export const orderShipments = pgTable(
         ),
     })
 );
-export const orderReturnRequests = pgTable(
-    "order_return_requests",
-    {
-        id: uuid("id").primaryKey().defaultRandom(),
-        orderId: text("order_id")
-            .notNull()
-            .references(() => orders.id, { onDelete: "cascade" }),
+export const orderReturnRequests = pgTable("order_return_requests", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orderId: text("order_id")
+        .notNull()
+        .references(() => orders.id, { onDelete: "cascade" }),
 
-        orderItemId: uuid("order_item_id")
-            .notNull()
-            .references(() => orderItems.id, { onDelete: "cascade" }),
+    orderItemId: uuid("order_item_id")
+        .notNull()
+        .references(() => orderItems.id, { onDelete: "cascade" }),
 
-        brandId: uuid("brand_id")
-            .notNull()
-            .references(() => brands.id, { onDelete: "cascade" }),
+    brandId: uuid("brand_id")
+        .notNull()
+        .references(() => brands.id, { onDelete: "cascade" }),
 
-        requestType: text("request_type", {
-            enum: ["return", "replace"],
-        }).notNull(),
+    requestType: text("request_type", {
+        enum: ["return", "replace"],
+    }).notNull(),
 
-        newVariantId: uuid("new_variant_id"), // only for replacement
+    newVariantId: uuid("new_variant_id"), // only for replacement
 
-        reason: text("reason"),
-        comment: text("comment"),
+    reason: text("reason"),
+    comment: text("comment"),
 
-        images: jsonb("images").default([]),
+    images: jsonb("images").default([]),
 
-        status: text("status", {
-            enum: ["pending", "approved", "rejected", "processing", "completed"],
-        })
-            .notNull()
-            .default("pending"),
+    status: text("status", {
+        enum: ["pending", "approved", "rejected", "processing", "completed"],
+    })
+        .notNull()
+        .default("pending"),
 
-        ...timestamps,
-    }
-);
+    ...timestamps,
+});
 
 export const orderShipmentItems = pgTable(
     "order_shipment_items",
@@ -227,83 +229,82 @@ export const exchangeShipments = pgTable(
     })
 );
 export const packingTypes = pgTable("packing_types", {
-  id: uuid("id").defaultRandom().primaryKey(),
+    id: uuid("id").defaultRandom().primaryKey(),
 
-  // Packing Type Name
-  name: text("hs_code"),
+    // Packing Type Name
+    name: text("hs_code"),
 
-  // Base dimensions (cm)
-  baseLength: integer("base_length").default(0),
-  baseWidth: integer("base_width").default(0),
-  baseHeight: integer("base_height").default(0),
+    // Base dimensions (cm)
+    baseLength: integer("base_length").default(0),
+    baseWidth: integer("base_width").default(0),
+    baseHeight: integer("base_height").default(0),
 
-  // Extra CM logic (0 for soft, 2 for box, 3 for fragile)
-  extraCm: integer("extra_cm").default(0),
+    // Extra CM logic (0 for soft, 2 for box, 3 for fragile)
+    extraCm: integer("extra_cm").default(0),
 
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const brandProductTypePacking = pgTable(
-  "brand_product_type_packing",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
+    "brand_product_type_packing",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
 
-    // 🔗 Relations
-    brandId: uuid("brand_id")
-      .notNull()
-      .references(() => brands.id, { onDelete: "cascade" }),
+        // 🔗 Relations
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "cascade" }),
 
-    productTypeId: uuid("product_type_id")
-      .notNull()
-      .references(() => productTypes.id, { onDelete: "cascade" }),
+        productTypeId: uuid("product_type_id")
+            .notNull()
+            .references(() => productTypes.id, { onDelete: "cascade" }),
 
-    packingTypeId: uuid("packing_type_id")
-      .references(() => packingTypes.id, { onDelete: "set null" }),
+        packingTypeId: uuid("packing_type_id").references(
+            () => packingTypes.id,
+            { onDelete: "set null" }
+        ),
 
-    // 🚚 Shipping flags
-    isFragile: boolean("is_fragile").notNull().default(false),
+        // 🚚 Shipping flags
+        isFragile: boolean("is_fragile").notNull().default(false),
 
-    shipsInOwnBox: boolean("ships_in_own_box")
-      .notNull()
-      .default(false),
+        shipsInOwnBox: boolean("ships_in_own_box").notNull().default(false),
 
-    canOverride: boolean("can_override")
-      .notNull()
-      .default(false),
+        canOverride: boolean("can_override").notNull().default(false),
 
-    // 🕒 Meta
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
-  },
-  (table) => ({
-    // 🚨 IMPORTANT: prevent duplicates
-    brandProductTypeUniqueIdx: index(
-      "brand_product_type_unique_idx"
-    ).on(table.brandId, table.productTypeId),
-  })
+        // 🕒 Meta
+        createdAt: timestamp("created_at").defaultNow(),
+        updatedAt: timestamp("updated_at").defaultNow(),
+    },
+    (table) => ({
+        // 🚨 IMPORTANT: prevent duplicates
+        brandProductTypeUniqueIdx: index("brand_product_type_unique_idx").on(
+            table.brandId,
+            table.productTypeId
+        ),
+    })
 );
 
-export const shipmentDiscrepancies = pgTable(
-  "shipment_discrepancies",
-  {
+export const shipmentDiscrepancies = pgTable("shipment_discrepancies", {
     id: uuid("id").defaultRandom().primaryKey(),
 
     orderId: text("order_id")
-      .notNull()
-      .references(() => orders.id, { onDelete: "cascade" }),
+        .notNull()
+        .references(() => orders.id, { onDelete: "cascade" }),
 
     productId: uuid("product_id")
-      .notNull()
-      .references(() => products.id, { onDelete: "cascade" }),
+        .notNull()
+        .references(() => products.id, { onDelete: "cascade" }),
 
     brandId: uuid("brand_id")
-      .notNull()
-      .references(() => brands.id, { onDelete: "cascade" }),
+        .notNull()
+        .references(() => brands.id, { onDelete: "cascade" }),
 
     // 🔥 Brand packing rule used at shipment time
-    brandPackingId: uuid("brand_packing_id")
-      .references(() => brandProductTypePacking.id, { onDelete: "set null" }),
+    brandPackingId: uuid("brand_packing_id").references(
+        () => brandProductTypePacking.id,
+        { onDelete: "set null" }
+    ),
 
     actualWeight: integer("actual_weight").notNull(), // grams
     volumetricWeight: integer("volumetric_weight").notNull(),
@@ -316,53 +317,51 @@ export const shipmentDiscrepancies = pgTable(
     rulesViolated: jsonb("rules_violated").notNull(),
 
     createdAt: timestamp("created_at").defaultNow(),
-  }
-);
+});
 
 export const shipmentDiscrepanciesRelations = relations(
-  shipmentDiscrepancies,
-  ({ one }) => ({
-    order: one(orders, {
-      fields: [shipmentDiscrepancies.orderId],
-      references: [orders.id],
-    }),
+    shipmentDiscrepancies,
+    ({ one }) => ({
+        order: one(orders, {
+            fields: [shipmentDiscrepancies.orderId],
+            references: [orders.id],
+        }),
 
-    product: one(products, {
-      fields: [shipmentDiscrepancies.productId],
-      references: [products.id],
-    }),
+        product: one(products, {
+            fields: [shipmentDiscrepancies.productId],
+            references: [products.id],
+        }),
 
-    brand: one(brands, {
-      fields: [shipmentDiscrepancies.brandId],
-      references: [brands.id],
-    }),
+        brand: one(brands, {
+            fields: [shipmentDiscrepancies.brandId],
+            references: [brands.id],
+        }),
 
-    brandProductTypePacking: one(brandProductTypePacking, {
-      fields: [shipmentDiscrepancies.brandPackingId],
-      references: [brandProductTypePacking.id],
-    }),
-  })
+        brandProductTypePacking: one(brandProductTypePacking, {
+            fields: [shipmentDiscrepancies.brandPackingId],
+            references: [brandProductTypePacking.id],
+        }),
+    })
 );
 
-
 export const brandProductTypePackingRelations = relations(
-  brandProductTypePacking,
-  ({ one }) => ({
-    brand: one(brands, {
-      fields: [brandProductTypePacking.brandId],
-      references: [brands.id],
-    }),
+    brandProductTypePacking,
+    ({ one }) => ({
+        brand: one(brands, {
+            fields: [brandProductTypePacking.brandId],
+            references: [brands.id],
+        }),
 
-    productType: one(productTypes, {
-      fields: [brandProductTypePacking.productTypeId],
-      references: [productTypes.id],
-    }),
+        productType: one(productTypes, {
+            fields: [brandProductTypePacking.productTypeId],
+            references: [productTypes.id],
+        }),
 
-    packingType: one(packingTypes, {
-      fields: [brandProductTypePacking.packingTypeId],
-      references: [packingTypes.id],
-    }),
-  })
+        packingType: one(packingTypes, {
+            fields: [brandProductTypePacking.packingTypeId],
+            references: [packingTypes.id],
+        }),
+    })
 );
 
 export const orderShipmentsRelations = relations(
@@ -405,14 +404,13 @@ export const orderReturnRequestsRelations = relations(
             fields: [orderReturnRequests.brandId],
             references: [brands.id],
         }),
-    //         user: one(users, {
-    //   fields: [orderReturnRequests.orderId],
-    //   references: [orders.id],
-    //   relationName: "returnRequestUser",
-    // }),
+        //         user: one(users, {
+        //   fields: [orderReturnRequests.orderId],
+        //   references: [orders.id],
+        //   relationName: "returnRequestUser",
+        // }),
     })
 );
-
 
 export const returnShipmentsRelations = relations(
     returnShipments,
@@ -472,9 +470,6 @@ export const exchangeShipmentMediaRelation = relations(
     })
 );
 
-export const packingTypesRelations = relations(
-  packingTypes,
-  ({ many }) => ({
+export const packingTypesRelations = relations(packingTypes, ({ many }) => ({
     productTypes: many(productTypes),
-  })
-);
+}));

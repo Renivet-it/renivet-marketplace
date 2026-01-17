@@ -21,9 +21,10 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 import { trpc } from "@/lib/trpc/client";
+import { useUploadThing } from "@/lib/uploadthing";
 import { cn } from "@/lib/utils";
+import { UploadCloud, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import OrderShipment from "./order-shipment";
@@ -39,7 +40,7 @@ export function OrderAction({ order, onAction }: PageProps) {
     // 1. Detect if Delhivery order
     // -----------------------------
     const isDelhivery = Boolean(order?.uploadWbn || order?.awbNumber);
-  const { data: userData } = trpc.general.users.currentUser.useQuery();
+    const { data: userData } = trpc.general.users.currentUser.useQuery();
 
     // Shiprocket shipment details
     const { data: orderShipmentDetails } =
@@ -53,20 +54,72 @@ export function OrderAction({ order, onAction }: PageProps) {
                 enabled: !!order.shiprocketShipmentId,
             }
         );
-const { data: brandData } = trpc.brands.brands.getBrandWithConfidential.useQuery(
-  { brandId: userData?.brand?.id ?? "" },
-  { enabled: !!userData?.brand?.id }
-);
-const { data: productData } = trpc.brands.products.getProduct.useQuery(
-  { productId: order?.productId ?? "" },
-);
-console.log(productData, "productData");
+    const { data: brandData } =
+        trpc.brands.brands.getBrandWithConfidential.useQuery(
+            { brandId: userData?.brand?.id ?? "" },
+            { enabled: !!userData?.brand?.id }
+        );
+    const { data: productData } = trpc.brands.products.getProduct.useQuery({
+        productId: order?.productId ?? "",
+    });
+    console.log(productData, "productData");
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [isAwbGenerated, setIsAwbGenerated] = useState(false);
     const [isShipmentGenerated, setIsShipmentGenerated] = useState(false);
+
+    // Shipment Image Upload State
+    const [isShipmentImageModalOpen, setIsShipmentImageModalOpen] =
+        useState(false);
+    const [shipmentImageFile, setShipmentImageFile] = useState<File | null>(
+        null
+    );
+    const [isUploading, setIsUploading] = useState(false);
+
+    const { startUpload } = useUploadThing("brandMediaUploader");
+    const utils = trpc.useUtils();
+
+    const updateShipmentImage =
+        trpc.brands.orders.updateShipmentImage.useMutation({
+            onSuccess: () => {
+                toast.success("Shipment image uploaded successfully!");
+                utils.brands.orders.getOrdersByBrandId.invalidate();
+                setIsShipmentImageModalOpen(false);
+                setShipmentImageFile(null);
+                onAction();
+            },
+            onError: (error) => {
+                toast.error(error.message || "Failed to save shipment image");
+            },
+        });
+
+    const handleShipmentImageUpload = async () => {
+        if (!shipmentImageFile) {
+            toast.error("Please select an image");
+            return;
+        }
+
+        try {
+            setIsUploading(true);
+            const uploaded = await startUpload([shipmentImageFile]);
+
+            if (!uploaded || uploaded.length === 0) {
+                throw new Error("Upload failed");
+            }
+
+            await updateShipmentImage.mutateAsync({
+                orderId: order.id,
+                imageUrl: uploaded[0].url,
+            });
+        } catch (err) {
+            toast.error("Failed to upload image");
+            console.error(err);
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     // Detect Shiprocket statuses
     useEffect(() => {
@@ -81,7 +134,7 @@ console.log(productData, "productData");
             setIsShipmentGenerated(shipmentGenerated);
         }
     }, [orderShipmentDetails]);
-console.log(order, "orders");
+    console.log(order, "orders");
     // ------------------------------------------------------
     // 2. DELHIVERY DOWNLOAD INVOICE
     // ------------------------------------------------------
@@ -93,10 +146,7 @@ console.log(order, "orders");
                 body: JSON.stringify({
                     order: {
                         id: order.id,
-                        customerName:
-                            order.firstName +
-                            " " +
-                            order.lastName,
+                        customerName: order.firstName + " " + order.lastName,
                         phone: order?.phone,
                         address:
                             order.street +
@@ -181,7 +231,9 @@ console.log(order, "orders");
                 link.click();
                 link.remove();
             } else if (type === "label") {
-                const response = await generateLabel(order.shiprocketShipmentId);
+                const response = await generateLabel(
+                    order.shiprocketShipmentId
+                );
                 const link = document.createElement("a");
                 link.href = response.labelUrl;
                 link.download = `label_${order.shiprocketShipmentId}.pdf`;
@@ -222,14 +274,17 @@ console.log(order, "orders");
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
                     <DropdownMenuGroup>
-                        {!isShipmentGenerated && order.status !== "cancelled" && order.status !== "delivered" && order.status !== "shipped" && (
-                            <DropdownMenuItem
-                                onClick={() => setIsSheetOpen(true)}
-                            >
-                                <Icons.Truck className="size-4" />
-                                <span>Ship Now</span>
-                            </DropdownMenuItem>
-                        )}
+                        {!isShipmentGenerated &&
+                            order.status !== "cancelled" &&
+                            order.status !== "delivered" &&
+                            order.status !== "shipped" && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsSheetOpen(true)}
+                                >
+                                    <Icons.Truck className="size-4" />
+                                    <span>Ship Now</span>
+                                </DropdownMenuItem>
+                            )}
 
                         {/* INVOICE */}
                         <DropdownMenuItem
@@ -265,6 +320,19 @@ console.log(order, "orders");
                             >
                                 <Icons.ClipboardList className="size-4" />
                                 <span>Download Manifest</span>
+                            </DropdownMenuItem>
+                        )}
+
+                        {/* SHIPMENT IMAGE */}
+                        {(order.status === "pending" ||
+                            order.status === "processing") && (
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    setIsShipmentImageModalOpen(true)
+                                }
+                            >
+                                <Icons.Upload className="size-4" />
+                                <span>Upload Shipment Image</span>
                             </DropdownMenuItem>
                         )}
                     </DropdownMenuGroup>
@@ -327,8 +395,7 @@ console.log(order, "orders");
 
                         <Button
                             onClick={async () => {
-                                if (isDelhivery)
-                                    await downloadDelhiveryLabel();
+                                if (isDelhivery) await downloadDelhiveryLabel();
                                 else await handleDownload("label");
 
                                 setIsLabelModalOpen(false);
@@ -353,7 +420,7 @@ console.log(order, "orders");
                         </DialogDescription>
                     </DialogHeader>
 
-                    <p className={cn("text-[#FF5733] font-bold")}>
+                    <p className={cn("font-bold text-[#FF5733]")}>
                         Note: Manifest can be downloaded only once.
                     </p>
 
@@ -372,6 +439,85 @@ console.log(order, "orders");
                             }}
                         >
                             Download
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* --------------------- SHIPMENT IMAGE MODAL --------------------- */}
+            <Dialog
+                open={isShipmentImageModalOpen}
+                onOpenChange={(open) => {
+                    setIsShipmentImageModalOpen(open);
+                    if (!open) setShipmentImageFile(null);
+                }}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Upload Shipment Image</DialogTitle>
+                        <DialogDescription>
+                            Upload a photo of the order before shipping
+                            (optional)
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {/* Upload Area */}
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted p-6 text-center transition hover:bg-muted/40">
+                            <UploadCloud className="h-8 w-8 text-muted-foreground" />
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Click to upload or drag & drop
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                PNG, JPG up to 8MB
+                            </p>
+
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) setShipmentImageFile(file);
+                                }}
+                                className="hidden"
+                            />
+                        </label>
+
+                        {/* Image Preview */}
+                        {shipmentImageFile && (
+                            <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-xl border bg-muted">
+                                <img
+                                    src={URL.createObjectURL(shipmentImageFile)}
+                                    alt="preview"
+                                    className="h-full w-full object-cover"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShipmentImageFile(null)}
+                                    className="absolute right-2 top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsShipmentImageModalOpen(false);
+                                setShipmentImageFile(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            onClick={handleShipmentImageUpload}
+                            disabled={!shipmentImageFile || isUploading}
+                        >
+                            {isUploading ? "Uploading..." : "Upload Image"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
