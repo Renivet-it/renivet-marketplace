@@ -23,7 +23,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const mobileAspectRatio = 375 / 487;
     const mobileImageUrl =
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP";
-    const placeholders = ["Search For Products And Brands"];
+    const placeholders = ["Search For Products"];
 
     const [displayText, setDisplayText] = useState("");
     const [runCount, setRunCount] = useState(0); // how many times finished typing
@@ -121,7 +121,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             asChild
                                         >
                                             <Link href={item.url || "/shop"}>
-                                                {">"} EXPLORE NOW
+                                                {">"} Shop With Purpose
                                             </Link>
                                         </Button>
                                     </div>
