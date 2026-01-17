@@ -13,7 +13,7 @@ interface PageProps extends GenericProps {
 
 export function SuggestedLook({ className, banners, ...props }: PageProps) {
   return (
-    <section className={cn("w-full pt-10 md:pt-16 lg:pt-20 pb-12 md:pb-16 px-4 sm:px-6 lg:px-8 bg-[#F4F0EC]", className)} {...props}>
+    <section className={cn("w-full pt-10 md:pt-16 lg:pt-20 pb-12 md:pb-16 px-4 sm:px-6 lg:px-8 bg-[#FCFBF4]", className)} {...props}>
       {/* Centered Title Section */}
       <div className="w-full flex justify-center mb-6 md:mb-8">
         <div className="max-w-screen-2xl w-full text-center">

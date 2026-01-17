@@ -91,7 +91,7 @@ export function StyleWithSubstance({
   }
 
   return (
-    <section className={cn("bg-[#F4F0EC] py-2 pt-4", className)}>
+    <section className={cn("bg-[#FCFBF4] py-2 pt-4", className)}>
       {/* TITLE */}
       <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
         Best Sellers

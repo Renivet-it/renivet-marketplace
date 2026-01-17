@@ -1,8 +1,3 @@
-import React from "react";
-import { cn } from "@/lib/utils";
-import { HomeShopByCategory } from "@/lib/validations";
-import Image from "next/image";
-import Link from "next/link";
 import {
     Carousel,
     CarouselContent,
@@ -10,6 +5,11 @@ import {
     CarouselNext,
     CarouselPrevious,
 } from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
+import { HomeShopByCategory } from "@/lib/validations";
+import Image from "next/image";
+import Link from "next/link";
+import React from "react";
 
 interface PageProps extends GenericProps {
     shopByCategories: HomeShopByCategory[];
@@ -25,24 +25,24 @@ export function ElevateYourLooks({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-12 bg-[#F4F0EC]",
+                "flex w-full justify-center bg-[#FCFBF4] py-12",
                 className
             )}
             {...props}
         >
-            <div className="w-full max-w-screen-2xl mx-auto px-4 relative">
+            <div className="relative mx-auto w-full max-w-screen-2xl px-4">
                 {/* Title */}
-                <h4 className="text-center text-3xl font-bold text-gray-900 mb-12">
+                <h4 className="mb-12 text-center text-3xl font-bold text-gray-900">
                     {title}
                 </h4>
 
                 {/* Carousel */}
-                <div className="px-2 relative">
+                <div className="relative px-2">
                     <Carousel
                         opts={{
                             align: "start",
                             loop: true,
-                            slidesToScroll: "auto"
+                            slidesToScroll: "auto",
                         }}
                         className="w-full"
                     >
@@ -50,17 +50,20 @@ export function ElevateYourLooks({
                             {shopByCategories.map((category, index) => (
                                 <CarouselItem
                                     key={index}
-                                    className="pl-2 basis-1/3 sm:basis-1/4 md:basis-1/5 lg:basis-1/6 min-w-0"
+                                    className="min-w-0 basis-1/3 pl-2 sm:basis-1/4 md:basis-1/5 lg:basis-1/6"
                                 >
                                     <Link
                                         href={category.url || "/shop"}
-                                        className="group flex flex-col items-center w-full px-1"
+                                        className="group flex w-full flex-col items-center px-1"
                                     >
-                                        <div className="rounded-full overflow-hidden w-full aspect-square mb-4">
-                                            <div className="rounded-full overflow-hidden w-full h-full">
+                                        <div className="mb-4 aspect-square w-full overflow-hidden rounded-full">
+                                            <div className="h-full w-full overflow-hidden rounded-full">
                                                 <Image
                                                     src={category.imageUrl}
-                                                    alt={category.title || "Category"}
+                                                    alt={
+                                                        category.title ||
+                                                        "Category"
+                                                    }
                                                     width={176}
                                                     height={176}
                                                     sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, 160px"
@@ -69,15 +72,15 @@ export function ElevateYourLooks({
                                                 />
                                             </div>
                                         </div>
-                                        <p className="text-lg font-medium uppercase text-gray-800 sm:text-sm text-center">
+                                        <p className="text-center text-lg font-medium uppercase text-gray-800 sm:text-sm">
                                             {category.title || "Category"}
                                         </p>
                                     </Link>
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
-                        <CarouselPrevious className="absolute left-0 -translate-x-6 top-1/2 -translate-y-1/2 hidden md:flex" />
-                        <CarouselNext className="absolute right-0 translate-x-6 top-1/2 -translate-y-1/2 hidden md:flex" />
+                        <CarouselPrevious className="absolute left-0 top-1/2 hidden -translate-x-6 -translate-y-1/2 md:flex" />
+                        <CarouselNext className="absolute right-0 top-1/2 hidden -translate-y-1/2 translate-x-6 md:flex" />
                     </Carousel>
                 </div>
             </div>

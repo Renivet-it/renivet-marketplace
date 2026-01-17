@@ -14,7 +14,10 @@ interface PageProps extends GenericProps {
 
 export function DollBanner({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full lg:pb-20 bg-[#F4F0EC]", className)} {...props}>
+        <section
+            className={cn("w-full bg-[#FCFBF4] lg:pb-20", className)}
+            {...props}
+        >
             <Carousel
                 opts={{
                     align: "start",
@@ -25,30 +28,32 @@ export function DollBanner({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full bg-[#F4F0EC] lg:h-[600px]"
+                className="w-full bg-[#FCFBF4] lg:h-[600px]"
             >
                 <CarouselContent className="h-full">
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full pl-0">
-                            <div className="relative w-full h-full">
+                            <div className="relative h-full w-full">
                                 <Image
                                     src={item.imageUrl}
                                     alt={item.title}
                                     width={1440}
                                     height={600}
-                                    className="w-full h-full object-cover"
+                                    className="h-full w-full object-cover"
                                     priority={index === 0}
                                     style={{
-                                        objectPosition: "center center"
+                                        objectPosition: "center center",
                                     }}
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <Button
                                         size="lg"
-                                        className="bg-black text-white font-semibold uppercase rounded-full hover:bg-gray-800 py-3 px-8"
+                                        className="rounded-full bg-black px-8 py-3 font-semibold uppercase text-white hover:bg-gray-800"
                                         asChild
                                     >
-                                        <Link href={item.url || "/shop"}>Shop Now</Link>
+                                        <Link href={item.url || "/shop"}>
+                                            Shop Now
+                                        </Link>
                                     </Button>
                                 </div>
                             </div>

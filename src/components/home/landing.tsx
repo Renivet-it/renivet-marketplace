@@ -121,7 +121,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             asChild
                                         >
                                             <Link href={item.url || "/shop"}>
-                                                {">"} Shop With Purpose
+                                                Shop With Purpose
                                             </Link>
                                         </Button>
                                     </div>
@@ -205,7 +205,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             href={category.href}
                             className="flex min-w-[60px] flex-col items-center"
                         >
-                            <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[#F4F0EC] shadow-sm">
+                            <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[#FCFBF4] shadow-sm">
                                 <Image
                                     src={category.imageUrl}
                                     alt={category.name}

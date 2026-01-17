@@ -96,7 +96,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             asChild
                                         >
                                             <Link href={item.url || pathname}>
-                                                {">"} Shop With Purpose
+                                                Shop With Purpose
                                             </Link>
                                         </Button>
                                     </div>
@@ -134,7 +134,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             >
                                 <div
                                     className={cn(
-                                        "relative h-14 w-14 overflow-hidden rounded-full bg-[#F4F0EC] transition",
+                                        "relative h-14 w-14 overflow-hidden rounded-full bg-[#FCFBF4] transition",
                                         isActive &&
                                             "scale-105 ring-2 ring-black"
                                     )}
@@ -189,7 +189,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             className="group relative inline-flex items-center justify-center overflow-hidden border border-black px-8 py-3 text-sm font-medium text-black"
                         >
                             <span className="relative z-10 transition group-hover:text-white">
-                               Shop With Purpose
+                                Shop With Purpose
                             </span>
                             <span className="absolute inset-0 translate-y-full bg-black transition-transform duration-300 group-hover:translate-y-0" />
                         </Link>

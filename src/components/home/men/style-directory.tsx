@@ -23,7 +23,7 @@ export function StyleDirectory({
     return (
         <section
             className={cn(
-                "flex w-full justify-center py-6 bg-[#F4F0EC]",
+                "flex w-full justify-center py-6 bg-[#FCFBF4]",
                 className
             )}
             {...props}

@@ -14,10 +14,13 @@ interface PageProps extends GenericProps {
 
 export function BrandSection({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full pt-2 pb-6 md:pt-4 bg-[#F4F0EC]", className)} {...props}>
-            <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-2">
- Timeless Pieces for Thoughtful Homes
-</h2>
+        <section
+            className={cn("w-full bg-[#FCFBF4] pb-6 pt-2 md:pt-4", className)}
+            {...props}
+        >
+            <h2 className="mb-2 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+                Timeless Pieces for Thoughtful Homes
+            </h2>
             <Carousel
                 opts={{
                     align: "start",
@@ -28,7 +31,7 @@ export function BrandSection({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full h-auto md:h-[700px]"
+                className="h-auto w-full md:h-[700px]"
             >
                 <CarouselContent
                     classNames={{
@@ -38,13 +41,16 @@ export function BrandSection({ className, banners, ...props }: PageProps) {
                 >
                     {banners.map((item, index) => (
                         <CarouselItem key={index} className="h-full p-0">
-                            <div className="relative w-full aspect-[1400/700]">
-                                <Link href={item.url || "/shop"} className="block w-full h-full">
+                            <div className="relative aspect-[1400/700] w-full">
+                                <Link
+                                    href={item.url || "/shop"}
+                                    className="block h-full w-full"
+                                >
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
                                         fill
-                                        className="object-cover w-full h-full brightness-100"
+                                        className="h-full w-full object-cover brightness-100"
                                         priority={index === 0}
                                         sizes="(max-width: 768px) 100vw,1400px"
                                     />

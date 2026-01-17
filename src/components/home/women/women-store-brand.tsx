@@ -25,7 +25,7 @@ export function BrandProducts({
     return (
         <section
             className={cn(
-                "flex w-full bg-[#F4F0EC] justify-center py-5 md:px-8 md:py-10",
+                "flex w-full justify-center bg-[#FCFBF4] py-5 md:px-8 md:py-10",
                 className
             )}
             {...props}
@@ -52,7 +52,7 @@ export function BrandProducts({
                 </div>
             </div>
             <div className="hidden w-full max-w-5xl md:block xl:max-w-[100rem]">
-                <div className="flex justify-center gap-2 mb-6">
+                <div className="mb-6 flex justify-center gap-2">
                     <h2
                         className={cn(
                             "text-xl sm:text-3xl",
@@ -74,7 +74,7 @@ export function BrandProducts({
                         align: "start",
                     }}
                 >
-                    <CarouselContent className="-ml-2 md:-ml-4 bg-[#F4F0EC]">
+                    <CarouselContent className="-ml-2 bg-[#FCFBF4] md:-ml-4">
                         {brandProducts.map((item, index) => (
                             <CarouselItem
                                 key={index}
@@ -85,15 +85,15 @@ export function BrandProducts({
                                     className="block"
                                 >
                                     {/* Brand Name Above Image */}
-                                    <div className="text-center mb-2">
+                                    <div className="mb-2 text-center">
                                         <span className="text-lg font-semibold text-gray-900">
-                                            { `Brand ${index + 1}`}
+                                            {`Brand ${index + 1}`}
                                         </span>
                                     </div>
                                     <div className="aspect-[3/4] overflow-hidden">
                                         <Image
                                             src={item.imageUrl}
-                                            alt={ `Brand Product ${index + 1}`}
+                                            alt={`Brand Product ${index + 1}`}
                                             width={300}
                                             height={400}
                                             quality={90}
@@ -120,7 +120,7 @@ function BrandCard({ product }: { product: HomeBrandProduct }) {
             className="relative w-[200px] flex-shrink-0 md:w-auto"
         >
             {/* Brand Name Above Image */}
-            <div className="text-center mb-2">
+            <div className="mb-2 text-center">
                 <span className="text-lg font-semibold text-gray-900">
                     {"Brand"}
                 </span>

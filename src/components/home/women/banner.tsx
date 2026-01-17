@@ -96,7 +96,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             asChild
                                         >
                                             <Link href={item.url || pathname}>
-                                                {">"} Shop With Purpose
+                                                Shop With Purpose
                                             </Link>
                                         </Button>
                                     </div>
@@ -134,7 +134,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             >
                                 <div
                                     className={cn(
-                                        "relative h-14 w-14 overflow-hidden rounded-full bg-[#F4F0EC] transition",
+                                        "relative h-14 w-14 overflow-hidden rounded-full bg-[#FCFBF4] transition",
                                         isActive &&
                                             "scale-105 ring-2 ring-black"
                                     )}
