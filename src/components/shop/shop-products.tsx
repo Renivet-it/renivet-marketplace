@@ -90,6 +90,7 @@ export function ShopProducts({
         "sortOrder",
         parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
     );
+    const [minDiscount] = useQueryState("minDiscount", parseAsInteger);
 
     const {
         data: { data: products, count },
@@ -114,6 +115,7 @@ export function ShopProducts({
             sortOrder,
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
+            minDiscount: minDiscount ? Number(minDiscount) : undefined,
         },
         { initialData }
     );

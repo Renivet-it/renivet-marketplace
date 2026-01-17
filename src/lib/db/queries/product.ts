@@ -553,6 +553,7 @@ class ProductQuery {
         productVisiblity,
         colors,
         sizes,
+        minDiscount,
     }: {
         limit: number;
         page: number;
@@ -574,6 +575,7 @@ class ProductQuery {
         productVisiblity?: Product["productVisiblityFilter"];
         colors?: string[];
         sizes?: string[];
+        minDiscount?: number | null;
     }) {
         // --- Price conversions ---
         minPrice = !!minPrice
@@ -739,6 +741,36 @@ class ProductQuery {
               AND LOWER(item.name) IN (${sql.join(normalizedSizes!, sql`, `)})
           )
         `
+                : undefined,
+            // Discount filter: only show products with discount >= minDiscount%
+            // Discount = ((compare_at_price - price) / compare_at_price) * 100
+            minDiscount !== undefined && minDiscount !== null && minDiscount > 0
+                ? sql`(
+                    -- Product-level discount check (for products without variants)
+                    (
+                        COALESCE(${products.compareAtPrice}, 0) > 0
+                        AND COALESCE(${products.price}, 0) > 0
+                        AND COALESCE(${products.compareAtPrice}, 0) > COALESCE(${products.price}, 0)
+                        AND (
+                            (COALESCE(${products.compareAtPrice}, 0) - COALESCE(${products.price}, 0))::float 
+                            / COALESCE(${products.compareAtPrice}, 1)::float * 100
+                        ) >= ${minDiscount}
+                    )
+                    OR
+                    -- Variant-level discount check (for products with variants)
+                    EXISTS (
+                        SELECT 1 FROM product_variants pv
+                        WHERE pv.product_id = ${products.id}
+                        AND pv.is_deleted = false
+                        AND COALESCE(pv.compare_at_price, 0) > 0
+                        AND COALESCE(pv.price, 0) > 0
+                        AND COALESCE(pv.compare_at_price, 0) > COALESCE(pv.price, 0)
+                        AND (
+                            (COALESCE(pv.compare_at_price, 0) - COALESCE(pv.price, 0))::float 
+                            / COALESCE(pv.compare_at_price, 1)::float * 100
+                        ) >= ${minDiscount}
+                    )
+                )`
                 : undefined,
         ].filter(Boolean);
 

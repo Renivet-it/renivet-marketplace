@@ -358,7 +358,13 @@ const getColorHex = (colorName: string): string => {
 };
 
 // --- TYPE DEFINITIONS ---
-type ActiveFilter = "category" | "brand" | "price" | "color" | "size";
+type ActiveFilter =
+    | "category"
+    | "brand"
+    | "price"
+    | "discount"
+    | "color"
+    | "size";
 
 interface GenericProps {
     className?: string;
@@ -448,6 +454,11 @@ export function ShopFilters({
                                 onClick={() => setActiveFilter("color")}
                             />
                             <FilterNavButton
+                                label="Discount"
+                                isActive={activeFilter === "discount"}
+                                onClick={() => setActiveFilter("discount")}
+                            />
+                            <FilterNavButton
                                 label="Size"
                                 isActive={activeFilter === "size"}
                                 onClick={() => setActiveFilter("size")}
@@ -466,6 +477,7 @@ export function ShopFilters({
                                 />
                             )}
                             {activeFilter === "price" && <PriceFilter />}
+                            {activeFilter === "discount" && <DiscountFilter />}
                             {activeFilter === "color" && (
                                 <ColorFilter colors={colors} />
                             )}
@@ -575,6 +587,8 @@ function ShopFiltersSection({
             <BrandFilter brandsMeta={brandsMeta} />
             <Separator />
             <PriceFilter />
+            <Separator />
+            <DiscountFilter />
             <Separator />
             <ColorFilter colors={colors} />
             <Separator />
@@ -814,6 +828,55 @@ function PriceFilter() {
                 {formatPriceTag(priceRange[1])}
                 {priceRange[1] === 10000 && "+"}
             </p>
+        </div>
+    );
+}
+
+const DISCOUNT_OPTIONS = [
+    { value: 10, label: "10% and above" },
+    { value: 20, label: "20% and above" },
+    { value: 30, label: "30% and above" },
+    { value: 40, label: "40% and above" },
+    { value: 50, label: "50% and above" },
+];
+
+function DiscountFilter() {
+    const [minDiscount, setMinDiscount] = useQueryState(
+        "minDiscount",
+        parseAsInteger
+    );
+    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+
+    return (
+        <div className="space-y-2">
+            <Label className="font-semibold uppercase">Discount Range</Label>
+            <RadioGroup
+                value={minDiscount?.toString() || ""}
+                onValueChange={(value) => {
+                    const numValue = parseInt(value, 10);
+                    setMinDiscount(numValue === minDiscount ? null : numValue);
+                    setPage(1);
+                }}
+                className="space-y-2"
+            >
+                {DISCOUNT_OPTIONS.map((option) => (
+                    <div
+                        key={option.value}
+                        className="flex items-center space-x-2"
+                    >
+                        <RadioGroupItem
+                            value={option.value.toString()}
+                            id={`discount-${option.value}`}
+                        />
+                        <Label
+                            htmlFor={`discount-${option.value}`}
+                            className="font-normal"
+                        >
+                            {option.label}
+                        </Label>
+                    </div>
+                ))}
+            </RadioGroup>
         </div>
     );
 }
