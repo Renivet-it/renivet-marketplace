@@ -104,6 +104,7 @@ export const productsRouter = createTRPCRouter({
                     productSchema.shape.isHomeLoveTheseProducts,
                 colors: z.array(z.string()).optional(),
                 sizes: z.array(z.string()).optional(),
+                minDiscount: z.number().min(0).max(100).optional(),
             })
         )
         .query(async ({ input, ctx }) => {
