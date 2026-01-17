@@ -189,7 +189,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             className="group relative inline-flex items-center justify-center overflow-hidden border border-black px-8 py-3 text-sm font-medium text-black"
                         >
                             <span className="relative z-10 transition group-hover:text-white">
-                                Shop {pathname.replace("/", "") || "Now"}
+                                Shop With Purpose
                             </span>
                             <span className="absolute inset-0 translate-y-full bg-black transition-transform duration-300 group-hover:translate-y-0" />
                         </Link>
