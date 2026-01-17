@@ -791,6 +791,42 @@ class ProductQuery {
             );
         }
 
+        // 🟪 Step 2.5: Sort by discount percentage when discount filter is applied
+        // Products with lower discount (e.g., 20%) appear first, then gradually increase
+        if (
+            minDiscount !== undefined &&
+            minDiscount !== null &&
+            minDiscount > 0
+        ) {
+            orderBy.push(
+                sql`
+                    COALESCE(
+                        -- Calculate discount % from product-level pricing
+                        CASE 
+                            WHEN COALESCE(${products.compareAtPrice}, 0) > 0 
+                                AND COALESCE(${products.price}, 0) > 0 
+                                AND COALESCE(${products.compareAtPrice}, 0) > COALESCE(${products.price}, 0)
+                            THEN (COALESCE(${products.compareAtPrice}, 0) - COALESCE(${products.price}, 0))::float 
+                                / COALESCE(${products.compareAtPrice}, 1)::float * 100
+                            ELSE NULL
+                        END,
+                        -- Or calculate from variant with highest discount
+                        (
+                            SELECT MAX(
+                                (COALESCE(pv.compare_at_price, 0) - COALESCE(pv.price, 0))::float 
+                                / COALESCE(pv.compare_at_price, 1)::float * 100
+                            )
+                            FROM product_variants pv
+                            WHERE pv.product_id = ${products.id}
+                            AND pv.is_deleted = false
+                            AND COALESCE(pv.compare_at_price, 0) > COALESCE(pv.price, 0)
+                        ),
+                        0
+                    ) ASC NULLS LAST
+                `
+            );
+        }
+
         // 🟨 Step 3: user-selected sorting (price or createdAt)
         if (sortBy && sortOrder) {
             orderBy.push(
