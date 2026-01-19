@@ -892,63 +892,356 @@ function ColorFilter({
     );
     const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [showAllColors, setShowAllColors] = useState(false);
-    const INITIAL_VISIBLE_COUNT = 7;
+    const INITIAL_VISIBLE_COUNT = 10;
+
+    // Main color categories with their hex codes
+    const MAIN_CATEGORIES = [
+        {
+            name: "Black",
+            hex: "#000000",
+            keywords: ["black", "charcoal", "ebony", "jet", "onyx", "midnight"],
+        },
+        {
+            name: "White",
+            hex: "#FFFFFF",
+            keywords: [
+                "white",
+                "ivory",
+                "cream",
+                "off-white",
+                "offwhite",
+                "snow",
+                "pearl",
+                "bright white",
+            ],
+        },
+        {
+            name: "Grey",
+            hex: "#808080",
+            keywords: [
+                "grey",
+                "gray",
+                "silver",
+                "ash",
+                "slate",
+                "stone",
+                "smoke",
+            ],
+        },
+        {
+            name: "Blue",
+            hex: "#0066CC",
+            keywords: [
+                "blue",
+                "azure",
+                "cobalt",
+                "cyan",
+                "denim",
+                "indigo",
+                "powder",
+                "royal",
+                "sky",
+                "turquoise",
+            ],
+        },
+        {
+            name: "Navy",
+            hex: "#000080",
+            keywords: ["navy", "midnight blue", "dark blue"],
+        },
+        {
+            name: "Green",
+            hex: "#228B22",
+            keywords: [
+                "green",
+                "emerald",
+                "forest",
+                "lime",
+                "mint",
+                "olive",
+                "sage",
+                "teal",
+                "khaki",
+                "bamboo",
+                "bottle",
+                "pastel green",
+            ],
+        },
+        {
+            name: "Red",
+            hex: "#FF0000",
+            keywords: [
+                "red",
+                "crimson",
+                "scarlet",
+                "cherry",
+                "ruby",
+                "vermilion",
+                "tomato",
+            ],
+        },
+        {
+            name: "Pink",
+            hex: "#FFC0CB",
+            keywords: [
+                "pink",
+                "rose",
+                "blush",
+                "coral",
+                "salmon",
+                "fuchsia",
+                "magenta",
+                "dusty pink",
+                "baby pink",
+                "hot pink",
+            ],
+        },
+        {
+            name: "Purple",
+            hex: "#800080",
+            keywords: [
+                "purple",
+                "violet",
+                "lavender",
+                "lilac",
+                "plum",
+                "mauve",
+                "orchid",
+                "grape",
+            ],
+        },
+        {
+            name: "Orange",
+            hex: "#FFA500",
+            keywords: ["orange", "tangerine", "rust", "terracotta", "apricot"],
+        },
+        {
+            name: "Yellow",
+            hex: "#FFFF00",
+            keywords: [
+                "yellow",
+                "gold",
+                "mustard",
+                "lemon",
+                "canary",
+                "marigold",
+                "amber",
+            ],
+        },
+        {
+            name: "Brown",
+            hex: "#8B4513",
+            keywords: [
+                "brown",
+                "tan",
+                "chocolate",
+                "coffee",
+                "mocha",
+                "chestnut",
+                "camel",
+                "bronze",
+                "copper",
+                "sienna",
+                "umber",
+                "walnut",
+            ],
+        },
+        {
+            name: "Beige",
+            hex: "#F5F5DC",
+            keywords: [
+                "beige",
+                "sand",
+                "nude",
+                "oatmeal",
+                "taupe",
+                "fawn",
+                "ecru",
+            ],
+        },
+        {
+            name: "Maroon",
+            hex: "#800000",
+            keywords: ["maroon", "burgundy", "wine", "oxblood", "dark red"],
+        },
+        { name: "Peach", hex: "#FFCBA4", keywords: ["peach"] },
+        { name: "Multi", hex: "#E5E5E5", keywords: [] },
+    ];
+
+    // Map each raw color to its main category
+    const getMainCategory = (colorName: string): string => {
+        const normalized = colorName.toLowerCase().trim();
+
+        // Check for multi-color indicators first
+        if (
+            normalized.includes("&") ||
+            normalized.includes(" and ") ||
+            (normalized.includes("-") && normalized.split("-").length > 2) ||
+            normalized.includes("multi") ||
+            normalized.includes("print") ||
+            normalized.includes("stripe") ||
+            normalized.includes("check") ||
+            normalized.includes("pattern")
+        ) {
+            return "Multi";
+        }
+
+        // Find matching category by keywords
+        for (const category of MAIN_CATEGORIES) {
+            for (const keyword of category.keywords) {
+                if (normalized.includes(keyword.toLowerCase())) {
+                    return category.name;
+                }
+            }
+        }
+
+        // FUTURE-PROOF: Analyze the hex color to determine category
+        // This handles any new/random color names by checking their actual color
+        try {
+            const hex = getColorHex(colorName);
+            if (hex && hex !== "#E5E5E5" && hex !== "#CCCCCC") {
+                // Parse hex to RGB
+                const r = parseInt(hex.substring(1, 3), 16);
+                const g = parseInt(hex.substring(3, 5), 16);
+                const b = parseInt(hex.substring(5, 7), 16);
+
+                // Calculate hue, saturation, lightness
+                const max = Math.max(r, g, b) / 255;
+                const min = Math.min(r, g, b) / 255;
+                const l = (max + min) / 2;
+                const d = max - min;
+                const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+
+                let h = 0;
+                if (d !== 0) {
+                    if (max === r / 255) h = ((g / 255 - b / 255) / d) % 6;
+                    else if (max === g / 255) h = (b / 255 - r / 255) / d + 2;
+                    else h = (r / 255 - g / 255) / d + 4;
+                    h = Math.round(h * 60);
+                    if (h < 0) h += 360;
+                }
+
+                // Determine category based on HSL values
+                if (l < 0.15) return "Black";
+                if (l > 0.9 && s < 0.1) return "White";
+                if (s < 0.1) return "Grey";
+
+                // Determine by hue
+                if (h >= 0 && h < 15) return "Red";
+                if (h >= 15 && h < 45) return "Orange";
+                if (h >= 45 && h < 70) return "Yellow";
+                if (h >= 70 && h < 170) return "Green";
+                if (h >= 170 && h < 200) return l < 0.3 ? "Navy" : "Blue";
+                if (h >= 200 && h < 260) return l < 0.25 ? "Navy" : "Blue";
+                if (h >= 260 && h < 290) return "Purple";
+                if (h >= 290 && h < 340) return "Pink";
+                if (h >= 340) return l < 0.35 ? "Maroon" : "Red";
+
+                // Brown/Beige detection (low saturation oranges/reds)
+                if (h >= 15 && h < 45 && s < 0.5)
+                    return l > 0.6 ? "Beige" : "Brown";
+            }
+        } catch {
+            // If hex detection fails, continue to fallback
+        }
+
+        return "Multi";
+    };
+
+    // Group colors by main category
+    const groupedColors = useMemo(() => {
+        const groups: Record<string, { rawColors: string[]; count: number }> =
+            {};
+
+        for (const color of colors) {
+            const category = getMainCategory(color.name);
+            if (!groups[category]) {
+                groups[category] = { rawColors: [], count: 0 };
+            }
+            groups[category].rawColors.push(color.name);
+            groups[category].count += color.count;
+        }
+
+        // Convert to array and sort by count descending
+        return MAIN_CATEGORIES.filter((cat) => groups[cat.name])
+            .map((cat) => ({
+                name: cat.name,
+                hex: cat.hex,
+                rawColors: groups[cat.name]?.rawColors || [],
+                count: groups[cat.name]?.count || 0,
+            }))
+            .sort((a, b) => b.count - a.count);
+    }, [colors]);
+
     const visibleColors = showAllColors
-        ? colors
-        : colors.slice(0, INITIAL_VISIBLE_COUNT);
-    const remainingCount = colors.length - INITIAL_VISIBLE_COUNT;
+        ? groupedColors
+        : groupedColors.slice(0, INITIAL_VISIBLE_COUNT);
+    const remainingCount = groupedColors.length - INITIAL_VISIBLE_COUNT;
+
+    // Check if a main category is selected (any of its raw colors are in the filter)
+    const isCategorySelected = (rawColors: string[]) => {
+        return rawColors.some((rc) => colorFilters.includes(rc));
+    };
+
+    // Toggle all raw colors for a category
+    const toggleCategory = (rawColors: string[]) => {
+        const isSelected = isCategorySelected(rawColors);
+        if (isSelected) {
+            // Remove all raw colors of this category
+            setColorFilters(colorFilters.filter((c) => !rawColors.includes(c)));
+        } else {
+            // Add all raw colors of this category
+            const newFilters = [
+                ...colorFilters,
+                ...rawColors.filter((rc) => !colorFilters.includes(rc)),
+            ];
+            setColorFilters(newFilters);
+        }
+        setPage(1);
+    };
 
     return (
         <div className="space-y-3">
             <Label className="font-semibold uppercase">Color</Label>
             <div className="space-y-2">
-                {visibleColors.map((color) => {
-                    const hex = getColorHex(color.name);
-                    const isSelected = colorFilters.includes(color.name);
+                {visibleColors.map((category) => {
+                    const isSelected = isCategorySelected(category.rawColors);
                     return (
                         <div
-                            key={color.name}
+                            key={category.name}
                             className="flex cursor-pointer items-center gap-3"
-                            onClick={() => {
-                                setColorFilters(
-                                    isSelected
-                                        ? colorFilters.filter(
-                                              (c) => c !== color.name
-                                          )
-                                        : [...colorFilters, color.name]
-                                );
-                                setPage(1);
-                            }}
+                            onClick={() => toggleCategory(category.rawColors)}
                         >
                             <Checkbox
                                 checked={isSelected}
-                                onCheckedChange={() => {
-                                    setColorFilters(
-                                        isSelected
-                                            ? colorFilters.filter(
-                                                  (c) => c !== color.name
-                                              )
-                                            : [...colorFilters, color.name]
-                                    );
-                                    setPage(1);
-                                }}
+                                onCheckedChange={() =>
+                                    toggleCategory(category.rawColors)
+                                }
                                 className="size-4 rounded border-gray-300"
                             />
                             <span
-                                className="size-5 shrink-0 rounded-full border border-gray-200"
-                                style={{ backgroundColor: hex }}
+                                className={cn(
+                                    "size-5 shrink-0 rounded-full border border-gray-200",
+                                    category.name === "Multi" &&
+                                        "bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400"
+                                )}
+                                style={
+                                    category.name !== "Multi"
+                                        ? { backgroundColor: category.hex }
+                                        : undefined
+                                }
                             />
                             <span className="text-sm capitalize text-gray-700">
-                                {color.name}
+                                {category.name}
                             </span>
                             <span className="text-sm text-gray-400">
-                                ({color.count.toLocaleString()})
+                                ({category.count.toLocaleString()})
                             </span>
                         </div>
                     );
                 })}
             </div>
-            {colors.length > INITIAL_VISIBLE_COUNT && (
+            {groupedColors.length > INITIAL_VISIBLE_COUNT && (
                 <button
                     className="text-sm font-medium text-accent hover:underline"
                     onClick={() => setShowAllColors(!showAllColors)}
