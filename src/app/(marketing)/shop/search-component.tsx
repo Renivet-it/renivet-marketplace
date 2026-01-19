@@ -145,7 +145,7 @@ export function SearchableProductTypes({
             <div
                 className={cn(
                     "scrollbar-hide flex gap-2 overflow-x-auto pb-2",
-                    isDesktop && "flex-nowrap"
+                    isDesktop && (!showAll ? "flex-nowrap" : "flex-wrap")
                 )}
             >
                 <a
