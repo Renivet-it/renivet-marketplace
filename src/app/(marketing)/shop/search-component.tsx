@@ -42,6 +42,7 @@ export function SearchableProductTypes({
         productsProp ?? initialProducts ?? []
     );
     const [loading, setLoading] = useState(false);
+    const [showAll, setShowAll] = useState(false);
 
     // 2) sync when parent updates the prop (e.g. full page navigation / SSR)
     useEffect(() => {
@@ -144,7 +145,7 @@ export function SearchableProductTypes({
             <div
                 className={cn(
                     "scrollbar-hide flex gap-2 overflow-x-auto pb-2",
-                    isDesktop && "flex-nowrap"
+                    isDesktop && (!showAll ? "flex-nowrap" : "flex-wrap")
                 )}
             >
                 <a
@@ -162,19 +163,32 @@ export function SearchableProductTypes({
                         Loading...
                     </p>
                 ) : activeTypes.length > 0 ? (
-                    activeTypes.map((type) => (
-                        <a
-                            key={type.id}
-                            href={`?productTypeId=${type.id}`}
-                            className={cn(
-                                "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
-                                productTypeId === type.id &&
-                                    "border-black bg-black text-white"
-                            )}
-                        >
-                            {type.displayName}
-                        </a>
-                    ))
+                    <>
+                        {(isDesktop && !showAll
+                            ? activeTypes.slice(0, 6)
+                            : activeTypes
+                        ).map((type) => (
+                            <a
+                                key={type.id}
+                                href={`?productTypeId=${type.id}`}
+                                className={cn(
+                                    "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                                    productTypeId === type.id &&
+                                        "border-black bg-black text-white"
+                                )}
+                            >
+                                {type.displayName}
+                            </a>
+                        ))}
+                        {isDesktop && activeTypes.length > 6 && (
+                            <button
+                                onClick={() => setShowAll(!showAll)}
+                                className="whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100"
+                            >
+                                {showAll ? "Show Less" : "Show More"}
+                            </button>
+                        )}
+                    </>
                 ) : (
                     <p className="px-2 text-sm text-muted-foreground">
                         No related types
