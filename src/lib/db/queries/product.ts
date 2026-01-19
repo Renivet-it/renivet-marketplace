@@ -554,6 +554,7 @@ class ProductQuery {
         colors,
         sizes,
         minDiscount,
+        prioritizeBestSellers,
     }: {
         limit: number;
         page: number;
@@ -576,6 +577,7 @@ class ProductQuery {
         colors?: string[];
         sizes?: string[];
         minDiscount?: number | null;
+        prioritizeBestSellers?: boolean;
     }) {
         // --- Price conversions ---
         minPrice = !!minPrice
@@ -776,6 +778,13 @@ class ProductQuery {
 
         // --- OrderBy construction ---
         const orderBy: any[] = [];
+
+        // 🌟 Step 0: prioritize best sellers (only on page 1)
+        if (prioritizeBestSellers) {
+            orderBy.push(
+                sql`CASE WHEN ${products.isBestSeller} = true THEN 0 ELSE 1 END ASC`
+            );
+        }
 
         // 🟦 Step 1: prioritize matched brand
         if (topBrandMatch) {

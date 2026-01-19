@@ -116,6 +116,7 @@ export function ShopProducts({
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
             minDiscount: minDiscount ? Number(minDiscount) : undefined,
+            prioritizeBestSellers: page === 1,
         },
         { initialData }
     );

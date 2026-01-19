@@ -59,6 +59,7 @@ export default async function Page({ searchParams }: PageProps) {
             sortOrder: params.sortOrder,
             colors: params.colors?.split(","),
             sizes: params.sizes?.split(","),
+            prioritizeBestSellers: parseInt(params.page || "1") === 1,
         }),
     ]);
 
@@ -360,6 +361,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             sortOrder,
             colors,
             sizes,
+            prioritizeBestSellers: page === 1,
         }),
         userId ? userWishlistCache.get(userId) : undefined,
     ]);

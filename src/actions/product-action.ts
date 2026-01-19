@@ -1,12 +1,32 @@
 "use server";
 
-import { productQueries } from "@/lib/db/queries";
 import { db } from "@/lib/db";
-import { womenPageFeaturedProducts, products, menPageFeaturedProducts, womenStyleWithSubstanceMiddlePageSection, menCuratedHerEssence, homeandlivingNewArrival, homeandlivingTopPicks, kidsFreshCollectionSection, beautyTopPicks, beautyNewArrivals, homeNewArrivals, newProductEventPage, homeProductSection, homeProductLoveTheseSection, homeProductMayAlsoLikeThese, homeProductPageList } from "@/lib/db/schema";
+import { productQueries } from "@/lib/db/queries";
+import {
+    beautyNewArrivals,
+    beautyTopPicks,
+    homeandlivingNewArrival,
+    homeandlivingTopPicks,
+    homeNewArrivals,
+    homeProductLoveTheseSection,
+    homeProductMayAlsoLikeThese,
+    homeProductPageList,
+    homeProductSection,
+    kidsFreshCollectionSection,
+    menCuratedHerEssence,
+    menPageFeaturedProducts,
+    newProductEventPage,
+    products,
+    womenPageFeaturedProducts,
+    womenStyleWithSubstanceMiddlePageSection,
+} from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function toggleFeaturedProduct(productId: string, isFeaturedWomen: boolean) {
+export async function toggleFeaturedProduct(
+    productId: string,
+    isFeaturedWomen: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -21,7 +41,8 @@ export async function toggleFeaturedProduct(productId: string, isFeaturedWomen: 
 
         if (isFeaturedWomen) {
             // Remove from featured products (soft delete) in womenPageFeaturedProducts
-            const result = await productQueries.removeWomenPageFeaturedProduct(productId);
+            const result =
+                await productQueries.removeWomenPageFeaturedProduct(productId);
             if (!result) {
                 return { success: false, error: "Featured product not found" };
             }
@@ -31,9 +52,12 @@ export async function toggleFeaturedProduct(productId: string, isFeaturedWomen: 
                 .update(products)
                 .set({ isFeaturedWomen: false })
                 .where(eq(products.id, productId));
-revalidatePath("/dashboard/general/products");
+            revalidatePath("/dashboard/general/products");
 
-            return { success: true, message: "Product removed from featured list" };
+            return {
+                success: true,
+                message: "Product removed from featured list",
+            };
         } else {
             // Check if product already exists and is not deleted in womenPageFeaturedProducts
             const existing = await db
@@ -54,7 +78,7 @@ revalidatePath("/dashboard/general/products");
                 .update(products)
                 .set({ isFeaturedWomen: true })
                 .where(eq(products.id, productId));
-revalidatePath("/dashboard/general/products");
+            revalidatePath("/dashboard/general/products");
             return { success: true, message: "Product added to featured list" };
         }
     } catch (error) {
@@ -63,7 +87,10 @@ revalidatePath("/dashboard/general/products");
     }
 }
 
-export async function menToggleFeaturedProduct(productId: string, isFeaturedMen: boolean) {
+export async function menToggleFeaturedProduct(
+    productId: string,
+    isFeaturedMen: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -78,7 +105,8 @@ export async function menToggleFeaturedProduct(productId: string, isFeaturedMen:
 
         if (isFeaturedMen) {
             // Remove from featured products (soft delete) in womenPageFeaturedProducts
-            const result = await productQueries.removeMenPageFeaturedProduct(productId);
+            const result =
+                await productQueries.removeMenPageFeaturedProduct(productId);
             if (!result) {
                 return { success: false, error: "Featured product not found" };
             }
@@ -88,8 +116,11 @@ export async function menToggleFeaturedProduct(productId: string, isFeaturedMen:
                 .update(products)
                 .set({ isFeaturedMen: false })
                 .where(eq(products.id, productId));
-revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from featured list" };
+            revalidatePath("/dashboard/general/products");
+            return {
+                success: true,
+                message: "Product removed from featured list",
+            };
         } else {
             // Check if product already exists and is not deleted in womenPageFeaturedProducts
             const existing = await db
@@ -110,7 +141,7 @@ revalidatePath("/dashboard/general/products");
                 .update(products)
                 .set({ isFeaturedMen: true })
                 .where(eq(products.id, productId));
-revalidatePath("/dashboard/general/products");
+            revalidatePath("/dashboard/general/products");
 
             return { success: true, message: "Product added to featured list" };
         }
@@ -119,7 +150,6 @@ revalidatePath("/dashboard/general/products");
         return { success: false, error: "Failed to update featured status" };
     }
 }
-
 
 // export async function toggleWomenStyleWithSubstance(productId: string, isStyleWithSubstanceWoMen: boolean) {
 //     try {
@@ -136,7 +166,6 @@ revalidatePath("/dashboard/general/products");
 
 //         if (isStyleWithSubstanceWoMen) {
 //             // Remove from featured products (soft delete)
-
 
 //                     const result = await db
 //                         .update(womenStyleWithSubstanceMiddlePageSection)
@@ -208,8 +237,10 @@ revalidatePath("/dashboard/general/products");
 //     }
 // }
 
-
-export async function toggleWomenStyleWithSubstance(productId: string, isStyleWithSubstanceWoMen: boolean) {
+export async function toggleWomenStyleWithSubstance(
+    productId: string,
+    isStyleWithSubstanceWoMen: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -227,13 +258,21 @@ export async function toggleWomenStyleWithSubstance(productId: string, isStyleWi
             const result = await db
                 .update(womenStyleWithSubstanceMiddlePageSection)
                 .set({ isDeleted: true, deletedAt: new Date() })
-                .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId))
+                .where(
+                    eq(
+                        womenStyleWithSubstanceMiddlePageSection.productId,
+                        productId
+                    )
+                )
                 .returning()
                 .then((res) => res[0]);
 
             // Check if the update affected any rows
             if (!result) {
-                return { success: false, error: "Product not found in Style With Substance section" };
+                return {
+                    success: false,
+                    error: "Product not found in Style With Substance section",
+                };
             }
 
             // Update isStyleWithSubstanceWoMen to false in products table
@@ -243,17 +282,28 @@ export async function toggleWomenStyleWithSubstance(productId: string, isStyleWi
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists in womenStyleWithSubstanceMiddlePageSection
             const existing = await db
                 .select()
                 .from(womenStyleWithSubstanceMiddlePageSection)
-                .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId))
+                .where(
+                    eq(
+                        womenStyleWithSubstanceMiddlePageSection.productId,
+                        productId
+                    )
+                )
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -264,7 +314,12 @@ export async function toggleWomenStyleWithSubstance(productId: string, isStyleWi
                         isDeleted: false,
                         deletedAt: null,
                     })
-                    .where(eq(womenStyleWithSubstanceMiddlePageSection.productId, productId));
+                    .where(
+                        eq(
+                            womenStyleWithSubstanceMiddlePageSection.productId,
+                            productId
+                        )
+                    );
             } else {
                 // Add new entry
                 await db
@@ -279,16 +334,24 @@ export async function toggleWomenStyleWithSubstance(productId: string, isStyleWi
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-export async function toggleMenStyleWithSubstance(productId: string, isFeatured: boolean) {
+export async function toggleMenStyleWithSubstance(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -307,7 +370,7 @@ export async function toggleMenStyleWithSubstance(productId: string, isFeatured:
                 .update(menCuratedHerEssence)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(menCuratedHerEssence.productId, productId));
 
@@ -322,7 +385,10 @@ export async function toggleMenStyleWithSubstance(productId: string, isFeatured:
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -332,7 +398,10 @@ export async function toggleMenStyleWithSubstance(productId: string, isFeatured:
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -341,13 +410,12 @@ export async function toggleMenStyleWithSubstance(productId: string, isFeatured:
                     .update(menCuratedHerEssence)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(menCuratedHerEssence.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(menCuratedHerEssence)
-                    .values({ productId });
+                await db.insert(menCuratedHerEssence).values({ productId });
             }
 
             // Update isStyleWithSubstanceMen to true in products table
@@ -357,16 +425,24 @@ export async function toggleMenStyleWithSubstance(productId: string, isFeatured:
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-export async function toggleKidsFetchSection(productId: string, isFeatured: boolean) {
+export async function toggleKidsFetchSection(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -385,7 +461,7 @@ export async function toggleKidsFetchSection(productId: string, isFeatured: bool
                 .update(kidsFreshCollectionSection)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(kidsFreshCollectionSection.productId, productId));
 
@@ -400,7 +476,10 @@ export async function toggleKidsFetchSection(productId: string, isFeatured: bool
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -410,7 +489,10 @@ export async function toggleKidsFetchSection(productId: string, isFeatured: bool
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -419,12 +501,13 @@ export async function toggleKidsFetchSection(productId: string, isFeatured: bool
                     .update(kidsFreshCollectionSection)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(kidsFreshCollectionSection.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(kidsFreshCollectionSection)
+                await db
+                    .insert(kidsFreshCollectionSection)
                     .values({ productId });
             }
 
@@ -435,16 +518,24 @@ export async function toggleKidsFetchSection(productId: string, isFeatured: bool
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-export async function toggleHomeAndLivingNewArrivalsSection(productId: string, isFeatured: boolean) {
+export async function toggleHomeAndLivingNewArrivalsSection(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -463,7 +554,7 @@ export async function toggleHomeAndLivingNewArrivalsSection(productId: string, i
                 .update(homeandlivingNewArrival)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(homeandlivingNewArrival.productId, productId));
 
@@ -478,7 +569,10 @@ export async function toggleHomeAndLivingNewArrivalsSection(productId: string, i
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -488,7 +582,10 @@ export async function toggleHomeAndLivingNewArrivalsSection(productId: string, i
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -497,13 +594,12 @@ export async function toggleHomeAndLivingNewArrivalsSection(productId: string, i
                     .update(homeandlivingNewArrival)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(homeandlivingNewArrival.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeandlivingNewArrival)
-                    .values({ productId });
+                await db.insert(homeandlivingNewArrival).values({ productId });
             }
 
             // Update isHomeAndLivingSectionNewArrival to true in products table
@@ -513,17 +609,24 @@ export async function toggleHomeAndLivingNewArrivalsSection(productId: string, i
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-
-export async function toggleHomeAndLivingTopPicksSection(productId: string, isFeatured: boolean) {
+export async function toggleHomeAndLivingTopPicksSection(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -542,7 +645,7 @@ export async function toggleHomeAndLivingTopPicksSection(productId: string, isFe
                 .update(homeandlivingTopPicks)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(homeandlivingTopPicks.productId, productId));
 
@@ -557,7 +660,10 @@ export async function toggleHomeAndLivingTopPicksSection(productId: string, isFe
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -567,7 +673,10 @@ export async function toggleHomeAndLivingTopPicksSection(productId: string, isFe
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -576,13 +685,12 @@ export async function toggleHomeAndLivingTopPicksSection(productId: string, isFe
                     .update(homeandlivingTopPicks)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(homeandlivingTopPicks.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeandlivingTopPicks)
-                    .values({ productId });
+                await db.insert(homeandlivingTopPicks).values({ productId });
             }
 
             // Update isHomeAndLivingSectionTopPicks to true in products table
@@ -592,20 +700,24 @@ export async function toggleHomeAndLivingTopPicksSection(productId: string, isFe
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-
-
-
-
-export async function toggleBeautyNewArrivalSection(productId: string, isFeatured: boolean) {
+export async function toggleBeautyNewArrivalSection(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -624,7 +736,7 @@ export async function toggleBeautyNewArrivalSection(productId: string, isFeature
                 .update(beautyNewArrivals)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(beautyNewArrivals.productId, productId));
 
@@ -639,7 +751,10 @@ export async function toggleBeautyNewArrivalSection(productId: string, isFeature
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -649,7 +764,10 @@ export async function toggleBeautyNewArrivalSection(productId: string, isFeature
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -658,13 +776,12 @@ export async function toggleBeautyNewArrivalSection(productId: string, isFeature
                     .update(beautyNewArrivals)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(beautyNewArrivals.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(beautyNewArrivals)
-                    .values({ productId });
+                await db.insert(beautyNewArrivals).values({ productId });
             }
 
             // Update isBeautyNewArrival to true in products table
@@ -674,18 +791,24 @@ export async function toggleBeautyNewArrivalSection(productId: string, isFeature
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-
-
-export async function toggleBeautyTopPickSection(productId: string, isFeatured: boolean) {
+export async function toggleBeautyTopPickSection(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -704,7 +827,7 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
                 .update(beautyTopPicks)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(beautyTopPicks.productId, productId));
 
@@ -719,7 +842,10 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -729,7 +855,10 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -738,13 +867,12 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
                     .update(beautyTopPicks)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(beautyTopPicks.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(beautyTopPicks)
-                    .values({ productId });
+                await db.insert(beautyTopPicks).values({ productId });
             }
 
             // Update isBeautyTopPicks to true in products table
@@ -754,16 +882,24 @@ export async function toggleBeautyTopPickSection(productId: string, isFeatured: 
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-export async function toggleHomeHeroProduct(productId: string, isFeatured: boolean) {
+export async function toggleHomeHeroProduct(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -782,7 +918,7 @@ export async function toggleHomeHeroProduct(productId: string, isFeatured: boole
                 .update(homeProductSection)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(homeProductSection.productId, productId));
 
@@ -797,7 +933,10 @@ export async function toggleHomeHeroProduct(productId: string, isFeatured: boole
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -807,7 +946,10 @@ export async function toggleHomeHeroProduct(productId: string, isFeatured: boole
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -816,13 +958,12 @@ export async function toggleHomeHeroProduct(productId: string, isFeatured: boole
                     .update(homeProductSection)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(homeProductSection.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeProductSection)
-                    .values({ productId });
+                await db.insert(homeProductSection).values({ productId });
             }
 
             // Update ishomeProductSection to true in products table
@@ -832,16 +973,24 @@ export async function toggleHomeHeroProduct(productId: string, isFeatured: boole
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-export async function toggleHomeYouMayLoveProduct(productId: string, isFeatured: boolean) {
+export async function toggleHomeYouMayLoveProduct(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -860,7 +1009,7 @@ export async function toggleHomeYouMayLoveProduct(productId: string, isFeatured:
                 .update(homeProductLoveTheseSection)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(homeProductLoveTheseSection.productId, productId));
 
@@ -875,7 +1024,10 @@ export async function toggleHomeYouMayLoveProduct(productId: string, isFeatured:
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -885,7 +1037,10 @@ export async function toggleHomeYouMayLoveProduct(productId: string, isFeatured:
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -894,12 +1049,15 @@ export async function toggleHomeYouMayLoveProduct(productId: string, isFeatured:
                     .update(homeProductLoveTheseSection)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
-                    .where(eq(homeProductLoveTheseSection.productId, productId));
+                    .where(
+                        eq(homeProductLoveTheseSection.productId, productId)
+                    );
             } else {
                 // Add new entry
-                await db.insert(homeProductLoveTheseSection)
+                await db
+                    .insert(homeProductLoveTheseSection)
                     .values({ productId });
             }
 
@@ -910,16 +1068,24 @@ export async function toggleHomeYouMayLoveProduct(productId: string, isFeatured:
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-export async function toggleHomeYouMayAlsoLikeProduct(productId: string, isFeatured: boolean) {
+export async function toggleHomeYouMayAlsoLikeProduct(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -938,7 +1104,7 @@ export async function toggleHomeYouMayAlsoLikeProduct(productId: string, isFeatu
                 .update(homeProductMayAlsoLikeThese)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(homeProductMayAlsoLikeThese.productId, productId));
 
@@ -953,7 +1119,10 @@ export async function toggleHomeYouMayAlsoLikeProduct(productId: string, isFeatu
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -963,7 +1132,10 @@ export async function toggleHomeYouMayAlsoLikeProduct(productId: string, isFeatu
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -972,12 +1144,15 @@ export async function toggleHomeYouMayAlsoLikeProduct(productId: string, isFeatu
                     .update(homeProductMayAlsoLikeThese)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
-                    .where(eq(homeProductMayAlsoLikeThese.productId, productId));
+                    .where(
+                        eq(homeProductMayAlsoLikeThese.productId, productId)
+                    );
             } else {
                 // Add new entry
-                await db.insert(homeProductMayAlsoLikeThese)
+                await db
+                    .insert(homeProductMayAlsoLikeThese)
                     .values({ productId });
             }
 
@@ -988,16 +1163,24 @@ export async function toggleHomeYouMayAlsoLikeProduct(productId: string, isFeatu
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
-
-export async function toggleHomePageProduct(productId: string, isFeatured: boolean) {
+export async function toggleHomePageProduct(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -1016,7 +1199,7 @@ export async function toggleHomePageProduct(productId: string, isFeatured: boole
                 .update(homeProductPageList)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(homeProductPageList.productId, productId));
 
@@ -1031,7 +1214,10 @@ export async function toggleHomePageProduct(productId: string, isFeatured: boole
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Style With Substance list" };
+            return {
+                success: true,
+                message: "Product removed from Style With Substance list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -1041,7 +1227,10 @@ export async function toggleHomePageProduct(productId: string, isFeatured: boole
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Style With Substance" };
+                return {
+                    success: false,
+                    error: "Product is already in Style With Substance",
+                };
             }
 
             if (existing) {
@@ -1050,13 +1239,12 @@ export async function toggleHomePageProduct(productId: string, isFeatured: boole
                     .update(homeProductPageList)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(homeProductPageList.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeProductPageList)
-                    .values({ productId });
+                await db.insert(homeProductPageList).values({ productId });
             }
 
             // Update ishomeProductSection to true in products table
@@ -1066,11 +1254,17 @@ export async function toggleHomePageProduct(productId: string, isFeatured: boole
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Style With Substance list" };
+            return {
+                success: true,
+                message: "Product added to Style With Substance list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Style With Substance status:", error);
-        return { success: false, error: "Failed to update Style With Substance status" };
+        return {
+            success: false,
+            error: "Failed to update Style With Substance status",
+        };
     }
 }
 
@@ -1188,8 +1382,10 @@ export async function toggleHomeNewArrivalsProduct(
     }
 }
 
-
-export async function newEventPageSection(productId: string, isFeatured: boolean) {
+export async function newEventPageSection(
+    productId: string,
+    isFeatured: boolean
+) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -1208,7 +1404,7 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                 .update(newProductEventPage)
                 .set({
                     isDeleted: true,
-                    deletedAt: new Date()
+                    deletedAt: new Date(),
                 })
                 .where(eq(newProductEventPage.productId, productId));
 
@@ -1223,7 +1419,10 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product removed from Event Exibition list" };
+            return {
+                success: true,
+                message: "Product removed from Event Exibition list",
+            };
         } else {
             // Check if product already exists and is not deleted
             const existing = await db
@@ -1233,7 +1432,10 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                 .then((res) => res[0]);
 
             if (existing && !existing.isDeleted) {
-                return { success: false, error: "Product is already in Event Exibition" };
+                return {
+                    success: false,
+                    error: "Product is already in Event Exibition",
+                };
             }
 
             if (existing) {
@@ -1242,13 +1444,12 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                     .update(newProductEventPage)
                     .set({
                         isDeleted: false,
-                        deletedAt: null
+                        deletedAt: null,
                     })
                     .where(eq(newProductEventPage.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(newProductEventPage)
-                    .values({ productId });
+                await db.insert(newProductEventPage).values({ productId });
             }
 
             // Update isHomeAndLivingSectionTopPicks to true in products table
@@ -1258,10 +1459,51 @@ export async function newEventPageSection(productId: string, isFeatured: boolean
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
-            return { success: true, message: "Product added to Event Exibition list" };
+            return {
+                success: true,
+                message: "Product added to Event Exibition list",
+            };
         }
     } catch (error) {
         console.error("Error toggling Event Exibition status:", error);
-        return { success: false, error: "Failed to update Event Exibition status" };
+        return {
+            success: false,
+            error: "Failed to update Event Exibition status",
+        };
+    }
+}
+
+export async function toggleBestSeller(
+    productId: string,
+    isBestSeller: boolean
+) {
+    try {
+        // Check if product exists in products table
+        const existingProduct = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        // Toggle the isBestSeller status
+        await db
+            .update(products)
+            .set({ isBestSeller: !isBestSeller })
+            .where(eq(products.id, productId));
+
+        revalidatePath("/dashboard/general/products");
+        return {
+            success: true,
+            message: isBestSeller
+                ? "Product removed from Best Sellers"
+                : "Product added to Best Sellers",
+        };
+    } catch (error) {
+        console.error("Error toggling Best Seller status:", error);
+        return { success: false, error: "Failed to update Best Seller status" };
     }
 }

@@ -5,18 +5,18 @@ import {
     newEventPageSection,
     toggleBeautyNewArrivalSection,
     toggleBeautyTopPickSection,
+    toggleBestSeller,
     toggleFeaturedProduct,
     toggleHomeAndLivingNewArrivalsSection,
     toggleHomeAndLivingTopPicksSection,
-    toggleHomeNewArrivalsProduct,
     toggleHomeHeroProduct,
+    toggleHomeNewArrivalsProduct,
+    toggleHomePageProduct,
+    toggleHomeYouMayAlsoLikeProduct,
+    toggleHomeYouMayLoveProduct,
     toggleKidsFetchSection,
     toggleMenStyleWithSubstance,
     toggleWomenStyleWithSubstance,
-    toggleHomeYouMayLoveProduct,
-    toggleHomeYouMayAlsoLikeProduct,
-    toggleHomePageProduct
-
 } from "@/actions/product-action";
 import {
     ProductActivationModal,
@@ -77,7 +77,8 @@ interface PageProps {
         isHomeHeroProducts?: boolean;
         isHomeLoveTheseProducts?: boolean;
         isHomeYouMayAlsoLikeTheseProducts?: boolean;
-isHomePageProduct?: boolean;
+        isHomePageProduct?: boolean;
+        isBestSeller?: boolean;
     };
 }
 
@@ -103,6 +104,26 @@ export function ProductAction({ product }: PageProps) {
         page,
         search,
     });
+
+    const handleToggleBestSeller = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleBestSeller(
+                product.id,
+                product.isBestSeller ?? false
+            );
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Best Seller status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // CORRECTED: This handler now sends the category string to the updated server action
     // const handletoggleHomeNewArrivalsProduct = async (category: string) => {
@@ -131,31 +152,30 @@ export function ProductAction({ product }: PageProps) {
     //     }
     // };
     const handletoggleHomeNewArrivalsProduct = async (
-  category: string,
-  isActive: boolean // <-- added this
-) => {
-  setIsLoading(true);
+        category: string,
+        isActive: boolean // <-- added this
+    ) => {
+        setIsLoading(true);
 
-  try {
-    const result = await toggleHomeNewArrivalsProduct(
-      product.id,
-      isActive, // directly use the param
-      category
-    );
+        try {
+            const result = await toggleHomeNewArrivalsProduct(
+                product.id,
+                isActive, // directly use the param
+                category
+            );
 
-    if (result.success) {
-      refetch();
-      toast.success(result.message);
-    } else {
-      toast.error(result.error);
-    }
-  } catch (error) {
-    toast.error("Failed to update New Arrivals status");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update New Arrivals status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // --- All other handler functions remain unchanged ---
     const handleToggleFeatured = async () => {
@@ -216,7 +236,7 @@ export function ProductAction({ product }: PageProps) {
         }
     };
 
-      const handleToggleProductHeroHomePage = async () => {
+    const handleToggleProductHeroHomePage = async () => {
         setIsLoading(true);
         try {
             const result = await toggleHomeHeroProduct(
@@ -276,7 +296,7 @@ export function ProductAction({ product }: PageProps) {
         }
     };
 
-      const handleToggleHomePageMainProduct = async () => {
+    const handleToggleHomePageMainProduct = async () => {
         setIsLoading(true);
         try {
             const result = await toggleHomePageProduct(
@@ -523,6 +543,17 @@ export function ProductAction({ product }: PageProps) {
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
                         <DropdownMenuItem
+                            onClick={handleToggleBestSeller}
+                            disabled={isLoading}
+                        >
+                            <Icons.Star className="size-4" />
+                            <span>
+                                {product.isBestSeller
+                                    ? "Remove from Best Sellers"
+                                    : "Add to Best Sellers"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                             onClick={handleToggleFeatured}
                             disabled={isLoading}
                         >
@@ -533,7 +564,7 @@ export function ProductAction({ product }: PageProps) {
                                     : "Add to Featured Women"}
                             </span>
                         </DropdownMenuItem>
-                                           <DropdownMenuItem
+                        <DropdownMenuItem
                             onClick={handleToggleProductHeroHomePage}
                             disabled={isLoading}
                         >
@@ -544,7 +575,7 @@ export function ProductAction({ product }: PageProps) {
                                     : "Add to Hero Home Page"}
                             </span>
                         </DropdownMenuItem>
-                                                              <DropdownMenuItem
+                        <DropdownMenuItem
                             onClick={handleToggleYouMayLoveThese}
                             disabled={isLoading}
                         >
@@ -555,7 +586,7 @@ export function ProductAction({ product }: PageProps) {
                                     : "Add to You may love these products Home Page"}
                             </span>
                         </DropdownMenuItem>
-                                                                                      <DropdownMenuItem
+                        <DropdownMenuItem
                             onClick={handleToggleYouMayAlsoLikeThese}
                             disabled={isLoading}
                         >
@@ -566,7 +597,7 @@ export function ProductAction({ product }: PageProps) {
                                     : "Add to You may also like these products Home Page"}
                             </span>
                         </DropdownMenuItem>
-                                                                                                 <DropdownMenuItem
+                        <DropdownMenuItem
                             onClick={handleToggleHomePageMainProduct}
                             disabled={isLoading}
                         >
@@ -667,66 +698,74 @@ export function ProductAction({ product }: PageProps) {
                                     : "Add to Top Picks(Beauty Personal)"}
                             </span>
                         </DropdownMenuItem>
-                     {/* --- Refactored New Arrivals Section --- */}
-{/* --- Fixed New Arrivals Section --- */}
-{/* --- Fixed New Arrivals Section --- */}
-<DropdownMenuSub>
-  <DropdownMenuSubTrigger disabled={isLoading}>
-    <Icons.Layers className="mr-2 size-4" />
-    <span>New Arrivals (Home Page)</span>
-  </DropdownMenuSubTrigger>
+                        {/* --- Refactored New Arrivals Section --- */}
+                        {/* --- Fixed New Arrivals Section --- */}
+                        {/* --- Fixed New Arrivals Section --- */}
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger disabled={isLoading}>
+                                <Icons.Layers className="mr-2 size-4" />
+                                <span>New Arrivals (Home Page)</span>
+                            </DropdownMenuSubTrigger>
 
-  <DropdownMenuPortal>
-    <DropdownMenuSubContent>
-      <DropdownMenuLabel>Select a Category</DropdownMenuLabel>
-      <DropdownMenuSeparator />
+                            <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuLabel>
+                                        Select a Category
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
 
-      {/* 🟢 Add to Category */}
-      {NEW_ARRIVALS_CATEGORIES.map((category) => (
-        <DropdownMenuItem
-          key={category}
-          onClick={() =>
-            handletoggleHomeNewArrivalsProduct(category, true) // ✅ add (isActive = true)
-          }
-          disabled={isLoading}
-        >
-          {product.homeNewArrivalCategory === category && (
-            <Icons.Check className="mr-2 size-4" />
-          )}
-          <span>{category}</span>
-        </DropdownMenuItem>
-      ))}
+                                    {/* 🟢 Add to Category */}
+                                    {NEW_ARRIVALS_CATEGORIES.map((category) => (
+                                        <DropdownMenuItem
+                                            key={category}
+                                            onClick={
+                                                () =>
+                                                    handletoggleHomeNewArrivalsProduct(
+                                                        category,
+                                                        true
+                                                    ) // ✅ add (isActive = true)
+                                            }
+                                            disabled={isLoading}
+                                        >
+                                            {product.homeNewArrivalCategory ===
+                                                category && (
+                                                <Icons.Check className="mr-2 size-4" />
+                                            )}
+                                            <span>{category}</span>
+                                        </DropdownMenuItem>
+                                    ))}
 
-      {/* 🔴 Remove option if already active */}
-      {product.isHomeNewArrival && (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() =>
-              handletoggleHomeNewArrivalsProduct(
-                product.homeNewArrivalCategory ?? "",
-                false // ✅ remove (isActive = false)
-              )
-            }
-            disabled={isLoading}
-            className="text-red-600 focus:text-red-600"
-          >
-            <Icons.Trash className="mr-2 size-4" />
-            <span>
-              Remove from New Arrivals
-              {product.homeNewArrivalCategory
-                ? ` (${product.homeNewArrivalCategory})`
-                : ""}
-            </span>
-          </DropdownMenuItem>
-        </>
-      )}
-    </DropdownMenuSubContent>
-  </DropdownMenuPortal>
-</DropdownMenuSub>
-{/* --- End of Fixed Section --- */}
+                                    {/* 🔴 Remove option if already active */}
+                                    {product.isHomeNewArrival && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={() =>
+                                                    handletoggleHomeNewArrivalsProduct(
+                                                        product.homeNewArrivalCategory ??
+                                                            "",
+                                                        false // ✅ remove (isActive = false)
+                                                    )
+                                                }
+                                                disabled={isLoading}
+                                                className="text-red-600 focus:text-red-600"
+                                            >
+                                                <Icons.Trash className="mr-2 size-4" />
+                                                <span>
+                                                    Remove from New Arrivals
+                                                    {product.homeNewArrivalCategory
+                                                        ? ` (${product.homeNewArrivalCategory})`
+                                                        : ""}
+                                                </span>
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                        {/* --- End of Fixed Section --- */}
 
-{/* --- End of Fixed Section --- */}
+                        {/* --- End of Fixed Section --- */}
 
                         {/* --- End of Refactored Section --- */}
 
