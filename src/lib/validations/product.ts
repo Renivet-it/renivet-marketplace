@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
 import { brandSchema } from "./brand";
+import { brandConfidentialSchema } from "./brand-confidential";
 import { cachedBrandMediaItemSchema } from "./brand-media-item";
 import {
     categorySchema,
     productTypeSchema,
     subCategorySchema,
 } from "./category";
-
-import { brandConfidentialSchema } from "./brand-confidential";
 
 export const productOptionValueSchema = z.object({
     id: z
@@ -127,12 +126,17 @@ export const productVerificationStatusSchema = z.enum([
     "rejected",
 ]);
 
-export const productImageFilterSchema = z.enum(["with", "without", "all"], {
-    invalid_type_error: "Product image must be 'with', 'without', or 'all'",
-  }).optional();
-  export const productVisiblityFilterSchema = z.enum(["public", "private", "all"], {
-    invalid_type_error: "Product visiblity must be 'public', 'private', or 'all'",
-  }).optional();
+export const productImageFilterSchema = z
+    .enum(["with", "without", "all"], {
+        invalid_type_error: "Product image must be 'with', 'without', or 'all'",
+    })
+    .optional();
+export const productVisiblityFilterSchema = z
+    .enum(["public", "private", "all"], {
+        invalid_type_error:
+            "Product visiblity must be 'public', 'private', or 'all'",
+    })
+    .optional();
 
 export const productSchema = z.object({
     // BASIC INFO
@@ -148,12 +152,12 @@ export const productSchema = z.object({
             invalid_type_error: "Title must be a string",
         })
         .min(3, "Title must be at least 3 characters long"),
-        sizeAndFit: z
+    sizeAndFit: z
         .string()
         .min(3, "Size & Fit must be at least 3 characters long")
         .or(z.literal("").transform(() => null))
         .nullable(),
-        materialAndCare: z
+    materialAndCare: z
         .string()
         .min(3, "Material & Care must be at least 3 characters long")
         .or(z.literal("").transform(() => null))
@@ -368,17 +372,13 @@ export const productSchema = z.object({
             .min(1, "Meta keyword must be at least 1 characters long")
     ),
     specifications: z
-  .array(
-    z.object({
-      key: z
-        .string()
-        .min(1, "Specification key is required"),
-      value: z
-        .string()
-        .min(1, "Specification value is required"),
-    })
-  )
-  .optional(),
+        .array(
+            z.object({
+                key: z.string().min(1, "Specification key is required"),
+                value: z.string().min(1, "Specification value is required"),
+            })
+        )
+        .optional(),
     // OTHER
     verificationStatus: productVerificationStatusSchema,
     productImageFilter: productImageFilterSchema,
@@ -428,25 +428,26 @@ export const productSchema = z.object({
             invalid_type_error: "Updated at must be a date",
         })
         .transform((v) => new Date(v)),
-        returnable: z.boolean().optional(),
-        returnDescription: z.string().nullable().optional(),
-        exchangeable: z.boolean().optional(),
-        exchangeDescription: z.string().nullable().optional(),
-        isFeaturedWomen: z.boolean().optional().default(false),
-        isFeaturedMen: z.boolean().optional().default(false),
-        isStyleWithSubstanceWoMen: z.boolean().optional().default(false),
-        isStyleWithSubstanceMen: z.boolean().optional().default(false),
-        iskidsFetchSection: z.boolean().optional().default(false),
-        isHomeAndLivingSectionNewArrival: z.boolean().optional().default(false),
-        isHomeAndLivingSectionTopPicks: z.boolean().optional().default(false),
-        isBeautyNewArrival: z.boolean().optional().default(false),
-        isBeautyTopPicks: z.boolean().optional().default(false),
-        isHomeNewArrival: z.boolean().optional().default(false),
-        isAddedInEventProductPage: z.boolean().optional().default(false),
-        isHomeHeroProducts: z.boolean().optional().default(false),
-        isHomeLoveTheseProducts: z.boolean().optional().default(false),
-        isHomeYouMayAlsoLikeTheseProducts: z.boolean().optional().default(false),
-        isHomePageProduct: z.boolean().optional().default(false),
+    returnable: z.boolean().optional(),
+    returnDescription: z.string().nullable().optional(),
+    exchangeable: z.boolean().optional(),
+    exchangeDescription: z.string().nullable().optional(),
+    isFeaturedWomen: z.boolean().optional().default(false),
+    isFeaturedMen: z.boolean().optional().default(false),
+    isStyleWithSubstanceWoMen: z.boolean().optional().default(false),
+    isStyleWithSubstanceMen: z.boolean().optional().default(false),
+    iskidsFetchSection: z.boolean().optional().default(false),
+    isHomeAndLivingSectionNewArrival: z.boolean().optional().default(false),
+    isHomeAndLivingSectionTopPicks: z.boolean().optional().default(false),
+    isBeautyNewArrival: z.boolean().optional().default(false),
+    isBeautyTopPicks: z.boolean().optional().default(false),
+    isHomeNewArrival: z.boolean().optional().default(false),
+    isAddedInEventProductPage: z.boolean().optional().default(false),
+    isHomeHeroProducts: z.boolean().optional().default(false),
+    isHomeLoveTheseProducts: z.boolean().optional().default(false),
+    isHomeYouMayAlsoLikeTheseProducts: z.boolean().optional().default(false),
+    isHomePageProduct: z.boolean().optional().default(false),
+    isBestSeller: z.boolean().optional().default(false),
 });
 
 export const productOptionSchema = z.object({
@@ -751,24 +752,26 @@ export const productWithBrandSchema = productSchema.extend({
     //     brand: z.lazy(() => brandSchema.extend({
     //     confidential: brandConfidentialSchema.nullable().optional()
     // })),
-     brand: z.lazy(() =>
-    brandSchema.extend({
-      confidential: brandConfidentialSchema.nullable().optional(),
+    brand: z.lazy(() =>
+        brandSchema.extend({
+            confidential: brandConfidentialSchema.nullable().optional(),
 
-      packingRules: z.array(
-        z.object({
-          id: z.string().uuid(),
-          productTypeId: z.string().uuid(),
+            packingRules: z
+                .array(
+                    z.object({
+                        id: z.string().uuid(),
+                        productTypeId: z.string().uuid(),
 
-          isFragile: z.boolean(),
-          shipsInOwnBox: z.boolean(),
-          canOverride: z.boolean(),
+                        isFragile: z.boolean(),
+                        shipsInOwnBox: z.boolean(),
+                        canOverride: z.boolean(),
 
-          packingType: packingTypeSchema.nullable().optional(),
+                        packingType: packingTypeSchema.nullable().optional(),
+                    })
+                )
+                .default([]),
         })
-      ).default([]),
-    })
-  ),
+    ),
     options: z.array(productOptionSchema),
     variants: z.array(enhancedProductVariantSchema),
     returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
@@ -778,28 +781,26 @@ export const productWithBrandSchema = productSchema.extend({
     subcategory: subCategorySchema,
     // productType: productTypeSchema,
     productType: z.lazy(() =>
-  productTypeSchema.extend({
-    packingType: packingTypeSchema.nullable().optional(),
-  })
-),
+        productTypeSchema.extend({
+            packingType: packingTypeSchema.nullable().optional(),
+        })
+    ),
 
     journey: productJourneySchema.nullable(),
     values: productValueSchema.nullable(),
-        confidentialData: brandConfidentialSchema.optional() // ← Add this line
-
+    confidentialData: brandConfidentialSchema.optional(), // ← Add this line
 });
 export const packingTypeSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
+    id: z.string().uuid(),
+    name: z.string(),
 
+    baseLength: z.number().int(),
+    baseWidth: z.number().int(),
+    baseHeight: z.number().int(),
+    extraCm: z.number().int().optional(),
 
-  baseLength: z.number().int(),
-  baseWidth: z.number().int(),
-  baseHeight: z.number().int(),
-  extraCm: z.number().int().optional(),
-
-  createdAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
-  updatedAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
+    createdAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
+    updatedAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
 });
 
 export const createProductSchema = productSchema
@@ -954,12 +955,12 @@ export const rejectProductSchema = productSchema.pick({
 export const updateProductMediaInputSchema = z.object({
     productId: z.string(),
     media: z.array(
-      z.object({
-        id: z.string(), // Assuming media.id is a string; adjust if it's a number
-        position: z.number(),
-      })
+        z.object({
+            id: z.string(), // Assuming media.id is a string; adjust if it's a number
+            position: z.number(),
+        })
     ),
-  });
+});
 
 export type Product = z.infer<typeof productSchema>;
 export type ProductOptionValue = z.infer<typeof productOptionValueSchema>;
@@ -980,4 +981,6 @@ export type CreateProduct = z.infer<typeof createProductSchema>;
 export type UpdateProduct = z.infer<typeof updateProductSchema>;
 export type RejectProduct = z.infer<typeof rejectProductSchema>;
 export type ReturnExchangePolicy = z.infer<typeof returnExchangePolicySchema>;
-export type UpdateProductMediaInput = z.infer<typeof updateProductMediaInputSchema>;
+export type UpdateProductMediaInput = z.infer<
+    typeof updateProductMediaInputSchema
+>;
