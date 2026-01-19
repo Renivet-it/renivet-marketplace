@@ -1297,6 +1297,10 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
     const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [categoryId] = useQueryState(
+        "categoryId",
+        parseAsString.withDefault("")
+    );
 
     // Categorize sizes
     const categorized = useMemo(() => categorizeSizes(allSizes), [allSizes]);
@@ -1342,8 +1346,8 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
     return (
         <div className="space-y-4">
             {renderSizeGroup("Standard Sizes", categorized.standard)}
-            {renderSizeGroup("Age-Based", categorized.age)}
-            {renderSizeGroup("Other Sizes", categorized.other)}
+            {categoryId && renderSizeGroup("Age-Based", categorized.age)}
+            {categoryId && renderSizeGroup("Other Sizes", categorized.other)}
         </div>
     );
 }
