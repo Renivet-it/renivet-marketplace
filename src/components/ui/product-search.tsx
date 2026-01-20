@@ -1,249 +1,12 @@
-// "use client";
-
-// import { cn } from "@/lib/utils";
-// import { usePathname, useRouter } from "next/navigation";
-// import { useQueryState } from "nuqs";
-// import * as React from "react";
-// import { useCallback, useRef, useState } from "react";
-// import { Icons } from "../icons";
-// import { fetchSuggestions } from "@/lib/python/ai-suggestion";
-
-// // Custom debounce function (without useEffect)
-// function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
-//   let timeoutId: ReturnType<typeof setTimeout> | null = null;
-//   return (...args: Parameters<T>) => {
-//     if (timeoutId) {
-//       clearTimeout(timeoutId);
-//     }
-//     timeoutId = setTimeout(() => {
-//       func(...args);
-//     }, delay);
-//   };
-// }
-
-// export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
-//   classNames?: {
-//     wrapper?: string;
-//     input?: string;
-//   };
-// };
-
-// const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
-//   (
-//     { className, disabled, type = "text", classNames, ...props },
-//     ref
-//   ) => {
-//     const router = useRouter();
-//     const pathname = usePathname();
-//     const [search, setSearch] = useQueryState("search", {
-//       defaultValue: "",
-//     });
-//     const [localSearch, setLocalSearch] = useState(search); // Initialize with search
-//     const [suggestions, setSuggestions] = useState<string[]>([]);
-//     const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
-//     const wrapperRef = useRef<HTMLDivElement>(null);
-
-//     // Fetch AI-driven suggestions
-//     const updateSuggestions = useCallback(async (value: string) => {
-//       if (value.length > 0) {
-//         try {
-//           console.log("Fetching suggestions for:", value);
-//           const fetchedSuggestions = await fetchSuggestions(value);
-//           setSuggestions(fetchedSuggestions);
-//           setIsSuggestionVisible(true);
-//         } catch (error) {
-//           console.error("Failed to update suggestions:", error);
-//           setSuggestions([]);
-//           setIsSuggestionVisible(false);
-//         }
-//       } else {
-//         setSuggestions([]);
-//         setIsSuggestionVisible(false);
-//       }
-//     }, []);
-
-//     // Debounced suggestion fetching
-//     const debouncedUpdateSuggestions = useCallback(
-//       debounce((value: string) => {
-//         updateSuggestions(value);
-//       }, 500),
-//       [updateSuggestions]
-//     );
-
-//     // Handle input change to update localSearch and trigger debounced suggestions
-//     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//       const value = e.target.value;
-//       setLocalSearch(value);
-//       debouncedUpdateSuggestions(value);
-//     };
-
-//     // Handle search submission (on Enter or suggestion click)
-//     const handleSearch = (value: string) => {
-//       setIsSuggestionVisible(false);
-//       if (value.length > 2) {
-//         if (pathname !== "/shop") {
-//           router.push(`/shop?search=${encodeURIComponent(value)}`);
-//         } else {
-//           setSearch(value);
-//         }
-//       } else if (value.length === 0) {
-//         if (pathname !== "/shop") {
-//           router.push("/shop");
-//         } else {
-//           setSearch("");
-//         }
-//       }
-//     };
-
-//     // Handle suggestion click
-//     const handleSuggestionClick = (suggestion: string) => {
-//       setLocalSearch(suggestion);
-//       setIsSuggestionVisible(false);
-//       handleSearch(suggestion);
-//     };
-
-//     // Handle Enter or Escape key
-//     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-//       if (e.key === "Enter") {
-//         handleSearch(localSearch);
-//         setIsSuggestionVisible(false);
-//       } else if (e.key === "Escape") {
-//         setIsSuggestionVisible(false);
-//       }
-//     };
-
-//     // Handle clear button click
-//     const handleClear = () => {
-//       setLocalSearch("");
-//       setSuggestions([]);
-//       setIsSuggestionVisible(false);
-
-//       if (pathname === "/") {
-//         setLocalSearch("");
-//       } else if (pathname.startsWith("/shop")) {
-//         setSearch("");
-//       } else {
-//         setLocalSearch("");
-//       }
-//     };
-
-//     // Handle click outside to hide suggestions
-//     const handleClickOutside = useCallback((e: MouseEvent) => {
-//       if (
-//         wrapperRef.current &&
-//         !wrapperRef.current.contains(e.target as Node)
-//       ) {
-//         setIsSuggestionVisible(false);
-//       }
-//     }, []);
-
-//     // Add click outside listener on mount, remove on unmount
-//     // Note: This still requires a way to handle lifecycle without useEffect.
-//     // We'll simulate it with a ref-based approach or manual cleanup.
-//     const isMounted = useRef(false);
-//     if (!isMounted.current) {
-//       isMounted.current = true;
-//       document.addEventListener("click", handleClickOutside);
-//     }
-
-//     // Simulate cleanup (this is a workaround since we're avoiding useEffect)
-//     // In a real-world scenario, you might need a cleanup mechanism tied to component unmounting.
-//     // This can be handled by wrapping in a higher-order component or using a library.
-//     const cleanup = () => {
-//       document.removeEventListener("click", handleClickOutside);
-//     };
-
-//     // Handle initial sync of localSearch with search (instead of useEffect)
-//     // This runs only once when the component mounts.
-//     const initialSync = useRef(false);
-//     if (!initialSync.current) {
-//       initialSync.current = true;
-//       setLocalSearch(search);
-//     }
-
-//     return (
-//       <div
-//         ref={wrapperRef}
-//         className={cn(
-//            "relative flex w-full items-center gap-1 rounded-full bg-white shadow-md",
-//           disabled && "cursor-not-allowed opacity-50",
-//           classNames?.wrapper
-//         )}
-//         onClick={(e) => e.stopPropagation()}
-//       >
-//         <div className="p-2 pl-3">
-//           <Icons.Search className="size-5 opacity-60" />
-//         </div>
-
-//         <input
-//           type="text"
-//           className={cn(
-//     "flex h-9 w-full bg-transparent pr-10 text-sm text-gray-700 placeholder-gray-500 focus:outline-none",
-//             className,
-//             classNames?.input
-//           )}
-//           disabled={disabled}
-//           ref={ref}
-//           value={localSearch}
-//           onChange={handleChange}
-//           onKeyDown={handleKeyDown}
-//           onFocus={() => debouncedUpdateSuggestions(localSearch)}
-//           placeholder="Search for products..."
-//           {...props}
-//         />
-
-//         {/* Clear Button (Cross) */}
-//         {localSearch && (
-//           <button
-//             type="button"
-//             className="absolute right-2 p-1"
-//             onClick={handleClear}
-//             aria-label="Clear search"
-//           >
-//             <Icons.X className="size-5 opacity-60 hover:opacity-100" />
-//           </button>
-//         )}
-
-//         {/* Suggestions Dropdown */}
-//         {isSuggestionVisible && suggestions.length > 0 && (
-//           <ul className="absolute top-full left-0 mt-1 w-full bg-white border border-foreground/20 rounded-md shadow-lg z-10 max-h-80 overflow-y-auto">
-//             {suggestions.map((suggestion, index) => (
-//               <li
-//                 key={index}
-//                 className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-//                 onClick={() => handleSuggestionClick(suggestion)}
-//               >
-//                 {suggestion}
-//               </li>
-//             ))}
-//           </ul>
-//         )}
-//       </div>
-//     );
-//   }
-// );
-
-// // Manual cleanup on component unmount (workaround)
-// ProductSearch.displayName = "ProductSearch";
-// export { ProductSearch };
 "use client";
 
-import { fetchSuggestions } from "@/lib/python/ai-suggestion";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import { Icons } from "../icons";
-
-// Debounce utility (unchanged)
-function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    return (...args: Parameters<T>) => {
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func(...args), delay);
-    };
-}
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
     classNames?: {
@@ -253,7 +16,7 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
-    ({ className, disabled, type = "text", classNames, ...props }, ref) => {
+    ({ className, disabled, classNames, ...props }, ref) => {
         const router = useRouter();
         const pathname = usePathname();
         const [search, setSearch] = useQueryState("search", {
@@ -271,111 +34,157 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [, setPage] = useQueryState("page", { defaultValue: "1" });
 
         const [localSearch, setLocalSearch] = useState(search);
-        const [suggestions, setSuggestions] = useState<string[]>([]);
-        const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
-        const wrapperRef = useRef<HTMLDivElement>(null);
+        const [isSearching, setIsSearching] = useState(false);
 
-        // --- Suggestion fetching logic ---
-        const updateSuggestions = useCallback(async (value: string) => {
-            if (value.length > 0) {
-                try {
-                    const fetchedSuggestions = await fetchSuggestions(value);
-                    setSuggestions(fetchedSuggestions);
-                    setIsSuggestionVisible(true);
-                } catch (error) {
-                    console.error("Failed to update suggestions:", error);
-                    setSuggestions([]);
-                    setIsSuggestionVisible(false);
-                }
-            } else {
-                setSuggestions([]);
-                setIsSuggestionVisible(false);
-            }
-        }, []);
+        // TRPC mutation for search processing
+        const processSearchMutation =
+            trpc.general.search.processSearch.useMutation({
+                onSuccess: (result) => {
+                    setIsSearching(false);
 
-        const debouncedUpdateSuggestions = useCallback(
-            debounce((value: string) => updateSuggestions(value), 500),
-            [updateSuggestions]
-        );
+                    // Route based on intent type (Stage 6 & 9)
+                    switch (result.intentType) {
+                        case "BRAND":
+                            // Navigate to brand page
+                            router.push(`/brands/${result.brandSlug}`);
+                            break;
 
-        // --- Input & search handlers ---
+                        case "CATEGORY":
+                            // Navigate to shop with category filter
+                            if (pathname === "/shop") {
+                                setCategoryId(result.categoryId || "");
+                                setSubCategoryId("");
+                                setProductTypeId("");
+                                setSearch("");
+                                setPage("1");
+                            } else {
+                                router.push(
+                                    `/shop?categoryId=${result.categoryId}`
+                                );
+                            }
+                            break;
+
+                        case "SUBCATEGORY":
+                            // Navigate to shop with subcategory filter
+                            if (pathname === "/shop") {
+                                setSubCategoryId(result.subcategoryId || "");
+                                setCategoryId("");
+                                setProductTypeId("");
+                                setSearch("");
+                                setPage("1");
+                            } else {
+                                router.push(
+                                    `/shop?subcategoryId=${result.subcategoryId}`
+                                );
+                            }
+                            break;
+
+                        case "PRODUCT_TYPE":
+                            // Navigate to shop with product type filter
+                            if (pathname === "/shop") {
+                                setProductTypeId(result.productTypeId || "");
+                                setCategoryId("");
+                                setSubCategoryId("");
+                                setSearch("");
+                                setPage("1");
+                            } else {
+                                router.push(
+                                    `/shop?productTypeId=${result.productTypeId}`
+                                );
+                            }
+                            break;
+
+                        case "UNKNOWN":
+                        default:
+                            // Fallback to full-text search
+                            if (pathname === "/shop") {
+                                setSearch(result.originalQuery);
+                                setCategoryId("");
+                                setSubCategoryId("");
+                                setProductTypeId("");
+                                setPage("1");
+                            } else {
+                                router.push(
+                                    `/shop?search=${encodeURIComponent(result.originalQuery)}`
+                                );
+                            }
+                            break;
+                    }
+                },
+                onError: (error) => {
+                    setIsSearching(false);
+                    console.error("Search error:", error);
+                    // Fallback to simple search on error
+                    if (pathname === "/shop") {
+                        setSearch(localSearch);
+                        setPage("1");
+                    } else {
+                        router.push(
+                            `/shop?search=${encodeURIComponent(localSearch)}`
+                        );
+                    }
+                },
+            });
+
+        // Handle input change
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const value = e.target.value;
-            setLocalSearch(value);
-            debouncedUpdateSuggestions(value);
+            setLocalSearch(e.target.value);
         };
 
-        const handleSearch = (value: string) => {
-            setIsSuggestionVisible(false);
-            if (value.length > 2) {
-                if (pathname !== "/shop")
-                    router.push(`/shop?search=${encodeURIComponent(value)}`);
-                else {
-                    setSearch(value);
-                    setCategoryId("");
-                    setSubCategoryId("");
-                    setProductTypeId("");
-                    setPage("1");
+        // Handle search submission
+        const handleSearch = () => {
+            const query = localSearch.trim();
+
+            if (query.length > 2) {
+                setIsSearching(true);
+                // Process through the search engine
+                processSearchMutation.mutate({
+                    query,
+                });
+            } else if (query.length === 0) {
+                // Clear search
+                if (pathname === "/shop") {
+                    setSearch("");
+                } else {
+                    router.push("/shop");
                 }
-            } else if (value.length === 0) {
-                if (pathname !== "/shop") router.push("/shop");
-                else setSearch("");
             }
         };
 
-        const handleSuggestionClick = (suggestion: string) => {
-            setLocalSearch(suggestion);
-            setIsSuggestionVisible(false);
-            handleSearch(suggestion);
-        };
-
+        // Handle Enter key
         const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === "Enter") handleSearch(localSearch);
-            else if (e.key === "Escape") setIsSuggestionVisible(false);
+            if (e.key === "Enter") {
+                handleSearch();
+            }
         };
 
+        // Handle clear button
         const handleClear = () => {
             setLocalSearch("");
-            setSuggestions([]);
-            setIsSuggestionVisible(false);
-            if (pathname.startsWith("/shop")) setSearch("");
+            if (pathname.startsWith("/shop")) {
+                setSearch("");
+            }
         };
 
-        // --- Click outside handler (safe for SSR) ---
-        const handleClickOutside = useCallback((e: MouseEvent) => {
-            if (
-                wrapperRef.current &&
-                !wrapperRef.current.contains(e.target as Node)
-            ) {
-                setIsSuggestionVisible(false);
-            }
-        }, []);
-
-        // ✅ Properly attach/detach DOM listeners (client-side only)
-        React.useEffect(() => {
-            if (typeof document === "undefined") return; // SSR guard
-            document.addEventListener("click", handleClickOutside);
-            return () =>
-                document.removeEventListener("click", handleClickOutside);
-        }, [handleClickOutside]);
-
-        // ✅ Sync initial state on mount
+        // Sync with URL search param
         React.useEffect(() => {
             setLocalSearch(search);
         }, [search]);
 
         return (
             <div
-                ref={wrapperRef}
                 className={cn(
                     "relative flex w-full items-center gap-1 rounded-none bg-[#fbfaf4] shadow-md",
                     disabled && "cursor-not-allowed opacity-50",
                     classNames?.wrapper
                 )}
-                onClick={(e) => e.stopPropagation()}
             >
                 <div className="bg-[#fbfaf4] p-2 pl-3">
-                    <Icons.Search className="opacity size-5 bg-[#fbfaf4]" />
+                    {isSearching ? (
+                        <Icons.Loader2 className="size-5 animate-spin opacity-60" />
+                    ) : (
+                        <Icons.Search className="size-5 bg-[#fbfaf4] opacity-60" />
+                    )}
                 </div>
 
                 <input
@@ -385,17 +194,16 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                         className,
                         classNames?.input
                     )}
-                    disabled={disabled}
+                    disabled={disabled || isSearching}
                     ref={ref}
                     value={localSearch}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
-                    onFocus={() => debouncedUpdateSuggestions(localSearch)}
-                    placeholder="Search for products..."
+                    placeholder="Search for products, brands, categories..."
                     {...props}
                 />
 
-                {localSearch && (
+                {localSearch && !isSearching && (
                     <button
                         type="button"
                         className="absolute right-2 p-1"
@@ -404,22 +212,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     >
                         <Icons.X className="size-5 opacity-60 hover:opacity-100" />
                     </button>
-                )}
-
-                {isSuggestionVisible && suggestions.length > 0 && (
-                    <ul className="absolute left-0 top-full z-10 mt-1 max-h-80 w-full overflow-y-auto rounded-md border border-foreground/20 bg-white text-left shadow-lg">
-                        {suggestions.map((suggestion, index) => (
-                            <li
-                                key={index}
-                                className="cursor-pointer px-4 py-2 text-left text-sm hover:bg-gray-100"
-                                onClick={() =>
-                                    handleSuggestionClick(suggestion)
-                                }
-                            >
-                                {suggestion}
-                            </li>
-                        ))}
-                    </ul>
                 )}
             </div>
         );

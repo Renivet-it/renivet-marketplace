@@ -1,0 +1,145 @@
+keyword,intent_type,category_ids,priority,source
+bags,CATEGORY,Women|Bags,medium,subcategory
+bags and backpacks,CATEGORY,Men|Bags and Backpacks,medium,subcategory
+bath ,CATEGORY,Home and Living|Bath ,medium,subcategory
+beauty and personal care,CATEGORY,Beauty and Personal Care,medium,category
+beauty gift and makeup set,CATEGORY,Beauty and Personal Care|Beauty Gift and Makeup Set,medium,subcategory
+bottomwear,CATEGORY,Men|Bottomwear,medium,subcategory
+boys clothing ,CATEGORY,Kids|Boys Clothing ,medium,subcategory
+fashion accessories ,CATEGORY,Men|Fashion Accessories ,medium,subcategory
+footwear,CATEGORY,Men|Footwear,medium,subcategory
+footwear,CATEGORY,Women|Footwear,medium,subcategory
+fragrances,CATEGORY,Beauty and Personal Care|Fragrances,medium,subcategory
+furniture,CATEGORY,Home and Living|Furniture,medium,subcategory
+girls clothing,CATEGORY,Kids|Girls Clothing,medium,subcategory
+haircare ,CATEGORY,Beauty and Personal Care|Haircare ,medium,subcategory
+home and living,CATEGORY,Home and Living,medium,category
+home decor ,CATEGORY,Home and Living|Home Decor ,medium,subcategory
+home gift sets,CATEGORY,Home and Living|Home Gift Sets,medium,subcategory
+indian and festive wear,CATEGORY,Men|Indian and Festive Wear,medium,subcategory
+indian and fusion wear ,CATEGORY,Women|Indian and Fusion Wear ,medium,subcategory
+infants ,CATEGORY,Kids|Infants ,medium,subcategory
+innerwear and sleepwear,CATEGORY,Men|Innerwear and Sleepwear,medium,subcategory
+jewellery,CATEGORY,Women|Jewellery,medium,subcategory
+kids,CATEGORY,Kids,medium,category
+kitchen and table,CATEGORY,Home and Living|Kitchen and Table,medium,subcategory
+lamps and lighting,CATEGORY,Home and Living|Lamps and Lighting,medium,subcategory
+lingerie and sleepwear ,CATEGORY,Women|Lingerie and Sleepwear ,medium,subcategory
+masks,CATEGORY,Beauty and Personal Care|Masks,medium,subcategory
+men,CATEGORY,Men,medium,category
+personal care,CATEGORY,Kids|Personal Care,medium,subcategory
+skincare bath and body ,CATEGORY,Beauty and Personal Care|Skincare Bath and Body ,medium,subcategory
+storage ,CATEGORY,Home and Living|Storage ,medium,subcategory
+topwear,CATEGORY,Men|Topwear,medium,subcategory
+toys and games,CATEGORY,Kids|Toys and Games,medium,subcategory
+unisex clothing,CATEGORY,Kids|Unisex Clothing,medium,subcategory
+wellness and hygiene,CATEGORY,Beauty and Personal Care|Wellness and Hygiene,medium,subcategory
+western wear,CATEGORY,Women|Western Wear,medium,subcategory
+women,CATEGORY,Women,medium,category
+women sports and active wear ,CATEGORY,Women|Women Sports and Active Wear ,medium,subcategory
+ body wash,PRODUCT,Beauty and Personal Care|Skincare Bath and Body ,medium,product_type
+ cleanser,PRODUCT,Beauty and Personal Care|Skincare Bath and Body ,medium,product_type
+ comb,PRODUCT,Beauty and Personal Care|Wellness and Hygiene,medium,product_type
+ face wash,PRODUCT,Beauty and Personal Care|Skincare Bath and Body ,medium,product_type
+ innerwear and thermals,PRODUCT,Kids|Girls Clothing,medium,product_type
+ kurta sets,PRODUCT,Kids|Girls Clothing,medium,product_type
+ period panty,PRODUCT,Beauty and Personal Care|Wellness and Hygiene,medium,product_type
+ toungue cleaner,PRODUCT,Beauty and Personal Care|Wellness and Hygiene,medium,product_type
+accessory gift sets,PRODUCT,Men|Fashion Accessories ,medium,product_type
+aromas and candles,PRODUCT,Home and Living|Home Decor ,medium,product_type
+bagpacks,PRODUCT,Women|Bags,medium,product_type
+bakeware and cookware,PRODUCT,Home and Living|Kitchen and Table,medium,product_type
+bath towels,PRODUCT,Home and Living|Bath ,medium,product_type
+bathroom accessories,PRODUCT,Home and Living|Bath ,medium,product_type
+bathtime,PRODUCT,Kids|Infants ,medium,product_type
+beauty gift,PRODUCT,Beauty and Personal Care|Beauty Gift and Makeup Set,medium,product_type
+bedding,PRODUCT,Kids|Infants ,medium,product_type
+bedtime,PRODUCT,Kids|Infants ,medium,product_type
+blazers and waistcoats,PRODUCT,Women|Western Wear,medium,product_type
+body scrub,PRODUCT,Beauty and Personal Care|Skincare Bath and Body ,medium,product_type
+bra,PRODUCT,Women|Lingerie and Sleepwear ,medium,product_type
+briefs,PRODUCT,Women|Lingerie and Sleepwear ,medium,product_type
+briefs and trunks,PRODUCT,Men|Innerwear and Sleepwear,medium,product_type
+brush,PRODUCT,Beauty and Personal Care|Wellness and Hygiene,medium,product_type
+camisoles and thermals,PRODUCT,Women|Lingerie and Sleepwear ,medium,product_type
+casual shirts,PRODUCT,Men|Topwear,medium,product_type
+casual shoes,PRODUCT,Men|Footwear,medium,product_type
+casual shoes,PRODUCT,Women|Footwear,medium,product_type
+casual trousers,PRODUCT,Men|Bottomwear,medium,product_type
+clothing,PRODUCT,Women|Women Sports and Active Wear ,medium,product_type
+clothing,PRODUCT,Kids|Infants ,medium,product_type
+co-ord sets,PRODUCT,Kids|Unisex Clothing,medium,product_type
+co-ord sets,PRODUCT,Kids|Boys Clothing ,medium,product_type
+co-ords,PRODUCT,Women|Western Wear,medium,product_type
+cups and mugs,PRODUCT,Home and Living|Kitchen and Table,medium,product_type
+diaper,PRODUCT,Kids|Personal Care,medium,product_type
+dinnerware and serveware,PRODUCT,Home and Living|Kitchen and Table,medium,product_type
+dresses,PRODUCT,Kids|Girls Clothing,medium,product_type
+dresses,PRODUCT,Women|Western Wear,medium,product_type
+duffle bag,PRODUCT,Men|Bags and Backpacks,medium,product_type
+earrings,PRODUCT,Women|Jewellery,medium,product_type
+essentials,PRODUCT,Beauty and Personal Care|Skincare Bath and Body ,medium,product_type
+essentials,PRODUCT,Home and Living|Home Decor ,medium,product_type
+ethnic wear,PRODUCT,Women|Indian and Fusion Wear ,medium,product_type
+face mask,PRODUCT,Beauty and Personal Care|Masks,medium,product_type
+fashion jewellery,PRODUCT,Women|Jewellery,medium,product_type
+feeding,PRODUCT,Kids|Infants ,medium,product_type
+festive decor,PRODUCT,Home and Living|Home Decor ,medium,product_type
+fine jewellery,PRODUCT,Women|Jewellery,medium,product_type
+floor lamps,PRODUCT,Home and Living|Lamps and Lighting,medium,product_type
+fun essentials,PRODUCT,Kids|Toys and Games,medium,product_type
+gear,PRODUCT,Kids|Infants ,medium,product_type
+gift bundle,PRODUCT,Kids|Infants ,medium,product_type
+gifts,PRODUCT,Home and Living|Home Gift Sets,medium,product_type
+gifts,PRODUCT,Home and Living|Furniture,medium,product_type
+hair oil,PRODUCT,Beauty and Personal Care|Haircare ,medium,product_type
+hand and face towels,PRODUCT,Home and Living|Bath ,medium,product_type
+handbags,PRODUCT,Women|Bags,medium,product_type
+handbags bags and wallets,PRODUCT,Women|Bags,medium,product_type
+hooks and holders,PRODUCT,Home and Living|Storage ,medium,product_type
+intimate wash,PRODUCT,Beauty and Personal Care|Wellness and Hygiene,medium,product_type
+jackets,PRODUCT,Men|Topwear,medium,product_type
+jumpsuits,PRODUCT,Women|Western Wear,medium,product_type
+kitchen storage and tools,PRODUCT,Home and Living|Kitchen and Table,medium,product_type
+kurtas & suits,PRODUCT,Women|Indian and Fusion Wear ,medium,product_type
+kurtas and kurta sets,PRODUCT,Men|Indian and Festive Wear,medium,product_type
+kurtis tunics and tops,PRODUCT,Women|Indian and Fusion Wear ,medium,product_type
+laptop bag,PRODUCT,Women|Bags,medium,product_type
+lip care,PRODUCT,Beauty and Personal Care|Skincare Bath and Body ,medium,product_type
+nehru jackets,PRODUCT,Men|Indian and Festive Wear,medium,product_type
+organisers,PRODUCT,Home and Living|Storage ,medium,product_type
+perfume,PRODUCT,Beauty and Personal Care|Fragrances,medium,product_type
+placemats,PRODUCT,Home and Living|Kitchen and Table,medium,product_type
+playmat,PRODUCT,Kids|Infants ,medium,product_type
+pooja essentials,PRODUCT,Home and Living|Home Decor ,medium,product_type
+rings and wristwear,PRODUCT,Men|Fashion Accessories ,medium,product_type
+sandals,PRODUCT,Men|Footwear,medium,product_type
+sandals,PRODUCT,Women|Footwear,medium,product_type
+sarees,PRODUCT,Women|Indian and Fusion Wear ,medium,product_type
+shirts,PRODUCT,Kids|Unisex Clothing,medium,product_type
+shirts,PRODUCT,Kids|Boys Clothing ,medium,product_type
+shorts,PRODUCT,Men|Bottomwear,medium,product_type
+shorts & skirts,PRODUCT,Women|Western Wear,medium,product_type
+showpieces and vases,PRODUCT,Home and Living|Home Decor ,medium,product_type
+skirts and palazzos,PRODUCT,Women|Indian and Fusion Wear ,medium,product_type
+sliders,PRODUCT,Men|Footwear,medium,product_type
+sneakers,PRODUCT,Women|Footwear,medium,product_type
+sneakers,PRODUCT,Men|Footwear,medium,product_type
+soap,PRODUCT,Beauty and Personal Care|Skincare Bath and Body ,medium,product_type
+socks,PRODUCT,Men|Footwear,medium,product_type
+stationery,PRODUCT,Home and Living|Home Gift Sets,medium,product_type
+sweaters and sweatshirts,PRODUCT,Women|Western Wear,medium,product_type
+sweatshirts,PRODUCT,Men|Topwear,medium,product_type
+t-shirts,PRODUCT,Men|Topwear,medium,product_type
+t-shirts,PRODUCT,Women|Western Wear,medium,product_type
+table lamps,PRODUCT,Home and Living|Lamps and Lighting,medium,product_type
+toothbrush,PRODUCT,Beauty and Personal Care|Wellness and Hygiene,medium,product_type
+tops,PRODUCT,Women|Western Wear,medium,product_type
+track pants and joggers,PRODUCT,Men|Bottomwear,medium,product_type
+travel,PRODUCT,Kids|Infants ,medium,product_type
+trousers,PRODUCT,Women|Western Wear,medium,product_type
+trousers and capris,PRODUCT,Women|Western Wear,medium,product_type
+vests,PRODUCT,Men|Innerwear and Sleepwear,medium,product_type
+wall decor,PRODUCT,Home and Living|Home Decor ,medium,product_type
+wallets,PRODUCT,Men|Fashion Accessories ,medium,product_type
+yoga essentials,PRODUCT,Beauty and Personal Care|Wellness and Hygiene,medium,product_type
