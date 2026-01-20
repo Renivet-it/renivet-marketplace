@@ -529,3 +529,95 @@ export function getSearchCopy(result: SearchResult): string {
                 : `Based on your search`;
     }
 }
+
+// ============================================
+// SEARCH SUGGESTIONS
+// ============================================
+
+export interface SearchSuggestion {
+    keyword: string;
+    intentType: "CATEGORY" | "PRODUCT" | "BRAND";
+    categoryPath: string;
+    displayText: string;
+}
+
+/**
+ * Get search suggestions based on partial query
+ * Returns matching keywords from search_intents table
+ */
+export async function getSuggestions(
+    query: string,
+    limit: number = 6
+): Promise<SearchSuggestion[]> {
+    const normalizedQuery = normalizeQuery(query);
+
+    if (!normalizedQuery || normalizedQuery.length < 2) {
+        return [];
+    }
+
+    try {
+        // Fetch all intents and filter in memory for flexibility
+        const allIntents = await db.query.searchIntents.findMany();
+
+        // Filter intents that match the query
+        const matchingIntents = allIntents
+            .filter((intent) => {
+                const keyword = intent.keyword.toLowerCase();
+                // Match if keyword starts with query or contains query
+                return (
+                    keyword.startsWith(normalizedQuery) ||
+                    keyword.includes(normalizedQuery) ||
+                    normalizedQuery.includes(keyword)
+                );
+            })
+            // Sort by priority and relevance
+            .sort((a, b) => {
+                // Prioritize exact matches
+                if (a.keyword === normalizedQuery) return -1;
+                if (b.keyword === normalizedQuery) return 1;
+
+                // Then by priority
+                const priorityOrder = { high: 0, medium: 1, low: 2 };
+                const aPriority =
+                    priorityOrder[a.priority as keyof typeof priorityOrder] ??
+                    1;
+                const bPriority =
+                    priorityOrder[b.priority as keyof typeof priorityOrder] ??
+                    1;
+                if (aPriority !== bPriority) return aPriority - bPriority;
+
+                // Then by how close the match is
+                const aStartsWith = a.keyword.startsWith(normalizedQuery);
+                const bStartsWith = b.keyword.startsWith(normalizedQuery);
+                if (aStartsWith && !bStartsWith) return -1;
+                if (!aStartsWith && bStartsWith) return 1;
+
+                return a.keyword.length - b.keyword.length;
+            })
+            .slice(0, limit);
+
+        // Format suggestions
+        return matchingIntents.map((intent) => {
+            const categoryPath = intent.categoryIds;
+            const parts = categoryPath.split("|");
+            const displayCategory =
+                parts.length > 1 ? parts[parts.length - 1] : parts[0];
+
+            return {
+                keyword: intent.keyword,
+                intentType: intent.intentType as
+                    | "CATEGORY"
+                    | "PRODUCT"
+                    | "BRAND",
+                categoryPath: categoryPath,
+                displayText:
+                    intent.intentType === "CATEGORY"
+                        ? `${intent.keyword} in ${displayCategory}`
+                        : `${intent.keyword} - ${displayCategory}`,
+            };
+        });
+    } catch (error) {
+        console.error("Error getting suggestions:", error);
+        return [];
+    }
+}

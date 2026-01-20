@@ -2,10 +2,11 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { useDebouncedCallback } from "@mantine/hooks";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icons } from "../icons";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
@@ -35,22 +36,48 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
         const [localSearch, setLocalSearch] = useState(search);
         const [isSearching, setIsSearching] = useState(false);
+        const [showSuggestions, setShowSuggestions] = useState(false);
+        const [selectedIndex, setSelectedIndex] = useState(-1);
+        const wrapperRef = useRef<HTMLDivElement>(null);
+        const inputRef = useRef<HTMLInputElement | null>(null);
+
+        // Merge refs
+        const setRefs = useCallback(
+            (node: HTMLInputElement | null) => {
+                inputRef.current = node;
+                if (typeof ref === "function") {
+                    ref(node);
+                } else if (ref) {
+                    ref.current = node;
+                }
+            },
+            [ref]
+        );
+
+        // TRPC query for suggestions
+        const { data: suggestions = [], isLoading: isFetchingSuggestions } =
+            trpc.general.search.getSuggestions.useQuery(
+                { query: localSearch, limit: 6 },
+                {
+                    enabled: localSearch.length >= 2,
+                    staleTime: 1000 * 60, // 1 minute
+                }
+            );
 
         // TRPC mutation for search processing
         const processSearchMutation =
             trpc.general.search.processSearch.useMutation({
                 onSuccess: (result) => {
                     setIsSearching(false);
+                    setShowSuggestions(false);
 
                     // Route based on intent type (Stage 6 & 9)
                     switch (result.intentType) {
                         case "BRAND":
-                            // Navigate to brand page
                             router.push(`/brands/${result.brandSlug}`);
                             break;
 
                         case "CATEGORY":
-                            // Navigate to shop with category filter
                             if (pathname === "/shop") {
                                 setCategoryId(result.categoryId || "");
                                 setSubCategoryId("");
@@ -65,7 +92,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                             break;
 
                         case "SUBCATEGORY":
-                            // Navigate to shop with subcategory filter
                             if (pathname === "/shop") {
                                 setSubCategoryId(result.subcategoryId || "");
                                 setCategoryId("");
@@ -80,7 +106,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                             break;
 
                         case "PRODUCT_TYPE":
-                            // Navigate to shop with product type filter
                             if (pathname === "/shop") {
                                 setProductTypeId(result.productTypeId || "");
                                 setCategoryId("");
@@ -96,7 +121,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
                         case "UNKNOWN":
                         default:
-                            // Fallback to full-text search
                             if (pathname === "/shop") {
                                 setSearch(result.originalQuery);
                                 setCategoryId("");
@@ -114,7 +138,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 onError: (error) => {
                     setIsSearching(false);
                     console.error("Search error:", error);
-                    // Fallback to simple search on error
                     if (pathname === "/shop") {
                         setSearch(localSearch);
                         setPage("1");
@@ -128,21 +151,21 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
         // Handle input change
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            setLocalSearch(e.target.value);
+            const value = e.target.value;
+            setLocalSearch(value);
+            setShowSuggestions(value.length >= 2);
+            setSelectedIndex(-1);
         };
 
         // Handle search submission
-        const handleSearch = () => {
-            const query = localSearch.trim();
+        const handleSearch = (query?: string) => {
+            const searchQuery = (query || localSearch).trim();
 
-            if (query.length > 2) {
+            if (searchQuery.length > 2) {
                 setIsSearching(true);
-                // Process through the search engine
-                processSearchMutation.mutate({
-                    query,
-                });
-            } else if (query.length === 0) {
-                // Clear search
+                setShowSuggestions(false);
+                processSearchMutation.mutate({ query: searchQuery });
+            } else if (searchQuery.length === 0) {
                 if (pathname === "/shop") {
                     setSearch("");
                 } else {
@@ -151,67 +174,172 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             }
         };
 
-        // Handle Enter key
+        // Handle suggestion click
+        const handleSuggestionClick = (keyword: string) => {
+            setLocalSearch(keyword);
+            handleSearch(keyword);
+        };
+
+        // Handle keyboard navigation
         const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === "Enter") {
-                handleSearch();
+            if (!showSuggestions || suggestions.length === 0) {
+                if (e.key === "Enter") {
+                    handleSearch();
+                }
+                return;
+            }
+
+            switch (e.key) {
+                case "ArrowDown":
+                    e.preventDefault();
+                    setSelectedIndex((prev) =>
+                        prev < suggestions.length - 1 ? prev + 1 : prev
+                    );
+                    break;
+                case "ArrowUp":
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+                    break;
+                case "Enter":
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                        handleSuggestionClick(
+                            suggestions[selectedIndex].keyword
+                        );
+                    } else {
+                        handleSearch();
+                    }
+                    break;
+                case "Escape":
+                    setShowSuggestions(false);
+                    setSelectedIndex(-1);
+                    break;
             }
         };
 
         // Handle clear button
         const handleClear = () => {
             setLocalSearch("");
+            setShowSuggestions(false);
             if (pathname.startsWith("/shop")) {
                 setSearch("");
             }
         };
 
+        // Close suggestions when clicking outside
+        useEffect(() => {
+            const handleClickOutside = (event: MouseEvent) => {
+                if (
+                    wrapperRef.current &&
+                    !wrapperRef.current.contains(event.target as Node)
+                ) {
+                    setShowSuggestions(false);
+                }
+            };
+
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => {
+                document.removeEventListener("mousedown", handleClickOutside);
+            };
+        }, []);
+
         // Sync with URL search param
-        React.useEffect(() => {
+        useEffect(() => {
             setLocalSearch(search);
         }, [search]);
 
         return (
-            <div
-                className={cn(
-                    "relative flex w-full items-center gap-1 rounded-none bg-[#fbfaf4] shadow-md",
-                    disabled && "cursor-not-allowed opacity-50",
-                    classNames?.wrapper
-                )}
-            >
-                <div className="bg-[#fbfaf4] p-2 pl-3">
-                    {isSearching ? (
-                        <Icons.Loader2 className="size-5 animate-spin opacity-60" />
-                    ) : (
-                        <Icons.Search className="size-5 bg-[#fbfaf4] opacity-60" />
+            <div ref={wrapperRef} className="relative w-full">
+                <div
+                    className={cn(
+                        "relative flex w-full items-center gap-1 rounded-none bg-[#fbfaf4] shadow-md",
+                        disabled && "cursor-not-allowed opacity-50",
+                        classNames?.wrapper
+                    )}
+                >
+                    <div className="bg-[#fbfaf4] p-2 pl-3">
+                        {isSearching || isFetchingSuggestions ? (
+                            <Icons.Loader2 className="size-5 animate-spin opacity-60" />
+                        ) : (
+                            <Icons.Search className="size-5 bg-[#fbfaf4] opacity-60" />
+                        )}
+                    </div>
+
+                    <input
+                        type="text"
+                        className={cn(
+                            "flex h-9 w-full bg-[#fbfaf4] pr-10 text-sm text-gray-700 placeholder-gray-500 focus:outline-none",
+                            className,
+                            classNames?.input
+                        )}
+                        disabled={disabled || isSearching}
+                        ref={setRefs}
+                        value={localSearch}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        onFocus={() =>
+                            localSearch.length >= 2 && setShowSuggestions(true)
+                        }
+                        placeholder="Search for products, brands, categories..."
+                        autoComplete="off"
+                        {...props}
+                    />
+
+                    {localSearch && !isSearching && (
+                        <button
+                            type="button"
+                            className="absolute right-2 p-1"
+                            onClick={handleClear}
+                            aria-label="Clear search"
+                        >
+                            <Icons.X className="size-5 opacity-60 hover:opacity-100" />
+                        </button>
                     )}
                 </div>
 
-                <input
-                    type="text"
-                    className={cn(
-                        "flex h-9 w-full bg-[#fbfaf4] pr-10 text-sm text-gray-700 placeholder-gray-500 focus:outline-none",
-                        className,
-                        classNames?.input
-                    )}
-                    disabled={disabled || isSearching}
-                    ref={ref}
-                    value={localSearch}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Search for products, brands, categories..."
-                    {...props}
-                />
-
-                {localSearch && !isSearching && (
-                    <button
-                        type="button"
-                        className="absolute right-2 p-1"
-                        onClick={handleClear}
-                        aria-label="Clear search"
-                    >
-                        <Icons.X className="size-5 opacity-60 hover:opacity-100" />
-                    </button>
+                {/* Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        {suggestions.map((suggestion, index) => (
+                            <button
+                                key={suggestion.keyword}
+                                type="button"
+                                className={cn(
+                                    "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50",
+                                    selectedIndex === index && "bg-gray-100"
+                                )}
+                                onClick={() =>
+                                    handleSuggestionClick(suggestion.keyword)
+                                }
+                                onMouseEnter={() => setSelectedIndex(index)}
+                            >
+                                <Icons.Search className="size-4 shrink-0 text-gray-400" />
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="truncate text-sm font-medium text-gray-900">
+                                        {suggestion.keyword}
+                                    </p>
+                                    <p className="truncate text-xs text-gray-500">
+                                        {suggestion.categoryPath.replace(
+                                            /\|/g,
+                                            " → "
+                                        )}
+                                    </p>
+                                </div>
+                                <span
+                                    className={cn(
+                                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+                                        suggestion.intentType === "CATEGORY"
+                                            ? "bg-blue-100 text-blue-700"
+                                            : "bg-green-100 text-green-700"
+                                    )}
+                                >
+                                    {suggestion.intentType === "CATEGORY"
+                                        ? "Category"
+                                        : "Product"}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 )}
             </div>
         );

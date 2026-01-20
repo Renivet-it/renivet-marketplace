@@ -1,6 +1,7 @@
 import {
     getSearchCopy,
     getSearchRedirectUrl,
+    getSuggestions,
     logSearchQuery,
     processSearch,
 } from "@/lib/search/search-engine";
@@ -8,6 +9,22 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "../../trpc";
 
 export const searchRouter = createTRPCRouter({
+    /**
+     * Get search suggestions based on partial query
+     * Returns matching keywords from search_intents table
+     */
+    getSuggestions: publicProcedure
+        .input(
+            z.object({
+                query: z.string().min(1).max(200),
+                limit: z.number().min(1).max(10).default(6),
+            })
+        )
+        .query(async ({ input }) => {
+            const { query, limit } = input;
+            return getSuggestions(query, limit);
+        }),
+
     /**
      * Process a search query and return intent classification result
      * Implements Stages 1-6 of Search Engine Flow
