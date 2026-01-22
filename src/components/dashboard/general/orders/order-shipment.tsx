@@ -87,8 +87,9 @@ export default function OrderShipment({
     // ================================================================
 
     console.log("⭐ Shipment Type:", isDelhivery ? "Delhivery" : "Shiprocket");
-const utils = trpc.useUtils();
-const updatePickupStatus = trpc.general.orders.updatePickupStatus.useMutation();
+    const utils = trpc.useUtils();
+    const updatePickupStatus =
+        trpc.general.orders.updatePickupStatus.useMutation();
 
     /* -----------------------------------------------------------
      ⭐ HANDLE SHIP NOW CLICK
@@ -100,7 +101,9 @@ const updatePickupStatus = trpc.general.orders.updatePickupStatus.useMutation();
         }
 
         if (isDelhivery && !selectedTime) {
-            toast.error("Please select a pickup time (Delhivery requires time).");
+            toast.error(
+                "Please select a pickup time (Delhivery requires time)."
+            );
             return;
         }
 
@@ -122,7 +125,10 @@ const updatePickupStatus = trpc.general.orders.updatePickupStatus.useMutation();
                     expected_package_count: 1,
                 };
 
-                console.log("📦 Sending Delhivery Pickup Payload:", delhiveryPayload);
+                console.log(
+                    "📦 Sending Delhivery Pickup Payload:",
+                    delhiveryPayload
+                );
 
                 const res = await fetch("/api/delhivery/pickup", {
                     method: "POST",
@@ -133,16 +139,18 @@ const updatePickupStatus = trpc.general.orders.updatePickupStatus.useMutation();
                 const data = await res.json();
 
                 if (!data.success) {
-                    toast.error(data.message || "Failed to schedule Delhivery pickup");
+                    toast.error(
+                        data.message || "Failed to schedule Delhivery pickup"
+                    );
                     return;
                 }
 
                 toast.success("Delhivery pickup scheduled!");
                 // update DB pickup status
-await updatePickupStatus.mutateAsync({ orderId: order.id });
+                await updatePickupStatus.mutateAsync({ orderId: order.id });
 
-// OPTIONAL: refresh order table
-utils.general.orders.getOrders.invalidate();
+                // OPTIONAL: refresh order table
+                utils.general.orders.getOrders.invalidate();
                 setIsSheetOpen(false);
                 onShipmentSuccessRefetchOrder();
                 return;
@@ -285,7 +293,8 @@ utils.general.orders.getOrders.invalidate();
                                         variant="outline"
                                         className={cn(
                                             "w-full justify-start text-left font-normal",
-                                            !selectedDate && "text-muted-foreground"
+                                            !selectedDate &&
+                                                "text-muted-foreground"
                                         )}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -314,37 +323,86 @@ utils.general.orders.getOrders.invalidate();
                             {isDelhivery && (
                                 <select
                                     value={selectedTime}
-                                    onChange={(e) => setSelectedTime(e.target.value)}
-                                    className="border rounded-md p-2 text-sm w-full"
+                                    onChange={(e) =>
+                                        setSelectedTime(e.target.value)
+                                    }
+                                    className="w-full rounded-md border p-2 text-sm"
                                 >
                                     <option value="">Select Pickup Time</option>
-                                    <option value="09:00:00">9 AM – 10 AM</option>
-                                    <option value="11:00:00">11 AM – 12 PM</option>
-                                    <option value="14:00:00">2 PM – 3 PM</option>
-                                    <option value="16:00:00">4 PM – 5 PM</option>
-                                    <option value="18:00:00">6 PM – 7 PM</option>
+                                    {(() => {
+                                        const PICKUP_TIME_SLOTS = [
+                                            {
+                                                value: "09:00:00",
+                                                label: "9 AM – 10 AM",
+                                                hour: 9,
+                                            },
+                                            {
+                                                value: "11:00:00",
+                                                label: "11 AM – 12 PM",
+                                                hour: 11,
+                                            },
+                                            {
+                                                value: "14:00:00",
+                                                label: "2 PM – 3 PM",
+                                                hour: 14,
+                                            },
+                                            {
+                                                value: "16:00:00",
+                                                label: "4 PM – 5 PM",
+                                                hour: 16,
+                                            },
+                                            {
+                                                value: "18:00:00",
+                                                label: "6 PM – 7 PM",
+                                                hour: 18,
+                                            },
+                                        ];
+
+                                        const now = new Date();
+                                        const currentHour = now.getHours();
+                                        const isToday =
+                                            selectedDate &&
+                                            format(
+                                                selectedDate,
+                                                "yyyy-MM-dd"
+                                            ) === format(now, "yyyy-MM-dd");
+
+                                        const availableSlots =
+                                            PICKUP_TIME_SLOTS.filter((slot) => {
+                                                if (!isToday) return true;
+                                                return slot.hour > currentHour;
+                                            });
+
+                                        return availableSlots.map((slot) => (
+                                            <option
+                                                key={slot.value}
+                                                value={slot.value}
+                                            >
+                                                {slot.label}
+                                            </option>
+                                        ));
+                                    })()}
                                 </select>
                             )}
 
                             {/* SHIP NOW BUTTON */}
-<Button
-    className="flex items-center gap-2"
-    onClick={handleShipNow}
-    disabled={buttonLoading}
->
-    {buttonLoading ? (
-        <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Processing...
-        </>
-    ) : (
-        <>
-            <Truck className="h-4 w-4" />
-            Ship Now
-        </>
-    )}
-</Button>
-
+                            <Button
+                                className="flex items-center gap-2"
+                                onClick={handleShipNow}
+                                disabled={buttonLoading}
+                            >
+                                {buttonLoading ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Truck className="h-4 w-4" />
+                                        Ship Now
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     </SheetHeader>
 
