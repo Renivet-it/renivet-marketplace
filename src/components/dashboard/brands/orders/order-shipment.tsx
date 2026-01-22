@@ -49,10 +49,9 @@ export default function OrderShipment({
     order,
     onShipmentSuccessRefetchOrder,
 }: PageProps) {
-
     // shiprocket/delhivery fields are FLAT, not nested
     const isDelhivery = Boolean(order.uploadWbn);
-  const { data: userData } = trpc.general.users.currentUser.useQuery();
+    const { data: userData } = trpc.general.users.currentUser.useQuery();
 
     const { data: customerAddressDetails, refetch: refetchCustomerAddress } =
         trpc.general.addresses.getAddressById.useQuery(
@@ -78,11 +77,10 @@ export default function OrderShipment({
     const [selectedTime, setSelectedTime] = useState<string | undefined>();
 
     // correct pickup location
-const pickupLocation = generatePickupLocationCode({
-    brandId: userData?.brand?.id ?? "",
-    brandName: userData?.brand?.name ?? "",
-});
-
+    const pickupLocation = generatePickupLocationCode({
+        brandId: userData?.brand?.id ?? "",
+        brandName: userData?.brand?.name ?? "",
+    });
 
     /* ---------------------------------------------
        HANDLE SHIP NOW CLICK
@@ -144,11 +142,14 @@ const pickupLocation = generatePickupLocationCode({
                 pickup_date: format(selectedDate, "yyyy-MM-dd"),
             };
 
-            const generateAwbRes = await fetch("/api/shiprocket/couriers/generate-awb", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(awbPayload),
-            });
+            const generateAwbRes = await fetch(
+                "/api/shiprocket/couriers/generate-awb",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(awbPayload),
+                }
+            );
 
             const awbData = await generateAwbRes.json();
             if (!awbData.status) {
@@ -232,11 +233,15 @@ const pickupLocation = generatePickupLocationCode({
             <SheetContent side={side}>
                 <SheetHeader className="mb-4">
                     <SheetTitle className={cn("capitalize text-primary")}>
-                        {isDelhivery ? "Schedule Delhivery Pickup" : "Ship Products with Courier Partners"}
+                        {isDelhivery
+                            ? "Schedule Delhivery Pickup"
+                            : "Ship Products with Courier Partners"}
                     </SheetTitle>
 
                     <SheetDescription className="text-sm uppercase text-secondary">
-                        {isDelhivery ? "Select pickup date & time" : "Select courier partner for shipping"}
+                        {isDelhivery
+                            ? "Select pickup date & time"
+                            : "Select courier partner for shipping"}
                     </SheetDescription>
 
                     <div className="mt-4 flex flex-col gap-3">
@@ -251,7 +256,9 @@ const pickupLocation = generatePickupLocationCode({
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {selectedDate ? format(selectedDate, "PPP") : "Pick pickup date"}
+                                    {selectedDate
+                                        ? format(selectedDate, "PPP")
+                                        : "Pick pickup date"}
                                 </Button>
                             </PopoverTrigger>
 
@@ -274,15 +281,63 @@ const pickupLocation = generatePickupLocationCode({
                         {isDelhivery && (
                             <select
                                 value={selectedTime}
-                                onChange={(e) => setSelectedTime(e.target.value)}
-                                className="border rounded-md p-2 text-sm w-full"
+                                onChange={(e) =>
+                                    setSelectedTime(e.target.value)
+                                }
+                                className="w-full rounded-md border p-2 text-sm"
                             >
                                 <option value="">Select Pickup Time</option>
-                                <option value="09:00:00">9 AM – 10 AM</option>
-                                <option value="11:00:00">11 AM – 12 PM</option>
-                                <option value="14:00:00">2 PM – 3 PM</option>
-                                <option value="16:00:00">4 PM – 5 PM</option>
-                                <option value="18:00:00">6 PM – 7 PM</option>
+                                {(() => {
+                                    const PICKUP_TIME_SLOTS = [
+                                        {
+                                            value: "09:00:00",
+                                            label: "9 AM – 10 AM",
+                                            hour: 9,
+                                        },
+                                        {
+                                            value: "11:00:00",
+                                            label: "11 AM – 12 PM",
+                                            hour: 11,
+                                        },
+                                        {
+                                            value: "14:00:00",
+                                            label: "2 PM – 3 PM",
+                                            hour: 14,
+                                        },
+                                        {
+                                            value: "16:00:00",
+                                            label: "4 PM – 5 PM",
+                                            hour: 16,
+                                        },
+                                        {
+                                            value: "18:00:00",
+                                            label: "6 PM – 7 PM",
+                                            hour: 18,
+                                        },
+                                    ];
+
+                                    const now = new Date();
+                                    const currentHour = now.getHours();
+                                    const isToday =
+                                        selectedDate &&
+                                        format(selectedDate, "yyyy-MM-dd") ===
+                                            format(now, "yyyy-MM-dd");
+
+                                    const availableSlots =
+                                        PICKUP_TIME_SLOTS.filter((slot) => {
+                                            if (!isToday) return true;
+                                            return slot.hour > currentHour;
+                                        });
+
+                                    return availableSlots.map((slot) => (
+                                        <option
+                                            key={slot.value}
+                                            value={slot.value}
+                                        >
+                                            {slot.label}
+                                        </option>
+                                    ));
+                                })()}
                             </select>
                         )}
 
@@ -321,11 +376,15 @@ const pickupLocation = generatePickupLocationCode({
                                 recommendedCourierForShiping.data.data
                                     .available_courier_companies as GetCourierForDeliveryLocation[]
                             }
-                            selectedCourierId={selectedCourier?.courier_company_id}
+                            selectedCourierId={
+                                selectedCourier?.courier_company_id
+                            }
                             onCourierSelect={(c) => setSelectedCourier(c)}
                         />
                     ) : (
-                        <div className="text-sm text-muted-foreground">No courier data found.</div>
+                        <div className="text-sm text-muted-foreground">
+                            No courier data found.
+                        </div>
                     ))}
             </SheetContent>
         </Sheet>
