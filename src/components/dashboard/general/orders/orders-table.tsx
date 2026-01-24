@@ -272,6 +272,12 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
             initialData: brandData, // Use brandData prop
         }
     );
+
+    // Fetch counts for each status tab
+    const { data: statusCounts } =
+        trpc.general.orders.getOrderStatusCounts.useQuery(undefined, {
+            refetchOnWindowFocus: false,
+        });
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
     const isBrandSelected = brandIds.length > 0;
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
@@ -812,6 +818,25 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
                                 <span className="relative z-10">
                                     {tab.label}
                                 </span>
+                                {statusCounts &&
+                                    statusCounts[
+                                        tab.value as keyof typeof statusCounts
+                                    ] !== undefined && (
+                                        <span
+                                            className={cn(
+                                                "ml-2 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                                                statusTab === tab.value
+                                                    ? "bg-primary/10 text-primary"
+                                                    : "bg-gray-200 text-gray-600"
+                                            )}
+                                        >
+                                            {
+                                                statusCounts[
+                                                    tab.value as keyof typeof statusCounts
+                                                ]
+                                            }
+                                        </span>
+                                    )}
                             </TabsTrigger>
                         ))}
                     </TabsList>
