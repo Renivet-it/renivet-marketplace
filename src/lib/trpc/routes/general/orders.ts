@@ -3,7 +3,10 @@ import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-em
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { db } from "@/lib/db";
 import { productQueries, refundQueries } from "@/lib/db/queries";
+import { orderShipments } from "@/lib/db/schema/order-shipment";
+import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
 import { razorpay } from "@/lib/razorpay";
 import {
     analytics,
@@ -33,22 +36,17 @@ import {
     updateOrderStatusSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
+import axios from "axios";
 import { format } from "date-fns";
 import { and, eq, gte } from "drizzle-orm";
 import { z } from "zod";
 
-import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
-import { orderShipments } from "@/lib/db/schema/order-shipment";
-import axios from "axios";
-import { db } from "@/lib/db";
-
 function resolveBrandPackingRule(product: any) {
-  if (!product?.brand?.packingRules?.length) return null;
+    if (!product?.brand?.packingRules?.length) return null;
 
-  return product.brand.packingRules.find(
-    (rule: any) =>
-      rule.productTypeId === product.productTypeId
-  );
+    return product.brand.packingRules.find(
+        (rule: any) => rule.productTypeId === product.productTypeId
+    );
 }
 
 async function createShiprocketOrderWithRetry(
@@ -106,8 +104,20 @@ export const ordersRouter = createTRPCRouter({
                 brandIds: z.array(productSchema.shape.brandId).optional(),
                 startDate: z.string().optional(),
                 endDate: z.string().optional(),
+                statusTab: z
+                    .enum([
+                        "all",
+                        "ready_to_pickup",
+                        "pickup_scheduled",
+                        "shipped",
+                        "delivered",
+                        "cancelled",
+                        "rto",
+                    ])
+                    .optional(),
             })
         )
+
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
         .query(async ({ ctx, input }) => {
             const { queries } = ctx;
@@ -374,7 +384,6 @@ export const ordersRouter = createTRPCRouter({
                     // Clear user cart (do this once after all orders are created to avoid multiple calls)
                     // Moved outside the loop
 
-
                     try {
                         await sendBrandOrderNotificationEmail({
                             orderId: newOrder.id,
@@ -401,12 +410,12 @@ export const ordersRouter = createTRPCRouter({
                         );
                         // Log the error but don't fail the mutation
                     }
-                  // const sr = await shiprocket();
+                    // const sr = await shiprocket();
 
-                  //   // NEW: Process Shiprocket order for this single item
-                  //   console.log(
-                  //       `Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`
-                  //   );
+                    //   // NEW: Process Shiprocket order for this single item
+                    //   console.log(
+                    //       `Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`
+                    //   );
                     const product = await queries.products.getProduct({
                         productId: item.productId,
                         isActive: true,
@@ -487,157 +496,185 @@ export const ordersRouter = createTRPCRouter({
                         orderItemsForShiprocket
                     );
 
-                        const packingRule = resolveBrandPackingRule(product);
-                        const packingTypeName =
+                    const packingRule = resolveBrandPackingRule(product);
+                    const packingTypeName =
                         packingRule?.packingType?.name?.toLowerCase();
 
-                        const isHardOrFragileBox =
+                    const isHardOrFragileBox =
                         packingTypeName === "hard box" ||
                         packingTypeName === "fragile box";
-                        console.log("📦 Resolved packing rule:", packingRule);
-                        const baseLength =
+                    console.log("📦 Resolved packing rule:", packingRule);
+                    const baseLength =
                         packingRule?.packingType?.baseLength ?? 0;
 
-                        const baseWidth =
-                        packingRule?.packingType?.baseWidth ?? 0;
+                    const baseWidth = packingRule?.packingType?.baseWidth ?? 0;
 
-                        const baseHeight =
+                    const baseHeight =
                         packingRule?.packingType?.baseHeight ?? 0;
 
-                        const extraCm =
-                        packingRule?.packingType?.extraCm ?? 0;
+                    const extraCm = packingRule?.packingType?.extraCm ?? 0;
 
-const volumetricWeight = (baseLength * baseWidth * baseHeight) / 5;
-let finalVolumetricWeight = volumetricWeight;
-if (isHardOrFragileBox) {
-  const boxLength = packingRule?.packingType?.baseLength ?? 0;
-  const boxWidth = packingRule?.packingType?.baseWidth ?? 0;
-  const boxHeight = packingRule?.packingType?.baseHeight ?? 0;
+                    const volumetricWeight =
+                        (baseLength * baseWidth * baseHeight) / 5;
+                    let finalVolumetricWeight = volumetricWeight;
+                    if (isHardOrFragileBox) {
+                        const boxLength =
+                            packingRule?.packingType?.baseLength ?? 0;
+                        const boxWidth =
+                            packingRule?.packingType?.baseWidth ?? 0;
+                        const boxHeight =
+                            packingRule?.packingType?.baseHeight ?? 0;
 
-  const combinedLength = validatedDimensions.length + boxLength;
-  const combinedWidth = validatedDimensions.width + boxWidth;
-  const combinedHeight = validatedDimensions.height + boxHeight;
+                        const combinedLength =
+                            validatedDimensions.length + boxLength;
+                        const combinedWidth =
+                            validatedDimensions.width + boxWidth;
+                        const combinedHeight =
+                            validatedDimensions.height + boxHeight;
 
-  // 🔥 ONLY HERE volumetric is recalculated
-  finalVolumetricWeight =
-    (combinedLength * combinedWidth * combinedHeight) / 5;
-}
+                        // 🔥 ONLY HERE volumetric is recalculated
+                        finalVolumetricWeight =
+                            (combinedLength * combinedWidth * combinedHeight) /
+                            5;
+                    }
 
-                        console.log("📐 Packing dimensions resolved:", {
+                    console.log("📐 Packing dimensions resolved:", {
                         baseLength,
                         baseWidth,
                         baseHeight,
                         extraCm,
-                        });
-try {
-  const reasons: string[] = [];
-  const violatedRules: string[] = [];
+                    });
+                    try {
+                        const reasons: string[] = [];
+                        const violatedRules: string[] = [];
 
-  const actualWeight = validatedDimensions.weight; // grams
-  const volumetric = finalVolumetricWeight;
+                        const actualWeight = validatedDimensions.weight; // grams
+                        const volumetric = finalVolumetricWeight;
 
-  const { length, width, height } = validatedDimensions;
+                        const { length, width, height } = validatedDimensions;
 
-  // Rule 1: Volumetric < Actual
-  if (volumetric < actualWeight) {
-    reasons.push("Volumetric weight is less than actual weight");
-    violatedRules.push("VOLUMETRIC_LESS_THAN_ACTUAL");
-  }
+                        // Rule 1: Volumetric < Actual
+                        if (volumetric < actualWeight) {
+                            reasons.push(
+                                "Volumetric weight is less than actual weight"
+                            );
+                            violatedRules.push("VOLUMETRIC_LESS_THAN_ACTUAL");
+                        }
 
-  // Rule 2: Any dimension > 70 cm
-  if (length > 70 || width > 70 || height > 70) {
-    reasons.push("One or more dimensions exceed 70 cm");
-    violatedRules.push("OVERSIZE_DIMENSION");
-  }
+                        // Rule 2: Any dimension > 70 cm
+                        if (length > 70 || width > 70 || height > 70) {
+                            reasons.push("One or more dimensions exceed 70 cm");
+                            violatedRules.push("OVERSIZE_DIMENSION");
+                        }
 
-  // Rule 3: Any dimension < 4 cm
-  if (length < 4 || width < 4 || height < 4) {
-    reasons.push("One or more dimensions are less than 4 cm");
-    violatedRules.push("UNDERSIZE_DIMENSION");
-  }
+                        // Rule 3: Any dimension < 4 cm
+                        if (length < 4 || width < 4 || height < 4) {
+                            reasons.push(
+                                "One or more dimensions are less than 4 cm"
+                            );
+                            violatedRules.push("UNDERSIZE_DIMENSION");
+                        }
 
-  // Rule 4: Small volume but heavy
-  const volume = length * width * height;
-  if (volume < 1000) {
-    reasons.push("Small volume but high weight");
-    violatedRules.push("HEAVY_SMALL_PACKAGE");
-  }
+                        // Rule 4: Small volume but heavy
+                        const volume = length * width * height;
+                        if (volume < 1000) {
+                            reasons.push("Small volume but high weight");
+                            violatedRules.push("HEAVY_SMALL_PACKAGE");
+                        }
 
-  // ✅ INSERT ONLY IF VIOLATED
-  if (violatedRules.length > 0) {
-    await db.insert(schemas.shipmentDiscrepancies).values({
-      orderId: newOrder.id,
-      productId: item.productId,
-      brandId: item.brandId,
-      brandPackingId: packingRule?.id ?? null,
+                        // ✅ INSERT ONLY IF VIOLATED
+                        if (violatedRules.length > 0) {
+                            await db
+                                .insert(schemas.shipmentDiscrepancies)
+                                .values({
+                                    orderId: newOrder.id,
+                                    productId: item.productId,
+                                    brandId: item.brandId,
+                                    brandPackingId: packingRule?.id ?? null,
 
-      actualWeight,
-      volumetricWeight: volumetric,
+                                    actualWeight,
+                                    volumetricWeight: volumetric,
 
-      length,
-      width,
-      height,
+                                    length,
+                                    width,
+                                    height,
 
-      reason: reasons.join(" | "),
-      rulesViolated: violatedRules,
-    });
+                                    reason: reasons.join(" | "),
+                                    rulesViolated: violatedRules,
+                                });
 
-    console.log("🚨 Shipment discrepancy logged", {
-      orderId: newOrder.id,
-      violatedRules,
-    });
-  }
-} catch (discrepancyError) {
-  // 🔥 IMPORTANT: Never break order flow
-  console.error("Discrepancy logging failed:", discrepancyError);
-}
+                            console.log("🚨 Shipment discrepancy logged", {
+                                orderId: newOrder.id,
+                                violatedRules,
+                            });
+                        }
+                    } catch (discrepancyError) {
+                        // 🔥 IMPORTANT: Never break order flow
+                        console.error(
+                            "Discrepancy logging failed:",
+                            discrepancyError
+                        );
+                    }
 
-                      const delhiveryPayload = {
+                    const delhiveryPayload = {
                         pickup_location: {
-                        name: pickupLocation, // must match registered Delhivery pickup name
-                      },
-                      shipments: [
-                        {
-                          name: existingAddress.fullName,
-                          add: existingAddress.street,
-                          city: existingAddress.city,
-                          state: existingAddress.state,
-                          country: "India",
-                          pin: existingAddress.zip,
-                          phone: String(getRawNumberFromPhone(existingAddress.phone)),
-                          order: orderId,
-                          payment_mode: input.paymentMethod === "COD" ? "COD" : "Prepaid",
-                          total_amount: +convertPaiseToRupees(orderValue),
-                          cod_amount:
-                            input.paymentMethod === "COD"
-                              ? +convertPaiseToRupees(orderValue)
-                              : 0,
-                          products_desc:
-                            product?.title ||
-                            variant?.sku ||
-                            "General Product",
-                          weight: finalVolumetricWeight, // grams → kg
-                          shipment_length: validatedDimensions.length / 10, // cm → mm optional
-                          shipment_width: validatedDimensions.width / 10,
-                          shipment_height: validatedDimensions.height / 10,
-                          quantity: String(item.quantity),
-                          seller_name: brand.name,
-                          seller_add: brand.address || "Warehouse Address",
-                          return_name: brand.name,
-                          return_add: brand.address || "Warehouse Address",
-                          return_city: existingAddress.city,
-                          return_phone: getRawNumberFromPhone(existingAddress.phone),
-                          return_state: existingAddress.state,
-                          return_country: "India",
-                          return_pin: existingAddress.zip,
-                          fragile_shipment: false,
-                          plastic_packaging: false,
+                            name: pickupLocation, // must match registered Delhivery pickup name
                         },
-                      ],
+                        shipments: [
+                            {
+                                name: existingAddress.fullName,
+                                add: existingAddress.street,
+                                city: existingAddress.city,
+                                state: existingAddress.state,
+                                country: "India",
+                                pin: existingAddress.zip,
+                                phone: String(
+                                    getRawNumberFromPhone(existingAddress.phone)
+                                ),
+                                order: orderId,
+                                payment_mode:
+                                    input.paymentMethod === "COD"
+                                        ? "COD"
+                                        : "Prepaid",
+                                total_amount: +convertPaiseToRupees(orderValue),
+                                cod_amount:
+                                    input.paymentMethod === "COD"
+                                        ? +convertPaiseToRupees(orderValue)
+                                        : 0,
+                                products_desc:
+                                    product?.title ||
+                                    variant?.sku ||
+                                    "General Product",
+                                weight: finalVolumetricWeight, // grams → kg
+                                shipment_length:
+                                    validatedDimensions.length / 10, // cm → mm optional
+                                shipment_width: validatedDimensions.width / 10,
+                                shipment_height:
+                                    validatedDimensions.height / 10,
+                                quantity: String(item.quantity),
+                                seller_name: brand.name,
+                                seller_add:
+                                    brand.address || "Warehouse Address",
+                                return_name: brand.name,
+                                return_add:
+                                    brand.address || "Warehouse Address",
+                                return_city: existingAddress.city,
+                                return_phone: getRawNumberFromPhone(
+                                    existingAddress.phone
+                                ),
+                                return_state: existingAddress.state,
+                                return_country: "India",
+                                return_pin: existingAddress.zip,
+                                fragile_shipment: false,
+                                plastic_packaging: false,
+                            },
+                        ],
                     };
 
-                    console.log("🚀 Delhivery Order Payload:", delhiveryPayload);
-
+                    console.log(
+                        "🚀 Delhivery Order Payload:",
+                        delhiveryPayload
+                    );
 
                     const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
 
@@ -675,17 +712,20 @@ try {
                         //     `Shiprocket order creation response for brand ${brand.name}:`,
                         //     srOrder
                         // );
-                    const srOrder = await createDelhiveryOrder(delhiveryPayload);
- console.log("✅ Delhivery Response:", srOrder);
- let finalLength = baseLength;
-let finalWidth = baseWidth;
-let finalHeight = baseHeight;
+                        const srOrder =
+                            await createDelhiveryOrder(delhiveryPayload);
+                        console.log("✅ Delhivery Response:", srOrder);
+                        let finalLength = baseLength;
+                        let finalWidth = baseWidth;
+                        let finalHeight = baseHeight;
 
-if (isHardOrFragileBox) {
-  finalLength = validatedDimensions.length + baseLength;
-  finalWidth = validatedDimensions.width + baseWidth;
-  finalHeight = validatedDimensions.height + baseHeight;
-}
+                        if (isHardOrFragileBox) {
+                            finalLength =
+                                validatedDimensions.length + baseLength;
+                            finalWidth = validatedDimensions.width + baseWidth;
+                            finalHeight =
+                                validatedDimensions.height + baseHeight;
+                        }
                         if (matchedIntent) {
                             await db
                                 .update(schemas.ordersIntent)
@@ -709,72 +749,96 @@ if (isHardOrFragileBox) {
                                 );
                         }
 
+                        console.log(
+                            "📦 Checking Delhivery response success:",
+                            srOrder?.data?.success
+                        );
 
-             console.log("📦 Checking Delhivery response success:", srOrder?.data?.success);
+                        if (srOrder?.data?.success === true) {
+                            const pkg = srOrder.data.packages?.[0];
+                            console.log("📦 Extracted Delhivery Package:", pkg);
 
-                    if (srOrder?.data?.success === true) {
-                        const pkg = srOrder.data.packages?.[0];
-                        console.log("📦 Extracted Delhivery Package:", pkg);
+                            const shipment = await db
+                                .insert(schemas.orderShipments)
+                                .values({
+                                    orderId: newOrder.id,
+                                    brandId: item.brandId,
 
-                        const shipment = await db
-                            .insert(schemas.orderShipments)
-                            .values({
-                                orderId: newOrder.id,
-                                brandId: item.brandId,
+                                    // 🔄 Stored in old Shiprocket fields
+                                    // shiprocketOrderId: pkg?.waybill || null, // using refnum as order reference
+                                    // shiprocketShipmentId: pkg?.waybill || null, // using upload_wbn
+                                    uploadWbn: srOrder.data.upload_wbn || null, // New field
+                                    status: "pending",
 
-                                // 🔄 Stored in old Shiprocket fields
-                                // shiprocketOrderId: pkg?.waybill || null, // using refnum as order reference
-                                // shiprocketShipmentId: pkg?.waybill || null, // using upload_wbn
-                                uploadWbn: srOrder.data.upload_wbn || null, // New field
-                                status: "pending",
+                                    // courierCompanyId: pkg?.sort_code || null, // not exactly a company id but closest
+                                    delhiveryClientId: pkg?.client || null,
+                                    delhiverySortCode: pkg?.sort_code || null,
+                                    courierName: "Delhivery", // fixed since courier is always Delhivery
+                                    awbNumber: pkg?.waybill || null, // MAIN AWB FROM DELHIVERY
+                                    isAwbGenerated: true,
+                                    givenLength: finalLength,
+                                    givenWidth: finalWidth,
+                                    givenHeight: finalHeight,
+                                })
+                                .returning()
+                                .then((res) => res[0]);
 
-                                // courierCompanyId: pkg?.sort_code || null, // not exactly a company id but closest
-                                delhiveryClientId: pkg?.client || null,
-                                delhiverySortCode: pkg?.sort_code || null,
-                                courierName: "Delhivery", // fixed since courier is always Delhivery
-                                awbNumber: pkg?.waybill || null, // MAIN AWB FROM DELHIVERY
-                                isAwbGenerated: true,
-                                givenLength: finalLength,
-                                givenWidth: finalWidth,
-                                givenHeight: finalHeight,
-                            })
-                            .returning()
-                            .then((res) => res[0]);
+                            console.log(
+                                "🚚 Delhivery shipment stored in DB:",
+                                shipment
+                            );
 
-                        console.log("🚚 Delhivery shipment stored in DB:", shipment);
-
-                        // Fetch Order Items for this brand
-                        const orderItemsForBrand = await db
-                            .select({
-                                orderItem: schemas.orderItems,
-                                product: schemas.products,
-                            })
-                            .from(schemas.orderItems)
-                            .where(
-                                and(
-                                    eq(schemas.orderItems.orderId, newOrder.id),
-                                    eq(schemas.products.brandId, item.brandId)
+                            // Fetch Order Items for this brand
+                            const orderItemsForBrand = await db
+                                .select({
+                                    orderItem: schemas.orderItems,
+                                    product: schemas.products,
+                                })
+                                .from(schemas.orderItems)
+                                .where(
+                                    and(
+                                        eq(
+                                            schemas.orderItems.orderId,
+                                            newOrder.id
+                                        ),
+                                        eq(
+                                            schemas.products.brandId,
+                                            item.brandId
+                                        )
+                                    )
                                 )
-                            )
-                            .innerJoin(
-                                schemas.products,
-                                eq(schemas.orderItems.productId, schemas.products.id)
+                                .innerJoin(
+                                    schemas.products,
+                                    eq(
+                                        schemas.orderItems.productId,
+                                        schemas.products.id
+                                    )
+                                );
+
+                            console.log(
+                                "🧾 Order items for shipment:",
+                                orderItemsForBrand
                             );
 
-                        console.log("🧾 Order items for shipment:", orderItemsForBrand);
-
-                        if (orderItemsForBrand.length > 0) {
-                            await db.insert(schemas.orderShipmentItems).values(
-                                orderItemsForBrand.map((row) => ({
-                                    shipmentId: shipment.id,
-                                    orderItemId: row.orderItem.id,
-                                }))
+                            if (orderItemsForBrand.length > 0) {
+                                await db
+                                    .insert(schemas.orderShipmentItems)
+                                    .values(
+                                        orderItemsForBrand.map((row) => ({
+                                            shipmentId: shipment.id,
+                                            orderItemId: row.orderItem.id,
+                                        }))
+                                    );
+                                console.log(
+                                    "🧾 Order Shipment Items inserted."
+                                );
+                            }
+                        } else {
+                            console.log(
+                                "❌ Delhivery response failed:",
+                                srOrder
                             );
-                            console.log("🧾 Order Shipment Items inserted.");
                         }
-                    } else {
-                        console.log("❌ Delhivery response failed:", srOrder);
-                    }
                         // if (srOrder.status || srOrder.data) {
                         //     const shipment = await db
                         //         .insert(schemas.orderShipments)
@@ -1218,18 +1282,19 @@ if (isHardOrFragileBox) {
                 );
             }
         }),
-        updatePickupStatus: protectedProcedure
-  .input(z.object({ orderId: z.string() }))
-  .mutation(async ({ ctx, input }) => {
-    await ctx.db.update(orderShipments)
-         .set({
-        isPickupScheduled: true,
-        isAwbGenerated: true,
-      })
-      .where(eq(orderShipments.orderId, input.orderId));
+    updatePickupStatus: protectedProcedure
+        .input(z.object({ orderId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            await ctx.db
+                .update(orderShipments)
+                .set({
+                    isPickupScheduled: true,
+                    isAwbGenerated: true,
+                })
+                .where(eq(orderShipments.orderId, input.orderId));
 
-    return { success: true };
-  }),
+            return { success: true };
+        }),
 
     cancelOrder: protectedProcedure
         .input(
@@ -1417,96 +1482,95 @@ if (isHardOrFragileBox) {
 
             return true;
         }),
-  getOrderShipmentDetailsByShipmentId: protectedProcedure
-  .input(
-    z.object({
-      shipmentId: z.number(),
-    })
-  )
-  .query(async ({ input, ctx }) => {
-    const { queries } = ctx;
+    getOrderShipmentDetailsByShipmentId: protectedProcedure
+        .input(
+            z.object({
+                shipmentId: z.number(),
+            })
+        )
+        .query(async ({ input, ctx }) => {
+            const { queries } = ctx;
 
-    return queries.orders.getShipmentDetailsByShipmentId(
-      input.shipmentId
-    );
-  }),
+            return queries.orders.getShipmentDetailsByShipmentId(
+                input.shipmentId
+            );
+        }),
 
-/* --------------------------------------------------
+    /* --------------------------------------------------
    UPDATE DELHIVERY DIMENSIONS
 -------------------------------------------------- */
 
-updateDelhiveryDimensions: protectedProcedure
-  .input(
-    z.object({
-      orderId: z.string(),
-      awbNumber: z.string(),
-      length: z.number(),
-      width: z.number(),
-      height: z.number(),
-      volumetricWeight: z.number(), // grams
-    })
-  )
-  .mutation(async ({ input, ctx }) => {
-    const {
-      orderId,
-      awbNumber,
-      length,
-      width,
-      height,
-      volumetricWeight,
-    } = input;
+    updateDelhiveryDimensions: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+                awbNumber: z.string(),
+                length: z.number(),
+                width: z.number(),
+                height: z.number(),
+                volumetricWeight: z.number(), // grams
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            const {
+                orderId,
+                awbNumber,
+                length,
+                width,
+                height,
+                volumetricWeight,
+            } = input;
 
-    if (!awbNumber) {
-      throw new Error("AWB number missing");
-    }
+            if (!awbNumber) {
+                throw new Error("AWB number missing");
+            }
 
-    /* -----------------------------
+            /* -----------------------------
        ✅ JSON BODY (NOT FORM DATA)
     ----------------------------- */
-   const volbKg = volumetricWeight;
+            const volbKg = volumetricWeight;
 
-// Force non-integer float
-const safeVolb = volbKg % 1 === 0 ? volbKg + 0.001 : volbKg;
+            // Force non-integer float
+            const safeVolb = volbKg % 1 === 0 ? volbKg + 0.001 : volbKg;
 
-const payload = {
-  waybill: awbNumber,
-  shipment_length: length % 1 === 0 ? length + 0.1 : length,
-  shipment_width: width % 1 === 0 ? width + 0.1 : width,
-  shipment_height: height % 1 === 0 ? height + 0.1 : height,
-  gm: safeVolb,
-};
-console.log(payload, "payloadpayloadpayload");
-    const resp = await axios.post(
-      "https://track.delhivery.com/api/p/edit",
-      payload,
-      {
-        headers: {
-          Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+            const payload = {
+                waybill: awbNumber,
+                shipment_length: length % 1 === 0 ? length + 0.1 : length,
+                shipment_width: width % 1 === 0 ? width + 0.1 : width,
+                shipment_height: height % 1 === 0 ? height + 0.1 : height,
+                gm: safeVolb,
+            };
+            console.log(payload, "payloadpayloadpayload");
+            const resp = await axios.post(
+                "https://track.delhivery.com/api/p/edit",
+                payload,
+                {
+                    headers: {
+                        Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
-    console.log("📦 Delhivery UPDATE response →", resp.data);
+            console.log("📦 Delhivery UPDATE response →", resp.data);
 
-    if (!resp.data || resp.data.status === "Failure") {
-      throw new Error(
-        "Delhivery update failed: " +
-          JSON.stringify(resp.data)
-      );
-    }
+            if (!resp.data || resp.data.status === "Failure") {
+                throw new Error(
+                    "Delhivery update failed: " + JSON.stringify(resp.data)
+                );
+            }
 
-    // ✅ DB update
-    await ctx.db
-      .update(orderShipments)
-      .set({
-        givenLength: length,
-        givenWidth: width,
-        givenHeight: height,
-        updatedAt: new Date(),
-      })
-      .where(eq(orderShipments.orderId, orderId));
+            // ✅ DB update
+            await ctx.db
+                .update(orderShipments)
+                .set({
+                    givenLength: length,
+                    givenWidth: width,
+                    givenHeight: height,
+                    updatedAt: new Date(),
+                })
+                .where(eq(orderShipments.orderId, orderId));
 
-    return { success: true };
-  })
+            return { success: true };
+        }),
 });
