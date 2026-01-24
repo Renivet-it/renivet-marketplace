@@ -787,8 +787,8 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
     };
     return (
         <div className="space-y-6 rounded-lg border border-gray-100 bg-white p-6 shadow-sm">
-            {/* Status Tabs */}
-            <div className="border-b border-gray-200">
+            {/* Status Tabs - Modern Pill Style */}
+            <div className="rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 p-1.5">
                 <Tabs
                     value={statusTab}
                     onValueChange={(value) => {
@@ -797,19 +797,21 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
                     }}
                     className="w-full"
                 >
-                    <TabsList className="flex h-auto flex-wrap gap-0 border-none bg-transparent p-0">
+                    <TabsList className="flex h-auto flex-wrap gap-1 border-none bg-transparent p-0">
                         {STATUS_TABS.map((tab) => (
                             <TabsTrigger
                                 key={tab.value}
                                 value={tab.value}
                                 className={cn(
-                                    "relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium",
-                                    "data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary",
-                                    "hover:bg-gray-50 hover:text-gray-700 data-[state=inactive]:text-gray-500",
-                                    "transition-all duration-200"
+                                    "relative rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-300",
+                                    "data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-md",
+                                    "data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-white/60 data-[state=inactive]:hover:text-gray-900",
+                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
                                 )}
                             >
-                                {tab.label}
+                                <span className="relative z-10">
+                                    {tab.label}
+                                </span>
                             </TabsTrigger>
                         ))}
                     </TabsList>
