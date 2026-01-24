@@ -18,6 +18,14 @@ interface PageProps {
         page?: string;
         limit?: string;
         search?: string;
+        statusTab?:
+            | "all"
+            | "ready_to_pickup"
+            | "pickup_scheduled"
+            | "shipped"
+            | "delivered"
+            | "cancelled"
+            | "rto";
     }>;
 }
 
@@ -49,17 +57,20 @@ async function OrdersFetch({ searchParams }: PageProps) {
         page: pageRaw,
         limit: limitRaw,
         search: searchRaw,
+        statusTab: statusTabRaw,
     } = await searchParams;
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const search = searchRaw?.length ? searchRaw : undefined;
+    const statusTab = statusTabRaw || "all";
 
     const data = await orderQueries.getOrders({
         page,
         limit,
         search,
+        statusTab,
     });
 
     return <OrdersTable initialData={data} />;
