@@ -125,7 +125,15 @@ export const ordersRouter = createTRPCRouter({
             const data = await queries.orders.getOrders(input);
             return data;
         }),
+    getOrderStatusCounts: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .query(async ({ ctx }) => {
+            const { queries } = ctx;
+            const counts = await queries.orders.getOrderStatusCounts();
+            return counts;
+        }),
     getOrdersByUserId: protectedProcedure
+
         .input(
             z.object({
                 userId: z.string(),

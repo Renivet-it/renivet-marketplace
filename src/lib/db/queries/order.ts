@@ -192,20 +192,21 @@ class OrderQuery {
         if (statusTab && statusTab !== "all") {
             switch (statusTab) {
                 case "ready_to_pickup":
-                    // orders.status = 'pending' AND orderShipments.isPickupScheduled = false
-                    whereConditions.push(eq(orders.status, "pending"));
+                    // orders.status = 'pending' OR orderShipments.status = 'pending' (any pending status)
                     whereConditions.push(
-                        inArray(
-                            orders.id,
-                            db
-                                .select({ orderId: orderShipments.orderId })
-                                .from(orderShipments)
-                                .where(
-                                    eq(orderShipments.isPickupScheduled, false)
-                                )
+                        or(
+                            eq(orders.status, "pending"),
+                            inArray(
+                                orders.id,
+                                db
+                                    .select({ orderId: orderShipments.orderId })
+                                    .from(orderShipments)
+                                    .where(eq(orderShipments.status, "pending"))
+                            )
                         )
                     );
                     break;
+
                 case "pickup_scheduled":
                     // orders.status = 'pending' AND orderShipments.isPickupScheduled = true AND orderShipments.status = 'pending'
                     whereConditions.push(eq(orders.status, "pending"));
@@ -367,6 +368,111 @@ class OrderQuery {
         return {
             data: parsed,
             count: +data?.[0]?.count || 0,
+        };
+    }
+
+    async getOrderStatusCounts() {
+        // Get counts for each status tab efficiently
+        const [
+            allCount,
+            readyToPickupCount,
+            pickupScheduledCount,
+            shippedCount,
+            deliveredCount,
+            cancelledCount,
+            rtoCount,
+        ] = await Promise.all([
+            // All orders
+            db.$count(orders),
+
+            // Ready to pickup: orders.status = 'pending' OR orderShipments.status = 'pending'
+            db.$count(
+                orders,
+                or(
+                    eq(orders.status, "pending"),
+                    inArray(
+                        orders.id,
+                        db
+                            .select({ orderId: orderShipments.orderId })
+                            .from(orderShipments)
+                            .where(eq(orderShipments.status, "pending"))
+                    )
+                )
+            ),
+
+            // Pickup scheduled: orders.status = 'pending' AND orderShipments.isPickupScheduled = true
+            db.$count(
+                orders,
+                and(
+                    eq(orders.status, "pending"),
+                    inArray(
+                        orders.id,
+                        db
+                            .select({ orderId: orderShipments.orderId })
+                            .from(orderShipments)
+                            .where(
+                                and(
+                                    eq(orderShipments.isPickupScheduled, true),
+                                    eq(orderShipments.status, "pending")
+                                )
+                            )
+                    )
+                )
+            ),
+
+            // Shipped: orders.status = 'processing' OR orderShipments.status = 'in_transit'
+            db.$count(
+                orders,
+                or(
+                    eq(orders.status, "processing"),
+                    inArray(
+                        orders.id,
+                        db
+                            .select({ orderId: orderShipments.orderId })
+                            .from(orderShipments)
+                            .where(eq(orderShipments.status, "in_transit"))
+                    )
+                )
+            ),
+
+            // Delivered
+            db.$count(orders, eq(orders.status, "delivered")),
+
+            // Cancelled
+            db.$count(orders, eq(orders.status, "cancelled")),
+
+            // RTO: is_return_label_generated = true OR is_replacement_label_generated = true
+            db.$count(
+                orders,
+                inArray(
+                    orders.id,
+                    db
+                        .select({ orderId: orderShipments.orderId })
+                        .from(orderShipments)
+                        .where(
+                            or(
+                                eq(
+                                    orderShipments.is_return_label_generated,
+                                    true
+                                ),
+                                eq(
+                                    orderShipments.is_replacement_label_generated,
+                                    true
+                                )
+                            )
+                        )
+                )
+            ),
+        ]);
+
+        return {
+            all: Number(allCount),
+            ready_to_pickup: Number(readyToPickupCount),
+            pickup_scheduled: Number(pickupScheduledCount),
+            shipped: Number(shippedCount),
+            delivered: Number(deliveredCount),
+            cancelled: Number(cancelledCount),
+            rto: Number(rtoCount),
         };
     }
 
