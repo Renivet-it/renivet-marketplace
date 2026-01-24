@@ -229,22 +229,39 @@ class OrderQuery {
                     );
                     break;
                 case "shipped":
-                    // orders.status = 'processing' OR orderShipments.status = 'in_transit'
+                    // Shipped: (orders.status = 'processing' OR orderShipments.status = 'in_transit')
+                    // AND NOT (orders.status = 'pending' OR orderShipments.status = 'pending')
                     whereConditions.push(
-                        or(
-                            eq(orders.status, "processing"),
-                            inArray(
-                                orders.id,
-                                db
-                                    .select({ orderId: orderShipments.orderId })
-                                    .from(orderShipments)
-                                    .where(
-                                        eq(orderShipments.status, "in_transit")
-                                    )
-                            )
+                        and(
+                            // Must be processing or in_transit
+                            or(
+                                eq(orders.status, "processing"),
+                                inArray(
+                                    orders.id,
+                                    db
+                                        .select({
+                                            orderId: orderShipments.orderId,
+                                        })
+                                        .from(orderShipments)
+                                        .where(
+                                            eq(
+                                                orderShipments.status,
+                                                "in_transit"
+                                            )
+                                        )
+                                )
+                            ),
+                            // Exclude if orders.status is pending
+                            sql`${orders.status} != 'pending'`,
+                            // Exclude if orderShipments.status is pending
+                            sql`${orders.id} NOT IN (
+                                SELECT ${orderShipments.orderId} FROM ${orderShipments}
+                                WHERE ${orderShipments.status} = 'pending'
+                            )`
                         )
                     );
                     break;
+
                 case "delivered":
                     whereConditions.push(eq(orders.status, "delivered"));
                     break;
@@ -420,18 +437,26 @@ class OrderQuery {
                 )
             ),
 
-            // Shipped: orders.status = 'processing' OR orderShipments.status = 'in_transit'
+            // Shipped: (orders.status = 'processing' OR orderShipments.status = 'in_transit')
+            // AND NOT (orders.status = 'pending' OR orderShipments.status = 'pending')
             db.$count(
                 orders,
-                or(
-                    eq(orders.status, "processing"),
-                    inArray(
-                        orders.id,
-                        db
-                            .select({ orderId: orderShipments.orderId })
-                            .from(orderShipments)
-                            .where(eq(orderShipments.status, "in_transit"))
-                    )
+                and(
+                    or(
+                        eq(orders.status, "processing"),
+                        inArray(
+                            orders.id,
+                            db
+                                .select({ orderId: orderShipments.orderId })
+                                .from(orderShipments)
+                                .where(eq(orderShipments.status, "in_transit"))
+                        )
+                    ),
+                    sql`${orders.status} != 'pending'`,
+                    sql`${orders.id} NOT IN (
+                        SELECT ${orderShipments.orderId} FROM ${orderShipments}
+                        WHERE ${orderShipments.status} = 'pending'
+                    )`
                 )
             ),
 
