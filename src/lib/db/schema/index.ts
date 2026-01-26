@@ -25,4 +25,6 @@ export * from "./user";
 export * from "./wishlist";
 export * from "./media";
 export * from "./reason";
+export * from "./order-return-exchange";
+export * from "./search";
 export * from "./types";

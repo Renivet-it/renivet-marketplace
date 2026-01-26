@@ -1457,6 +1457,13 @@
       "when": 1768832611767,
       "tag": "0207_keen_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 208,
+      "version": "7",
+      "when": 1768925817066,
+      "tag": "0208_rapid_swordsman",
+      "breakpoints": true
     }
   ]
 }
