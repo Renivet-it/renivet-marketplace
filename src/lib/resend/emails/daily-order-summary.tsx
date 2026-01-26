@@ -15,6 +15,8 @@ interface OrderSummaryItem {
         lastName?: string | null;
     };
     status: string;
+    shipmentStatus?: string;
+    isPickupScheduled?: boolean;
     totalAmount: number;
     createdAt: Date;
 }
@@ -36,11 +38,59 @@ interface Props {
     orders: OrderSummaryItem[];
 }
 
-const STATUS_LABELS: Record<string, string> = {
-    pending: "Pending",
-    processing: "Processing",
-    delivered: "Delivered",
-    cancelled: "Cancelled",
+// Function to get detailed status based on order and shipment data
+const getDetailedStatus = (
+    order: OrderSummaryItem
+): { label: string; category: string } => {
+    // Handle delivered and cancelled first
+    if (order.status === "delivered")
+        return { label: "Delivered", category: "delivered" };
+    if (order.status === "cancelled")
+        return { label: "Cancelled", category: "cancelled" };
+
+    // Handle pending orders
+    if (order.status === "pending") {
+        if (order.isPickupScheduled && order.shipmentStatus === "pending") {
+            return { label: "Pickup Scheduled", category: "pickup_scheduled" };
+        }
+        return { label: "Ready to Pickup", category: "ready_to_pickup" };
+    }
+
+    // Handle processing orders - NEVER show "Processing", always show specific status
+    if (order.status === "processing") {
+        // Check shipment status for more granular classification
+        if (order.shipmentStatus === "pending") {
+            // If shipment is pending, check if pickup is scheduled
+            if (order.isPickupScheduled) {
+                return {
+                    label: "Pickup Scheduled",
+                    category: "pickup_scheduled",
+                };
+            }
+            return { label: "Ready to Pickup", category: "ready_to_pickup" };
+        }
+
+        // Any other shipment status means it's shipped
+        if (
+            order.shipmentStatus === "in_transit" ||
+            order.shipmentStatus === "out_for_delivery"
+        ) {
+            return { label: "Shipped", category: "shipped" };
+        }
+
+        if (order.shipmentStatus && order.shipmentStatus !== "pending") {
+            return { label: "Shipped", category: "shipped" };
+        }
+
+        // Fallback for processing without shipment data
+        return { label: "Ready to Pickup", category: "ready_to_pickup" };
+    }
+
+    // Fallback
+    return {
+        label: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+        category: order.status,
+    };
 };
 
 export default function DailyOrderSummary({
@@ -281,37 +331,77 @@ export default function DailyOrderSummary({
                                         borderBottom: "1px solid #eee",
                                     }}
                                 >
-                                    <span
-                                        style={{
-                                            padding: "4px 8px",
-                                            borderRadius: "4px",
-                                            backgroundColor:
-                                                order.status === "delivered"
-                                                    ? "#d4edda"
-                                                    : order.status ===
-                                                        "cancelled"
-                                                      ? "#f8d7da"
-                                                      : order.status ===
-                                                          "processing"
-                                                        ? "#fff3cd"
-                                                        : "#d1ecf1",
-                                            color:
-                                                order.status === "delivered"
-                                                    ? "#155724"
-                                                    : order.status ===
-                                                        "cancelled"
-                                                      ? "#721c24"
-                                                      : order.status ===
-                                                          "processing"
-                                                        ? "#856404"
-                                                        : "#0c5460",
-                                            fontSize: "12px",
-                                            fontWeight: "500",
-                                        }}
-                                    >
-                                        {STATUS_LABELS[order.status] ||
-                                            order.status}
-                                    </span>
+                                    {(() => {
+                                        const statusInfo =
+                                            getDetailedStatus(order);
+                                        const colors = {
+                                            delivered: {
+                                                bg: "#d4edda",
+                                                text: "#155724",
+                                            },
+                                            cancelled: {
+                                                bg: "#f8d7da",
+                                                text: "#721c24",
+                                            },
+                                            shipped: {
+                                                bg: "#cfe2ff",
+                                                text: "#084298",
+                                            },
+                                            pickup_scheduled: {
+                                                bg: "#fff3cd",
+                                                text: "#856404",
+                                            },
+                                            ready_to_pickup: {
+                                                bg: "#fff3cd",
+                                                text: "#856404",
+                                            },
+                                            processing: {
+                                                bg: "#e2e3e5",
+                                                text: "#41464b",
+                                            },
+                                        };
+                                        const color = colors[
+                                            statusInfo.category as keyof typeof colors
+                                        ] || { bg: "#d1ecf1", text: "#0c5460" };
+
+                                        return (
+                                            <div>
+                                                <span
+                                                    style={{
+                                                        padding: "6px 10px",
+                                                        borderRadius: "4px",
+                                                        backgroundColor:
+                                                            color.bg,
+                                                        color: color.text,
+                                                        fontSize: "12px",
+                                                        fontWeight: "600",
+                                                        display: "inline-block",
+                                                    }}
+                                                >
+                                                    {statusInfo.label}
+                                                </span>
+                                                {order.shipmentStatus && (
+                                                    <div
+                                                        style={{
+                                                            fontSize: "10px",
+                                                            color: "#666",
+                                                            marginTop: "4px",
+                                                            fontStyle: "italic",
+                                                        }}
+                                                    >
+                                                        Shipment:{" "}
+                                                        {order.shipmentStatus
+                                                            .replace(/_/g, " ")
+                                                            .replace(
+                                                                /\b\w/g,
+                                                                (l) =>
+                                                                    l.toUpperCase()
+                                                            )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </td>
                                 <td
                                     style={{

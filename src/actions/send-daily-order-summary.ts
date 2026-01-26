@@ -32,19 +32,24 @@ export async function sendDailyOrderSummary() {
 
         console.log(`📦 Total orders found: ${ordersResponse.count}`);
 
-        // Format orders for email template
-        const formattedOrders = ordersResponse.data.map((order) => ({
-            id: order.id,
-            user: order.user
-                ? {
-                      firstName: order.user.firstName,
-                      lastName: order.user.lastName,
-                  }
-                : undefined,
-            status: order.status,
-            totalAmount: order.totalAmount,
-            createdAt: order.createdAt,
-        }));
+        // Format orders for email template with shipment data
+        const formattedOrders = ordersResponse.data.map((order) => {
+            const shipment = order.shipments?.[0];
+            return {
+                id: order.id,
+                user: order.user
+                    ? {
+                          firstName: order.user.firstName,
+                          lastName: order.user.lastName,
+                      }
+                    : undefined,
+                status: order.status,
+                shipmentStatus: shipment?.status,
+                isPickupScheduled: shipment?.isPickupScheduled,
+                totalAmount: order.totalAmount,
+                createdAt: order.createdAt,
+            };
+        });
 
         // Prepare email data
         const emailData = {
@@ -57,7 +62,8 @@ export async function sendDailyOrderSummary() {
         };
 
         // Send email to configured recipients
-        const recipients = [env.RENIVET_EMAIL_1, env.RENIVET_EMAIL_2];
+        // TODO: For testing - change back to [env.RENIVET_EMAIL_1, env.RENIVET_EMAIL_2] for production
+        const recipients = ["ayanganguly333@gmail.com"];
 
         console.log(`📨 Sending emails to: ${recipients.join(", ")}`);
 
