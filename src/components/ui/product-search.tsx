@@ -242,19 +242,24 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                 key={`${suggestion.type}-${suggestion.displayText}-${index}`}
                                 type="button"
                                 className={cn(
-                                    "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50",
+                                    "flex w-full cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50",
                                     selectedIndex === index && "bg-gray-100",
                                     suggestion.type === "all" &&
                                         "bg-gray-50 font-medium"
                                 )}
+                                style={{ userSelect: "none" }}
                                 onClick={() => {
                                     // All suggestion types just use the search query
                                     handleSuggestionClick(suggestion.keyword);
                                 }}
+                                onMouseDown={(e) => e.preventDefault()}
                                 onMouseEnter={() => setSelectedIndex(index)}
                             >
-                                <Icons.Search className="size-4 shrink-0 text-gray-400" />
-                                <span className="flex-1 truncate text-sm text-gray-700">
+                                <Icons.Search className="pointer-events-none size-4 shrink-0 text-gray-400" />
+                                <span
+                                    className="pointer-events-none flex-1 select-none truncate text-sm text-gray-700"
+                                    style={{ userSelect: "none" }}
+                                >
                                     {suggestion.displayText}
                                 </span>
                             </button>
