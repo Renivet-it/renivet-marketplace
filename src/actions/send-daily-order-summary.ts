@@ -64,8 +64,11 @@ export async function sendDailyOrderSummary() {
         };
 
         // Send email to configured recipients
-        // TODO: For testing - change back to [env.RENIVET_EMAIL_1, env.RENIVET_EMAIL_2] for production
-        const recipients = ["ayanganguly333@gmail.com"];
+        const recipients = [
+            "akshay@renivet.com",
+            "kriti@renivet.com",
+            "ayanganguly333@gmail.com",
+        ];
 
         console.log(`📨 Sending emails to: ${recipients.join(", ")}`);
 
