@@ -2,6 +2,7 @@
 "use server";
 
 import { env } from "@/../env";
+import { sendDailyOrderSummaryWhatsApp } from "@/actions/whatsapp/send-daily-summary-whatsapp";
 import { orderQueries } from "@/lib/db/queries";
 import { resend } from "@/lib/resend";
 import { DailyOrderSummary } from "@/lib/resend/emails";
@@ -88,9 +89,45 @@ export async function sendDailyOrderSummary() {
 
         console.log("✅ Daily order summary emails sent successfully!");
 
+        // Send WhatsApp summaries
+        // TODO: Add phone numbers to environment variables for WhatsApp recipients
+        // For now using a test number - replace with actual recipients in production
+        const whatsappRecipients = ["+917001047092"]; // TODO: Update with actual phone numbers
+
+        const whatsappData = {
+            statistics,
+            orderCount: ordersResponse.count,
+            dateRange: {
+                start: startDate,
+                end: endDate,
+            },
+        };
+
+        console.log(
+            `📱 Sending WhatsApp summaries to: ${whatsappRecipients.join(", ")}`
+        );
+
+        try {
+            const whatsappPromises = whatsappRecipients.map((phoneNumber) =>
+                sendDailyOrderSummaryWhatsApp({
+                    phoneNumber,
+                    data: whatsappData,
+                })
+            );
+
+            await Promise.all(whatsappPromises);
+            console.log("✅ WhatsApp summaries sent successfully!");
+        } catch (whatsappError) {
+            console.error(
+                "⚠️ WhatsApp sending failed (continuing anyway):",
+                whatsappError
+            );
+            // Don't fail the whole operation if WhatsApp fails
+        }
+
         return {
             success: true,
-            message: `Daily order summary sent to ${recipients.length} recipients`,
+            message: `Daily order summary sent to ${recipients.length} email recipients and WhatsApp attempted`,
             count: ordersResponse.count,
             recipients: recipients.length,
         };

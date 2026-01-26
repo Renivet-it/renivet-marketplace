@@ -201,3 +201,43 @@ export async function sendPromoOfferMessage({
     throw new Error(err.message || "Failed to send WhatsApp promo offer message");
   }
 }
+
+/**
+ * Send a plain text WhatsApp message (for messages that don't fit template format)
+ * Useful for dynamic content like daily summaries
+ */
+export async function sendPlainWhatsAppMessage({
+    recipientPhoneNumber,
+    message,
+}: {
+    recipientPhoneNumber: string;
+    message: string;
+}) {
+    if (
+        !process.env.TWILIO_ACCOUNT_SID ||
+        !process.env.TWILIO_AUTH_TOKEN ||
+        !process.env.TWILIO_WHATSAPP_NUMBER
+    ) {
+        throw new Error("Twilio configuration missing");
+    }
+
+    const payload = {
+        from: process.env.TWILIO_WHATSAPP_NUMBER,
+        to: `whatsapp:${recipientPhoneNumber}`,
+        body: message,
+    };
+
+    console.log("Plain WhatsApp Message Payload:", JSON.stringify(payload, null, 2));
+
+    try {
+        const sentMessage = await client.messages.create(payload);
+        console.log(
+            "Twilio Plain WhatsApp API Response:",
+            JSON.stringify(sentMessage, null, 2)
+        );
+        return { success: true, data: { sid: sentMessage.sid } };
+    } catch (err: any) {
+        console.error("Error sending plain WhatsApp message:", err);
+        throw new Error(err.message || "Failed to send WhatsApp message");
+    }
+}
