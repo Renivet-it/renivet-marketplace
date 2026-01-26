@@ -6,7 +6,9 @@ import BrandSubscriptionCharged from "./brand-subscription-charged";
 import BrandUnsubscribed from "./brand-unsubscribed";
 import BrandVerificationStatusUpdate from "./brand-verification-status-update";
 import BrandVerificationtSubmitted from "./brand-verification-submitted";
+import brandOrderNotification from "./brandOrderNotification";
 import CategoryRequestStatusUpdate from "./category-request-status-update";
+import DailyOrderSummary from "./daily-order-summary";
 import OrderDelivered from "./order-delivered";
 import OrderPlaceFailed from "./order-place-failed";
 import OrderPlaced from "./order-placed";
@@ -15,7 +17,6 @@ import OrderRefundInitiated from "./order-refund-initiated";
 import OrderRefundProcessed from "./order-refund-processed";
 import ProductReviewStatusUpdate from "./product-review-status-update";
 import ProductReviewSubmitted from "./product-review-submitted";
-import brandOrderNotification from "./brandOrderNotification";
 
 export {
     AccountCreated,
@@ -27,6 +28,7 @@ export {
     BrandVerificationStatusUpdate,
     BrandVerificationtSubmitted,
     CategoryRequestStatusUpdate,
+    DailyOrderSummary,
     OrderDelivered,
     OrderPlaced,
     OrderPlaceFailed,
