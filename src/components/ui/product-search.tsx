@@ -141,7 +141,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     e.preventDefault();
                     if (selectedIndex >= 0 && suggestions[selectedIndex]) {
                         handleSuggestionClick(
-                            suggestions[selectedIndex].keyword
+                            suggestions[selectedIndex].displayText
                         );
                     } else {
                         handleSearch();
@@ -249,8 +249,10 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                 )}
                                 style={{ userSelect: "none" }}
                                 onClick={() => {
-                                    // All suggestion types just use the search query
-                                    handleSuggestionClick(suggestion.keyword);
+                                    // Use displayText for full search term (e.g., "Sweatshirts in Men")
+                                    handleSuggestionClick(
+                                        suggestion.displayText
+                                    );
                                 }}
                                 onMouseDown={(e) => e.preventDefault()}
                                 onMouseEnter={() => setSelectedIndex(index)}
