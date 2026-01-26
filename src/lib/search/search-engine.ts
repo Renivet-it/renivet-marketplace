@@ -531,23 +531,34 @@ export function getSearchCopy(result: SearchResult): string {
 }
 
 // ============================================
-// SEARCH SUGGESTIONS
+// SEARCH SUGGESTIONS (MYNTRA-STYLE)
 // ============================================
 
 export interface SearchSuggestion {
     keyword: string;
-    intentType: "CATEGORY" | "PRODUCT" | "BRAND";
-    categoryPath: string;
     displayText: string;
+    type:
+        | "all"
+        | "category"
+        | "subcategory"
+        | "productType"
+        | "brand"
+        | "searchIntent";
+    categoryId?: string;
+    subcategoryId?: string;
+    productTypeId?: string;
+    brandId?: string;
+    brandSlug?: string;
+    score: number;
 }
 
 /**
- * Get search suggestions based on partial query
- * Returns matching keywords from search_intents table
+ * Get Myntra-style search suggestions
+ * Dynamically generates suggestions by combining query with categories, subcategories, and product types
  */
 export async function getSuggestions(
     query: string,
-    limit: number = 6
+    limit: number = 10
 ): Promise<SearchSuggestion[]> {
     const normalizedQuery = normalizeQuery(query);
 
@@ -556,66 +567,192 @@ export async function getSuggestions(
     }
 
     try {
-        // Fetch all intents and filter in memory for flexibility
+        // Fetch all category data
+        const [
+            categoriesData,
+            subCategoriesData,
+            productTypesData,
+            brandsData,
+        ] = await Promise.all([
+            db.query.categories.findMany({
+                columns: { id: true, name: true, slug: true },
+            }),
+            db.query.subCategories.findMany({
+                columns: { id: true, name: true, slug: true, categoryId: true },
+                with: {
+                    category: { columns: { name: true } },
+                },
+            }),
+            db.query.productTypes.findMany({
+                columns: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    categoryId: true,
+                    subCategoryId: true,
+                },
+                with: {
+                    category: { columns: { name: true } },
+                    subCategory: { columns: { name: true } },
+                },
+            }),
+            db.query.brands.findMany({
+                columns: { id: true, name: true, slug: true },
+                where: eq(brands.isActive, true),
+            }),
+        ]);
+
+        const suggestions: SearchSuggestion[] = [];
+        const tokens = tokenizeQuery(normalizedQuery);
+        const firstToken = tokens[0] || normalizedQuery;
+
+        // Helper to capitalize words
+        const capitalize = (str: string) =>
+            str.replace(/\b\w/g, (c) => c.toUpperCase());
+
+        // 1. Add "All Others" option first (global search)
+        suggestions.push({
+            keyword: normalizedQuery,
+            displayText: "All Others",
+            type: "all",
+            score: 1000, // Highest priority
+        });
+
+        // 2. Check for exact/partial product type matches
+        for (const pt of productTypesData) {
+            const ptNameLower = pt.name.toLowerCase();
+            if (
+                ptNameLower.includes(normalizedQuery) ||
+                normalizedQuery.includes(ptNameLower)
+            ) {
+                const exactMatch = ptNameLower === normalizedQuery;
+                suggestions.push({
+                    keyword: pt.name,
+                    displayText: capitalize(pt.name),
+                    type: "productType",
+                    productTypeId: pt.id,
+                    score: exactMatch ? 900 : 800 - ptNameLower.length,
+                });
+            }
+        }
+
+        // 3. Generate "Query For Category" combinations (e.g., "Shirts For Men")
+        for (const cat of categoriesData) {
+            const catNameLower = cat.name.toLowerCase();
+            // Skip if category name is too similar to the query itself
+            if (catNameLower === normalizedQuery) continue;
+
+            const displayText = `${capitalize(firstToken)} For ${capitalize(cat.name)}`;
+            suggestions.push({
+                keyword: `${firstToken} for ${catNameLower}`,
+                displayText,
+                type: "category",
+                categoryId: cat.id,
+                score: 700,
+            });
+        }
+
+        // 4. Generate "Query + Subcategory context" (e.g., "Shirts Men Casual")
+        for (const sc of subCategoriesData) {
+            const scNameLower = sc.name.toLowerCase();
+            const catName = (sc as any).category?.name || "";
+
+            // Skip if subcategory name is query itself
+            if (scNameLower === normalizedQuery) continue;
+
+            // Create combination like "Shirts Casual" or "Shirts Tops"
+            const displayText = `${capitalize(firstToken)} ${capitalize(sc.name)}`;
+            suggestions.push({
+                keyword: `${firstToken} ${scNameLower}`,
+                displayText,
+                type: "subcategory",
+                subcategoryId: sc.id,
+                categoryId: sc.categoryId,
+                score: 600 - scNameLower.length,
+            });
+
+            // Also create "Query For Category Subcategory" like "Shirts Men Casual"
+            if (catName) {
+                const fullDisplayText = `${capitalize(firstToken)} ${capitalize(catName)} ${capitalize(sc.name)}`;
+                suggestions.push({
+                    keyword: `${firstToken} ${catName.toLowerCase()} ${scNameLower}`,
+                    displayText: fullDisplayText,
+                    type: "subcategory",
+                    subcategoryId: sc.id,
+                    categoryId: sc.categoryId,
+                    score: 550,
+                });
+            }
+        }
+
+        // 5. Generate "Query + ProductType" combos (e.g., "Shirts Tshirt")
+        for (const pt of productTypesData) {
+            const ptNameLower = pt.name.toLowerCase();
+            // Skip if already matched as exact
+            if (
+                ptNameLower === normalizedQuery ||
+                ptNameLower.includes(normalizedQuery)
+            )
+                continue;
+
+            const displayText = `${capitalize(firstToken)} ${capitalize(pt.name)}`;
+            suggestions.push({
+                keyword: `${firstToken} ${ptNameLower}`,
+                displayText,
+                type: "productType",
+                productTypeId: pt.id,
+                score: 500 - ptNameLower.length,
+            });
+        }
+
+        // 6. Check for brand matches
+        for (const brand of brandsData) {
+            const brandNameLower = brand.name.toLowerCase();
+            if (
+                brandNameLower.includes(normalizedQuery) ||
+                normalizedQuery.includes(brandNameLower)
+            ) {
+                suggestions.push({
+                    keyword: brand.name,
+                    displayText: `${capitalize(brand.name)} (Brand)`,
+                    type: "brand",
+                    brandId: brand.id,
+                    brandSlug: brand.slug,
+                    score: 850,
+                });
+            }
+        }
+
+        // 7. Also check searchIntents table for any manual mappings
         const allIntents = await db.query.searchIntents.findMany();
+        for (const intent of allIntents) {
+            const keyword = intent.keyword.toLowerCase();
+            if (
+                keyword.startsWith(normalizedQuery) ||
+                keyword.includes(normalizedQuery)
+            ) {
+                suggestions.push({
+                    keyword: intent.keyword,
+                    displayText: capitalize(intent.keyword),
+                    type: "searchIntent",
+                    score: 400,
+                });
+            }
+        }
 
-        // Filter intents that match the query
-        const matchingIntents = allIntents
-            .filter((intent) => {
-                const keyword = intent.keyword.toLowerCase();
-                // Match if keyword starts with query or contains query
-                return (
-                    keyword.startsWith(normalizedQuery) ||
-                    keyword.includes(normalizedQuery) ||
-                    normalizedQuery.includes(keyword)
-                );
-            })
-            // Sort by priority and relevance
-            .sort((a, b) => {
-                // Prioritize exact matches
-                if (a.keyword === normalizedQuery) return -1;
-                if (b.keyword === normalizedQuery) return 1;
-
-                // Then by priority
-                const priorityOrder = { high: 0, medium: 1, low: 2 };
-                const aPriority =
-                    priorityOrder[a.priority as keyof typeof priorityOrder] ??
-                    1;
-                const bPriority =
-                    priorityOrder[b.priority as keyof typeof priorityOrder] ??
-                    1;
-                if (aPriority !== bPriority) return aPriority - bPriority;
-
-                // Then by how close the match is
-                const aStartsWith = a.keyword.startsWith(normalizedQuery);
-                const bStartsWith = b.keyword.startsWith(normalizedQuery);
-                if (aStartsWith && !bStartsWith) return -1;
-                if (!aStartsWith && bStartsWith) return 1;
-
-                return a.keyword.length - b.keyword.length;
+        // Sort by score (descending) and remove duplicates
+        const seen = new Set<string>();
+        const uniqueSuggestions = suggestions
+            .sort((a, b) => b.score - a.score)
+            .filter((s) => {
+                const key = s.displayText.toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
             })
             .slice(0, limit);
 
-        // Format suggestions
-        return matchingIntents.map((intent) => {
-            const categoryPath = intent.categoryIds;
-            const parts = categoryPath.split("|");
-            const displayCategory =
-                parts.length > 1 ? parts[parts.length - 1] : parts[0];
-
-            return {
-                keyword: intent.keyword,
-                intentType: intent.intentType as
-                    | "CATEGORY"
-                    | "PRODUCT"
-                    | "BRAND",
-                categoryPath: categoryPath,
-                displayText:
-                    intent.intentType === "CATEGORY"
-                        ? `${intent.keyword} in ${displayCategory}`
-                        : `${intent.keyword} - ${displayCategory}`,
-            };
-        });
+        return uniqueSuggestions;
     } catch (error) {
         console.error("Error getting suggestions:", error);
         return [];

@@ -297,45 +297,98 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     )}
                 </div>
 
-                {/* Suggestions Dropdown */}
+                {/* Suggestions Dropdown - Myntra Style */}
                 {showSuggestions && suggestions.length > 0 && (
                     <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
                         {suggestions.map((suggestion, index) => (
                             <button
-                                key={suggestion.keyword}
+                                key={`${suggestion.type}-${suggestion.displayText}-${index}`}
                                 type="button"
                                 className={cn(
-                                    "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50",
-                                    selectedIndex === index && "bg-gray-100"
+                                    "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50",
+                                    selectedIndex === index && "bg-gray-100",
+                                    suggestion.type === "all" &&
+                                        "bg-gray-50 font-medium"
                                 )}
-                                onClick={() =>
-                                    handleSuggestionClick(suggestion.keyword)
-                                }
+                                onClick={() => {
+                                    // Handle navigation based on suggestion type
+                                    if (suggestion.type === "all") {
+                                        handleSuggestionClick(
+                                            suggestion.keyword
+                                        );
+                                    } else if (
+                                        suggestion.type === "brand" &&
+                                        suggestion.brandSlug
+                                    ) {
+                                        router.push(
+                                            `/brands/${suggestion.brandSlug}`
+                                        );
+                                        setShowSuggestions(false);
+                                    } else if (
+                                        suggestion.type === "category" &&
+                                        suggestion.categoryId
+                                    ) {
+                                        if (pathname === "/shop") {
+                                            setCategoryId(
+                                                suggestion.categoryId
+                                            );
+                                            setSubCategoryId("");
+                                            setProductTypeId("");
+                                            setSearch("");
+                                            setPage("1");
+                                        } else {
+                                            router.push(
+                                                `/shop?categoryId=${suggestion.categoryId}`
+                                            );
+                                        }
+                                        setShowSuggestions(false);
+                                    } else if (
+                                        suggestion.type === "subcategory" &&
+                                        suggestion.subcategoryId
+                                    ) {
+                                        if (pathname === "/shop") {
+                                            setSubCategoryId(
+                                                suggestion.subcategoryId
+                                            );
+                                            setCategoryId("");
+                                            setProductTypeId("");
+                                            setSearch("");
+                                            setPage("1");
+                                        } else {
+                                            router.push(
+                                                `/shop?subcategoryId=${suggestion.subcategoryId}`
+                                            );
+                                        }
+                                        setShowSuggestions(false);
+                                    } else if (
+                                        suggestion.type === "productType" &&
+                                        suggestion.productTypeId
+                                    ) {
+                                        if (pathname === "/shop") {
+                                            setProductTypeId(
+                                                suggestion.productTypeId
+                                            );
+                                            setCategoryId("");
+                                            setSubCategoryId("");
+                                            setSearch("");
+                                            setPage("1");
+                                        } else {
+                                            router.push(
+                                                `/shop?productTypeId=${suggestion.productTypeId}`
+                                            );
+                                        }
+                                        setShowSuggestions(false);
+                                    } else {
+                                        handleSuggestionClick(
+                                            suggestion.keyword
+                                        );
+                                    }
+                                }}
                                 onMouseEnter={() => setSelectedIndex(index)}
                             >
                                 <Icons.Search className="size-4 shrink-0 text-gray-400" />
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="truncate text-sm font-medium text-gray-900">
-                                        {suggestion.keyword}
-                                    </p>
-                                    <p className="truncate text-xs text-gray-500">
-                                        {suggestion.categoryPath.replace(
-                                            /\|/g,
-                                            " → "
-                                        )}
-                                    </p>
-                                </div>
-                                <span
-                                    className={cn(
-                                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                                        suggestion.intentType === "CATEGORY"
-                                            ? "bg-blue-100 text-blue-700"
-                                            : "bg-green-100 text-green-700"
-                                    )}
-                                >
-                                    {suggestion.intentType === "CATEGORY"
-                                        ? "Category"
-                                        : "Product"}
+                                <span className="flex-1 truncate text-sm text-gray-700">
+                                    {suggestion.displayText}
                                 </span>
                             </button>
                         ))}
