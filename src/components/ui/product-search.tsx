@@ -23,15 +23,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [search, setSearch] = useQueryState("search", {
             defaultValue: "",
         });
-        const [, setCategoryId] = useQueryState("categoryId", {
-            defaultValue: "",
-        });
-        const [, setSubCategoryId] = useQueryState("subcategoryId", {
-            defaultValue: "",
-        });
-        const [, setProductTypeId] = useQueryState("productTypeId", {
-            defaultValue: "",
-        });
         const [, setPage] = useQueryState("page", { defaultValue: "1" });
 
         const [localSearch, setLocalSearch] = useState(search);
@@ -71,68 +62,14 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     setIsSearching(false);
                     setShowSuggestions(false);
 
-                    // Route based on intent type (Stage 6 & 9)
-                    switch (result.intentType) {
-                        case "BRAND":
-                            router.push(`/brands/${result.brandSlug}`);
-                            break;
-
-                        case "CATEGORY":
-                            if (pathname === "/shop") {
-                                setCategoryId(result.categoryId || "");
-                                setSubCategoryId("");
-                                setProductTypeId("");
-                                setSearch("");
-                                setPage("1");
-                            } else {
-                                router.push(
-                                    `/shop?categoryId=${result.categoryId}`
-                                );
-                            }
-                            break;
-
-                        case "SUBCATEGORY":
-                            if (pathname === "/shop") {
-                                setSubCategoryId(result.subcategoryId || "");
-                                setCategoryId("");
-                                setProductTypeId("");
-                                setSearch("");
-                                setPage("1");
-                            } else {
-                                router.push(
-                                    `/shop?subcategoryId=${result.subcategoryId}`
-                                );
-                            }
-                            break;
-
-                        case "PRODUCT_TYPE":
-                            if (pathname === "/shop") {
-                                setProductTypeId(result.productTypeId || "");
-                                setCategoryId("");
-                                setSubCategoryId("");
-                                setSearch("");
-                                setPage("1");
-                            } else {
-                                router.push(
-                                    `/shop?productTypeId=${result.productTypeId}`
-                                );
-                            }
-                            break;
-
-                        case "UNKNOWN":
-                        default:
-                            if (pathname === "/shop") {
-                                setSearch(result.originalQuery);
-                                setCategoryId("");
-                                setSubCategoryId("");
-                                setProductTypeId("");
-                                setPage("1");
-                            } else {
-                                router.push(
-                                    `/shop?search=${encodeURIComponent(result.originalQuery)}`
-                                );
-                            }
-                            break;
+                    // Simply pass the query to search param - shop page handles everything
+                    if (pathname === "/shop") {
+                        setSearch(result.originalQuery);
+                        setPage("1");
+                    } else {
+                        router.push(
+                            `/shop?search=${encodeURIComponent(result.originalQuery)}`
+                        );
                     }
                 },
                 onError: (error) => {
@@ -311,78 +248,8 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                         "bg-gray-50 font-medium"
                                 )}
                                 onClick={() => {
-                                    // Handle navigation based on suggestion type
-                                    if (suggestion.type === "all") {
-                                        handleSuggestionClick(
-                                            suggestion.keyword
-                                        );
-                                    } else if (
-                                        suggestion.type === "brand" &&
-                                        suggestion.brandSlug
-                                    ) {
-                                        router.push(
-                                            `/brands/${suggestion.brandSlug}`
-                                        );
-                                        setShowSuggestions(false);
-                                    } else if (
-                                        suggestion.type === "category" &&
-                                        suggestion.categoryId
-                                    ) {
-                                        if (pathname === "/shop") {
-                                            setCategoryId(
-                                                suggestion.categoryId
-                                            );
-                                            setSubCategoryId("");
-                                            setProductTypeId("");
-                                            setSearch("");
-                                            setPage("1");
-                                        } else {
-                                            router.push(
-                                                `/shop?categoryId=${suggestion.categoryId}`
-                                            );
-                                        }
-                                        setShowSuggestions(false);
-                                    } else if (
-                                        suggestion.type === "subcategory" &&
-                                        suggestion.subcategoryId
-                                    ) {
-                                        if (pathname === "/shop") {
-                                            setSubCategoryId(
-                                                suggestion.subcategoryId
-                                            );
-                                            setCategoryId("");
-                                            setProductTypeId("");
-                                            setSearch("");
-                                            setPage("1");
-                                        } else {
-                                            router.push(
-                                                `/shop?subcategoryId=${suggestion.subcategoryId}`
-                                            );
-                                        }
-                                        setShowSuggestions(false);
-                                    } else if (
-                                        suggestion.type === "productType" &&
-                                        suggestion.productTypeId
-                                    ) {
-                                        if (pathname === "/shop") {
-                                            setProductTypeId(
-                                                suggestion.productTypeId
-                                            );
-                                            setCategoryId("");
-                                            setSubCategoryId("");
-                                            setSearch("");
-                                            setPage("1");
-                                        } else {
-                                            router.push(
-                                                `/shop?productTypeId=${suggestion.productTypeId}`
-                                            );
-                                        }
-                                        setShowSuggestions(false);
-                                    } else {
-                                        handleSuggestionClick(
-                                            suggestion.keyword
-                                        );
-                                    }
+                                    // All suggestion types just use the search query
+                                    handleSuggestionClick(suggestion.keyword);
                                 }}
                                 onMouseEnter={() => setSelectedIndex(index)}
                             >

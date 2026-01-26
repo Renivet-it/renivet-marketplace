@@ -610,15 +610,115 @@ export async function getSuggestions(
         const capitalize = (str: string) =>
             str.replace(/\b\w/g, (c) => c.toUpperCase());
 
+        // Check if query matches a category name (exact or partial)
+        const matchedCategory = categoriesData.find(
+            (cat) =>
+                cat.name.toLowerCase() === normalizedQuery ||
+                cat.name.toLowerCase().includes(normalizedQuery) ||
+                normalizedQuery.includes(cat.name.toLowerCase())
+        );
+
+        // Check if query matches a subcategory name
+        const matchedSubcategory = subCategoriesData.find(
+            (sc) =>
+                sc.name.toLowerCase() === normalizedQuery ||
+                sc.name.toLowerCase().includes(normalizedQuery)
+        );
+
+        // Get all category names for semantic validation
+        const categoryNames = new Set(
+            categoriesData.map((c) => c.name.toLowerCase())
+        );
+
         // 1. Add "All Others" option first (global search)
         suggestions.push({
             keyword: normalizedQuery,
-            displayText: "All Others",
+            displayText: capitalize(normalizedQuery),
             type: "all",
             score: 1000, // Highest priority
         });
 
-        // 2. Check for exact/partial product type matches
+        // 2. If query matches a category, show subcategories and product types FOR that category
+        if (matchedCategory) {
+            const catId = matchedCategory.id;
+            const catName = matchedCategory.name;
+
+            // Show the category itself first
+            suggestions.push({
+                keyword: catName,
+                displayText: `${capitalize(catName)} (Category)`,
+                type: "category",
+                categoryId: catId,
+                score: 950,
+            });
+
+            // Show subcategories under this category
+            const relatedSubcategories = subCategoriesData.filter(
+                (sc) => sc.categoryId === catId
+            );
+            for (const sc of relatedSubcategories) {
+                suggestions.push({
+                    keyword: sc.name,
+                    displayText: `${capitalize(catName)} - ${capitalize(sc.name)}`,
+                    type: "subcategory",
+                    subcategoryId: sc.id,
+                    categoryId: catId,
+                    score: 900 - sc.name.length,
+                });
+            }
+
+            // Show product types under this category
+            const relatedProductTypes = productTypesData.filter(
+                (pt) => pt.categoryId === catId
+            );
+            for (const pt of relatedProductTypes) {
+                const scName = (pt as any).subCategory?.name || "";
+                suggestions.push({
+                    keyword: pt.name,
+                    displayText: scName
+                        ? `${capitalize(catName)} - ${capitalize(scName)} - ${capitalize(pt.name)}`
+                        : `${capitalize(catName)} - ${capitalize(pt.name)}`,
+                    type: "productType",
+                    productTypeId: pt.id,
+                    score: 850 - pt.name.length,
+                });
+            }
+        }
+
+        // 3. If query matches a subcategory, show product types for that subcategory
+        if (matchedSubcategory && !matchedCategory) {
+            const scId = matchedSubcategory.id;
+            const scName = matchedSubcategory.name;
+            const catName = (matchedSubcategory as any).category?.name || "";
+
+            // Show the subcategory itself
+            suggestions.push({
+                keyword: scName,
+                displayText: catName
+                    ? `${capitalize(catName)} - ${capitalize(scName)}`
+                    : capitalize(scName),
+                type: "subcategory",
+                subcategoryId: scId,
+                categoryId: matchedSubcategory.categoryId,
+                score: 920,
+            });
+
+            // Show product types under this subcategory
+            const relatedProductTypes = productTypesData.filter(
+                (pt) => pt.subCategoryId === scId
+            );
+            for (const pt of relatedProductTypes) {
+                suggestions.push({
+                    keyword: pt.name,
+                    displayText: `${capitalize(scName)} - ${capitalize(pt.name)}`,
+                    type: "productType",
+                    productTypeId: pt.id,
+                    score: 880 - pt.name.length,
+                });
+            }
+        }
+
+        // 4. Check for exact/partial product type matches
         for (const pt of productTypesData) {
             const ptNameLower = pt.name.toLowerCase();
             if (
@@ -626,9 +726,13 @@ export async function getSuggestions(
                 normalizedQuery.includes(ptNameLower)
             ) {
                 const exactMatch = ptNameLower === normalizedQuery;
+                const catName = (pt as any).category?.name || "";
+
                 suggestions.push({
                     keyword: pt.name,
-                    displayText: capitalize(pt.name),
+                    displayText: catName
+                        ? `${capitalize(pt.name)} in ${capitalize(catName)}`
+                        : capitalize(pt.name),
                     type: "productType",
                     productTypeId: pt.id,
                     score: exactMatch ? 900 : 800 - ptNameLower.length,
@@ -636,76 +740,7 @@ export async function getSuggestions(
             }
         }
 
-        // 3. Generate "Query For Category" combinations (e.g., "Shirts For Men")
-        for (const cat of categoriesData) {
-            const catNameLower = cat.name.toLowerCase();
-            // Skip if category name is too similar to the query itself
-            if (catNameLower === normalizedQuery) continue;
-
-            const displayText = `${capitalize(firstToken)} For ${capitalize(cat.name)}`;
-            suggestions.push({
-                keyword: `${firstToken} for ${catNameLower}`,
-                displayText,
-                type: "category",
-                categoryId: cat.id,
-                score: 700,
-            });
-        }
-
-        // 4. Generate "Query + Subcategory context" (e.g., "Shirts Men Casual")
-        for (const sc of subCategoriesData) {
-            const scNameLower = sc.name.toLowerCase();
-            const catName = (sc as any).category?.name || "";
-
-            // Skip if subcategory name is query itself
-            if (scNameLower === normalizedQuery) continue;
-
-            // Create combination like "Shirts Casual" or "Shirts Tops"
-            const displayText = `${capitalize(firstToken)} ${capitalize(sc.name)}`;
-            suggestions.push({
-                keyword: `${firstToken} ${scNameLower}`,
-                displayText,
-                type: "subcategory",
-                subcategoryId: sc.id,
-                categoryId: sc.categoryId,
-                score: 600 - scNameLower.length,
-            });
-
-            // Also create "Query For Category Subcategory" like "Shirts Men Casual"
-            if (catName) {
-                const fullDisplayText = `${capitalize(firstToken)} ${capitalize(catName)} ${capitalize(sc.name)}`;
-                suggestions.push({
-                    keyword: `${firstToken} ${catName.toLowerCase()} ${scNameLower}`,
-                    displayText: fullDisplayText,
-                    type: "subcategory",
-                    subcategoryId: sc.id,
-                    categoryId: sc.categoryId,
-                    score: 550,
-                });
-            }
-        }
-
-        // 5. Generate "Query + ProductType" combos (e.g., "Shirts Tshirt")
-        for (const pt of productTypesData) {
-            const ptNameLower = pt.name.toLowerCase();
-            // Skip if already matched as exact
-            if (
-                ptNameLower === normalizedQuery ||
-                ptNameLower.includes(normalizedQuery)
-            )
-                continue;
-
-            const displayText = `${capitalize(firstToken)} ${capitalize(pt.name)}`;
-            suggestions.push({
-                keyword: `${firstToken} ${ptNameLower}`,
-                displayText,
-                type: "productType",
-                productTypeId: pt.id,
-                score: 500 - ptNameLower.length,
-            });
-        }
-
-        // 6. Check for brand matches
+        // 5. Check for brand matches
         for (const brand of brandsData) {
             const brandNameLower = brand.name.toLowerCase();
             if (
@@ -718,8 +753,32 @@ export async function getSuggestions(
                     type: "brand",
                     brandId: brand.id,
                     brandSlug: brand.slug,
-                    score: 850,
+                    score: 870,
                 });
+            }
+        }
+
+        // 6. Only generate "Query For Category" combinations if query is NOT a category/subcategory
+        //    AND the combination makes semantic sense (query is likely a product type)
+        if (!matchedCategory && !matchedSubcategory) {
+            // Check if query looks like a product type (not already a category name)
+            const isLikelyProductType = !categoryNames.has(normalizedQuery);
+
+            if (isLikelyProductType) {
+                for (const cat of categoriesData) {
+                    const catNameLower = cat.name.toLowerCase();
+                    // Skip if category name is too similar to the query itself
+                    if (catNameLower === normalizedQuery) continue;
+
+                    const displayText = `${capitalize(firstToken)} for ${capitalize(cat.name)}`;
+                    suggestions.push({
+                        keyword: `${firstToken} for ${catNameLower}`,
+                        displayText,
+                        type: "category",
+                        categoryId: cat.id,
+                        score: 600,
+                    });
+                }
             }
         }
 
