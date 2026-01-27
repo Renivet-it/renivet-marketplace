@@ -800,7 +800,7 @@ function PriceFilter() {
     );
     const [maxPrice, setMaxPrice] = useQueryState(
         "maxPrice",
-        parseAsInteger.withDefault(10000)
+        parseAsInteger.withDefault(1000000)
     );
     const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [priceRange, setPriceRange] = useState<number[]>([
@@ -815,7 +815,7 @@ function PriceFilter() {
                 value={priceRange}
                 step={100}
                 min={0}
-                max={10000}
+                max={1000000}
                 onValueChange={setPriceRange}
                 onValueCommit={(values) => {
                     setMinPrice(values[0]);
@@ -826,7 +826,7 @@ function PriceFilter() {
             <p className="text-sm tabular-nums">
                 {formatPriceTag(priceRange[0])} -{" "}
                 {formatPriceTag(priceRange[1])}
-                {priceRange[1] === 10000 && "+"}
+                {priceRange[1] === 1000000 && "+"}
             </p>
         </div>
     );

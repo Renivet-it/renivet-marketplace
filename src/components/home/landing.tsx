@@ -13,6 +13,7 @@ import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Icons } from "../icons";
 
 interface PageProps extends GenericProps {
     banners: Banner[];
@@ -117,11 +118,12 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Button
                                             size="lg"
-                                            className="border-2 border-black bg-transparent px-8 py-3 text-sm font-medium uppercase tracking-wider text-black hover:bg-black hover:text-white"
+                                            className="group gap-3 bg-white/95 px-8 py-6 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white hover:shadow-2xl"
                                             asChild
                                         >
                                             <Link href={item.url || "/shop"}>
-                                                Shop With Purpose
+                                                <span>Shop With Purpose</span>
+                                                <Icons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                                             </Link>
                                         </Button>
                                     </div>
@@ -214,7 +216,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     sizes="64px"
                                 />
                             </div>
-                            <span className="text-xs font-medium text-black">
+                            <span className="pt-1 text-xs font-medium text-black">
                                 {category.name}
                             </span>
                         </Link>
@@ -244,18 +246,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             <div className="absolute bottom-16">
                                 <Link
                                     href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
-                                    className="group relative inline-flex items-center justify-center overflow-hidden border border-black bg-transparent px-10 py-3 text-sm font-medium text-black transition-colors duration-300"
+                                    className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
                                 >
-                                    {/* Text */}
-                                    <span className="relative z-10 transition-colors duration-300 group-hover:text-white">
-                                        Shop With Purpose
-                                    </span>
-
-                                    {/* Hover background */}
-                                    <span
-                                        aria-hidden
-                                        className="absolute inset-0 translate-y-full bg-black transition-transform duration-300 ease-out group-hover:translate-y-0"
-                                    />
+                                    <span>Shop With Purpose</span>
+                                    <Icons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                                 </Link>
                             </div>
                         </div>

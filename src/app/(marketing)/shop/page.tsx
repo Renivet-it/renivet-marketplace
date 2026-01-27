@@ -326,9 +326,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             : 0;
     const maxPrice =
         maxPriceRaw && !isNaN(parseInt(maxPriceRaw))
-            ? parseInt(maxPriceRaw) > 10000
-                ? 10000
-                : parseInt(maxPriceRaw)
+            ? parseInt(maxPriceRaw)
             : 10000;
     const categoryId = !!categoryIdRaw?.length ? categoryIdRaw : undefined;
     const subCategoryId = !!subCategoryIdRaw?.length

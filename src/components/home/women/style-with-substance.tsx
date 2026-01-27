@@ -5,6 +5,8 @@ import {
     Carousel,
     CarouselContent,
     CarouselItem,
+    CarouselNext,
+    CarouselPrevious,
 } from "@/components/ui/carousel";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -91,7 +93,6 @@ export function StyleWithSubstance({ products, userId, className }: Props) {
             </h2>
 
             {/* ================= MOBILE ================= */}
-            {/* ================= MOBILE ================= */}
             <div className="px-2 md:hidden">
                 <Carousel>
                     <CarouselContent>
@@ -118,18 +119,19 @@ export function StyleWithSubstance({ products, userId, className }: Props) {
             </div>
 
             {/* ================= DESKTOP (DO NOT TOUCH) ================= */}
-            <div className="hidden md:block">
+            <div className="relative mx-auto hidden w-full px-4 md:block">
                 <Carousel
                     opts={{
                         align: "start",
                         loop: true,
                     }}
+                    className="w-full"
                 >
-                    <CarouselContent className="gap-6 px-12">
+                    <CarouselContent className="gap-4 py-4">
                         {products.map(({ product }) => (
                             <CarouselItem
                                 key={product.id}
-                                className="basis-auto"
+                                className="basis-auto pl-1"
                             >
                                 <ProductCard
                                     product={product}
@@ -139,6 +141,8 @@ export function StyleWithSubstance({ products, userId, className }: Props) {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
+                    <CarouselPrevious className="left-4 border-neutral-200 bg-white text-black shadow-lg transition-all  [&>svg]:transition-transform [&>svg]:duration-300 hover:[&>svg]:-translate-x-0.5" />
+                    <CarouselNext className="right-4 border-neutral-200 bg-white text-black shadow-lg transition-all  [&>svg]:transition-transform [&>svg]:duration-300 hover:[&>svg]:translate-x-0.5" />
                 </Carousel>
             </div>
         </section>
