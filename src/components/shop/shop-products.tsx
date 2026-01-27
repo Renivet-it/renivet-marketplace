@@ -117,6 +117,7 @@ export function ShopProducts({
             sizes: sizes.length ? sizes : undefined,
             minDiscount: minDiscount ? Number(minDiscount) : undefined,
             prioritizeBestSellers: page === 1,
+            requireMedia: true,
         },
         { initialData }
     );
@@ -127,11 +128,9 @@ export function ShopProducts({
     );
 
     // --- FILTER PRODUCTS ---
+    // We now filter for media on the server (requireMedia: true), so we trust the server count
     const visibleProducts: ProductWithBrand[] = Array.isArray(products)
-        ? products.filter(
-              (p: any) =>
-                  !p?.isDeleted && Array.isArray(p.media) && p.media.length > 0
-          )
+        ? products.filter((p: any) => !p?.isDeleted)
         : [];
 
     const pages = Math.ceil(count / limit) ?? 1;
