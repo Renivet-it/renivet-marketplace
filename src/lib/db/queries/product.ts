@@ -555,6 +555,7 @@ class ProductQuery {
         sizes,
         minDiscount,
         prioritizeBestSellers,
+        requireMedia,
     }: {
         limit: number;
         page: number;
@@ -578,6 +579,7 @@ class ProductQuery {
         sizes?: string[];
         minDiscount?: number | null;
         prioritizeBestSellers?: boolean;
+        requireMedia?: boolean;
     }) {
         // --- Price conversions ---
         minPrice = !!minPrice
@@ -774,6 +776,8 @@ class ProductQuery {
                     )
                 )`
                 : undefined,
+            // Filter for products with media (images) - used by shop page
+            requireMedia ? hasMedia(products, "media") : undefined,
         ].filter(Boolean);
 
         // --- OrderBy construction ---
