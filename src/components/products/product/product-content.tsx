@@ -160,7 +160,7 @@ export function ProductContent({
 
             {/* Rating & Reviews */}
             <span className="text-gray-700 text-sm">
-              {rating} • {reviews} reviews
+              {rating}
             </span>
 
             {/* Brand */}
