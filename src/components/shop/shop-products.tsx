@@ -63,7 +63,7 @@ export function ShopProducts({
     const [minPrice] = useQueryState("minPrice", parseAsInteger.withDefault(0));
     const [maxPrice] = useQueryState(
         "maxPrice",
-        parseAsInteger.withDefault(10000)
+        parseAsInteger.withDefault(1000000)
     );
     const [categoryId] = useQueryState("categoryId", { defaultValue: "" });
     const [subCategoryId] = useQueryState("subcategoryId", {
@@ -107,7 +107,7 @@ export function ShopProducts({
             verificationStatus: "approved",
             brandIds,
             minPrice: minPrice < 0 ? 0 : minPrice,
-            maxPrice: maxPrice > 10000 ? 10000 : maxPrice,
+            maxPrice: maxPrice,
             categoryId: !!categoryId.length ? categoryId : undefined,
             subcategoryId: !!subCategoryId.length ? subCategoryId : undefined,
             productTypeId: !!productTypeId.length ? productTypeId : undefined,

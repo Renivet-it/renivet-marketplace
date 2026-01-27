@@ -587,11 +587,7 @@ class ProductQuery {
                 ? 0
                 : convertPriceToPaise(minPrice)
             : null;
-        maxPrice = !!maxPrice
-            ? maxPrice > 10000
-                ? null
-                : convertPriceToPaise(maxPrice)
-            : null;
+        maxPrice = !!maxPrice ? convertPriceToPaise(maxPrice) : null;
 
         // --- Constants ---
         const colorOptionNames = [
@@ -997,11 +993,7 @@ class ProductQuery {
                 ? 0
                 : convertPriceToPaise(minPrice)
             : null;
-        maxPrice = !!maxPrice
-            ? maxPrice > 10000
-                ? null
-                : convertPriceToPaise(maxPrice)
-            : null;
+        maxPrice = !!maxPrice ? convertPriceToPaise(maxPrice) : null;
 
         let searchQuery;
         if (search?.length) {
