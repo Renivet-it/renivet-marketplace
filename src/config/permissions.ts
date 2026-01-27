@@ -88,8 +88,17 @@ export const sitePermissions: Permission[] = [
         name: "ADMINISTRATOR",
         description:
             "Access to all platform functions, including critical administrative tasks",
-        bit: 1 << 16, // 65536
-
+        bit: 1 << 16,
+    },
+    {
+        name: "VIEW_ORDERS",
+        description: "View all orders across the platform",
+        bit: 1 << 17,
+    },
+    {
+        name: "MANAGE_ORDERS",
+        description: "Manage orders, update statuses, process shipments",
+        bit: 1 << 18,
     },
 ];
 
@@ -111,6 +120,8 @@ export enum BitFieldSitePermission {
     VIEW_FEEDBACK = 1 << 14,
     MANAGE_FEEDBACK = 1 << 15,
     ADMINISTRATOR = 1 << 16,
+    VIEW_ORDERS = 1 << 17,
+    MANAGE_ORDERS = 1 << 18,
 }
 
 export const brandPermissions: Permission[] = [

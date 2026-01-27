@@ -54,10 +54,24 @@ export default clerkMiddleware(async (auth, req) => {
                             url
                         )
                     );
-                } else
-                    return NextResponse.redirect(
-                        new URL("/dashboard/general/banners", url)
+                } else {
+                    // Find the first route the user has permission for
+                    const allRoutes = generalSidebarConfig
+                        .map((item) => item.items.map((subItem) => subItem))
+                        .flat();
+
+                    const firstAccessibleRoute = allRoutes.find((route) =>
+                        hasPermission(sitePermissions, [route.permissions])
                     );
+
+                    if (firstAccessibleRoute) {
+                        return NextResponse.redirect(
+                            new URL(firstAccessibleRoute.url, url)
+                        );
+                    }
+                    // If no accessible route found, redirect to home
+                    return NextResponse.redirect(new URL("/", url));
+                }
             }
 
             if (url.pathname.startsWith("/dashboard/general")) {

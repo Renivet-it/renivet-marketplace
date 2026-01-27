@@ -118,7 +118,7 @@ export const ordersRouter = createTRPCRouter({
             })
         )
 
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
         .query(async ({ ctx, input }) => {
             const { queries } = ctx;
 
@@ -126,7 +126,7 @@ export const ordersRouter = createTRPCRouter({
             return data;
         }),
     getOrderStatusCounts: protectedProcedure
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
         .query(async ({ ctx }) => {
             const { queries } = ctx;
             const counts = await queries.orders.getOrderStatusCounts();
