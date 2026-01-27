@@ -214,7 +214,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     sizes="64px"
                                 />
                             </div>
-                            <span className="text-xs font-medium text-black">
+                            <span className="text-xs pt-1 font-medium text-black">
                                 {category.name}
                             </span>
                         </Link>
