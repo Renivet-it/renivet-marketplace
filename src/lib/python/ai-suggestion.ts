@@ -10,7 +10,8 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
         );
         const embeddingServiceUrl = process.env.EMBEDDING_SERVICE_URL;
         const response = await axios.get(
-            `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
+            // `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
+            `${"http://localhost:8000"}/suggestions/ai-suggestions`,
             {
                 params: { query }, // Pass the query as a URL parameter
                 headers: {
