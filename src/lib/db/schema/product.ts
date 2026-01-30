@@ -125,6 +125,12 @@ export const products = pgTable(
         isBestSeller: boolean("is_best_seller").default(false),
 
         embeddings: vector("embeddings", { dimensions: 384 }),
+        searchSuggestionEmbeddings: vector("search_suggestion_embeddings", {
+            dimensions: 384,
+        }),
+        semanticSearchEmbeddings: vector("semantic_search_embeddings", {
+            dimensions: 768,
+        }),
         ...timestamps,
     },
     (table) => ({
@@ -138,6 +144,22 @@ export const products = pgTable(
         // ),
         productEmbeddingIdx: index("product_embedding_idx")
             .using("ivfflat", sql`${table.embeddings} vector_cosine_ops`)
+            .with({
+                lists: 100, // Adjust based on your dataset size
+            }),
+        searchSuggestionEmbeddingIdx: index("search_suggestion_embedding_idx")
+            .using(
+                "ivfflat",
+                sql`${table.searchSuggestionEmbeddings} vector_cosine_ops`
+            )
+            .with({
+                lists: 100, // Adjust based on your dataset size
+            }),
+        semanticSearchEmbeddingIdx: index("semantic_search_embedding_idx")
+            .using(
+                "ivfflat",
+                sql`${table.semanticSearchEmbeddings} vector_cosine_ops`
+            )
             .with({
                 lists: 100, // Adjust based on your dataset size
             }),

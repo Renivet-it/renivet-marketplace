@@ -1,0 +1,2 @@
+ALTER TABLE "products" ADD COLUMN "semantic_search_embeddings" vector(768);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "semantic_search_embedding_idx" ON "products" USING ivfflat ("semantic_search_embeddings" vector_cosine_ops) WITH (lists=100);

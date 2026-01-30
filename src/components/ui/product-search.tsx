@@ -45,15 +45,42 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             [ref]
         );
 
-        // TRPC query for suggestions
-        const { data: suggestions = [], isLoading: isFetchingSuggestions } =
-            trpc.general.search.getSuggestions.useQuery(
-                { query: localSearch, limit: 6 },
-                {
-                    enabled: localSearch.length >= 2,
-                    staleTime: 1000 * 60, // 1 minute
+        // State for suggestions
+        const [suggestions, setSuggestions] = useState<string[]>([]);
+        const [isFetchingSuggestions, setIsFetchingSuggestions] =
+            useState(false);
+
+        // Fetch suggestions when search term changes
+        useEffect(() => {
+            const fetchAISuggestions = async () => {
+                if (localSearch.length < 2) {
+                    setSuggestions([]);
+                    return;
                 }
-            );
+
+                setIsFetchingSuggestions(true);
+                try {
+                    const { fetchSuggestions } = await import(
+                        "@/lib/python/ai-suggestion"
+                    );
+                    const results = await fetchSuggestions(localSearch);
+                    if (Array.isArray(results)) {
+                        setSuggestions(results);
+                    }
+                } catch (error) {
+                    console.error("Error fetching suggestions:", error);
+                    setSuggestions([]);
+                } finally {
+                    setIsFetchingSuggestions(false);
+                }
+            };
+
+            const debounceTimer = setTimeout(() => {
+                fetchAISuggestions();
+            }, 300);
+
+            return () => clearTimeout(debounceTimer);
+        }, [localSearch]);
 
         // TRPC mutation for search processing
         const processSearchMutation =
@@ -90,6 +117,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const value = e.target.value;
             setLocalSearch(value);
+            // Show suggestions immediately if we have them, otherwise the effect will fetch
             setShowSuggestions(value.length >= 2);
             setSelectedIndex(-1);
         };
@@ -140,9 +168,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 case "Enter":
                     e.preventDefault();
                     if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-                        handleSuggestionClick(
-                            suggestions[selectedIndex].displayText
-                        );
+                        handleSuggestionClick(suggestions[selectedIndex]);
                     } else {
                         handleSearch();
                     }
@@ -157,6 +183,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         // Handle clear button
         const handleClear = () => {
             setLocalSearch("");
+            setSuggestions([]);
             setShowSuggestions(false);
             if (pathname.startsWith("/shop")) {
                 setSearch("");
@@ -239,20 +266,15 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
                         {suggestions.map((suggestion, index) => (
                             <button
-                                key={`${suggestion.type}-${suggestion.displayText}-${index}`}
+                                key={`${suggestion}-${index}`}
                                 type="button"
                                 className={cn(
                                     "flex w-full cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50",
-                                    selectedIndex === index && "bg-gray-100",
-                                    suggestion.type === "all" &&
-                                        "bg-gray-50 font-medium"
+                                    selectedIndex === index && "bg-gray-100"
                                 )}
                                 style={{ userSelect: "none" }}
                                 onClick={() => {
-                                    // Use displayText for full search term (e.g., "Sweatshirts in Men")
-                                    handleSuggestionClick(
-                                        suggestion.displayText
-                                    );
+                                    handleSuggestionClick(suggestion);
                                 }}
                                 onMouseDown={(e) => e.preventDefault()}
                                 onMouseEnter={() => setSelectedIndex(index)}
@@ -262,7 +284,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                     className="pointer-events-none flex-1 select-none truncate text-sm text-gray-700"
                                     style={{ userSelect: "none" }}
                                 >
-                                    {suggestion.displayText}
+                                    {suggestion}
                                 </span>
                             </button>
                         ))}
