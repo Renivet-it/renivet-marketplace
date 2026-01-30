@@ -10,8 +10,8 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
         );
         const embeddingServiceUrl = process.env.EMBEDDING_SERVICE_URL;
         const response = await axios.get(
-            // `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
-            `${"http://localhost:8000"}/suggestions/ai-suggestions`,
+            `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
+            // `${"http://localhost:8000"}/suggestions/ai-suggestions`,
             {
                 params: { query }, // Pass the query as a URL parameter
                 headers: {
@@ -20,16 +20,28 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
             }
         );
 
-        const suggestions = response.data;
-        console.log("Received suggestions:", suggestions);
+        const suggestionsData = response.data;
+        console.log("Received suggestions:", suggestionsData);
 
-        // Validate that the response is an array of strings
-        if (
-            !Array.isArray(suggestions) ||
-            !suggestions.every((item) => typeof item === "string")
-        ) {
+        // Validate that the response is an array
+        if (!Array.isArray(suggestionsData)) {
             throw new Error("Invalid suggestions format received");
         }
+
+        // Map to string array if it's an array of objects with 'text' property
+        const suggestions: string[] = suggestionsData
+            .map((item: any) => {
+                if (typeof item === "string") return item;
+                if (
+                    typeof item === "object" &&
+                    item !== null &&
+                    "text" in item
+                ) {
+                    return item.text;
+                }
+                return "";
+            })
+            .filter((item) => item !== "");
 
         return suggestions;
     } catch (error: any) {

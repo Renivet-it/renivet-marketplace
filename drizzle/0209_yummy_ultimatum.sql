@@ -1,0 +1,2 @@
+ALTER TABLE "products" ADD COLUMN "search_suggestion_embeddings" vector(384);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "search_suggestion_embedding_idx" ON "products" USING ivfflat ("search_suggestion_embeddings" vector_cosine_ops) WITH (lists=100);
