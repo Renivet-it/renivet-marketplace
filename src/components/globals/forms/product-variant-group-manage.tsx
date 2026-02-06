@@ -240,6 +240,39 @@ export function ProductVariantGroupManageForm({
                 </TableCell>
 
                 <TableCell>
+                    <PriceInput
+                        className="h-9"
+                        value={group.variants[0]?.compareAtPrice || 0}
+                        disabled={
+                            group.variants.some(
+                                (variant) =>
+                                    +(variant.compareAtPrice ?? 0) !==
+                                    +(group.variants[0].compareAtPrice ?? 0)
+                            ) || isPending
+                        }
+                        onChange={(e) => {
+                            const price = e.target.value
+                                .replace(/[^0-9.]/g, "")
+                                .replace(/\.(\d{2})\d+/, ".$1");
+
+                            group.variants.forEach((variant) => {
+                                const index = variants.findIndex(
+                                    (v) => v.id === variant.id
+                                );
+                                if (index !== -1)
+                                    form.setValue(
+                                        `variants.${index}.compareAtPrice`,
+                                        price as unknown as number,
+                                        {
+                                            shouldDirty: true,
+                                        }
+                                    );
+                            });
+                        }}
+                    />
+                </TableCell>
+
+                <TableCell>
                     <Input
                         value={group.variants.reduce(
                             (acc, variant) => acc + +variant.quantity,
@@ -518,6 +551,34 @@ function ExpandedGroupRow({
                                         {...field}
                                         className="h-9"
                                         value={field.value}
+                                        onChange={(e) => {
+                                            const value = e.target.value
+                                                .replace(/[^0-9.]/g, "")
+                                                .replace(/\.(\d{2})\d+/, ".$1");
+
+                                            field.onChange(value);
+                                        }}
+                                        disabled={isPending}
+                                    />
+                                </FormControl>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </TableCell>
+
+                <TableCell>
+                    <FormField
+                        control={form.control}
+                        name={`variants.${variantIndex}.compareAtPrice`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormControl>
+                                    <PriceInput
+                                        {...field}
+                                        className="h-9"
+                                        value={field.value ?? 0}
                                         onChange={(e) => {
                                             const value = e.target.value
                                                 .replace(/[^0-9.]/g, "")
