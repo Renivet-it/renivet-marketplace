@@ -634,6 +634,7 @@ export function ProductVariantManage({
                                         </TableHead>
                                         <TableHead>Variant</TableHead>
                                         <TableHead>Price</TableHead>
+                                        <TableHead>Compare At</TableHead>
                                         <TableHead>Available</TableHead>
                                     </TableRow>
                                 </TableHeader>
