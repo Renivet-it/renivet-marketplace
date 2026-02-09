@@ -1,7 +1,5 @@
 import axios from "axios";
 
-const EMBEDDING_SERVICE_URL =
-    process.env.EMBEDDING_SERVICE_URL || "http://localhost:8000";
             // `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
 
 /**
