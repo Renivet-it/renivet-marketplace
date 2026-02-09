@@ -560,6 +560,7 @@ class ProductQuery {
         minDiscount,
         prioritizeBestSellers,
         requireMedia,
+        priorityProductIds,
     }: {
         limit: number;
         page: number;
@@ -584,7 +585,14 @@ class ProductQuery {
         minDiscount?: number | null;
         prioritizeBestSellers?: boolean;
         requireMedia?: boolean;
+        priorityProductIds?: string[];
     }) {
+        console.log(
+            "[getProducts] search:",
+            search,
+            "requireMedia:",
+            requireMedia
+        );
         // --- Price conversions ---
         minPrice = !!minPrice
             ? minPrice < 0
@@ -811,7 +819,17 @@ class ProductQuery {
         // --- OrderBy construction ---
         const orderBy: any[] = [];
 
-        // 🌟 Step 0: prioritize best sellers (only on page 1)
+        // 🎯 Step -1: prioritize user's personalized products (highest priority)
+        if (priorityProductIds && priorityProductIds.length > 0) {
+            // Create a CASE statement that gives lower values to priority products
+            // Products in the priority list get sorted by their position in the list
+            orderBy.push(
+                sql`CASE WHEN ${products.id}::text IN (${sql.raw(priorityProductIds.map((id) => `'${id}'`).join(", "))}) 
+                    THEN 0 ELSE 1 END ASC`
+            );
+        }
+
+        // 🌟 Step 0: prioritize best sellers
         if (prioritizeBestSellers) {
             orderBy.push(
                 sql`CASE WHEN ${products.isBestSeller} = true THEN 0 ELSE 1 END ASC`
@@ -962,8 +980,37 @@ class ProductQuery {
             .array()
             .parse(enhancedData);
 
+        // Filter out products with no valid media (where media items don't have URLs)
+        // This handles cases where media IDs exist but the actual media was deleted
+        const filteredData = requireMedia
+            ? parsed.filter((product) => {
+                  // Check if product has at least one media item with a valid URL
+                  const hasValidMedia = product.media.some(
+                      (m) => m.mediaItem?.url
+                  );
+                  return hasValidMedia;
+              })
+            : parsed;
+
+        if (requireMedia && search) {
+            console.log(
+                `[getProducts] Filtered ${parsed.length} -> ${filteredData.length} products`
+            );
+            if (filteredData.length > 0) {
+                console.log(
+                    "[getProducts] Sample passed media:",
+                    JSON.stringify(filteredData[0].media, null, 2)
+                );
+            } else if (parsed.length > 0) {
+                console.log(
+                    "[getProducts] Sample rejected media:",
+                    JSON.stringify(parsed[0].media, null, 2)
+                );
+            }
+        }
+
         return {
-            data: parsed,
+            data: filteredData,
             count: +data?.[0]?.count || 0,
             topBrandMatch, // optional — can show in frontend
         };

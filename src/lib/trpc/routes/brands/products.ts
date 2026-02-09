@@ -116,10 +116,9 @@ export const productsRouter = createTRPCRouter({
             const userId = ctx.user?.id;
 
             // Check if we should use personalized recommendations
-            // Only apply on first page with no specific category/search filters
+            // Apply when no specific category/search filters are active
             const shouldUseRecommendations =
                 input.useRecommendations &&
-                input.page === 1 &&
                 !input.search &&
                 !input.categoryId &&
                 !input.subcategoryId &&
@@ -127,39 +126,34 @@ export const productsRouter = createTRPCRouter({
                 (!input.brandIds || input.brandIds.length === 0);
 
             if (shouldUseRecommendations && userId) {
-                // Get personalized recommendations
+                // Get user's priority product IDs (clicked, wishlisted, etc.)
+                // These will be used for ordering across all pages
                 const recommendations =
                     await queries.recommendations.getPersonalizedRecommendations(
                         {
                             userId,
-                            limit: input.limit,
+                            limit: 100, // Get more products for consistent ordering across pages
                             excludeProductIds: [],
                         }
                     );
 
-                // If we have enough personalized recommendations, use them
+                // If we have personalized recommendations, use them for ordering
                 if (recommendations.products.length >= 5) {
-                    // Get regular products for the remaining count
-                    const regularData = await queries.products.getProducts({
+                    const priorityProductIds = recommendations.products.map(
+                        (p) => p.id
+                    );
+
+                    // Get products with priority ordering
+                    const data = await queries.products.getProducts({
                         ...input,
                         prioritizeBestSellers: true,
+                        // Pass priority IDs for ordering
+                        priorityProductIds,
                     });
 
-                    // Combine: personalized first, then regular (excluding duplicates)
-                    const recommendedIds = new Set(
-                        recommendations.products.map((p) => p.id)
-                    );
-                    const regularProducts = regularData.data.filter(
-                        (p) => !recommendedIds.has(p.id)
-                    );
-                    const combinedProducts = [
-                        ...recommendations.products,
-                        ...regularProducts,
-                    ].slice(0, input.limit);
-
                     return {
-                        data: combinedProducts,
-                        count: regularData.count,
+                        data: data.data,
+                        count: data.count,
                         recommendationSource: recommendations.source,
                     };
                 }

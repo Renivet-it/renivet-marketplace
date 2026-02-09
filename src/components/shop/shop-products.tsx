@@ -116,12 +116,27 @@ export function ShopProducts({
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
             minDiscount: minDiscount ? Number(minDiscount) : undefined,
-            prioritizeBestSellers: page === 1,
+            prioritizeBestSellers: true,
             requireMedia: true,
-            // Enable personalized recommendations on first page
-            useRecommendations: page === 1,
+            // Enable personalized recommendations on all pages (when no filters)
+            useRecommendations: true,
         },
-        { initialData: { ...initialData, recommendationSource: null } }
+        {
+            initialData: { ...initialData, recommendationSource: null },
+            // Only apply staleTime when no filters active (for recommendations)
+            // When filters are active, allow immediate refetch
+            staleTime:
+                !search &&
+                !categoryId.length &&
+                !subCategoryId.length &&
+                !productTypeId.length &&
+                !brandIds?.length &&
+                !colors.length &&
+                !sizes.length &&
+                !minDiscount
+                    ? 60 * 1000
+                    : 0,
+        }
     );
 
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
