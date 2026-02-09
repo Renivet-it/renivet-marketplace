@@ -587,6 +587,12 @@ class ProductQuery {
         requireMedia?: boolean;
         priorityProductIds?: string[];
     }) {
+        console.log(
+            "[getProducts] search:",
+            search,
+            "requireMedia:",
+            requireMedia
+        );
         // --- Price conversions ---
         minPrice = !!minPrice
             ? minPrice < 0
@@ -974,8 +980,37 @@ class ProductQuery {
             .array()
             .parse(enhancedData);
 
+        // Filter out products with no valid media (where media items don't have URLs)
+        // This handles cases where media IDs exist but the actual media was deleted
+        const filteredData = requireMedia
+            ? parsed.filter((product) => {
+                  // Check if product has at least one media item with a valid URL
+                  const hasValidMedia = product.media.some(
+                      (m) => m.mediaItem?.url
+                  );
+                  return hasValidMedia;
+              })
+            : parsed;
+
+        if (requireMedia && search) {
+            console.log(
+                `[getProducts] Filtered ${parsed.length} -> ${filteredData.length} products`
+            );
+            if (filteredData.length > 0) {
+                console.log(
+                    "[getProducts] Sample passed media:",
+                    JSON.stringify(filteredData[0].media, null, 2)
+                );
+            } else if (parsed.length > 0) {
+                console.log(
+                    "[getProducts] Sample rejected media:",
+                    JSON.stringify(parsed[0].media, null, 2)
+                );
+            }
+        }
+
         return {
-            data: parsed,
+            data: filteredData,
             count: +data?.[0]?.count || 0,
             topBrandMatch, // optional — can show in frontend
         };
