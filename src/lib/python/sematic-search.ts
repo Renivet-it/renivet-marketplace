@@ -10,7 +10,7 @@ const EMBEDDING_SERVICE_URL =
 export async function getEmbedding(text: string): Promise<number[]> {
     try {
         const response = await axios.post(
-            `${EMBEDDING_SERVICE_URL}/embeddings/generate`,
+            `${"http://64.227.137.174:8000"}/embeddings/generate`,
             { text },
             {
                 headers: {
@@ -41,8 +41,8 @@ export async function getEmbedding(text: string): Promise<number[]> {
 export async function getEmbedding768(text: string): Promise<number[]> {
     try {
         const response = await axios.post(
-            `${"http://localhost:8000"}/embeddings/generate-768`,
-            // `${EMBEDDING_SERVICE_URL}/embeddings/generate-768`,
+            `${"http://64.227.137.174:8000"}/embeddings/generate-768`,
+            // `${"http://64.227.137.174:8000"}/embeddings/generate-768`,
             { text },
             {
                 headers: {
