@@ -192,6 +192,14 @@ export const productEvents = pgTable(
             t.event
         ),
         idxCreatedAt: index("product_events_created_at_idx").on(t.createdAt),
+        // New indexes for recommendation queries
+        idxUserIdCreatedAt: index("product_events_user_created_idx").on(
+            t.userId,
+            t.createdAt
+        ),
+        idxUserIdEventCreatedAt: index(
+            "product_events_user_event_created_idx"
+        ).on(t.userId, t.event, t.createdAt),
     })
 );
 export const womenPageFeaturedProducts = pgTable(

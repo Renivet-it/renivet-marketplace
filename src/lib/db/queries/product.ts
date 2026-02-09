@@ -560,6 +560,7 @@ class ProductQuery {
         minDiscount,
         prioritizeBestSellers,
         requireMedia,
+        priorityProductIds,
     }: {
         limit: number;
         page: number;
@@ -584,6 +585,7 @@ class ProductQuery {
         minDiscount?: number | null;
         prioritizeBestSellers?: boolean;
         requireMedia?: boolean;
+        priorityProductIds?: string[];
     }) {
         // --- Price conversions ---
         minPrice = !!minPrice
@@ -811,7 +813,17 @@ class ProductQuery {
         // --- OrderBy construction ---
         const orderBy: any[] = [];
 
-        // 🌟 Step 0: prioritize best sellers (only on page 1)
+        // 🎯 Step -1: prioritize user's personalized products (highest priority)
+        if (priorityProductIds && priorityProductIds.length > 0) {
+            // Create a CASE statement that gives lower values to priority products
+            // Products in the priority list get sorted by their position in the list
+            orderBy.push(
+                sql`CASE WHEN ${products.id}::text IN (${sql.raw(priorityProductIds.map((id) => `'${id}'`).join(", "))}) 
+                    THEN 0 ELSE 1 END ASC`
+            );
+        }
+
+        // 🌟 Step 0: prioritize best sellers
         if (prioritizeBestSellers) {
             orderBy.push(
                 sql`CASE WHEN ${products.isBestSeller} = true THEN 0 ELSE 1 END ASC`

@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "product_events_user_created_idx" ON "product_events" USING btree ("user_id","created_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "product_events_user_event_created_idx" ON "product_events" USING btree ("user_id","event","created_at");
