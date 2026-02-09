@@ -118,8 +118,10 @@ export function ShopProducts({
             minDiscount: minDiscount ? Number(minDiscount) : undefined,
             prioritizeBestSellers: page === 1,
             requireMedia: true,
+            // Enable personalized recommendations on first page
+            useRecommendations: page === 1,
         },
-        { initialData }
+        { initialData: { ...initialData, recommendationSource: null } }
     );
 
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(

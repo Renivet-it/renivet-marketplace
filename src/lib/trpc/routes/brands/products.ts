@@ -107,13 +107,67 @@ export const productsRouter = createTRPCRouter({
                 minDiscount: z.number().min(0).max(100).optional(),
                 prioritizeBestSellers: z.boolean().optional(),
                 requireMedia: z.boolean().optional(),
+                // NEW: Enable personalized recommendations for shop page
+                useRecommendations: z.boolean().optional(),
             })
         )
         .query(async ({ input, ctx }) => {
             const { queries } = ctx;
+            const userId = ctx.user?.id;
 
+            // Check if we should use personalized recommendations
+            // Only apply on first page with no specific category/search filters
+            const shouldUseRecommendations =
+                input.useRecommendations &&
+                input.page === 1 &&
+                !input.search &&
+                !input.categoryId &&
+                !input.subcategoryId &&
+                !input.productTypeId &&
+                (!input.brandIds || input.brandIds.length === 0);
+
+            if (shouldUseRecommendations && userId) {
+                // Get personalized recommendations
+                const recommendations =
+                    await queries.recommendations.getPersonalizedRecommendations(
+                        {
+                            userId,
+                            limit: input.limit,
+                            excludeProductIds: [],
+                        }
+                    );
+
+                // If we have enough personalized recommendations, use them
+                if (recommendations.products.length >= 5) {
+                    // Get regular products for the remaining count
+                    const regularData = await queries.products.getProducts({
+                        ...input,
+                        prioritizeBestSellers: true,
+                    });
+
+                    // Combine: personalized first, then regular (excluding duplicates)
+                    const recommendedIds = new Set(
+                        recommendations.products.map((p) => p.id)
+                    );
+                    const regularProducts = regularData.data.filter(
+                        (p) => !recommendedIds.has(p.id)
+                    );
+                    const combinedProducts = [
+                        ...recommendations.products,
+                        ...regularProducts,
+                    ].slice(0, input.limit);
+
+                    return {
+                        data: combinedProducts,
+                        count: regularData.count,
+                        recommendationSource: recommendations.source,
+                    };
+                }
+            }
+
+            // Default behavior: use regular getProducts
             const data = await queries.products.getProducts(input);
-            return data;
+            return { ...data, recommendationSource: null };
         }),
     getAllCatalogueProducts: publicProcedure
         .input(
@@ -1426,5 +1480,30 @@ export const productsRouter = createTRPCRouter({
                     message: err?.message || "Failed to fetch recommendations",
                 });
             }
+        }),
+
+    /**
+     * Get personalized shop recommendations based on user history
+     * Cascading logic: orders → wishlist → browsing → search → platform defaults
+     */
+    getShopRecommendations: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().min(1).max(50).default(20).optional(),
+                excludeProductIds: z.array(z.string().uuid()).optional(),
+            })
+        )
+        .query(async ({ input, ctx }) => {
+            const { queries } = ctx;
+            const userId = ctx.user?.id;
+
+            const result =
+                await queries.recommendations.getPersonalizedRecommendations({
+                    userId,
+                    limit: input.limit ?? 20,
+                    excludeProductIds: input.excludeProductIds ?? [],
+                });
+
+            return result;
         }),
 });

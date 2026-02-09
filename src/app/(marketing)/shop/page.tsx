@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { productQueries } from "@/lib/db/queries";
+import { productQueries, recommendationQueries } from "@/lib/db/queries";
 import {
     categoryCache,
     productTypeCache,
@@ -340,8 +340,105 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
 
-    const [data, userWishlist] = await Promise.all([
-        productQueries.getProducts({
+    // Check if we should use personalized recommendations
+    // Only apply on first page with no specific filters
+    const shouldUseRecommendations =
+        page === 1 &&
+        !search &&
+        !categoryId &&
+        !subCategoryId &&
+        !productTypeId &&
+        !brandIds?.length &&
+        !!userId;
+
+    let finalData;
+
+    if (shouldUseRecommendations) {
+        // Get personalized recommendations
+        const recommendations =
+            await recommendationQueries.getPersonalizedRecommendations({
+                userId,
+                limit,
+                excludeProductIds: [],
+            });
+
+        if (recommendations.products.length >= 5) {
+            // Get regular products for count and remaining products
+            const regularData = await productQueries.getProducts({
+                page,
+                limit,
+                search,
+                isAvailable: true,
+                isActive: true,
+                isPublished: true,
+                isDeleted: false,
+                verificationStatus: "approved",
+                brandIds,
+                minPrice,
+                maxPrice,
+                categoryId: !!categoryId?.length ? categoryId : undefined,
+                subcategoryId: !!subCategoryId?.length
+                    ? subCategoryId
+                    : undefined,
+                productTypeId: !!productTypeId?.length
+                    ? productTypeId
+                    : undefined,
+                sortBy,
+                sortOrder,
+                colors,
+                sizes,
+                prioritizeBestSellers: true,
+                requireMedia: true,
+            });
+
+            // Combine personalized first, then regular (exclude duplicates)
+            const recommendedIds = new Set(
+                recommendations.products.map((p) => p.id)
+            );
+            const regularProducts = regularData.data.filter(
+                (p) => !recommendedIds.has(p.id)
+            );
+            const combinedProducts = [
+                ...recommendations.products,
+                ...regularProducts,
+            ].slice(0, limit);
+
+            finalData = {
+                data: combinedProducts,
+                count: regularData.count,
+            };
+        } else {
+            // Not enough personalized recommendations, use regular
+            finalData = await productQueries.getProducts({
+                page,
+                limit,
+                search,
+                isAvailable: true,
+                isActive: true,
+                isPublished: true,
+                isDeleted: false,
+                verificationStatus: "approved",
+                brandIds,
+                minPrice,
+                maxPrice,
+                categoryId: !!categoryId?.length ? categoryId : undefined,
+                subcategoryId: !!subCategoryId?.length
+                    ? subCategoryId
+                    : undefined,
+                productTypeId: !!productTypeId?.length
+                    ? productTypeId
+                    : undefined,
+                sortBy,
+                sortOrder,
+                colors,
+                sizes,
+                prioritizeBestSellers: page === 1,
+                requireMedia: true,
+            });
+        }
+    } else {
+        // Regular products query
+        finalData = await productQueries.getProducts({
             page,
             limit,
             search,
@@ -362,15 +459,19 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             sizes,
             prioritizeBestSellers: page === 1,
             requireMedia: true,
-        }),
-        userId ? userWishlistCache.get(userId) : undefined,
-    ]);
-    console.log(data.data, "data");
+        });
+    }
+
+    const userWishlist = userId
+        ? await userWishlistCache.get(userId)
+        : undefined;
+
+    console.log(finalData.data, "data");
     return (
         <ShopProducts
             initialData={{
-                ...data,
-                data: data?.data?.filter((p: any) => !p.isDeleted) ?? [],
+                ...finalData,
+                data: finalData?.data?.filter((p: any) => !p.isDeleted) ?? [],
             }}
             initialWishlist={userWishlist}
             userId={userId ?? undefined}

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import {
+    addressQueries,
     advertisementQueries,
     bannedBrandMemberQueries,
     bannerQueries,
@@ -18,14 +19,15 @@ import {
     couponQueries,
     homeBrandProductQueries,
     homeShopByCategoryQueries,
-    homeShopByNewCategoryQueries,
     homeShopByCategoryTitleQueries,
+    homeShopByNewCategoryQueries,
     legalQueries,
     marketingStripQueries,
     orderQueries,
     planQueries,
     productQueries,
     productTypeQueries,
+    recommendationQueries,
     roleQueries,
     subCategoryQueries,
     subscriberQueries,
@@ -35,8 +37,7 @@ import {
     userQueries,
     userWishlistQueries,
     waitlistQueries,
-    addressQueries,
-    WomenHomeSectionQueries
+    WomenHomeSectionQueries,
 } from "@/lib/db/queries";
 import * as schema from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
@@ -100,6 +101,7 @@ export const createContextInner = ({ req, auth, user }: ContextProps) => {
             userWishlists: userWishlistQueries,
             waitlists: waitlistQueries,
             addresses: addressQueries,
+            recommendations: recommendationQueries,
         },
     };
 };
