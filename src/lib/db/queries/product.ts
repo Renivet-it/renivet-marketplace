@@ -1,5 +1,9 @@
 import { hasMedia, noMedia } from "@/lib/db/helperfilter";
-import { getEmbedding } from "@/lib/python/sematic-search";
+import {
+    getEmbedding,
+    getEmbedding768,
+    preprocessSearchQuery,
+} from "@/lib/python/sematic-search";
 import { mediaCache } from "@/lib/redis/methods";
 import { convertPriceToPaise } from "@/lib/utils";
 import {
@@ -601,10 +605,18 @@ class ProductQuery {
         const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
         const normalizedColors = colors?.map((c) => c.toLowerCase());
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
+        // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
+        const CATEGORY_MATCH_THRESHOLD = 0.35;
 
         let searchEmbedding: number[] | null = null;
+        let searchEmbedding768: number[] | null = null;
         let topBrandMatch: {
+            id: string;
+            name: string;
+            distance: number;
+        } | null = null;
+        let topCategoryMatch: {
             id: string;
             name: string;
             distance: number;
@@ -612,16 +624,30 @@ class ProductQuery {
 
         // --- Search embedding (semantic) ---
         if (search?.length) {
-            searchEmbedding = await getEmbedding(search);
+            // Preprocess query for better matching
+            const processedSearch = preprocessSearchQuery(search);
+
+            // Generate 384-dim embedding for brand matching (brands still use 384-dim)
+            searchEmbedding = await getEmbedding(processedSearch);
+
+            // Generate 768-dim embedding for advanced semantic product search
+            try {
+                searchEmbedding768 = await getEmbedding768(processedSearch);
+            } catch (_error) {
+                console.warn(
+                    "⚠️ Failed to generate 768-dim embedding, falling back to 384-dim"
+                );
+                searchEmbedding768 = null;
+            }
 
             // 🔍 Detect brand intent
             const brandResult = await db.execute(sql`
-      SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
-      FROM brands
-      WHERE embeddings IS NOT NULL
-      ORDER BY distance ASC
-      LIMIT 1
-    `);
+                SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
+                FROM brands
+                WHERE embeddings IS NOT NULL
+                ORDER BY distance ASC
+                LIMIT 1
+            `);
 
             const brandRow = Array.isArray(brandResult)
                 ? brandResult[0]
@@ -636,11 +662,45 @@ class ProductQuery {
                     `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
                 );
             }
+
+            // 🔍 Detect category intent
+            const categoryResult = await db.execute(sql`
+                SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
+                FROM categories
+                WHERE embeddings IS NOT NULL
+                ORDER BY distance ASC
+                LIMIT 1
+            `);
+
+            const categoryRow = Array.isArray(categoryResult)
+                ? categoryResult[0]
+                : categoryResult?.rows?.[0];
+            if (
+                categoryRow &&
+                Number(categoryRow.distance) < CATEGORY_MATCH_THRESHOLD
+            ) {
+                topCategoryMatch = {
+                    id: categoryRow.id,
+                    name: categoryRow.name,
+                    distance: Number(categoryRow.distance),
+                };
+                console.log(
+                    `📂 Category match detected: ${topCategoryMatch.name} (distance ${topCategoryMatch.distance})`
+                );
+            }
         }
 
-        // --- Search relevance filters ---
+        // --- Search relevance filters (using 768-dim if available) ---
         let searchQuery;
-        if (searchEmbedding) {
+        if (searchEmbedding768) {
+            // Use 768-dim embeddings for better semantic matching
+            const highRelevanceThreshold = 0.5; // Tighter threshold for 768-dim
+            const lowRelevanceThreshold = 0.85;
+            const highRelevanceQuery = sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector < ${highRelevanceThreshold}`;
+            const lowRelevanceQuery = sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
+            searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+        } else if (searchEmbedding) {
+            // Fallback to 384-dim embeddings
             const highRelevanceThreshold = 0.6;
             const lowRelevanceThreshold = 0.99;
             const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
@@ -793,8 +853,20 @@ class ProductQuery {
             );
         }
 
-        // 🟩 Step 2: semantic relevance (embedding distance)
-        if (searchEmbedding) {
+        // 📂 Step 1.5: prioritize matched category
+        if (topCategoryMatch) {
+            orderBy.push(
+                sql`CASE WHEN ${products.categoryId} = ${topCategoryMatch.id} THEN 0 ELSE 1 END ASC`
+            );
+        }
+
+        // 🟩 Step 2: semantic relevance (using 768-dim if available, fallback to 384-dim)
+        if (searchEmbedding768) {
+            orderBy.push(
+                sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector ASC`
+            );
+        } else if (searchEmbedding) {
+            // Fallback to 384-dim embeddings
             orderBy.push(
                 sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
             );
@@ -929,6 +1001,7 @@ class ProductQuery {
             data: parsed,
             count: +data?.[0]?.count || 0,
             topBrandMatch, // optional — can show in frontend
+            topCategoryMatch, // optional — for category suggestions
         };
     }
 
