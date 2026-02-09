@@ -607,16 +607,10 @@ class ProductQuery {
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
         // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
-        const CATEGORY_MATCH_THRESHOLD = 0.35;
 
         let searchEmbedding: number[] | null = null;
         let searchEmbedding768: number[] | null = null;
         let topBrandMatch: {
-            id: string;
-            name: string;
-            distance: number;
-        } | null = null;
-        let topCategoryMatch: {
             id: string;
             name: string;
             distance: number;
@@ -663,31 +657,9 @@ class ProductQuery {
                 );
             }
 
-            // 🔍 Detect category intent
-            const categoryResult = await db.execute(sql`
-                SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
-                FROM categories
-                WHERE embeddings IS NOT NULL
-                ORDER BY distance ASC
-                LIMIT 1
-            `);
-
-            const categoryRow = Array.isArray(categoryResult)
-                ? categoryResult[0]
-                : categoryResult?.rows?.[0];
-            if (
-                categoryRow &&
-                Number(categoryRow.distance) < CATEGORY_MATCH_THRESHOLD
-            ) {
-                topCategoryMatch = {
-                    id: categoryRow.id,
-                    name: categoryRow.name,
-                    distance: Number(categoryRow.distance),
-                };
-                console.log(
-                    `📂 Category match detected: ${topCategoryMatch.name} (distance ${topCategoryMatch.distance})`
-                );
-            }
+            // NOTE: Category intent detection is disabled because the categories
+            // table doesn't have an embeddings column. To enable it, add an
+            // embeddings column to the categories table and generate embeddings.
         }
 
         // --- Search relevance filters (using 768-dim if available) ---
@@ -853,13 +825,6 @@ class ProductQuery {
             );
         }
 
-        // 📂 Step 1.5: prioritize matched category
-        if (topCategoryMatch) {
-            orderBy.push(
-                sql`CASE WHEN ${products.categoryId} = ${topCategoryMatch.id} THEN 0 ELSE 1 END ASC`
-            );
-        }
-
         // 🟩 Step 2: semantic relevance (using 768-dim if available, fallback to 384-dim)
         if (searchEmbedding768) {
             orderBy.push(
@@ -1001,7 +966,6 @@ class ProductQuery {
             data: parsed,
             count: +data?.[0]?.count || 0,
             topBrandMatch, // optional — can show in frontend
-            topCategoryMatch, // optional — for category suggestions
         };
     }
 
