@@ -94,42 +94,9 @@ const getDetailedStatus = (
 };
 
 export default function DailyOrderSummary({
-    dateRange = {
-        start: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        end: new Date(),
-    },
-    statistics = {
-        total: 15,
-        ready_to_pickup: 3,
-        pickup_scheduled: 2,
-        shipped: 5,
-        delivered: 4,
-        cancelled: 1,
-        rto: 0,
-    },
-    orders = [
-        {
-            id: "ORD-2024-001",
-            user: { firstName: "John", lastName: "Doe" },
-            status: "delivered",
-            totalAmount: 299900,
-            createdAt: new Date(),
-        },
-        {
-            id: "ORD-2024-002",
-            user: { firstName: "Jane", lastName: "Smith" },
-            status: "processing",
-            totalAmount: 199900,
-            createdAt: new Date(),
-        },
-        {
-            id: "ORD-2024-003",
-            user: { firstName: "Mike", lastName: "Johnson" },
-            status: "pending",
-            totalAmount: 399900,
-            createdAt: new Date(),
-        },
-    ],
+    dateRange,
+    statistics,
+    orders,
 }: Props) {
     const formatDate = (date: Date) => {
         return format(date, "MMM dd, yyyy h:mm a");
