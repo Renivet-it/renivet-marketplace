@@ -37,6 +37,18 @@ export default function ContactPage() {
 
     return (
         <div className="bg-[#fcfbf4] px-4 py-10 md:min-h-screen">
+            <style jsx>{`
+                @media (min-width: 1532px) and (max-width: 1600px) {
+                    .contact-bottom-image {
+                        left: -350px !important;
+                    }
+                }
+                @media (min-width: 1282px) and (max-width: 1393px) {
+                    .contact-bottom-image {
+                        left: -200px !important;
+                    }
+                }
+            `}</style>
             {/* Header */}
             <div className="mb-6 text-center md:mb-10">
                 <h1
@@ -345,7 +357,7 @@ export default function ContactPage() {
                     </div>
 
                     {/* Desktop Image - Absolute positioned, responsive for screen sizes */}
-                    <div className="absolute bottom-[-350px] left-[-200px] h-[400px] w-[500px] lg:bottom-[-450px] lg:left-[-120px] lg:h-[500px] lg:w-[620px] xl:bottom-[-567px] xl:left-[-310px] xl:h-[613px] xl:w-[760px] 2xl:left-[-494px]">
+                    <div className="contact-bottom-image absolute bottom-[-350px] left-[-200px] h-[400px] w-[500px] lg:bottom-[-450px] lg:left-[-120px] lg:h-[500px] lg:w-[620px] xl:bottom-[-567px] xl:left-[-310px] xl:h-[613px] xl:w-[760px] 2xl:left-[-494px]">
                         <Image
                             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
                             alt="Leaf person"
