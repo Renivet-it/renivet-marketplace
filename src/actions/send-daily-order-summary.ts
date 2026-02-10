@@ -21,7 +21,10 @@ export async function sendDailyOrderSummary() {
         );
 
         // Fetch order status counts
-        const statistics = await orderQueries.getOrderStatusCounts();
+        const statistics = await orderQueries.getOrderStatusCounts({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+        });
         console.log("📊 Statistics fetched:", statistics);
 
         // Fetch all orders from the past 24 hours

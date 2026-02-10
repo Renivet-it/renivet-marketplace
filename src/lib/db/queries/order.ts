@@ -370,7 +370,25 @@ class OrderQuery {
         };
     }
 
-    async getOrderStatusCounts() {
+    async getOrderStatusCounts({
+        startDate,
+        endDate,
+    }: {
+        startDate?: string | Date;
+        endDate?: string | Date;
+    } = {}) {
+        const dateFilter =
+            startDate && endDate
+                ? and(
+                      gte(orders.createdAt, new Date(startDate)),
+                      lte(orders.createdAt, new Date(endDate))
+                  )
+                : startDate
+                  ? gte(orders.createdAt, new Date(startDate))
+                  : endDate
+                    ? lte(orders.createdAt, new Date(endDate))
+                    : undefined;
+
         // Get counts for each status tab efficiently
         const [
             allCount,
@@ -382,20 +400,23 @@ class OrderQuery {
             rtoCount,
         ] = await Promise.all([
             // All orders
-            db.$count(orders),
+            db.$count(orders, dateFilter),
 
             // Ready to pickup: orders.status = 'pending' OR orderShipments.status = 'pending'
             db.$count(
                 orders,
-                or(
-                    eq(orders.status, "pending"),
-                    inArray(
-                        orders.id,
-                        db
-                            .select({ orderId: orderShipments.orderId })
-                            .from(orderShipments)
-                            .where(eq(orderShipments.status, "pending"))
-                    )
+                and(
+                    or(
+                        eq(orders.status, "pending"),
+                        inArray(
+                            orders.id,
+                            db
+                                .select({ orderId: orderShipments.orderId })
+                                .from(orderShipments)
+                                .where(eq(orderShipments.status, "pending"))
+                        )
+                    ),
+                    dateFilter
                 )
             ),
 
@@ -415,7 +436,8 @@ class OrderQuery {
                                     eq(orderShipments.status, "pending")
                                 )
                             )
-                    )
+                    ),
+                    dateFilter
                 )
             ),
 
@@ -427,36 +449,40 @@ class OrderQuery {
                         SELECT order_id FROM order_shipments 
                         WHERE status = 'pending'
                     )`,
-                    eq(orders.status, "processing")
+                    eq(orders.status, "processing"),
+                    dateFilter
                 )
             ),
 
             // Delivered
-            db.$count(orders, eq(orders.status, "delivered")),
+            db.$count(orders, and(eq(orders.status, "delivered"), dateFilter)),
 
             // Cancelled
-            db.$count(orders, eq(orders.status, "cancelled")),
+            db.$count(orders, and(eq(orders.status, "cancelled"), dateFilter)),
 
             // RTO: is_return_label_generated = true OR is_replacement_label_generated = true
             db.$count(
                 orders,
-                inArray(
-                    orders.id,
-                    db
-                        .select({ orderId: orderShipments.orderId })
-                        .from(orderShipments)
-                        .where(
-                            or(
-                                eq(
-                                    orderShipments.is_return_label_generated,
-                                    true
-                                ),
-                                eq(
-                                    orderShipments.is_replacement_label_generated,
-                                    true
+                and(
+                    inArray(
+                        orders.id,
+                        db
+                            .select({ orderId: orderShipments.orderId })
+                            .from(orderShipments)
+                            .where(
+                                or(
+                                    eq(
+                                        orderShipments.is_return_label_generated,
+                                        true
+                                    ),
+                                    eq(
+                                        orderShipments.is_replacement_label_generated,
+                                        true
+                                    )
                                 )
                             )
-                        )
+                    ),
+                    dateFilter
                 )
             ),
         ]);
