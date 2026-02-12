@@ -69,7 +69,8 @@ type Tab = "on_the_way" | "delivered";
 type StatusFilter = "in_transit" | "processing" | "delivered" | "cancelled";
 type DeliveredSubFilter = "all" | "needs_review" | "most_worn";
 
-const ORDERS_PER_PAGE = 5;
+const ORDERS_PER_PAGE_ON_THE_WAY = 5;
+const ORDERS_PER_PAGE_DELIVERED = 4;
 
 interface PageProps extends GenericProps {
     initialData: OrderWithItemAndBrand[];
@@ -246,14 +247,15 @@ export function OrdersPage({
         activeTab === "on_the_way" ? filteredOnTheWay : filteredDelivered;
 
     // Pagination
-    const totalPages = Math.max(
-        1,
-        Math.ceil(filteredOrders.length / ORDERS_PER_PAGE)
-    );
+    const perPage =
+        activeTab === "delivered"
+            ? ORDERS_PER_PAGE_DELIVERED
+            : ORDERS_PER_PAGE_ON_THE_WAY;
+    const totalPages = Math.max(1, Math.ceil(filteredOrders.length / perPage));
     const paginatedOrders = useMemo(() => {
-        const start = (currentPage - 1) * ORDERS_PER_PAGE;
-        return filteredOrders.slice(start, start + ORDERS_PER_PAGE);
-    }, [filteredOrders, currentPage]);
+        const start = (currentPage - 1) * perPage;
+        return filteredOrders.slice(start, start + perPage);
+    }, [filteredOrders, currentPage, perPage]);
 
     // Stats
     const stats = useMemo(() => {
@@ -470,7 +472,7 @@ export function OrdersPage({
                                 totalPages={totalPages}
                                 onPageChange={setCurrentPage}
                                 totalItems={filteredOrders.length}
-                                perPage={ORDERS_PER_PAGE}
+                                perPage={perPage}
                             />
                         )}
                     </div>
