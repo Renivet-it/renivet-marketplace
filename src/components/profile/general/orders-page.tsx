@@ -41,6 +41,8 @@ import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { differenceInDays, differenceInMonths, format } from "date-fns";
 import {
     Check,
+    ChevronLeft,
+    ChevronRight,
     Droplets,
     Eye,
     Heart,
@@ -57,7 +59,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ReplaceModal } from "./replace-modal";
 import { ReturnModal } from "./return-modal";
@@ -66,6 +68,8 @@ import { ReturnModal } from "./return-modal";
 type Tab = "on_the_way" | "delivered";
 type StatusFilter = "in_transit" | "processing" | "delivered" | "cancelled";
 type DeliveredSubFilter = "all" | "needs_review" | "most_worn";
+
+const ORDERS_PER_PAGE = 5;
 
 interface PageProps extends GenericProps {
     initialData: OrderWithItemAndBrand[];
@@ -131,6 +135,20 @@ export function OrdersPage({
     const [deliveredSubFilter, setDeliveredSubFilter] =
         useState<DeliveredSubFilter>("all");
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Reset page on tab or filter change
+    const handleTabChange = useCallback((tab: Tab) => {
+        setActiveTab(tab);
+        setCurrentPage(1);
+    }, []);
+    const handleDeliveredSubFilterChange = useCallback(
+        (filter: DeliveredSubFilter) => {
+            setDeliveredSubFilter(filter);
+            setCurrentPage(1);
+        },
+        []
+    );
 
     const { data: orders } = trpc.general.orders.getOrdersByUserId.useQuery(
         { userId: user.id },
@@ -227,6 +245,16 @@ export function OrdersPage({
     const filteredOrders =
         activeTab === "on_the_way" ? filteredOnTheWay : filteredDelivered;
 
+    // Pagination
+    const totalPages = Math.max(
+        1,
+        Math.ceil(filteredOrders.length / ORDERS_PER_PAGE)
+    );
+    const paginatedOrders = useMemo(() => {
+        const start = (currentPage - 1) * ORDERS_PER_PAGE;
+        return filteredOrders.slice(start, start + ORDERS_PER_PAGE);
+    }, [filteredOrders, currentPage]);
+
     // Stats
     const stats = useMemo(() => {
         const total = availableOrders.length;
@@ -271,6 +299,7 @@ export function OrdersPage({
                 ? prev.filter((f) => f !== filter)
                 : [...prev, filter]
         );
+        setCurrentPage(1);
     };
 
     return (
@@ -297,7 +326,7 @@ export function OrdersPage({
                         {/* ── Tabs ────────────────────────── */}
                         <div className="mb-5 flex gap-3">
                             <button
-                                onClick={() => setActiveTab("on_the_way")}
+                                onClick={() => handleTabChange("on_the_way")}
                                 className={cn(
                                     "rounded-full px-5 py-2 text-sm font-medium transition-all",
                                     activeTab === "on_the_way"
@@ -311,7 +340,7 @@ export function OrdersPage({
                                 </span>
                             </button>
                             <button
-                                onClick={() => setActiveTab("delivered")}
+                                onClick={() => handleTabChange("delivered")}
                                 className={cn(
                                     "rounded-full px-5 py-2 text-sm font-medium transition-all",
                                     activeTab === "delivered"
@@ -349,7 +378,7 @@ export function OrdersPage({
                                     <button
                                         key={key}
                                         onClick={() =>
-                                            setDeliveredSubFilter(key)
+                                            handleDeliveredSubFilterChange(key)
                                         }
                                         className={cn(
                                             "rounded-full px-3 py-1 text-xs font-medium transition-all",
@@ -413,7 +442,7 @@ export function OrdersPage({
                         ) : activeTab === "delivered" ? (
                             /* ── Delivered: grid of detailed cards ── */
                             <div className="grid gap-5 md:grid-cols-2">
-                                {filteredOrders.map((order) => (
+                                {paginatedOrders.map((order) => (
                                     <DeliveredOrderCard
                                         key={order.id}
                                         order={order}
@@ -424,7 +453,7 @@ export function OrdersPage({
                         ) : (
                             /* ── On The Way: compact cards ── */
                             <div className="space-y-4">
-                                {filteredOrders.map((order) => (
+                                {paginatedOrders.map((order) => (
                                     <OnTheWayOrderCard
                                         key={order.id}
                                         order={order}
@@ -432,6 +461,17 @@ export function OrdersPage({
                                     />
                                 ))}
                             </div>
+                        )}
+
+                        {/* ── Pagination ────────────────────── */}
+                        {totalPages > 1 && (
+                            <PaginationControls
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                totalItems={filteredOrders.length}
+                                perPage={ORDERS_PER_PAGE}
+                            />
                         )}
                     </div>
 
@@ -1289,5 +1329,109 @@ function DeliveredOrderCard({
                 />
             )}
         </>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── PAGINATION CONTROLS ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+interface PaginationControlsProps {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    totalItems: number;
+    perPage: number;
+}
+
+function PaginationControls({
+    currentPage,
+    totalPages,
+    onPageChange,
+    totalItems,
+    perPage,
+}: PaginationControlsProps) {
+    const startItem = (currentPage - 1) * perPage + 1;
+    const endItem = Math.min(currentPage * perPage, totalItems);
+
+    // Generate page numbers to show (max 5 visible)
+    const getPageNumbers = () => {
+        const pages: (number | "ellipsis")[] = [];
+        if (totalPages <= 5) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push("ellipsis");
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            for (let i = start; i <= end; i++) pages.push(i);
+            if (currentPage < totalPages - 2) pages.push("ellipsis");
+            pages.push(totalPages);
+        }
+        return pages;
+    };
+
+    return (
+        <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+            <p className="text-xs text-gray-500">
+                Showing {startItem}–{endItem} of {totalItems} orders
+            </p>
+
+            <div className="flex items-center gap-1">
+                {/* Previous */}
+                <button
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={cn(
+                        "flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                        currentPage === 1
+                            ? "cursor-not-allowed text-gray-300"
+                            : "text-gray-600 hover:bg-gray-100"
+                    )}
+                >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Previous</span>
+                </button>
+
+                {/* Page numbers */}
+                {getPageNumbers().map((page, idx) =>
+                    page === "ellipsis" ? (
+                        <span
+                            key={`ellipsis-${idx}`}
+                            className="flex h-8 w-8 items-center justify-center text-xs text-gray-400"
+                        >
+                            ···
+                        </span>
+                    ) : (
+                        <button
+                            key={page}
+                            onClick={() => onPageChange(page)}
+                            className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors",
+                                page === currentPage
+                                    ? "bg-[#5B9BD5] text-white shadow-sm"
+                                    : "text-gray-600 hover:bg-gray-100"
+                            )}
+                        >
+                            {page}
+                        </button>
+                    )
+                )}
+
+                {/* Next */}
+                <button
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={cn(
+                        "flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
+                        currentPage === totalPages
+                            ? "cursor-not-allowed text-gray-300"
+                            : "text-gray-600 hover:bg-gray-100"
+                    )}
+                >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+            </div>
+        </div>
     );
 }
