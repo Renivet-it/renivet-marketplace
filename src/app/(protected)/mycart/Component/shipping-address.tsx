@@ -13,16 +13,16 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-    DialogFooter
 } from "@/components/ui/dialog-dash";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Loader2, Phone, Plus } from "lucide-react";
+import { Leaf, Loader2, MapPin, Phone, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./add-address";
 
@@ -46,7 +46,8 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
     const { data: user, isLoading } = trpc.general.users.currentUser.useQuery();
     const addresses = useMemo(() => user?.addresses ?? [], [user?.addresses]);
     const [formOpen, setFormOpen] = useState(false);
-    const { selectedShippingAddress, setSelectedShippingAddress } = useCartStore();
+    const { selectedShippingAddress, setSelectedShippingAddress } =
+        useCartStore();
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
         selectedShippingAddress?.id || null
     );
@@ -54,21 +55,31 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
     useEffect(() => {
         if (addresses.length > 0) {
             if (selectedShippingAddress?.id) {
-                const isValidAddress = addresses.some((addr) => addr.id === selectedShippingAddress.id);
+                const isValidAddress = addresses.some(
+                    (addr) => addr.id === selectedShippingAddress.id
+                );
                 if (isValidAddress) {
                     setSelectedAddressId(selectedShippingAddress.id);
                 } else {
                     // @ts-ignore
                     setSelectedShippingAddress(null);
-                    setSelectedAddressId(addresses.find((addr) => addr.isPrimary)?.id || addresses[0].id);
+                    setSelectedAddressId(
+                        addresses.find((addr) => addr.isPrimary)?.id ||
+                            addresses[0].id
+                    );
                 }
             } else {
-                setSelectedAddressId(addresses.find((addr) => addr.isPrimary)?.id || addresses[0].id);
+                setSelectedAddressId(
+                    addresses.find((addr) => addr.isPrimary)?.id ||
+                        addresses[0].id
+                );
             }
         }
     }, [addresses, selectedShippingAddress, setSelectedShippingAddress]);
 
-    const selectedAddress = addresses.find((addr) => addr.id === selectedAddressId);
+    const selectedAddress = addresses.find(
+        (addr) => addr.id === selectedAddressId
+    );
 
     useEffect(() => {
         if (selectedAddress) {
@@ -77,28 +88,41 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
     }, [selectedAddress, setSelectedShippingAddress]);
 
     return (
-        <Card className={cn("border border-gray-200 shadow-none", className)} {...props}>
-            <CardHeader className="p-2">
+        <div
+            className={cn(
+                "rounded-xl border border-gray-200 bg-white",
+                className
+            )}
+            {...props}
+        >
+            <div className="p-4 md:p-5">
+                <div className="mb-3 flex items-center gap-2">
+                    <MapPin className="size-4 text-gray-500" />
+                    <h3 className="text-sm font-semibold text-gray-900 md:text-base">
+                        Delivery Address
+                    </h3>
+                </div>
+
                 {isLoading ? (
-                    <div className="flex h-24 items-center justify-center text-muted-foreground">
-                        <Loader2 className="mr-2 animate-spin" />
-                        Loading addresses...
+                    <div className="flex h-20 items-center justify-center text-muted-foreground">
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        <span className="text-sm">Loading addresses...</span>
                     </div>
                 ) : addresses.length === 0 || !selectedAddress ? (
-                    <>
-                        <div className="space-y-2 mt-2">
-                            <div className="text-sm text-gray-600">
-                                You have no saved addresses. Please add one to proceed with checkout.
-                            </div>
+                    <div className="space-y-3">
+                        <p className="text-sm text-gray-500">
+                            You have no saved addresses. Please add one to
+                            proceed with checkout.
+                        </p>
                         <Dialog open={formOpen} onOpenChange={setFormOpen}>
-                                <DialogTrigger asChild>
-                                    <div className="flex items-center gap-2 border border-dashed border-gray-300 rounded-md p-3 hover:bg-gray-50 cursor-pointer">
-                                        <Plus className="size-4 text-blue-600" />
-                                        <span className="text-sm text-blue-600">
-                                            Add a new address
-                                        </span>
-                                    </div>
-                                </DialogTrigger>
+                            <DialogTrigger asChild>
+                                <div className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-gray-300 p-3 transition-colors hover:border-green-400 hover:bg-green-50/50">
+                                    <Plus className="size-4 text-green-600" />
+                                    <span className="text-sm font-medium text-green-600">
+                                        Add a new address
+                                    </span>
+                                </div>
+                            </DialogTrigger>
                             <DialogContent className="sm:max-w-[800px]">
                                 <DialogHeader>
                                     <DialogTitle>Add New Address</DialogTitle>
@@ -112,62 +136,83 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                 )}
                             </DialogContent>
                         </Dialog>
-                        </div>
-                    </>
+                    </div>
                 ) : (
-                    <div className="rounded-md p-2">
-                        <div className="text-sm text-gray-500 mb-1">Deliver to</div>
-                        <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-1 font-semibold text-base">
-                                    {selectedAddress.fullName}
+                    <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-gray-900">
+                                        {selectedAddress.fullName}
+                                    </span>
                                     {selectedAddress.isPrimary && (
-                                        <Badge variant="default" className="bg-blue-500 text-white text-xs ml-2">
+                                        <Badge
+                                            variant="default"
+                                            className="bg-blue-100 text-[10px] text-blue-700 hover:bg-blue-100"
+                                        >
                                             Primary
                                         </Badge>
                                     )}
                                 </div>
-                                <div className="mt-1 text-sm text-gray-600">
-                                    {selectedAddress.street}, {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.zip}
-                                </div>
-                                <div className="mt-1 text-sm text-gray-600">
-                                    <Phone className="mr-1 inline-block" size={14} />
-                                    {selectedAddress.phone}
+                                <p className="text-sm leading-relaxed text-gray-600">
+                                    {selectedAddress.street},{" "}
+                                    {selectedAddress.city},{" "}
+                                    {selectedAddress.state} -{" "}
+                                    {selectedAddress.zip}
+                                </p>
+                                <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                    <Phone className="size-3.5" />
+                                    <span>{selectedAddress.phone}</span>
                                 </div>
                             </div>
+
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <button className="rounded-sm border border-blue-500 px-4 py-1 text-xs font-semibold text-blue-500 hover:bg-blue-100">
+                                    <button className="shrink-0 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100">
                                         Change
                                     </button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[500px]">
                                     <DialogHeader>
-                                        <DialogTitle className="text-lg">Select Address</DialogTitle>
+                                        <DialogTitle className="text-lg">
+                                            Select Address
+                                        </DialogTitle>
                                         <DialogDescription className="text-sm">
-                                            Choose a different address for this order.
+                                            Choose a different address for this
+                                            order.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <RadioGroup
                                         value={selectedAddressId || ""}
-                                        onValueChange={(value) => setSelectedAddressId(value)}
+                                        onValueChange={(value) =>
+                                            setSelectedAddressId(value)
+                                        }
                                         className="space-y-2"
                                     >
                                         {addresses.map((address) => {
-                                            const isSelected = address.id === selectedAddressId;
+                                            const isSelected =
+                                                address.id ===
+                                                selectedAddressId;
                                             return (
                                                 <div
                                                     key={address.id}
-                                                    className="flex items-start space-x-3 rounded-md border p-3 hover:bg-gray-50"
+                                                    className={cn(
+                                                        "flex items-start space-x-3 rounded-lg border p-3 transition-colors hover:bg-gray-50",
+                                                        isSelected &&
+                                                            "border-green-400 bg-green-50/50"
+                                                    )}
                                                 >
-                                                    <RadioGroupItem value={address.id} className="mt-1" />
+                                                    <RadioGroupItem
+                                                        value={address.id}
+                                                        className="mt-1"
+                                                    />
                                                     <div className="flex-1">
-                                                        <div className="flex items-center gap-1 text-base font-semibold">
+                                                        <div className="flex items-center gap-1 text-sm font-semibold">
                                                             {address.fullName}
                                                             {address.isPrimary && (
                                                                 <Badge
                                                                     variant="default"
-                                                                    className="ml-2 bg-blue-500 text-xs text-white"
+                                                                    className="ml-2 bg-blue-100 text-[10px] text-blue-700 hover:bg-blue-100"
                                                                 >
                                                                     Primary
                                                                 </Badge>
@@ -175,17 +220,23 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                                             {isSelected && (
                                                                 <Badge
                                                                     variant="default"
-                                                                    className="ml-2 bg-green-600 text-xs text-white"
+                                                                    className="ml-2 bg-green-100 text-[10px] text-green-700 hover:bg-green-100"
                                                                 >
                                                                     Selected
                                                                 </Badge>
                                                             )}
                                                         </div>
-                                                        <div className="text-sm text-gray-600">
-                                                            {address.street}, {address.city}, {address.state} - {address.zip}
+                                                        <div className="mt-1 text-sm text-gray-600">
+                                                            {address.street},{" "}
+                                                            {address.city},{" "}
+                                                            {address.state} -{" "}
+                                                            {address.zip}
                                                         </div>
-                                                        <div className="text-sm text-gray-600">
-                                                            <Phone className="mr-1 inline-block" size={14} />
+                                                        <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-600">
+                                                            <Phone
+                                                                className="inline-block"
+                                                                size={14}
+                                                            />
                                                             {address.phone}
                                                         </div>
                                                     </div>
@@ -194,21 +245,30 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                         })}
                                     </RadioGroup>
                                     <DialogFooter className="mt-4">
-                                        <Dialog open={formOpen} onOpenChange={setFormOpen}>
+                                        <Dialog
+                                            open={formOpen}
+                                            onOpenChange={setFormOpen}
+                                        >
                                             <DialogTrigger asChild>
-                                                <span className="cursor-pointer text-sm font-medium text-blue-600 hover:underline">
+                                                <span className="cursor-pointer text-sm font-medium text-green-600 hover:underline">
                                                     + Add New Address
                                                 </span>
                                             </DialogTrigger>
                                             <DialogContent className="sm:max-w-lg">
                                                 <DialogHeader>
-                                                    <DialogTitle>Add New Address</DialogTitle>
+                                                    <DialogTitle>
+                                                        Add New Address
+                                                    </DialogTitle>
                                                 </DialogHeader>
                                                 {user?.id && (
                                                     <AddAddressForm
                                                         user={user}
-                                                        onSuccess={() => setFormOpen(false)}
-                                                        onCancel={() => setFormOpen(false)}
+                                                        onSuccess={() =>
+                                                            setFormOpen(false)
+                                                        }
+                                                        onCancel={() =>
+                                                            setFormOpen(false)
+                                                        }
                                                     />
                                                 )}
                                             </DialogContent>
@@ -217,10 +277,17 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                                 </DialogContent>
                             </Dialog>
                         </div>
+
+                        {/* Carbon-neutral delivery badge */}
+                        <div className="flex w-fit items-center gap-1.5 rounded-full bg-green-50 px-3 py-1.5">
+                            <Leaf className="size-3.5 text-green-600" />
+                            <span className="text-xs font-medium text-green-700">
+                                Carbon-neutral delivery
+                            </span>
+                        </div>
                     </div>
                 )}
-            </CardHeader>
-            <CardFooter className="p-2"></CardFooter>
-        </Card>
+            </div>
+        </div>
     );
 }
