@@ -1,18 +1,9 @@
 "use client";
 
-import { Icons } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
-import {
-    cn,
-    convertPaiseToRupees,
-    formatPriceTag,
-    handleClientError,
-} from "@/lib/utils";
-import { Check, ShoppingBag, Sparkles } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { Bookmark, Check, ShoppingBag, Sparkles } from "lucide-react";
 import { useMemo } from "react";
-import { toast } from "sonner";
 
 interface WardrobeSuggestionsProps {
     userId: string;
@@ -33,27 +24,26 @@ export default function WardrobeSuggestions({
         return [...new Set(userCart.map((item) => item.product.categoryId))];
     }, [userCart]);
 
-    // For now, this is a static UI section since we don't have a dedicated recommendations endpoint
-    // The section will display properly with the design, and can be wired up to real data later
-
     const suggestions = [
         {
             id: 1,
             badge: "Pairs with shirt",
             brand: "EARTHEN THREADS",
-            title: "Navy Organic Cotton Pants",
-            price: "€58.00",
+            title: "Organic Cotton Wide-Leg Pants - Navy",
+            price: "€52.00",
             matchTag: "Pairs with shirt",
             worksWithCount: 3,
+            deliveryDate: "Jan 17",
         },
         {
             id: 2,
             badge: "Completes outfit",
             brand: "SIMPLE GOODS",
-            title: "Natural Canvas Belt",
-            price: "€32.00",
+            title: "Handwoven Canvas Belt - Earth Tones",
+            price: "€38.00",
             matchTag: "Completes outfit",
             worksWithCount: 3,
+            deliveryDate: "Jan 18",
         },
         {
             id: 3,
@@ -63,6 +53,7 @@ export default function WardrobeSuggestions({
             price: "€45.00",
             matchTag: "Same artisan region",
             worksWithCount: 2,
+            deliveryDate: "Jan 20",
         },
         {
             id: 4,
@@ -72,6 +63,7 @@ export default function WardrobeSuggestions({
             price: "€78.00",
             matchTag: "Watches tone",
             worksWithCount: 2,
+            deliveryDate: "Jan 22",
         },
     ];
 
@@ -85,35 +77,35 @@ export default function WardrobeSuggestions({
                     <Sparkles className="size-5 text-amber-500" />
                     Complete Your Conscious Wardrobe
                 </h2>
-                <p className="mt-1 text-sm text-gray-500">
-                    Based on your cart, these pieces create more outfit
-                    possibilities
+                <p className="mt-1 text-xs text-gray-500 md:text-sm">
+                    Thoughtfully curated pieces that pair beautifully with your
+                    selections
                 </p>
             </div>
 
             {/* Why we suggest these */}
-            <div className="mb-5 rounded-xl border border-gray-100 bg-gray-50 p-4">
-                <p className="mb-2 text-sm font-semibold text-gray-800">
-                    Why we suggest these:
+            <div className="mb-5 rounded-xl border border-gray-100 bg-gray-50 p-3 md:p-4">
+                <p className="mb-2 text-xs font-semibold text-gray-800 md:text-sm">
+                    Why these suggestions?
                 </p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <Check className="size-3.5 text-green-600" />
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 md:gap-2">
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
+                        <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
                         <span>Pairs with items in your cart</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <Check className="size-3.5 text-green-600" />
-                        <span>Fills a gap in your wardrobe composition</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <Check className="size-3.5 text-green-600" />
-                        <span>High versatility score (8+/10)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <Check className="size-3.5 text-green-600" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
+                        <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
                         <span>
                             Similar sustainability values (85+ Earth Score)
                         </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
+                        <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
+                        <span>High versatility score (8+/10)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
+                        <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
+                        <span>Fills wardrobe versatility gaps</span>
                     </div>
                 </div>
             </div>
@@ -136,34 +128,59 @@ export default function WardrobeSuggestions({
                         </div>
 
                         {/* Info */}
-                        <div className="p-3">
-                            <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        <div className="p-2.5 md:p-3">
+                            <p className="text-[9px] font-medium uppercase tracking-wide text-gray-400 md:text-[10px]">
                                 {item.brand}
                             </p>
-                            <h4 className="mt-0.5 line-clamp-2 text-sm font-semibold text-gray-900">
+                            <h4 className="mt-0.5 line-clamp-2 text-xs font-semibold text-gray-900 md:text-sm">
                                 {item.title}
                             </h4>
-                            <p className="mt-1 text-sm font-bold text-gray-900">
+                            <p className="mt-1 text-xs font-bold text-gray-900 md:text-sm">
                                 {item.price}
                             </p>
 
                             {/* Match tag */}
-                            <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-500">
+                            <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-500">
                                 <Check className="size-3 text-green-600" />
                                 <span>{item.matchTag}</span>
                             </div>
-                            <p className="mt-0.5 text-[10px] text-gray-400">
+
+                            {/* Mobile: delivery date */}
+                            <p className="mt-0.5 text-[10px] text-gray-400 md:hidden">
+                                Delivery {item.deliveryDate}
+                            </p>
+
+                            {/* Desktop: works with */}
+                            <p className="mt-0.5 hidden text-[10px] text-gray-400 md:block">
                                 Works with {item.worksWithCount} cart items
                             </p>
 
                             {/* Add to bag button */}
-                            <button className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 py-2 text-xs font-medium text-gray-700 transition-colors hover:border-green-600 hover:bg-green-50 hover:text-green-700">
-                                <ShoppingBag className="size-3.5" />
+                            <button className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 py-1.5 text-[11px] font-medium text-gray-700 transition-colors hover:border-green-600 hover:bg-green-50 hover:text-green-700 md:mt-3 md:py-2 md:text-xs">
+                                <ShoppingBag className="size-3" />
                                 Add to Bag
+                            </button>
+
+                            {/* Mobile: Save here link */}
+                            <button className="mt-1.5 flex w-full items-center justify-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 md:hidden">
+                                <Bookmark className="size-3" />
+                                Save here
                             </button>
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Mobile: Not interested / Save for later */}
+            <div className="mt-4 flex items-center justify-center gap-4 text-[11px] text-gray-400 md:hidden">
+                <button className="hover:text-gray-600 hover:underline">
+                    Not interested?
+                </button>
+                <span>·</span>
+                <button className="flex items-center gap-1 hover:text-gray-600 hover:underline">
+                    <Bookmark className="size-3" />
+                    Save for later
+                </button>
             </div>
         </div>
     );

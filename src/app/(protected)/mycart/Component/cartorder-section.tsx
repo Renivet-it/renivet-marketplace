@@ -13,22 +13,9 @@ import {
     EmptyPlaceholderIcon,
     EmptyPlaceholderTitle,
 } from "@/components/ui/empty-placeholder-general";
-import {
-    Notice,
-    NoticeButton,
-    NoticeContent,
-    NoticeIcon,
-    NoticeTitle,
-} from "@/components/ui/notice-general";
-import { Progress } from "@/components/ui/progress";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
-import {
-    cn,
-    convertPaiseToRupees,
-    formatPriceTag,
-    handleClientError,
-} from "@/lib/utils";
+import { cn, handleClientError } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
@@ -125,23 +112,25 @@ export function CartPage({
             <div className={cn("space-y-4", className)} {...props}>
                 {/* Unavailable items warning */}
                 {unavailableCart?.length > 0 && (
-                    <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-100">
-                            <Icons.AlertTriangle className="size-4 text-amber-600" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-amber-900">
-                                A mindful note:{" "}
-                                {unavailableCart?.length === 1
-                                    ? "One item in your bag is"
-                                    : `${unavailableCart?.length} items in your bag are`}{" "}
-                                no longer available. We recommend reviewing your
-                                selection.
-                            </p>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                                <Icons.AlertTriangle className="size-4 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-amber-900">
+                                    A mindful note:{" "}
+                                    {unavailableCart?.length === 1
+                                        ? "One item in your bag is"
+                                        : `${unavailableCart?.length} items in your bag are`}{" "}
+                                    no longer available. We recommend reviewing
+                                    your selection.
+                                </p>
+                            </div>
                         </div>
                         <Button
                             size="sm"
-                            className="shrink-0 rounded-lg bg-green-600 text-xs hover:bg-green-700"
+                            className="mt-3 w-full rounded-lg bg-green-600 text-xs hover:bg-green-700 md:mt-0 md:w-auto"
                             onClick={() => setIsUnavailableModalOpen(true)}
                         >
                             Review Unavailable Items

@@ -168,7 +168,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
 
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <button className="shrink-0 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100">
+                                    <button className="shrink-0 text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700 hover:underline">
                                         Change
                                     </button>
                                 </DialogTrigger>

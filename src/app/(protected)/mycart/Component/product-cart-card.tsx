@@ -25,7 +25,7 @@ import {
     handleClientError,
 } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
-import { format } from "date-fns";
+import { addDays, format } from "date-fns";
 import { Leaf, Minus, Plus, Recycle, RotateCcw, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -103,11 +103,228 @@ export function ProductCartCard({
     const priceInRupees = parseFloat(convertPaiseToRupees(itemPrice));
     const pricePerWear = (priceInRupees / estimatedWears).toFixed(2);
 
+    // Estimate delivery date (7-10 days from now)
+    const estimatedDelivery = format(addDays(new Date(), 8), "MMM dd");
+
     return (
         <>
+            {/* ==================== MOBILE CARD ==================== */}
             <div
                 className={cn(
-                    "relative rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md",
+                    "relative rounded-xl border border-gray-200 bg-white p-3 md:hidden",
+                    className
+                )}
+                {...props}
+            >
+                {/* Top row: image + info */}
+                <div className="flex gap-3">
+                    {/* Image — compact 72×72 */}
+                    <div className="group relative aspect-square w-[72px] shrink-0 overflow-hidden rounded-lg">
+                        <Image
+                            src={imageUrl}
+                            alt={imageAlt}
+                            width={200}
+                            height={200}
+                            className="size-full object-cover"
+                        />
+                    </div>
+
+                    {/* Info column */}
+                    <div className="flex-1 space-y-1">
+                        {/* Title */}
+                        <h3 className="text-sm font-semibold leading-tight text-gray-900">
+                            <Link
+                                href={`/products/${item.product.slug}`}
+                                target="_blank"
+                                referrerPolicy="no-referrer"
+                                className="hover:underline"
+                            >
+                                {item.product.title}
+                            </Link>
+                        </h3>
+
+                        {/* Brand */}
+                        <p className="text-[11px] text-gray-500">
+                            <Link
+                                href={`/brands/${item.product.brand.id}`}
+                                className="hover:underline"
+                            >
+                                By {item.product.brand.name}
+                            </Link>
+                        </p>
+
+                        {/* Price + You save */}
+                        <div className="space-y-0.5">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-sm font-bold text-gray-900">
+                                    {formatPriceTag(
+                                        parseFloat(
+                                            convertPaiseToRupees(itemPrice)
+                                        ),
+                                        true
+                                    )}
+                                </span>
+                                {item.product.compareAtPrice &&
+                                    item.product.compareAtPrice > itemPrice && (
+                                        <span className="text-xs text-gray-400 line-through">
+                                            {formatPriceTag(
+                                                parseFloat(
+                                                    convertPaiseToRupees(
+                                                        item.product
+                                                            .compareAtPrice
+                                                    )
+                                                ),
+                                                true
+                                            )}
+                                        </span>
+                                    )}
+                            </div>
+                            {item.product.compareAtPrice &&
+                                item.product.compareAtPrice > itemPrice && (
+                                    <p className="text-[11px] font-medium text-green-600">
+                                        You save{" "}
+                                        {formatPriceTag(
+                                            parseFloat(
+                                                convertPaiseToRupees(
+                                                    item.product
+                                                        .compareAtPrice -
+                                                        itemPrice
+                                                )
+                                            ),
+                                            true
+                                        )}
+                                    </p>
+                                )}
+                        </div>
+
+                        {/* Variant info */}
+                        {item.variantId && (
+                            <div className="text-[11px] text-gray-500">
+                                {item.product.options.map((option) => {
+                                    const selectedValue =
+                                        item.product.variants.find(
+                                            (v) => v.id === item.variantId
+                                        )?.combinations[option.id];
+                                    const optionValue = option.values.find(
+                                        (v) => v.id === selectedValue
+                                    );
+                                    return (
+                                        <span key={option.id} className="mr-2">
+                                            <span className="font-medium">
+                                                {option.name}:
+                                            </span>{" "}
+                                            {optionValue?.name}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Supporting artisan text */}
+                        <p className="text-[11px] font-medium text-amber-700">
+                            Supporting 1 artisan family
+                        </p>
+
+                        {/* Delivery estimate */}
+                        <div className="flex items-center gap-1 text-[11px] text-gray-600">
+                            <Truck className="size-3 text-gray-400" />
+                            <span>Delivery by {estimatedDelivery}</span>
+                        </div>
+
+                        {/* Free carbon-neutral shipping */}
+                        <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                            <Truck className="size-3 text-green-500" />
+                            <span>Free carbon-neutral shipping</span>
+                        </div>
+
+                        {/* 10-day returns badge */}
+                        <div className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-teal-700">
+                            <RotateCcw className="size-3" />
+                            10-day returns available
+                        </div>
+
+                        {/* Product details toggle */}
+                        <button
+                            onClick={() => setShowDetails(!showDetails)}
+                            className="flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-gray-700"
+                        >
+                            Product details
+                            <Icons.ChevronRight
+                                className={cn(
+                                    "size-3 transition-transform",
+                                    showDetails && "rotate-90"
+                                )}
+                            />
+                        </button>
+                        {showDetails && (
+                            <div className="space-y-1 rounded-lg bg-gray-50 p-2 text-[11px] text-gray-600">
+                                <p>
+                                    <span className="font-medium">
+                                        Added on:{" "}
+                                    </span>
+                                    {format(
+                                        new Date(item.createdAt),
+                                        "MMM dd, yyyy"
+                                    )}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Bottom row: quantity controls */}
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                    {/* Quantity */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    className="flex size-7 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={isUpdating || readOnly}
+                                    onClick={(e) => {
+                                        if (readOnly) e.preventDefault();
+                                    }}
+                                >
+                                    <Minus className="size-3" />
+                                </button>
+                                <span className="w-5 text-center text-sm font-medium">
+                                    {item.quantity}
+                                </span>
+                                <button
+                                    className="flex size-7 items-center justify-center rounded border border-gray-300 bg-gray-50 text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={isUpdating || readOnly}
+                                    onClick={(e) => {
+                                        if (readOnly) e.preventDefault();
+                                    }}
+                                >
+                                    <Plus className="size-3" />
+                                </button>
+                            </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto rounded-lg p-3">
+                            <ProductCartQuantityChangeForm
+                                item={item}
+                                userId={userId}
+                            />
+                        </PopoverContent>
+                    </Popover>
+
+                    {/* Remove */}
+                    {!readOnly && (
+                        <button
+                            className="text-[11px] font-medium text-red-500 transition-colors hover:text-red-600 hover:underline"
+                            onClick={() => setIsActionDialogOpen(true)}
+                        >
+                            Remove
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* ==================== DESKTOP CARD ==================== */}
+            <div
+                className={cn(
+                    "relative hidden rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md md:block",
                     className
                 )}
                 {...props}
@@ -131,7 +348,7 @@ export function ProductCartCard({
                             />
                         )}
 
-                        <div className="group relative aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-lg md:w-28">
+                        <div className="group relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-lg">
                             <Image
                                 src={imageUrl}
                                 alt={imageAlt}
@@ -257,18 +474,6 @@ export function ProductCartCard({
                                 </p>
                             </div>
                         )}
-
-                        {/* Info badges row — mobile */}
-                        <div className="flex flex-wrap gap-2 md:hidden">
-                            <div className="flex items-center gap-1 text-[11px] text-gray-500">
-                                <Truck className="size-3" />
-                                <span>Free carbon-neutral shipping</span>
-                            </div>
-                            <div className="flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-teal-700">
-                                <RotateCcw className="size-3" />
-                                10-day returns available
-                            </div>
-                        </div>
                     </div>
 
                     {/* Right side — Quantity + Remove */}
@@ -325,7 +530,7 @@ export function ProductCartCard({
                         )}
 
                         {/* Info badges — desktop */}
-                        <div className="mt-2 hidden flex-col gap-1 md:flex">
+                        <div className="mt-2 flex flex-col gap-1">
                             <div className="flex items-center gap-1 text-[11px] text-gray-500">
                                 <Truck className="size-3" />
                                 <span>Free carbon-neutral shipping</span>
