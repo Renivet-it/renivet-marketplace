@@ -328,7 +328,10 @@ export function OrdersPage({
 
     return (
         <>
-            <div className={cn("min-w-0 flex-1", className)} {...props}>
+            <div
+                className={cn("min-w-0 flex-1 bg-[#f8f7f4]", className)}
+                {...props}
+            >
                 {/* ── Header ──────────────────────────────── */}
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
@@ -1174,23 +1177,36 @@ function DeliveredOrderCard({
 
                 {/* ── Product Image + Name ── */}
                 <div className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                        <div className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50 md:h-[80px] md:w-full md:max-w-none md:shrink">
+                    {/* Desktop: full-width image */}
+                    <div className="hidden md:block">
+                        <div className="h-[180px] w-full overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
                             <Image
                                 src={imageUrl}
                                 alt={imageAlt}
                                 width={400}
                                 height={400}
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                             />
                         </div>
-                        <p className="line-clamp-2 text-sm font-medium text-gray-800 md:hidden">
+                        <p className="mt-2 text-sm font-medium text-gray-800">
                             {productDisplay}
                         </p>
                     </div>
-                    <p className="mt-2 hidden text-sm font-medium text-gray-800 md:block">
-                        {productDisplay}
-                    </p>
+                    {/* Mobile: thumbnail + name side by side */}
+                    <div className="flex items-center gap-3 md:hidden">
+                        <div className="size-[64px] shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                            <Image
+                                src={imageUrl}
+                                alt={imageAlt}
+                                width={200}
+                                height={200}
+                                className="h-full w-full object-contain"
+                            />
+                        </div>
+                        <p className="line-clamp-2 text-sm font-medium text-gray-800">
+                            {productDisplay}
+                        </p>
+                    </div>
                 </div>
 
                 {/* ── Sustainability Stats ── */}

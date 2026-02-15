@@ -130,7 +130,7 @@ function NavItem({ item, pathname }: { item: Item; pathname: string }) {
             className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-[#92b5db] text-accent-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 isDisabled && "cursor-default opacity-60 hover:bg-transparent"
             )}
@@ -146,11 +146,9 @@ function NavItem({ item, pathname }: { item: Item; pathname: string }) {
 
     // return <Link href={`/profile${item.href}`}>{content}</Link>;
     const finalHref =
-    item.name === "contact-us"
-        ? item.href
-        : `/profile${item.href}`;
+        item.name === "contact-us" ? item.href : `/profile${item.href}`;
 
-return <Link href={finalHref}>{content}</Link>;
+    return <Link href={finalHref}>{content}</Link>;
 }
 
 function NavGroup({ items, pathname }: { items: Item[]; pathname: string }) {
