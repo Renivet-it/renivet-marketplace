@@ -258,7 +258,7 @@ export default function TrackingPage() {
                     {/* ── Order header ── */}
                     <div className="mb-2">
                         <p className="text-base font-bold text-gray-900">
-                            Order #{order.receiptId ?? order.id.slice(0, 8)}
+                            Order #{order.id}
                             <span className="ml-2 text-xs font-normal text-gray-400">
                                 Placed on{" "}
                                 {format(
@@ -277,7 +277,7 @@ export default function TrackingPage() {
                                 alt={brandName}
                                 width={36}
                                 height={36}
-                                className="h-full w-full rounded-full object-cover"
+                                className="h-full w-full rounded-full object-contain"
                             />
                         </div>
                         <div>
@@ -371,7 +371,7 @@ export default function TrackingPage() {
                                 alt={productTitle}
                                 width={120}
                                 height={120}
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                             />
                         </div>
                         <div className="min-w-0">
@@ -450,7 +450,7 @@ export default function TrackingPage() {
                     {/* Order header */}
                     <div className="border-b border-gray-100 px-8 py-5">
                         <p className="text-lg font-bold text-gray-900">
-                            Order #{order.receiptId ?? order.id.slice(0, 8)}
+                            Order #{order.id}
                             <span className="ml-2 text-sm font-normal text-gray-400">
                                 • Placed on{" "}
                                 {format(
@@ -473,7 +473,7 @@ export default function TrackingPage() {
                                         alt={brandName}
                                         width={40}
                                         height={40}
-                                        className="h-full w-full object-cover"
+                                        className="h-full w-full object-contain"
                                     />
                                 </div>
                                 <div>
@@ -562,21 +562,21 @@ export default function TrackingPage() {
                             <div className="flex items-start gap-4">
                                 {/* Sustainability score badge */}
                                 <div className="relative shrink-0">
-                                    <div className="absolute -left-2 -top-2 z-10 flex h-9 w-9 items-center justify-center rounded-lg bg-[#5B9BD5] text-[10px] font-bold text-white shadow-sm">
+                                    {/* <div className="absolute -left-2 -top-2 z-10 flex h-9 w-9 items-center justify-center rounded-lg bg-[#5B9BD5] text-[10px] font-bold text-white shadow-sm">
                                         <span>
                                             {sustainScore}
                                             <span className="text-[8px] opacity-70">
                                                 /100
                                             </span>
                                         </span>
-                                    </div>
+                                    </div> */}
                                     <div className="h-24 w-24 overflow-hidden rounded-xl border border-gray-200">
                                         <Image
                                             src={productImage}
                                             alt={productTitle}
                                             width={200}
                                             height={200}
-                                            className="h-full w-full object-cover"
+                                            className="h-full w-full object-contain"
                                         />
                                     </div>
                                 </div>
