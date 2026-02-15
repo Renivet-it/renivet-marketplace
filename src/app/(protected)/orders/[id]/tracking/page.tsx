@@ -173,7 +173,7 @@ export default function TrackingPage() {
             {/* ═══════════════════════════════════════════════════════ */}
             {/*  MOBILE LAYOUT                                        */}
             {/* ═══════════════════════════════════════════════════════ */}
-            <div className="min-h-screen bg-[#FAFBFC] md:hidden">
+            <div className="min-h-screen bg-[#fcfcf5] md:hidden">
                 {/* ── Top bar ── */}
                 <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
                     <button
@@ -190,7 +190,7 @@ export default function TrackingPage() {
 
                 <div className="px-4 pb-8">
                     {/* ── Welcome section ── */}
-                    <div className="mt-4 rounded-xl border border-gray-100 bg-gradient-to-b from-[#FDF8F0] to-white p-4">
+                    <div className="mt-4 rounded-xl border border-gray-100 bg-gradient-to-b from-[#f5f9f7] to-white p-4">
                         <h2 className="text-base font-bold text-gray-800">
                             Welcome back, {userName}
                         </h2>
@@ -244,12 +244,12 @@ export default function TrackingPage() {
                     </div>
 
                     {/* Tracking journey text */}
-                    <p className="mt-4 text-sm text-gray-500">
+                    <p className="mt-4 ml-5 text-sm text-gray-500">
                         Tracking your sustainable journey with Renivet.
                     </p>
 
                     {/* Year badge */}
-                    <div className="mb-5 mt-3">
+                    <div className="mb-5 ml-5 mt-3">
                         <span className="inline-block rounded-full border border-gray-300 px-3 py-0.5 text-xs font-medium text-gray-500">
                             {new Date(order.createdAt).getFullYear()}
                         </span>
@@ -257,8 +257,8 @@ export default function TrackingPage() {
 
                     {/* ── Order header ── */}
                     <div className="mb-2">
-                        <p className="text-base font-bold text-gray-900">
-                            Order #{order.id}
+                        <p className="text-base text-center font-bold text-gray-900">
+                            #{order.id}
                             <span className="ml-2 text-xs font-normal text-gray-400">
                                 Placed on{" "}
                                 {format(
@@ -271,7 +271,7 @@ export default function TrackingPage() {
 
                     {/* ── Artisan badge ── */}
                     <div className="mb-5 flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
+                        <div className="ml-5 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
                             <Image
                                 src={productImage}
                                 alt={brandName}
@@ -282,11 +282,11 @@ export default function TrackingPage() {
                         </div>
                         <div>
                             <p className="text-[11px] text-gray-400">
-                                Handcrafted by
-                            </p>
-                            <p className="text-sm font-semibold text-gray-800">
+                                Handcrafted by  <span className="text-sm font-semibold text-gray-800">
                                 {brandName}
+                            </span>
                             </p>
+                       
                         </div>
                     </div>
 
@@ -427,7 +427,7 @@ export default function TrackingPage() {
             {/* ═══════════════════════════════════════════════════════ */}
             {/*  DESKTOP LAYOUT                                       */}
             {/* ═══════════════════════════════════════════════════════ */}
-            <div className="mx-auto hidden max-w-5xl px-4 py-10 md:block">
+            <div className="mx-auto hidden max-w-5xl bg-[#fcfcf5] px-4 py-10 md:block">
                 {/* Title bar */}
                 <div className="mb-2">
                     <h1 className="text-xl font-bold text-gray-900">
