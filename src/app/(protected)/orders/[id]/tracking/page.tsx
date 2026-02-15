@@ -291,7 +291,7 @@ export default function TrackingPage() {
                     </div>
 
                     {/* ── Status timeline ── */}
-                    <div className="relative mb-6 space-y-5 pl-6">
+                    <div className="relative mb-6 ml-10 space-y-5 pl-6">
                         {/* Vertical line */}
                         <div className="absolute bottom-2 left-[9px] top-2 w-[2px] bg-gray-200" />
 
