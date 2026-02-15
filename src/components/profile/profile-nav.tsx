@@ -7,15 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icons } from "../icons";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Button } from "../ui/button-general";
 import { Separator } from "../ui/separator";
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "../ui/sheet";
 
 interface Item {
     icon: keyof typeof Icons;
@@ -221,73 +213,6 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                     </div>
                 </div>
             </div>
-
-            {/* Mobile Sheet */}
-            <Sheet>
-                <SheetTrigger asChild className="md:hidden">
-                    <Button>
-                        <Icons.Settings2 />
-                        <span>Open Menu</span>
-                    </Button>
-                </SheetTrigger>
-
-                <SheetContent side="bottom" className="p-0 [&>button]:hidden">
-                    <SheetHeader className="sr-only p-0">
-                        <SheetTitle>Profile Navigation</SheetTitle>
-                    </SheetHeader>
-
-                    <div className="flex flex-col">
-                        {/* User Profile Section */}
-                        {user && (
-                            <div className="flex items-center gap-3 p-4">
-                                <Avatar className="size-10 bg-muted">
-                                    <AvatarImage
-                                        src={
-                                            user.avatarUrl ?? DEFAULT_AVATAR_URL
-                                        }
-                                        alt={user.firstName}
-                                    />
-                                    <AvatarFallback>
-                                        {user.firstName[0].toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
-
-                                <div>
-                                    <p className="text-sm font-semibold">
-                                        {user.firstName} {user.lastName}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {hideEmail(user.email)}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        <Separator />
-
-                        <div className="space-y-1 p-3">
-                            <NavGroup
-                                items={mainNavItems}
-                                pathname={pathname}
-                            />
-
-                            <Separator className="my-2" />
-
-                            <NavGroup
-                                items={accountItems}
-                                pathname={pathname}
-                            />
-
-                            <Separator className="my-2" />
-
-                            <NavGroup
-                                items={supportItems}
-                                pathname={pathname}
-                            />
-                        </div>
-                    </div>
-                </SheetContent>
-            </Sheet>
         </>
     );
 }
