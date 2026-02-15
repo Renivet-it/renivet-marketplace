@@ -81,7 +81,13 @@ interface PageProps extends GenericProps {
 function getOrderDisplayStatus(order: OrderWithItemAndBrand): StatusFilter {
     if (order.status === "cancelled") return "cancelled";
     if (order.status === "delivered") return "delivered";
-    if (order.status === "shipped") return "in_transit";
+    // Check shipment-level status for in_transit
+    const shipmentStatus = order.shipments?.[0]?.status;
+    if (
+        shipmentStatus === "in_transit" ||
+        shipmentStatus === "out_for_delivery"
+    )
+        return "in_transit";
     return "processing";
 }
 
@@ -137,10 +143,13 @@ export function OrdersPage({
         useState<DeliveredSubFilter>("all");
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [deliveryDateFilter, setDeliveryDateFilter] = useState<string>("");
 
     // Reset page on tab or filter change
     const handleTabChange = useCallback((tab: Tab) => {
         setActiveTab(tab);
+        setStatusFilters([]);
+        setDeliveryDateFilter("");
         setCurrentPage(1);
     }, []);
     const handleDeliveredSubFilterChange = useCallback(
@@ -205,7 +214,9 @@ export function OrdersPage({
     const onTheWayOrders = useMemo(
         () =>
             availableOrders.filter((o) =>
-                ["pending", "processing", "shipped"].includes(o.status)
+                ["pending", "processing", "shipped", "cancelled"].includes(
+                    o.status
+                )
             ),
         [availableOrders]
     );
@@ -225,12 +236,23 @@ export function OrdersPage({
     // Delivered filtered with sub-filter
     const filteredDelivered = useMemo(() => {
         let filtered = deliveredOrders;
+
+        // Apply date filter first
+        if (deliveryDateFilter) {
+            filtered = filtered.filter((o) => {
+                const dAt = o.shipments?.[0]?.updatedAt
+                    ? new Date(o.shipments[0].updatedAt)
+                    : new Date(o.createdAt);
+                return format(dAt, "yyyy-MM-dd") === deliveryDateFilter;
+            });
+        }
+
         if (deliveredSubFilter === "needs_review") {
-            // Show orders that haven't been "reviewed" — for now, all delivered orders
-            filtered = deliveredOrders;
+            // Show orders that haven't been "reviewed" — for now, all filtered orders
+            // (date filter already applied above)
         } else if (deliveredSubFilter === "most_worn") {
             // Sort by delivery age (older = more worn)
-            filtered = [...deliveredOrders].sort((a, b) => {
+            filtered = [...filtered].sort((a, b) => {
                 const aDate = a.shipments?.[0]?.updatedAt
                     ? new Date(a.shipments[0].updatedAt).getTime()
                     : new Date(a.createdAt).getTime();
@@ -241,7 +263,7 @@ export function OrdersPage({
             });
         }
         return filtered;
-    }, [deliveredOrders, deliveredSubFilter]);
+    }, [deliveredOrders, deliveredSubFilter, deliveryDateFilter]);
 
     const filteredOrders =
         activeTab === "on_the_way" ? filteredOnTheWay : filteredDelivered;
@@ -492,7 +514,6 @@ export function OrdersPage({
                                             [
                                                 "in_transit",
                                                 "processing",
-                                                "delivered",
                                                 "cancelled",
                                             ] as StatusFilter[]
                                         ).map((filter) => (
@@ -677,8 +698,26 @@ export function OrdersPage({
                                     </label>
                                     <input
                                         type="date"
+                                        value={deliveryDateFilter}
+                                        onChange={(e) => {
+                                            setDeliveryDateFilter(
+                                                e.target.value
+                                            );
+                                            setCurrentPage(1);
+                                        }}
                                         className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-[#5B9BD5] focus:outline-none focus:ring-1 focus:ring-[#5B9BD5]"
                                     />
+                                    {deliveryDateFilter && (
+                                        <button
+                                            onClick={() => {
+                                                setDeliveryDateFilter("");
+                                                setCurrentPage(1);
+                                            }}
+                                            className="mt-2 text-xs font-medium text-[#5B9BD5] hover:underline"
+                                        >
+                                            Clear date filter
+                                        </button>
+                                    )}
                                 </div>
                             </>
                         )}
@@ -818,19 +857,19 @@ function OnTheWayOrderCard({
             {/* ── Desktop Card ── */}
             <div className="hidden rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md md:block">
                 <div className="flex items-center gap-4">
-                    <div className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-lg border border-gray-100">
+                    <div className="size-[96px] shrink-0 overflow-hidden rounded-lg border border-gray-100">
                         <Image
                             src={imageUrl}
                             alt={imageAlt}
                             width={200}
                             height={200}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                         />
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-xs text-gray-400">
                             <span className="font-medium text-gray-500">
-                                #{order.receiptId}
+                                {order.id}
                             </span>
                             <span>•</span>
                             <span>
@@ -932,7 +971,7 @@ function OnTheWayOrderCard({
                 <div className="flex items-start justify-between">
                     <div>
                         <p className="text-xs font-medium text-gray-400">
-                            #{order.receiptId}
+                            {order.id}
                         </p>
                         <p className="text-xs text-gray-400">
                             {format(new Date(order.createdAt), "MMM dd, yyyy")}
@@ -948,13 +987,13 @@ function OnTheWayOrderCard({
                     </span>
                 </div>
                 <div className="mt-3 flex items-center gap-3">
-                    <div className="h-[56px] w-[56px] shrink-0 overflow-hidden rounded-lg border border-gray-100">
+                    <div className="size-[72px] shrink-0 overflow-hidden rounded-lg border border-gray-100">
                         <Image
                             src={imageUrl}
                             alt={imageAlt}
                             width={200}
                             height={200}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                         />
                     </div>
                     <p className="line-clamp-2 text-sm font-medium text-gray-800">
@@ -1114,7 +1153,7 @@ function DeliveredOrderCard({
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="text-xs font-medium text-gray-400">
-                                #{order.receiptId}
+                                {order.id}
                             </p>
                             <div className="mt-0.5 flex items-center gap-1">
                                 <span className="flex items-center gap-0.5 text-xs font-medium text-green-600">
