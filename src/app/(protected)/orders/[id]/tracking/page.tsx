@@ -163,7 +163,10 @@ export default function TrackingPage() {
         shipment?.is_return_label_generated === true ||
         shipment?.is_replacement_label_generated === true;
     const canCancel =
-        order.status === "pending" || order.status === "processing";
+        (order.status === "pending" || order.status === "processing") &&
+        currentStatus !== "in_transit" &&
+        currentStatus !== "out_for_delivery" &&
+        currentStatus !== "delivered";
 
     const userName =
         currentUser?.firstName ?? currentUser?.name?.split(" ")[0] ?? "there";
@@ -244,7 +247,7 @@ export default function TrackingPage() {
                     </div>
 
                     {/* Tracking journey text */}
-                    <p className="mt-4 ml-5 text-sm text-gray-500">
+                    <p className="ml-5 mt-4 text-sm text-gray-500">
                         Tracking your sustainable journey with Renivet.
                     </p>
 
@@ -257,7 +260,7 @@ export default function TrackingPage() {
 
                     {/* ── Order header ── */}
                     <div className="mb-2">
-                        <p className="text-base text-center font-bold text-gray-900">
+                        <p className="text-center text-base font-bold text-gray-900">
                             #{order.id}
                             <span className="ml-2 text-xs font-normal text-gray-400">
                                 Placed on{" "}
@@ -282,11 +285,11 @@ export default function TrackingPage() {
                         </div>
                         <div>
                             <p className="text-[11px] text-gray-400">
-                                Handcrafted by  <span className="text-sm font-semibold text-gray-800">
-                                {brandName}
-                            </span>
+                                Handcrafted by{" "}
+                                <span className="text-sm font-semibold text-gray-800">
+                                    {brandName}
+                                </span>
                             </p>
-                       
                         </div>
                     </div>
 

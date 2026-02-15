@@ -852,8 +852,13 @@ function OnTheWayOrderCard({
     const displayStatus = getOrderDisplayStatus(order);
     const { url: imageUrl, alt: imageAlt } = getOrderImage(order);
     const productDisplay = getProductDisplayName(order);
+    const shipment = order.shipments?.[0];
     const canCancel =
-        order.status === "pending" || order.status === "processing";
+        (order.status === "pending" || order.status === "processing") &&
+        (!shipment ||
+            !["in_transit", "out_for_delivery", "delivered"].includes(
+                shipment.status
+            ));
 
     return (
         <>
