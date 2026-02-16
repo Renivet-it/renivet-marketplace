@@ -1,6 +1,5 @@
 "use client";
 
-import { ProductCartCard } from "./product-cart-card";
 import {
     CheckoutModal,
     UnavailableItemsModal,
@@ -14,26 +13,14 @@ import {
     EmptyPlaceholderIcon,
     EmptyPlaceholderTitle,
 } from "@/components/ui/empty-placeholder-general";
-import {
-    Notice,
-    NoticeButton,
-    NoticeContent,
-    NoticeIcon,
-    NoticeTitle,
-} from "@/components/ui/notice-general";
-import { Progress } from "@/components/ui/progress";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
-import {
-    cn,
-    convertPaiseToRupees,
-    formatPriceTag,
-    handleClientError,
-} from "@/lib/utils";
+import { cn, handleClientError } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ProductCartCard } from "./product-cart-card";
 
 interface PageProps extends GenericProps {
     initialData: CachedCart[];
@@ -72,7 +59,7 @@ export function CartPage({
     );
 
     const totalPrice = availableCart
-    ?.filter((item) => item.status)
+        ?.filter((item) => item.status)
         .reduce((acc, item) => {
             const itemPrice = item.variantId
                 ? (item.product.variants.find((v) => v.id === item.variantId)
@@ -84,7 +71,7 @@ export function CartPage({
         }, 0);
 
     const itemCount = availableCart
-    ?.filter((item) => item.status)
+        ?.filter((item) => item.status)
         .reduce((acc, item) => acc + item.quantity, 0);
 
     const getProgress = () => {
@@ -122,74 +109,43 @@ export function CartPage({
 
     return (
         <>
-            <div className={cn("space-y-5", className)} {...props}>
+            <div className={cn("space-y-4", className)} {...props}>
+                {/* Unavailable items warning */}
                 {unavailableCart?.length > 0 && (
-                    <Notice>
-                        <NoticeContent>
-                            <NoticeTitle>
-                                <NoticeIcon />
-                                <span>Warning</span>
-                            </NoticeTitle>
-
-                            <p className="text-sm">
-                                {unavailableCart?.length} item(s) in your cart
-                                are no longer available.
-                            </p>
-                        </NoticeContent>
-
-                        <NoticeButton asChild>
-                            <Button
-                                size="sm"
-                                className="text-xs"
-                                onClick={() => setIsUnavailableModalOpen(true)}
-                            >
-                                Show Item(s)
-                            </Button>
-                        </NoticeButton>
-                    </Notice>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                                <Icons.AlertTriangle className="size-4 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-amber-900">
+                                    A mindful note:{" "}
+                                    {unavailableCart?.length === 1
+                                        ? "One item in your bag is"
+                                        : `${unavailableCart?.length} items in your bag are`}{" "}
+                                    no longer available. We recommend reviewing
+                                    your selection.
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            size="sm"
+                            className="mt-3 w-full rounded-lg bg-[#6B7A5E] text-xs hover:bg-[#5a6950] md:mt-0 md:w-auto"
+                            onClick={() => setIsUnavailableModalOpen(true)}
+                        >
+                            Review Unavailable Items
+                        </Button>
+                    </div>
                 )}
 
-                <div className="flex items-center justify-between gap-5 border p-4 md:gap-10 md:p-6">
-                    <div className="w-full space-y-2">
-                        <Progress
-                            value={getProgress()}
-                            className="h-4 border border-green-700 bg-transparent md:h-5"
-                            indicatorClassName="bg-green-700"
-                        />
-
-                        <div className="flex items-center gap-2 text-green-700">
-                            <div>
-                                <Icons.CircleCheck className="size-5 rounded-full bg-green-700 stroke-background" />
-                            </div>
-
-                            <p className="text-xs md:text-sm">
-                                {totalPrice < FREE_DELIVERY_THRESHOLD
-                                    ? `Add ${formatPriceTag(
-                                          parseFloat(
-                                              convertPaiseToRupees(
-                                                  FREE_DELIVERY_THRESHOLD -
-                                                      totalPrice
-                                              )
-                                          )
-                                      )} to get free delivery`
-                                    : "Your order is eligible for free delivery"}
-                            </p>
-                        </div>
-                    </div>
-
-                    <p className="font-semibold md:text-lg">
-                        {formatPriceTag(
-                            parseFloat(convertPaiseToRupees(totalPrice)),
-                            true
-                        )}
-                    </p>
-                </div>
-
-                <div className="flex items-center justify-between gap-2 border p-4 md:p-6">
-                    <p className="text-sm md:text-base">{itemCount} item(s)</p>
-
+                {/* Item count header */}
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <h2 className="text-base font-semibold text-gray-900">
+                        {itemCount} Thoughtful{" "}
+                        {itemCount === 1 ? "Choice" : "Choices"}
+                    </h2>
                     <button
-                        className="text-sm hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                        className="text-sm font-medium text-gray-500 transition-colors hover:text-gray-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() =>
                             updateSelection({ userId, status: !isAllSelected })
                         }
@@ -199,7 +155,8 @@ export function CartPage({
                     </button>
                 </div>
 
-                <div className="space-y-2">
+                {/* Cart items */}
+                <div className="space-y-4">
                     {availableCart?.map((item) => (
                         <ProductCartCard
                             item={item}
@@ -208,25 +165,26 @@ export function CartPage({
                         />
                     ))}
                 </div>
+
+                {/* Wishlist link */}
                 <Link
-      href="profile/wishlist"
- className="flex items-center justify-between px-4 py-3 rounded-md border-2 border-border hover:bg-muted transition"
-    >
-      <div className="flex items-center gap-2">
-        <Icons.Bookmark className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium text-primary">
-          Add More From Wishlist
-        </span>
-      </div>
-      <Icons.ChevronRight className="h-4 w-4 text-muted-foreground" />
-    </Link>
+                    href="profile/wishlist"
+                    className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 transition-colors hover:bg-gray-50"
+                >
+                    <div className="flex items-center gap-2">
+                        <Icons.Bookmark className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-700">
+                            Add More From Wishlist
+                        </span>
+                    </div>
+                    <Icons.ChevronRight className="h-4 w-4 text-gray-400" />
+                </Link>
+
                 {process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED === "true" && (
                     <p className="text-xs text-destructive">
                         * Checkouts are currently disabled due to testing
                     </p>
                 )}
-
-
             </div>
 
             <CheckoutModal

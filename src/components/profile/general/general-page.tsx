@@ -20,7 +20,7 @@ export function GeneralPage({ className, ...props }: GenericProps) {
     if (!user) return null;
 
     return (
-        <div className={cn("space-y-5", className)} {...props}>
+        <div className={cn("space-y-5 bg-[##fcfcf5]", className)} {...props}>
             <Card className="w-full rounded-none">
                 <CardHeader className="px-4 md:p-6">
                     <CardTitle>General Information</CardTitle>

@@ -6,6 +6,7 @@ import {
     ArrowUp,
     ArrowUpDown,
     AudioWaveform,
+    Bell,
     Bookmark,
     BookOpen,
     Bot,
@@ -30,6 +31,7 @@ import {
     Cookie,
     Copy,
     Copyright,
+    CreditCard,
     DollarSign,
     Download,
     Droplet,
@@ -129,6 +131,8 @@ import {
 export type Icon = LucideIcon;
 
 export const Icons = {
+    Bell,
+    CreditCard,
     MapPin,
     Recycle,
     RotateCw,

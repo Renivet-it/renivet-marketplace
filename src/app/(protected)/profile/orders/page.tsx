@@ -1,11 +1,4 @@
 import { OrdersPage } from "@/components/profile";
-import {
-    Card,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { orderQueries } from "@/lib/db/queries";
 import { userCache } from "@/lib/redis/methods";
@@ -21,16 +14,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
     return (
-        <div className="space-y-5 md:basis-3/4">
-            <Card className="w-full rounded-none">
-                <CardHeader className="px-4 md:p-6">
-                    <CardTitle>Your Orders</CardTitle>
-                    <CardDescription>
-                        View and manage your orders
-                    </CardDescription>
-                </CardHeader>
-            </Card>
-
+        <div className="min-w-0 flex-1">
             <Suspense fallback={<OrdersSkeleton />}>
                 <OrdersFetch />
             </Suspense>
@@ -54,17 +38,21 @@ async function OrdersFetch() {
 function OrdersSkeleton() {
     return (
         <div className="space-y-5">
-            <div className="flex items-center gap-5">
-                <Skeleton className="h-5 w-[7.5rem]" />
-                <Skeleton className="h-10 w-36" />
+            {/* Title skeleton */}
+            <div>
+                <Skeleton className="h-8 w-40" />
+                <Skeleton className="mt-2 hidden h-4 w-64 md:block" />
             </div>
 
-            {[...Array(3)].map((_, i, arr) => (
-                <div key={i} className="space-y-5">
-                    <Skeleton className="h-96 w-full" />
+            {/* Tabs skeleton */}
+            <div className="flex gap-3">
+                <Skeleton className="h-10 w-32 rounded-full" />
+                <Skeleton className="h-10 w-28 rounded-full" />
+            </div>
 
-                    {i !== arr.length - 1 && <Separator />}
-                </div>
+            {/* Cards skeleton */}
+            {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-24 w-full rounded-xl" />
             ))}
         </div>
     );

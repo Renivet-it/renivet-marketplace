@@ -1,13 +1,19 @@
 // src/app/(protected)/mycart/Component/checkout-section.tsx
 "use client";
 
+import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-general";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
-import { Icons } from "@/components/icons";
 import {
     calculateTotalPriceWithCoupon,
     convertPaiseToRupees,
@@ -15,16 +21,11 @@ import {
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
-import { CouponWithCategory } from "@/lib/validations";
+import { Leaf, Recycle, Truck, Users } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog-general";
 
 interface PageProps {
     userId: string;
@@ -32,7 +33,8 @@ interface PageProps {
 
 export default function CheckoutSection({ userId }: PageProps) {
     const router = useRouter();
-    const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } = useCartStore();
+    const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
+        useCartStore();
 
     const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
     const [couponCode, setCouponCode] = useState<string>("");
@@ -61,35 +63,19 @@ export default function CheckoutSection({ userId }: PageProps) {
         [userCart]
     );
 
-    const itemsCount = useMemo(
-        () =>
-            availableCart
-                .filter((item) => item.status)
-                .reduce((acc, item) => acc + item.quantity, 0) || 0,
+    const selectedItems = useMemo(
+        () => availableCart.filter((item) => item.status),
         [availableCart]
+    );
+
+    const itemsCount = useMemo(
+        () => selectedItems.reduce((acc, item) => acc + item.quantity, 0) || 0,
+        [selectedItems]
     );
 
     const totalPrice = useMemo(
         () =>
-            availableCart
-                .filter((item) => item.status)
-                .reduce((acc, item) => {
-                    const itemPrice = item.variantId
-                        ? (item.product.variants.find(
-                              (v) => v.id === item.variantId
-                          )?.price ??
-                          item.product.price ??
-                          0)
-                        : (item.product.price ?? 0);
-                    return acc + itemPrice * item.quantity;
-                }, 0) || 0,
-        [availableCart]
-    );
-
-    const priceList = useMemo(() => {
-        const items = availableCart
-            .filter((item) => item.status)
-            .map((item) => {
+            selectedItems.reduce((acc, item) => {
                 const itemPrice = item.variantId
                     ? (item.product.variants.find(
                           (v) => v.id === item.variantId
@@ -97,14 +83,27 @@ export default function CheckoutSection({ userId }: PageProps) {
                       item.product.price ??
                       0)
                     : (item.product.price ?? 0);
-                return {
-                    price: itemPrice,
-                    quantity: item.quantity,
-                    categoryId: item.product.categoryId,
-                    subCategoryId: item.product.subcategoryId,
-                    productTypeId: item.product.productTypeId,
-                };
-            });
+                return acc + itemPrice * item.quantity;
+            }, 0) || 0,
+        [selectedItems]
+    );
+
+    const priceList = useMemo(() => {
+        const items = selectedItems.map((item) => {
+            const itemPrice = item.variantId
+                ? (item.product.variants.find((v) => v.id === item.variantId)
+                      ?.price ??
+                  item.product.price ??
+                  0)
+                : (item.product.price ?? 0);
+            return {
+                price: itemPrice,
+                quantity: item.quantity,
+                categoryId: item.product.categoryId,
+                subCategoryId: item.product.subcategoryId,
+                productTypeId: item.product.productTypeId,
+            };
+        });
 
         return calculateTotalPriceWithCoupon(
             items.map((item) => item.price * item.quantity),
@@ -120,7 +119,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                 : null,
             items
         );
-    }, [availableCart, appliedCoupon]);
+    }, [selectedItems, appliedCoupon]);
 
     const { mutate: validateCoupon, isPending: isValidating } =
         trpc.general.coupons.validateCoupon.useMutation({
@@ -130,7 +129,7 @@ export default function CheckoutSection({ userId }: PageProps) {
             },
             onSuccess: (data, _, { toastId }) => {
                 toast.success("Coupon applied successfully", { id: toastId });
-                setAppliedCoupon(data); // Store in useCartStore
+                setAppliedCoupon(data);
                 setIsCouponModalOpen(false);
                 setCouponCode("");
             },
@@ -140,27 +139,247 @@ export default function CheckoutSection({ userId }: PageProps) {
         });
 
     return (
-        <div className="mx-auto w-full max-w-md rounded-lg bg-white p-4 shadow">
-            <div className="mb-4 border-b pb-2">
-                <h2 className="text-lg font-semibold">Coupons</h2>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Icons.Tag className="size-4 text-black" />
-                        <span className="text-sm font-medium text-black">
-                            {appliedCoupon
-                                ? `Coupon Applied: ${appliedCoupon.code}`
-                                : "Apply Coupons"}
+        <div className="w-full space-y-4">
+            {/* Complimentary delivery banner */}
+            <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                    <Truck className="size-3.5 text-blue-600" />
+                </div>
+                <p className="text-xs font-medium text-blue-700">
+                    Your order is eligible for complimentary delivery!
+                </p>
+            </div>
+
+            {/* Mobile: Product thumbnails before summary */}
+            <div className="space-y-3 lg:hidden">
+                {selectedItems.map((item) => {
+                    const itemMedia =
+                        item.product.media?.[0]?.mediaItem ?? null;
+                    const imgUrl =
+                        itemMedia?.url ??
+                        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+                    const price = item.variantId
+                        ? (item.product.variants.find(
+                              (v) => v.id === item.variantId
+                          )?.price ??
+                          item.product.price ??
+                          0)
+                        : (item.product.price ?? 0);
+                    return (
+                        <div
+                            key={item.id}
+                            className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white p-3"
+                        >
+                            <div className="relative size-16 shrink-0 overflow-hidden rounded-lg">
+                                <Image
+                                    src={imgUrl}
+                                    alt={item.product.title}
+                                    width={100}
+                                    height={100}
+                                    className="size-full object-cover"
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="line-clamp-2 text-xs font-semibold text-gray-900">
+                                    {item.product.title}
+                                </h4>
+                                <p className="mt-0.5 text-xs font-bold text-gray-900">
+                                    {formatPriceTag(
+                                        parseFloat(convertPaiseToRupees(price)),
+                                        true
+                                    )}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <button className="flex size-5 items-center justify-center rounded border border-gray-300 text-gray-500">
+                                    <span className="text-xs leading-none">
+                                        −
+                                    </span>
+                                </button>
+                                <span className="min-w-[16px] text-center text-xs text-gray-700">
+                                    {item.quantity}
+                                </span>
+                                <button className="flex size-5 items-center justify-center rounded border border-gray-300 text-gray-500">
+                                    <span className="text-xs leading-none">
+                                        +
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Order Summary Card — hidden card border on mobile, shown on desktop */}
+            <div className="border-0 bg-transparent p-0 md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5">
+                <h2 className="mb-4 text-base font-semibold text-gray-900 md:text-lg">
+                    Order Summary
+                </h2>
+
+                {/* Sustainability line items — desktop only */}
+                <div className="hidden space-y-2.5 text-sm md:block">
+                    <div className="flex items-center gap-2 text-gray-600">
+                        <Leaf className="size-3.5 text-blue-500" />
+                        <span className="text-xs">
+                            Carbon neutral delivery included
                         </span>
                     </div>
-                    <button
-                        className="rounded-sm border border-pink-500 px-4 py-1 text-xs font-semibold text-pink-500 hover:bg-pink-50"
-                        onClick={() => setIsCouponModalOpen(true)}
+                    <div className="flex items-center gap-2 text-gray-600">
+                        <Recycle className="size-3.5 text-blue-600" />
+                        <span className="text-xs">
+                            We plant 2 trees to offset emissions
+                        </span>
+                    </div>
+                    <Separator className="my-4" />
+                </div>
+
+                {/* Price breakdown */}
+                <div className="space-y-2">
+                    {/* Mobile: simple Subtotal / Delivery / Total */}
+                    <ul className="space-y-1.5 md:hidden">
+                        <li className="flex justify-between text-sm text-gray-600">
+                            <span>Subtotal</span>
+                            <span>
+                                {formatPriceTag(
+                                    +convertPaiseToRupees(totalPrice),
+                                    true
+                                )}
+                            </span>
+                        </li>
+                        <li className="flex justify-between text-sm text-gray-600">
+                            <span>Delivery</span>
+                            <span className="font-medium text-blue-600">
+                                {formatPriceTag(0, true)} (Free)
+                            </span>
+                        </li>
+                    </ul>
+
+                    {/* Desktop: full priceList breakdown */}
+                    <ul className="hidden space-y-1.5 md:block">
+                        {Object.entries(priceList)
+                            .filter(([key]) => key !== "total")
+                            .map(([key, value]) => (
+                                <li
+                                    key={key}
+                                    className="flex justify-between text-sm text-gray-600"
+                                >
+                                    <span>{convertValueToLabel(key)}</span>
+                                    <span>
+                                        {formatPriceTag(
+                                            +convertPaiseToRupees(value),
+                                            true
+                                        )}
+                                    </span>
+                                </li>
+                            ))}
+                        <li className="flex justify-between text-sm text-gray-600">
+                            <span>Delivery</span>
+                            <span className="font-medium text-blue-600">
+                                {formatPriceTag(0, true)} (Free)
+                            </span>
+                        </li>
+                    </ul>
+
+                    <Separator />
+
+                    {/* Your Impact section — desktop only */}
+                    <div className="hidden rounded-lg bg-blue-50/70 p-3 md:block">
+                        <p className="mb-2 text-xs font-semibold text-blue-800">
+                            Your Impact
+                        </p>
+                        <div className="space-y-1.5 text-xs text-blue-700">
+                            <div className="flex items-center gap-1.5">
+                                <Leaf className="size-3" />
+                                <span>1.6kg CO₂ saved</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Recycle className="size-3" />
+                                <span>8% materials reused</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Users className="size-3" />
+                                <span>2 artisans supported</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="flex items-center justify-between pt-2">
+                        <span className="text-base font-bold text-gray-900">
+                            Total
+                        </span>
+                        <span className="text-lg font-bold text-gray-900">
+                            {formatPriceTag(
+                                +convertPaiseToRupees(priceList.total),
+                                true
+                            )}
+                        </span>
+                    </div>
+
+                    {/* Per wear estimate — desktop only */}
+                    <p className="hidden text-[10px] text-gray-400 md:block">
+                        Certified estimated over{" "}
+                        {formatPriceTag(
+                            +(
+                                +convertPaiseToRupees(priceList.total) /
+                                (itemsCount * 180 || 1)
+                            ).toFixed(2),
+                            true
+                        )}{" "}
+                        per wear per item
+                    </p>
+                </div>
+
+                {/* Coupon section */}
+                <div className="mt-4 border-t border-gray-100 pt-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Icons.Tag className="size-4 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-700">
+                                {appliedCoupon
+                                    ? `Coupon: ${appliedCoupon.code}`
+                                    : "Apply Coupons"}
+                            </span>
+                        </div>
+                        <button
+                            className="rounded-md border border-blue-600 px-3 py-1 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                            onClick={() => setIsCouponModalOpen(true)}
+                        >
+                            APPLY
+                        </button>
+                    </div>
+                </div>
+
+                {/* Proceed to checkout button */}
+                <div className="mt-5">
+                    <Button
+                        size="sm"
+                        className="w-full rounded-lg bg-[#95b6da] text-sm font-semibold text-white hover:bg-[#82a3c7]"
+                        disabled={
+                            isUserFetching ||
+                            isValidating ||
+                            !userCart?.some((item) => item.status)
+                        }
+                        onClick={() => {
+                            if (!user)
+                                return toast.error(
+                                    DEFAULT_MESSAGES.ERRORS.USER_FETCHING
+                                );
+
+                            if (user.addresses.length === 0)
+                                return toast.error(
+                                    "Please add an address to proceed"
+                                );
+
+                            router.push("?step=1");
+                        }}
                     >
-                        APPLY
-                    </button>
+                        Proceed to Checkout
+                    </Button>
                 </div>
             </div>
 
+            {/* Coupon modal */}
             <Dialog
                 open={isCouponModalOpen}
                 onOpenChange={(open) => {
@@ -199,75 +418,6 @@ export default function CheckoutSection({ userId }: PageProps) {
                     </div>
                 </DialogContent>
             </Dialog>
-
-            <div className="mb-4">
-                <h2 className="text-lg font-semibold">Order Summary</h2>
-                <p className="text-sm text-gray-500">
-                    You are about to place an order for {itemsCount} items with a
-                    total of{" "}
-                    {formatPriceTag(+convertPaiseToRupees(priceList.total), true)}.
-                    Please review your order before proceeding.
-                </p>
-            </div>
-
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <ul className="space-y-1">
-                        {Object.entries(priceList)
-                            .filter(([key]) => key !== "total")
-                            .map(([key, value]) => (
-                                <li
-                                    key={key}
-                                    className="flex justify-between text-sm"
-                                >
-                                    <span>{convertValueToLabel(key)}:</span>
-                                    <span>
-                                        {formatPriceTag(
-                                            +convertPaiseToRupees(value),
-                                            true
-                                        )}
-                                    </span>
-                                </li>
-                            ))}
-                    </ul>
-                    <Separator />
-                    <div className="flex justify-between font-semibold text-destructive">
-                        <span>Total:</span>
-                        <span>
-                            {formatPriceTag(
-                                +convertPaiseToRupees(priceList.total),
-                                true
-                            )}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="mt-6">
-                <Button
-                    size="sm"
-                    className="w-full"
-                    disabled={
-                        isUserFetching ||
-                        isValidating ||
-                        !userCart?.some((item) => item.status)
-                    }
-                    onClick={() => {
-                        if (!user)
-                            return toast.error(
-                                DEFAULT_MESSAGES.ERRORS.USER_FETCHING
-                            );
-
-                        if (user.addresses.length === 0)
-                            return toast.error("Please add an address to proceed");
-
-                        // Navigate to address page (step 1) without creating an order
-                        router.push("?step=1");
-                    }}
-                >
-                    Proceed to checkout
-                </Button>
-            </div>
         </div>
     );
 }

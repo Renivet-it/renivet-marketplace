@@ -12,17 +12,17 @@ import {
     convertValueToLabel,
     formatPriceTag,
 } from "@/lib/utils";
+import { ArrowRight, Leaf, Package, Shield, Truck } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { toast } from "sonner";
-import Image from "next/image";
 
 interface PageProps {
     userId: string;
-    order?: any; // Optional, as no order is created
 }
 
-export default function AddressCheckoutSection({ userId, order }: PageProps) {
+export default function AddressCheckoutSection({ userId }: PageProps) {
     const router = useRouter();
     const { selectedShippingAddress, appliedCoupon } = useCartStore();
 
@@ -51,31 +51,20 @@ export default function AddressCheckoutSection({ userId, order }: PageProps) {
         [userCart]
     );
 
-    // Use cart items since no order is created
     const itemsToDisplay = availableCart.filter((item) => item.status);
 
     const itemsCount = useMemo(
-        () => itemsToDisplay.reduce((acc: any, item: any) => acc + item.quantity, 0) || 0,
-        [itemsToDisplay]
-    );
-
-    const totalPrice = useMemo(
-        () =>
-            itemsToDisplay.reduce((acc: any, item: any) => {
-                const itemPrice = item.variantId
-                    ? (item.product.variants?.find((v:any) => v.id === item.variantId)
-                          ?.price ?? item.product.price ?? 0)
-                    : (item.product.price ?? 0);
-                return acc + itemPrice * item.quantity;
-            }, 0) || 0,
+        () => itemsToDisplay.reduce((acc, item) => acc + item.quantity, 0) || 0,
         [itemsToDisplay]
     );
 
     const priceList = useMemo(() => {
-        const items = itemsToDisplay.map((item: any) => {
+        const items = itemsToDisplay.map((item) => {
             const itemPrice = item.variantId
-                ? (item.product.variants?.find((v: any) => v.id === item.variantId)
-                      ?.price ?? item.product.price ?? 0)
+                ? (item.product.variants?.find((v) => v.id === item.variantId)
+                      ?.price ??
+                  item.product.price ??
+                  0)
                 : (item.product.price ?? 0);
             return {
                 price: itemPrice,
@@ -103,109 +92,172 @@ export default function AddressCheckoutSection({ userId, order }: PageProps) {
     }, [itemsToDisplay, appliedCoupon]);
 
     return (
-        <div className="mx-auto w-full max-w-md rounded-lg bg-white p-4 shadow">
-            <div className="mb-4 border-b pb-2">
-                <h2 className="text-lg font-semibold text-gray-900">Order Details</h2>
-                {itemsToDisplay.length > 0 ? (
-                    <ul className="mt-2 space-y-2">
-    {itemsToDisplay.map((item: any) => (
-        <li key={item.id} className="flex items-center gap-3">
-            {/* Product Image */}
-            <div className="h-15 w-12 flex-shrink-0">
-                {item.product.media &&
-                item.product.media.length > 0 &&
-                item.product.media[0].mediaItem &&
-                item.product.media[0].mediaItem.url ? (
-                    <Image
-                        src={item.product.media[0].mediaItem.url}
-                        alt={item.product.title}
-                        width={1000}
-                        height={1000}
-                        className="h-15 w-12 rounded-md object-cover"
-                    />
-                ) : (
-                    <div className="h-10 w-10 rounded-md bg-gray-200" />
-                )}
-            </div>
+        <div className="w-full space-y-3">
+            {/* ── Items in your order ── */}
+            <div className="rounded-xl border border-gray-200 bg-white">
+                <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        <Package className="size-4 text-blue-600" />
+                        <h3 className="text-sm font-semibold text-gray-900">
+                            Your Items ({itemsCount})
+                        </h3>
+                    </div>
+                </div>
 
-            {/* Product Name and Quantity */}
-            <div className="flex-1 flex justify-between items-center text-sm overflow-hidden">
-                <span className="text-sm font-medium text-gray-900 whitespace-normal">
-                    {item.product.title}
-                </span>
-                <span className="text-sm text-gray-500 flex-shrink-0">
-                    Qty: {item.quantity}
-                </span>
-            </div>
-        </li>
-    ))}
-</ul>
+                {itemsToDisplay.length > 0 ? (
+                    <div className="divide-y divide-gray-50 px-4">
+                        {itemsToDisplay.map((item) => {
+                            const imgUrl =
+                                item.product.media?.[0]?.mediaItem?.url ??
+                                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+                            const itemPrice = item.variantId
+                                ? (item.product.variants?.find(
+                                      (v) => v.id === item.variantId
+                                  )?.price ??
+                                  item.product.price ??
+                                  0)
+                                : (item.product.price ?? 0);
+
+                            return (
+                                <div
+                                    key={item.id}
+                                    className="flex items-center gap-3 py-3"
+                                >
+                                    <div className="relative aspect-square w-12 shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-[#fafaf5]">
+                                        <Image
+                                            src={imgUrl}
+                                            alt={item.product.title}
+                                            width={96}
+                                            height={96}
+                                            className="size-full object-contain p-0.5"
+                                        />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h4 className="truncate text-sm font-medium text-gray-900">
+                                            {item.product.title}
+                                        </h4>
+                                        <p className="text-xs text-gray-500">
+                                            Qty: {item.quantity} ·{" "}
+                                            {formatPriceTag(
+                                                parseFloat(
+                                                    convertPaiseToRupees(
+                                                        itemPrice
+                                                    )
+                                                ),
+                                                true
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 ) : (
-                    <div className="mt-2 text-sm text-gray-500">
-                        No items to display. Please add items to your cart.
+                    <div className="p-4 text-sm text-gray-500">
+                        No items to display.
                     </div>
                 )}
             </div>
 
-            {/* Order Summary Section */}
-            <div className="mb-4">
-                <h2 className="text-lg font-semibold">Order Summary</h2>
-                <p className="text-sm text-gray-500">
-                    You are about to place an order for {itemsCount} items with a total of{" "}
-                    {formatPriceTag(+convertPaiseToRupees(priceList.total), true)}.
-                    Please review your order before proceeding.
-                </p>
-            </div>
-
-            {/* Price Summary Section */}
-            <div className="space-y-4">
+            {/* ── Price breakdown ── */}
+            <div className="rounded-xl border border-gray-200 bg-white px-4 py-4">
+                <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                    Order Summary
+                </h3>
                 <div className="space-y-2">
-                    <ul className="space-y-1">
-                        {Object.entries(priceList)
-                            .filter(([key]) => key !== "total")
-                            .map(([key, value]) => (
-                                <li key={key} className="flex justify-between text-sm">
-                                    <span>{convertValueToLabel(key)}:</span>
-                                    <span>{formatPriceTag(+convertPaiseToRupees(value), true)}</span>
-                                </li>
-                            ))}
-                    </ul>
+                    {Object.entries(priceList)
+                        .filter(
+                            ([key]) => key !== "total" && key !== "delivery"
+                        )
+                        .map(([key, value]) => (
+                            <div
+                                key={key}
+                                className="flex justify-between text-sm"
+                            >
+                                <span className="text-gray-500">
+                                    {convertValueToLabel(key)}
+                                </span>
+                                <span className="text-gray-700">
+                                    {formatPriceTag(
+                                        +convertPaiseToRupees(value),
+                                        true
+                                    )}
+                                </span>
+                            </div>
+                        ))}
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Delivery</span>
+                        <span className="font-medium text-blue-600">FREE</span>
+                    </div>
 
-                    <Separator />
+                    <Separator className="my-1" />
 
-                    <div className="flex justify-between font-semibold text-destructive">
-                        <span>Total:</span>
-                        <span>{formatPriceTag(+convertPaiseToRupees(priceList.total), true)}</span>
+                    <div className="flex items-center justify-between pt-1">
+                        <span className="text-sm font-bold text-gray-900">
+                            Total
+                        </span>
+                        <span className="text-base font-bold text-gray-900">
+                            {formatPriceTag(
+                                +convertPaiseToRupees(priceList.total),
+                                true
+                            )}
+                        </span>
                     </div>
                 </div>
             </div>
 
-            {/* Footer/Action Section */}
-            <div className="mt-6">
-                <Button
-                    size="sm"
-                    className="w-full"
-                    disabled={
-                        isUserFetching ||
-                        itemsToDisplay.length === 0 ||
-                        !selectedShippingAddress
-                    }
-                    onClick={() => {
-                        if (!user)
-                            return toast.error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);
-
-                        if (user.addresses.length === 0)
-                            return toast.error("Please add an address to proceed");
-
-                        if (!selectedShippingAddress)
-                            return toast.error("Please select a shipping address.");
-
-                        router.push("?step=2");
-                    }}
-                >
-                    Proceed to checkout
-                </Button>
+            {/* ── Trust badges ── */}
+            <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
+                    <Leaf className="size-3.5 text-blue-600" />
+                    <span className="text-[11px] font-medium text-gray-600">
+                        Carbon Neutral
+                    </span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
+                    <Shield className="size-3.5 text-blue-600" />
+                    <span className="text-[11px] font-medium text-gray-600">
+                        Secure Checkout
+                    </span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
+                    <Truck className="size-3.5 text-blue-600" />
+                    <span className="text-[11px] font-medium text-gray-600">
+                        Free Delivery
+                    </span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
+                    <Package className="size-3.5 text-blue-600" />
+                    <span className="text-[11px] font-medium text-gray-600">
+                        Easy Returns
+                    </span>
+                </div>
             </div>
+
+            {/* ── Proceed button ── */}
+            <Button
+                size="lg"
+                className="group w-full rounded-xl bg-[#95b6da] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#82a3c7] hover:shadow-md"
+                disabled={
+                    isUserFetching ||
+                    itemsToDisplay.length === 0 ||
+                    !selectedShippingAddress
+                }
+                onClick={() => {
+                    if (!user)
+                        return toast.error(
+                            DEFAULT_MESSAGES.ERRORS.USER_FETCHING
+                        );
+                    if (user.addresses.length === 0)
+                        return toast.error("Please add an address to proceed");
+                    if (!selectedShippingAddress)
+                        return toast.error("Please select a shipping address.");
+                    router.push("?step=2");
+                }}
+            >
+                Proceed to Checkout
+                <ArrowRight className="ml-2 size-4 transition-transform group-hover:translate-x-0.5" />
+            </Button>
         </div>
     );
 }

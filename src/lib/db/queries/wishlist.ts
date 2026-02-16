@@ -1,17 +1,28 @@
 import { mediaCache } from "@/lib/redis/methods";
 import { cachedWishlistSchema, CreateWishlist } from "@/lib/validations";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db } from "..";
-import { wishlists } from "../schema";
+import { products, wishlists } from "../schema";
 
 class UserWishlistQuery {
     async getUserWishlistCount(userId: string) {
-        const data = await db.$count(wishlists, eq(wishlists.userId, userId));
-        return +data || 0;
+        const [data] = await db
+            .select({ count: count() })
+            .from(wishlists)
+            .leftJoin(products, eq(wishlists.productId, products.id))
+            .where(
+                and(
+                    eq(wishlists.userId, userId),
+                    eq(products.isDeleted, false),
+                    eq(products.isPublished, true),
+                    eq(products.isActive, true)
+                )
+            );
+        return data?.count || 0;
     }
 
     async getUserWishlist(userId: string) {
-        const data = await db.query.wishlists.findMany({
+        const rawData = await db.query.wishlists.findMany({
             with: {
                 product: {
                     with: {
@@ -22,15 +33,23 @@ class UserWishlistQuery {
                         productType: true,
                         options: true,
                     },
+                    where: (products, { and, eq }) =>
+                        and(
+                            eq(products.isDeleted, false),
+                            eq(products.isPublished, true),
+                            eq(products.isActive, true)
+                        ),
                 },
             },
             where: eq(wishlists.userId, userId),
         });
 
-        const products = data.map((d) => d.product);
+        // Filter out wishlist items where product is null (due to above filtering)
+        const data = rawData.filter((d) => d.product);
+        const productsList = data.map((d) => d.product);
 
         const mediaIds = new Set<string>();
-        for (const product of products) {
+        for (const product of productsList) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -44,7 +63,7 @@ class UserWishlistQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedProducts = products.map((product) => ({
+        const enhancedProducts = productsList.map((product) => ({
             ...product,
             media: product.media.map((media) => ({
                 ...media,
@@ -61,7 +80,7 @@ class UserWishlistQuery {
 
         const enhancedData = data.map((d) => ({
             ...d,
-            product: enhancedProducts.find((p) => p.id === d.productId),
+            product: enhancedProducts.find((p) => p.id === d.productId)!,
         }));
 
         const parsed = cachedWishlistSchema.array().parse(enhancedData);

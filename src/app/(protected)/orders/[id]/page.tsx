@@ -42,7 +42,7 @@ async function CheckoutFetch({ params }: PageProps) {
 
 function OrderSkeleton() {
     return (
-        <div className="flex flex-col-reverse justify-between gap-5 lg:flex-row">
+        <div className="flex bg-[#fcfcf5] flex-col-reverse justify-between gap-5 lg:flex-row">
             <div className="w-full space-y-5 px-5">
                 <Skeleton className="h-32 w-full" />
                 <Separator />
