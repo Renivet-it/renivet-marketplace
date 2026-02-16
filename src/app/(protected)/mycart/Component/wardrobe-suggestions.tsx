@@ -25,7 +25,6 @@ export default function WardrobeSuggestions({
             { userId },
             {
                 enabled: !!userCart && userCart.length > 0,
-                staleTime: 1000 * 60 * 5, // Cache for 5 minutes
             }
         );
 
@@ -93,6 +92,7 @@ interface SuggestionItem {
     categoryId: string;
     imageUrl: string | null;
     distance: number;
+    defaultVariantId?: string | null;
 }
 
 function SuggestionCard({
@@ -122,7 +122,7 @@ function SuggestionCard({
         addToCartMutation.mutate({
             userId,
             productId: item.id,
-            variantId: null,
+            variantId: item.defaultVariantId || null,
             quantity: 1,
         });
     };
