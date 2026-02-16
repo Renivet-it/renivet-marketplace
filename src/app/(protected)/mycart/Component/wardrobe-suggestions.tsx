@@ -73,8 +73,13 @@ export default function WardrobeSuggestions({
 
             {/* Suggestion cards grid */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {suggestions.map((item) => (
-                    <SuggestionCard key={item.id} item={item} userId={userId} />
+                {suggestions.map((item, index) => (
+                    <SuggestionCard
+                        key={item.id}
+                        item={item}
+                        userId={userId}
+                        index={index}
+                    />
                 ))}
             </div>
         </div>
@@ -98,10 +103,14 @@ interface SuggestionItem {
 function SuggestionCard({
     item,
     userId,
+    index,
 }: {
     item: SuggestionItem;
     userId: string;
+    index: number;
 }) {
+    const LABELS = ["Pairs well", "Complements", "Style match", "Great fit"];
+    const label = LABELS[index % LABELS.length];
     const [addedToBag, setAddedToBag] = useState(false);
     const utils = trpc.useUtils();
 
@@ -138,9 +147,9 @@ function SuggestionCard({
     }, [item.price, item.compareAtPrice]);
 
     return (
-        <div className="group overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md">
+        <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md">
             {/* Product image */}
-            <Link href={`/products/${item.slug}`}>
+            <Link href={`/products/${item.slug}`} className="shrink-0">
                 <div className="relative aspect-[4/5] bg-stone-100">
                     {item.imageUrl ? (
                         <Image
@@ -156,13 +165,13 @@ function SuggestionCard({
                         </div>
                     )}
                     <div className="absolute right-2 top-2 rounded-full bg-green-600 px-2 py-0.5 text-[9px] font-semibold text-white">
-                        Pairs well
+                        {label}
                     </div>
                 </div>
             </Link>
 
             {/* Info */}
-            <div className="p-2.5 md:p-3">
+            <div className="flex flex-1 flex-col p-2.5 md:p-3">
                 <p className="text-[9px] font-medium uppercase tracking-wide text-gray-400 md:text-[10px]">
                     {item.brandName ?? "Brand"}
                 </p>
@@ -186,36 +195,38 @@ function SuggestionCard({
                 )}
 
                 {/* Match tag */}
-                <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-500">
-                    <Check className="size-3 text-green-600" />
-                    <span>Complements your cart</span>
-                </div>
+                <div className="mt-auto pt-3">
+                    <div className="mb-2 flex items-center gap-1 text-[10px] text-gray-500">
+                        <Check className="size-3 text-green-600" />
+                        <span>Complements your cart</span>
+                    </div>
 
-                {/* Add to bag button */}
-                <button
-                    onClick={handleAddToBag}
-                    disabled={addedToBag || addToCartMutation.isPending}
-                    className={cn(
-                        "mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border py-1.5 text-[11px] font-medium transition-colors md:mt-3 md:py-2 md:text-xs",
-                        addedToBag
-                            ? "border-green-200 bg-green-50 text-green-700"
-                            : "border-gray-200 text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
-                    )}
-                >
-                    {addToCartMutation.isPending ? (
-                        <Loader2 className="size-3 animate-spin" />
-                    ) : addedToBag ? (
-                        <>
-                            <Check className="size-3" />
-                            Added to Bag
-                        </>
-                    ) : (
-                        <>
-                            <ShoppingBag className="size-3" />
-                            Add to Bag
-                        </>
-                    )}
-                </button>
+                    {/* Add to bag button */}
+                    <button
+                        onClick={handleAddToBag}
+                        disabled={addedToBag || addToCartMutation.isPending}
+                        className={cn(
+                            "flex w-full items-center justify-center gap-1.5 rounded-lg border py-1.5 text-[11px] font-medium transition-colors md:py-2 md:text-xs",
+                            addedToBag
+                                ? "border-green-200 bg-green-50 text-green-700"
+                                : "border-gray-200 text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                        )}
+                    >
+                        {addToCartMutation.isPending ? (
+                            <Loader2 className="size-3 animate-spin" />
+                        ) : addedToBag ? (
+                            <>
+                                <Check className="size-3" />
+                                Added to Bag
+                            </>
+                        ) : (
+                            <>
+                                <ShoppingBag className="size-3" />
+                                Add to Bag
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );
