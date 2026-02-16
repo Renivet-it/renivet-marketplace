@@ -47,12 +47,14 @@ import {
     Eye,
     Heart,
     Leaf,
+    Loader2,
     MoreHorizontal,
     Package,
     RefreshCw,
     RotateCcw,
     Shirt,
     ShoppingBag,
+    ShoppingCart,
     Star,
     Truck,
     XCircle,
@@ -1114,6 +1116,30 @@ function DeliveredOrderCard({
     const [returnItem, setReturnItem] = useState<any>(null);
     const [replaceItem, setReplaceItem] = useState<any>(null);
     const [showDetails, setShowDetails] = useState(false);
+    const [isReordering, setIsReordering] = useState(false);
+
+    const { mutateAsync: addToCart } =
+        trpc.general.users.cart.addProductToCart.useMutation();
+
+    const handleReorder = async () => {
+        setIsReordering(true);
+        const toastId = toast.loading("Adding items to cart...");
+        try {
+            for (const item of order.items) {
+                await addToCart({
+                    userId: user.id,
+                    productId: item.productId,
+                    variantId: item.variantId ?? null,
+                    quantity: item.quantity,
+                });
+            }
+            toast.success("Items added to cart!", { id: toastId });
+            window.location.href = "/mycart";
+        } catch (err) {
+            handleClientError(err, toastId);
+            setIsReordering(false);
+        }
+    };
 
     const { url: imageUrl, alt: imageAlt } = getOrderImage(order);
     const productDisplay = getProductDisplayName(order);
@@ -1288,12 +1314,21 @@ function DeliveredOrderCard({
                         Log Wear
                     </button>
                     <button
-                        onClick={() =>
-                            toast.info("Reorder feature coming soon!")
-                        }
-                        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                        onClick={handleReorder}
+                        disabled={isReordering}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        Reorder
+                        {isReordering ? (
+                            <>
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Adding…
+                            </>
+                        ) : (
+                            <>
+                                <ShoppingCart className="h-3 w-3" />
+                                Reorder
+                            </>
+                        )}
                     </button>
                     <Popover>
                         <PopoverTrigger asChild>
