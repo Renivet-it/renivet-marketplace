@@ -97,7 +97,7 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
             <div className="rounded-xl border border-gray-200 bg-white">
                 <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                     <div className="flex items-center gap-2">
-                        <Package className="size-4 text-[#6B7A5E]" />
+                        <Package className="size-4 text-blue-600" />
                         <h3 className="text-sm font-semibold text-gray-900">
                             Your Items ({itemsCount})
                         </h3>
@@ -187,7 +187,7 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                         ))}
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Delivery</span>
-                        <span className="font-medium text-[#6B7A5E]">FREE</span>
+                        <span className="font-medium text-blue-600">FREE</span>
                     </div>
 
                     <Separator className="my-1" />
@@ -209,25 +209,25 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
             {/* ── Trust badges ── */}
             <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
-                    <Leaf className="size-3.5 text-[#6B7A5E]" />
+                    <Leaf className="size-3.5 text-blue-600" />
                     <span className="text-[11px] font-medium text-gray-600">
                         Carbon Neutral
                     </span>
                 </div>
                 <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
-                    <Shield className="size-3.5 text-[#6B7A5E]" />
+                    <Shield className="size-3.5 text-blue-600" />
                     <span className="text-[11px] font-medium text-gray-600">
                         Secure Checkout
                     </span>
                 </div>
                 <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
-                    <Truck className="size-3.5 text-[#6B7A5E]" />
+                    <Truck className="size-3.5 text-blue-600" />
                     <span className="text-[11px] font-medium text-gray-600">
                         Free Delivery
                     </span>
                 </div>
                 <div className="flex items-center gap-2 rounded-lg border border-gray-100 bg-[#fafaf5] px-3 py-2.5">
-                    <Package className="size-3.5 text-[#6B7A5E]" />
+                    <Package className="size-3.5 text-blue-600" />
                     <span className="text-[11px] font-medium text-gray-600">
                         Easy Returns
                     </span>
@@ -237,7 +237,7 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
             {/* ── Proceed button ── */}
             <Button
                 size="lg"
-                className="group w-full rounded-xl bg-[#6B7A5E] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#5a6950] hover:shadow-md"
+                className="group w-full rounded-xl bg-[#95b6da] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#82a3c7] hover:shadow-md"
                 disabled={
                     isUserFetching ||
                     itemsToDisplay.length === 0 ||

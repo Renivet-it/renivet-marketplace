@@ -141,11 +141,11 @@ export default function CheckoutSection({ userId }: PageProps) {
     return (
         <div className="w-full space-y-4">
             {/* Complimentary delivery banner */}
-            <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-100">
-                    <Truck className="size-3.5 text-green-600" />
+            <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                    <Truck className="size-3.5 text-blue-600" />
                 </div>
-                <p className="text-xs font-medium text-green-700">
+                <p className="text-xs font-medium text-blue-700">
                     Your order is eligible for complimentary delivery!
                 </p>
             </div>
@@ -219,13 +219,13 @@ export default function CheckoutSection({ userId }: PageProps) {
                 {/* Sustainability line items — desktop only */}
                 <div className="hidden space-y-2.5 text-sm md:block">
                     <div className="flex items-center gap-2 text-gray-600">
-                        <Leaf className="size-3.5 text-green-500" />
+                        <Leaf className="size-3.5 text-blue-500" />
                         <span className="text-xs">
                             Carbon neutral delivery included
                         </span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">
-                        <Recycle className="size-3.5 text-[#6B7A5E]" />
+                        <Recycle className="size-3.5 text-blue-600" />
                         <span className="text-xs">
                             We plant 2 trees to offset emissions
                         </span>
@@ -248,7 +248,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                         </li>
                         <li className="flex justify-between text-sm text-gray-600">
                             <span>Delivery</span>
-                            <span className="font-medium text-green-600">
+                            <span className="font-medium text-blue-600">
                                 {formatPriceTag(0, true)} (Free)
                             </span>
                         </li>
@@ -274,7 +274,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                             ))}
                         <li className="flex justify-between text-sm text-gray-600">
                             <span>Delivery</span>
-                            <span className="font-medium text-green-600">
+                            <span className="font-medium text-blue-600">
                                 {formatPriceTag(0, true)} (Free)
                             </span>
                         </li>
@@ -283,11 +283,11 @@ export default function CheckoutSection({ userId }: PageProps) {
                     <Separator />
 
                     {/* Your Impact section — desktop only */}
-                    <div className="hidden rounded-lg bg-emerald-50/70 p-3 md:block">
-                        <p className="mb-2 text-xs font-semibold text-emerald-800">
+                    <div className="hidden rounded-lg bg-blue-50/70 p-3 md:block">
+                        <p className="mb-2 text-xs font-semibold text-blue-800">
                             Your Impact
                         </p>
-                        <div className="space-y-1.5 text-xs text-emerald-700">
+                        <div className="space-y-1.5 text-xs text-blue-700">
                             <div className="flex items-center gap-1.5">
                                 <Leaf className="size-3" />
                                 <span>1.6kg CO₂ saved</span>
@@ -342,7 +342,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                             </span>
                         </div>
                         <button
-                            className="rounded-md border border-green-600 px-3 py-1 text-xs font-semibold text-green-600 transition-colors hover:bg-green-50"
+                            className="rounded-md border border-blue-600 px-3 py-1 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-50"
                             onClick={() => setIsCouponModalOpen(true)}
                         >
                             APPLY
@@ -354,7 +354,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                 <div className="mt-5">
                     <Button
                         size="sm"
-                        className="w-full rounded-lg bg-[#6B7A5E] text-sm font-semibold text-white hover:bg-[#5a6950]"
+                        className="w-full rounded-lg bg-[#95b6da] text-sm font-semibold text-white hover:bg-[#82a3c7]"
                         disabled={
                             isUserFetching ||
                             isValidating ||

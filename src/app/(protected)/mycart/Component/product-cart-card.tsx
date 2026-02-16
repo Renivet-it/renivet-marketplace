@@ -240,7 +240,7 @@ export function ProductCartCard({
                         {/* 10-day returns badge */}
                         <div className="inline-flex items-center gap-1 rounded-full border border-[#c5d1b8] bg-[#f0f4eb] px-2 py-0.5 text-[10px] font-medium text-[#6B7A5E]">
                             <RotateCcw className="size-3" />
-                            10-day returns available
+                           7-day returns available
                         </div>
 
                         {/* Product details toggle */}
@@ -537,7 +537,7 @@ export function ProductCartCard({
                             </div>
                             <div className="flex items-center gap-1 rounded-full border border-[#c5d1b8] bg-[#f0f4eb] px-2 py-0.5 text-[10px] font-medium text-[#6B7A5E]">
                                 <RotateCcw className="size-3" />
-                                10-day returns available
+                               7-day returns available
                             </div>
                         </div>
                     </div>

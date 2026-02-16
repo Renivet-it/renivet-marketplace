@@ -471,7 +471,7 @@ export function OrderPage({
                                 ))}
                             <li className="flex justify-between text-sm">
                                 <span className="text-gray-600">Delivery</span>
-                                <span className="font-medium text-[#6B7A5E]">
+                                <span className="font-medium text-blue-600">
                                     FREE
                                 </span>
                             </li>
@@ -494,17 +494,17 @@ export function OrderPage({
                 {/* Trust badges */}
                 <div className="mt-3 flex items-center justify-center gap-4">
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                        <Shield className="size-3.5 text-[#6B7A5E]" />
+                        <Shield className="size-3.5 text-blue-600" />
                         <span>Secure Payment</span>
                     </div>
                     <div className="h-3 w-px bg-gray-200" />
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                        <Truck className="size-3.5 text-[#6B7A5E]" />
+                        <Truck className="size-3.5 text-blue-600" />
                         <span>Free Delivery</span>
                     </div>
                     <div className="h-3 w-px bg-gray-200" />
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                        <Leaf className="size-3.5 text-[#6B7A5E]" />
+                        <Leaf className="size-3.5 text-blue-600" />
                         <span>Eco Friendly</span>
                     </div>
                 </div>
@@ -512,7 +512,7 @@ export function OrderPage({
                 <div className="mt-4 space-y-3">
                     <Button
                         size="lg"
-                        className="group w-full rounded-xl bg-[#6B7A5E] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#5a6950] hover:shadow-md"
+                        className="group w-full rounded-xl bg-[#95b6da] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#82a3c7] hover:shadow-md"
                         disabled={
                             isProcessing ||
                             isPaymentInitializing ||
@@ -561,7 +561,7 @@ export function OrderPage({
                         <Link
                             href="/terms"
                             target="_blank"
-                            className="text-[#6B7A5E] hover:underline"
+                            className="text-blue-600 hover:underline"
                         >
                             Terms of Service
                         </Link>{" "}
@@ -569,7 +569,7 @@ export function OrderPage({
                         <Link
                             href="/privacy"
                             target="_blank"
-                            className="text-[#6B7A5E] hover:underline"
+                            className="text-blue-600 hover:underline"
                         >
                             Privacy Policy
                         </Link>
