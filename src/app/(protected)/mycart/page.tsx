@@ -42,7 +42,7 @@ export default async function CartPage({
     const step = Math.max(0, Math.min(currentStep, 2));
 
     return (
-        <div className="relative flex min-h-screen flex-col bg-gray-50/50">
+        <div className="relative flex min-h-screen flex-col bg-[#fcfcf5]">
             <NavbarHome />
             <main className="flex flex-1 flex-col">
                 <GeneralShell>

@@ -225,7 +225,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                         </span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">
-                        <Recycle className="size-3.5 text-blue-500" />
+                        <Recycle className="size-3.5 text-[#6B7A5E]" />
                         <span className="text-xs">
                             We plant 2 trees to offset emissions
                         </span>
@@ -354,7 +354,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                 <div className="mt-5">
                     <Button
                         size="sm"
-                        className="w-full rounded-lg bg-green-600 text-sm font-semibold text-white hover:bg-green-700"
+                        className="w-full rounded-lg bg-[#6B7A5E] text-sm font-semibold text-white hover:bg-[#5a6950]"
                         disabled={
                             isUserFetching ||
                             isValidating ||

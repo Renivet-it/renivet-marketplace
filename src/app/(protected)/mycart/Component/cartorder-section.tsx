@@ -130,7 +130,7 @@ export function CartPage({
                         </div>
                         <Button
                             size="sm"
-                            className="mt-3 w-full rounded-lg bg-green-600 text-xs hover:bg-green-700 md:mt-0 md:w-auto"
+                            className="mt-3 w-full rounded-lg bg-[#6B7A5E] text-xs hover:bg-[#5a6950] md:mt-0 md:w-auto"
                             onClick={() => setIsUnavailableModalOpen(true)}
                         >
                             Review Unavailable Items

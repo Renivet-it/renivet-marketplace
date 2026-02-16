@@ -118,14 +118,14 @@ export function ProductCartCard({
             >
                 {/* Top row: image + info */}
                 <div className="flex gap-3">
-                    {/* Image — compact 72×72 */}
-                    <div className="group relative aspect-square w-[72px] shrink-0 overflow-hidden rounded-lg">
+                    {/* Image — portrait thumbnail */}
+                    <div className="group relative aspect-[3/4] w-[80px] shrink-0 overflow-hidden rounded-lg bg-gray-50">
                         <Image
                             src={imageUrl}
                             alt={imageAlt}
                             width={200}
-                            height={200}
-                            className="size-full object-cover"
+                            height={260}
+                            className="size-full object-contain"
                         />
                     </div>
 
@@ -238,7 +238,7 @@ export function ProductCartCard({
                         </div>
 
                         {/* 10-day returns badge */}
-                        <div className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-teal-700">
+                        <div className="inline-flex items-center gap-1 rounded-full border border-[#c5d1b8] bg-[#f0f4eb] px-2 py-0.5 text-[10px] font-medium text-[#6B7A5E]">
                             <RotateCcw className="size-3" />
                             10-day returns available
                         </div>
@@ -279,7 +279,7 @@ export function ProductCartCard({
                         <PopoverTrigger asChild>
                             <div className="flex items-center gap-2">
                                 <button
-                                    className="flex size-7 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex size-7 items-center justify-center rounded border border-green-300 text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     disabled={isUpdating || readOnly}
                                     onClick={(e) => {
                                         if (readOnly) e.preventDefault();
@@ -291,7 +291,7 @@ export function ProductCartCard({
                                     {item.quantity}
                                 </span>
                                 <button
-                                    className="flex size-7 items-center justify-center rounded border border-gray-300 bg-gray-50 text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex size-7 items-center justify-center rounded border border-green-300 bg-green-50 text-green-600 transition-colors hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
                                     disabled={isUpdating || readOnly}
                                     onClick={(e) => {
                                         if (readOnly) e.preventDefault();
@@ -348,14 +348,14 @@ export function ProductCartCard({
                             />
                         )}
 
-                        <div className="group relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-lg">
+                        <div className="group relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-lg bg-gray-50">
                             <Image
                                 src={imageUrl}
                                 alt={imageAlt}
                                 width={1000}
                                 height={1000}
                                 className={cn(
-                                    "size-full object-cover",
+                                    "size-full object-contain",
                                     !readOnly &&
                                         "transition-all ease-in-out group-hover:brightness-90"
                                 )}
@@ -484,7 +484,7 @@ export function ProductCartCard({
                                 <PopoverTrigger asChild>
                                     <div className="flex items-center gap-1.5">
                                         <button
-                                            className="flex size-7 items-center justify-center rounded-full border border-blue-300 text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="flex size-7 items-center justify-center rounded-full border border-green-300 text-green-600 transition-colors hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
                                             disabled={isUpdating || readOnly}
                                             onClick={(e) => {
                                                 if (readOnly)
@@ -497,7 +497,7 @@ export function ProductCartCard({
                                             {item.quantity}
                                         </span>
                                         <button
-                                            className="flex size-7 items-center justify-center rounded-full border border-blue-300 bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="flex size-7 items-center justify-center rounded-full border border-green-300 bg-green-50 text-green-600 transition-colors hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
                                             disabled={isUpdating || readOnly}
                                             onClick={(e) => {
                                                 if (readOnly)
@@ -535,7 +535,7 @@ export function ProductCartCard({
                                 <Truck className="size-3" />
                                 <span>Free carbon-neutral shipping</span>
                             </div>
-                            <div className="flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-teal-700">
+                            <div className="flex items-center gap-1 rounded-full border border-[#c5d1b8] bg-[#f0f4eb] px-2 py-0.5 text-[10px] font-medium text-[#6B7A5E]">
                                 <RotateCcw className="size-3" />
                                 10-day returns available
                             </div>
