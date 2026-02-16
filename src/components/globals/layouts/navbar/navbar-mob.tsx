@@ -1,8 +1,6 @@
 "use client";
 
 import { Icons } from "@/components/icons";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DEFAULT_AVATAR_URL } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
@@ -12,7 +10,6 @@ import {
     handleClientError,
     hasPermission,
     hideEmail,
-    slugify,
 } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -78,29 +75,6 @@ const extraMenu: SiteConfig["menu"] = [
         description: "Read our terms of service",
         href: "/terms",
         icon: "ScrollText",
-    },
-];
-
-const profileMenu: SiteConfig["menu"] = [
-    {
-        name: "Dashboard",
-        href: "/dashboard",
-        icon: "LayoutDashboard",
-    },
-    {
-        name: "Manage Account",
-        href: "/profile",
-        icon: "User2",
-    },
-    {
-        name: "Addresses",
-        href: "/profile/addresses",
-        icon: "Map",
-    },
-    {
-        name: "Login/Register",
-        href: "/auth/signin",
-        icon: "LogIn",
     },
 ];
 
@@ -580,7 +554,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                     <li
                                         key={index}
                                         className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200"
-                                        aria-label={`Box Menu Item ${item.name}`}
+                                        aria-label="Box Menu Item"
                                     >
                                         <Link
                                             href={item.href}
@@ -621,7 +595,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                         return (
                                             <li
                                                 key={index}
-                                                aria-label={`Extra Menu Item ${item.name}`}
+                                                aria-label="Extra Menu Item"
                                             >
                                                 <Link
                                                     href={item.href}
