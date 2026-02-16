@@ -2,8 +2,10 @@
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Bookmark, Check, ShoppingBag, Sparkles } from "lucide-react";
-import { useMemo } from "react";
+import { Check, Loader2, ShoppingBag, Sparkles } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
 interface WardrobeSuggestionsProps {
     userId: string;
@@ -18,56 +20,18 @@ export default function WardrobeSuggestions({
         userId,
     });
 
-    // Get category IDs from cart to suggest similar items
-    const cartCategoryIds = useMemo(() => {
-        if (!userCart) return [];
-        return [...new Set(userCart.map((item) => item.product.categoryId))];
-    }, [userCart]);
-
-    const suggestions = [
-        {
-            id: 1,
-            badge: "Pairs with shirt",
-            brand: "EARTHEN THREADS",
-            title: "Organic Cotton Wide-Leg Pants - Navy",
-            price: "€52.00",
-            matchTag: "Pairs with shirt",
-            worksWithCount: 3,
-            deliveryDate: "Jan 17",
-        },
-        {
-            id: 2,
-            badge: "Completes outfit",
-            brand: "SIMPLE GOODS",
-            title: "Handwoven Canvas Belt - Earth Tones",
-            price: "€38.00",
-            matchTag: "Completes outfit",
-            worksWithCount: 3,
-            deliveryDate: "Jan 18",
-        },
-        {
-            id: 3,
-            badge: "Active",
-            brand: "ARTISAN COLLECTIVE",
-            title: "Handwoven Scarf - Earth...",
-            price: "€45.00",
-            matchTag: "Same artisan region",
-            worksWithCount: 2,
-            deliveryDate: "Jan 20",
-        },
-        {
-            id: 4,
-            badge: "Sole Purpose",
-            brand: "SOLE PURPOSE",
-            title: "Minimalist Leather...",
-            price: "€78.00",
-            matchTag: "Watches tone",
-            worksWithCount: 2,
-            deliveryDate: "Jan 22",
-        },
-    ];
+    const { data: suggestions, isLoading } =
+        trpc.general.users.cart.getWardrobeSuggestions.useQuery(
+            { userId },
+            {
+                enabled: !!userCart && userCart.length > 0,
+                staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+            }
+        );
 
     if (!userCart || userCart.length === 0) return null;
+    if (isLoading) return <SuggestionsSkeleton />;
+    if (!suggestions || suggestions.length === 0) return null;
 
     return (
         <div className={cn("mt-8", className)}>
@@ -95,13 +59,11 @@ export default function WardrobeSuggestions({
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
                         <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
-                        <span>
-                            Similar sustainability values (85+ Earth Score)
-                        </span>
+                        <span>Matched using AI-powered similarity</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
                         <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
-                        <span>High versatility score (8+/10)</span>
+                        <span>Complements your style choices</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-600 md:text-xs">
                         <Check className="size-3 shrink-0 text-green-600 md:size-3.5" />
@@ -113,74 +75,174 @@ export default function WardrobeSuggestions({
             {/* Suggestion cards grid */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 {suggestions.map((item) => (
-                    <div
-                        key={item.id}
-                        className="group overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md"
-                    >
-                        {/* Image placeholder with badge */}
-                        <div className="relative aspect-[4/5] bg-stone-100">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <ShoppingBag className="size-8 text-stone-300" />
-                            </div>
-                            <div className="absolute right-2 top-2 rounded-full bg-green-600 px-2 py-0.5 text-[9px] font-semibold text-white">
-                                {item.badge}
-                            </div>
+                    <SuggestionCard key={item.id} item={item} userId={userId} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+interface SuggestionItem {
+    id: string;
+    title: string;
+    slug: string;
+    price: number | null;
+    compareAtPrice: number | null;
+    brandId: string;
+    brandName: string | null;
+    categoryId: string;
+    imageUrl: string | null;
+    distance: number;
+}
+
+function SuggestionCard({
+    item,
+    userId,
+}: {
+    item: SuggestionItem;
+    userId: string;
+}) {
+    const [addedToBag, setAddedToBag] = useState(false);
+    const utils = trpc.useUtils();
+
+    const addToCartMutation =
+        trpc.general.users.cart.addProductToCart.useMutation({
+            onSuccess: () => {
+                setAddedToBag(true);
+                // Invalidate cart queries so the cart count updates
+                utils.general.users.cart.getCartForUser.invalidate({ userId });
+                utils.general.users.cart.getWardrobeSuggestions.invalidate({
+                    userId,
+                });
+            },
+        });
+
+    const handleAddToBag = () => {
+        if (addedToBag || addToCartMutation.isPending) return;
+        addToCartMutation.mutate({
+            userId,
+            productId: item.id,
+            variantId: null,
+            quantity: 1,
+        });
+    };
+
+    const priceDisplay = useMemo(() => {
+        if (!item.price) return null;
+        const price = (item.price / 100).toFixed(2);
+        const compareAt =
+            item.compareAtPrice && item.compareAtPrice > item.price
+                ? (item.compareAtPrice / 100).toFixed(2)
+                : null;
+        return { price, compareAt };
+    }, [item.price, item.compareAtPrice]);
+
+    return (
+        <div className="group overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md">
+            {/* Product image */}
+            <Link href={`/products/${item.slug}`}>
+                <div className="relative aspect-[4/5] bg-stone-100">
+                    {item.imageUrl ? (
+                        <Image
+                            src={item.imageUrl}
+                            alt={item.title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <ShoppingBag className="size-8 text-stone-300" />
                         </div>
+                    )}
+                    <div className="absolute right-2 top-2 rounded-full bg-green-600 px-2 py-0.5 text-[9px] font-semibold text-white">
+                        Pairs well
+                    </div>
+                </div>
+            </Link>
 
-                        {/* Info */}
-                        <div className="p-2.5 md:p-3">
-                            <p className="text-[9px] font-medium uppercase tracking-wide text-gray-400 md:text-[10px]">
-                                {item.brand}
-                            </p>
-                            <h4 className="mt-0.5 line-clamp-2 text-xs font-semibold text-gray-900 md:text-sm">
-                                {item.title}
-                            </h4>
-                            <p className="mt-1 text-xs font-bold text-gray-900 md:text-sm">
-                                {item.price}
-                            </p>
+            {/* Info */}
+            <div className="p-2.5 md:p-3">
+                <p className="text-[9px] font-medium uppercase tracking-wide text-gray-400 md:text-[10px]">
+                    {item.brandName ?? "Brand"}
+                </p>
+                <Link href={`/products/${item.slug}`}>
+                    <h4 className="mt-0.5 line-clamp-2 text-xs font-semibold text-gray-900 hover:underline md:text-sm">
+                        {item.title}
+                    </h4>
+                </Link>
 
-                            {/* Match tag */}
-                            <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-500">
-                                <Check className="size-3 text-green-600" />
-                                <span>{item.matchTag}</span>
-                            </div>
+                {priceDisplay && (
+                    <div className="mt-1 flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-gray-900 md:text-sm">
+                            ₹{priceDisplay.price}
+                        </span>
+                        {priceDisplay.compareAt && (
+                            <span className="text-[10px] text-gray-400 line-through md:text-xs">
+                                ₹{priceDisplay.compareAt}
+                            </span>
+                        )}
+                    </div>
+                )}
 
-                            {/* Mobile: delivery date */}
-                            <p className="mt-0.5 text-[10px] text-gray-400 md:hidden">
-                                Delivery {item.deliveryDate}
-                            </p>
+                {/* Match tag */}
+                <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-500">
+                    <Check className="size-3 text-green-600" />
+                    <span>Complements your cart</span>
+                </div>
 
-                            {/* Desktop: works with */}
-                            <p className="mt-0.5 hidden text-[10px] text-gray-400 md:block">
-                                Works with {item.worksWithCount} cart items
-                            </p>
+                {/* Add to bag button */}
+                <button
+                    onClick={handleAddToBag}
+                    disabled={addedToBag || addToCartMutation.isPending}
+                    className={cn(
+                        "mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border py-1.5 text-[11px] font-medium transition-colors md:mt-3 md:py-2 md:text-xs",
+                        addedToBag
+                            ? "border-green-200 bg-green-50 text-green-700"
+                            : "border-gray-200 text-gray-700 hover:border-green-600 hover:bg-green-50 hover:text-green-700"
+                    )}
+                >
+                    {addToCartMutation.isPending ? (
+                        <Loader2 className="size-3 animate-spin" />
+                    ) : addedToBag ? (
+                        <>
+                            <Check className="size-3" />
+                            Added to Bag
+                        </>
+                    ) : (
+                        <>
+                            <ShoppingBag className="size-3" />
+                            Add to Bag
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+    );
+}
 
-                            {/* Add to bag button */}
-                            <button className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gray-200 py-1.5 text-[11px] font-medium text-gray-700 transition-colors hover:border-green-600 hover:bg-green-50 hover:text-green-700 md:mt-3 md:py-2 md:text-xs">
-                                <ShoppingBag className="size-3" />
-                                Add to Bag
-                            </button>
-
-                            {/* Mobile: Save here link */}
-                            <button className="mt-1.5 flex w-full items-center justify-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 md:hidden">
-                                <Bookmark className="size-3" />
-                                Save here
-                            </button>
+function SuggestionsSkeleton() {
+    return (
+        <div className="mt-8">
+            <div className="mb-4">
+                <div className="h-6 w-64 animate-pulse rounded bg-gray-200" />
+                <div className="mt-2 h-4 w-48 animate-pulse rounded bg-gray-100" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                    <div
+                        key={i}
+                        className="overflow-hidden rounded-xl border border-gray-200 bg-white"
+                    >
+                        <div className="aspect-[4/5] animate-pulse bg-gray-100" />
+                        <div className="space-y-2 p-3">
+                            <div className="h-3 w-16 animate-pulse rounded bg-gray-100" />
+                            <div className="h-4 w-full animate-pulse rounded bg-gray-100" />
+                            <div className="h-4 w-12 animate-pulse rounded bg-gray-100" />
+                            <div className="h-8 w-full animate-pulse rounded bg-gray-100" />
                         </div>
                     </div>
                 ))}
-            </div>
-
-            {/* Mobile: Not interested / Save for later */}
-            <div className="mt-4 flex items-center justify-center gap-4 text-[11px] text-gray-400 md:hidden">
-                <button className="hover:text-gray-600 hover:underline">
-                    Not interested?
-                </button>
-                <span>·</span>
-                <button className="flex items-center gap-1 hover:text-gray-600 hover:underline">
-                    <Bookmark className="size-3" />
-                    Save for later
-                </button>
             </div>
         </div>
     );

@@ -80,32 +80,40 @@ export default async function CartPage({
                         )}
 
                         {step === 1 && (
-                            <div className="flex flex-col gap-6 md:flex-row">
-                                <div className="w-full rounded-lg bg-white p-4 shadow md:w-2/3">
-                                    <h2 className="mb-4 text-lg font-semibold text-gray-800">
+                            <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
+                                <div className="w-full rounded-xl border border-gray-200 bg-white p-4 lg:w-2/3 lg:p-5">
+                                    <h2 className="mb-4 text-lg font-semibold text-gray-900">
                                         Select Delivery Address
                                     </h2>
                                     <ShippingAddress />
                                 </div>
-                                <div className="w-full rounded-lg bg-white p-4 shadow md:w-1/3">
-                                    <AddressCheckoutSection userId={userId} />
+                                <div className="w-full lg:w-1/3">
+                                    <div className="lg:sticky lg:top-24">
+                                        <AddressCheckoutSection
+                                            userId={userId}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         )}
 
                         {step === 2 && (
-                            <div className="flex flex-col gap-6 md:flex-row">
-                                <div className="w-full rounded-lg bg-white p-4 shadow md:w-2/3">
+                            <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
+                                <div className="w-full rounded-xl border border-gray-200 bg-white p-4 lg:w-2/3 lg:p-5">
                                     <Suspense
                                         fallback={<div>Loading cart...</div>}
                                     >
                                         <CartFetcher userId={userId} />
                                     </Suspense>
                                 </div>
-                                <div className="w-full rounded-lg bg-white p-4 shadow md:w-1/3">
-                                    <Page
-                                        params={Promise.resolve({ id: null })}
-                                    />
+                                <div className="w-full lg:w-1/3">
+                                    <div className="lg:sticky lg:top-24">
+                                        <Page
+                                            params={Promise.resolve({
+                                                id: null,
+                                            })}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         )}

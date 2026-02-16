@@ -1,8 +1,10 @@
 import { BRAND_EVENTS } from "@/config/brand";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
+import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 import {
     analytics,
+    mediaCache,
     userCartCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
@@ -41,54 +43,57 @@ export const cartRouter = createTRPCRouter({
 
             return existingCart;
         }),
-        mergeGuestCart: protectedProcedure
-  .input(
-    z.array(
-      z.object({
-        productId: z.string(),
-        variantId: z.string().nullable(),
-        quantity: z.number(),
-      })
-    )
-  )
-  .mutation(async ({ ctx, input }) => {
-    const { queries, db } = ctx;
-    const userId = ctx.user.id;
+    mergeGuestCart: protectedProcedure
+        .input(
+            z.array(
+                z.object({
+                    productId: z.string(),
+                    variantId: z.string().nullable(),
+                    quantity: z.number(),
+                })
+            )
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { queries, db } = ctx;
+            const userId = ctx.user.id;
 
-    for (const item of input) {
-      const existingCart = await userCartCache.getProduct({
-        userId,
-        productId: item.productId,
-        variantId: item.variantId ?? undefined,
-      });
+            for (const item of input) {
+                const existingCart = await userCartCache.getProduct({
+                    userId,
+                    productId: item.productId,
+                    variantId: item.variantId ?? undefined,
+                });
 
-      if (!existingCart) {
-        await queries.userCarts.addProductToCart({
-          userId,
-          productId: item.productId,
-          variantId: item.variantId ?? null,
-          quantity: item.quantity,
-        });
-      } else {
-        await queries.userCarts.updateProductInCart(existingCart.id, {
-          ...existingCart,
-          quantity: existingCart.quantity + item.quantity,
-        });
+                if (!existingCart) {
+                    await queries.userCarts.addProductToCart({
+                        userId,
+                        productId: item.productId,
+                        variantId: item.variantId ?? null,
+                        quantity: item.quantity,
+                    });
+                } else {
+                    await queries.userCarts.updateProductInCart(
+                        existingCart.id,
+                        {
+                            ...existingCart,
+                            quantity: existingCart.quantity + item.quantity,
+                        }
+                    );
 
-        // Remove from cache so it refetches
-        await userCartCache.remove({
-          userId,
-          productId: item.productId,
-          variantId: item.variantId ?? undefined,
-        });
-      }
-    }
+                    // Remove from cache so it refetches
+                    await userCartCache.remove({
+                        userId,
+                        productId: item.productId,
+                        variantId: item.variantId ?? undefined,
+                    });
+                }
+            }
 
-    // Clear entire user cart cache to refetch updated cart
-    await userCartCache.drop(userId);
+            // Clear entire user cart cache to refetch updated cart
+            await userCartCache.drop(userId);
 
-    return { success: true };
-  }),
+            return { success: true };
+        }),
     addProductToCart: protectedProcedure
         .input(createCartSchema)
         .use(({ ctx, input, next }) => {
@@ -667,5 +672,121 @@ export const cartRouter = createTRPCRouter({
             });
 
             return data;
+        }),
+    getWardrobeSuggestions: protectedProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+            })
+        )
+        .query(async ({ input }) => {
+            const { userId } = input;
+
+            try {
+                // 1. Get user cart
+                const cart = await userCartCache.get(userId);
+                if (!cart || cart.length === 0) return [];
+
+                // 2. Build search text from cart items
+                const cartProductIds = cart.map((c) => c.productId);
+                const searchText = cart
+                    .map((c) => {
+                        const p = c.product;
+                        return [p.title, p.brand?.name]
+                            .filter(Boolean)
+                            .join(" ");
+                    })
+                    .join(". ");
+
+                // 3. Generate 768-dim embedding
+                const embedding = await getEmbedding768(searchText);
+
+                // 4. Find similar products via cosine similarity, excluding cart items
+                const excludeList = cartProductIds
+                    .map((id) => `'${id}'`)
+                    .join(", ");
+
+                const similarProducts = await db.execute(sql`
+                    SELECT
+                        p.id::text AS id,
+                        p.title,
+                        p.slug,
+                        p.price,
+                        p.compare_at_price AS "compareAtPrice",
+                        p.brand_id::text AS "brandId",
+                        p.media,
+                        p.category_id::text AS "categoryId",
+                        b.name AS "brandName",
+                        (p.semantic_search_embeddings <=> ${JSON.stringify(embedding)}::vector) AS distance
+                    FROM products p
+                    LEFT JOIN brands b ON p.brand_id = b.id
+                    WHERE p.semantic_search_embeddings IS NOT NULL
+                      AND p.is_deleted = false
+                      AND p.is_active = true
+                      AND p.is_available = true
+                      AND p.is_published = true
+                      AND p.verification_status = 'approved'
+                      AND p.id::text NOT IN (${sql.raw(excludeList)})
+                    ORDER BY distance ASC
+                    LIMIT 8
+                `);
+
+                const rows = Array.isArray(similarProducts)
+                    ? similarProducts
+                    : (similarProducts?.rows ?? []);
+
+                if (rows.length === 0) return [];
+
+                // 5. Enhance with media
+                const allMediaIds = new Set<string>();
+                for (const row of rows) {
+                    const media =
+                        typeof row.media === "string"
+                            ? JSON.parse(row.media)
+                            : (row.media ?? []);
+                    for (const m of media) {
+                        if (m?.id) allMediaIds.add(m.id);
+                    }
+                }
+
+                const mediaItems = await mediaCache.getByIds(
+                    Array.from(allMediaIds)
+                );
+                const mediaMap = new Map(
+                    mediaItems.data.map((item) => [item.id, item])
+                );
+
+                return rows.map((row: any) => {
+                    const media =
+                        typeof row.media === "string"
+                            ? JSON.parse(row.media)
+                            : (row.media ?? []);
+
+                    const firstMediaWithUrl = media.find((m: any) => {
+                        const mediaItem = mediaMap.get(m.id);
+                        return mediaItem?.url;
+                    });
+
+                    const imageUrl = firstMediaWithUrl
+                        ? mediaMap.get(firstMediaWithUrl.id)?.url
+                        : null;
+
+                    return {
+                        id: row.id,
+                        title: row.title,
+                        slug: row.slug,
+                        price: row.price,
+                        compareAtPrice: row.compareAtPrice,
+                        brandId: row.brandId,
+                        brandName: row.brandName,
+                        categoryId: row.categoryId,
+                        imageUrl,
+                        distance: Number(row.distance),
+                    };
+                });
+            } catch (error) {
+                console.error("Error fetching wardrobe suggestions:", error);
+                return [];
+            }
         }),
 });
