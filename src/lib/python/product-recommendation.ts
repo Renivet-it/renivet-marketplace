@@ -7,9 +7,7 @@ export async function getAdvancedRecommendations(productId: string) {
     console.log("productId", productId);
     try {
         const response = await axios.get(
-            // `${"http://64.227.137.174:8000"}/recommendations/similar-advanced`,
-            `${"http://localhost:8000"}/recommendations/similar-advanced`,
-
+            `${"http://64.227.137.174:8000"}/recommendations/similar-advanced`,
             {
                 params: { product_id: productId, top_n: 28 },
             }
