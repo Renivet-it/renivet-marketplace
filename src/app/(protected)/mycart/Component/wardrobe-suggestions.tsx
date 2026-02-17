@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Check, Loader2, ShoppingBag, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 interface WardrobeSuggestionsProps {
     userId: string;
@@ -136,16 +136,6 @@ function SuggestionCard({
         });
     };
 
-    const priceDisplay = useMemo(() => {
-        if (!item.price) return null;
-        const price = (item.price / 100).toFixed(2);
-        const compareAt =
-            item.compareAtPrice && item.compareAtPrice > item.price
-                ? (item.compareAtPrice / 100).toFixed(2)
-                : null;
-        return { price, compareAt };
-    }, [item.price, item.compareAtPrice]);
-
     return (
         <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition-shadow hover:shadow-md">
             {/* Product image */}
@@ -181,18 +171,20 @@ function SuggestionCard({
                     </h4>
                 </Link>
 
-                {priceDisplay && (
+                {/* Price Display */}
+                {item.price ? (
                     <div className="mt-1 flex items-center gap-1.5">
                         <span className="text-xs font-bold text-gray-900 md:text-sm">
-                            ₹{priceDisplay.price}
+                            ₹{(item.price / 100).toFixed(2)}
                         </span>
-                        {priceDisplay.compareAt && (
-                            <span className="text-[10px] text-gray-400 line-through md:text-xs">
-                                ₹{priceDisplay.compareAt}
-                            </span>
-                        )}
+                        {item.compareAtPrice &&
+                            item.compareAtPrice > item.price && (
+                                <span className="text-[10px] text-gray-400 line-through md:text-xs">
+                                    ₹{(item.compareAtPrice / 100).toFixed(2)}
+                                </span>
+                            )}
                     </div>
-                )}
+                ) : null}
 
                 {/* Match tag */}
                 <div className="mt-auto pt-3">

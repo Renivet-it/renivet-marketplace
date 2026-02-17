@@ -24,9 +24,6 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
 
-    const mobileImageUrl =
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuOYYftYhnjfTvXWe4YdlSzoaZPyC7xGVghID";
-
     /* ----------------------------------
      🔎 SEARCH TYPING EFFECT
   ---------------------------------- */
@@ -199,34 +196,49 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     })}
                 </div>
 
-                {/* 🖼 MOBILE BANNER */}
-                <div className="relative w-full overflow-hidden">
-                    <div
-                        style={{
-                            paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
-                        }}
-                    />
-                    <Image
-                        src={mobileImageUrl}
-                        alt="Mobile Banner"
-                        fill
-                        className="absolute inset-0 object-cover"
-                        priority
-                    />
+                {/* 🖼 MOBILE BANNER CAROUSEL */}
+                <Carousel
+                    opts={{ align: "start", loop: true }}
+                    plugins={[Autoplay({ delay: 5000 })]}
+                    className="relative w-full overflow-hidden"
+                >
+                    <CarouselContent>
+                        {[
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNyQPK9j5TEHko4KfX8CDn1z7Q2migSIjw0dsy",
+                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNuOAJpn6hnjfTvXWe4YdlSzoaZPyC7xGVghID",
+                        ].map((imgUrl, index) => (
+                            <CarouselItem key={index} className="pl-0">
+                                <div className="relative w-full">
+                                    <div
+                                        style={{
+                                            paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
+                                        }}
+                                    />
+                                    <Image
+                                        src={imgUrl}
+                                        alt={`Mobile Banner ${index + 1}`}
+                                        fill
+                                        className="absolute inset-0 object-cover"
+                                        priority={index === 0}
+                                    />
 
-                    {/* CTA */}
-                    <div className="absolute bottom-16 flex w-full justify-center">
-                        <Link
-                            href="https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02"
-                            className="group relative inline-flex items-center justify-center overflow-hidden border border-black px-8 py-3 text-sm font-medium text-black"
-                        >
-                            <span className="relative z-10 transition group-hover:text-white">
-                                Shop With Purpose
-                            </span>
-                            <span className="absolute inset-0 translate-y-full bg-black transition-transform duration-300 group-hover:translate-y-0" />
-                        </Link>
-                    </div>
-                </div>
+                                    {/* CTA */}
+                                    <div className="absolute bottom-16 flex w-full justify-center">
+                                        <Link
+                                            href="https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02&brandIds=4f6efe94-0f57-4d9e-b61d-2da7aa9743e3,56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
+                                            className="group relative inline-flex items-center justify-center overflow-hidden border border-black bg-white px-8 py-3 text-sm font-medium text-black"
+                                        >
+                                            <span className="relative z-10 transition group-hover:text-white">
+                                                Shop With Purpose
+                                            </span>
+                                            <span className="absolute inset-0 translate-y-full bg-black transition-transform duration-300 group-hover:translate-y-0" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                </Carousel>
             </div>
         </section>
     );

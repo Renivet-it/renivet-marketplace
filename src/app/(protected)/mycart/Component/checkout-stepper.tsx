@@ -102,7 +102,7 @@ export default function CheckoutStepper({ currentStep }: CheckoutStepperProps) {
             </div>
 
             {/* Desktop Stepper */}
-            <div className="hidden items-center justify-center gap-2 py-5 md:flex">
+            <div className="hidden items-center justify-center gap-2 py-2 md:flex">
                 {steps.map((stepItem, index) => (
                     <div
                         key={stepItem.step}

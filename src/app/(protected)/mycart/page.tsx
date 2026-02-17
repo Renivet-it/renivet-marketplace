@@ -45,7 +45,7 @@ export default async function CartPage({
         <div className="relative flex min-h-screen flex-col bg-[#fcfcf5]">
             <NavbarHome />
             <main className="flex flex-1 flex-col">
-                <GeneralShell>
+                <GeneralShell classNames={{ innerWrapper: "pt-0 md:pt-0" }}>
                     <CheckoutStepper currentStep={step} />
 
                     <div className="container mx-auto px-4 py-2">

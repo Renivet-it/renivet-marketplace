@@ -1,0 +1,22 @@
+Searching for 'The Minimalist Shirt'...
+Product Found: The Minimalist Shirt
+ID: 4f0af933-cdce-4e47-b446-fc72f405f0de
+Price: [0m[33m0[0m
+Compare At Price: [0m[33mnull[0m
+Has Variants Flag: [0m[33mtrue[0m
+Is Deleted: [0m[33mfalse[0m
+Verification Status: approved
+
+Variants:
+- ID: 8717d3a4-6189-4c35-9f11-47bd57ba9e54, SKU: FI-24M-07M, Price: 660000, Is Deleted: false, Quantity: 1
+- ID: f7342956-471d-4536-bf1a-d28245ad8abe, SKU: FI-24M-07L, Price: 660000, Is Deleted: false, Quantity: 1
+- ID: 1e479868-897b-468e-a7e5-32d46803d168, SKU: FI-24M-07S, Price: 660000, Is Deleted: false, Quantity: 1
+- ID: 9a1cde32-105d-4a1e-bdfe-4127491d2809, SKU: FI-24M-07XL, Price: 660000, Is Deleted: false, Quantity: 1
+- ID: bd155ebb-aa8b-4f2b-b2d9-d4781e3e1056, SKU: FI-24M-07XXL, Price: 660000, Is Deleted: false, Quantity: 1
+
+Manual Active Variants Query Count: [0m[33m5[0m
+- ID: 8717d3a4-6189-4c35-9f11-47bd57ba9e54, Price: 660000
+- ID: f7342956-471d-4536-bf1a-d28245ad8abe, Price: 660000
+- ID: 1e479868-897b-468e-a7e5-32d46803d168, Price: 660000
+- ID: 9a1cde32-105d-4a1e-bdfe-4127491d2809, Price: 660000
+- ID: bd155ebb-aa8b-4f2b-b2d9-d4781e3e1056, Price: 660000
