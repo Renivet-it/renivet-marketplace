@@ -586,24 +586,7 @@ export function ProductCartAddForm({
                                     )}
                                 />
                             ))}
-
-                        {/* Size & fit */}
-                        <div>
-                            <RichTextViewer
-                                content={product.sizeAndFit ?? "<p></p>"}
-                                customClasses={{
-                                    orderedList:
-                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
-                                    bulletList:
-                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
-                                    heading:
-                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
-                                }}
-                                editorClasses="pt-3"
-                            />
-                        </div>
-
-                        {/* Delivery */}
+  {/* Delivery */}
                         <DeliveryOption
                             initialZipCode={initialZipCode}
                             warehousePincode={warehousePincode}
@@ -718,6 +701,21 @@ export function ProductCartAddForm({
                                     Wishlist
                                 </Button>
                             )}
+                        </div>
+                                {/* Size & fit */}
+                        <div>
+                            <RichTextViewer
+                                content={product.sizeAndFit ?? "<p></p>"}
+                                customClasses={{
+                                    orderedList:
+                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    bulletList:
+                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                    heading:
+                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
+                                }}
+                                editorClasses="pt-3"
+                            />
                         </div>
                     </div>
                 </form>

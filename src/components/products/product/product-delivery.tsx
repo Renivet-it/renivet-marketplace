@@ -124,7 +124,7 @@ export function DeliveryOption({
                     type="button"
                     disabled={isPending || !newZipCode || newZipCode.length < 6}
                     onClick={handleCheck}
-                    className="border-l border-gray-200 bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                    className="border-l border-gray-200 bg-[#84abd6] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6d96c2] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                 >
                     {isPending ? "Checking..." : "Check"}
                 </button>
@@ -134,15 +134,15 @@ export function DeliveryOption({
             {error && <p className="text-xs text-red-500">{error}</p>}
 
             {/* Delivery estimate banner */}
-            <div className="flex items-center gap-3 rounded-xl border border-blue-200/60 bg-gradient-to-r from-blue-50/80 to-[#f0f4ff] px-4 py-3.5">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
-                    <Icons.Truck className="size-4 text-blue-600" />
+            <div className="flex items-center gap-3 rounded-xl border border-[#84abd6]/30 bg-gradient-to-r from-[#84abd6]/10 to-[#e8f0f8] px-4 py-3.5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#84abd6]/20">
+                    <Icons.Truck className="size-4 text-[#84abd6]" />
                 </div>
                 <div className="flex-1">
                     {estimatedDelivery ? (
                         <p className="text-[13px] font-medium text-gray-800">
                             Get it by{" "}
-                            <span className="font-bold text-blue-700">
+                            <span className="font-bold text-[#4a7faa]">
                                 {estimatedDelivery}
                             </span>
                         </p>
@@ -161,7 +161,7 @@ export function DeliveryOption({
                     </p>
                 </div>
                 {estimatedDelivery && (
-                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-blue-500 text-[11px] font-bold text-white shadow-sm">
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-[#84abd6] text-[11px] font-bold text-white shadow-sm">
                         ✓
                     </span>
                 )}
