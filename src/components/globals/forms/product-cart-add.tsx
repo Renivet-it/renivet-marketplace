@@ -28,7 +28,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { redirect, useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { DeliveryOption } from "../../products/product/product-delivery";
@@ -132,6 +132,22 @@ export function ProductCartAddForm({
 }: PageProps) {
     const { guestCart, addToGuestCart } = useGuestCart();
     const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
+
+    // Floating bar: show only when inline buttons scroll out of view on mobile
+    const buttonsRef = useRef<HTMLDivElement>(null);
+    const [showFloatingBar, setShowFloatingBar] = useState(false);
+
+    useEffect(() => {
+        const el = buttonsRef.current;
+        if (!el) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => setShowFloatingBar(!entry.isIntersecting),
+            { threshold: 0 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
     const router = useRouter();
 
     const handleAddProductCart = async (productId: string, brandId: string) => {
@@ -586,7 +602,7 @@ export function ProductCartAddForm({
                                     )}
                                 />
                             ))}
-  {/* Delivery */}
+                        {/* Delivery */}
                         <DeliveryOption
                             initialZipCode={initialZipCode}
                             warehousePincode={warehousePincode}
@@ -595,8 +611,8 @@ export function ProductCartAddForm({
                             setEstimatedDelivery={setEstimatedDelivery}
                         />
 
-                        {/* Buttons */}
-                        <div className="flex gap-4">
+                        {/* Inline buttons (normal flow) */}
+                        <div ref={buttonsRef} className="flex gap-4">
                             <Button
                                 type="submit"
                                 size="lg"
@@ -613,7 +629,7 @@ export function ProductCartAddForm({
                                 onClick={(e) => {
                                     if (isAddedToCart) {
                                         e.preventDefault();
-                                        router.push("/mycart"); // ✅ safe client navigation
+                                        router.push("/mycart");
                                         return;
                                     }
                                     handleAddProductCart(
@@ -678,7 +694,7 @@ export function ProductCartAddForm({
                                             sku:
                                                 selectedVariant?.nativeSku ??
                                                 null,
-                                            fullProduct: product, // 👈 same trick as guest cart
+                                            fullProduct: product,
                                         });
                                     }}
                                 >
@@ -702,7 +718,7 @@ export function ProductCartAddForm({
                                 </Button>
                             )}
                         </div>
-                                {/* Size & fit */}
+                        {/* Size & fit */}
                         <div>
                             <RichTextViewer
                                 content={product.sizeAndFit ?? "<p></p>"}
@@ -718,6 +734,121 @@ export function ProductCartAddForm({
                             />
                         </div>
                     </div>
+
+                    {/* Floating bottom bar — mobile only, visible when inline buttons are scrolled past */}
+                    {showFloatingBar && (
+                        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.1)] md:hidden">
+                            <div className="flex gap-3">
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    className="flex-1 rounded-full bg-[#E0E2E1] text-base font-semibold text-black hover:bg-[#E0E2E1]"
+                                    disabled={
+                                        !product.isAvailable ||
+                                        (!!selectedVariant &&
+                                            (selectedVariant.isDeleted ||
+                                                selectedVariant?.quantity ===
+                                                    0)) ||
+                                        (product.productHasVariants &&
+                                            !selectedVariant) ||
+                                        isPending
+                                    }
+                                    onClick={(e) => {
+                                        if (isAddedToCart) {
+                                            e.preventDefault();
+                                            router.push("/mycart");
+                                            return;
+                                        }
+                                        handleAddProductCart(
+                                            product.id,
+                                            product.brandId
+                                        );
+                                    }}
+                                >
+                                    {isPending ? (
+                                        <>
+                                            <Icons.Loader2 className="mr-2 size-4 animate-spin" />
+                                            Adding...
+                                        </>
+                                    ) : isAddedToCart ? (
+                                        <>
+                                            Go to Cart
+                                            <Icons.ArrowRight className="ml-2 size-4" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icons.ShoppingCart className="mr-2 size-4" />
+                                            Add to Cart
+                                        </>
+                                    )}
+                                </Button>
+
+                                {userId ? (
+                                    <WishlistButton
+                                        type="button"
+                                        variant="outline"
+                                        size="lg"
+                                        className="rounded-full px-4 font-semibold"
+                                        userId={userId}
+                                        productId={product.id}
+                                        isProductWishlisted={
+                                            isProductWishlisted
+                                        }
+                                        setIsProductWishlisted={
+                                            setIsProductWishlisted
+                                        }
+                                        iconClassName={cn(
+                                            isWishlisted &&
+                                                "fill-primary stroke-primary"
+                                        )}
+                                    />
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="lg"
+                                        className="rounded-full px-4 font-semibold"
+                                        onClick={() => {
+                                            addToGuestWishlist({
+                                                productId: product.id,
+                                                variantId:
+                                                    selectedVariant?.id || null,
+                                                title: product.title,
+                                                brand: product.brand?.name,
+                                                price: productPrice,
+                                                image:
+                                                    selectedVariant?.image ??
+                                                    product.thumbnail ??
+                                                    null,
+                                                sku:
+                                                    selectedVariant?.nativeSku ??
+                                                    null,
+                                                fullProduct: product,
+                                            });
+                                        }}
+                                    >
+                                        <Icons.Heart
+                                            className={cn(
+                                                guestWishlist.some(
+                                                    (w) =>
+                                                        w.productId ===
+                                                            product.id &&
+                                                        String(
+                                                            w.variantId ?? ""
+                                                        ) ===
+                                                            String(
+                                                                selectedVariant?.id ??
+                                                                    ""
+                                                            )
+                                                ) &&
+                                                    "fill-primary stroke-primary"
+                                            )}
+                                        />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </form>
             </Form>
         </div>
