@@ -22,52 +22,15 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
 
     return (
         <div className={cn("space-y-3", className)}>
-            <Accordion type="single" collapsible className="w-full">
-                {/* Product Details */}
-                <AccordionItem value="details">
-                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
-                        Product Details
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <RichTextViewer
-                            content={product.description ?? "<p></p>"}
-                            customClasses={{
-                                orderedList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                                bulletList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                                heading:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                            }}
-                            editorClasses="pt-3"
-                        />
-                    </AccordionContent>
-                </AccordionItem>
-
-                {/* Material & Care */}
-                <AccordionItem value="material-care">
-                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
-                        Material & Care
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <RichTextViewer
-                            content={product.materialAndCare ?? "<p></p>"}
-                            customClasses={{
-                                orderedList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                                bulletList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                                heading:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                            }}
-                            editorClasses="pt-3"
-                        />
-                    </AccordionContent>
-                </AccordionItem>
-
+            <Accordion
+                type="single"
+                collapsible
+                className="w-full"
+                defaultValue="specifications"
+            >
                 {/* Specifications */}
                 <AccordionItem value="specifications">
-                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
+                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
                         Specifications
                     </AccordionTrigger>
                     <AccordionContent>
@@ -94,7 +57,7 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                                 !showAllSpecifications
                                             )
                                         }
-                                        className="text-base text-accent cursor-pointer font-bold capitalize"
+                                        className="cursor-pointer text-base font-bold capitalize text-accent"
                                     >
                                         {showAllSpecifications
                                             ? "See Less"
@@ -105,20 +68,63 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                     </AccordionContent>
                 </AccordionItem>
 
+                {/* Product Details */}
+                <AccordionItem value="details">
+                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
+                        Product Details
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <RichTextViewer
+                            content={product.description ?? "<p></p>"}
+                            customClasses={{
+                                orderedList:
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                                bulletList:
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                                heading:
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                            }}
+                            editorClasses="pt-3"
+                        />
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* Material & Care */}
+                <AccordionItem value="material-care">
+                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
+                        Material & Care
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <RichTextViewer
+                            content={product.materialAndCare ?? "<p></p>"}
+                            customClasses={{
+                                orderedList:
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                                bulletList:
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                                heading:
+                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                            }}
+                            editorClasses="pt-3"
+                        />
+                    </AccordionContent>
+                </AccordionItem>
+
                 {/* Return & Exchange */}
                 <AccordionItem value="return-exchange">
-                    <AccordionTrigger className="text-lg py-6 font-bold hover:no-underline mt-4">
+                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
                         Return & Exchange
                     </AccordionTrigger>
                     <AccordionContent>
                         <div className="space-y-5">
                             <div>
-                                <span className="font-bold block text-base">
+                                <span className="block text-base font-bold">
                                     Return
                                 </span>
                                 <RichTextViewer
                                     content={
-                                        product.returnExchangePolicy?.returnDescription ??
+                                        product.returnExchangePolicy
+                                            ?.returnDescription ??
                                         "<p>This item is not returnable</p>"
                                     }
                                     customClasses={{
@@ -133,12 +139,13 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                 />
                             </div>
                             <div>
-                                <span className="font-bold block text-base">
+                                <span className="block text-base font-bold">
                                     Exchange
                                 </span>
                                 <RichTextViewer
                                     content={
-                                        product.returnExchangePolicy?.exchangeDescription ??
+                                        product.returnExchangePolicy
+                                            ?.exchangeDescription ??
                                         "<p>This item is not exchangeable</p>"
                                     }
                                     customClasses={{
