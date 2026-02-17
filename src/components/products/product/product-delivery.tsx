@@ -95,7 +95,7 @@ export function DeliveryOption({
     };
 
     return (
-        <div className="mb-5 space-y-3">
+        <div className="mb-5 w-full max-w-xs space-y-3">
             {/* Inline pincode check */}
             <div className="flex items-center overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                 <div className="flex flex-1 items-center gap-2 px-3">
@@ -131,7 +131,7 @@ export function DeliveryOption({
             </div>
 
             {/* Error message */}
-            {error && <p className="text-xs text-red-500">{error}</p>}
+            {error && <p className="text-sm text-red-500">{error}</p>}
 
             {/* Delivery estimate banner */}
             <div className="flex items-center gap-3 rounded-xl border border-[#84abd6]/30 bg-gradient-to-r from-[#84abd6]/10 to-[#e8f0f8] px-4 py-3.5">

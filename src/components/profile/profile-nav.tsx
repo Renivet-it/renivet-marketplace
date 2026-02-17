@@ -64,8 +64,9 @@ function NavItem({ item, pathname }: { item: Item; pathname: string }) {
         return content;
     }
 
-    const finalHref =
-        item.name === "contact-us" ? item.href : `/profile${item.href}`;
+    const finalHref = ["contact-us", "shopping-bag"].includes(item.name)
+        ? item.href
+        : `/profile${item.href}`;
 
     return <Link href={finalHref}>{content}</Link>;
 }
@@ -145,14 +146,14 @@ export function ProfileNav({ className, ...props }: GenericProps) {
         {
             icon: "Heart",
             name: "wishlist",
-            href: "/profile/wishlist",
+            href: "/wishlist",
             label: "Wishlist",
             count: wishlist?.length,
         },
         {
             icon: "ShoppingCart",
             name: "shopping-bag",
-            href: "/cart",
+            href: "/mycart",
             label: "Shopping Bag",
             count: cartCount,
         },

@@ -317,7 +317,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                     </div>
 
                     {/* Per wear estimate — desktop only */}
-                    <p className="hidden text-[10px] text-gray-400 md:block">
+                    {/* <p className="hidden text-[10px] text-gray-400 md:block">
                         Certified estimated over{" "}
                         {formatPriceTag(
                             +(
@@ -327,7 +327,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                             true
                         )}{" "}
                         per wear per item
-                    </p>
+                    </p> */}
                 </div>
 
                 {/* Coupon section */}
