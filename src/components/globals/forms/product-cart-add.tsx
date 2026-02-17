@@ -378,6 +378,16 @@ export function ProductCartAddForm({
                             </>
                         )}
                 </div>
+                {productCompareAtPrice &&
+                    productCompareAtPrice > productPrice && (
+                        <p className="mt-1 text-sm font-medium text-green-700">
+                            You save{" "}
+                            {formatPriceTag(
+                                (productCompareAtPrice - productPrice) / 100,
+                                true
+                            )}
+                        </p>
+                    )}
                 <p className="text-sm text-gray-500">inclusive of all taxes</p>
             </div>
 
