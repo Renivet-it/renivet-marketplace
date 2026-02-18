@@ -45,78 +45,91 @@ export default async function CartPage({
         <div className="relative flex min-h-screen flex-col bg-[#fcfcf5]">
             <NavbarHome />
             <main className="flex flex-1 flex-col">
-                <GeneralShell classNames={{ innerWrapper: "pt-0 md:pt-0" }}>
-                    <CheckoutStepper currentStep={step} />
-
-                    <div className="container mx-auto px-4 py-2">
+                <GeneralShell>
+                    <div className="flex flex-col gap-6 md:flex-row">
                         {step === 0 && (
-                            <div className="flex flex-col gap-6 lg:flex-row">
-                                {/* Left sidebar — Profile Nav (desktop only) */}
-                                <div className="hidden lg:block">
-                                    <ProfileNav className="sticky top-24 h-min shrink-0" />
-                                </div>
-
-                                {/* Center content — Cart items */}
-                                <div className="flex-1 space-y-4">
-                                    <Suspense
-                                        fallback={<CartLoadingSkeleton />}
-                                    >
-                                        <CartComponent />
-                                    </Suspense>
-
-                                    {/* Wardrobe suggestions */}
-                                    <Suspense fallback={null}>
-                                        <WardrobeSuggestions userId={userId} />
-                                    </Suspense>
-                                </div>
-
-                                {/* Right sidebar — Order Summary (desktop: sticky sidebar, mobile: full-width at bottom) */}
-                                <div className="w-full lg:w-80 lg:shrink-0">
-                                    <div className="lg:sticky lg:top-24">
-                                        <CheckoutSection userId={userId} />
-                                    </div>
-                                </div>
-                            </div>
+                            <ProfileNav
+                                className="hidden shrink-0 md:block"
+                                style={{ width: 300, minHeight: 966 }}
+                            />
                         )}
 
-                        {step === 1 && (
-                            <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
-                                <div className="w-full rounded-xl border border-gray-200 bg-white p-4 lg:w-2/3 lg:p-5">
-                                    <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                                        Select Delivery Address
-                                    </h2>
-                                    <ShippingAddress />
-                                </div>
-                                <div className="w-full lg:w-1/3">
-                                    <div className="lg:sticky lg:top-24">
-                                        <AddressCheckoutSection
-                                            userId={userId}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        <div className="flex flex-1 flex-col gap-6">
+                            {step === 0 && (
+                                <div className="flex flex-col gap-6 lg:flex-row">
+                                    {/* Center content — Cart items */}
+                                    <div className="flex-1 space-y-4">
+                                        <CheckoutStepper currentStep={step} />
+                                        <Suspense
+                                            fallback={<CartLoadingSkeleton />}
+                                        >
+                                            <CartComponent />
+                                        </Suspense>
 
-                        {step === 2 && (
-                            <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
-                                <div className="w-full rounded-xl border border-gray-200 bg-white p-4 lg:w-2/3 lg:p-5">
-                                    <Suspense
-                                        fallback={<div>Loading cart...</div>}
-                                    >
-                                        <CartFetcher userId={userId} />
-                                    </Suspense>
-                                </div>
-                                <div className="w-full lg:w-1/3">
-                                    <div className="lg:sticky lg:top-24">
-                                        <Page
-                                            params={Promise.resolve({
-                                                id: null,
-                                            })}
-                                        />
+                                        {/* Wardrobe suggestions */}
+                                        <Suspense fallback={null}>
+                                            <WardrobeSuggestions
+                                                userId={userId}
+                                            />
+                                        </Suspense>
+                                    </div>
+
+                                    {/* Right sidebar — Order Summary (desktop: sticky sidebar, mobile: full-width at bottom) */}
+                                    <div className="w-full lg:w-80 lg:shrink-0">
+                                        <div className="lg:sticky lg:top-24">
+                                            <CheckoutSection userId={userId} />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {step === 1 && (
+                                <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
+                                    <div className="flex w-full flex-col gap-4 lg:w-2/3">
+                                        <CheckoutStepper currentStep={step} />
+                                        <div className="rounded-xl border border-gray-200 bg-white p-4 lg:p-5">
+                                            <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                                                Select Delivery Address
+                                            </h2>
+                                            <ShippingAddress />
+                                        </div>
+                                    </div>
+                                    <div className="w-full lg:w-1/3">
+                                        <div className="lg:sticky lg:top-24">
+                                            <AddressCheckoutSection
+                                                userId={userId}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 2 && (
+                                <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
+                                    <div className="flex w-full flex-col gap-4 lg:w-2/3">
+                                        <CheckoutStepper currentStep={step} />
+                                        <div className="rounded-xl border border-gray-200 bg-white p-4 lg:p-5">
+                                            <Suspense
+                                                fallback={
+                                                    <div>Loading cart...</div>
+                                                }
+                                            >
+                                                <CartFetcher userId={userId} />
+                                            </Suspense>
+                                        </div>
+                                    </div>
+                                    <div className="w-full lg:w-1/3">
+                                        <div className="lg:sticky lg:top-24">
+                                            <Page
+                                                params={Promise.resolve({
+                                                    id: null,
+                                                })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </GeneralShell>
             </main>

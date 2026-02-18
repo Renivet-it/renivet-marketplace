@@ -21,6 +21,7 @@ import {
     Headphones,
     Heart,
     HelpCircle,
+    LayoutDashboard,
     LineChart,
     Lock,
     LogOut,
@@ -248,6 +249,8 @@ export function NavbarMob({ className, ...props }: GenericProps) {
 
     const isBrandAuthorized = useMemo(() => !!user?.brand, [user]);
 
+    const isAuthorized = isSiteAuthorized || isBrandAuthorized;
+
     const { signOut } = useAuth();
 
     const { mutate: handleLogout, isPending: isLoggingOut } = useMutation({
@@ -389,32 +392,44 @@ export function NavbarMob({ className, ...props }: GenericProps) {
 
                         {/* Summary Cards Grid */}
                         <div className="grid grid-cols-2 gap-4">
-                            <SummaryCard
-                                icon={Heart}
-                                title="Wishlist"
-                                count={wishlistCount}
-                                subtitle="Avg. Earth Score: 82"
-                                href="/profile/wishlist"
-                            />
-                            <SummaryCard
-                                icon={Package}
-                                title="Orders"
-                                count={ordersCount}
-                                subtitle={
-                                    ordersCount > 0
-                                        ? "View your orders"
-                                        : "No active orders"
-                                }
-                                href="/orders"
-                                className="bg-white"
-                            />
-                            <SummaryCard
-                                icon={ShoppingBag}
-                                title="Shopping Bag"
-                                count={cartCount}
-                                subtitle="Will save 0.8kg CO₂"
-                                href="/cart"
-                            />
+                            {!isAuthorized ? (
+                                <>
+                                    <SummaryCard
+                                        icon={Heart}
+                                        title="Wishlist"
+                                        count={wishlistCount}
+                                        subtitle="Avg. Earth Score: 82"
+                                        href="/profile/wishlist"
+                                    />
+                                    <SummaryCard
+                                        icon={Package}
+                                        title="Orders"
+                                        count={ordersCount}
+                                        subtitle={
+                                            ordersCount > 0
+                                                ? "View your orders"
+                                                : "No active orders"
+                                        }
+                                        href="/orders"
+                                        className="bg-white"
+                                    />
+                                    <SummaryCard
+                                        icon={ShoppingBag}
+                                        title="Shopping Bag"
+                                        count={cartCount}
+                                        subtitle="Will save 0.8kg CO₂"
+                                        href="/cart"
+                                    />
+                                </>
+                            ) : (
+                                <SummaryCard
+                                    icon={LayoutDashboard}
+                                    title="Dashboard"
+                                    count="View Dashboard"
+                                    href="/dashboard"
+                                    customCount={true}
+                                />
+                            )}
                             <SummaryCard
                                 icon={LineChart}
                                 title="about us"
