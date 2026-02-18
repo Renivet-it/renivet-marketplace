@@ -256,7 +256,12 @@ export const productsRouter = createTRPCRouter({
     createProduct: protectedProcedure
         .input(createProductSchema)
         .use(
-            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+            isTRPCAuth(
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
+                "all",
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
         )
         .mutation(async ({ input, ctx }) => {
             const { queries, user } = ctx;
@@ -294,7 +299,12 @@ export const productsRouter = createTRPCRouter({
                     message: "Invalid category, subcategory or product type",
                 });
 
-            if (brandId !== user.brand?.id)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (brandId !== user.brand?.id && !hasManageProductsPermission)
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
@@ -380,7 +390,12 @@ export const productsRouter = createTRPCRouter({
     updateProductMedia: protectedProcedure
         .input(updateProductMediaInputSchema)
         .use(
-            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+            isTRPCAuth(
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
+                "all",
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
         )
         .mutation(async ({ input, ctx }) => {
             const { productId, media } = input;
@@ -400,7 +415,16 @@ export const productsRouter = createTRPCRouter({
                 BitFieldSitePermission.ADMINISTRATOR,
             ]);
 
-            if (!isAdmin && existingProduct.brand.id !== user.brand?.id)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (
+                !isAdmin &&
+                !hasManageProductsPermission &&
+                existingProduct.brand.id !== user.brand?.id
+            )
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
@@ -422,7 +446,12 @@ export const productsRouter = createTRPCRouter({
     bulkCreateProducts: protectedProcedure
         .input(z.array(createProductSchema))
         .use(
-            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+            isTRPCAuth(
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
+                "all",
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
         )
         .mutation(async ({ input, ctx }) => {
             const { queries, user } = ctx;
@@ -434,7 +463,12 @@ export const productsRouter = createTRPCRouter({
                     message: "All products must belong to the same brand",
                 });
 
-            if (brandIds[0] !== user.brand?.id)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (brandIds[0] !== user.brand?.id && !hasManageProductsPermission)
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
@@ -921,7 +955,12 @@ export const productsRouter = createTRPCRouter({
             })
         )
         .use(
-            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+            isTRPCAuth(
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
+                "all",
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
         )
         .mutation(async ({ input, ctx }) => {
             const { productId, values } = input;
@@ -946,7 +985,16 @@ export const productsRouter = createTRPCRouter({
                 BitFieldSitePermission.ADMINISTRATOR,
             ]);
 
-            if (!isAdmin && existingProduct.brand.id !== user.brand?.id)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (
+                !isAdmin &&
+                !hasManageProductsPermission &&
+                existingProduct.brand.id !== user.brand?.id
+            )
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
@@ -1056,7 +1104,15 @@ export const productsRouter = createTRPCRouter({
                     message: "Product not found",
                 });
 
-            if (existingProduct.brand.id !== user.brand?.id)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (
+                existingProduct.brand.id !== user.brand?.id &&
+                !hasManageProductsPermission
+            )
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
@@ -1160,7 +1216,15 @@ export const productsRouter = createTRPCRouter({
                     message: "Product not found",
                 });
 
-            if (existingProduct.brand.id !== user.brand?.id)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (
+                existingProduct.brand.id !== user.brand?.id &&
+                !hasManageProductsPermission
+            )
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",
@@ -1208,7 +1272,15 @@ export const productsRouter = createTRPCRouter({
                     message: "Product not found",
                 });
 
-            if (existingProduct.brand.id !== user.brand?.id)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (
+                existingProduct.brand.id !== user.brand?.id &&
+                !hasManageProductsPermission
+            )
                 throw new TRPCError({
                     code: "FORBIDDEN",
                     message: "You are not a member of this brand",

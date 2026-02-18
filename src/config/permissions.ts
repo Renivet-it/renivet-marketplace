@@ -110,6 +110,11 @@ export const sitePermissions: Permission[] = [
         description: "View categories, subcategories and product types",
         bit: 1 << 20,
     },
+    {
+        name: "MANAGE_PRODUCTS",
+        description: "Create, edit, or delete products across all brands",
+        bit: 1 << 21,
+    },
 ];
 
 export enum BitFieldSitePermission {
@@ -134,6 +139,7 @@ export enum BitFieldSitePermission {
     MANAGE_ORDERS = 1 << 18,
     VIEW_PRODUCTS = 1 << 19,
     VIEW_CATEGORIES = 1 << 20,
+    MANAGE_PRODUCTS = 1 << 21,
 }
 
 export const brandPermissions: Permission[] = [

@@ -131,15 +131,20 @@ const errorHandler = t.middleware(async ({ next }) => {
 export const isTRPCAuth = (
     permission: number,
     type?: "all" | "any",
-    permType?: "brand" | "site"
+    permType?: "brand" | "site",
+    siteOverridePermission?: number
 ) =>
     isAuth.unstable_pipe(({ ctx, next }) => {
         const { user } = ctx;
 
-        const isAdmin = hasPermission(
-            user.sitePermissions,
-            [BitFieldSitePermission.ADMINISTRATOR]
-        );
+        const isAdmin = hasPermission(user.sitePermissions, [
+            BitFieldSitePermission.ADMINISTRATOR,
+        ]);
+
+        // Check if user has the specific site override permission
+        const hasSiteOverride =
+            siteOverridePermission &&
+            hasPermission(user.sitePermissions, [siteOverridePermission]);
 
         const permissionsToCheck =
             permType === "brand" ? user.brandPermissions : user.sitePermissions;
@@ -150,7 +155,7 @@ export const isTRPCAuth = (
             type
         );
 
-        if (!hasRequiredPermission && !isAdmin) {
+        if (!hasRequiredPermission && !isAdmin && !hasSiteOverride) {
             throw new TRPCError({
                 code: "UNAUTHORIZED",
                 message: "You're not authorized",
@@ -159,7 +164,6 @@ export const isTRPCAuth = (
 
         return next({ ctx });
     });
-
 
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure.use(errorHandler).use(ratelimiter);

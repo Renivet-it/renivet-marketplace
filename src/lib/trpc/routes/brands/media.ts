@@ -1,5 +1,8 @@
 import { utApi } from "@/app/api/uploadthing/core";
-import { BitFieldBrandPermission, BitFieldSitePermission } from "@/config/permissions";
+import {
+    BitFieldBrandPermission,
+    BitFieldSitePermission,
+} from "@/config/permissions";
 import { brandCache, mediaCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -12,8 +15,8 @@ import {
     updateBrandMediaItemSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
-import { hasPermission } from "../../../utils";
 import { z } from "zod";
+import { hasPermission } from "../../../utils";
 
 export const mediaRouter = createTRPCRouter({
     getMediaItems: protectedProcedure
@@ -22,22 +25,24 @@ export const mediaRouter = createTRPCRouter({
             const { user } = ctx;
             const { brandId } = input;
 
-            const isAdmin = hasPermission(
+            const isAdmin = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.ADMINISTRATOR,
+            ]);
+
+            const hasManageProductsPermission = hasPermission(
                 user.sitePermissions,
-                [BitFieldSitePermission.ADMINISTRATOR]
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
             );
 
-            if (!isAdmin && user.brand?.id !== brandId)
+            if (
+                !isAdmin &&
+                !hasManageProductsPermission &&
+                user.brand?.id !== brandId
+            )
                 throw new TRPCError({
                     code: "UNAUTHORIZED",
                     message: "You are not a member of this brand",
                 });
-
-            // if (user.brand?.id !== brandId)
-            //     throw new TRPCError({
-            //         code: "UNAUTHORIZED",
-            //         message: "User does not have access to this brand",
-            //     });
 
             const existingBrand = await brandCache.get(brandId);
             if (!existingBrand)
@@ -61,18 +66,27 @@ export const mediaRouter = createTRPCRouter({
                 BitFieldBrandPermission.MANAGE_BRANDING |
                     BitFieldBrandPermission.MANAGE_PRODUCTS,
                 "all",
-                "brand"
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
             )
         )
         .mutation(async ({ input, ctx }) => {
             const { queries, user } = ctx;
             const { id: brandId, values } = input;
-            const isAdmin = hasPermission(
+            const isAdmin = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.ADMINISTRATOR,
+            ]);
+
+            const hasManageProductsPermission = hasPermission(
                 user.sitePermissions,
-                [BitFieldSitePermission.ADMINISTRATOR]
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
             );
 
-            if (!isAdmin && user.brand?.id !== brandId)
+            if (
+                !isAdmin &&
+                !hasManageProductsPermission &&
+                user.brand?.id !== brandId
+            )
                 throw new TRPCError({
                     code: "UNAUTHORIZED",
                     message: "User does not have access to this brand",
@@ -104,7 +118,8 @@ export const mediaRouter = createTRPCRouter({
                 BitFieldBrandPermission.MANAGE_BRANDING |
                     BitFieldBrandPermission.MANAGE_PRODUCTS,
                 "all",
-                "brand"
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
             )
         )
         .mutation(async ({ input, ctx }) => {
@@ -128,7 +143,15 @@ export const mediaRouter = createTRPCRouter({
                     message: "Brand not found",
                 });
 
-            if (user.brand?.id !== existingMediaItem.brandId)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (
+                user.brand?.id !== existingMediaItem.brandId &&
+                !hasManageProductsPermission
+            )
                 throw new TRPCError({
                     code: "UNAUTHORIZED",
                     message: "User does not have access to this brand",
@@ -161,14 +184,20 @@ export const mediaRouter = createTRPCRouter({
                 BitFieldBrandPermission.MANAGE_BRANDING |
                     BitFieldBrandPermission.MANAGE_PRODUCTS,
                 "all",
-                "brand"
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
             )
         )
         .mutation(async ({ input, ctx }) => {
             const { queries, user } = ctx;
             const { brandId, ids } = input;
 
-            if (user.brand?.id !== brandId)
+            const hasManageProductsPermission = hasPermission(
+                user.sitePermissions,
+                [BitFieldSitePermission.MANAGE_PRODUCTS]
+            );
+
+            if (user.brand?.id !== brandId && !hasManageProductsPermission)
                 throw new TRPCError({
                     code: "UNAUTHORIZED",
                     message: "User does not have access to this brand",
