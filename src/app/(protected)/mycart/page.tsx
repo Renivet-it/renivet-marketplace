@@ -55,12 +55,11 @@ export default async function CartPage({
                         )}
 
                         <div className="flex flex-1 flex-col gap-6">
-                            <CheckoutStepper currentStep={step} />
-
                             {step === 0 && (
                                 <div className="flex flex-col gap-6 lg:flex-row">
                                     {/* Center content — Cart items */}
                                     <div className="flex-1 space-y-4">
+                                        <CheckoutStepper currentStep={step} />
                                         <Suspense
                                             fallback={<CartLoadingSkeleton />}
                                         >
@@ -86,11 +85,14 @@ export default async function CartPage({
 
                             {step === 1 && (
                                 <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
-                                    <div className="w-full rounded-xl border border-gray-200 bg-white p-4 lg:w-2/3 lg:p-5">
-                                        <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                                            Select Delivery Address
-                                        </h2>
-                                        <ShippingAddress />
+                                    <div className="flex w-full flex-col gap-4 lg:w-2/3">
+                                        <CheckoutStepper currentStep={step} />
+                                        <div className="rounded-xl border border-gray-200 bg-white p-4 lg:p-5">
+                                            <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                                                Select Delivery Address
+                                            </h2>
+                                            <ShippingAddress />
+                                        </div>
                                     </div>
                                     <div className="w-full lg:w-1/3">
                                         <div className="lg:sticky lg:top-24">
@@ -104,14 +106,17 @@ export default async function CartPage({
 
                             {step === 2 && (
                                 <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
-                                    <div className="w-full rounded-xl border border-gray-200 bg-white p-4 lg:w-2/3 lg:p-5">
-                                        <Suspense
-                                            fallback={
-                                                <div>Loading cart...</div>
-                                            }
-                                        >
-                                            <CartFetcher userId={userId} />
-                                        </Suspense>
+                                    <div className="flex w-full flex-col gap-4 lg:w-2/3">
+                                        <CheckoutStepper currentStep={step} />
+                                        <div className="rounded-xl border border-gray-200 bg-white p-4 lg:p-5">
+                                            <Suspense
+                                                fallback={
+                                                    <div>Loading cart...</div>
+                                                }
+                                            >
+                                                <CartFetcher userId={userId} />
+                                            </Suspense>
+                                        </div>
                                     </div>
                                     <div className="w-full lg:w-1/3">
                                         <div className="lg:sticky lg:top-24">
