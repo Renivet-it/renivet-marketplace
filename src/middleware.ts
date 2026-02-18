@@ -60,8 +60,29 @@ export default clerkMiddleware(async (auth, req) => {
                         .map((item) => item.items.map((subItem) => subItem))
                         .flat();
 
+                    // Prioritize Products page if user has access
+                    const productsRoute = allRoutes.find(
+                        (route) => route.url === "/dashboard/general/products"
+                    );
+                    if (
+                        productsRoute &&
+                        hasPermission(
+                            sitePermissions,
+                            [productsRoute.permissions],
+                            "any"
+                        )
+                    ) {
+                        return NextResponse.redirect(
+                            new URL(productsRoute.url, url)
+                        );
+                    }
+
                     const firstAccessibleRoute = allRoutes.find((route) =>
-                        hasPermission(sitePermissions, [route.permissions])
+                        hasPermission(
+                            sitePermissions,
+                            [route.permissions],
+                            "any"
+                        )
                     );
 
                     if (firstAccessibleRoute) {
@@ -99,9 +120,11 @@ export default clerkMiddleware(async (auth, req) => {
                             new URL("/dashboard", url)
                         );
 
-                    const isAuthorized = hasPermission(sitePermissions, [
-                        accessedRoute.permissions,
-                    ]);
+                    const isAuthorized = hasPermission(
+                        sitePermissions,
+                        [accessedRoute.permissions],
+                        "any"
+                    );
                     if (!isAuthorized)
                         return NextResponse.redirect(
                             new URL("/dashboard", url)
@@ -140,9 +163,11 @@ export default clerkMiddleware(async (auth, req) => {
                             )
                         );
 
-                    const isAuthorized = hasPermission(brandPermissions, [
-                        accessedRoute.permissions,
-                    ]);
+                    const isAuthorized = hasPermission(
+                        brandPermissions,
+                        [accessedRoute.permissions],
+                        "any"
+                    );
                     if (!isAuthorized)
                         return NextResponse.redirect(
                             new URL(

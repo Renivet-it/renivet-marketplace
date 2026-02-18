@@ -100,6 +100,16 @@ export const sitePermissions: Permission[] = [
         description: "Manage orders, update statuses, process shipments",
         bit: 1 << 18,
     },
+    {
+        name: "VIEW_PRODUCTS",
+        description: "View products",
+        bit: 1 << 19,
+    },
+    {
+        name: "VIEW_CATEGORIES",
+        description: "View categories, subcategories and product types",
+        bit: 1 << 20,
+    },
 ];
 
 export enum BitFieldSitePermission {
@@ -122,6 +132,8 @@ export enum BitFieldSitePermission {
     ADMINISTRATOR = 1 << 16,
     VIEW_ORDERS = 1 << 17,
     MANAGE_ORDERS = 1 << 18,
+    VIEW_PRODUCTS = 1 << 19,
+    VIEW_CATEGORIES = 1 << 20,
 }
 
 export const brandPermissions: Permission[] = [

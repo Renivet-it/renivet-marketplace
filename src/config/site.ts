@@ -314,33 +314,40 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             {
                 title: "Product Catalogue",
                 url: "/dashboard/general/product-catalogue",
-                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
             },
             {
                 title: "Categories",
                 url: "/dashboard/general/categories",
                 permissions:
                     BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.MANAGE_BRANDS,
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_CATEGORIES,
             },
             {
                 title: "Sub Categories",
                 url: "/dashboard/general/sub-categories",
                 permissions:
                     BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.MANAGE_BRANDS,
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_CATEGORIES,
             },
             {
                 title: "Product Types",
                 url: "/dashboard/general/product-types",
                 permissions:
                     BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.MANAGE_BRANDS,
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_CATEGORIES,
             },
             {
                 title: "Products",
                 url: "/dashboard/general/products",
-                permissions: BitFieldSitePermission.MANAGE_BRANDS,
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
             },
             {
                 title: "Orders",
