@@ -424,7 +424,7 @@ export function NavbarHome() {
                                                             {category.name}
                                                         </NavigationMenuTrigger>
                                                         <NavigationMenuContent>
-                                                            <div className="font-dmsans grid w-[1200px] max-w-[95vw] grid-cols-5 border border-gray-100 bg-white shadow-2xl">
+                                                            <div className="grid w-[1200px] max-w-[95vw] grid-cols-5 border border-gray-100 bg-white font-dmsans shadow-2xl">
                                                                 {(() => {
                                                                     const filteredSubCategories =
                                                                         subcategories.data
