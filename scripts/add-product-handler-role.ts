@@ -15,7 +15,8 @@ async function main() {
     const permissions =
         BitFieldSitePermission.VIEW_PRODUCTS |
         BitFieldSitePermission.VIEW_CATEGORIES |
-        BitFieldSitePermission.VIEW_PROTECTED_PAGES;
+        BitFieldSitePermission.VIEW_PROTECTED_PAGES |
+        BitFieldSitePermission.MANAGE_PRODUCTS;
 
     const existingRole = await db.query.roles.findFirst({
         where: eq(roles.slug, roleSlug),
