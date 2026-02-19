@@ -215,57 +215,6 @@ export function ProductCartAddForm({
                 },
                 getAbsoluteURL(window.location.href) // Send current URL
             ).catch((err) => console.error("CAPI Error:", err));
-
-            // 🔹 FB Pixel (Client)
-            fbEvent(
-                "AddToCart",
-                {
-                    content_ids: [productId],
-                    content_name: product.title,
-                    content_category: product.brand?.name || "Unknown Brand",
-                    content_type: "product",
-                    value: parseFloat(convertPaiseToRupees(productPrice)),
-                    currency: "INR",
-                    brand_id: brandId,
-                    quantity: 1,
-                    ...(user
-                        ? {
-                              em: user.primaryEmailAddress?.emailAddress,
-                              ph: user.primaryPhoneNumber?.phoneNumber,
-                              fn: user.firstName ?? undefined,
-                              ln: user.lastName ?? undefined,
-                              external_id: user.id,
-                          }
-                        : {}),
-                },
-                { eventId }
-            );
-
-            // 🔹 CAPI (Server)
-            const userData = {
-                em: user?.primaryEmailAddress?.emailAddress,
-                ph: user?.primaryPhoneNumber?.phoneNumber,
-                fn: user?.firstName ?? undefined,
-                ln: user?.lastName ?? undefined,
-                external_id: user?.id,
-                fb_login_id: user?.externalAccounts.find(
-                    (acc) => acc.provider === "oauth_facebook"
-                )?.externalId,
-            };
-
-            trackAddToCartCapi(
-                eventId,
-                userData,
-                {
-                    content_ids: [productId],
-                    content_name: product.title,
-                    content_category: product.brand?.name || "Unknown Brand",
-                    content_type: "product",
-                    value: parseFloat(convertPaiseToRupees(productPrice)),
-                    currency: "INR",
-                },
-                getAbsoluteURL(window.location.href) // Send current URL
-            ).catch((err) => console.error("CAPI Error:", err));
         } catch (error) {
             console.error("Failed to track click:", error);
         }
