@@ -17,8 +17,12 @@ const getRequestData = async () => {
     const referer = headersList.get("referer") || "";
     const fbp = cookieStore.get("_fbp")?.value;
     const fbc = cookieStore.get("_fbc")?.value;
+    const country =
+        headersList.get("x-vercel-ip-country") ||
+        headersList.get("x-country") ||
+        undefined;
 
-    return { userAgent, ip, referer, fbp, fbc };
+    return { userAgent, ip, referer, fbp, fbc, country };
 };
 
 export async function trackAddToCartCapi(
@@ -129,7 +133,7 @@ export async function trackPurchaseCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc } = await getRequestData();
+    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
 
     await sendCapiEvent(
         "Purchase",
@@ -139,6 +143,7 @@ export async function trackPurchaseCapi(
             client_ip_address: ip,
             fbp,
             fbc,
+            country: userData.country || country,
         },
         customData,
         eventId,
@@ -152,7 +157,7 @@ export async function trackViewContentCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc } = await getRequestData();
+    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
 
     await sendCapiEvent(
         "ViewContent",
@@ -162,6 +167,7 @@ export async function trackViewContentCapi(
             client_ip_address: ip,
             fbp,
             fbc,
+            country: userData.country || country,
         },
         customData,
         eventId,
