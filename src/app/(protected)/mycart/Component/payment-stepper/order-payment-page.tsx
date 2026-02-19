@@ -1,6 +1,11 @@
 "use client";
 
 import { getShiprocketBalance } from "@/actions";
+import {
+    trackInitiateCheckoutCapi,
+    trackPurchaseCapi,
+} from "@/actions/analytics";
+// Impoert actions
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +23,7 @@ import {
     convertPaiseToRupees,
     convertValueToLabel,
     formatPriceTag,
+    getAbsoluteURL,
     handleClientError,
 } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
@@ -414,26 +420,72 @@ export function OrderPage({
             toast.error("Cart or address missing");
             return;
         }
-        // ✅ Fire Facebook Pixel InitiateCheckout Event
-        fbEvent("InitiateCheckout", {
-            value: convertPaiseToRupees(priceList.total), // Convert paise to rupees
-            currency: "INR",
-            contents: availableItems.map((item) => ({
-                id: item.product.id,
-                name: item.product.title,
-                quantity: item.quantity,
-                price:
-                    (item.variantId
-                        ? (item.product.variants?.find(
-                              (v) => v.id === item.variantId
-                          )?.price ??
-                          item.product.price ??
-                          0)
-                        : (item.product.price ?? 0)) / 100, // convert to rupees
-            })),
-            content_type: "product",
-            num_items: totalQuantity, // Number of items
-        });
+        // 🔹 Generate Event ID
+        const eventId = crypto.randomUUID();
+
+        // 🔹 FB Pixel (Client)
+        fbEvent(
+            "InitiateCheckout",
+            {
+                content_ids: availableItems.map((item) => item.product.id),
+                value: convertPaiseToRupees(priceList.total), // Convert paise to rupees
+                currency: "INR",
+                contents: availableItems.map((item) => ({
+                    id: item.product.id,
+                    name: item.product.title,
+                    quantity: item.quantity,
+                    price:
+                        (item.variantId
+                            ? (item.product.variants?.find(
+                                  (v) => v.id === item.variantId
+                              )?.price ??
+                              item.product.price ??
+                              0)
+                            : (item.product.price ?? 0)) / 100, // convert to rupees
+                })),
+                content_type: "product",
+                num_items: totalQuantity, // Number of items
+                // User Data
+                em: user.emailAddresses?.[0]?.emailAddress,
+                ph: selectedShippingAddress.phone,
+                fn: user.firstName ?? undefined,
+                ln: user.lastName ?? undefined,
+                ct: selectedShippingAddress.city,
+                st: selectedShippingAddress.state,
+                zp: selectedShippingAddress.zip,
+                external_id: user.id,
+            },
+            { eventId }
+        );
+
+        // 🔹 CAPI (Server)
+        const userData = {
+            em: user?.emailAddresses?.[0]?.emailAddress,
+            ph: selectedShippingAddress.phone,
+            fn: user.firstName ?? undefined,
+            ln: user.lastName ?? undefined,
+            ct: selectedShippingAddress.city,
+            st: selectedShippingAddress.state,
+            zp: selectedShippingAddress.zip,
+            external_id: user.id,
+            fb_login_id: user.externalAccounts.find(
+                (acc) => acc.provider === "oauth_facebook"
+            )?.externalId,
+        };
+
+        trackInitiateCheckoutCapi(
+            eventId,
+            userData,
+            {
+                content_ids: availableItems.map((item) => item.product.id),
+                content_type: "product",
+                value: parseFloat(convertPaiseToRupees(priceList.total)),
+                currency: "INR",
+                num_items: totalQuantity,
+            },
+            getAbsoluteURL(window.location.href)
+        ).catch((err) => console.error("CAPI InitiateCheckout Error:", err));
+
         initPayment();
     };
 

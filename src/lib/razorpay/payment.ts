@@ -1,17 +1,27 @@
 import { env } from "@/../env";
 import { verifyPayment } from "@/actions";
+import { trackPurchaseCapi } from "@/actions/analytics";
+import { processOrderAfterPayment } from "@/actions/process-order-after-payment";
+import { updatePaymentStatusAction } from "@/actions/update-payment-status";
+import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 import { siteConfig } from "@/config/site";
+import { orderQueries, productQueries } from "@/lib/db/queries";
+// Assuming needed for value formatting if not available
+// crypto is usually available globally in Node but for client side... wait.
+// payment.ts is a utility file. Is it client or server?
+// It imports "use client" hooks? No.
+// It imports "trpc/client". It is likely client-side or shared.
+// If client-side, crypto.randomUUID() is available in modern browsers.
+// If not, I might need a polyfill or just use globalThis.crypto.
+import { CapiUserData } from "@/lib/fb-capi";
+import { fbEvent } from "@/lib/fbpixel";
+import { formatPriceTag, getAbsoluteURL, handleClientError } from "@/lib/utils";
 import { CachedUser } from "@/lib/validations";
 import { RazorpayPaymentOptions } from "@/types";
 import { Dispatch, SetStateAction } from "react";
-import { wait } from "../utils";
-import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
-import { processOrderAfterPayment } from "@/actions/process-order-after-payment";
-import { updatePaymentStatusAction } from "@/actions/update-payment-status";
 import { toast } from "sonner";
-import { handleClientError } from "@/lib/utils";
-import { orderQueries, productQueries } from "@/lib/db/queries";
 import { trpc } from "../trpc/client";
+import { wait } from "../utils";
 
 export function createRazorpayPaymentOptions({
     orderId,
@@ -46,7 +56,9 @@ export function createRazorpayPaymentOptions({
     setIsProcessingModalOpen: Dispatch<SetStateAction<boolean>>;
     setProcessingModalTitle: Dispatch<SetStateAction<string>>;
     setProcessingModalDescription: Dispatch<SetStateAction<string>>;
-    setProcessingModalState: Dispatch<SetStateAction<"pending" | "success" | "error">>;
+    setProcessingModalState: Dispatch<
+        SetStateAction<"pending" | "success" | "error">
+    >;
     refetch: () => void;
     createOrder: (input: {
         userId: string;
@@ -129,7 +141,9 @@ export function createRazorpayPaymentOptions({
 
             setIsProcessingModalOpen(true);
             setProcessingModalTitle("Processing payment...");
-            setProcessingModalDescription("Please wait while we process your payment");
+            setProcessingModalDescription(
+                "Please wait while we process your payment"
+            );
             setProcessingModalState("pending");
 
             try {
@@ -138,39 +152,127 @@ export function createRazorpayPaymentOptions({
                 await verifyPayment(payload);
                 console.log("Payment verified successfully");
 
-                console.log(orderIntentId, "Updating payment status to 'paid'...");
+                // 🔹 Track Purchase Event (Pixel + CAPI)
+                try {
+                    const eventId = crypto.randomUUID();
 
-// Step 2: Validate order details
+                    // Pixel
+                    if (typeof window !== "undefined") {
+                        fbEvent(
+                            "Purchase",
+                            {
+                                value: prices.total,
+                                currency: "INR",
+                                content_type: "product",
+                                contents: orderDetailsByBrand.flatMap((order) =>
+                                    order.items.map((item) => ({
+                                        id: item.productId,
+                                        quantity: item.quantity,
+                                        price: item.price,
+                                    }))
+                                ),
+                                num_items: orderDetailsByBrand.reduce(
+                                    (acc, order) => acc + order.totalItems,
+                                    0
+                                ),
+                                em: user.email,
+                                ph: deliveryAddress.phone,
+                                fn: user.firstName,
+                                ct: deliveryAddress.city,
+                                st: deliveryAddress.state,
+                                zp: deliveryAddress.zip,
+                                external_id: user.id,
+                            },
+                            { eventId }
+                        );
+                    }
+
+                    // CAPI
+                    const userData: CapiUserData = {
+                        em: user.email,
+                        ph: deliveryAddress.phone,
+                        fn: user.firstName,
+                        ct: deliveryAddress.city,
+                        st: deliveryAddress.state,
+                        zp: deliveryAddress.zip,
+                        external_id: user.id,
+                    };
+
+                    trackPurchaseCapi(
+                        eventId,
+                        userData,
+                        {
+                            value: prices.total,
+                            currency: "INR",
+                            content_type: "product",
+                            content_ids: orderDetailsByBrand.flatMap((order) =>
+                                order.items.map((item) => item.productId)
+                            ),
+                            num_items: orderDetailsByBrand.reduce(
+                                (acc, order) => acc + order.totalItems,
+                                0
+                            ),
+                        },
+                        getAbsoluteURL(window.location.href)
+                    ).catch((err) =>
+                        console.error("CAPI Purchase Error:", err)
+                    );
+                } catch (e) {
+                    console.error("Error tracking purchase:", e);
+                }
+
+                console.log(
+                    orderIntentId,
+                    "Updating payment status to 'paid'..."
+                );
+
+                // Step 2: Validate order details
                 if (!orderDetailsByBrand || orderDetailsByBrand.length === 0) {
                     throw new Error("No order details found to create orders");
                 }
-                console.log("Order details validated, proceeding to create orders...");
+                console.log(
+                    "Order details validated, proceeding to create orders..."
+                );
 
                 // Step 3: Create orders for each brand and process stock and payment status
                 const createdOrders = [];
-                for (const [index, orderDetails] of orderDetailsByBrand.entries()) {
+                for (const [
+                    index,
+                    orderDetails,
+                ] of orderDetailsByBrand.entries()) {
                     try {
-                        console.log(`Creating order ${index + 1}/${orderDetailsByBrand.length} for brand...`, orderDetails);
+                        console.log(
+                            `Creating order ${index + 1}/${orderDetailsByBrand.length} for brand...`,
+                            orderDetails
+                        );
                         // await createOrder(orderDetails);
                         await createOrder({
                             ...orderDetails,
                             razorpayPaymentId: payload.razorpay_payment_id, // Add payment ID
-                          });
+                        });
                         console.log(`Order ${index + 1} created successfully`);
 
                         // Call the new function to handle stock deduction and payment status
                         await processOrderAfterPayment({
                             orderDetails,
                             paymentId: payload.razorpay_payment_id,
-                            orderIntentId: orderIntentId
+                            orderIntentId: orderIntentId,
                         });
-                        console.log(`Order ${orderDetails.razorpayOrderId} processed successfully`);
+                        console.log(
+                            `Order ${orderDetails.razorpayOrderId} processed successfully`
+                        );
 
                         createdOrders.push(orderDetails);
                     } catch (error) {
                         console.error(`Failed to create order ${index + 1}:`, {
-                            error: error instanceof Error ? error.message : "Unknown error",
-                            stack: error instanceof Error ? error.stack : undefined,
+                            error:
+                                error instanceof Error
+                                    ? error.message
+                                    : "Unknown error",
+                            stack:
+                                error instanceof Error
+                                    ? error.stack
+                                    : undefined,
                             errorCode: (error as any)?.code || "N/A",
                             errorShape: (error as any)?.shape || "N/A",
                         });
@@ -179,7 +281,9 @@ export function createRazorpayPaymentOptions({
                 }
 
                 if (createdOrders.length === 0) {
-                    throw new Error("No orders were created successfully. Please contact support.");
+                    throw new Error(
+                        "No orders were created successfully. Please contact support."
+                    );
                 }
 
                 // Step 4: Send WhatsApp notification
@@ -196,7 +300,10 @@ export function createRazorpayPaymentOptions({
                     console.log("WhatsApp notification sent successfully");
                 } catch (error) {
                     console.error("Failed to send WhatsApp notification:", {
-                        error: error instanceof Error ? error.message : "Unknown error",
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : "Unknown error",
                         stack: error instanceof Error ? error.stack : undefined,
                     });
                     // Continue even if notification fails
@@ -209,7 +316,10 @@ export function createRazorpayPaymentOptions({
                     console.log("Cart cleared successfully");
                 } catch (error) {
                     console.error("Failed to clear cart:", {
-                        error: error instanceof Error ? error.message : "Unknown error",
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : "Unknown error",
                         stack: error instanceof Error ? error.stack : undefined,
                     });
                     // Continue even if cart clearing fails
@@ -230,17 +340,21 @@ export function createRazorpayPaymentOptions({
                 window.location.href = "/profile/orders";
             } catch (error) {
                 console.error("Payment handler failed:", {
-                    error: error instanceof Error ? error.message : "Unknown error",
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error",
                     stack: error instanceof Error ? error.stack : undefined,
                 });
-                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error";
                 setProcessingModalTitle("Order Processing Failed");
                 setProcessingModalDescription(
                     errorMessage.includes("signature")
                         ? "Failed to verify your payment. The payment details are invalid. Please try again or contact support."
                         : errorMessage.includes("Unauthorized")
-                        ? "You are not authorized to perform this action. Please log in and try again."
-                        : `Failed to process your order: ${errorMessage}. Please try again or contact support.`
+                          ? "You are not authorized to perform this action. Please log in and try again."
+                          : `Failed to process your order: ${errorMessage}. Please try again or contact support.`
                 );
                 setProcessingModalState("error");
 
@@ -254,7 +368,9 @@ export function createRazorpayPaymentOptions({
                 console.log("Payment modal dismissed by user");
                 setIsProcessing(false);
                 setProcessingModalTitle("Payment Cancelled");
-                setProcessingModalDescription("You cancelled the payment process.");
+                setProcessingModalDescription(
+                    "You cancelled the payment process."
+                );
                 setProcessingModalState("error");
                 setIsProcessingModalOpen(true);
                 await wait(3000);
