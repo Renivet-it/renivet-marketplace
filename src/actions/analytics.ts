@@ -31,7 +31,7 @@ export async function trackAddToCartCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc } = await getRequestData();
+    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
     let enrichedUserData = { ...userData };
 
     if (userData.external_id) {
@@ -69,6 +69,7 @@ export async function trackAddToCartCapi(
             client_ip_address: ip,
             fbp,
             fbc,
+            country: enrichedUserData.country || country,
         },
         customData,
         eventId,
@@ -82,7 +83,7 @@ export async function trackInitiateCheckoutCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc } = await getRequestData();
+    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
     let enrichedUserData = { ...userData };
 
     if (userData.external_id) {
@@ -120,6 +121,7 @@ export async function trackInitiateCheckoutCapi(
             client_ip_address: ip,
             fbp,
             fbc,
+            country: enrichedUserData.country || country,
         },
         customData,
         eventId,
