@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAddToCartCapi } from "@/actions/analytics";
 import { trackAddToCart } from "@/actions/track-product";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
@@ -18,13 +19,19 @@ import { getColorHex } from "@/lib/color-utils";
 import { fbEvent } from "@/lib/fbpixel";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatPriceTag,
+    getAbsoluteURL,
+} from "@/lib/utils";
 import {
     CachedCart,
     CreateCart,
     createCartSchema,
     ProductWithBrand,
 } from "@/lib/validations";
+import { useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { redirect, useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
@@ -149,20 +156,116 @@ export function ProductCartAddForm({
         return () => observer.disconnect();
     }, []);
     const router = useRouter();
+    const { user } = useUser();
 
     const handleAddProductCart = async (productId: string, brandId: string) => {
         try {
             await trackAddToCart(productId, brandId);
-            fbEvent("AddToCart", {
-                content_ids: [productId],
-                content_name: product.title,
-                content_category: product.brand?.name || "Unknown Brand",
-                content_type: "product",
-                value: parseFloat(convertPaiseToRupees(productPrice)),
-                currency: "INR",
-                brand_id: brandId,
-                quantity: 1,
-            });
+
+            // 🔹 Generate Event ID
+            const eventId = crypto.randomUUID();
+
+            // 🔹 FB Pixel (Client)
+            fbEvent(
+                "AddToCart",
+                {
+                    content_ids: [productId],
+                    content_name: product.title,
+                    content_category: product.brand?.name || "Unknown Brand",
+                    content_type: "product",
+                    value: parseFloat(convertPaiseToRupees(productPrice)),
+                    currency: "INR",
+                    brand_id: brandId,
+                    quantity: 1,
+                    ...(user
+                        ? {
+                              em: user.primaryEmailAddress?.emailAddress,
+                              ph: user.primaryPhoneNumber?.phoneNumber,
+                              fn: user.firstName ?? undefined,
+                              ln: user.lastName ?? undefined,
+                              external_id: user.id,
+                          }
+                        : {}),
+                },
+                { eventId }
+            );
+
+            // 🔹 CAPI (Server)
+            const userData = {
+                em: user?.primaryEmailAddress?.emailAddress,
+                ph: user?.primaryPhoneNumber?.phoneNumber,
+                fn: user?.firstName ?? undefined,
+                ln: user?.lastName ?? undefined,
+                external_id: user?.id,
+                fb_login_id: user?.externalAccounts.find(
+                    (acc) => acc.provider === "oauth_facebook"
+                )?.externalId,
+            };
+
+            trackAddToCartCapi(
+                eventId,
+                userData,
+                {
+                    content_ids: [productId],
+                    content_name: product.title,
+                    content_category: product.brand?.name || "Unknown Brand",
+                    content_type: "product",
+                    value: parseFloat(convertPaiseToRupees(productPrice)),
+                    currency: "INR",
+                },
+                getAbsoluteURL(window.location.href) // Send current URL
+            ).catch((err) => console.error("CAPI Error:", err));
+
+            // 🔹 FB Pixel (Client)
+            fbEvent(
+                "AddToCart",
+                {
+                    content_ids: [productId],
+                    content_name: product.title,
+                    content_category: product.brand?.name || "Unknown Brand",
+                    content_type: "product",
+                    value: parseFloat(convertPaiseToRupees(productPrice)),
+                    currency: "INR",
+                    brand_id: brandId,
+                    quantity: 1,
+                    ...(user
+                        ? {
+                              em: user.primaryEmailAddress?.emailAddress,
+                              ph: user.primaryPhoneNumber?.phoneNumber,
+                              fn: user.firstName ?? undefined,
+                              ln: user.lastName ?? undefined,
+                              external_id: user.id,
+                          }
+                        : {}),
+                },
+                { eventId }
+            );
+
+            // 🔹 CAPI (Server)
+            const userData = {
+                em: user?.primaryEmailAddress?.emailAddress,
+                ph: user?.primaryPhoneNumber?.phoneNumber,
+                fn: user?.firstName ?? undefined,
+                ln: user?.lastName ?? undefined,
+                external_id: user?.id,
+                fb_login_id: user?.externalAccounts.find(
+                    (acc) => acc.provider === "oauth_facebook"
+                )?.externalId,
+            };
+
+            trackAddToCartCapi(
+                eventId,
+                userData,
+                {
+                    content_ids: [productId],
+                    content_name: product.title,
+                    content_category: product.brand?.name || "Unknown Brand",
+                    content_type: "product",
+                    value: parseFloat(convertPaiseToRupees(productPrice)),
+                    currency: "INR",
+                },
+                getAbsoluteURL(window.location.href) // Send current URL
+            ).catch((err) => console.error("CAPI Error:", err));
         } catch (error) {
             console.error("Failed to track click:", error);
         }

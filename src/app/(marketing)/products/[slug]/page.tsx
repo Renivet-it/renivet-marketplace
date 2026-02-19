@@ -1,21 +1,24 @@
+import { randomUUID } from "crypto";
+import { trackViewContentCapi } from "@/actions/analytics";
 import { GeneralShell } from "@/components/globals/layouts";
 import { ProductPage } from "@/components/products/product";
+import { TrackViewContent } from "@/components/shop/facebook-pixel-events"; // Import the new component
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BRAND_EVENTS } from "@/config/brand";
 import { siteConfig } from "@/config/site";
 import { productQueries } from "@/lib/db/queries";
+import { userQueries } from "@/lib/db/queries/user";
 import {
     analytics,
     userCartCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
 import { cn, getAbsoluteURL } from "@/lib/utils";
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { TrackViewContent } from "@/components/shop/facebook-pixel-events"; // Import the new component
 
 interface PageProps {
     params: Promise<{
@@ -42,13 +45,12 @@ export async function generateMetadata({
             description: "The requested product was not found.",
         };
 
-    const retailerItemId =
-        existingProduct.id;
+    const retailerItemId = existingProduct.id;
     const priceInRupees = existingProduct.costPerItem
-  ? (existingProduct.costPerItem / 100).toFixed(2)
-  : existingProduct.variants?.[0]?.price
-    ? (existingProduct.variants[0].price / 100).toFixed(2)
-    : "0.00";
+        ? (existingProduct.costPerItem / 100).toFixed(2)
+        : existingProduct.variants?.[0]?.price
+          ? (existingProduct.variants[0].price / 100).toFixed(2)
+          : "0.00";
 
     const availability =
         (existingProduct.quantity ?? 0) > 0 ? "in stock" : "out of stock";
@@ -141,7 +143,8 @@ export default function Page({ params }: PageProps) {
 // ------------------
 async function ProductFetch({ params }: PageProps) {
     const { slug } = await params;
-    const { userId } = await auth();
+    const user = await currentUser();
+    const userId = user?.id;
 
     const [existingProduct, userWishlist, userCart] = await Promise.all([
         productQueries.getProductBySlug({
@@ -165,13 +168,57 @@ async function ProductFetch({ params }: PageProps) {
         },
     });
 
-    const retailerItemId =
-        existingProduct.id;
+    const retailerItemId = existingProduct.id;
     const priceInRupees = existingProduct.costPerItem
-  ? (existingProduct.costPerItem / 100).toFixed(2)
-  : existingProduct.variants?.[0]?.price
-    ? (existingProduct.variants[0].price / 100).toFixed(2)
-    : "0.00";
+        ? (existingProduct.costPerItem / 100).toFixed(2)
+        : existingProduct.variants?.[0]?.price
+          ? (existingProduct.variants[0].price / 100).toFixed(2)
+          : "0.00";
+
+    // 🔹 Generate Event ID for Deduplication
+    const eventId = randomUUID();
+
+    // 🔹 Fetch User Details for Address if available
+    let dbUser = null;
+    if (userId) {
+        try {
+            dbUser = await userQueries.getUser(userId);
+        } catch (error) {
+            console.error("Error fetching db user:", error);
+        }
+    }
+
+    const primaryAddress =
+        dbUser?.addresses?.find((a) => a.isPrimary) || dbUser?.addresses?.[0];
+
+    // 🔹 Trigger CAPI Event (Server-Side) - Fire and Forget
+    const userData = {
+        em: user?.emailAddresses?.[0]?.emailAddress,
+        ph: user?.phoneNumbers?.[0]?.phoneNumber || primaryAddress?.phone,
+        fn: user?.firstName ?? undefined,
+        ln: user?.lastName ?? undefined,
+        ct: primaryAddress?.city,
+        st: primaryAddress?.state,
+        zp: primaryAddress?.zip,
+        external_id: user?.id,
+        fb_login_id: user?.externalAccounts.find(
+            (acc) => acc.provider === "oauth_facebook"
+        )?.externalId,
+    };
+
+    trackViewContentCapi(
+        eventId,
+        userData,
+        {
+            content_ids: [existingProduct.id],
+            content_name: existingProduct.title,
+            content_type: "product",
+            content_category: existingProduct.brand?.name || "Unknown Brand",
+            value: parseFloat(priceInRupees),
+            currency: "INR",
+        },
+        getAbsoluteURL(`/products/${slug}`)
+    ).catch((err) => console.error("Failed to send ViewContent CAPI:", err));
 
     const jsonLd = {
         "@context": "https://schema.org",
@@ -191,7 +238,8 @@ async function ProductFetch({ params }: PageProps) {
             priceCurrency: "INR",
             availability:
                 (existingProduct.quantity ?? 0) > 0
-                    ? "in stock" : "out of stock",
+                    ? "in stock"
+                    : "out of stock",
             url: getAbsoluteURL(`/products/${slug}`),
         },
     };
@@ -210,7 +258,11 @@ async function ProductFetch({ params }: PageProps) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-              <TrackViewContent product={existingProduct} />
+            <TrackViewContent
+                product={existingProduct}
+                userData={userData}
+                eventId={eventId}
+            />
         </>
     );
 }
@@ -223,7 +275,10 @@ function ProductSkeleton() {
         <div className="flex flex-col gap-5 md:flex-row">
             <div className="grid basis-3/5 grid-cols-1 gap-5 md:grid-cols-2">
                 {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="aspect-[3/4] overflow-hidden" />
+                    <Skeleton
+                        key={i}
+                        className="aspect-[3/4] overflow-hidden"
+                    />
                 ))}
             </div>
 
@@ -236,7 +291,10 @@ function ProductSkeleton() {
                             {[...Array(2)].map((_, i) => (
                                 <Skeleton
                                     key={i}
-                                    className={cn("h-10 w-1/3", i === 0 && "w-full")}
+                                    className={cn(
+                                        "h-10 w-1/3",
+                                        i === 0 && "w-full"
+                                    )}
                                 />
                             ))}
                         </div>
@@ -275,7 +333,10 @@ function ProductSkeleton() {
                     <Skeleton className="h-6 w-32" />
                     <div className="flex flex-wrap gap-2">
                         {[...Array(5)].map((_, i) => (
-                            <Skeleton key={i} className="size-12 rounded-full" />
+                            <Skeleton
+                                key={i}
+                                className="size-12 rounded-full"
+                            />
                         ))}
                     </div>
                 </div>
