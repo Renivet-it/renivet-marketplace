@@ -17,6 +17,7 @@ export function WelcomeRenivet() {
                             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkKIY1exYt1TxMBy6jes3QdWaELUvNIiXHwRO"
                             alt="Renivet Circle"
                             fill
+                            sizes="(max-width: 768px) 100vw, 480px"
                             className="object-cover"
                         />
                     </div>

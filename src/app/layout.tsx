@@ -227,6 +227,11 @@ export default async function RootLayout({ children }: LayoutProps) {
             )}
         >
             <head>
+                <link
+                    rel="preconnect"
+                    href="https://fonts.gstatic.com"
+                    crossOrigin="anonymous"
+                />
                 {FB_PIXEL_ID && (
                     <>
                         {/* ✅ Meta Pixel Script */}

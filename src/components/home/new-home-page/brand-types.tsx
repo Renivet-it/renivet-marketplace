@@ -50,6 +50,7 @@ export function BrandTypes() {
                             src={item.imageUrl}
                             alt={item.title}
                             fill
+                            sizes="350px"
                             className="object-cover transition-all duration-300 group-hover:scale-105"
                         />
                     </Link>
@@ -68,6 +69,7 @@ export function BrandTypes() {
                             src={item.imageUrl}
                             alt={item.title}
                             fill
+                            sizes="50vw"
                             className="object-cover"
                         />
                     </Link>
