@@ -195,6 +195,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                                         }
                                         alt={product.title}
                                         fill
+                                        sizes="(max-width: 768px) 140px, 140px"
                                         className="object-cover"
                                     />
                                 </div>
@@ -228,36 +229,27 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
 
                 {/* --- MOBILE CTA CARD --- */}
 
-<Link
-  href="/curious-shift" // ✅ redirect changed here
-  className="block h-[193px] w-[169px]
-             border border-white/40
-             bg-gradient-to-br from-[#B7D3EA] to-[#F7F6E7]
-             px-5 pt-6 shadow-lg
-             transition
-             hover:scale-[1.03] hover:shadow-xl
-             focus:outline-none
-             focus:ring-2 focus:ring-black focus:ring-offset-2 active:scale-[0.98]
-             [-webkit-tap-highlight-color:transparent]
-             "
->
-  {/* Title */}
-  <h2 className="font-serif text-xl font-semibold leading-tight text-gray-900">
-    Got <br />
-    curiosity?
-  </h2>
+                <Link
+                    href="/curious-shift" // ✅ redirect changed here
+                    className="block h-[193px] w-[169px] border border-white/40 bg-gradient-to-br from-[#B7D3EA] to-[#F7F6E7] px-5 pt-6 shadow-lg transition [-webkit-tap-highlight-color:transparent] hover:scale-[1.03] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 active:scale-[0.98]"
+                >
+                    {/* Title */}
+                    <h2 className="font-serif text-xl font-semibold leading-tight text-gray-900">
+                        Got <br />
+                        curiosity?
+                    </h2>
 
-  <br />
+                    <br />
 
-  {/* Subtitle + arrow */}
-  <div className="flex items-center gap-3">
-    <p className="text-sm italic leading-snug text-gray-600">
-      We’ve Got <br /> Secrets.
-    </p>
+                    {/* Subtitle + arrow */}
+                    <div className="flex items-center gap-3">
+                        <p className="text-sm italic leading-snug text-gray-600">
+                            We’ve Got <br /> Secrets.
+                        </p>
 
-    <Icons.ArrowRight className="size-5 text-gray-800" />
-  </div>
-</Link>
+                        <Icons.ArrowRight className="size-5 text-gray-800" />
+                    </div>
+                </Link>
             </div>
 
             {/* ================= DESKTOP ================= */}
@@ -292,6 +284,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                                         }
                                         alt={product.title}
                                         fill
+                                        sizes="(max-width: 768px) 100vw, 400px"
                                         className="object-cover"
                                     />
                                 </div>
@@ -323,24 +316,20 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                 </div>
 
                 {/* Desktop CTA */}
-              <Link
-  href="/curious-shift"
-  className="mx-auto block w-full max-w-md rounded-2xl border
-             bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7]
-             p-8 shadow-lg transition
-             hover:scale-[1.02] hover:shadow-xl
-             focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2  [-webkit-tap-highlight-color:transparent]"
->
-  <h2 className="font-serif text-3xl text-gray-900">
-    Got curiosity?
-  </h2>
+                <Link
+                    href="/curious-shift"
+                    className="mx-auto block w-full max-w-md rounded-2xl border bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7] p-8 shadow-lg transition [-webkit-tap-highlight-color:transparent] hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
+                >
+                    <h2 className="font-serif text-3xl text-gray-900">
+                        Got curiosity?
+                    </h2>
 
-  <p className="mt-6 italic text-gray-600">
-    We’ve Got Secrets.
-  </p>
+                    <p className="mt-6 italic text-gray-600">
+                        We’ve Got Secrets.
+                    </p>
 
-  <Icons.ArrowRight className="mt-4 size-7" />
-</Link>
+                    <Icons.ArrowRight className="mt-4 size-7" />
+                </Link>
             </div>
         </section>
     );

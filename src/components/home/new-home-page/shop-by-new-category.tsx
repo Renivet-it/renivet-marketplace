@@ -1,8 +1,8 @@
-import React from "react";
 import { cn } from "@/lib/utils";
 import { HomeShopByCategory } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
+import React from "react";
 
 interface PageProps extends GenericProps {
     shopByCategories: HomeShopByCategory[];
@@ -32,31 +32,31 @@ export function ShopByNewCategories({
     return (
         <section
             className={cn(
-                "flex w-full bg-[#FCFBF4] justify-center py-10",
+                "flex w-full justify-center bg-[#FCFBF4] py-10",
                 className
             )}
             {...props}
         >
-            <div className="w-full space-y-8 max-w-screen-2xl mx-auto px-4">
+            <div className="mx-auto w-full max-w-screen-2xl space-y-8 px-4">
                 {/* Title */}
-             <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
+                <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                     {titleData?.title || "Shop by Category"}
                 </h2>
 
                 {/* ========================================================== */}
                 {/* 🔹 MOBILE-ONLY VIEW (Two-Row Scrolling Carousel)        */}
                 {/* ========================================================== */}
-                <div className="md:hidden flex flex-col gap-4 px-2">
+                <div className="flex flex-col gap-4 px-2 md:hidden">
                     {/* First Row */}
-                    <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                    <div className="scrollbar-hide flex gap-3 overflow-x-auto">
                         {firstRowItems.map((category, index) => (
                             <Link
                                 key={`row1-${index}`}
                                 href={category.url || "/shop"}
                                 className="block w-[110px] flex-shrink-0" // Set fixed width and prevent shrinking
                             >
-                                <div className="flex flex-col items-center bg-gradient-to-b from-[#E8E8E8] to-[#F5F5F5] p-2 w-full rounded-md">
-                                    <div className="relative w-full aspect-[2/3] rounded-sm overflow-hidden">
+                                <div className="flex w-full flex-col items-center rounded-md bg-gradient-to-b from-[#E8E8E8] to-[#F5F5F5] p-2">
+                                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-sm">
                                         <Image
                                             src={category.imageUrl}
                                             alt={category.title || "Category"}
@@ -66,8 +66,8 @@ export function ShopByNewCategories({
                                             sizes="110px"
                                         />
                                     </div>
-                                    <div className="mt-2 text-center w-full space-y-0.5">
-                                        <p className="text-xs font-bold text-gray-800 truncate">
+                                    <div className="mt-2 w-full space-y-0.5 text-center">
+                                        <p className="truncate text-xs font-bold text-gray-800">
                                             {category.title || "Category"}
                                         </p>
                                         <p className="text-[10px] text-gray-500 hover:underline">
@@ -79,15 +79,15 @@ export function ShopByNewCategories({
                         ))}
                     </div>
                     {/* Second Row */}
-                    <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                    <div className="scrollbar-hide flex gap-3 overflow-x-auto">
                         {secondRowItems.map((category, index) => (
                             <Link
                                 key={`row2-${index}`}
                                 href={category.url || "/shop"}
                                 className="block w-[110px] flex-shrink-0"
                             >
-                                <div className="flex flex-col items-center bg-gradient-to-b from-[#E8E8E8] to-[#F5F5F5] p-2 w-full rounded-md">
-                                    <div className="relative w-full aspect-[2/3] rounded-sm overflow-hidden">
+                                <div className="flex w-full flex-col items-center rounded-md bg-gradient-to-b from-[#E8E8E8] to-[#F5F5F5] p-2">
+                                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-sm">
                                         <Image
                                             src={category.imageUrl}
                                             alt={category.title || "Category"}
@@ -97,8 +97,8 @@ export function ShopByNewCategories({
                                             sizes="110px"
                                         />
                                     </div>
-                                    <div className="mt-2 text-center w-full space-y-0.5">
-                                        <p className="text-xs font-bold text-gray-800 truncate">
+                                    <div className="mt-2 w-full space-y-0.5 text-center">
+                                        <p className="truncate text-xs font-bold text-gray-800">
                                             {category.title || "Category"}
                                         </p>
                                         <p className="text-[10px] text-gray-500 hover:underline">
@@ -116,24 +116,30 @@ export function ShopByNewCategories({
                 {/* ========================================================== */}
                 <div className="hidden md:block">
                     {desktopChunks.map((chunk, chunkIndex) => (
-                        <div key={chunkIndex} className="grid grid-cols-6 gap-4 mb-6 px-2">
+                        <div
+                            key={chunkIndex}
+                            className="mb-6 grid grid-cols-6 gap-4 px-2"
+                        >
                             {chunk.map((category, index) => (
                                 <Link
                                     key={index}
                                     href={category.url || "/shop"}
                                     className="block"
                                 >
-                                    <div className="flex flex-col items-center bg-gradient-to-b from-[#E8E8E8] to-[#c6ced0] p-3 hover:shadow-md transition-shadow duration-200 h-[257px] w-[182px]">
-                                        <div className="relative w-full h-[180px]">
+                                    <div className="flex h-[257px] w-[182px] flex-col items-center bg-gradient-to-b from-[#E8E8E8] to-[#c6ced0] p-3 transition-shadow duration-200 hover:shadow-md">
+                                        <div className="relative h-[180px] w-full">
                                             <Image
                                                 src={category.imageUrl}
-                                                alt={category.title || "Category"}
+                                                alt={
+                                                    category.title || "Category"
+                                                }
                                                 fill
+                                                sizes="180px"
                                                 quality={90}
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <div className="mt-4 text-center w-full space-y-1">
+                                        <div className="mt-4 w-full space-y-1 text-center">
                                             <p className="text-sm font-bold text-gray-800">
                                                 {category.title || "Category"}
                                             </p>

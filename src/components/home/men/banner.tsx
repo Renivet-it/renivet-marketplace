@@ -116,6 +116,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         fill
                                         className="absolute inset-0 object-cover"
                                         priority={index === 0}
+                                        fetchPriority={
+                                            index === 0 ? "high" : "auto"
+                                        }
+                                        unoptimized={index === 0}
                                     />
 
                                     <div className="absolute bottom-16 flex w-full justify-center">
@@ -220,6 +224,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         fill
                                         className="absolute inset-0 object-cover"
                                         priority={index === 0}
+                                        fetchPriority={
+                                            index === 0 ? "high" : "auto"
+                                        }
+                                        unoptimized={index === 0}
                                     />
 
                                     {/* CTA */}

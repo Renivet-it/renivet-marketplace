@@ -1,132 +1,129 @@
 "use client";
 
+import { convertPaiseToRupees } from "@/lib/utils";
+import { Banner } from "@/lib/validations";
+import { Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Banner } from "@/lib/validations";
-import { convertPaiseToRupees } from "@/lib/utils";
 import React, { useState } from "react";
-import { Heart } from "lucide-react";
 
 const PLACEHOLDER_IMAGE_URL =
-  "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
 // ⭐ PRODUCT CARD — NO GAP VERSION
-const ProductCard = ({ banner }: { banner: Banner } ) => {
-  const { product } = banner;
-  const [isWishlisted, setIsWishlisted] = useState(false);
+const ProductCard = ({ banner }: { banner: Banner }) => {
+    const { product } = banner;
+    const [isWishlisted, setIsWishlisted] = useState(false);
 
-  if (!product) return null;
+    if (!product) return null;
 
-  const imageUrl = product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
+    const imageUrl =
+        product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
 
-  const price = convertPaiseToRupees(
-    product.variants?.[0]?.price ?? product.price ?? 0
-  );
+    const price = convertPaiseToRupees(
+        product.variants?.[0]?.price ?? product.price ?? 0
+    );
 
-  const compareAt =
-    product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
+    const compareAt =
+        product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
 
-  const displayCompare = compareAt ? convertPaiseToRupees(compareAt) : null;
+    const displayCompare = compareAt ? convertPaiseToRupees(compareAt) : null;
 
-  const productUrl = `/products/${product.slug}`;
+    const productUrl = `/products/${product.slug}`;
 
-  const toggleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation when clicking the heart
-    setIsWishlisted(!isWishlisted);
-  };
+    const toggleWishlist = (e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent navigation when clicking the heart
+        setIsWishlisted(!isWishlisted);
+    };
 
-  return (
-    <Link
-      href={productUrl}
-      className="block w-[180px] md:w-full flex-shrink-0 md:flex-shrink text-center group"
-    >
-      {/* Vegan Tag */}
-      <div className="flex justify-start items-center px-1 mb-1">
-        <span className="text-[10px] md:text-[12px] text-green-700 font-medium uppercase tracking-wider">
-          100%vegan
-        </span>
-      </div>
-
-      {/* IMAGE CONTAINER */}
-      <div className="relative w-full h-[240px] md:h-[350px] overflow-hidden rounded-sm">
-        <Image
-          src={imageUrl}
-          alt={product.title}
-          fill
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-        
-        {/* Wishlist Button Overlay */}
-        <button 
-          onClick={toggleWishlist}
-          className="absolute top-3 right-3 z-10 p-1.5 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors"
+    return (
+        <Link
+            href={productUrl}
+            className="group block w-[180px] flex-shrink-0 text-center md:w-full md:flex-shrink"
         >
-          <Heart 
-            className={isWishlisted ? "w-4 h-4 fill-red-500 text-red-500" : "w-4 h-4 text-gray-600"} 
-            strokeWidth={isWishlisted ? 0 : 1.5} 
-          />
-        </button>
-      </div>
+            {/* Vegan Tag */}
+            <div className="mb-1 flex items-center justify-start px-1">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-green-700 md:text-[12px]">
+                    100%vegan
+                </span>
+            </div>
 
-      {/* Title */}
-      <h3 className="mt-3 text-[14px] md:text-[16px] font-medium text-gray-800 line-clamp-2 h-[42px]">
-        {product.title}
-      </h3>
+            {/* IMAGE CONTAINER */}
+            <div className="relative h-[240px] w-full overflow-hidden rounded-sm md:h-[350px]">
+                <Image
+                    src={imageUrl}
+                    alt={product.title}
+                    fill
+                    sizes="(max-width: 768px) 180px, 300px"
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
 
-      {/* Price */}
-      <div className="mt-1 flex justify-center items-center gap-2">
-        <span className="text-[16px] md:text-[18px] font-semibold text-gray-900">
-          ₹{price}
-        </span>
+                {/* Wishlist Button Overlay */}
+                <button
+                    onClick={toggleWishlist}
+                    className="absolute right-3 top-3 z-10 rounded-full bg-white/80 p-1.5 shadow-sm backdrop-blur-sm transition-colors hover:bg-white"
+                >
+                    <Heart
+                        className={
+                            isWishlisted
+                                ? "h-4 w-4 fill-red-500 text-red-500"
+                                : "h-4 w-4 text-gray-600"
+                        }
+                        strokeWidth={isWishlisted ? 0 : 1.5}
+                    />
+                </button>
+            </div>
 
-        {displayCompare && (
-          <span className="text-[12px] md:text-[13px] line-through text-gray-400">
-            ₹{displayCompare}
-          </span>
-        )}
-      </div>
-    </Link>
-  );
+            {/* Title */}
+            <h3 className="mt-3 line-clamp-2 h-[42px] text-[14px] font-medium text-gray-800 md:text-[16px]">
+                {product.title}
+            </h3>
+
+            {/* Price */}
+            <div className="mt-1 flex items-center justify-center gap-2">
+                <span className="text-[16px] font-semibold text-gray-900 md:text-[18px]">
+                    ₹{price}
+                </span>
+
+                {displayCompare && (
+                    <span className="text-[12px] text-gray-400 line-through md:text-[13px]">
+                        ₹{displayCompare}
+                    </span>
+                )}
+            </div>
+        </Link>
+    );
 };
 
 // ⭐ MAIN — 2 ROW CAROUSEL (MOBILE) + GRID (DESKTOP)
 export function MayAlsoLoveThese({ banners }: { banners: Banner[] }) {
-  if (!banners.length) return null;
+    if (!banners.length) return null;
 
-  const items = banners.slice(0, 18);
+    const items = banners.slice(0, 18);
 
-  return (
-    <section className="w-full py-8 bg-[#FCFBF4]">
-<h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
-        You&apos;ll Love These
-      </h2>
+    return (
+        <section className="w-full bg-[#FCFBF4] py-8">
+            <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+                You&apos;ll Love These
+            </h2>
 
-      {/* 📱 MOBILE — SINGLE ROW HORIZONTAL SCROLL */}
-      <div className="md:hidden overflow-x-auto scrollbar-hide px-4">
-        <div className="flex gap-4 w-max">
-          {items.map((item) => (
-            <ProductCard key={item.id} banner={item} />
-          ))}
-        </div>
-      </div>
+            {/* 📱 MOBILE — SINGLE ROW HORIZONTAL SCROLL */}
+            <div className="scrollbar-hide overflow-x-auto px-4 md:hidden">
+                <div className="flex w-max gap-4">
+                    {items.map((item) => (
+                        <ProductCard key={item.id} banner={item} />
+                    ))}
+                </div>
+            </div>
 
-      {/* 🖥 DESKTOP — 6 COLUMN GRID */}
-      <div className="hidden md:block max-w-screen-2xl mx-auto px-6">
-        <div
-          className="
-            grid
-            gap-8
-            grid-cols-2
-            sm:grid-cols-3
-            lg:grid-cols-4
-            xl:grid-cols-6
-          "
-        >
-          {items.map((item) => (
-            <ProductCard key={item.id} banner={item} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+            {/* 🖥 DESKTOP — 6 COLUMN GRID */}
+            <div className="mx-auto hidden max-w-screen-2xl px-6 md:block">
+                <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                    {items.map((item) => (
+                        <ProductCard key={item.id} banner={item} />
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
 }

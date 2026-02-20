@@ -115,6 +115,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         sizes="(max-width: 768px) 100vw, 100vw"
                                         className="absolute inset-0 h-full w-full object-cover"
                                         priority={index === 0}
+                                        fetchPriority={
+                                            index === 0 ? "high" : "auto"
+                                        }
+                                        unoptimized={index === 0}
                                     />
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Button
@@ -240,6 +244,8 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         sizes="(max-width: 768px) 100vw, 33vw"
                         className="absolute inset-0 h-full w-full object-cover"
                         priority
+                        fetchPriority="high"
+                        unoptimized
                     />
 
                     {/* 🔵 CENTER BUTTON — MOBILE ONLY */}

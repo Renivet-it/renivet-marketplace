@@ -1,106 +1,120 @@
-import { AdvertisementPage, Blogs, BrandProducts, Landing, MarketingStrip, ShopByCategories } from "@/components/home";
-import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
-import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
-import { HomeAndLivingectionAdvertisement } from "@/components/home/new-home-page/discount-section";
-import { advertisementQueries, blogQueries, homeBrandProductQueries, productQueries, homeShopByCategoryQueries, homeShopByCategoryTitleQueries, WomenHomeSectionQueries } from "@/lib/db/queries";
-import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
-import { Suspense } from "react";
-import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
-import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
-import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
+import {
+    AdvertisementPage,
+    Blogs,
+    BrandProducts,
+    Landing,
+    MarketingStrip,
+    ShopByCategories,
+} from "@/components/home";
+import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
+import { BagSection } from "@/components/home/new-home-page/bag-section";
+import { BrandPromotion } from "@/components/home/new-home-page/brand-promotion";
 import { BrandTypes } from "@/components/home/new-home-page/brand-types";
-import { MobileCategories } from "@/components/home/new-home-page/mobile-categories";
-import { WelcomeRenivet } from "@/components/home/new-home-page/welcome-to-renivet";
+import { ConciousClick } from "@/components/home/new-home-page/concious-click";
 import { CuratedBanner } from "@/components/home/new-home-page/curated-banner";
+import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
+import { HomeAndLivingectionAdvertisement } from "@/components/home/new-home-page/discount-section";
+import { EcoIcons } from "@/components/home/new-home-page/eco-icons";
+import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
 import { EventSectionOneBanner } from "@/components/home/new-home-page/event-section-one";
 import { EventSectionTwoBanner } from "@/components/home/new-home-page/event-section-two";
-import { BrandPromotion } from "@/components/home/new-home-page/brand-promotion";
-import { BagSection } from "@/components/home/new-home-page/bag-section";
-import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
-import { EffortlessElegance } from "@/components/home/new-home-page/effortless-section";
-import { ConciousClick } from "@/components/home/new-home-page/concious-click";
-import { SwapSpace } from "@/components/home/new-home-page/swap-space";
-import { MobileBottom } from "@/components/home/new-home-page/mobile-bottom-product";
-import { LoveThese } from "@/components/home/new-home-page/love-these";
-import { MayAlsoLoveThese } from "@/components/home/new-home-page/may-also-love";
-import { ArtisanCollection } from "@/components/home/new-home-page/artisan-space";
-import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 import { Page as EveryDayEssential } from "@/components/home/new-home-page/everyday-essential";
+import { InstaBanner } from "@/components/home/new-home-page/insta-banner";
 import { ProductGrid } from "@/components/home/new-home-page/kids-product-grid";
+import { LoveThese } from "@/components/home/new-home-page/love-these";
+import { MatchaBag } from "@/components/home/new-home-page/match-a-bag";
+import { MayAlsoLoveThese } from "@/components/home/new-home-page/may-also-love";
+import { MobileBottom } from "@/components/home/new-home-page/mobile-bottom-product";
+import { MobileCategories } from "@/components/home/new-home-page/mobile-categories";
 import { ProductGridNewArrivals } from "@/components/home/new-home-page/new-arrivals";
+import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
+import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
+import { SwapSpace } from "@/components/home/new-home-page/swap-space";
 import { SwipeCard } from "@/components/home/new-home-page/swipe-card";
-import { EcoIcons } from "@/components/home/new-home-page/eco-icons";
+import { WelcomeRenivet } from "@/components/home/new-home-page/welcome-to-renivet";
+import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
+import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
+import {
+    advertisementQueries,
+    blogQueries,
+    homeBrandProductQueries,
+    homeShopByCategoryQueries,
+    homeShopByCategoryTitleQueries,
+    productQueries,
+    WomenHomeSectionQueries,
+} from "@/lib/db/queries";
+import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
+import { Suspense } from "react";
 
 export default function Page() {
     return (
         <>
             <Suspense
                 fallback={
-                    <div className="h-[calc(100vh-20vh)] w-full bg-background" />
+                    <div className="h-[calc(100vh-20vh)] w-full bg-[#FCFBF4]" />
                 }
             >
                 <BannersFetch />
             </Suspense>
 
-                                           <Suspense>
+            <Suspense>
                 <ShopCategoryFetch />
             </Suspense>
-                                                     <Suspense>
+            <Suspense>
                 <MobileCategoriesFetch />
             </Suspense>
-                                                       <Suspense>
+            <Suspense>
                 <BrandTypesFetch />
             </Suspense>
-                                <Suspense>
+            <Suspense>
                 <CuratedBannerFetch />
             </Suspense>
-                                                    <Suspense>
+            <Suspense>
                 <SwapSpaceBannerFetch />
             </Suspense>
-                            <Suspense>
+            <Suspense>
                 <WelcomeToRenivetFetch />
             </Suspense>
-                              <Suspense>
+            <Suspense>
                 <BrandPromotionFetch />
             </Suspense>
-                          
-                               {/* <Suspense>
+
+            {/* <Suspense>
                 <BrandCollaborateFetch />
             </Suspense> */}
-                                                     <Suspense>
+            <Suspense>
                 <EventSectionTwoBannerFetch />
             </Suspense>
-                            <Suspense>
+            <Suspense>
                 <DealMarketingStripFetch />
             </Suspense>
 
-                              <Suspense>
+            <Suspense>
                 <EffortlessEleganceFetch />
             </Suspense>
-                                                                     {/* <Suspense>
+            {/* <Suspense>
                 <ConciousClickBannerFetch />
             </Suspense> */}
-                                 <Suspense>
+            <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-                                                    {/* <Suspense>
+            {/* <Suspense>
                 <ProductGridFetch />
             </Suspense> */}
-                                               <Suspense>
+            <Suspense>
                 <MatchaBagFetch />
             </Suspense>
-                                                                  <Suspense>
+            <Suspense>
                 <LoveTheseFetch />
             </Suspense>
-                    <Suspense>
+            <Suspense>
                 <ProductSwipeCardFetch />
             </Suspense>
-                                                                                   <Suspense>
+            <Suspense>
                 <MayAlsoLoveTheseFetch />
             </Suspense>
-          
-               
-                                                    {/* <Suspense>
+
+            {/* <Suspense>
                 <BagSectionFetch />
             </Suspense>
                                          <Suspense>
@@ -110,16 +124,15 @@ export default function Page() {
                                                               <Suspense>
                 <InstaBannerFetch />
             </Suspense> */}
-                                                          <Suspense>
+            <Suspense>
                 <HomePageMainProductFetch />
             </Suspense>
-                
-           
-              <div className="hidden md:block">
-  <Suspense>
-    <ShopByNewCategoriesFetch />
-  </Suspense>
-</div>
+
+            <div className="hidden md:block">
+                <Suspense>
+                    <ShopByNewCategoriesFetch />
+                </Suspense>
+            </div>
 
             {/* <Suspense>
                 <BlogsFetch />
@@ -136,27 +149,25 @@ async function BrandProductsFetch() {
     return <BrandProducts marketingStrip={brandProducts} />;
 }
 
-
 async function ProductNewArrivalsGridFetch() {
-  const products = await productQueries.getHomePageFeaturedProducts();
-  if (!products.length) return null;
+    const products = await productQueries.getHomePageFeaturedProducts();
+    if (!products.length) return null;
     //@ts-ignore
-  return <ProductGridNewArrivals products={products} />;
+    return <ProductGridNewArrivals products={products} />;
 }
 
 async function ProductSwipeCardFetch() {
-  const products = await productQueries.getHomePageFeaturedProducts();
-  if (!products.length) return null;
+    const products = await productQueries.getHomePageFeaturedProducts();
+    if (!products.length) return null;
     //@ts-ignore
-  return <SwipeCard products={products} />;
+    return <SwipeCard products={products} />;
 }
 
-
 async function ProductGridFetch() {
-  const products = await productQueries.getKidsPageFeaturedProducts();
-  if (!products.length) return null;
+    const products = await productQueries.getKidsPageFeaturedProducts();
+    if (!products.length) return null;
     //@ts-ignore
-  return <ProductGrid products={products} />;
+    return <ProductGrid products={products} />;
 }
 
 async function EventSectionBannerOneFetch() {
@@ -184,38 +195,32 @@ async function CuratedBannerFetch() {
 }
 
 async function SwapSpaceBannerFetch() {
-    const brandProducts =
-        await productQueries.getHomeHeroProducts();
+    const brandProducts = await productQueries.getHomeHeroProducts();
     if (!brandProducts.length) return null;
 
     return <SwapSpace banners={brandProducts} />;
 }
 
-
 async function LoveTheseFetch() {
-    const brandProducts =
-        await productQueries.getHomeLoveTheseProducts();
+    const brandProducts = await productQueries.getHomeLoveTheseProducts();
     if (!brandProducts.length) return null;
 
     return <LoveThese banners={brandProducts} />;
 }
 
 async function HomePageMainProductFetch() {
-    const brandProducts =
-        await productQueries.getHomePageProducts();
+    const brandProducts = await productQueries.getHomePageProducts();
     if (!brandProducts.length) return null;
 
     return <MobileBottom banners={brandProducts} />;
 }
 
 async function MayAlsoLoveTheseFetch() {
-    const brandProducts =
-        await productQueries.getHomeYouMayAlsoLikeProducts();
+    const brandProducts = await productQueries.getHomeYouMayAlsoLikeProducts();
     if (!brandProducts.length) return null;
 
     return <MayAlsoLoveThese banners={brandProducts} />;
 }
-
 
 async function ArtisanCollectionFetch() {
     const brandProducts =
@@ -243,7 +248,7 @@ async function ConciousClickBannerFetch() {
 
 async function BrandPromotionFetch() {
     const [sbc, sbcT] = await Promise.all([
-    //@ts-ignore
+        //@ts-ignore
 
         WomenHomeSectionQueries.getHomePageBrandIntroductionSections(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
@@ -258,7 +263,7 @@ async function BrandPromotionFetch() {
 
 async function BagSectionFetch() {
     const [sbc, sbcT] = await Promise.all([
-    //@ts-ignore
+        //@ts-ignore
 
         WomenHomeSectionQueries.getHomePageBagSectionections(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
@@ -273,7 +278,7 @@ async function BagSectionFetch() {
 
 async function MatchaBagFetch() {
     const [sbc, sbcT] = await Promise.all([
-    //@ts-ignore
+        //@ts-ignore
 
         WomenHomeSectionQueries.getHomePageMatchingSections(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
@@ -286,11 +291,9 @@ async function MatchaBagFetch() {
     return <MatchaBag moodboardItems={sbc} titleData={sbcT} />;
 }
 
-
-
 async function EffortlessEleganceFetch() {
     const [sbc, sbcT] = await Promise.all([
-    //@ts-ignore
+        //@ts-ignore
 
         WomenHomeSectionQueries.getHomePageEffortlessEleganceSections(),
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
@@ -361,7 +364,10 @@ async function ShopByNewCategoriesFetch() {
         homeShopByCategoryTitleQueries.getHomeShopByCategoryTitle(),
     ]);
     if (!Array.isArray(sbc) || !sbc.length) {
-        console.warn("ShopByNewCategoriesFetch: No categories found or invalid data", sbc);
+        console.warn(
+            "ShopByNewCategoriesFetch: No categories found or invalid data",
+            sbc
+        );
         return null;
     }
     return <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />;
@@ -432,8 +438,6 @@ async function NewAdvertisementsFetch() {
     return <HomeAndLivingectionAdvertisement banners={advertisements} />;
 }
 
-
-
 // import { AdvertisementPage, Blogs, BrandProducts, Landing, MarketingStrip, ShopByCategories } from "@/components/home";
 // import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 // import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
@@ -444,7 +448,6 @@ async function NewAdvertisementsFetch() {
 // import { Page as ElavateLooksPage } from "@/components/home/shop-slow";
 // import { Page as BrandCollaborate } from "@/components/home/types-of-brand-section";
 // import { ShopCategories } from "@/components/home/new-home-page/shop-by-category";
-
 
 // export default function Page() {
 //     return (
@@ -605,4 +608,3 @@ async function NewAdvertisementsFetch() {
 
 //     return <AdvertisementDiscountPage advertisements={advertisements} />;
 // }
-
