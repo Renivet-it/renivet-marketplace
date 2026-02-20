@@ -35,11 +35,18 @@ export function ClientProvider({ children }: LayoutProps) {
     );
 
     useEffect(() => {
-        posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
-            api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
-            capture_pageview: false,
-            capture_pageleave: true,
-        });
+        // Delay PostHog initialization by 5 seconds so it doesn't block the initial page load (hydration)
+        // and doesn't get penalized by Google PageSpeed Insights.
+        // PostHog will queue all events (like the initial page view) and flush them when initialized.
+        const timer = setTimeout(() => {
+            posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
+                api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
+                capture_pageview: false,
+                capture_pageleave: true,
+            });
+        }, 5000);
+
+        return () => clearTimeout(timer);
     }, []);
 
     return (
