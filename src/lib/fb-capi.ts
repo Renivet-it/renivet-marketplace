@@ -1,3 +1,5 @@
+import { db } from "@/lib/db";
+import { capiLogs } from "@/lib/db/schema";
 import {
     CustomData,
     EventRequest,
@@ -113,13 +115,34 @@ export const sendCapiEvent = async (
         eventsData
     );
 
+    let responseData;
+    let status = "success";
+
     try {
         const response = await eventRequest.execute();
         console.log(
             `CAPI Event '${eventName}' sent successfully. Event ID: ${eventId}`
         );
-        return response;
-    } catch (error) {
+        responseData = response;
+    } catch (error: any) {
         console.error(`Failed to send CAPI Event '${eventName}':`, error);
+        status = "failed";
+        responseData = error?.response || { message: error.message };
     }
+
+    // Attempt to log regardless of success or failure
+    try {
+        await db.insert(capiLogs).values({
+            eventName,
+            eventId,
+            userData: userData as any,
+            customData: customData as any,
+            status,
+            response: responseData,
+        });
+    } catch (dbError) {
+        console.error("Failed to log CAPI event to database:", dbError);
+    }
+
+    return responseData;
 };

@@ -43,6 +43,7 @@ import {
     usersRouter,
 } from "./routes/general";
 import { addressesRouter } from "./routes/general/address";
+import { capiLogsRouter } from "./routes/general/capi";
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({
@@ -73,6 +74,7 @@ export const appRouter = createTRPCRouter({
         packingTypes: packingTypesRouter,
         brandProductTypePacking: brandProductTypePackingRouter,
         search: searchRouter,
+        capiLogs: capiLogsRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,
