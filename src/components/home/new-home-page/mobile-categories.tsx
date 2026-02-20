@@ -70,7 +70,7 @@ export function MobileCategories() {
                                 <div className="perspective h-[78px] w-[78px]">
                                     <div className="flip-card">
                                         {/* FRONT */}
-                                        <div className="card-face card-front">
+                                        <div className="card-face card-front relative h-full w-full overflow-hidden">
                                             <Image
                                                 src={item.imageUrl}
                                                 alt={item.title}
