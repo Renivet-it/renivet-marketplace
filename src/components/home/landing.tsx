@@ -112,6 +112,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                         src={item.imageUrl}
                                         alt={item.title}
                                         fill
+                                        sizes="(max-width: 768px) 100vw, 100vw"
                                         className="absolute inset-0 h-full w-full object-cover"
                                         priority={index === 0}
                                     />
@@ -236,6 +237,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         src={mobileImageUrl}
                         alt="Mobile Banner"
                         fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
                         className="absolute inset-0 h-full w-full object-cover"
                         priority
                     />

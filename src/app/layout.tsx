@@ -174,7 +174,12 @@ export const metadata: Metadata = {
 // };
 
 export default async function RootLayout({ children }: LayoutProps) {
-    const user = await currentUser();
+    let user = null;
+    try {
+        user = await currentUser();
+    } catch (error) {
+        console.warn("Clerk: auth() was used outside of middleware context");
+    }
     let pixelUserData: any = {};
 
     if (user) {
@@ -225,7 +230,7 @@ export default async function RootLayout({ children }: LayoutProps) {
                 {FB_PIXEL_ID && (
                     <>
                         {/* ✅ Meta Pixel Script */}
-                        <Script id="fb-pixel" strategy="afterInteractive">
+                        <Script id="fb-pixel" strategy="lazyOnload">
                             {`
                                 !function(f,b,e,v,n,t,s){
                                   if(f.fbq)return;
