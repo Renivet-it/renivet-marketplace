@@ -11,9 +11,14 @@ const getRequestData = async () => {
     const headersList = await headers();
     const cookieStore = await cookies();
     const userAgent = headersList.get("user-agent") || "";
-    // X-Forwarded-For is often a list, prioritize grabbing the first valid one which could be IPv6
+    // Vercel and many CDNs pass the true client IP in x-real-ip. If missing, fallback to the first x-forwarded-for IP.
+    const realIp = headersList.get("x-real-ip");
     const forwardedFor = headersList.get("x-forwarded-for");
-    const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : "0.0.0.0";
+    const ip = realIp
+        ? realIp
+        : forwardedFor
+          ? forwardedFor.split(",")[0].trim()
+          : "0.0.0.0";
     const referer = headersList.get("referer") || "";
     const fbp = cookieStore.get("_fbp")?.value;
     const fbc = cookieStore.get("_fbc")?.value;
