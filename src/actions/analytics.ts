@@ -11,9 +11,9 @@ const getRequestData = async () => {
     const headersList = await headers();
     const cookieStore = await cookies();
     const userAgent = headersList.get("user-agent") || "";
-    // X-Forwarded-For is often a list, take the first one
+    // X-Forwarded-For is often a list, prioritize grabbing the first valid one which could be IPv6
     const forwardedFor = headersList.get("x-forwarded-for");
-    const ip = forwardedFor ? forwardedFor.split(",")[0] : "0.0.0.0";
+    const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : "0.0.0.0";
     const referer = headersList.get("referer") || "";
     const fbp = cookieStore.get("_fbp")?.value;
     const fbc = cookieStore.get("_fbc")?.value;
@@ -69,6 +69,7 @@ export async function trackAddToCartCapi(
             client_ip_address: ip,
             fbp,
             fbc,
+            fb_login_id: enrichedUserData.external_id,
             country: enrichedUserData.country || country,
         },
         customData,
@@ -121,6 +122,7 @@ export async function trackInitiateCheckoutCapi(
             client_ip_address: ip,
             fbp,
             fbc,
+            fb_login_id: enrichedUserData.external_id,
             country: enrichedUserData.country || country,
         },
         customData,
