@@ -116,8 +116,12 @@ export function NavbarHome() {
     //     else setIsMenuHidden(false);
     // });
 
+    const { isSignedIn } = useAuth();
+
     const { data: user, isPending: isUserFetching } =
-        trpc.general.users.currentUser.useQuery();
+        trpc.general.users.currentUser.useQuery(undefined, {
+            enabled: !!isSignedIn,
+        });
 
     const [
         { data: categories, isPending: isCategoriesFetching },

@@ -228,7 +228,10 @@ export function NavbarMob({ className, ...props }: GenericProps) {
         };
     }, [isMenuOpen]);
 
-    const { data: user } = trpc.general.users.currentUser.useQuery();
+    const { isSignedIn } = useAuth();
+    const { data: user } = trpc.general.users.currentUser.useQuery(undefined, {
+        enabled: !!isSignedIn,
+    });
 
     const userPermissions = useMemo(() => {
         if (!user)

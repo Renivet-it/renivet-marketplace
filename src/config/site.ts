@@ -23,7 +23,7 @@ export const siteConfig: SiteConfig = {
         url: "https://itsdrvgo.me/",
     },
     og: {
-        url: getAbsoluteURL("/og.webp"),
+        url: getAbsoluteURL("/images/renivet-logo.png"),
         width: 1200,
         height: 630,
     },
