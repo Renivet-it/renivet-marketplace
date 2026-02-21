@@ -178,7 +178,8 @@ export default async function RootLayout({ children }: LayoutProps) {
     try {
         user = await currentUser();
     } catch (error) {
-        console.warn("Clerk: auth() was used outside of middleware context");
+        // Silently catch Clerk: auth() used outside of middleware context
+        // This is expected during static generation for pages excluded from middleware
     }
     let pixelUserData: any = {};
 
