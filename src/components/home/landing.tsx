@@ -197,15 +197,14 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     </div>
                 </div>
 
-                <div
-                    className="scrollbar-none mt-3 flex w-full justify-between gap-3 overflow-x-auto px-3 py-4"
-                    style={{
-                        backgroundImage:
-                            "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                    }}
-                >
+                <div className="scrollbar-none relative mt-3 flex w-full justify-between gap-3 overflow-x-auto px-3 py-4">
+                    <Image
+                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV"
+                        alt="Category Background"
+                        fill
+                        sizes="100vw"
+                        className="absolute inset-0 -z-10 object-cover"
+                    />
                     {categories.map((category) => (
                         <Link
                             key={category.name}
@@ -245,7 +244,6 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         className="absolute inset-0 h-full w-full object-cover"
                         priority
                         fetchPriority="high"
-                        unoptimized
                     />
 
                     {/* 🔵 CENTER BUTTON — MOBILE ONLY */}
