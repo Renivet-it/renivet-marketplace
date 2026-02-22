@@ -6,8 +6,6 @@ import type { Metadata, Viewport } from "next";
 import { dmsans, josefin, playfair, rubik, worksans } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
-import { userQueries } from "@/lib/db/queries/user";
-import { currentUser } from "@clerk/nextjs/server";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import { MergeGuestCart } from "../components/globals/layouts/guest/merge-guest-cart";
@@ -173,48 +171,7 @@ export const metadata: Metadata = {
 //     metadataBase: new URL(getAbsoluteURL()),
 // };
 
-export default async function RootLayout({ children }: LayoutProps) {
-    let user = null;
-    try {
-        user = await currentUser();
-    } catch (error) {
-        // Silently catch Clerk: auth() used outside of middleware context
-        // This is expected during static generation for pages excluded from middleware
-    }
-    let pixelUserData: any = {};
-
-    if (user) {
-        try {
-            const dbUser = await userQueries.getUser(user.id);
-            const primaryAddress =
-                dbUser?.addresses?.find((a) => a.isPrimary) ||
-                dbUser?.addresses?.[0];
-
-            pixelUserData = {
-                em: user.emailAddresses?.[0]?.emailAddress,
-                ph:
-                    user.phoneNumbers?.[0]?.phoneNumber ||
-                    primaryAddress?.phone,
-                fn: user.firstName,
-                ln: user.lastName,
-                external_id: user.id,
-                ct: primaryAddress?.city,
-                st: primaryAddress?.state,
-                zp: primaryAddress?.zip,
-            };
-        } catch (error) {
-            console.error("Error fetching user data for pixel:", error);
-            // Fallback to basic user data if DB fails
-            pixelUserData = {
-                em: user.emailAddresses?.[0]?.emailAddress,
-                ph: user.phoneNumbers?.[0]?.phoneNumber,
-                fn: user.firstName,
-                ln: user.lastName,
-                external_id: user.id,
-            };
-        }
-    }
-
+export default function RootLayout({ children }: LayoutProps) {
     return (
         <html
             lang="en"
@@ -228,15 +185,10 @@ export default async function RootLayout({ children }: LayoutProps) {
             )}
         >
             <head>
-                <link
-                    rel="preconnect"
-                    href="https://fonts.gstatic.com"
-                    crossOrigin="anonymous"
-                />
                 {FB_PIXEL_ID && (
                     <>
                         {/* ✅ Meta Pixel Script */}
-                        <Script id="fb-pixel" strategy="lazyOnload">
+                        <Script id="fb-pixel" strategy="afterInteractive">
                             {`
                                 !function(f,b,e,v,n,t,s){
                                   if(f.fbq)return;
@@ -249,7 +201,7 @@ export default async function RootLayout({ children }: LayoutProps) {
                                   s=b.getElementsByTagName(e)[0];
                                   s.parentNode.insertBefore(t,s)
                                 }(window,document,'script');
-                                fbq('init', '${FB_PIXEL_ID}', ${JSON.stringify(pixelUserData)});
+                                fbq('init', '${FB_PIXEL_ID}');
                                 fbq('track', 'PageView');
                             `}
                         </Script>
