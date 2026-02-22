@@ -6,15 +6,12 @@ import type { Metadata, Viewport } from "next";
 import { dmsans, josefin, playfair, rubik, worksans } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
-import { userQueries } from "@/lib/db/queries/user";
-import { currentUser } from "@clerk/nextjs/server";
+import { FB_PIXEL_ID } from "@/lib/fbpixel";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import { MergeGuestCart } from "../components/globals/layouts/guest/merge-guest-cart";
 import { MergeGuestWishlist } from "../components/globals/layouts/guest/merge-guest-wishlist";
-import FacebookPixel from "./facebook-pixel"; // ✅ add this
-
-const FB_PIXEL_ID = "618442627790500"; // ✅
+import FacebookPixel from "./facebook-pixel";
 
 export const viewport: Viewport = {
     themeColor: [
@@ -27,7 +24,6 @@ export const viewport: Viewport = {
     maximumScale: 1,
 };
 
-// export const metadata: Metadata = {
 export const metadata: Metadata = {
     title: {
         default: `${siteConfig.name} | Sustainable Marketplace for Quality Products`,
@@ -107,114 +103,8 @@ export const metadata: Metadata = {
     manifest: "/site.webmanifest",
     metadataBase: new URL(getAbsoluteURL()),
 };
-//     title: {
-//         default: siteConfig.name,
-//         template: "%s | " + siteConfig.name,
-//     },
-//     description: siteConfig.description,
-//     keywords: siteConfig.keywords,
-//     authors: [
-//         {
-//             name: `${siteConfig.name} Team`,
-//             url: getAbsoluteURL("/about#team"),
-//         },
-//     ],
-//     publisher: `${siteConfig.name} Team`,
-//     formatDetection: {
-//         email: false,
-//         address: false,
-//         telephone: false,
-//     },
-//     referrer: "origin-when-cross-origin",
-//     category: siteConfig.category,
-//     appleWebApp: {
-//         capable: true,
-//         statusBarStyle: "black-translucent",
-//         title: siteConfig.name,
-//     },
-//     creator: siteConfig.name,
-//     openGraph: {
-//         title: siteConfig.name,
-//         description: siteConfig.description,
-//         url: getAbsoluteURL(),
-//         siteName: siteConfig.name,
-//         images: [
-//             {
-//                 ...siteConfig.og,
-//                 alt: siteConfig.name,
-//             },
-//         ],
-//         locale: "en_US",
-//         type: "website",
-//     },
-//     twitter: {
-//         card: "summary_large_image",
-//         title: siteConfig.name,
-//         description: siteConfig.description,
-//         images: [siteConfig.og.url],
-//         creator: "@itsdrvgo",
-//     },
-//     icons: {
-//         icon: [
-//             {
-//                 url: "/favicon.ico",
-//                 sizes: "32x32",
-//                 type: "image/x-icon",
-//             },
-//             {
-//                 url: "/favicon-96x96.png",
-//                 sizes: "96x96",
-//                 type: "image/png",
-//             },
-//         ],
-//         apple: "/apple-touch-icon.png",
-//     },
-//     manifest: "/site.webmanifest",
-//     metadataBase: new URL(getAbsoluteURL()),
-// };
 
-export default async function RootLayout({ children }: LayoutProps) {
-    let user = null;
-    try {
-        user = await currentUser();
-    } catch (error) {
-        // Silently catch Clerk: auth() used outside of middleware context
-        // This is expected during static generation for pages excluded from middleware
-    }
-    let pixelUserData: any = {};
-
-    if (user) {
-        try {
-            const dbUser = await userQueries.getUser(user.id);
-            const primaryAddress =
-                dbUser?.addresses?.find((a) => a.isPrimary) ||
-                dbUser?.addresses?.[0];
-
-            pixelUserData = {
-                em: user.emailAddresses?.[0]?.emailAddress,
-                ph:
-                    user.phoneNumbers?.[0]?.phoneNumber ||
-                    primaryAddress?.phone,
-                fn: user.firstName,
-                ln: user.lastName,
-                external_id: user.id,
-                ct: primaryAddress?.city,
-                st: primaryAddress?.state,
-                zp: primaryAddress?.zip,
-            };
-        } catch (error) {
-            console.error("Error fetching user data for pixel:", error);
-            // Fallback to basic user data if DB fails
-            pixelUserData = {
-                em: user.emailAddresses?.[0]?.emailAddress,
-                ph: user.phoneNumbers?.[0]?.phoneNumber,
-                fn: user.firstName,
-                ln: user.lastName,
-                external_id: user.id,
-            };
-        }
-    }
-
+export default function RootLayout({ children }: LayoutProps) {
     return (
         <html
             lang="en"
@@ -233,9 +123,27 @@ export default async function RootLayout({ children }: LayoutProps) {
                     href="https://fonts.gstatic.com"
                     crossOrigin="anonymous"
                 />
+                {/* Preconnect to UploadThing CDN for faster image loads */}
+                <link
+                    rel="preconnect"
+                    href="https://4o4vm2cu6g.ufs.sh"
+                    crossOrigin="anonymous"
+                />
+                <link rel="dns-prefetch" href="https://4o4vm2cu6g.ufs.sh" />
+                {/* Preload the mobile banner LCP image to eliminate resource load delay.
+                    Without this, the browser waits for the Suspense boundary to resolve
+                    before discovering the image (~2.5s delay). */}
+                <link
+                    rel="preload"
+                    as="image"
+                    imageSrcSet={`/_next/image?url=${encodeURIComponent("https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP")}&w=640&q=75 640w, /_next/image?url=${encodeURIComponent("https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP")}&w=750&q=75 750w, /_next/image?url=${encodeURIComponent("https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP")}&w=828&q=75 828w`}
+                    imageSizes="100vw"
+                    fetchPriority="high"
+                />
                 {FB_PIXEL_ID && (
                     <>
-                        {/* ✅ Meta Pixel Script */}
+                        {/* Meta Pixel Script — init without user data for fast TTFB,
+                            user data enrichment happens client-side in FacebookPixel component */}
                         <Script id="fb-pixel" strategy="lazyOnload">
                             {`
                                 !function(f,b,e,v,n,t,s){
@@ -249,12 +157,12 @@ export default async function RootLayout({ children }: LayoutProps) {
                                   s=b.getElementsByTagName(e)[0];
                                   s.parentNode.insertBefore(t,s)
                                 }(window,document,'script');
-                                fbq('init', '${FB_PIXEL_ID}', ${JSON.stringify(pixelUserData)});
+                                fbq('init', '${FB_PIXEL_ID}');
                                 fbq('track', 'PageView');
                             `}
                         </Script>
 
-                        {/* ✅ NoScript Fallback */}
+                        {/* NoScript Fallback */}
                         <noscript>
                             <img
                                 height="1"
@@ -276,7 +184,7 @@ export default async function RootLayout({ children }: LayoutProps) {
                         <MergeGuestWishlist />
                         {children}
                         <Toaster />
-                        {/* ✅ Track page changes */}
+                        {/* Track page changes + enrich pixel with user data client-side */}
                         <FacebookPixel />
                     </ClientProvider>
                 </body>
