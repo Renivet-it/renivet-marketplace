@@ -197,35 +197,36 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     </div>
                 </div>
 
-                <div
-                    className="scrollbar-none mt-3 flex w-full justify-between gap-3 overflow-x-auto px-3 py-4"
-                    style={{
-                        backgroundImage:
-                            "url('https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV')",
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                    }}
-                >
-                    {categories.map((category) => (
-                        <Link
-                            key={category.name}
-                            href={category.href}
-                            className="flex min-w-[60px] flex-col items-center"
-                        >
-                            <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[#FCFBF4] shadow-sm">
-                                <Image
-                                    src={category.imageUrl}
-                                    alt={category.name}
-                                    fill
-                                    className="object-cover"
-                                    sizes="64px"
-                                />
-                            </div>
-                            <span className="pt-1 text-xs font-medium text-black">
-                                {category.name}
-                            </span>
-                        </Link>
-                    ))}
+                <div className="relative mt-3 w-full overflow-hidden">
+                    <Image
+                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhtEAhhb4imNMJ6l9SbIRxWLcDyX3vTqk2UV"
+                        alt="Category background"
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                    />
+                    <div className="scrollbar-none relative z-10 flex w-full justify-between gap-3 overflow-x-auto px-3 py-4">
+                        {categories.map((category) => (
+                            <Link
+                                key={category.name}
+                                href={category.href}
+                                className="flex min-w-[60px] flex-col items-center"
+                            >
+                                <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[#FCFBF4] shadow-sm">
+                                    <Image
+                                        src={category.imageUrl}
+                                        alt={category.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="64px"
+                                    />
+                                </div>
+                                <span className="pt-1 text-xs font-medium text-black">
+                                    {category.name}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
 
                 {/* 🔵 BANNER IMAGE */}
@@ -241,11 +242,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         src={mobileImageUrl}
                         alt="Mobile Banner"
                         fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
+                        sizes="100vw"
                         className="absolute inset-0 h-full w-full object-cover"
                         priority
                         fetchPriority="high"
-                        unoptimized
                     />
 
                     {/* 🔵 CENTER BUTTON — MOBILE ONLY */}

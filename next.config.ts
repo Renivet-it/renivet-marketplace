@@ -1,4 +1,3 @@
-
 import "./env";
 import type { NextConfig } from "next";
 
@@ -29,26 +28,26 @@ const nextConfig: NextConfig = {
                 hostname: "picsum.photos",
             },
             {
-    protocol: "https",
-    hostname: "utfs.io",
-    pathname: "/f/**",
-},
+                protocol: "https",
+                hostname: "utfs.io",
+                pathname: "/f/**",
+            },
             {
                 hostname: "img.clerk.com",
             },
             {
                 protocol: "https",
                 hostname: "placehold.co",
-                pathname: "**"
+                pathname: "**",
             },
             {
                 protocol: "https",
                 hostname: "4o4vm2cu6g.ufs.sh",
-                pathname: "**"
-            }
+                pathname: "**",
+            },
         ],
         // Optimize image loading (reduces build time)
-        formats: ["image/webp"],
+        formats: ["image/avif", "image/webp"],
         minimumCacheTTL: 60,
     },
 
