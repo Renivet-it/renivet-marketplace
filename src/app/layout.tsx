@@ -130,6 +130,16 @@ export default function RootLayout({ children }: LayoutProps) {
                     crossOrigin="anonymous"
                 />
                 <link rel="dns-prefetch" href="https://4o4vm2cu6g.ufs.sh" />
+                {/* Preload the mobile banner LCP image to eliminate resource load delay.
+                    Without this, the browser waits for the Suspense boundary to resolve
+                    before discovering the image (~2.5s delay). */}
+                <link
+                    rel="preload"
+                    as="image"
+                    imageSrcSet={`/_next/image?url=${encodeURIComponent("https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP")}&w=640&q=75 640w, /_next/image?url=${encodeURIComponent("https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP")}&w=750&q=75 750w, /_next/image?url=${encodeURIComponent("https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP")}&w=828&q=75 828w`}
+                    imageSizes="100vw"
+                    fetchPriority="high"
+                />
                 {FB_PIXEL_ID && (
                     <>
                         {/* Meta Pixel Script — init without user data for fast TTFB,
