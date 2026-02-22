@@ -50,6 +50,7 @@ const nextConfig: NextConfig = {
         formats: ["image/avif", "image/webp"],
         minimumCacheTTL: 60,
     },
+    compress: true,
 
     // ===== BUILD PERFORMANCE OPTIMIZATIONS =====
     staticPageGenerationTimeout: 180, // Increase from default 60
