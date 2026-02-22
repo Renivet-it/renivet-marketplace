@@ -118,6 +118,18 @@ export default function RootLayout({ children }: LayoutProps) {
             )}
         >
             <head>
+                <link
+                    rel="preconnect"
+                    href="https://fonts.gstatic.com"
+                    crossOrigin="anonymous"
+                />
+                {/* Preconnect to UploadThing CDN for faster image loads */}
+                <link
+                    rel="preconnect"
+                    href="https://4o4vm2cu6g.ufs.sh"
+                    crossOrigin="anonymous"
+                />
+                <link rel="dns-prefetch" href="https://4o4vm2cu6g.ufs.sh" />
                 {/* Preload the mobile banner LCP image to eliminate resource load delay.
                     Without this, the browser waits for the Suspense boundary to resolve
                     before discovering the image (~2.5s delay). */}
