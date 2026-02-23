@@ -61,9 +61,11 @@ interface Product {
     media: { mediaItem: { url: string } }[];
     title: string;
     brand?: { name: string };
+    compareAtPrice?: number;
     variants?: {
         id: string;
         price: number;
+        compareAtPrice?: number;
     }[];
     price?: number;
 }
@@ -162,6 +164,18 @@ function ProductCard({
         product.media?.[0]?.mediaItem?.url ||
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
+    /* ---- Discount calculation ---- */
+    const originalPrice =
+        product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
+    const displayOriginal =
+        originalPrice && originalPrice > rawPrice
+            ? convertPaiseToRupees(originalPrice)
+            : null;
+    const discountPct =
+        displayOriginal && originalPrice
+            ? Math.round(((originalPrice - rawPrice) / originalPrice) * 100)
+            : null;
+
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -192,9 +206,10 @@ function ProductCard({
     };
 
     return (
-        <div className="group flex-shrink-0 cursor-pointer overflow-hidden bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
+        <div className="group flex-shrink-0 cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
             <Link href={`/products/${product.slug}`} className="block">
-                <div className="relative aspect-[1/1] w-full">
+                {/* Image + discount badge */}
+                <div className="relative aspect-[1/1] w-full overflow-hidden">
                     <Image
                         src={imageUrl}
                         alt={product.title}
@@ -202,32 +217,57 @@ function ProductCard({
                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                         sizes="(max-width: 640px) 33vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                     />
+
+                    {/* 🏷️ Discount badge */}
+                    {discountPct && discountPct > 0 && (
+                        <span className="absolute left-0 top-2 rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md sm:px-2.5 sm:py-1 sm:text-xs">
+                            {discountPct}% OFF
+                        </span>
+                    )}
                 </div>
 
-                <div className="p-1.5 text-center sm:p-2">
-                    <h3 className="truncate text-xs font-normal text-gray-700 sm:text-sm">
+                {/* Info */}
+                <div className="space-y-1 p-2 sm:p-2.5">
+                    {/* Title */}
+                    <h3 className="truncate text-xs font-medium text-gray-700 sm:text-sm">
                         {product.title}
                     </h3>
 
-                    <div className="mt-1 flex items-center justify-center space-x-2 sm:space-x-3">
-                        <p className="text-xs font-medium text-gray-900 sm:text-sm">
+                    {/* Price row */}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-sm font-semibold text-gray-900 sm:text-base">
                             ₹{price}
-                        </p>
+                        </span>
 
-                        {/* ➕ ADD TO CART */}
-                        <button
-                            onClick={handleAddToCart}
-                            disabled={isLoading}
-                            className="flex size-5 items-center justify-center rounded-full bg-blue-100 text-blue-600 transition-colors hover:bg-blue-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:size-6"
-                            aria-label="Add to cart"
-                        >
-                            {isLoading ? (
-                                <Icons.Loader2 className="size-3 animate-spin" />
-                            ) : (
-                                <Icons.Plus className="size-3 sm:size-4" />
-                            )}
-                        </button>
+                        {displayOriginal && (
+                            <span className="text-[10px] text-gray-400 line-through sm:text-xs">
+                                ₹{displayOriginal}
+                            </span>
+                        )}
+
+                        {discountPct && discountPct > 0 && (
+                            <span className="text-[10px] font-semibold text-emerald-600 sm:text-xs">
+                                {discountPct}% off
+                            </span>
+                        )}
                     </div>
+
+                    {/* Add to cart button */}
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={isLoading}
+                        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white py-1.5 text-[11px] font-medium text-gray-700 transition-all duration-200 hover:border-gray-800 hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:py-2 sm:text-xs"
+                        aria-label="Add to cart"
+                    >
+                        {isLoading ? (
+                            <Icons.Loader2 className="size-3 animate-spin" />
+                        ) : (
+                            <>
+                                <Icons.Plus className="size-3 sm:size-3.5" />
+                                Add to Cart
+                            </>
+                        )}
+                    </button>
                 </div>
             </Link>
         </div>
