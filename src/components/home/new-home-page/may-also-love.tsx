@@ -29,6 +29,12 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
 
     const displayCompare = compareAt ? convertPaiseToRupees(compareAt) : null;
 
+    const rawPrice = product.variants?.[0]?.price ?? product.price ?? 0;
+    const discountPct =
+        compareAt && compareAt > rawPrice
+            ? Math.round(((compareAt - rawPrice) / compareAt) * 100)
+            : null;
+
     const productUrl = `/products/${product.slug}`;
 
     const toggleWishlist = (e: React.MouseEvent) => {
@@ -57,6 +63,13 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
                     sizes="(max-width: 768px) 180px, 300px"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
+
+                {/* 🏷️ Discount badge */}
+                {discountPct && discountPct > 0 && (
+                    <span className="absolute left-0 top-2.5 rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-3 md:py-1 md:text-xs">
+                        {discountPct}% OFF
+                    </span>
+                )}
 
                 {/* Wishlist Button Overlay */}
                 <button
@@ -88,6 +101,12 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
                 {displayCompare && (
                     <span className="text-[12px] text-gray-400 line-through md:text-[13px]">
                         ₹{displayCompare}
+                    </span>
+                )}
+
+                {discountPct && discountPct > 0 && (
+                    <span className="text-[11px] font-semibold text-emerald-600 md:text-[13px]">
+                        {discountPct}% off
                     </span>
                 )}
             </div>
