@@ -1,11 +1,15 @@
 import { Footer, NavbarHome, NavbarMob } from "@/components/globals/layouts";
 import { siteConfig } from "@/config/site";
+import { getAbsoluteURL } from "@/lib/utils";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: {
-        default: siteConfig.description + " | " + siteConfig.name,
+        default: siteConfig.name + " | Sustainable Fashion Marketplace",
         template: "%s | " + siteConfig.name,
+    },
+    alternates: {
+        canonical: getAbsoluteURL("/"),
     },
 };
 
