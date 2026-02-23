@@ -64,10 +64,17 @@ export function OrderPage({
         { enabled: !!user.id }
     );
 
-    const { data: order } = trpc.general.orders.getOrder.useQuery(
+    const isCartPayment = initialData.id.startsWith("cart-");
+
+    const { data: fetchedOrder } = trpc.general.orders.getOrder.useQuery(
         { id: initialData.id },
-        { initialData }
+        {
+            initialData: isCartPayment ? undefined : initialData,
+            enabled: !isCartPayment,
+        }
     );
+
+    const order = isCartPayment ? initialData : fetchedOrder || initialData;
 
     const availableItems = useMemo(
         () =>
@@ -468,7 +475,7 @@ export function OrderPage({
             st: selectedShippingAddress.state,
             zp: selectedShippingAddress.zip,
             external_id: user.id,
-            fb_login_id: user.externalAccounts.find(
+            fb_login_id: user.externalAccounts?.find(
                 (acc) => acc.provider === "oauth_facebook"
             )?.externalId,
         };

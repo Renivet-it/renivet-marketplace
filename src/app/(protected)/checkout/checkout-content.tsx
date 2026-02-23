@@ -44,6 +44,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ShippingAddress from "../mycart/Component/address-stepper/address-stepper";
+import { OrderProductCard } from "../mycart/Component/payment-stepper/ordered-product-card-view";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000;
@@ -439,6 +440,14 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             </div>
 
             <div className="space-y-4 p-4">
+                {/* Order Items */}
+                <div className="mb-6 rounded-2xl border border-gray-50 bg-white p-4 shadow-sm">
+                    <OrderProductCard
+                        orderItems={availableItems as any}
+                        className="border border-gray-100 shadow-none"
+                    />
+                </div>
+
                 {/* Delivery Details */}
                 <div className="mb-2 flex items-center gap-2">
                     <MapPin className="size-4 text-gray-500" />
