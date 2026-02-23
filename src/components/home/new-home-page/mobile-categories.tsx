@@ -57,6 +57,7 @@ export function MobileCategories() {
 
     return (
         <>
+            {/* Mobile: 4-col grid */}
             <section className="block w-full bg-[#FCFBF4] px-4 py-6 md:hidden">
                 <div className="grid grid-cols-4 place-items-center gap-x-3 gap-y-6">
                     {categories.map((item, index) => (
@@ -65,11 +66,9 @@ export function MobileCategories() {
                             href={item.link}
                             className="flex flex-col items-center"
                         >
-                            {/* IMAGE / FLIP CARD */}
                             {item.title === "Accessories" ? (
-                                <div className="perspective h-[78px] w-[78px]">
+                                <div className="perspective size-[78px]">
                                     <div className="flip-card">
-                                        {/* FRONT */}
                                         <div className="card-face card-front relative h-full w-full overflow-hidden">
                                             <Image
                                                 src={item.imageUrl}
@@ -79,8 +78,6 @@ export function MobileCategories() {
                                                 className="object-cover"
                                             />
                                         </div>
-
-                                        {/* BACK */}
                                         <div className="card-face card-back">
                                             <p className="text-[10px] leading-tight text-[#333]">
                                                 Buy Any 2
@@ -92,7 +89,7 @@ export function MobileCategories() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="relative h-[78px] w-[78px] overflow-hidden">
+                                <div className="relative size-[78px] overflow-hidden">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
@@ -102,8 +99,33 @@ export function MobileCategories() {
                                     />
                                 </div>
                             )}
-
                             <p className="mt-2 text-center text-[12px] leading-tight text-[#333]">
+                                {item.title}
+                            </p>
+                        </Link>
+                    ))}
+                </div>
+            </section>
+
+            {/* Desktop: horizontal row with round images */}
+            <section className="hidden w-full bg-[#FCFBF4] py-10 md:block">
+                <div className="flex items-start justify-between px-12">
+                    {categories.map((item, index) => (
+                        <Link
+                            key={index}
+                            href={item.link}
+                            className="group flex flex-col items-center gap-3"
+                        >
+                            <div className="relative size-[130px] overflow-hidden rounded-full border-2 border-transparent bg-white shadow-sm transition-all duration-300 group-hover:border-[#c5d1b8] group-hover:shadow-md">
+                                <Image
+                                    src={item.imageUrl}
+                                    alt={item.title}
+                                    fill
+                                    sizes="130px"
+                                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                                />
+                            </div>
+                            <p className="text-center text-sm font-medium text-[#333] transition-colors group-hover:text-[#6B7A5E]">
                                 {item.title}
                             </p>
                         </Link>
