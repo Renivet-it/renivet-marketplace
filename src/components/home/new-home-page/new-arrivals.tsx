@@ -244,13 +244,6 @@ function ProductCard({
                                 ₹{displayOriginal}
                             </span>
                         )}
-
-                        {/* Only show on sm+ — badge on image is enough for mobile */}
-                        {discountPct && discountPct > 0 && (
-                            <span className="hidden text-xs font-semibold text-emerald-600 sm:inline">
-                                {discountPct}% off
-                            </span>
-                        )}
                     </div>
 
                     {/* Add to cart button */}
