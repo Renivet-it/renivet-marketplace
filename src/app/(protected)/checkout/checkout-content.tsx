@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import ShippingAddress from "../mycart/Component/address-stepper/address-stepper";
@@ -51,6 +51,12 @@ const RETRY_DELAY_BASE = 1000;
 
 export default function CheckoutContent({ userId }: { userId: string }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const isBuyNow = searchParams.get("buy_now") === "true";
+    const buyNowItemId = searchParams.get("item");
+    const buyNowVariantId = searchParams.get("variant");
+    const buyNowQty = searchParams.get("qty");
 
     const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
     const [processingModalTitle, setProcessingModalTitle] = useState("");
@@ -67,7 +73,11 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
         useCartStore();
 
-    const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery(
+    const {
+        data: userCart,
+        isLoading: isCartLoading,
+        refetch: refetchCart,
+    } = trpc.general.users.cart.getCartForUser.useQuery(
         { userId },
         { enabled: !!userId }
     );
@@ -75,32 +85,59 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
 
-    const availableItems = useMemo(
-        () =>
-            userCart?.filter(
+    const availableItems = useMemo(() => {
+        if (!userCart) return [];
+
+        const filtered = userCart.filter(
+            (item) =>
+                item.product.isPublished &&
+                item.product.verificationStatus === "approved" &&
+                !item.product.isDeleted &&
+                item.product.isAvailable &&
+                (!!item.product.quantity ? item.product.quantity > 0 : true) &&
+                item.product.isActive &&
+                (!item.variant ||
+                    (item.variant &&
+                        !item.variant.isDeleted &&
+                        item.variant.quantity > 0)) &&
+                item.status
+        );
+
+        if (isBuyNow && buyNowItemId) {
+            const buyNowItem = filtered.find(
                 (item) =>
-                    item.product.isPublished &&
-                    item.product.verificationStatus === "approved" &&
-                    !item.product.isDeleted &&
-                    item.product.isAvailable &&
-                    (!!item.product.quantity
-                        ? item.product.quantity > 0
-                        : true) &&
-                    item.product.isActive &&
-                    (!item.variant ||
-                        (item.variant &&
-                            !item.variant.isDeleted &&
-                            item.variant.quantity > 0)) &&
-                    item.status
-            ) || [],
-        [userCart]
-    );
+                    item.productId === buyNowItemId &&
+                    (buyNowVariantId
+                        ? item.variantId === buyNowVariantId
+                        : !item.variantId)
+            );
+            if (!buyNowItem) return [];
+            const qty = parseInt(buyNowQty || "1", 10);
+            return [{ ...buyNowItem, quantity: qty }];
+        }
+
+        return filtered;
+    }, [userCart, isBuyNow, buyNowItemId, buyNowQty, buyNowVariantId]);
 
     useEffect(() => {
-        if (availableItems.length === 0 && userCart) {
+        if (
+            !isBuyNow &&
+            !isCartLoading &&
+            availableItems.length === 0 &&
+            userCart
+        ) {
             router.push("/mycart");
         }
-    }, [availableItems.length, userCart, router]);
+    }, [availableItems.length, userCart, router, isBuyNow, isCartLoading]);
+
+    useEffect(() => {
+        if (!(window as any).Razorpay) {
+            const script = document.createElement("script");
+            script.src = "https://checkout.razorpay.com/v1/checkout.js";
+            script.async = true;
+            document.body.appendChild(script);
+        }
+    }, []);
 
     const itemsCount = useMemo(
         () => availableItems.reduce((acc, item) => acc + item.quantity, 0),
@@ -169,6 +206,18 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
     const { mutate: deleteItemFromCart, isPending: isRemoving } =
         trpc.general.orders.deleteItemFromCart.useMutation({
+            onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
+        });
+
+    const { mutate: removeProduct, isPending: isRemovingProduct } =
+        trpc.general.users.cart.removeProductInCart.useMutation({
+            onMutate: () => ({
+                toastId: toast.loading("Removing product from cart..."),
+            }),
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Product removed from cart", { id: toastId });
+                refetchCart();
+            },
             onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
         });
 
@@ -336,7 +385,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         }
                     },
                     orderDetailsByBrand,
-                    deleteItemFromCart,
+                    deleteItemFromCart: isBuyNow
+                        ? undefined
+                        : deleteItemFromCart,
                     orderIntentId: orderIntent.id,
                 });
 
@@ -445,6 +496,17 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     <OrderProductCard
                         orderItems={availableItems as any}
                         className="border border-gray-100 shadow-none"
+                        isRemoving={isRemovingProduct}
+                        onRemove={
+                            !isBuyNow
+                                ? (item: any) =>
+                                      removeProduct({
+                                          userId,
+                                          productId: item.product.id,
+                                          variantId: item.variantId,
+                                      })
+                                : undefined
+                        }
                     />
                 </div>
 
@@ -592,7 +654,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
                     <Button
                         size="lg"
-                        className="h-12 w-full rounded-xl bg-[#fca5cb] text-lg font-bold text-white shadow-none hover:bg-[#eb8cb6]"
+                        className="h-12 w-full rounded-xl bg-[#84abd6] text-lg font-bold text-white shadow-none hover:bg-[#6d96c2]"
                         onClick={handlePayNow}
                         disabled={
                             isProcessing ||

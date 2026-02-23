@@ -7,6 +7,7 @@ import {
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
+import Script from "next/script";
 import { Suspense } from "react";
 import CheckoutContent from "./checkout-content";
 

@@ -494,7 +494,9 @@ export function ProductCartAddForm({
                                     setIsAddedToCart(true);
                                     refetch?.();
                                     if (isBuyNowRef.current || isBuyNow)
-                                        router.push("/checkout");
+                                        router.push(
+                                            `/checkout?buy_now=true&item=${product.id}&variant=${selectedVariant?.id || ""}&qty=${values.quantity}`
+                                        );
                                 },
                             });
                         } else {
@@ -515,7 +517,9 @@ export function ProductCartAddForm({
                             addToGuestCart(cartItem);
                             setIsAddedToCart(true);
                             if (isBuyNowRef.current || isBuyNow)
-                                router.push("/checkout");
+                                router.push(
+                                    `/checkout?buy_now=true&item=${product.id}&variant=${selectedVariant?.id || ""}&qty=${values.quantity}`
+                                );
                         }
                     })}
                 >
