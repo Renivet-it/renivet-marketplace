@@ -113,48 +113,55 @@ export default function Page() {
             <Suspense>
                 <MobileCategoriesFetch />
             </Suspense>
-            <Suspense>
+            {/* <Suspense>
                 <BrandTypesFetch />
-            </Suspense>
-            <Suspense>
+            </Suspense> */}
+            {/* <Suspense>
                 <CuratedBannerFetch />
-            </Suspense>
+            </Suspense> */}
             <Suspense>
                 <SwapSpaceBannerFetch />
             </Suspense>
+                       <Suspense>
+                <LoveTheseFetch />
+            </Suspense>
+                <Suspense>
+                <ProductNewArrivalsGridFetch />
+            </Suspense>
+  
+     <Suspense>
+                <ProductSwipeCardFetch />
+            </Suspense>
             <Suspense>
+                <EventSectionTwoBannerFetch />
+            </Suspense>
+            {/* <Suspense>
+                <DealMarketingStripFetch />
+            </Suspense> */}
+
+            {/* <Suspense>
+                <EffortlessEleganceFetch />
+            </Suspense> */}
+            {/* <Suspense>
+                <ProductNewArrivalsGridFetch />
+            </Suspense> */}
+                   <Suspense>
+                <MayAlsoLoveTheseFetch />
+            </Suspense>
+
+            {/* <Suspense>
+                <MatchaBagFetch />
+            </Suspense> */}
+            {/* <Suspense>
+                <LoveTheseFetch />
+            </Suspense> */}
+       
+               <Suspense>
                 <WelcomeToRenivetFetch />
             </Suspense>
             <Suspense>
                 <BrandPromotionFetch />
             </Suspense>
-
-            <Suspense>
-                <EventSectionTwoBannerFetch />
-            </Suspense>
-            <Suspense>
-                <DealMarketingStripFetch />
-            </Suspense>
-
-            <Suspense>
-                <EffortlessEleganceFetch />
-            </Suspense>
-            <Suspense>
-                <ProductNewArrivalsGridFetch />
-            </Suspense>
-            <Suspense>
-                <MatchaBagFetch />
-            </Suspense>
-            <Suspense>
-                <LoveTheseFetch />
-            </Suspense>
-            <Suspense>
-                <ProductSwipeCardFetch />
-            </Suspense>
-            <Suspense>
-                <MayAlsoLoveTheseFetch />
-            </Suspense>
-
             <Suspense>
                 <HomePageMainProductFetch />
             </Suspense>
