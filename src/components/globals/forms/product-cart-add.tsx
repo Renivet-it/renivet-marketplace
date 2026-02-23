@@ -693,10 +693,10 @@ export function ProductCartAddForm({
                         <div ref={buttonsRef} className="flex gap-2 sm:gap-4">
                             <Button
                                 type="submit"
-                                size="lg"
+                                size="sm"
                                 className={cn(
-                                    "rounded-full bg-[#E0E2E1] text-lg font-semibold text-black hover:bg-[#E0E2E1]",
-                                    userId ? "flex-1 md:flex-[2]" : "flex-1"
+                                    "h-9 rounded-full bg-[#E0E2E1] px-5 text-sm font-medium text-black hover:bg-[#E0E2E1]",
+                                    userId ? "flex-1" : "flex-1"
                                 )}
                                 disabled={
                                     !product.isAvailable ||
@@ -783,8 +783,8 @@ export function ProductCartAddForm({
                                 <WishlistButton
                                     type="button"
                                     variant="outline"
-                                    size="lg"
-                                    className="hidden flex-1 rounded-full font-semibold md:flex"
+                                    size="sm"
+                                    className="hidden h-9 flex-1 rounded-full px-5 text-sm font-medium md:flex"
                                     userId={userId}
                                     productId={product.id}
                                     isProductWishlisted={isProductWishlisted}
@@ -800,8 +800,8 @@ export function ProductCartAddForm({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    size="lg"
-                                    className="hidden flex-1 rounded-full font-semibold md:flex"
+                                    size="sm"
+                                    className="hidden h-9 flex-1 rounded-full px-5 text-sm font-medium md:flex"
                                     onClick={() => {
                                         addToGuestWishlist({
                                             productId: product.id,
