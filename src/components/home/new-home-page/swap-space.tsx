@@ -338,7 +338,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
   return (
     <section className={cn("w-full py-6 bg-[#FCFBF4]", className)}>
 <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-6">
-        What's New
+        Best Sellers
       </h2>
 
       {/* DESKTOP */}
