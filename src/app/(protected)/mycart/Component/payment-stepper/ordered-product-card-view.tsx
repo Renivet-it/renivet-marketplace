@@ -2,7 +2,7 @@
 
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { format } from "date-fns";
-import { Calendar, Leaf, RotateCcw, ShoppingBag } from "lucide-react";
+import { Calendar, Leaf, RotateCcw, ShoppingBag, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -14,6 +14,7 @@ interface GenericProps {
 interface CartItem {
     id: string;
     product: {
+        id: string;
         slug: string;
         title: string;
         price: number;
@@ -37,10 +38,14 @@ interface CartItem {
 
 interface OrderProductCardProps extends GenericProps {
     orderItems: CartItem[];
+    onRemove?: (item: CartItem) => void;
+    isRemoving?: boolean;
 }
 
 export function OrderProductCard({
     orderItems,
+    onRemove,
+    isRemoving,
     className,
     ...props
 }: OrderProductCardProps) {
@@ -146,6 +151,18 @@ export function OrderProductCard({
                                                     true
                                                 )}
                                             </div>
+                                            {onRemove && (
+                                                <button
+                                                    onClick={() =>
+                                                        onRemove(item)
+                                                    }
+                                                    disabled={isRemoving}
+                                                    className="mt-1 flex items-center gap-1 text-[11px] font-medium text-red-500 transition-colors hover:text-red-700 disabled:opacity-50"
+                                                >
+                                                    <Trash2 className="size-3" />
+                                                    Remove
+                                                </button>
+                                            )}
                                         </div>
 
                                         {/* Variant pills */}

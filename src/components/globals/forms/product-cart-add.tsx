@@ -119,6 +119,8 @@ interface PageProps {
     product: ProductWithBrand;
     userId?: string;
     isWishlisted: boolean;
+    isProductWishlisted?: boolean;
+    setIsProductWishlisted?: (value: boolean) => void;
     initialZipCode?: string;
     warehousePincode: string | null | undefined;
     estimatedDelivery?: string;
@@ -129,6 +131,8 @@ interface PageProps {
 export function ProductCartAddForm({
     product,
     isWishlisted,
+    isProductWishlisted: parentIsProductWishlisted,
+    setIsProductWishlisted: parentSetIsProductWishlisted,
     initialCart,
     userId,
     initialZipCode,
@@ -220,8 +224,15 @@ export function ProductCartAddForm({
         }
     };
 
-    const [isProductWishlisted, setIsProductWishlisted] =
+    const [localIsProductWishlisted, setLocalIsProductWishlisted] =
         useState(isWishlisted);
+    const isProductWishlisted =
+        parentIsProductWishlisted !== undefined
+            ? parentIsProductWishlisted
+            : localIsProductWishlisted;
+    const setIsProductWishlisted =
+        parentSetIsProductWishlisted || setLocalIsProductWishlisted;
+
     // Find the variant with the lowest price to use as default
     const lowestPriceVariant = useMemo(() => {
         if (!product.variants?.length) return null;
@@ -235,6 +246,8 @@ export function ProductCartAddForm({
         defaultValue: lowestPriceVariant?.nativeSku,
     });
     const [isAddedToCart, setIsAddedToCart] = useState(false);
+    const [isBuyNow, setIsBuyNow] = useState(false);
+    const isBuyNowRef = useRef(false);
 
     // User cart
     const { data: userCart, refetch } =
@@ -476,7 +489,16 @@ export function ProductCartAddForm({
                         }
 
                         if (userId) {
-                            addToCart(values);
+                            addToCart(values, {
+                                onSuccess: () => {
+                                    setIsAddedToCart(true);
+                                    refetch?.();
+                                    if (isBuyNowRef.current || isBuyNow)
+                                        router.push(
+                                            `/checkout?buy_now=true&item=${product.id}&variant=${selectedVariant?.id || ""}&qty=${values.quantity}`
+                                        );
+                                },
+                            });
                         } else {
                             const cartItem = {
                                 ...values, // productId, variantId, quantity
@@ -494,6 +516,10 @@ export function ProductCartAddForm({
 
                             addToGuestCart(cartItem);
                             setIsAddedToCart(true);
+                            if (isBuyNowRef.current || isBuyNow)
+                                router.push(
+                                    `/checkout?buy_now=true&item=${product.id}&variant=${selectedVariant?.id || ""}&qty=${values.quantity}`
+                                );
                         }
                     })}
                 >
@@ -664,11 +690,14 @@ export function ProductCartAddForm({
                         />
 
                         {/* Inline buttons (normal flow) */}
-                        <div ref={buttonsRef} className="flex gap-4">
+                        <div ref={buttonsRef} className="flex gap-2 sm:gap-4">
                             <Button
                                 type="submit"
-                                size="lg"
-                                className="flex-1 rounded-full bg-[#E0E2E1] text-lg font-semibold text-black hover:bg-[#E0E2E1]"
+                                size="sm"
+                                className={cn(
+                                    "h-9 rounded-full bg-[#E0E2E1] px-5 text-sm font-medium text-black hover:bg-[#E0E2E1]",
+                                    userId ? "flex-1" : "flex-1"
+                                )}
                                 disabled={
                                     !product.isAvailable ||
                                     (!!selectedVariant &&
@@ -684,6 +713,8 @@ export function ProductCartAddForm({
                                         router.push("/mycart");
                                         return;
                                     }
+                                    setIsBuyNow(false);
+                                    isBuyNowRef.current = false;
                                     handleAddProductCart(
                                         product.id,
                                         product.brandId
@@ -708,12 +739,52 @@ export function ProductCartAddForm({
                                 )}
                             </Button>
 
+                            {userId && (
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    className="flex-1 rounded-full bg-black text-lg font-semibold text-white hover:bg-gray-800 md:hidden"
+                                    disabled={
+                                        !product.isAvailable ||
+                                        (!!selectedVariant &&
+                                            (selectedVariant.isDeleted ||
+                                                selectedVariant?.quantity ===
+                                                    0)) ||
+                                        (product.productHasVariants &&
+                                            !selectedVariant) ||
+                                        isPending
+                                    }
+                                    onClick={(e) => {
+                                        if (isAddedToCart) {
+                                            e.preventDefault();
+                                            router.push("/checkout");
+                                            return;
+                                        }
+                                        setIsBuyNow(true);
+                                        isBuyNowRef.current = true;
+                                        handleAddProductCart(
+                                            product.id,
+                                            product.brandId
+                                        );
+                                    }}
+                                >
+                                    {isPending && isBuyNow ? (
+                                        <>
+                                            <Icons.Loader2 className="mr-2 size-5 animate-spin" />
+                                            Wait...
+                                        </>
+                                    ) : (
+                                        "Buy Now"
+                                    )}
+                                </Button>
+                            )}
+
                             {userId ? (
                                 <WishlistButton
                                     type="button"
                                     variant="outline"
-                                    size="lg"
-                                    className="flex-1 rounded-full font-semibold"
+                                    size="sm"
+                                    className="hidden h-9 flex-1 rounded-full px-5 text-sm font-medium md:flex"
                                     userId={userId}
                                     productId={product.id}
                                     isProductWishlisted={isProductWishlisted}
@@ -721,7 +792,7 @@ export function ProductCartAddForm({
                                         setIsProductWishlisted
                                     }
                                     iconClassName={cn(
-                                        isWishlisted &&
+                                        isProductWishlisted &&
                                             "fill-primary stroke-primary"
                                     )}
                                 />
@@ -729,8 +800,8 @@ export function ProductCartAddForm({
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    size="lg"
-                                    className="flex-1 rounded-full font-semibold"
+                                    size="sm"
+                                    className="hidden h-9 flex-1 rounded-full px-5 text-sm font-medium md:flex"
                                     onClick={() => {
                                         addToGuestWishlist({
                                             productId: product.id,
@@ -794,7 +865,10 @@ export function ProductCartAddForm({
                                 <Button
                                     type="submit"
                                     size="lg"
-                                    className="flex-1 rounded-full bg-[#E0E2E1] text-base font-semibold text-black hover:bg-[#E0E2E1]"
+                                    className={cn(
+                                        "rounded-full bg-[#E0E2E1] text-base font-semibold text-black hover:bg-[#E0E2E1]",
+                                        userId ? "flex-1" : "flex-1"
+                                    )}
                                     disabled={
                                         !product.isAvailable ||
                                         (!!selectedVariant &&
@@ -811,16 +885,18 @@ export function ProductCartAddForm({
                                             router.push("/mycart");
                                             return;
                                         }
+                                        setIsBuyNow(false);
+                                        isBuyNowRef.current = false;
                                         handleAddProductCart(
                                             product.id,
                                             product.brandId
                                         );
                                     }}
                                 >
-                                    {isPending ? (
+                                    {isPending && !isBuyNow ? (
                                         <>
                                             <Icons.Loader2 className="mr-2 size-4 animate-spin" />
-                                            Adding...
+                                            Wait...
                                         </>
                                     ) : isAddedToCart ? (
                                         <>
@@ -835,67 +911,43 @@ export function ProductCartAddForm({
                                     )}
                                 </Button>
 
-                                {userId ? (
-                                    <WishlistButton
-                                        type="button"
-                                        variant="outline"
-                                        size="lg"
-                                        className="rounded-full px-4 font-semibold"
-                                        userId={userId}
-                                        productId={product.id}
-                                        isProductWishlisted={
-                                            isProductWishlisted
-                                        }
-                                        setIsProductWishlisted={
-                                            setIsProductWishlisted
-                                        }
-                                        iconClassName={cn(
-                                            isWishlisted &&
-                                                "fill-primary stroke-primary"
-                                        )}
-                                    />
-                                ) : (
+                                {userId && (
                                     <Button
-                                        type="button"
-                                        variant="outline"
+                                        type="submit"
                                         size="lg"
-                                        className="rounded-full px-4 font-semibold"
-                                        onClick={() => {
-                                            addToGuestWishlist({
-                                                productId: product.id,
-                                                variantId:
-                                                    selectedVariant?.id || null,
-                                                title: product.title,
-                                                brand: product.brand?.name,
-                                                price: productPrice,
-                                                image:
-                                                    selectedVariant?.image ??
-                                                    product.thumbnail ??
-                                                    null,
-                                                sku:
-                                                    selectedVariant?.nativeSku ??
-                                                    null,
-                                                fullProduct: product,
-                                            });
+                                        className="flex-1 rounded-full bg-black text-base font-semibold text-white hover:bg-gray-800"
+                                        disabled={
+                                            !product.isAvailable ||
+                                            (!!selectedVariant &&
+                                                (selectedVariant.isDeleted ||
+                                                    selectedVariant?.quantity ===
+                                                        0)) ||
+                                            (product.productHasVariants &&
+                                                !selectedVariant) ||
+                                            isPending
+                                        }
+                                        onClick={(e) => {
+                                            if (isAddedToCart) {
+                                                e.preventDefault();
+                                                router.push("/checkout");
+                                                return;
+                                            }
+                                            setIsBuyNow(true);
+                                            isBuyNowRef.current = true;
+                                            handleAddProductCart(
+                                                product.id,
+                                                product.brandId
+                                            );
                                         }}
                                     >
-                                        <Icons.Heart
-                                            className={cn(
-                                                guestWishlist.some(
-                                                    (w) =>
-                                                        w.productId ===
-                                                            product.id &&
-                                                        String(
-                                                            w.variantId ?? ""
-                                                        ) ===
-                                                            String(
-                                                                selectedVariant?.id ??
-                                                                    ""
-                                                            )
-                                                ) &&
-                                                    "fill-primary stroke-primary"
-                                            )}
-                                        />
+                                        {isPending && isBuyNow ? (
+                                            <>
+                                                <Icons.Loader2 className="mr-2 size-4 animate-spin" />
+                                                Wait...
+                                            </>
+                                        ) : (
+                                            "Buy Now"
+                                        )}
                                     </Button>
                                 )}
                             </div>
