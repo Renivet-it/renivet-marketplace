@@ -107,25 +107,49 @@ export function MobileCategories() {
                 </div>
             </section>
 
-            {/* Desktop: horizontal row with round images */}
-            <section className="hidden w-full bg-[#FCFBF4] py-10 md:block">
-                <div className="flex items-start justify-between px-12">
+            {/* Desktop: full-width grid, minimal padding */}
+            <section className="hidden w-full bg-[#FCFBF4] px-4 py-8 md:block">
+                <div className="mx-auto grid max-w-screen-2xl grid-cols-8 gap-4 lg:gap-6">
                     {categories.map((item, index) => (
                         <Link
                             key={index}
                             href={item.link}
-                            className="group flex flex-col items-center gap-3"
+                            className="group flex flex-col items-center"
                         >
-                            <div className="relative size-[130px] overflow-hidden rounded-full border-2 border-transparent bg-white shadow-sm transition-all duration-300 group-hover:border-[#c5d1b8] group-hover:shadow-md">
-                                <Image
-                                    src={item.imageUrl}
-                                    alt={item.title}
-                                    fill
-                                    sizes="130px"
-                                    className="object-cover transition-transform duration-300 group-hover:scale-110"
-                                />
-                            </div>
-                            <p className="text-center text-sm font-medium text-[#333] transition-colors group-hover:text-[#6B7A5E]">
+                            {item.title === "Accessories" ? (
+                                <div className="perspective aspect-square w-full">
+                                    <div className="flip-card">
+                                        <div className="card-face card-front relative h-full w-full overflow-hidden">
+                                            <Image
+                                                src={item.imageUrl}
+                                                alt={item.title}
+                                                fill
+                                                sizes="(max-width: 1024px) 12.5vw, 170px"
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                        <div className="card-face card-back">
+                                            <p className="text-xs leading-tight text-[#333]">
+                                                Buy Any 2
+                                            </p>
+                                            <p className="text-sm font-semibold text-black">
+                                                Get 15% Off
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="relative aspect-square w-full overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                                    <Image
+                                        src={item.imageUrl}
+                                        alt={item.title}
+                                        fill
+                                        sizes="(max-width: 1024px) 12.5vw, 170px"
+                                        className="object-cover"
+                                    />
+                                </div>
+                            )}
+                            <p className="mt-2.5 text-center text-sm font-medium text-[#333] transition-colors group-hover:text-[#6B7A5E]">
                                 {item.title}
                             </p>
                         </Link>
