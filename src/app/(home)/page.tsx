@@ -162,9 +162,9 @@ export default function Page() {
             <Suspense>
                 <BrandPromotionFetch />
             </Suspense>
-            <Suspense>
+            {/* <Suspense>
                 <HomePageMainProductFetch />
-            </Suspense>
+            </Suspense> */}
 
             <div className="hidden md:block">
                 <Suspense>

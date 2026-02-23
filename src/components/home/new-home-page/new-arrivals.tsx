@@ -115,7 +115,7 @@ export function ProductGridNewArrivals({
                     return (
                         <div key={section}>
                             {/* Section heading */}
-                            <h2 className="mb-4 text-center text-lg font-semibold text-gray-800 sm:text-xl">
+                                        <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                                 {section}
                             </h2>
 

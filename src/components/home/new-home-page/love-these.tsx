@@ -31,9 +31,19 @@ export const ProductCard = ({
                 toast.error(err.message || "Could not add to wishlist."),
         });
 
-    const price = convertPaiseToRupees(
-        product.variants?.[0]?.price ?? product.price ?? 0
-    );
+    const rawPrice = product.variants?.[0]?.price ?? product.price ?? 0;
+    const price = convertPaiseToRupees(rawPrice);
+
+    const compareAt =
+        product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
+    const discountPct =
+        compareAt && compareAt > rawPrice
+            ? Math.round(((compareAt - rawPrice) / compareAt) * 100)
+            : null;
+    const savedAmount =
+        compareAt && compareAt > rawPrice
+            ? convertPaiseToRupees(compareAt - rawPrice)
+            : null;
 
     const imageUrl =
         product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
@@ -76,6 +86,13 @@ export const ProductCard = ({
                     className="object-cover"
                 />
 
+                {/* 🔴 Circular discount badge — unique to this section */}
+                {discountPct && discountPct > 0 && (
+                    <span className="absolute left-1.5 top-1.5 z-10 flex size-9 items-center justify-center rounded-full bg-teal-700 text-[10px] font-bold leading-none text-white shadow-lg sm:size-11 sm:text-xs">
+                        -{discountPct}%
+                    </span>
+                )}
+
                 {/* ❤️ WISHLIST BUTTON */}
                 <button
                     onClick={handleWishlist}
@@ -91,9 +108,25 @@ export const ProductCard = ({
                     {product.title}
                 </h3>
 
-                <span className="text-[14px] font-semibold text-gray-900 sm:text-[15px]">
-                    ₹{price}
-                </span>
+                {/* Price row */}
+                <div className="flex items-baseline gap-1.5">
+                    <span className="text-[14px] font-semibold text-gray-900 sm:text-[15px]">
+                        ₹{price}
+                    </span>
+
+                    {compareAt && compareAt > rawPrice && (
+                        <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
+                            ₹{convertPaiseToRupees(compareAt)}
+                        </span>
+                    )}
+                </div>
+
+                {/* Savings text */}
+                {savedAmount && (
+                    <p className="mt-0.5 text-[10px] font-semibold text-teal-700 sm:text-[11px]">
+                        Save ₹{savedAmount}
+                    </p>
+                )}
             </div>
         </Link>
     );
@@ -117,7 +150,7 @@ export function LoveThese({
     return (
         <section className="w-full bg-[#FCFBF4] py-4">
             <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
-                You May Like
+                Basic Collection
             </h2>
 
             {/* MOBILE */}

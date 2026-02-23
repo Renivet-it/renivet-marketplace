@@ -23,7 +23,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
     const mobileImageUrl =
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP";
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNJo8goeyxafbXy0opEDB8VMuLNYvt9OQnIkzd";
     const placeholders = ["Search For Products"];
 
     const [displayText, setDisplayText] = useState("");
