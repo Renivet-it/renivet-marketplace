@@ -115,7 +115,7 @@ export function ProductGridNewArrivals({
                     return (
                         <div key={section}>
                             {/* Section heading */}
-                                        <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+                            <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                                 {section}
                             </h2>
 
@@ -234,19 +234,20 @@ function ProductCard({
                     </h3>
 
                     {/* Price row */}
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                        <span className="text-sm font-semibold text-gray-900 sm:text-base">
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                        <span className="text-xs font-semibold text-gray-900 sm:text-base">
                             ₹{price}
                         </span>
 
                         {displayOriginal && (
-                            <span className="text-[10px] text-gray-400 line-through sm:text-xs">
+                            <span className="text-[9px] text-gray-400 line-through sm:text-xs">
                                 ₹{displayOriginal}
                             </span>
                         )}
 
+                        {/* Only show on sm+ — badge on image is enough for mobile */}
                         {discountPct && discountPct > 0 && (
-                            <span className="text-[10px] font-semibold text-emerald-600 sm:text-xs">
+                            <span className="hidden text-xs font-semibold text-emerald-600 sm:inline">
                                 {discountPct}% off
                             </span>
                         )}
