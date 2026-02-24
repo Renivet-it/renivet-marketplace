@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -54,6 +54,11 @@ export default function CheckoutSection({ userId }: PageProps) {
         trpc.general.coupons.getActiveCoupons.useQuery(undefined, {
             enabled: isCouponExpanded,
         });
+
+    const { data: userOrders } = trpc.general.orders.getOrdersByUserId.useQuery(
+        { userId },
+        { enabled: !!userId }
+    );
 
     const availableCart = useMemo(
         () =>
@@ -178,6 +183,25 @@ export default function CheckoutSection({ userId }: PageProps) {
                 return handleClientError(err, ctx?.toastId);
             },
         });
+
+    // Auto-apply RENIVETFIRST for first-time customers
+    const hasAutoApplied = useRef(false);
+
+    useEffect(() => {
+        if (
+            userOrders &&
+            userOrders.length === 0 &&
+            !appliedCoupon &&
+            !hasAutoApplied.current &&
+            totalPrice > 0
+        ) {
+            hasAutoApplied.current = true;
+            validateCoupon({
+                code: "RENIVETFIRST",
+                totalAmount: totalPrice,
+            });
+        }
+    }, [userOrders, appliedCoupon, totalPrice, validateCoupon]);
 
     return (
         <div className="w-full space-y-4">
