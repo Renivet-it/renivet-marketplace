@@ -20,7 +20,7 @@ export function FloatingLoginButton() {
             >
                 <button
                     className={cn(
-                        "group relative flex items-center gap-3 overflow-hidden rounded-full bg-primary px-2 py-2 pr-6 text-primary-foreground",
+                        "group relative flex items-center gap-3 overflow-hidden rounded-full bg-primary p-2 pr-6 text-primary-foreground",
                         "shadow-[0_10px_40px_rgba(0,0,0,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_15px_50px_rgba(0,0,0,0.4)]"
                     )}
                 >
