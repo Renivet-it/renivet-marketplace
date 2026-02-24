@@ -11,6 +11,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 export const couponRouter = createTRPCRouter({
+    getActiveCoupons: publicProcedure.query(async ({ ctx }) => {
+        const { queries } = ctx;
+        const data = await queries.coupons.getActiveCoupons();
+        return data;
+    }),
     getCoupons: protectedProcedure
         .input(
             z.object({
