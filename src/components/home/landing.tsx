@@ -26,6 +26,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNJo8goeyxafbXy0opEDB8VMuLNYvt9OQnIkzd",
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN4qyZgtKTrA2wJk4WKdFytgsaQSNjmBo8I5CG",
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNV4dRD8BbpNcg6ZSKi0IGkAsjuLwQox3znmlt",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP"
     ];
     const placeholders = ["Search For Products"];
 
