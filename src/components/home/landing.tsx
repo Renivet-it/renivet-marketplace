@@ -22,8 +22,12 @@ interface PageProps extends GenericProps {
 export function Landing({ className, banners, ...props }: PageProps) {
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
-    const mobileImageUrl =
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNJo8goeyxafbXy0opEDB8VMuLNYvt9OQnIkzd";
+    const mobileImages = [
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNJo8goeyxafbXy0opEDB8VMuLNYvt9OQnIkzd",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN4qyZgtKTrA2wJk4WKdFytgsaQSNjmBo8I5CG",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNV4dRD8BbpNcg6ZSKi0IGkAsjuLwQox3znmlt",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP"
+    ];
     const placeholders = ["Search For Products"];
 
     const [displayText, setDisplayText] = useState("");
@@ -232,34 +236,46 @@ export function Landing({ className, banners, ...props }: PageProps) {
                 {/* 🔵 BANNER IMAGE */}
                 {/* 🔵 BANNER IMAGE WITH CENTER CTA */}
                 <div className="relative w-full overflow-hidden">
-                    <div
-                        style={{
-                            paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
-                        }}
-                    />
-
-                    <Image
-                        src={mobileImageUrl}
-                        alt="Mobile Banner"
-                        fill
-                        sizes="100vw"
-                        className="absolute inset-0 h-full w-full object-cover"
-                        priority
-                        fetchPriority="high"
-                    />
+                    <Carousel
+                        opts={{ align: "start", loop: true }}
+                        plugins={[Autoplay({ delay: 5000 })]}
+                    >
+                        <CarouselContent>
+                            {mobileImages.map((src, idx) => (
+                                <CarouselItem key={idx}>
+                                    <div className="relative w-full overflow-hidden">
+                                        <div
+                                            style={{
+                                                paddingBottom: `${(1 / mobileAspectRatio) * 100}%`,
+                                            }}
+                                        />
+                                        <Image
+                                            src={src}
+                                            alt={`Mobile Banner ${idx + 1}`}
+                                            fill
+                                            sizes="100vw"
+                                            className="absolute inset-0 h-full w-full object-cover"
+                                            priority={idx === 0}
+                                            fetchPriority={
+                                                idx === 0 ? "high" : "auto"
+                                            }
+                                        />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                    </Carousel>
 
                     {/* 🔵 CENTER BUTTON — MOBILE ONLY */}
-                    <div className="absolute inset-0 flex justify-center md:hidden">
-                        <div className="absolute inset-0 flex justify-center md:hidden">
-                            <div className="absolute bottom-16">
-                                <Link
-                                    href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
-                                    className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
-                                >
-                                    <span>Shop With Purpose</span>
-                                    <Icons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                                </Link>
-                            </div>
+                    <div className="pointer-events-none absolute inset-0 z-10 flex justify-center md:hidden">
+                        <div className="pointer-events-auto absolute bottom-16">
+                            <Link
+                                href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
+                                className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
+                            >
+                                <span>Shop With Purpose</span>
+                                <Icons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                            </Link>
                         </div>
                     </div>
                 </div>

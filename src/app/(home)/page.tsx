@@ -1,3 +1,4 @@
+import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { Landing } from "@/components/home/landing";
 import {
     homeShopByCategoryQueries,
@@ -122,14 +123,14 @@ export default function Page() {
             <Suspense>
                 <SwapSpaceBannerFetch />
             </Suspense>
-                       <Suspense>
+            <Suspense>
                 <LoveTheseFetch />
             </Suspense>
-                <Suspense>
+            <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-  
-     <Suspense>
+
+            <Suspense>
                 <ProductSwipeCardFetch />
             </Suspense>
             <Suspense>
@@ -145,7 +146,7 @@ export default function Page() {
             {/* <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense> */}
-                   <Suspense>
+            <Suspense>
                 <MayAlsoLoveTheseFetch />
             </Suspense>
 
@@ -155,8 +156,8 @@ export default function Page() {
             {/* <Suspense>
                 <LoveTheseFetch />
             </Suspense> */}
-       
-               <Suspense>
+
+            <Suspense>
                 <WelcomeToRenivetFetch />
             </Suspense>
             <Suspense>
@@ -171,6 +172,8 @@ export default function Page() {
                     <ShopByNewCategoriesFetch />
                 </Suspense>
             </div>
+
+            <FloatingLoginButton />
         </>
     );
 }
