@@ -121,6 +121,38 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         return filtered;
     }, [userCart, isBuyNow, buyNowItemId, buyNowQty, buyNowVariantId]);
 
+    const filteredCoupons = useMemo(() => {
+        if (!activeCoupons) return [];
+        return activeCoupons.filter((coupon) => {
+            // If coupon has no category filters, it applies to all
+            if (
+                !coupon.categoryId &&
+                !coupon.subCategoryId &&
+                !coupon.productTypeId
+            )
+                return true;
+            // Check if at least one cart item matches all non-null coupon filters
+            return availableItems.some((item) => {
+                if (
+                    coupon.categoryId &&
+                    item.product.categoryId !== coupon.categoryId
+                )
+                    return false;
+                if (
+                    coupon.subCategoryId &&
+                    item.product.subcategoryId !== coupon.subCategoryId
+                )
+                    return false;
+                if (
+                    coupon.productTypeId &&
+                    item.product.productTypeId !== coupon.productTypeId
+                )
+                    return false;
+                return true;
+            });
+        });
+    }, [activeCoupons, availableItems]);
+
     useEffect(() => {
         if (
             !isBuyNow &&
@@ -632,7 +664,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                     <div className="flex items-center justify-center py-8">
                                         <Loader2 className="size-5 animate-spin text-gray-400" />
                                     </div>
-                                ) : !activeCoupons?.length ? (
+                                ) : !filteredCoupons?.length ? (
                                     <div className="py-8 text-center">
                                         <Ticket className="mx-auto size-8 text-gray-300" />
                                         <p className="mt-1.5 text-xs text-gray-500">
@@ -640,7 +672,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                         </p>
                                     </div>
                                 ) : (
-                                    activeCoupons.map((coupon) => {
+                                    filteredCoupons.map((coupon) => {
                                         const isApplied =
                                             appliedCoupon?.code === coupon.code;
                                         const isExpiringSoon =
