@@ -395,7 +395,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                     }
                                     disabled={isValidating}
                                     placeholder="Enter coupon code"
-                                    className="h-9 border-gray-200 bg-white text-sm uppercase"
+                                    className="h-9 border-gray-200 bg-white text-sm"
                                 />
                                 <Button
                                     size="sm"
