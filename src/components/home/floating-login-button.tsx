@@ -18,28 +18,35 @@ export function FloatingLoginButton() {
                 signUpFallbackRedirectUrl="/"
                 forceRedirectUrl="/"
             >
-                <button
-                    className={cn(
-                        "group relative flex items-center gap-3 overflow-hidden rounded-full bg-primary p-2 pr-6 text-primary-foreground",
-                        "shadow-[0_8px_30px_rgba(0,0,0,0.2)] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
-                    )}
-                >
-                    {/* Shine effect */}
-                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 ease-out group-hover:translate-x-full" />
+                <div className="group relative">
+                    {/* Continuous subtle pulse ring */}
+                    <div className="absolute -inset-1 animate-pulse rounded-full bg-primary/30 opacity-70 blur-md transition-all duration-1000 group-hover:-inset-2 group-hover:bg-primary/40 group-hover:opacity-100 group-hover:duration-200" />
 
-                    <div className="relative flex size-11 items-center justify-center rounded-full bg-white/20 backdrop-blur-md transition-all duration-500 group-hover:scale-110 group-hover:bg-white/30">
-                        <Icons.Sparkles className="size-5" />
-                    </div>
+                    <button
+                        className={cn(
+                            "relative flex items-center gap-3.5 overflow-hidden rounded-full bg-primary p-2 pr-7 text-primary-foreground",
+                            "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] ring-1 ring-white/10 transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)]"
+                        )}
+                    >
+                        {/* Shine effect */}
+                        <div className="duration-[1200ms] absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform ease-out group-hover:translate-x-full" />
 
-                    <div className="relative flex flex-col items-start gap-1 leading-none">
-                        <span className="text-[10px] font-medium uppercase tracking-[0.25em] text-primary-foreground/90">
-                            Become a Member
-                        </span>
-                        <span className="text-sm font-bold tracking-wide">
-                            Join Us
-                        </span>
-                    </div>
-                </button>
+                        {/* Icon Container */}
+                        <div className="relative flex size-[42px] items-center justify-center rounded-full bg-white/20 shadow-inner ring-1 ring-white/30 backdrop-blur-md transition-all duration-500 group-hover:scale-110 group-hover:bg-white/30">
+                            <Icons.Sparkles className="size-[22px] text-white drop-shadow-md" />
+                        </div>
+
+                        {/* Text Container */}
+                        <div className="relative flex flex-col items-start gap-1.5 pt-0.5 leading-[1.1]">
+                            <span className="text-[9px] font-semibold uppercase tracking-[0.3em] text-white/80">
+                                Exclusive Access
+                            </span>
+                            <span className="font-outfit text-[15px] font-bold tracking-wide text-white drop-shadow-sm">
+                                Join Renivet
+                            </span>
+                        </div>
+                    </button>
+                </div>
             </SignInButton>
         </div>
     );
