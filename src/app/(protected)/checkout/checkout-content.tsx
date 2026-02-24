@@ -610,7 +610,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                         {appliedCoupon.code} — saving{" "}
                                         {formatPriceTag(
                                             +convertPaiseToRupees(
-                                                priceList.coupon
+                                                priceList.discount
                                             ),
                                             true
                                         )}

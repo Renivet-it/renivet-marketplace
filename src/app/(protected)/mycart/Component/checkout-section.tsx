@@ -402,7 +402,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                         {appliedCoupon.code} — saving{" "}
                                         {formatPriceTag(
                                             +convertPaiseToRupees(
-                                                priceList.coupon
+                                                priceList.discount
                                             ),
                                             true
                                         )}
