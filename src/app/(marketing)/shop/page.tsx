@@ -29,7 +29,7 @@ interface PageProps {
         categoryId?: string;
         subCategoryId?: string;
         productTypeId?: string;
-        sortBy?: "price" | "createdAt";
+        sortBy?: "price" | "createdAt" | "recommended";
         sortOrder?: "asc" | "desc";
         sizes?: string;
     }>;
@@ -335,8 +335,14 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
     const productTypeId = !!productTypeIdRaw?.length
         ? productTypeIdRaw
         : undefined;
-    const sortBy = !!sortByRaw?.length ? sortByRaw : undefined;
-    const sortOrder = !!sortOrderRaw?.length ? sortOrderRaw : undefined;
+    const sortBy =
+        !!sortByRaw?.length && sortByRaw !== "recommended"
+            ? sortByRaw
+            : undefined;
+    const sortOrder =
+        !!sortOrderRaw?.length && sortByRaw !== "recommended"
+            ? sortOrderRaw
+            : undefined;
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
 
@@ -349,6 +355,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         !subCategoryId &&
         !productTypeId &&
         !brandIds?.length &&
+        (!sortByRaw || sortByRaw === "recommended") &&
         !!userId;
 
     let finalData;
@@ -387,7 +394,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
                 sortOrder,
                 colors,
                 sizes,
-                prioritizeBestSellers: true,
+                prioritizeBestSellers:
+                    page === 1 && (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
 
@@ -432,7 +440,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
                 sortOrder,
                 colors,
                 sizes,
-                prioritizeBestSellers: page === 1,
+                prioritizeBestSellers:
+                    page === 1 && (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
         }
@@ -457,7 +466,8 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             sortOrder,
             colors,
             sizes,
-            prioritizeBestSellers: page === 1,
+            prioritizeBestSellers:
+                page === 1 && (!sortByRaw || sortByRaw === "recommended"),
             requireMedia: true,
         });
     }

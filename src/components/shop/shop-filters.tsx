@@ -1354,11 +1354,12 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
 
 // --- +++ UPDATED: ShopSortBy Component +++ ---
 
-// The original sorting options as requested
+// The sorting options with Recommended as default
 const sortByWithOrderTypes = [
+    { label: "Recommended", value: "recommended:desc" },
+    { label: "Newest First", value: "createdAt:desc" },
     { label: "Price: High to Low", value: "price:desc" },
     { label: "Price: Low to High", value: "price:asc" },
-    { label: "Newest First", value: "createdAt:desc" },
     { label: "Oldest First", value: "createdAt:asc" },
 ];
 
@@ -1366,29 +1367,36 @@ export function ShopSortBy() {
     const isMobile = useMediaQuery("(max-width: 768px)");
     const [sortBy, setSortBy] = useQueryState(
         "sortBy",
-        parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
-            "createdAt"
-        )
+        parseAsStringLiteral([
+            "price",
+            "createdAt",
+            "recommended",
+        ] as const).withDefault("recommended")
     );
     const [sortOrder, setSortOrder] = useQueryState(
         "sortOrder",
         parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
     );
+    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
     const handleSort = (value: string) => {
         const [sort, order] = value.split(":");
-        setSortBy(sort as "price" | "createdAt");
+        setSortBy(sort as "price" | "createdAt" | "recommended");
         setSortOrder(order as "asc" | "desc");
+        setPage(1);
     };
 
     const currentValue = `${sortBy}:${sortOrder}`;
+    const currentLabel =
+        sortByWithOrderTypes.find((o) => o.value === currentValue)?.label ??
+        "Recommended";
 
     // --- Desktop View (Dropdown) ---
     if (!isMobile) {
         return (
-            <div className="w-52">
+            <div className="relative">
                 <select
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    className="h-10 w-56 cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-3 pr-10 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-gray-300 focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
                     value={currentValue}
                     onChange={(e) => handleSort(e.target.value)}
                 >
@@ -1398,6 +1406,7 @@ export function ShopSortBy() {
                         </option>
                     ))}
                 </select>
+                <Icons.ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             </div>
         );
     }
@@ -1406,34 +1415,40 @@ export function ShopSortBy() {
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                    <Icons.ArrowUpDown className="size-4" />
-                    Sort
+                <Button
+                    variant="outline"
+                    className="flex items-center gap-2 rounded-lg border-gray-200 text-sm font-medium shadow-sm"
+                >
+                    <Icons.ArrowUpDown className="size-4 text-gray-500" />
+                    <span className="text-gray-700">{currentLabel}</span>
                 </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="p-0">
-                <SheetHeader className="border-b p-4">
-                    <SheetTitle className="text-start text-base font-bold uppercase">
+            <SheetContent side="bottom" className="rounded-t-xl p-0">
+                <SheetHeader className="border-b border-gray-100 p-4">
+                    <SheetTitle className="text-start text-sm font-semibold uppercase tracking-wider text-gray-500">
                         Sort By
                     </SheetTitle>
                 </SheetHeader>
-                <div className="p-4">
+                <div className="p-2">
                     <RadioGroup value={currentValue} onValueChange={handleSort}>
                         {sortByWithOrderTypes.map((option) => (
                             <SheetClose key={option.value} asChild>
                                 <Label
                                     htmlFor={option.value}
                                     className={cn(
-                                        "flex items-center space-x-3 py-3 text-base",
+                                        "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3.5 text-sm transition-colors",
                                         currentValue === option.value
-                                            ? "font-bold text-pink-600"
-                                            : "text-gray-700"
+                                            ? "bg-gray-50 font-semibold text-gray-900"
+                                            : "text-gray-600 hover:bg-gray-50"
                                     )}
                                 >
                                     <RadioGroupItem
                                         value={option.value}
                                         id={option.value}
-                                        className="mr-2"
+                                        className={cn(
+                                            currentValue === option.value &&
+                                                "border-gray-900 text-gray-900"
+                                        )}
                                     />
                                     <span>{option.label}</span>
                                 </Label>

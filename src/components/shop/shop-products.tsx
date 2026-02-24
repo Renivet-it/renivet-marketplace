@@ -82,9 +82,11 @@ export function ShopProducts({
     );
     const [sortBy] = useQueryState(
         "sortBy",
-        parseAsStringLiteral(["price", "createdAt"] as const).withDefault(
-            "createdAt"
-        )
+        parseAsStringLiteral([
+            "price",
+            "createdAt",
+            "recommended",
+        ] as const).withDefault("recommended")
     );
     const [sortOrder] = useQueryState(
         "sortOrder",
@@ -111,12 +113,12 @@ export function ShopProducts({
             categoryId: !!categoryId.length ? categoryId : undefined,
             subcategoryId: !!subCategoryId.length ? subCategoryId : undefined,
             productTypeId: !!productTypeId.length ? productTypeId : undefined,
-            sortBy,
-            sortOrder,
+            sortBy: sortBy === "recommended" ? undefined : sortBy,
+            sortOrder: sortBy === "recommended" ? undefined : sortOrder,
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
-            minDiscount: minDiscount ? Number(minDiscount) : undefined,
-            prioritizeBestSellers: true,
+            prioritizeBestSellers:
+                page === 1 && (!sortBy || sortBy === "recommended"),
             requireMedia: true,
             // Enable personalized recommendations on all pages (when no filters)
             useRecommendations: true,

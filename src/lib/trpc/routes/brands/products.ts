@@ -76,7 +76,9 @@ export const productsRouter = createTRPCRouter({
                 isDeleted: productSchema.shape.isDeleted.optional(),
                 verificationStatus:
                     productSchema.shape.verificationStatus.optional(),
-                sortBy: z.enum(["price", "createdAt"]).optional(),
+                sortBy: z
+                    .enum(["price", "createdAt", "recommended"])
+                    .optional(),
                 sortOrder: z.enum(["asc", "desc"]).optional(),
                 productImage: productSchema.shape.productImageFilter,
                 productVisiblity: productSchema.shape.productVisiblityFilter,
@@ -123,7 +125,8 @@ export const productsRouter = createTRPCRouter({
                 !input.categoryId &&
                 !input.subcategoryId &&
                 !input.productTypeId &&
-                (!input.brandIds || input.brandIds.length === 0);
+                (!input.brandIds || input.brandIds.length === 0) &&
+                (!input.sortBy || input.sortBy === "recommended");
 
             if (shouldUseRecommendations && userId) {
                 // Get user's priority product IDs (clicked, wishlisted, etc.)
@@ -178,7 +181,9 @@ export const productsRouter = createTRPCRouter({
                 isPublished: productSchema.shape.isPublished.optional(),
                 verificationStatus:
                     productSchema.shape.verificationStatus.optional(),
-                sortBy: z.enum(["price", "createdAt"]).optional(),
+                sortBy: z
+                    .enum(["price", "createdAt", "recommended"])
+                    .optional(),
                 sortOrder: z.enum(["asc", "desc"]).optional(),
                 productImage: productSchema.shape.productImageFilter,
                 productVisiblity: productSchema.shape.productVisiblityFilter,
