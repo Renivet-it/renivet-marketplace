@@ -3,12 +3,6 @@
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog-general";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { DEFAULT_MESSAGES } from "@/config/const";
@@ -16,12 +10,23 @@ import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import {
     calculateTotalPriceWithCoupon,
+    cn,
     convertPaiseToRupees,
     convertValueToLabel,
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
-import { Leaf, Recycle, Truck, Users } from "lucide-react";
+import {
+    ChevronRight,
+    Clock,
+    Leaf,
+    Loader2,
+    Recycle,
+    Tag,
+    Ticket,
+    Truck,
+    Users,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -36,7 +41,7 @@ export default function CheckoutSection({ userId }: PageProps) {
     const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
         useCartStore();
 
-    const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+    const [isCouponExpanded, setIsCouponExpanded] = useState(false);
     const [couponCode, setCouponCode] = useState<string>("");
 
     const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery({
@@ -44,6 +49,11 @@ export default function CheckoutSection({ userId }: PageProps) {
     });
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
+
+    const { data: activeCoupons, isLoading: isCouponsLoading } =
+        trpc.general.coupons.getActiveCoupons.useQuery(undefined, {
+            enabled: isCouponExpanded,
+        });
 
     const availableCart = useMemo(
         () =>
@@ -130,7 +140,6 @@ export default function CheckoutSection({ userId }: PageProps) {
             onSuccess: (data, _, { toastId }) => {
                 toast.success("Coupon applied successfully", { id: toastId });
                 setAppliedCoupon(data);
-                setIsCouponModalOpen(false);
                 setCouponCode("");
             },
             onError: (err, _, ctx) => {
@@ -332,22 +341,225 @@ export default function CheckoutSection({ userId }: PageProps) {
 
                 {/* Coupon section */}
                 <div className="mt-4 border-t border-gray-100 pt-4">
-                    <div className="flex items-center justify-between">
+                    <button
+                        onClick={() => setIsCouponExpanded((v) => !v)}
+                        className="flex w-full items-center justify-between"
+                    >
                         <div className="flex items-center gap-2">
-                            <Icons.Tag className="size-4 text-gray-500" />
+                            <Ticket className="size-4 text-gray-500" />
                             <span className="text-sm font-medium text-gray-700">
                                 {appliedCoupon
                                     ? `Coupon: ${appliedCoupon.code}`
                                     : "Apply Coupons"}
                             </span>
                         </div>
-                        <button
-                            className="rounded-md border border-blue-600 px-3 py-1 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-50"
-                            onClick={() => setIsCouponModalOpen(true)}
-                        >
-                            APPLY
-                        </button>
-                    </div>
+                        <ChevronRight
+                            className={cn(
+                                "size-4 text-gray-400 transition-transform duration-200",
+                                isCouponExpanded && "rotate-90"
+                            )}
+                        />
+                    </button>
+
+                    {isCouponExpanded && (
+                        <div className="mt-3 space-y-3">
+                            {/* Applied coupon banner */}
+                            {appliedCoupon && (
+                                <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50/60 px-3 py-2">
+                                    <span className="text-xs font-semibold text-green-700">
+                                        {appliedCoupon.code} — saving{" "}
+                                        {formatPriceTag(
+                                            +convertPaiseToRupees(
+                                                priceList.coupon
+                                            ),
+                                            true
+                                        )}
+                                    </span>
+                                    <button
+                                        onClick={() => setAppliedCoupon(null)}
+                                        className="text-xs font-semibold uppercase text-red-500 hover:underline"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Manual Input */}
+                            <div className="flex items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-2.5">
+                                <Input
+                                    value={couponCode}
+                                    onChange={(e) =>
+                                        setCouponCode(
+                                            e.target.value.toUpperCase()
+                                        )
+                                    }
+                                    disabled={isValidating}
+                                    placeholder="Enter coupon code"
+                                    className="h-9 border-gray-200 bg-white text-sm uppercase"
+                                />
+                                <Button
+                                    size="sm"
+                                    onClick={() =>
+                                        validateCoupon({
+                                            code: couponCode,
+                                            totalAmount: priceList.total,
+                                        })
+                                    }
+                                    disabled={
+                                        isValidating || !couponCode.trim()
+                                    }
+                                    className="h-9 shrink-0 bg-blue-600 px-4 hover:bg-blue-700"
+                                >
+                                    {isValidating ? (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                        "Apply"
+                                    )}
+                                </Button>
+                            </div>
+
+                            {/* Coupon Cards */}
+                            <div className="space-y-2.5">
+                                {isCouponsLoading ? (
+                                    <div className="flex items-center justify-center py-6">
+                                        <Loader2 className="size-5 animate-spin text-gray-400" />
+                                    </div>
+                                ) : !activeCoupons?.length ? (
+                                    <div className="py-6 text-center">
+                                        <Ticket className="mx-auto size-8 text-gray-300" />
+                                        <p className="mt-1.5 text-xs text-gray-500">
+                                            No coupons available right now
+                                        </p>
+                                    </div>
+                                ) : (
+                                    activeCoupons.map((coupon) => {
+                                        const isApplied =
+                                            appliedCoupon?.code === coupon.code;
+                                        const isExpiringSoon =
+                                            coupon.expiresAt &&
+                                            new Date(
+                                                coupon.expiresAt
+                                            ).getTime() -
+                                                Date.now() <
+                                                7 * 24 * 60 * 60 * 1000;
+
+                                        return (
+                                            <div
+                                                key={coupon.code}
+                                                className={cn(
+                                                    "rounded-xl border p-3 transition-all",
+                                                    isApplied
+                                                        ? "border-green-300 bg-green-50/60 ring-1 ring-green-200"
+                                                        : "border-gray-200 bg-white hover:border-blue-200 hover:shadow-sm"
+                                                )}
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="mb-1 flex items-center gap-2">
+                                                            <span className="inline-flex items-center rounded-md border border-dashed border-gray-400 bg-gray-50 px-2 py-0.5 text-xs font-bold tracking-wider text-gray-800">
+                                                                {coupon.code}
+                                                            </span>
+                                                            {isApplied && (
+                                                                <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-green-700">
+                                                                    Applied
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-sm font-semibold text-gray-900">
+                                                            {coupon.discountType ===
+                                                            "percentage"
+                                                                ? `${coupon.discountValue}% OFF`
+                                                                : `\u20b9${convertPaiseToRupees(coupon.discountValue)} OFF`}
+                                                            {coupon.maxDiscountAmount &&
+                                                                coupon.discountType ===
+                                                                    "percentage" && (
+                                                                    <span className="ml-1 text-xs font-normal text-gray-500">
+                                                                        (up to
+                                                                        {
+                                                                            " \u20b9"
+                                                                        }
+                                                                        {convertPaiseToRupees(
+                                                                            coupon.maxDiscountAmount
+                                                                        )}
+                                                                        )
+                                                                    </span>
+                                                                )}
+                                                        </p>
+                                                        {coupon.description && (
+                                                            <p className="mt-0.5 text-xs text-gray-500">
+                                                                {
+                                                                    coupon.description
+                                                                }
+                                                            </p>
+                                                        )}
+                                                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                                                            {coupon.minOrderAmount >
+                                                                0 && (
+                                                                <span className="flex items-center gap-0.5">
+                                                                    <Tag className="size-3" />
+                                                                    Min
+                                                                    {" \u20b9"}
+                                                                    {convertPaiseToRupees(
+                                                                        coupon.minOrderAmount
+                                                                    )}
+                                                                </span>
+                                                            )}
+                                                            {coupon.expiresAt && (
+                                                                <span
+                                                                    className={cn(
+                                                                        "flex items-center gap-0.5",
+                                                                        isExpiringSoon &&
+                                                                            "font-medium text-orange-500"
+                                                                    )}
+                                                                >
+                                                                    <Clock className="size-3" />
+                                                                    {isExpiringSoon
+                                                                        ? "Expiring soon"
+                                                                        : `Expires ${new Date(coupon.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="shrink-0 pt-1">
+                                                        {isApplied ? (
+                                                            <button
+                                                                onClick={() =>
+                                                                    setAppliedCoupon(
+                                                                        null
+                                                                    )
+                                                                }
+                                                                className="text-xs font-semibold uppercase tracking-wide text-red-500 hover:underline"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() =>
+                                                                    validateCoupon(
+                                                                        {
+                                                                            code: coupon.code,
+                                                                            totalAmount:
+                                                                                priceList.total,
+                                                                        }
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isValidating
+                                                                }
+                                                                className="text-xs font-semibold uppercase tracking-wide text-blue-600 hover:underline disabled:opacity-50"
+                                                            >
+                                                                Apply
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Proceed to checkout button */}
@@ -378,46 +590,6 @@ export default function CheckoutSection({ userId }: PageProps) {
                     </Button>
                 </div>
             </div>
-
-            {/* Coupon modal */}
-            <Dialog
-                open={isCouponModalOpen}
-                onOpenChange={(open) => {
-                    setIsCouponModalOpen(open);
-                    if (!open) {
-                        setCouponCode("");
-                    }
-                }}
-            >
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Apply Coupon</DialogTitle>
-                    </DialogHeader>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            className="h-9"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value)}
-                            disabled={isValidating}
-                            placeholder="Enter coupon code"
-                        />
-                        <Button
-                            type="button"
-                            variant="accent"
-                            size="sm"
-                            disabled={isValidating}
-                            onClick={() =>
-                                validateCoupon({
-                                    code: couponCode,
-                                    totalAmount: priceList.total,
-                                })
-                            }
-                        >
-                            Apply
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }

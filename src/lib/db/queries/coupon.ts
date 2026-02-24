@@ -3,7 +3,7 @@ import {
     CreateCoupon,
     UpdateCoupon,
 } from "@/lib/validations";
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, desc, eq, gt, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "..";
 import { coupons } from "../schema";
 
@@ -46,6 +46,28 @@ class CouponQuery {
                 subCategory: true,
                 productType: true,
             },
+        });
+
+        return couponWithCategorySchema.array().parse(data);
+    }
+
+    async getActiveCoupons() {
+        const now = new Date();
+        const data = await db.query.coupons.findMany({
+            with: {
+                category: true,
+                subCategory: true,
+                productType: true,
+            },
+            where: and(
+                eq(coupons.isActive, true),
+                or(isNull(coupons.expiresAt), gt(coupons.expiresAt, now)),
+                or(
+                    eq(coupons.maxUses, 0),
+                    sql`${coupons.uses} < ${coupons.maxUses}`
+                )
+            ),
+            orderBy: [desc(coupons.createdAt)],
         });
 
         return couponWithCategorySchema.array().parse(data);
