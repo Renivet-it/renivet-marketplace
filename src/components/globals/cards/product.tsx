@@ -208,94 +208,152 @@ export function ProductCard({
             onMouseEnter={() => setIsProductHovered(true)}
             onMouseLeave={() => setIsProductHovered(false)}
         >
-            <Link
-                href={`/products/${product.slug}`}
-                onClick={(e) => {
-                    if (isWishlistHovered) e.preventDefault();
-                }}
-                target="_blank"
-                rel="noreferrer"
-            >
-                <div className="relative aspect-[3/4] overflow-hidden">
-                    {/* Product default image */}
-                    {isEmptyArray(mediaUrls) && (
-                        <Image
-                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                            alt="default image"
-                            width={1000}
-                            height={1000}
-                            className={cn(
-                                "size-full object-cover transition-all duration-500 ease-in-out",
-                                isProductHovered ? "scale-105" : "scale-100"
-                            )}
-                        />
-                    )}
-                    {mediaUrls.length > 0 && (
-                        <Image
-                            src={mediaUrls[currentImageIndex]}
-                            alt={product.title}
-                            width={1000}
-                            height={1000}
-                            className={cn(
-                                "size-full object-cover transition-all duration-500 ease-in-out",
-                                isProductHovered ? "scale-105" : "scale-100"
-                            )}
-                        />
-                    )}
-
-                    {/* Image indicators for slideshow */}
-                    {mediaUrls.length > 1 && (
-                        <div className="absolute inset-x-0 bottom-10 z-10 flex justify-center gap-1.5">
-                            {mediaUrls.map((_, index) => (
-                                <div
-                                    key={index}
-                                    className={cn(
-                                        "h-1.5 rounded-full transition-all duration-300",
-                                        currentImageIndex === index
-                                            ? "w-3 bg-primary"
-                                            : "w-1.5 bg-background/70"
-                                    )}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    <div
-                        className={cn(
-                            "absolute bottom-0 z-20 hidden w-full p-2 transition-all ease-in-out md:inline-block",
-                            isProductHovered
-                                ? "translate-y-0 opacity-100"
-                                : "translate-y-full opacity-0"
+            <div className="group/image relative block">
+                <Link
+                    href={`/products/${product.slug}`}
+                    onClick={(e) => {
+                        if (isWishlistHovered) e.preventDefault();
+                    }}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    <div className="relative aspect-[3/4] overflow-hidden">
+                        {/* Product default image */}
+                        {isEmptyArray(mediaUrls) && (
+                            <Image
+                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                alt="default image"
+                                width={1000}
+                                height={1000}
+                                className={cn(
+                                    "size-full object-cover transition-all duration-500 ease-in-out",
+                                    isProductHovered ? "scale-105" : "scale-100"
+                                )}
+                            />
                         )}
-                    >
-                        <button
-                            onClick={handleAddToCart}
-                            disabled={isLoading || isAdded}
-                            onMouseEnter={() => setIsWishlistHovered(true)}
-                            onMouseLeave={() => setIsWishlistHovered(false)}
-                            className={`flex h-10 w-full items-center justify-center gap-2 rounded-md font-medium transition-all duration-300 disabled:opacity-50 ${
-                                isAdded
-                                    ? "border-green-600 bg-green-600 text-white"
-                                    : "border-gray-200 bg-white/95 text-gray-800 shadow-sm backdrop-blur-sm hover:border-black hover:bg-black hover:text-white"
-                            }`}
-                        >
-                            {isLoading ? (
-                                <Icons.Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-                            ) : isAdded ? (
-                                <>
-                                    <Check className="h-5 w-5 shrink-0" />
-                                    <span>Added to Cart</span>
-                                </>
-                            ) : (
-                                <>
-                                    <ShoppingCart className="h-5 w-5 shrink-0" />
-                                    <span>Add to Cart</span>
-                                </>
+                        {mediaUrls.length > 0 && (
+                            <Image
+                                src={mediaUrls[currentImageIndex]}
+                                alt={product.title}
+                                width={1000}
+                                height={1000}
+                                className={cn(
+                                    "size-full object-cover transition-all duration-500 ease-in-out",
+                                    isProductHovered ? "scale-105" : "scale-100"
+                                )}
+                            />
+                        )}
+
+                        {/* Image indicators for slideshow */}
+                        {mediaUrls.length > 1 && (
+                            <div className="absolute inset-x-0 bottom-10 z-10 flex justify-center gap-1.5">
+                                {mediaUrls.map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className={cn(
+                                            "h-1.5 rounded-full transition-all duration-300",
+                                            currentImageIndex === index
+                                                ? "w-3 bg-primary"
+                                                : "w-1.5 bg-background/70"
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        <div
+                            className={cn(
+                                "absolute bottom-0 z-20 hidden w-full p-2 transition-all ease-in-out md:inline-block",
+                                isProductHovered
+                                    ? "translate-y-0 opacity-100"
+                                    : "translate-y-full opacity-0"
                             )}
-                        </button>
+                        >
+                            <button
+                                onClick={handleAddToCart}
+                                disabled={isLoading || isAdded}
+                                onMouseEnter={() => setIsWishlistHovered(true)}
+                                onMouseLeave={() => setIsWishlistHovered(false)}
+                                className={`flex h-10 w-full items-center justify-center gap-2 rounded-md font-medium transition-all duration-300 disabled:opacity-50 ${
+                                    isAdded
+                                        ? "border-green-600 bg-green-600 text-white"
+                                        : "border-gray-200 bg-white/95 text-gray-800 shadow-sm backdrop-blur-sm hover:border-black hover:bg-black hover:text-white"
+                                }`}
+                            >
+                                {isLoading ? (
+                                    <Icons.Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                                ) : isAdded ? (
+                                    <>
+                                        <Check className="h-5 w-5 shrink-0" />
+                                        <span>Added to Cart</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShoppingCart className="h-5 w-5 shrink-0" />
+                                        <span>Add to Cart</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
+                </Link>
+
+                {/* Mobile Floating Add to Cart */}
+                <div className="absolute bottom-2 right-2 z-20 md:hidden">
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <button
+                                className={cn(
+                                    "flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-md transition-all active:scale-95",
+                                    isAdded
+                                        ? "border-green-600 bg-green-600 text-white"
+                                        : "border-gray-100 bg-white/90 text-gray-800"
+                                )}
+                            >
+                                <ShoppingCart className="size-[18px]" />
+                            </button>
+                        </SheetTrigger>
+                        <SheetContent
+                            side="bottom"
+                            className="h-auto max-h-[90vh] w-full overflow-y-auto rounded-t-xl px-4 pb-6 pt-10"
+                        >
+                            <SheetHeader className="mb-4 text-left">
+                                <SheetTitle className="sr-only">
+                                    Add to Cart
+                                </SheetTitle>
+                                <div className="flex items-start gap-4 pb-2">
+                                    <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-md border border-gray-100 bg-gray-50">
+                                        <Image
+                                            src={imageUrl}
+                                            alt={product.title}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h3 className="line-clamp-2 text-sm font-medium text-gray-900">
+                                            {product.title}
+                                        </h3>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {product.brand.name}
+                                        </p>
+                                    </div>
+                                </div>
+                            </SheetHeader>
+                            <ProductCartAddForm
+                                product={product}
+                                isWishlisted={false}
+                                userId={userId}
+                                warehousePincode={
+                                    product.brand?.warehousePostalCode
+                                }
+                                setZipCode={() => {}}
+                                setEstimatedDelivery={() => {}}
+                            />
+                        </SheetContent>
+                    </Sheet>
                 </div>
-            </Link>
+            </div>
 
             <div className="space-y-1 py-2 md:p-2">
                 <div>
@@ -303,44 +361,9 @@ export function ProductCard({
                         <p className="truncate text-sm font-semibold">
                             {product.title}
                         </p>
-
-                        <div className="md:hidden">
-                            <Sheet>
-                                <SheetTrigger asChild>
-                                    <button
-                                        className={cn(
-                                            "flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-semibold tracking-wider transition-all",
-                                            isAdded
-                                                ? "bg-green-600 text-white"
-                                                : "bg-black text-white hover:bg-gray-800"
-                                        )}
-                                    >
-                                        Buy Now
-                                    </button>
-                                </SheetTrigger>
-                                <SheetContent
-                                    side="bottom"
-                                    className="h-auto max-h-[90vh] w-full overflow-y-auto rounded-t-xl px-4 pb-6 pt-10"
-                                >
-                                    <SheetHeader className="sr-only">
-                                        <SheetTitle>Add to Cart</SheetTitle>
-                                    </SheetHeader>
-                                    <ProductCartAddForm
-                                        product={product}
-                                        isWishlisted={false}
-                                        userId={userId}
-                                        warehousePincode={
-                                            product.brand?.warehousePostalCode
-                                        }
-                                        setZipCode={() => {}}
-                                        setEstimatedDelivery={() => {}}
-                                    />
-                                </SheetContent>
-                            </Sheet>
-                        </div>
                     </div>
 
-                    <p className="text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                         {product.brand.name}
                     </p>
                 </div>
