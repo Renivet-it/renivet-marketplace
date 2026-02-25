@@ -200,6 +200,7 @@ export function ProductPage({
 
                         {/* Main Image */}
                         <div
+                            id="pdp-main-image"
                             className="group relative flex cursor-pointer items-center justify-center bg-transparent transition-all duration-300"
                             style={{ width: "485px", height: "485px" }}
                             onClick={() => setIsImageModalOpen(true)}
