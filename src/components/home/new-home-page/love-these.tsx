@@ -40,11 +40,6 @@ export const ProductCard = ({
         compareAt && compareAt > rawPrice
             ? Math.round(((compareAt - rawPrice) / compareAt) * 100)
             : null;
-    const savedAmount =
-        compareAt && compareAt > rawPrice
-            ? convertPaiseToRupees(compareAt - rawPrice)
-            : null;
-
     const imageUrl =
         product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
 
@@ -86,10 +81,10 @@ export const ProductCard = ({
                     className="object-cover"
                 />
 
-                {/* 🔴 Circular discount badge — unique to this section */}
+                {/* 🔴 Rectangular discount strip — matches Best Sellers */}
                 {discountPct && discountPct > 0 && (
-                    <span className="absolute left-1.5 top-1.5 z-10 flex size-9 items-center justify-center rounded-full bg-teal-700 text-[10px] font-bold leading-none text-white shadow-lg sm:size-11 sm:text-xs">
-                        -{discountPct}%
+                    <span className="absolute left-0 top-2.5 z-10 whitespace-nowrap rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-2.5 md:py-1 md:text-xs">
+                        {discountPct}% OFF
                     </span>
                 )}
 
@@ -108,25 +103,39 @@ export const ProductCard = ({
                     {product.title}
                 </h3>
 
-                {/* Price row */}
-                <div className="flex items-baseline gap-1.5">
+                {/* PRICE ROW */}
+                <div className="flex h-[26px] items-center gap-2">
                     <span className="text-[14px] font-semibold text-gray-900 sm:text-[15px]">
                         ₹{price}
                     </span>
 
-                    {compareAt && compareAt > rawPrice && (
+                    {compareAt && compareAt > rawPrice ? (
                         <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
                             ₹{convertPaiseToRupees(compareAt)}
+                        </span>
+                    ) : (
+                        <span className="text-[11px] opacity-0 sm:text-[12px]">
+                            ₹0000
+                        </span>
+                    )}
+
+                    {discountPct && discountPct > 0 && (
+                        <span className="hidden text-xs font-semibold text-emerald-600 md:inline md:text-sm">
+                            {discountPct}% off
                         </span>
                     )}
                 </div>
 
-                {/* Savings text */}
-                {savedAmount && (
-                    <p className="mt-0.5 text-[10px] font-semibold text-teal-700 sm:text-[11px]">
-                        Save ₹{savedAmount}
-                    </p>
-                )}
+                {/* MOBILE DISCOUNT */}
+                <div className="h-[18px] md:hidden">
+                    {discountPct && discountPct > 0 ? (
+                        <span className="text-xs font-semibold text-emerald-600">
+                            {discountPct}% off
+                        </span>
+                    ) : (
+                        <span className="text-sm opacity-0">0% off</span>
+                    )}
+                </div>
             </div>
         </Link>
     );
