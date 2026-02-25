@@ -370,7 +370,6 @@ export function ProductCard({
                                 {/* Price */}
                                 <div className="flex items-baseline gap-2">
                                     <span className="text-xl font-bold text-gray-900">
-                                        ₹
                                         {formatPriceTag(
                                             parseFloat(
                                                 convertPaiseToRupees(
@@ -382,7 +381,6 @@ export function ProductCard({
                                     {productCompareAtPrice > productPrice && (
                                         <>
                                             <span className="text-sm text-gray-400 line-through">
-                                                ₹
                                                 {formatPriceTag(
                                                     parseFloat(
                                                         convertPaiseToRupees(

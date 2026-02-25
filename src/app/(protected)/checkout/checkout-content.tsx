@@ -842,13 +842,13 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                             </span>
                         </div>
                     )}
-                    {appliedCoupon && (
+                    {appliedCoupon && priceList.discount > 0 && (
                         <div className="flex justify-between text-sm font-medium text-green-600">
                             <span>Coupon Discount</span>
                             <span>
                                 -{" "}
                                 {formatPriceTag(
-                                    +convertPaiseToRupees(priceList.coupon),
+                                    +convertPaiseToRupees(priceList.discount),
                                     true
                                 )}
                             </span>
