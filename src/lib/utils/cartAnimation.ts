@@ -29,8 +29,16 @@ export const handleCartFlyAnimation = (
 
     const startRect =
         imageElem?.getBoundingClientRect() || button.getBoundingClientRect();
-    const cartIcon = document.querySelector(".global-cart-icon");
-    const endRect = cartIcon?.getBoundingClientRect() || {
+    const cartIcons = Array.from(
+        document.querySelectorAll(".global-cart-icon")
+    );
+    const targetIcon =
+        cartIcons.find((icon) => {
+            const rect = icon.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && rect.left > 0;
+        }) || cartIcons[0];
+
+    const endRect = targetIcon?.getBoundingClientRect() || {
         left: window.innerWidth - 50,
         top: 20,
         width: 24,
