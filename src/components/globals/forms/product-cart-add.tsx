@@ -126,6 +126,8 @@ interface PageProps {
     estimatedDelivery?: string;
     setZipCode: (zip: string) => void;
     setEstimatedDelivery: (date: string) => void;
+    /** When true, hides pricing section & delivery check (used in mobile quick-add drawer) */
+    compact?: boolean;
 }
 
 export function ProductCartAddForm({
@@ -140,6 +142,7 @@ export function ProductCartAddForm({
     estimatedDelivery,
     setZipCode,
     setEstimatedDelivery,
+    compact = false,
 }: PageProps) {
     const { guestCart, addToGuestCart } = useGuestCart();
     const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
@@ -415,69 +418,74 @@ export function ProductCartAddForm({
     //
     return (
         <div className="space-y-6">
-            {/* Price */}
-            <div>
-                <div className="flex items-end gap-2">
-                    <p className="text-3xl font-semibold text-gray-900">
-                        {formatPriceTag(
-                            parseFloat(convertPaiseToRupees(productPrice)),
-                            true
-                        )}
-                    </p>
-                    {productCompareAtPrice &&
-                        productCompareAtPrice > productPrice && (
-                            <>
-                                <p className="text-lg text-gray-400 line-through">
-                                    {formatPriceTag(
-                                        parseFloat(
-                                            convertPaiseToRupees(
-                                                productCompareAtPrice
-                                            )
-                                        ),
-                                        true
-                                    )}
-                                </p>
-                                <p className="text-lg font-semibold text-green-700">
-                                    {Math.round(
-                                        ((parseFloat(
-                                            convertPaiseToRupees(
-                                                productCompareAtPrice
-                                            )
-                                        ) -
-                                            parseFloat(
-                                                convertPaiseToRupees(
-                                                    productPrice
-                                                )
-                                            )) /
+            {/* Price — hidden in compact mode (drawer shows its own price) */}
+            {!compact && (
+                <div>
+                    <div className="flex items-end gap-2">
+                        <p className="text-3xl font-semibold text-gray-900">
+                            {formatPriceTag(
+                                parseFloat(convertPaiseToRupees(productPrice)),
+                                true
+                            )}
+                        </p>
+                        {productCompareAtPrice &&
+                            productCompareAtPrice > productPrice && (
+                                <>
+                                    <p className="text-lg text-gray-400 line-through">
+                                        {formatPriceTag(
                                             parseFloat(
                                                 convertPaiseToRupees(
                                                     productCompareAtPrice
                                                 )
-                                            )) *
-                                            100
-                                    )}
-                                    % OFF
-                                </p>
-                            </>
-                        )}
-                </div>
-                {productCompareAtPrice &&
-                    productCompareAtPrice > productPrice && (
-                        <p className="mt-1 text-sm font-medium text-green-700">
-                            You save{" "}
-                            {formatPriceTag(
-                                (productCompareAtPrice - productPrice) / 100,
-                                true
+                                            ),
+                                            true
+                                        )}
+                                    </p>
+                                    <p className="text-lg font-semibold text-green-700">
+                                        {Math.round(
+                                            ((parseFloat(
+                                                convertPaiseToRupees(
+                                                    productCompareAtPrice
+                                                )
+                                            ) -
+                                                parseFloat(
+                                                    convertPaiseToRupees(
+                                                        productPrice
+                                                    )
+                                                )) /
+                                                parseFloat(
+                                                    convertPaiseToRupees(
+                                                        productCompareAtPrice
+                                                    )
+                                                )) *
+                                                100
+                                        )}
+                                        % OFF
+                                    </p>
+                                </>
                             )}
-                        </p>
-                    )}
-                <p className="text-sm text-gray-500">inclusive of all taxes</p>
-            </div>
+                    </div>
+                    {productCompareAtPrice &&
+                        productCompareAtPrice > productPrice && (
+                            <p className="mt-1 text-sm font-medium text-green-700">
+                                You save{" "}
+                                {formatPriceTag(
+                                    (productCompareAtPrice - productPrice) /
+                                        100,
+                                    true
+                                )}
+                            </p>
+                        )}
+                    <p className="text-sm text-gray-500">
+                        inclusive of all taxes
+                    </p>
+                </div>
+            )}
 
             {/* Options */}
             <Form {...form}>
                 <form
-                    onSubmit={form.handleSubmit((values) => {
+                    onSubmit={form.handleSubmit((values, e) => {
                         if (
                             !product.isAvailable ||
                             !product.isActive ||
@@ -491,14 +499,16 @@ export function ProductCartAddForm({
                         }
 
                         if (userId) {
-                            // Trigger flying animation using the custom PDP selector
-                            handleCartFlyAnimation(
-                                e as unknown as React.MouseEvent,
-                                selectedVariant?.image ??
-                                    product.thumbnail ??
-                                    "",
-                                "#pdp-main-image"
-                            );
+                            // Trigger flying animation (safe – e.currentTarget may be null in Sheet drawer)
+                            if (e?.currentTarget) {
+                                handleCartFlyAnimation(
+                                    e as unknown as React.MouseEvent,
+                                    selectedVariant?.image ??
+                                        product.thumbnail ??
+                                        "",
+                                    "#pdp-main-image"
+                                );
+                            }
 
                             addToCart(values, {
                                 onSuccess: () => {
@@ -523,14 +533,16 @@ export function ProductCartAddForm({
                                 fullProduct: product, // 👈 quick fix: insert full product object
                             };
 
-                            // Trigger flying animation using the custom PDP selector
-                            handleCartFlyAnimation(
-                                e as unknown as React.MouseEvent,
-                                selectedVariant?.image ??
-                                    product.thumbnail ??
-                                    "",
-                                "#pdp-main-image"
-                            );
+                            // Trigger flying animation (safe – e.currentTarget may be null in Sheet drawer)
+                            if (e?.currentTarget) {
+                                handleCartFlyAnimation(
+                                    e as unknown as React.MouseEvent,
+                                    selectedVariant?.image ??
+                                        product.thumbnail ??
+                                        "",
+                                    "#pdp-main-image"
+                                );
+                            }
 
                             addToGuestCart(cartItem);
                             showAddToCartToast(
@@ -705,14 +717,16 @@ export function ProductCartAddForm({
                                     )}
                                 />
                             ))}
-                        {/* Delivery */}
-                        <DeliveryOption
-                            initialZipCode={initialZipCode}
-                            warehousePincode={warehousePincode}
-                            estimatedDelivery={estimatedDelivery || ""}
-                            setZipCode={setZipCode}
-                            setEstimatedDelivery={setEstimatedDelivery}
-                        />
+                        {/* Delivery — hidden in compact/drawer mode */}
+                        {!compact && (
+                            <DeliveryOption
+                                initialZipCode={initialZipCode}
+                                warehousePincode={warehousePincode}
+                                estimatedDelivery={estimatedDelivery || ""}
+                                setZipCode={setZipCode}
+                                setEstimatedDelivery={setEstimatedDelivery}
+                            />
+                        )}
 
                         {/* Inline buttons (normal flow) */}
                         <div ref={buttonsRef} className="flex gap-2 sm:gap-4">
@@ -720,7 +734,7 @@ export function ProductCartAddForm({
                                 type="submit"
                                 size="sm"
                                 className={cn(
-                                    "h-9 rounded-full bg-[#E0E2E1] px-5 text-sm font-medium text-black hover:bg-[#E0E2E1]",
+                                    "h-12 rounded-full border border-gray-300 bg-white px-5 text-sm font-semibold text-gray-900 hover:bg-gray-50",
                                     userId ? "flex-1" : "flex-1"
                                 )}
                                 disabled={
@@ -768,7 +782,7 @@ export function ProductCartAddForm({
                                 <Button
                                     type="submit"
                                     size="lg"
-                                    className="flex-1 rounded-full bg-black text-lg font-semibold text-white hover:bg-gray-800 md:hidden"
+                                    className="h-12 flex-1 rounded-full bg-gray-900 text-sm font-semibold text-white hover:bg-gray-800 md:hidden"
                                     disabled={
                                         !product.isAvailable ||
                                         (!!selectedVariant &&
