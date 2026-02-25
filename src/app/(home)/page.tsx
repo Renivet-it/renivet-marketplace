@@ -7,6 +7,7 @@ import {
     WomenHomeSectionQueries,
 } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
+import { Leaf, Lock, RefreshCcw, Truck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
@@ -108,9 +109,9 @@ export default function Page() {
                 <BannersFetch />
             </Suspense>
 
-            <Suspense>
+            {/* <Suspense>
                 <ShopCategoryFetch />
-            </Suspense>
+            </Suspense> */}
             <Suspense>
                 <MobileCategoriesFetch />
             </Suspense>
@@ -126,6 +127,61 @@ export default function Page() {
             <Suspense>
                 <LoveTheseFetch />
             </Suspense>
+
+            {/* Mobile-only Trust Badges Marquee */}
+            <div className="block w-full overflow-hidden bg-[#E4EDF7] md:hidden">
+                <style>
+                    {`
+                        @keyframes trustBadgesMarquee {
+                            0% { transform: translateX(0%); }
+                            100% { transform: translateX(-50%); }
+                        }
+                    `}
+                </style>
+                <div
+                    style={{
+                        display: "inline-flex",
+                        whiteSpace: "nowrap",
+                        gap: "40px",
+                        padding: "6px 0",
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        color: "#000",
+                        animation: "trustBadgesMarquee 25s linear infinite",
+                    }}
+                >
+                    {Array.from({ length: 8 }).map((_, i) => (
+                        <span key={i} className="flex items-center gap-[24px]">
+                            <span className="flex items-center gap-1.5">
+                                <Leaf className="h-3.5 w-3.5 text-emerald-700" />
+                                Verified Sustainable Brands
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <RefreshCcw className="h-3.5 w-3.5 text-blue-700" />
+                                Easy Returns
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Lock className="h-3.5 w-3.5 text-slate-800" />
+                                Secure Payments
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Truck className="h-3.5 w-3.5 text-amber-700" />
+                                Free Shipping
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Truck className="h-3.5 w-3.5 text-amber-900" />
+                                Pan‑India Delivery
+                            </span>
+                            <span className="text-gray-400">•</span>
+                        </span>
+                    ))}
+                </div>
+            </div>
+
             <Suspense>
                 <ProductNewArrivalsGridFetch />
             </Suspense>

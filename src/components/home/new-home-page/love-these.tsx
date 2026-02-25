@@ -5,9 +5,54 @@ import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { convertPaiseToRupees } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
+import { ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
+/* =============================
+   ⭐ GUEST CART HOOK
+============================= */
+function useGuestCart() {
+    const [guestCart, setGuestCart] = useState<any[]>([]);
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem("guest_cart");
+            if (stored) setGuestCart(JSON.parse(stored));
+        } catch {
+            setGuestCart([]);
+        }
+    }, []);
+
+    const addToGuestCart = (item: any) => {
+        const stored = localStorage.getItem("guest_cart");
+        const prev = stored ? JSON.parse(stored) : [];
+
+        const existing = prev.find(
+            (x: any) =>
+                x.productId === item.productId &&
+                (x.variantId || null) === (item.variantId || null)
+        );
+
+        const updated = existing
+            ? prev.map((x: any) =>
+                  x.productId === item.productId &&
+                  (x.variantId || null) === (item.variantId || null)
+                      ? { ...x, quantity: x.quantity + item.quantity }
+                      : x
+              )
+            : [...prev, item];
+
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        setGuestCart(updated);
+        window.dispatchEvent(new Event("guestCartUpdated"));
+        toast.success(existing ? "Updated Cart" : "Added to Cart!");
+    };
+
+    return { guestCart, addToGuestCart };
+}
 
 const PLACEHOLDER_IMAGE_URL =
     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
@@ -20,9 +65,17 @@ export const ProductCard = ({
     userId?: string;
 }) => {
     const { product } = banner;
-    if (!product) return null;
 
     const { addToGuestWishlist } = useGuestWishlist();
+    const { addToGuestCart } = useGuestCart();
+    const [isWishlisted, setIsWishlisted] = useState(false);
+
+    const { mutateAsync: addToCart, isLoading } =
+        trpc.general.users.cart.addProductToCart.useMutation({
+            onSuccess: () => toast.success("Added to Cart!"),
+            onError: (err) =>
+                toast.error(err.message || "Could not add to cart."),
+        });
 
     const { mutateAsync: addToWishlist } =
         trpc.general.users.wishlist.addProductInWishlist.useMutation({
@@ -31,43 +84,92 @@ export const ProductCard = ({
                 toast.error(err.message || "Could not add to wishlist."),
         });
 
+    if (!product) return null;
+
     const rawPrice = product.variants?.[0]?.price ?? product.price ?? 0;
-    const price = convertPaiseToRupees(rawPrice);
+    const priceStr = convertPaiseToRupees(rawPrice);
+    const price = Math.round(Number(priceStr));
 
     const compareAt =
         product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
+
+    const displayCompareAtStr =
+        compareAt && compareAt > rawPrice
+            ? convertPaiseToRupees(compareAt)
+            : null;
+    const displayCompareAt = displayCompareAtStr
+        ? Math.round(Number(displayCompareAtStr))
+        : null;
+
     const discountPct =
         compareAt && compareAt > rawPrice
             ? Math.round(((compareAt - rawPrice) / compareAt) * 100)
             : null;
-    const savedAmount =
-        compareAt && compareAt > rawPrice
-            ? convertPaiseToRupees(compareAt - rawPrice)
-            : null;
-
     const imageUrl =
         product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
 
+    const variantId = product.variants?.[0]?.id || null;
     const productUrl = `/products/${product.slug}`;
+
+    const handleAddToCart = async (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+            if (userId) {
+                await addToCart({
+                    productId: product.id,
+                    variantId,
+                    quantity: 1,
+                    userId,
+                });
+            } else {
+                addToGuestCart({
+                    productId: product.id,
+                    variantId,
+                    quantity: 1,
+                    title: product.title,
+                    brand: product.brand?.name,
+                    price: rawPrice,
+                    image: imageUrl,
+                    fullProduct: product,
+                });
+                toast.success("Added to Cart!");
+            }
+        } catch (err) {
+            toast.error(
+                err instanceof Error ? err.message : "Could not add to cart."
+            );
+        }
+    };
 
     const handleWishlist = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (userId) {
-            await addToWishlist({ productId: product.id });
-        } else {
-            addToGuestWishlist({
-                productId: product.id,
-                variantId: null,
-                title: product.title,
-                brand: product.brand?.name,
-                price,
-                image: imageUrl,
-                sku: null,
-                fullProduct: product,
-            });
-            toast.success("Added to Wishlist!");
+        try {
+            if (userId) {
+                await addToWishlist({ productId: product.id });
+            } else {
+                addToGuestWishlist({
+                    productId: product.id,
+                    variantId: null,
+                    title: product.title,
+                    brand: product.brand?.name,
+                    price: rawPrice,
+                    image: imageUrl,
+                    sku: null,
+                    fullProduct: product,
+                });
+                toast.success("Added to Wishlist!");
+            }
+            setIsWishlisted(true);
+        } catch (err) {
+            toast.error(
+                err instanceof Error
+                    ? err.message
+                    : "Could not add to wishlist."
+            );
         }
     };
 
@@ -86,20 +188,12 @@ export const ProductCard = ({
                     className="object-cover"
                 />
 
-                {/* 🔴 Circular discount badge — unique to this section */}
+                {/* 🔴 Rectangular discount strip — matches Best Sellers */}
                 {discountPct && discountPct > 0 && (
-                    <span className="absolute left-1.5 top-1.5 z-10 flex size-9 items-center justify-center rounded-full bg-teal-700 text-[10px] font-bold leading-none text-white shadow-lg sm:size-11 sm:text-xs">
-                        -{discountPct}%
+                    <span className="absolute left-0 top-2.5 z-10 whitespace-nowrap rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-2.5 md:py-1 md:text-xs">
+                        {discountPct}% OFF
                     </span>
                 )}
-
-                {/* ❤️ WISHLIST BUTTON */}
-                <button
-                    onClick={handleWishlist}
-                    className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow transition hover:bg-black hover:text-white"
-                >
-                    <Icons.Heart className="h-4 w-4" />
-                </button>
             </div>
 
             {/* CONTENT */}
@@ -108,25 +202,60 @@ export const ProductCard = ({
                     {product.title}
                 </h3>
 
-                {/* Price row */}
-                <div className="flex items-baseline gap-1.5">
-                    <span className="text-[14px] font-semibold text-gray-900 sm:text-[15px]">
+                {/* PRICE ROW */}
+                <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
+                    <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
                         ₹{price}
                     </span>
 
-                    {compareAt && compareAt > rawPrice && (
+                    {displayCompareAt ? (
                         <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
-                            ₹{convertPaiseToRupees(compareAt)}
+                            ₹{displayCompareAt}
+                        </span>
+                    ) : (
+                        <span className="text-[11px] opacity-0 sm:text-[12px]">
+                            ₹0000
                         </span>
                     )}
                 </div>
 
-                {/* Savings text */}
-                {savedAmount && (
-                    <p className="mt-0.5 text-[10px] font-semibold text-teal-700 sm:text-[11px]">
-                        Save ₹{savedAmount}
-                    </p>
-                )}
+                {/* BUTTONS ROW (CART + WISHLIST) */}
+                <div className="mt-2.5 flex items-center gap-2">
+                    <button
+                        onClick={handleWishlist}
+                        className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
+                    >
+                        {isWishlisted ? (
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 scale-110 text-red-500 md:h-5 md:w-5"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                            >
+                                <path
+                                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
+                4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
+                14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
+                3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                                />
+                            </svg>
+                        ) : (
+                            <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
+                        )}
+                    </button>
+
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={isLoading}
+                        className="flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:bg-gray-50 hover:shadow-sm disabled:opacity-50 md:h-10"
+                    >
+                        {isLoading ? (
+                            <Icons.Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
+                        ) : (
+                            <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
+                        )}
+                    </button>
+                </div>
             </div>
         </Link>
     );
@@ -149,7 +278,7 @@ export function LoveThese({
 
     return (
         <section className="w-full bg-[#FCFBF4] py-4">
-            <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+            <h2 className="mb-6 text-center font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Basic Collection
             </h2>
 
