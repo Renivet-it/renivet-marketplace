@@ -2,6 +2,7 @@
 
 import { trackAddToCartCapi } from "@/actions/analytics";
 import { trackAddToCart } from "@/actions/track-product";
+import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import {
@@ -25,6 +26,7 @@ import {
     formatPriceTag,
     getAbsoluteURL,
 } from "@/lib/utils";
+import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import {
     CachedCart,
     CreateCart,
@@ -87,10 +89,8 @@ function useGuestCart() {
                     ? { ...x, quantity: x.quantity + item.quantity }
                     : x
             );
-            toast.success("Increased quantity in Cart"); // ✅ toast for guest
         } else {
             updated = [...prev, item];
-            toast.success("Added to Cart!"); // ✅ toast for guest
         }
 
         localStorage.setItem("guest_cart", JSON.stringify(updated));
@@ -393,10 +393,12 @@ export function ProductCartAddForm({
     const { mutate: addToCart, isPending } =
         trpc.general.users.cart.addProductToCart.useMutation({
             onMutate: () => {
-                toast.success(
+                showAddToCartToast(
+                    product,
+                    selectedVariant,
                     isProductInCart
                         ? "Increased quantity in Cart"
-                        : "Added to Cart!"
+                        : "Item added to cart!"
                 );
             },
             onSuccess: () => {
@@ -489,6 +491,15 @@ export function ProductCartAddForm({
                         }
 
                         if (userId) {
+                            // Trigger flying animation using the custom PDP selector
+                            handleCartFlyAnimation(
+                                e as unknown as React.MouseEvent,
+                                selectedVariant?.image ??
+                                    product.thumbnail ??
+                                    "",
+                                "#pdp-main-image"
+                            );
+
                             addToCart(values, {
                                 onSuccess: () => {
                                     setIsAddedToCart(true);
@@ -500,21 +511,35 @@ export function ProductCartAddForm({
                                 },
                             });
                         } else {
+                            const { quantity } = values;
                             const cartItem = {
-                                ...values, // productId, variantId, quantity
-                                title: product.title,
-                                brand: product.brand?.name,
-                                price: productPrice, // paise
-                                compareAtPrice: productCompareAtPrice,
-                                image:
-                                    selectedVariant?.image ??
-                                    product.thumbnail ??
-                                    null,
-                                sku: selectedVariant?.nativeSku ?? null,
+                                productId: product.id,
+                                variantId: selectedVariant?.id,
+                                quantity,
+                                price: selectedVariant
+                                    ? selectedVariant.price
+                                    : product.price,
+                                image: selectedVariant?.image,
                                 fullProduct: product, // 👈 quick fix: insert full product object
                             };
 
+                            // Trigger flying animation using the custom PDP selector
+                            handleCartFlyAnimation(
+                                e as unknown as React.MouseEvent,
+                                selectedVariant?.image ??
+                                    product.thumbnail ??
+                                    "",
+                                "#pdp-main-image"
+                            );
+
                             addToGuestCart(cartItem);
+                            showAddToCartToast(
+                                product,
+                                selectedVariant,
+                                isProductInCart
+                                    ? "Increased quantity in Cart"
+                                    : "Item added to cart!"
+                            );
                             setIsAddedToCart(true);
                             if (isBuyNowRef.current || isBuyNow)
                                 router.push(

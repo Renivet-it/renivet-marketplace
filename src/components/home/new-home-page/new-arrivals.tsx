@@ -1,10 +1,12 @@
 "use client";
 
+import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { Icons } from "@/components/icons";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { ShoppingCart } from "lucide-react";
+import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
+import { Check, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -48,7 +50,15 @@ function useGuestCart() {
         localStorage.setItem("guest_cart", JSON.stringify(updated));
         setGuestCart(updated);
         window.dispatchEvent(new Event("guestCartUpdated"));
-        toast.success(existing ? "Updated Cart" : "Added to Cart!");
+        if (item.fullProduct) {
+            showAddToCartToast(
+                item.fullProduct,
+                null,
+                existing ? "Increased quantity in Cart" : "Item added to cart!"
+            );
+        } else {
+            toast.success(existing ? "Updated Cart" : "Added to Cart!");
+        }
     };
 
     return { guestCart, addToGuestCart };
@@ -154,10 +164,11 @@ function ProductCard({
     const { addToGuestCart } = useGuestCart();
     const { addToGuestWishlist } = useGuestWishlist();
     const [isWishlisted, setIsWishlisted] = useState(false);
+    const [isAdded, setIsAdded] = useState(false);
 
     const { mutateAsync: addToCart, isLoading } =
         trpc.general.users.cart.addProductToCart.useMutation({
-            onSuccess: () => toast.success("Added to Cart!"),
+            onSuccess: () => {},
             onError: (err) =>
                 toast.error(err.message || "Could not add to cart."),
         });
@@ -203,10 +214,10 @@ function ProductCard({
             if (userId) {
                 await addToCart({
                     productId: product.id,
-                    variantId,
                     quantity: 1,
                     userId,
                 });
+                showAddToCartToast(product, null, "Item added to cart!");
             } else {
                 addToGuestCart({
                     productId: product.id,
@@ -219,6 +230,14 @@ function ProductCard({
                     fullProduct: product,
                 });
             }
+
+            // Trigger flying animation
+            handleCartFlyAnimation(e, imageUrl);
+
+            setIsAdded(true);
+            setTimeout(() => {
+                setIsAdded(false);
+            }, 2000);
         } catch (err: any) {
             toast.error(err.message || "Could not add to cart.");
         }
@@ -252,10 +271,10 @@ function ProductCard({
     };
 
     return (
-        <div className="group flex-shrink-0 cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
+        <div className="product-card-container group flex-shrink-0 cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
             <Link href={`/products/${product.slug}`} className="block">
                 {/* Image + discount badge */}
-                <div className="relative aspect-[1/1] w-full overflow-hidden">
+                <div className="product-image-container relative aspect-[1/1] w-full overflow-hidden">
                     <Image
                         src={imageUrl}
                         alt={product.title}
@@ -323,13 +342,19 @@ function ProductCard({
 
                         <button
                             onClick={handleAddToCart}
-                            disabled={isLoading}
-                            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded border border-gray-300 bg-white text-[12px] font-medium text-gray-700 transition-all duration-300 hover:bg-gray-50 hover:shadow-sm disabled:opacity-50 md:h-10 md:text-sm"
+                            disabled={isLoading || isAdded}
+                            className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded border text-[12px] font-medium transition-all duration-300 disabled:opacity-50 md:h-10 md:text-sm ${
+                                isAdded
+                                    ? "border-green-600 bg-green-600 text-white"
+                                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:shadow-sm"
+                            }`}
                         >
                             {isLoading ? (
-                                <Icons.Loader2 className="h-4 w-4 animate-spin text-gray-700 md:h-5 md:w-5" />
+                                <Icons.Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
+                            ) : isAdded ? (
+                                <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
                             ) : (
-                                <ShoppingCart className="h-4 w-4 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
+                                <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
                             )}
                         </button>
                     </div>
