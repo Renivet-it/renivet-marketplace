@@ -5,6 +5,7 @@ import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
+import { ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -67,7 +68,6 @@ interface ProductCardProps {
 
 const ProductCard = ({ banner, userId }: ProductCardProps) => {
     const { product } = banner;
-    const router = useRouter();
 
     const { addToGuestCart } = useGuestCart();
     const { addToGuestWishlist } = useGuestWishlist();
@@ -89,13 +89,17 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
     if (!product) return null;
 
     const rawPrice = product.variants?.[0]?.price ?? product.price ?? 0;
-    const price = convertPaiseToRupees(rawPrice);
+    const priceStr = convertPaiseToRupees(rawPrice);
+    const price = Math.round(Number(priceStr));
 
     const originalPrice =
         product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
 
-    const displayPrice = originalPrice
+    const displayPriceStr = originalPrice
         ? convertPaiseToRupees(originalPrice)
+        : null;
+    const displayPrice = displayPriceStr
+        ? Math.round(Number(displayPriceStr))
         : null;
 
     const discount =
@@ -177,56 +181,10 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
     };
 
     return (
-        <div className="group w-[146px] flex-shrink-0 cursor-pointer md:flex md:h-[520px] md:w-[260px] md:flex-col">
+        <div className="group w-[146px] flex-shrink-0 cursor-pointer md:flex md:w-[260px] md:flex-col">
             <Link href={productUrl}>
                 <div className="relative h-[223px] w-[156px] overflow-hidden bg-gray-50 md:h-[350px] md:w-full">
-                    {/* ❤️ MOBILE WISHLIST (REAL LOGIC) */}
-                    <button
-                        onClick={handleAddToWishlist}
-                        className="absolute right-2 top-2 z-20 flex items-center justify-center rounded-full bg-white/80 p-2 shadow-md backdrop-blur-md md:hidden"
-                    >
-                        {isWishlisted ? (
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 text-red-500"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                            >
-                                <path
-                                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
-                4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
-                14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
-                3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                                />
-                            </svg>
-                        ) : (
-                            <Icons.Heart className="h-5 w-5 text-gray-700" />
-                        )}
-                    </button>
-                    {/* ❤️ DESKTOP WISHLIST (SAME LOGIC) */}
-                    <button
-                        onClick={handleAddToWishlist}
-                        className="absolute right-3 top-3 z-20 hidden items-center justify-center rounded-full bg-white/90 p-2 shadow-md backdrop-blur-md md:flex"
-                    >
-                        {isWishlisted ? (
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5 text-red-500"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                            >
-                                <path
-                                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
-      4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
-      14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
-      3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                                />
-                            </svg>
-                        ) : (
-                            <Icons.Heart className="h-5 w-5 text-gray-700" />
-                        )}
-                    </button>
-
+                    {/* (Icons Removed from Image) */}
                     <Image
                         src={imageUrl}
                         alt={product.title}
@@ -255,47 +213,55 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
             {/* PRICE ROW */}
             <div className="flex h-[26px] items-center gap-2">
-                <span className="text-lg font-semibold text-gray-900">
+                <span className="text-[15px] font-semibold text-gray-900 md:text-lg">
                     ₹{price}
                 </span>
 
                 {displayPrice ? (
-                    <span className="text-sm text-gray-400 line-through">
+                    <span className="text-[13px] text-gray-400 line-through md:text-sm">
                         ₹{displayPrice}
                     </span>
                 ) : (
-                    <span className="text-sm opacity-0">₹0000</span>
-                )}
-
-                {discount && discount > 0 && (
-                    <span className="hidden text-xs font-semibold text-emerald-600 md:inline md:text-sm">
-                        {discount}% off
+                    <span className="text-[13px] opacity-0 md:text-sm">
+                        ₹0000
                     </span>
                 )}
             </div>
 
-            {/* MOBILE DISCOUNT */}
-            <div className="h-[18px] md:hidden">
-                {discount && discount > 0 ? (
-                    <span className="text-xs font-semibold text-emerald-600">
-                        {discount}% off
-                    </span>
-                ) : (
-                    <span className="text-sm opacity-0">0% off</span>
-                )}
-            </div>
+            {/* BUTTONS ROW (CART + WISHLIST) */}
+            <div className="mt-2.5 flex items-center gap-2">
+                <button
+                    onClick={handleAddToWishlist}
+                    className="flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-colors hover:bg-gray-50 md:h-10"
+                >
+                    {isWishlisted ? (
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-red-500 md:h-5 md:w-5"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
+            4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
+            14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
+            3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                            />
+                        </svg>
+                    ) : (
+                        <Icons.Heart className="h-4 w-4 text-gray-700 md:h-5 md:w-5" />
+                    )}
+                </button>
 
-            {/* 🛒 ADD TO CART (UNCHANGED) */}
-            <div className="mt-2">
                 <button
                     onClick={handleAddToCart}
                     disabled={isLoading}
-                    className="flex w-full items-center justify-center border border-gray-700 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-800 hover:text-white disabled:opacity-50"
+                    className="flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-colors hover:bg-gray-50 disabled:opacity-50 md:h-10"
                 >
                     {isLoading ? (
-                        <Icons.Loader2 className="h-4 w-4 animate-spin" />
+                        <Icons.Loader2 className="h-4 w-4 animate-spin text-gray-700 md:h-5 md:w-5" />
                     ) : (
-                        "Add to Cart"
+                        <ShoppingCart className="h-4 w-4 text-gray-700 md:h-5 md:w-5" />
                     )}
                 </button>
             </div>

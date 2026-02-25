@@ -1,8 +1,10 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
+import { ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -149,6 +151,8 @@ function ProductCard({
     userId?: string;
 }) {
     const { addToGuestCart } = useGuestCart();
+    const { addToGuestWishlist } = useGuestWishlist();
+    const [isWishlisted, setIsWishlisted] = useState(false);
 
     const { mutateAsync: addToCart, isLoading } =
         trpc.general.users.cart.addProductToCart.useMutation({
@@ -157,8 +161,17 @@ function ProductCard({
                 toast.error(err.message || "Could not add to cart."),
         });
 
+    const { mutateAsync: addToWishlist } =
+        trpc.general.users.wishlist.addProductInWishlist.useMutation({
+            onSuccess: () => toast.success("Added to Wishlist!"),
+            onError: (err) =>
+                toast.error(err.message || "Could not add to wishlist"),
+        });
+
     const rawPrice = product.variants?.[0]?.price || product.price || 0;
-    const price = convertPaiseToRupees(rawPrice);
+    const priceStr = convertPaiseToRupees(rawPrice);
+    const price = Math.round(Number(priceStr));
+
     const variantId = product.variants?.[0]?.id || null;
     const imageUrl =
         product.media?.[0]?.mediaItem?.url ||
@@ -167,10 +180,15 @@ function ProductCard({
     /* ---- Discount calculation ---- */
     const originalPrice =
         product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
-    const displayOriginal =
+
+    const displayOriginalStr =
         originalPrice && originalPrice > rawPrice
             ? convertPaiseToRupees(originalPrice)
             : null;
+    const displayOriginal = displayOriginalStr
+        ? Math.round(Number(displayOriginalStr))
+        : null;
+
     const discountPct =
         displayOriginal && originalPrice
             ? Math.round(((originalPrice - rawPrice) / originalPrice) * 100)
@@ -205,6 +223,33 @@ function ProductCard({
         }
     };
 
+    const handleAddToWishlist = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+            if (userId) {
+                await addToWishlist({ productId: product.id });
+            } else {
+                addToGuestWishlist({
+                    productId: product.id,
+                    variantId: null,
+                    title: product.title,
+                    brand: product.brand?.name,
+                    price: rawPrice,
+                    image: imageUrl,
+                    sku: null,
+                    fullProduct: product,
+                });
+                toast.success("Added to Wishlist!");
+            }
+
+            setIsWishlisted(true);
+        } catch (err: any) {
+            toast.error(err.message || "Could not add to wishlist");
+        }
+    };
+
     return (
         <div className="group flex-shrink-0 cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
             <Link href={`/products/${product.slug}`} className="block">
@@ -234,34 +279,59 @@ function ProductCard({
                     </h3>
 
                     {/* Price row */}
-                    <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                        <span className="text-xs font-semibold text-gray-900 sm:text-base">
+                    <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
+                        <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
                             ₹{price}
                         </span>
 
-                        {displayOriginal && (
-                            <span className="text-[9px] text-gray-400 line-through sm:text-xs">
+                        {displayOriginal ? (
+                            <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
                                 ₹{displayOriginal}
+                            </span>
+                        ) : (
+                            <span className="text-[11px] opacity-0 sm:text-[12px]">
+                                ₹0000
                             </span>
                         )}
                     </div>
 
-                    {/* Add to cart button */}
-                    <button
-                        onClick={handleAddToCart}
-                        disabled={isLoading}
-                        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white py-1.5 text-[11px] font-medium text-gray-700 transition-all duration-200 hover:border-gray-800 hover:bg-gray-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:py-2 sm:text-xs"
-                        aria-label="Add to cart"
-                    >
-                        {isLoading ? (
-                            <Icons.Loader2 className="size-3 animate-spin" />
-                        ) : (
-                            <>
-                                <Icons.Plus className="size-3 sm:size-3.5" />
-                                Add to Cart
-                            </>
-                        )}
-                    </button>
+                    {/* BUTTONS ROW (CART + WISHLIST) */}
+                    <div className="mt-2.5 flex items-center gap-2">
+                        <button
+                            onClick={handleAddToWishlist}
+                            className="flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-colors hover:bg-gray-50 md:h-10"
+                        >
+                            {isWishlisted ? (
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4 text-red-500 md:h-5 md:w-5"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
+                    4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
+                    14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
+                    3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                                    />
+                                </svg>
+                            ) : (
+                                <Icons.Heart className="h-4 w-4 text-gray-700 md:h-5 md:w-5" />
+                            )}
+                        </button>
+
+                        <button
+                            onClick={handleAddToCart}
+                            disabled={isLoading}
+                            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded border border-gray-300 bg-white text-[12px] font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 md:h-10 md:text-sm"
+                        >
+                            {isLoading ? (
+                                <Icons.Loader2 className="h-4 w-4 animate-spin text-gray-700 md:h-5 md:w-5" />
+                            ) : (
+                                <ShoppingCart className="h-4 w-4 text-gray-700 md:h-5 md:w-5" />
+                            )}
+                        </button>
+                    </div>
                 </div>
             </Link>
         </div>
