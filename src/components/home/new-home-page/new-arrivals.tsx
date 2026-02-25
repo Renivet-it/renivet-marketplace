@@ -324,12 +324,12 @@ function ProductCard({
                         <button
                             onClick={handleAddToCart}
                             disabled={isLoading}
-                            className="group flex h-9 flex-1 items-center justify-center gap-1.5 rounded border border-gray-300 bg-white text-[12px] font-medium text-gray-700 transition-all duration-300 hover:border-black hover:bg-black hover:shadow-sm disabled:opacity-50 md:h-10 md:text-sm"
+                            className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded border border-gray-300 bg-white text-[12px] font-medium text-gray-700 transition-all duration-300 hover:bg-gray-50 hover:shadow-sm disabled:opacity-50 md:h-10 md:text-sm"
                         >
                             {isLoading ? (
                                 <Icons.Loader2 className="h-4 w-4 animate-spin text-gray-700 md:h-5 md:w-5" />
                             ) : (
-                                <ShoppingCart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-white md:h-5 md:w-5" />
+                                <ShoppingCart className="h-4 w-4 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
                             )}
                         </button>
                     </div>
