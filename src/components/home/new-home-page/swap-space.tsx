@@ -205,24 +205,24 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             {/* TITLE */}
             <div className="h-[42px] overflow-hidden pb-2 pt-3 text-left md:h-[48px]">
                 <Link href={productUrl}>
-                    <h3 className="line-clamp-2 text-[14px] font-normal leading-tight text-gray-700 md:text-[15px]">
+                    <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[14px]">
                         {product.title}
                     </h3>
                 </Link>
             </div>
 
             {/* PRICE ROW */}
-            <div className="flex h-[26px] items-center gap-2">
-                <span className="text-[15px] font-semibold text-gray-900 md:text-lg">
+            <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
+                <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
                     ₹{price}
                 </span>
 
                 {displayPrice ? (
-                    <span className="text-[13px] text-gray-400 line-through md:text-sm">
+                    <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
                         ₹{displayPrice}
                     </span>
                 ) : (
-                    <span className="text-[13px] opacity-0 md:text-sm">
+                    <span className="text-[11px] opacity-0 sm:text-[12px]">
                         ₹0000
                     </span>
                 )}
