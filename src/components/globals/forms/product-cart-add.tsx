@@ -734,7 +734,7 @@ export function ProductCartAddForm({
                                 type="submit"
                                 size="sm"
                                 className={cn(
-                                    "h-9 rounded-full bg-[#E0E2E1] px-5 text-sm font-medium text-black hover:bg-[#E0E2E1]",
+                                    "h-12 rounded-full border border-gray-300 bg-white px-5 text-sm font-semibold text-gray-900 hover:bg-gray-50",
                                     userId ? "flex-1" : "flex-1"
                                 )}
                                 disabled={
@@ -782,7 +782,7 @@ export function ProductCartAddForm({
                                 <Button
                                     type="submit"
                                     size="lg"
-                                    className="flex-1 rounded-full bg-black text-lg font-semibold text-white hover:bg-gray-800 md:hidden"
+                                    className="h-12 flex-1 rounded-full bg-gray-900 text-sm font-semibold text-white hover:bg-gray-800 md:hidden"
                                     disabled={
                                         !product.isAvailable ||
                                         (!!selectedVariant &&

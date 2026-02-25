@@ -417,7 +417,10 @@ export function ProductCard({
                                 {/* Description */}
                                 {product.description && (
                                     <p className="line-clamp-3 text-sm leading-relaxed text-gray-600">
-                                        {product.description}
+                                        {product.description.replace(
+                                            /<[^>]*>/g,
+                                            ""
+                                        )}
                                     </p>
                                 )}
 
