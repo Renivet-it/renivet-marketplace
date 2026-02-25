@@ -102,7 +102,7 @@ export function ProductGridNewArrivals({
 
     return (
         <section
-            className={cn("w-full bg-[#fcfbf4] py-8", className)}
+            className={cn("w-full bg-[#fcfbf4] py-3", className)}
             {...props}
         >
             <div className="mx-auto max-w-screen-2xl space-y-10 px-4 sm:px-6 lg:px-8">

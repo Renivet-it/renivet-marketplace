@@ -157,7 +157,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
         !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
 
     return (
-        <section className="w-full bg-[#FCFBF4] px-4 py-10 md:px-16">
+        <section className="w-full bg-[#FCFBF4] px-4 py-2 md:px-16">
             <h2 className="mb-6 py-4 text-center font-serif text-xl text-[#7A6A3A] md:mb-10 md:text-3xl">
                 Select What Matters
             </h2>

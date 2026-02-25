@@ -109,9 +109,9 @@ export default function Page() {
                 <BannersFetch />
             </Suspense>
 
-            <Suspense>
+            {/* <Suspense>
                 <ShopCategoryFetch />
-            </Suspense>
+            </Suspense> */}
             <Suspense>
                 <MobileCategoriesFetch />
             </Suspense>
