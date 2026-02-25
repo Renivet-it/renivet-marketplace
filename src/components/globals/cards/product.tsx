@@ -166,6 +166,9 @@ export function ProductCard({
         e.preventDefault();
         e.stopPropagation();
 
+        // Capture ref before async — React nullifies e.currentTarget after await
+        const buttonEl = e.currentTarget as HTMLElement | null;
+
         try {
             if (userId) {
                 await addToCart({
@@ -188,8 +191,14 @@ export function ProductCard({
                 });
             }
 
-            // Trigger flying animation
-            handleCartFlyAnimation(e, imageUrl);
+            // Trigger flying animation (safe — buttonEl may be null in Sheet portal)
+            if (buttonEl) {
+                try {
+                    handleCartFlyAnimation(e, imageUrl);
+                } catch {
+                    // Animation failure should not block cart logic
+                }
+            }
 
             setIsAdded(true);
             setTimeout(() => {
@@ -315,41 +324,163 @@ export function ProductCard({
                         </SheetTrigger>
                         <SheetContent
                             side="bottom"
-                            className="h-auto max-h-[90vh] w-full overflow-y-auto rounded-t-xl px-4 pb-6 pt-10"
+                            className="h-auto max-h-[85vh] w-full overflow-y-auto rounded-t-2xl px-0 pb-8 pt-3"
                         >
-                            <SheetHeader className="mb-4 text-left">
-                                <SheetTitle className="sr-only">
-                                    Add to Cart
-                                </SheetTitle>
-                                <div className="flex items-start gap-4 pb-2">
-                                    <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-md border border-gray-100 bg-gray-50">
+                            <SheetHeader className="sr-only">
+                                <SheetTitle>Quick Add</SheetTitle>
+                            </SheetHeader>
+
+                            {/* Drag handle indicator */}
+                            <div className="mb-4 flex justify-center">
+                                <div className="h-1 w-10 rounded-full bg-gray-300" />
+                            </div>
+
+                            {/* Image Gallery — horizontally scrollable */}
+                            <div className="scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-4">
+                                {(mediaUrls.length > 0
+                                    ? mediaUrls.slice(0, 5)
+                                    : [imageUrl]
+                                ).map((url, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="relative aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-gray-50"
+                                    >
                                         <Image
-                                            src={imageUrl}
-                                            alt={product.title}
+                                            src={url}
+                                            alt={`${product.title} ${idx + 1}`}
                                             fill
                                             className="object-cover"
                                         />
                                     </div>
-                                    <div className="flex flex-col">
-                                        <h3 className="line-clamp-2 text-sm font-medium text-gray-900">
-                                            {product.title}
-                                        </h3>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            {product.brand.name}
+                                ))}
+                            </div>
+
+                            {/* Product Info */}
+                            <div className="space-y-3 px-5">
+                                {/* Title + Brand */}
+                                <div>
+                                    <h3 className="text-base font-semibold leading-snug text-gray-900">
+                                        {product.title}
+                                    </h3>
+                                    <p className="mt-0.5 text-xs text-gray-500">
+                                        {product.brand.name}
+                                    </p>
+                                </div>
+
+                                {/* Price */}
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-xl font-bold text-gray-900">
+                                        ₹
+                                        {formatPriceTag(
+                                            parseFloat(
+                                                convertPaiseToRupees(
+                                                    productPrice
+                                                )
+                                            )
+                                        )}
+                                    </span>
+                                    {productCompareAtPrice > productPrice && (
+                                        <>
+                                            <span className="text-sm text-gray-400 line-through">
+                                                ₹
+                                                {formatPriceTag(
+                                                    parseFloat(
+                                                        convertPaiseToRupees(
+                                                            productCompareAtPrice
+                                                        )
+                                                    )
+                                                )}
+                                            </span>
+                                            <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
+                                                {Math.round(
+                                                    ((parseFloat(
+                                                        convertPaiseToRupees(
+                                                            productCompareAtPrice
+                                                        )
+                                                    ) -
+                                                        parseFloat(
+                                                            convertPaiseToRupees(
+                                                                productPrice
+                                                            )
+                                                        )) /
+                                                        (parseFloat(
+                                                            convertPaiseToRupees(
+                                                                productCompareAtPrice
+                                                            )
+                                                        ) || 1)) *
+                                                        100
+                                                )}
+                                                % OFF
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Description */}
+                                {product.description && (
+                                    <p className="line-clamp-3 text-sm leading-relaxed text-gray-600">
+                                        {product.description}
+                                    </p>
+                                )}
+
+                                {/* Specifications */}
+                                {product.specifications &&
+                                    product.specifications.length > 0 && (
+                                        <div className="space-y-1.5">
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                                Specifications
+                                            </p>
+                                            <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                                                {product.specifications
+                                                    .slice(0, 4)
+                                                    .map((spec, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="flex items-center justify-between px-3 py-2"
+                                                        >
+                                                            <span className="text-xs text-gray-500">
+                                                                {spec.key}
+                                                            </span>
+                                                            <span className="text-xs font-medium text-gray-800">
+                                                                {spec.value}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                {/* Delivery Badge */}
+                                <div className="flex items-center gap-2.5 rounded-lg bg-gray-50 px-3.5 py-2.5">
+                                    <div className="flex size-8 items-center justify-center rounded-full bg-white shadow-sm">
+                                        <Icons.Truck className="size-4 text-gray-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-800">
+                                            Estimated delivery in{" "}
+                                            <span className="font-bold">
+                                                4-6 days
+                                            </span>
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            Free delivery on all orders
                                         </p>
                                     </div>
                                 </div>
-                            </SheetHeader>
-                            <ProductCartAddForm
-                                product={product}
-                                isWishlisted={false}
-                                userId={userId}
-                                warehousePincode={
-                                    product.brand?.warehousePostalCode
-                                }
-                                setZipCode={() => {}}
-                                setEstimatedDelivery={() => {}}
-                            />
+
+                                {/* Variant selection + Add to Cart + Buy Now */}
+                                <ProductCartAddForm
+                                    product={product}
+                                    isWishlisted={false}
+                                    userId={userId}
+                                    warehousePincode={
+                                        product.brand?.warehousePostalCode
+                                    }
+                                    setZipCode={() => {}}
+                                    setEstimatedDelivery={() => {}}
+                                    compact
+                                />
+                            </div>
                         </SheetContent>
                     </Sheet>
                 </div>
