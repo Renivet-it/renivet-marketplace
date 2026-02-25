@@ -27,27 +27,28 @@ function useGuestCart() {
     }, []);
 
     const addToGuestCart = (item: any) => {
-        setGuestCart((prev) => {
-            const existing = prev.find(
-                (x) =>
-                    x.productId === item.productId &&
-                    (x.variantId || null) === (item.variantId || null)
-            );
+        const stored = localStorage.getItem("guest_cart");
+        const prev = stored ? JSON.parse(stored) : [];
 
-            const updated = existing
-                ? prev.map((x) =>
-                      x.productId === item.productId &&
-                      (x.variantId || null) === (item.variantId || null)
-                          ? { ...x, quantity: x.quantity + item.quantity }
-                          : x
-                  )
-                : [...prev, item];
+        const existing = prev.find(
+            (x: any) =>
+                x.productId === item.productId &&
+                (x.variantId || null) === (item.variantId || null)
+        );
 
-            localStorage.setItem("guest_cart", JSON.stringify(updated));
-            window.dispatchEvent(new Event("guestCartUpdated"));
-            toast.success(existing ? "Updated Cart" : "Added to Cart!");
-            return updated;
-        });
+        const updated = existing
+            ? prev.map((x: any) =>
+                  x.productId === item.productId &&
+                  (x.variantId || null) === (item.variantId || null)
+                      ? { ...x, quantity: x.quantity + item.quantity }
+                      : x
+              )
+            : [...prev, item];
+
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        setGuestCart(updated);
+        window.dispatchEvent(new Event("guestCartUpdated"));
+        toast.success(existing ? "Updated Cart" : "Added to Cart!");
     };
 
     return { guestCart, addToGuestCart };

@@ -27,27 +27,28 @@ function useGuestCart() {
     }, []);
 
     const addToGuestCart = (item: any) => {
-        setGuestCart((prev) => {
-            const existing = prev.find(
-                (x) =>
-                    x.productId === item.productId &&
-                    (x.variantId || null) === (item.variantId || null)
-            );
+        const stored = localStorage.getItem("guest_cart");
+        const prev = stored ? JSON.parse(stored) : [];
 
-            const updated = existing
-                ? prev.map((x) =>
-                      x.productId === item.productId &&
-                      (x.variantId || null) === (item.variantId || null)
-                          ? { ...x, quantity: x.quantity + item.quantity }
-                          : x
-                  )
-                : [...prev, item];
+        const existing = prev.find(
+            (x: any) =>
+                x.productId === item.productId &&
+                (x.variantId || null) === (item.variantId || null)
+        );
 
-            localStorage.setItem("guest_cart", JSON.stringify(updated));
-            window.dispatchEvent(new Event("guestCartUpdated"));
-            toast.success(existing ? "Updated Cart" : "Added to Cart!");
-            return updated;
-        });
+        const updated = existing
+            ? prev.map((x: any) =>
+                  x.productId === item.productId &&
+                  (x.variantId || null) === (item.variantId || null)
+                      ? { ...x, quantity: x.quantity + item.quantity }
+                      : x
+              )
+            : [...prev, item];
+
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        setGuestCart(updated);
+        window.dispatchEvent(new Event("guestCartUpdated"));
+        toast.success(existing ? "Updated Cart" : "Added to Cart!");
     };
 
     return { guestCart, addToGuestCart };
@@ -249,7 +250,7 @@ export const ProductCard = ({
                         className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-black hover:bg-black hover:shadow-sm disabled:opacity-50 md:h-10"
                     >
                         {isLoading ? (
-                            <Icons.Loader2 className="h-4 w-4 animate-spin text-gray-700 md:h-5 md:w-5" />
+                            <Icons.Loader2 className="h-4 w-4 animate-spin text-gray-700 group-hover:text-white md:h-5 md:w-5" />
                         ) : (
                             <ShoppingCart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-white md:h-5 md:w-5" />
                         )}

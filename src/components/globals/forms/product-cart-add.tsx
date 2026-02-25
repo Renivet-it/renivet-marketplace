@@ -70,36 +70,36 @@ function useGuestCart() {
     }, []);
 
     const addToGuestCart = (item: any) => {
-        setGuestCart((prev) => {
-            const existing = prev.find(
-                (x) =>
-                    x.productId === item.productId &&
-                    (x.variantId || null) === (item.variantId || null)
+        const stored = localStorage.getItem("guest_cart");
+        const prev = stored ? JSON.parse(stored) : [];
+
+        const existing = prev.find(
+            (x: any) =>
+                x.productId === item.productId &&
+                (x.variantId || null) === (item.variantId || null)
+        );
+
+        let updated;
+        if (existing) {
+            updated = prev.map((x: any) =>
+                x.productId === item.productId &&
+                (x.variantId || null) === (item.variantId || null)
+                    ? { ...x, quantity: x.quantity + item.quantity }
+                    : x
             );
+            toast.success("Increased quantity in Cart"); // ✅ toast for guest
+        } else {
+            updated = [...prev, item];
+            toast.success("Added to Cart!"); // ✅ toast for guest
+        }
 
-            let updated;
-            if (existing) {
-                updated = prev.map((x) =>
-                    x.productId === item.productId &&
-                    (x.variantId || null) === (item.variantId || null)
-                        ? { ...x, quantity: x.quantity + item.quantity }
-                        : x
-                );
-                toast.success("Increased quantity in Cart"); // ✅ toast for guest
-            } else {
-                updated = [...prev, item];
-                toast.success("Added to Cart!"); // ✅ toast for guest
-            }
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        setGuestCart(updated);
 
-            localStorage.setItem("guest_cart", JSON.stringify(updated));
-
-            // ✅ Defer event so Navbar updates safely
-            setTimeout(() => {
-                window.dispatchEvent(new Event("guestCartUpdated"));
-            }, 0);
-
-            return updated;
-        });
+        // ✅ Defer event so Navbar updates safely
+        setTimeout(() => {
+            window.dispatchEvent(new Event("guestCartUpdated"));
+        }, 0);
     };
 
     const clearGuestCart = () => {
