@@ -427,22 +427,32 @@ export function ProductCard({
                                 {/* Specifications */}
                                 {product.specifications &&
                                     product.specifications.length > 0 && (
-                                        <div className="space-y-1.5">
-                                            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                                                Specifications
-                                            </p>
-                                            <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="flex size-5 items-center justify-center rounded-md bg-indigo-100">
+                                                    <Icons.FileText className="size-3 text-indigo-600" />
+                                                </div>
+                                                <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                                                    Specifications
+                                                </p>
+                                            </div>
+                                            <div className="overflow-hidden rounded-xl border border-indigo-100 bg-gradient-to-b from-indigo-50/40 to-white">
                                                 {product.specifications
                                                     .slice(0, 4)
                                                     .map((spec, idx) => (
                                                         <div
                                                             key={idx}
-                                                            className="flex items-center justify-between px-3 py-2"
+                                                            className={cn(
+                                                                "flex items-center justify-between px-3.5 py-2.5",
+                                                                idx % 2 === 0
+                                                                    ? "bg-indigo-50/30"
+                                                                    : "bg-white"
+                                                            )}
                                                         >
-                                                            <span className="text-xs text-gray-500">
+                                                            <span className="text-xs font-medium text-gray-500">
                                                                 {spec.key}
                                                             </span>
-                                                            <span className="text-xs font-medium text-gray-800">
+                                                            <span className="text-xs font-semibold text-gray-800">
                                                                 {spec.value}
                                                             </span>
                                                         </div>
@@ -452,18 +462,18 @@ export function ProductCard({
                                     )}
 
                                 {/* Delivery Badge */}
-                                <div className="flex items-center gap-2.5 rounded-lg bg-gray-50 px-3.5 py-2.5">
-                                    <div className="flex size-8 items-center justify-center rounded-full bg-white shadow-sm">
-                                        <Icons.Truck className="size-4 text-gray-600" />
+                                <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50/50 px-4 py-3">
+                                    <div className="flex size-9 items-center justify-center rounded-full bg-emerald-100 shadow-sm">
+                                        <Icons.Truck className="size-4 text-emerald-600" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-800">
+                                        <p className="text-sm font-semibold text-gray-800">
                                             Estimated delivery in{" "}
-                                            <span className="font-bold">
+                                            <span className="font-bold text-emerald-700">
                                                 4-6 days
                                             </span>
                                         </p>
-                                        <p className="text-xs text-gray-500">
+                                        <p className="text-xs text-emerald-600/80">
                                             Free delivery on all orders
                                         </p>
                                     </div>
