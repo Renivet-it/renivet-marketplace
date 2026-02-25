@@ -19,17 +19,25 @@ export const AddToCartToast = ({
 }) => {
     const productName = product.title;
 
-    let imageSrc = "/images/placeholder.png";
+    let imageSrc =
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"; // better placeholder
+
     if (variant && variant.images && variant.images.length > 0) {
         imageSrc = variant.images[0].url;
-    } else if (variant && variant.image) {
+    } else if (variant && "image" in variant && variant.image) {
         imageSrc = variant.image as string;
     } else if (
         product.media &&
         product.media.length > 0 &&
-        product.media[0].url
+        (product.media[0] as any).mediaItem?.url
     ) {
-        imageSrc = product.media[0].url;
+        imageSrc = (product.media[0] as any).mediaItem.url;
+    } else if (
+        product.media &&
+        product.media.length > 0 &&
+        (product.media[0] as any).url
+    ) {
+        imageSrc = (product.media[0] as any).url;
     }
 
     return (

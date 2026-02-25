@@ -477,7 +477,7 @@ export function ProductCartAddForm({
             {/* Options */}
             <Form {...form}>
                 <form
-                    onSubmit={form.handleSubmit((values) => {
+                    onSubmit={form.handleSubmit((values, e) => {
                         if (
                             !product.isAvailable ||
                             !product.isActive ||
