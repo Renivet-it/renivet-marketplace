@@ -716,7 +716,7 @@ export function NavbarHome() {
 
                                 <Link
                                     href="/mycart"
-                                    className="global-cart-icon relative flex items-center justify-center pt-2"
+                                    className="global-cart-icon relative flex items-center justify-center"
                                 >
                                     <motion.div
                                         animate={{
@@ -745,7 +745,7 @@ export function NavbarHome() {
                             <div className="flex items-center">
                                 <Link
                                     aria-label="Mobile Cart Button"
-                                    className="global-cart-icon relative flex items-center justify-center pt-2 sm:hidden"
+                                    className="global-cart-icon relative flex items-center justify-center sm:hidden"
                                     href="/mycart"
                                     prefetch
                                 >
@@ -916,7 +916,7 @@ export function NavbarHome() {
 
                                     <Link
                                         href="/mycart"
-                                        className="global-cart-icon relative flex items-center justify-center pt-2"
+                                        className="global-cart-icon relative flex items-center justify-center"
                                     >
                                         <motion.div
                                             animate={{
