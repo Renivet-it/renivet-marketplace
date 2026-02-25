@@ -232,12 +232,12 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             <div className="mt-2.5 flex items-center gap-2">
                 <button
                     onClick={handleAddToWishlist}
-                    className="flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-colors hover:bg-gray-50 md:h-10"
+                    className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
                 >
                     {isWishlisted ? (
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 text-red-500 md:h-5 md:w-5"
+                            className="h-4 w-4 scale-110 text-red-500 md:h-5 md:w-5"
                             viewBox="0 0 24 24"
                             fill="currentColor"
                         >
@@ -249,19 +249,19 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                             />
                         </svg>
                     ) : (
-                        <Icons.Heart className="h-4 w-4 text-gray-700 md:h-5 md:w-5" />
+                        <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
                     )}
                 </button>
 
                 <button
                     onClick={handleAddToCart}
                     disabled={isLoading}
-                    className="flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-colors hover:bg-gray-50 disabled:opacity-50 md:h-10"
+                    className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-black hover:bg-black hover:shadow-sm disabled:opacity-50 md:h-10"
                 >
                     {isLoading ? (
                         <Icons.Loader2 className="h-4 w-4 animate-spin text-gray-700 md:h-5 md:w-5" />
                     ) : (
-                        <ShoppingCart className="h-4 w-4 text-gray-700 md:h-5 md:w-5" />
+                        <ShoppingCart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-white md:h-5 md:w-5" />
                     )}
                 </button>
             </div>
