@@ -82,13 +82,22 @@ export function OrderProductCard({
                         const imageAlt = itemMedia?.alt ?? item.product.title;
 
                         const itemPrice =
-                            item.variantId && item.product.variants.length > 0
+                            item.variantId && item.product.variants?.length > 0
                                 ? (item.product.variants.find(
                                       (variant) => variant.id === item.variantId
                                   )?.price ??
                                   item.product.price ??
                                   0)
                                 : (item.product.price ?? 0);
+
+                        const itemCompareAtPrice =
+                            item.variantId && item.product.variants?.length > 0
+                                ? (item.product.variants.find(
+                                      (variant) => variant.id === item.variantId
+                                  )?.compareAtPrice ??
+                                  item.product.compareAtPrice ??
+                                  itemPrice)
+                                : (item.product.compareAtPrice ?? itemPrice);
 
                         return (
                             <div
@@ -141,14 +150,40 @@ export function OrderProductCard({
                                             </h3>
 
                                             {/* Price */}
-                                            <div className="text-base font-bold text-gray-900">
-                                                {formatPriceTag(
-                                                    parseFloat(
-                                                        convertPaiseToRupees(
-                                                            itemPrice
-                                                        )
-                                                    ),
-                                                    true
+                                            <div className="flex items-end gap-2 text-base font-bold text-gray-900">
+                                                <span>
+                                                    {formatPriceTag(
+                                                        parseFloat(
+                                                            convertPaiseToRupees(
+                                                                itemPrice
+                                                            )
+                                                        ),
+                                                        true
+                                                    )}
+                                                </span>
+                                                {itemCompareAtPrice >
+                                                    itemPrice && (
+                                                    <>
+                                                        <span className="text-sm text-gray-400 line-through">
+                                                            {formatPriceTag(
+                                                                parseFloat(
+                                                                    convertPaiseToRupees(
+                                                                        itemCompareAtPrice
+                                                                    )
+                                                                ),
+                                                                true
+                                                            )}
+                                                        </span>
+                                                        <span className="text-sm font-semibold text-green-600">
+                                                            {Math.round(
+                                                                ((itemCompareAtPrice -
+                                                                    itemPrice) /
+                                                                    itemCompareAtPrice) *
+                                                                    100
+                                                            )}
+                                                            % OFF
+                                                        </span>
+                                                    </>
                                                 )}
                                             </div>
                                             {onRemove && (

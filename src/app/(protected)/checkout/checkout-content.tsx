@@ -186,8 +186,17 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                   item.product.price ??
                   0)
                 : (item.product.price ?? 0);
+
+            const compareAtPrice = item.variantId
+                ? (item.product.variants?.find((v) => v.id === item.variantId)
+                      ?.compareAtPrice ??
+                  item.product.compareAtPrice ??
+                  itemPrice)
+                : (item.product.compareAtPrice ?? itemPrice);
+
             return {
                 price: itemPrice,
+                compareAtPrice: compareAtPrice,
                 quantity: item.quantity,
                 categoryId: item.product.categoryId,
                 subCategoryId: item.product.subcategoryId,
@@ -263,7 +272,6 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             onSuccess: (data, _, { toastId }) => {
                 toast.success("Coupon applied successfully", { id: toastId });
                 setAppliedCoupon(data);
-                setIsCouponModalOpen(false);
                 setCouponCode("");
             },
             onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
@@ -823,37 +831,42 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         <span>Total MRP</span>
                         <span>
                             {formatPriceTag(
-                                +convertPaiseToRupees(
-                                    priceList.items + priceList.discount
-                                ),
+                                +convertPaiseToRupees(priceList.items),
                                 true
                             )}
                         </span>
                     </div>
-                    {priceList.discount > 0 && (
-                        <div className="flex justify-between text-sm font-medium text-green-600">
-                            <span>Discount on MRP</span>
-                            <span>
-                                -{" "}
-                                {formatPriceTag(
-                                    +convertPaiseToRupees(priceList.discount),
-                                    true
-                                )}
-                            </span>
-                        </div>
-                    )}
-                    {appliedCoupon && priceList.discount > 0 && (
-                        <div className="flex justify-between text-sm font-medium text-green-600">
-                            <span>Coupon Discount</span>
-                            <span>
-                                -{" "}
-                                {formatPriceTag(
-                                    +convertPaiseToRupees(priceList.discount),
-                                    true
-                                )}
-                            </span>
-                        </div>
-                    )}
+                    {priceList.productDiscount !== undefined &&
+                        priceList.productDiscount > 0 && (
+                            <div className="flex justify-between text-sm font-medium text-green-600">
+                                <span>Discount on MRP</span>
+                                <span>
+                                    -{" "}
+                                    {formatPriceTag(
+                                        +convertPaiseToRupees(
+                                            priceList.productDiscount
+                                        ),
+                                        true
+                                    )}
+                                </span>
+                            </div>
+                        )}
+                    {appliedCoupon &&
+                        priceList.couponDiscount !== undefined &&
+                        priceList.couponDiscount > 0 && (
+                            <div className="flex justify-between text-sm font-medium text-green-600">
+                                <span>Coupon Discount</span>
+                                <span>
+                                    -{" "}
+                                    {formatPriceTag(
+                                        +convertPaiseToRupees(
+                                            priceList.couponDiscount
+                                        ),
+                                        true
+                                    )}
+                                </span>
+                            </div>
+                        )}
                     <div className="flex justify-between text-sm font-medium text-gray-600">
                         <span>Platform Fee</span>
                         <span>{formatPriceTag(0, true)}</span>
