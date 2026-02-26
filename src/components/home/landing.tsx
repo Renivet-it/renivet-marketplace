@@ -30,7 +30,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqFXOkLGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP"
     ];
-    const placeholders = ["Search For Products"];
+    const placeholders = ["Search For Products and Brands"];
 
     const [displayText, setDisplayText] = useState("");
     const [runCount, setRunCount] = useState(0); // how many times finished typing
