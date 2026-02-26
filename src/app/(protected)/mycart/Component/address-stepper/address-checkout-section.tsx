@@ -66,8 +66,17 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                   item.product.price ??
                   0)
                 : (item.product.price ?? 0);
+
+            const compareAtPrice = item.variantId
+                ? (item.product.variants?.find((v) => v.id === item.variantId)
+                      ?.compareAtPrice ??
+                  item.product.compareAtPrice ??
+                  itemPrice)
+                : (item.product.compareAtPrice ?? itemPrice);
+
             return {
                 price: itemPrice,
+                compareAtPrice: compareAtPrice,
                 quantity: item.quantity,
                 categoryId: item.product.categoryId,
                 subCategoryId: item.product.subcategoryId,
@@ -167,17 +176,36 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                 <div className="space-y-2">
                     {Object.entries(priceList)
                         .filter(
-                            ([key]) => key !== "total" && key !== "delivery"
+                            ([key]) =>
+                                key !== "total" &&
+                                key !== "delivery" &&
+                                key !== "discount"
                         )
                         .map(([key, value]) => (
                             <div
                                 key={key}
                                 className="flex justify-between text-sm"
                             >
-                                <span className="text-gray-500">
+                                <span
+                                    className={
+                                        key.toLowerCase().includes("discount")
+                                            ? "text-emerald-600"
+                                            : "text-gray-500"
+                                    }
+                                >
                                     {convertValueToLabel(key)}
                                 </span>
-                                <span className="text-gray-700">
+                                <span
+                                    className={
+                                        key.toLowerCase().includes("discount")
+                                            ? "font-medium text-emerald-600"
+                                            : "text-gray-700"
+                                    }
+                                >
+                                    {key.toLowerCase().includes("discount") &&
+                                    value > 0
+                                        ? "-"
+                                        : ""}
                                     {formatPriceTag(
                                         +convertPaiseToRupees(value),
                                         true
