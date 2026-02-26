@@ -22,7 +22,10 @@ export function Pagination({ total }: PageProps) {
     );
 
     const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= total) setPage(newPage);
+        if (newPage >= 1 && newPage <= total) {
+            setPage(newPage);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
     };
 
     const renderPageNumbers = () => {

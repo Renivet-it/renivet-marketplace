@@ -4,6 +4,7 @@ import { trackProductClick } from "@/actions/track-product";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
+import { keepPreviousData } from "@tanstack/react-query";
 import Link from "next/link";
 import {
     parseAsArrayOf,
@@ -12,7 +13,7 @@ import {
     parseAsStringLiteral,
     useQueryState,
 } from "nuqs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "../globals/cards";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
@@ -94,6 +95,44 @@ export function ShopProducts({
     );
     const [minDiscount] = useQueryState("minDiscount", parseAsInteger);
 
+    const [initialParams] = useState(() =>
+        JSON.stringify({
+            page,
+            limit,
+            search,
+            brandIds,
+            minPrice,
+            maxPrice,
+            categoryId,
+            subCategoryId,
+            productTypeId,
+            sortBy,
+            sortOrder,
+            colors,
+            sizes,
+            minDiscount,
+        })
+    );
+
+    const currentParams = JSON.stringify({
+        page,
+        limit,
+        search,
+        brandIds,
+        minPrice,
+        maxPrice,
+        categoryId,
+        subCategoryId,
+        productTypeId,
+        sortBy,
+        sortOrder,
+        colors,
+        sizes,
+        minDiscount,
+    });
+
+    const isSameAsInitial = initialParams === currentParams;
+
     const {
         data: { data: products, count },
         isFetching,
@@ -124,7 +163,10 @@ export function ShopProducts({
             useRecommendations: true,
         },
         {
-            initialData: { ...initialData, recommendationSource: null },
+            initialData: isSameAsInitial
+                ? { ...initialData, recommendationSource: null }
+                : undefined,
+            placeholderData: keepPreviousData,
             // Only apply staleTime when no filters active (for recommendations)
             // When filters are active, allow immediate refetch
             staleTime:
@@ -148,9 +190,11 @@ export function ShopProducts({
 
     // --- FILTER PRODUCTS ---
     // We now filter for media on the server (requireMedia: true), so we trust the server count
-    const visibleProducts: ProductWithBrand[] = Array.isArray(products)
-        ? products.filter((p: any) => !p?.isDeleted)
-        : [];
+    const visibleProducts: ProductWithBrand[] = useMemo(() => {
+        return Array.isArray(products)
+            ? products.filter((p: ProductWithBrand) => !p?.isDeleted)
+            : [];
+    }, [products]);
 
     const pages = Math.ceil(count / limit) ?? 1;
     const [checkedPages, setCheckedPages] = useState<number[]>([]);
