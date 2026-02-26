@@ -23,9 +23,11 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
     const mobileImages = [
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNJo8goeyxafbXy0opEDB8VMuLNYvt9OQnIkzd",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN4qyZgtKTrA2wJk4WKdFytgsaQSNjmBo8I5CG",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNV4dRD8BbpNcg6ZSKi0IGkAsjuLwQox3znmlt",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNpB968wYoKFqlYMSWzhgNZG6Cm5OtIUjre39T",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkD4zwkxYt1TxMBy6jes3QdWaELUvNIiXHwRO",
+        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqFXOkLGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP"
     ];
     const placeholders = ["Search For Products"];
@@ -270,7 +272,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     <div className="pointer-events-none absolute inset-0 z-10 flex justify-center md:hidden">
                         <div className="pointer-events-auto absolute bottom-16">
                             <Link
-                                href="https://renivet.com/shop?brandIds=56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
+                                href="https://renivet.com/shop"
                                 className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
                             >
                                 <span>Shop With Purpose</span>
