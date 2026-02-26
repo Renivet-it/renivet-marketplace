@@ -160,8 +160,7 @@ export function ProductCartCard({
                                     {formatPriceTag(
                                         parseFloat(
                                             convertPaiseToRupees(itemPrice)
-                                        ),
-                                        true
+                                        )
                                     )}
                                 </span>
                                 {item.product.compareAtPrice &&
@@ -173,8 +172,7 @@ export function ProductCartCard({
                                                         item.product
                                                             .compareAtPrice
                                                     )
-                                                ),
-                                                true
+                                                )
                                             )}
                                         </span>
                                     )}
@@ -190,8 +188,7 @@ export function ProductCartCard({
                                                         .compareAtPrice -
                                                         itemPrice
                                                 )
-                                            ),
-                                            true
+                                            )
                                         )}
                                     </p>
                                 )}
@@ -240,7 +237,7 @@ export function ProductCartCard({
                         {/* 10-day returns badge */}
                         <div className="inline-flex items-center gap-1 rounded-full border border-[#c5d1b8] bg-[#f0f4eb] px-2 py-0.5 text-[10px] font-medium text-[#6B7A5E]">
                             <RotateCcw className="size-3" />
-                           7-day returns available
+                            7-day returns available
                         </div>
 
                         {/* Product details toggle */}
@@ -390,8 +387,7 @@ export function ProductCartCard({
                         {/* Price */}
                         <div className="text-lg font-bold text-gray-900">
                             {formatPriceTag(
-                                parseFloat(convertPaiseToRupees(itemPrice)),
-                                true
+                                parseFloat(convertPaiseToRupees(itemPrice))
                             )}
                         </div>
 
@@ -419,9 +415,8 @@ export function ProductCartCard({
 
                         {/* Estimated price per wear */}
                         <p className="text-xs text-gray-500">
-                            Estimated{" "}
-                            {formatPriceTag(parseFloat(pricePerWear), true)} per
-                            wear ({estimatedWears} wears)
+                            Estimated {formatPriceTag(parseFloat(pricePerWear))}{" "}
+                            per wear ({estimatedWears} wears)
                         </p>
 
                         {/* Variant info */}
@@ -537,7 +532,7 @@ export function ProductCartCard({
                             </div>
                             <div className="flex items-center gap-1 rounded-full border border-[#c5d1b8] bg-[#f0f4eb] px-2 py-0.5 text-[10px] font-medium text-[#6B7A5E]">
                                 <RotateCcw className="size-3" />
-                               7-day returns available
+                                7-day returns available
                             </div>
                         </div>
                     </div>
@@ -575,8 +570,7 @@ export function ProductCartCard({
                             </p>
                             <p className="mt-1 text-sm font-bold">
                                 {formatPriceTag(
-                                    parseFloat(convertPaiseToRupees(itemPrice)),
-                                    true
+                                    parseFloat(convertPaiseToRupees(itemPrice))
                                 )}
                             </p>
                         </div>

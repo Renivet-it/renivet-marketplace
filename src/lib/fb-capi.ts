@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { capiLogs } from "@/lib/db/schema";
+import { sanitizeFbUserData } from "@/lib/fbpixel";
 import {
     CustomData,
     EventRequest,
@@ -62,25 +63,27 @@ export const sendCapiEvent = async (
 
     const current_timestamp = Math.floor(new Date().getTime() / 1000);
 
+    const safeUserData = sanitizeFbUserData(userData) as CapiUserData;
+
     const user = new UserData();
-    if (userData.em) user.setEmail(userData.em);
-    if (userData.ph) user.setPhone(userData.ph);
-    if (userData.fn) user.setFirstName(userData.fn);
-    if (userData.ln) user.setLastName(userData.ln);
-    if (userData.db) user.setDateOfBirth(userData.db);
-    if (userData.ge) user.setGender(userData.ge);
-    if (userData.ct) user.setCity(userData.ct);
-    if (userData.st) user.setState(userData.st);
-    if (userData.zp) user.setZip(userData.zp);
-    if (userData.country) user.setCountry(userData.country);
-    if (userData.external_id) user.setExternalId(userData.external_id);
-    if (userData.fb_login_id) user.setFbLoginId(userData.fb_login_id);
-    if (userData.client_ip_address)
-        user.setClientIpAddress(userData.client_ip_address);
-    if (userData.client_user_agent)
-        user.setClientUserAgent(userData.client_user_agent);
-    if (userData.fbp) user.setFbp(userData.fbp);
-    if (userData.fbc) user.setFbc(userData.fbc);
+    if (safeUserData.em) user.setEmail(safeUserData.em);
+    if (safeUserData.ph) user.setPhone(safeUserData.ph);
+    if (safeUserData.fn) user.setFirstName(safeUserData.fn);
+    if (safeUserData.ln) user.setLastName(safeUserData.ln);
+    if (safeUserData.db) user.setDateOfBirth(safeUserData.db);
+    if (safeUserData.ge) user.setGender(safeUserData.ge);
+    if (safeUserData.ct) user.setCity(safeUserData.ct);
+    if (safeUserData.st) user.setState(safeUserData.st);
+    if (safeUserData.zp) user.setZip(safeUserData.zp);
+    if (safeUserData.country) user.setCountry(safeUserData.country);
+    if (safeUserData.external_id) user.setExternalId(safeUserData.external_id);
+    if (safeUserData.fb_login_id) user.setFbLoginId(safeUserData.fb_login_id);
+    if (safeUserData.client_ip_address)
+        user.setClientIpAddress(safeUserData.client_ip_address);
+    if (safeUserData.client_user_agent)
+        user.setClientUserAgent(safeUserData.client_user_agent);
+    if (safeUserData.fbp) user.setFbp(safeUserData.fbp);
+    if (safeUserData.fbc) user.setFbc(safeUserData.fbc);
 
     const custom = new CustomData();
     if (customData.content_name) custom.setContentName(customData.content_name);

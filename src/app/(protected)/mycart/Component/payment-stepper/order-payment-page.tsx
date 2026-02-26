@@ -552,8 +552,7 @@ export function OrderPage({
                                                 ? "-"
                                                 : ""}
                                             {formatPriceTag(
-                                                +convertPaiseToRupees(value),
-                                                true
+                                                +convertPaiseToRupees(value)
                                             )}
                                         </span>
                                     </li>
@@ -572,8 +571,7 @@ export function OrderPage({
                             </span>
                             <span className="text-lg font-bold text-gray-900">
                                 {formatPriceTag(
-                                    +convertPaiseToRupees(priceList.total),
-                                    true
+                                    +convertPaiseToRupees(priceList.total)
                                 )}
                             </span>
                         </div>

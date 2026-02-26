@@ -695,7 +695,7 @@ export function NavbarHome() {
 
                     <div className="flex items-center gap-5">
                         <ProductSearch
-                            placeholder="Search for products..."
+                            placeholder="Search for products and brands..."
                             classNames={{ wrapper: "min-w-80 hidden xl:flex" }}
                         />
                         {/* ✅ Guest-only Wishlist & Cart */}

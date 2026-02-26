@@ -440,6 +440,7 @@ export function formatPriceTag(price: number, keepDeciamls = false) {
         style: "currency",
         currency: "INR",
         minimumFractionDigits: keepDeciamls ? 2 : 0,
+        maximumFractionDigits: keepDeciamls ? 2 : 0,
     }).format(price);
 }
 
@@ -455,10 +456,12 @@ export function calculateTotalPrice(prices: number[]) {
     let total = rawTotal;
     if (rawTotal < FREE_DELIVERY_THRESHOLD) total += DELIVERY_CHARGE;
 
+    const toRupeePaise = (p: number) => Math.round(p / 100) * 100;
+
     return {
-        items: parseFloat(rawTotal.toFixed(2)),
+        items: toRupeePaise(rawTotal),
         devliery: rawTotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_CHARGE : 0,
-        total: parseFloat(total.toFixed(2)),
+        total: toRupeePaise(total),
     };
 }
 
@@ -527,21 +530,25 @@ export function calculateTotalPriceWithCoupon(
         }
     }
 
-    let total = rawTotal - discount;
-    if (total < FREE_DELIVERY_THRESHOLD && total > 0) total += DELIVERY_CHARGE;
+    const roundedOriginalTotal = Math.round(originalTotal / 100) * 100;
+    const roundedProductDiscount = Math.round(productDiscount / 100) * 100;
+    const roundedDiscount = Math.round(discount / 100) * 100;
+
+    let roundedTotal =
+        roundedOriginalTotal - roundedProductDiscount - roundedDiscount;
+    if (roundedTotal < FREE_DELIVERY_THRESHOLD && roundedTotal > 0)
+        roundedTotal += DELIVERY_CHARGE;
 
     return {
-        items: parseFloat(originalTotal.toFixed(2)),
+        items: roundedOriginalTotal,
         ...(productDiscount > 0
-            ? { productDiscount: parseFloat(productDiscount.toFixed(2)) }
+            ? { productDiscount: roundedProductDiscount }
             : {}),
-        ...(discount > 0
-            ? { couponDiscount: parseFloat(discount.toFixed(2)) }
-            : {}),
-        delivery: total < FREE_DELIVERY_THRESHOLD ? DELIVERY_CHARGE : 0,
-        total: parseFloat(total.toFixed(2)),
+        ...(discount > 0 ? { couponDiscount: roundedDiscount } : {}),
+        delivery: roundedTotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_CHARGE : 0,
+        total: Math.max(0, roundedTotal),
         // keep old discount property for compatibility in other areas if they exist
-        discount: parseFloat((productDiscount + discount).toFixed(2)),
+        discount: roundedProductDiscount + roundedDiscount,
     };
 }
 

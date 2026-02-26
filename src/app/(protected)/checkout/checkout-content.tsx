@@ -619,8 +619,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                         {formatPriceTag(
                                             +convertPaiseToRupees(
                                                 priceList.discount
-                                            ),
-                                            true
+                                            )
                                         )}
                                     </span>
                                     <button
@@ -720,17 +719,16 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                                             {coupon.discountType ===
                                                             "percentage"
                                                                 ? `${coupon.discountValue}% OFF`
-                                                                : `\u20b9${convertPaiseToRupees(coupon.discountValue)} OFF`}
+                                                                : `${formatPriceTag(+convertPaiseToRupees(coupon.discountValue))} OFF`}
                                                             {coupon.maxDiscountAmount &&
                                                                 coupon.discountType ===
                                                                     "percentage" && (
                                                                     <span className="ml-1 text-xs font-normal text-gray-500">
-                                                                        (up to
-                                                                        {
-                                                                            " \u20b9"
-                                                                        }
-                                                                        {convertPaiseToRupees(
-                                                                            coupon.maxDiscountAmount
+                                                                        (up to{" "}
+                                                                        {formatPriceTag(
+                                                                            +convertPaiseToRupees(
+                                                                                coupon.maxDiscountAmount
+                                                                            )
                                                                         )}
                                                                         )
                                                                     </span>
@@ -752,10 +750,11 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                                                 0 && (
                                                                 <span className="flex items-center gap-0.5">
                                                                     <Tag className="size-3" />
-                                                                    Min
-                                                                    {" \u20b9"}
-                                                                    {convertPaiseToRupees(
-                                                                        coupon.minOrderAmount
+                                                                    Min{" "}
+                                                                    {formatPriceTag(
+                                                                        +convertPaiseToRupees(
+                                                                            coupon.minOrderAmount
+                                                                        )
                                                                     )}
                                                                 </span>
                                                             )}
@@ -831,8 +830,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         <span>Total MRP</span>
                         <span>
                             {formatPriceTag(
-                                +convertPaiseToRupees(priceList.items),
-                                true
+                                +convertPaiseToRupees(priceList.items)
                             )}
                         </span>
                     </div>
@@ -845,8 +843,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                     {formatPriceTag(
                                         +convertPaiseToRupees(
                                             priceList.productDiscount
-                                        ),
-                                        true
+                                        )
                                     )}
                                 </span>
                             </div>
@@ -861,15 +858,14 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                     {formatPriceTag(
                                         +convertPaiseToRupees(
                                             priceList.couponDiscount
-                                        ),
-                                        true
+                                        )
                                     )}
                                 </span>
                             </div>
                         )}
                     <div className="flex justify-between text-sm font-medium text-gray-600">
                         <span>Platform Fee</span>
-                        <span>{formatPriceTag(0, true)}</span>
+                        <span>{formatPriceTag(0)}</span>
                     </div>
 
                     <Separator className="my-3" />
@@ -878,8 +874,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         <span>Total Amount</span>
                         <span>
                             {formatPriceTag(
-                                +convertPaiseToRupees(priceList.total),
-                                true
+                                +convertPaiseToRupees(priceList.total)
                             )}
                         </span>
                     </div>
@@ -922,7 +917,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     >
                         {isProcessing || isPaymentInitializing
                             ? "Processing..."
-                            : `Confirm & Pay ${formatPriceTag(+convertPaiseToRupees(priceList.total), true)}`}
+                            : `Confirm & Pay ${formatPriceTag(+convertPaiseToRupees(priceList.total))}`}
                     </Button>
                 </div>
             </div>
