@@ -477,11 +477,27 @@ export function calculateTotalPriceWithCoupon(
         subCategoryId: string;
         productTypeId: string;
         price: number;
+        compareAtPrice?: number;
         quantity: number;
     }[]
 ) {
-    const rawTotal = prices.reduce((acc, price) => acc + price, 0);
-    let discount = 0;
+    const rawTotal = prices.reduce((acc, price) => acc + price, 0); // rawTotal is sum of selling prices
+    let discount = 0; // this will be coupon discount
+    let productDiscount = 0;
+    let originalTotal = 0;
+
+    if (items) {
+        originalTotal = items.reduce((acc, item) => {
+            const originalPrice =
+                item.compareAtPrice && item.compareAtPrice > item.price
+                    ? item.compareAtPrice
+                    : item.price;
+            return acc + originalPrice * item.quantity;
+        }, 0);
+        productDiscount = originalTotal - rawTotal;
+    } else {
+        originalTotal = rawTotal;
+    }
 
     if (coupon && items) {
         const eligibleItems = items.filter(
@@ -512,13 +528,20 @@ export function calculateTotalPriceWithCoupon(
     }
 
     let total = rawTotal - discount;
-    if (total < FREE_DELIVERY_THRESHOLD) total += DELIVERY_CHARGE;
+    if (total < FREE_DELIVERY_THRESHOLD && total > 0) total += DELIVERY_CHARGE;
 
     return {
-        items: parseFloat(rawTotal.toFixed(2)),
-        discount: parseFloat(discount.toFixed(2)),
+        items: parseFloat(originalTotal.toFixed(2)),
+        ...(productDiscount > 0
+            ? { productDiscount: parseFloat(productDiscount.toFixed(2)) }
+            : {}),
+        ...(discount > 0
+            ? { couponDiscount: parseFloat(discount.toFixed(2)) }
+            : {}),
         delivery: total < FREE_DELIVERY_THRESHOLD ? DELIVERY_CHARGE : 0,
         total: parseFloat(total.toFixed(2)),
+        // keep old discount property for compatibility in other areas if they exist
+        discount: parseFloat((productDiscount + discount).toFixed(2)),
     };
 }
 
@@ -697,7 +720,9 @@ function generateRandomString(length: number): string {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     let result = "";
     for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
+        result += characters.charAt(
+            Math.floor(Math.random() * characters.length)
+        );
     }
     return result;
 }
@@ -713,7 +738,7 @@ export function generateOrderId(brandName: string): string {
     // Generate a 4-character random string for uniqueness
     const randomString = generateRandomString(4);
 
-// Combine into the format: ORD-{brandPrefix}-{timestamp}-{randomString}
+    // Combine into the format: ORD-{brandPrefix}-{timestamp}-{randomString}
     const orderId = `ORD-${brandPrefix}-${timestamp}-${randomString}`;
 
     // Ensure the length is under 50 characters (it will be, but adding a check for safety)

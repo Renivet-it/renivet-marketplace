@@ -117,8 +117,17 @@ export function OrderPage({
                   item.product.price ??
                   0)
                 : (item.product.price ?? 0);
+
+            const compareAtPrice = item.variantId
+                ? (item.product.variants?.find((v) => v.id === item.variantId)
+                      ?.compareAtPrice ??
+                  item.product.compareAtPrice ??
+                  itemPrice)
+                : (item.product.compareAtPrice ?? itemPrice);
+
             return {
                 price: itemPrice,
+                compareAtPrice: compareAtPrice,
                 quantity: item.quantity,
                 categoryId: item.product.categoryId,
                 subCategoryId: item.product.subcategoryId,
@@ -509,16 +518,37 @@ export function OrderPage({
                             {Object.entries(priceList)
                                 .filter(
                                     ([key]) =>
-                                        key !== "total" && key !== "delivery"
+                                        key !== "total" &&
+                                        key !== "delivery" &&
+                                        key !== "discount"
                                 )
                                 .map(([key, value]) => (
                                     <li
                                         key={key}
                                         className="flex justify-between text-sm text-gray-600"
                                     >
-                                        <span>{convertValueToLabel(key)}</span>
-                                        <span>
-                                            {key === "discount" && value > 0
+                                        <span
+                                            className={cn(
+                                                key
+                                                    .toLowerCase()
+                                                    .includes("discount") &&
+                                                    "text-emerald-600"
+                                            )}
+                                        >
+                                            {convertValueToLabel(key)}
+                                        </span>
+                                        <span
+                                            className={cn(
+                                                key
+                                                    .toLowerCase()
+                                                    .includes("discount") &&
+                                                    "font-medium text-emerald-600"
+                                            )}
+                                        >
+                                            {key
+                                                .toLowerCase()
+                                                .includes("discount") &&
+                                            value > 0
                                                 ? "-"
                                                 : ""}
                                             {formatPriceTag(

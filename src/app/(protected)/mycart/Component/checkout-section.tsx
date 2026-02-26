@@ -143,8 +143,17 @@ export default function CheckoutSection({ userId }: PageProps) {
                   item.product.price ??
                   0)
                 : (item.product.price ?? 0);
+
+            const compareAtPrice = item.variantId
+                ? (item.product.variants.find((v) => v.id === item.variantId)
+                      ?.compareAtPrice ??
+                  item.product.compareAtPrice ??
+                  itemPrice)
+                : (item.product.compareAtPrice ?? itemPrice);
+
             return {
                 price: itemPrice,
+                compareAtPrice: compareAtPrice,
                 quantity: item.quantity,
                 categoryId: item.product.categoryId,
                 subCategoryId: item.product.subcategoryId,
@@ -300,36 +309,42 @@ export default function CheckoutSection({ userId }: PageProps) {
 
                 {/* Price breakdown */}
                 <div className="space-y-2">
-                    {/* Mobile: simple Subtotal / Delivery / Total */}
-                    <ul className="space-y-1.5 md:hidden">
-                        <li className="flex justify-between text-sm text-gray-600">
-                            <span>Subtotal</span>
-                            <span>
-                                {formatPriceTag(
-                                    +convertPaiseToRupees(totalPrice),
-                                    true
-                                )}
-                            </span>
-                        </li>
-                        <li className="flex justify-between text-sm text-gray-600">
-                            <span>Delivery</span>
-                            <span className="font-medium text-blue-600">
-                                {formatPriceTag(0, true)} (Free)
-                            </span>
-                        </li>
-                    </ul>
-
-                    {/* Desktop: full priceList breakdown */}
-                    <ul className="hidden space-y-1.5 md:block">
+                    <ul className="space-y-1.5">
                         {Object.entries(priceList)
-                            .filter(([key]) => key !== "total")
+                            .filter(
+                                ([key]) =>
+                                    key !== "total" &&
+                                    key !== "delivery" &&
+                                    key !== "discount"
+                            )
                             .map(([key, value]) => (
                                 <li
                                     key={key}
                                     className="flex justify-between text-sm text-gray-600"
                                 >
-                                    <span>{convertValueToLabel(key)}</span>
-                                    <span>
+                                    <span
+                                        className={cn(
+                                            key
+                                                .toLowerCase()
+                                                .includes("discount") &&
+                                                "text-emerald-600"
+                                        )}
+                                    >
+                                        {convertValueToLabel(key)}
+                                    </span>
+                                    <span
+                                        className={cn(
+                                            key
+                                                .toLowerCase()
+                                                .includes("discount") &&
+                                                "font-medium text-emerald-600"
+                                        )}
+                                    >
+                                        {key
+                                            .toLowerCase()
+                                            .includes("discount") && value > 0
+                                            ? "-"
+                                            : ""}
                                         {formatPriceTag(
                                             +convertPaiseToRupees(value),
                                             true
