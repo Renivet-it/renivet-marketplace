@@ -259,8 +259,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                 </h4>
                                 <p className="mt-0.5 text-xs font-bold text-gray-900">
                                     {formatPriceTag(
-                                        parseFloat(convertPaiseToRupees(price)),
-                                        true
+                                        parseFloat(convertPaiseToRupees(price))
                                     )}
                                 </p>
                             </div>
@@ -346,8 +345,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                             ? "-"
                                             : ""}
                                         {formatPriceTag(
-                                            +convertPaiseToRupees(value),
-                                            true
+                                            +convertPaiseToRupees(value)
                                         )}
                                     </span>
                                 </li>
@@ -355,7 +353,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                         <li className="flex justify-between text-sm text-gray-600">
                             <span>Delivery</span>
                             <span className="font-medium text-blue-600">
-                                {formatPriceTag(0, true)} (Free)
+                                {formatPriceTag(0)} (Free)
                             </span>
                         </li>
                     </ul>
@@ -390,8 +388,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                         </span>
                         <span className="text-lg font-bold text-gray-900">
                             {formatPriceTag(
-                                +convertPaiseToRupees(priceList.total),
-                                true
+                                +convertPaiseToRupees(priceList.total)
                             )}
                         </span>
                     </div>
@@ -442,8 +439,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                         {formatPriceTag(
                                             +convertPaiseToRupees(
                                                 priceList.discount
-                                            ),
-                                            true
+                                            )
                                         )}
                                     </span>
                                     <button
@@ -540,17 +536,16 @@ export default function CheckoutSection({ userId }: PageProps) {
                                                             {coupon.discountType ===
                                                             "percentage"
                                                                 ? `${coupon.discountValue}% OFF`
-                                                                : `\u20b9${convertPaiseToRupees(coupon.discountValue)} OFF`}
+                                                                : `${formatPriceTag(+convertPaiseToRupees(coupon.discountValue))} OFF`}
                                                             {coupon.maxDiscountAmount &&
                                                                 coupon.discountType ===
                                                                     "percentage" && (
                                                                     <span className="ml-1 text-xs font-normal text-gray-500">
-                                                                        (up to
-                                                                        {
-                                                                            " \u20b9"
-                                                                        }
-                                                                        {convertPaiseToRupees(
-                                                                            coupon.maxDiscountAmount
+                                                                        (up to{" "}
+                                                                        {formatPriceTag(
+                                                                            +convertPaiseToRupees(
+                                                                                coupon.maxDiscountAmount
+                                                                            )
                                                                         )}
                                                                         )
                                                                     </span>
@@ -568,10 +563,11 @@ export default function CheckoutSection({ userId }: PageProps) {
                                                                 0 && (
                                                                 <span className="flex items-center gap-0.5">
                                                                     <Tag className="size-3" />
-                                                                    Min
-                                                                    {" \u20b9"}
-                                                                    {convertPaiseToRupees(
-                                                                        coupon.minOrderAmount
+                                                                    Min{" "}
+                                                                    {formatPriceTag(
+                                                                        +convertPaiseToRupees(
+                                                                            coupon.minOrderAmount
+                                                                        )
                                                                     )}
                                                                 </span>
                                                             )}

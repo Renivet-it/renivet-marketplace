@@ -152,8 +152,7 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                                                     convertPaiseToRupees(
                                                         itemPrice
                                                     )
-                                                ),
-                                                true
+                                                )
                                             )}
                                         </p>
                                     </div>
@@ -207,8 +206,7 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                                         ? "-"
                                         : ""}
                                     {formatPriceTag(
-                                        +convertPaiseToRupees(value),
-                                        true
+                                        +convertPaiseToRupees(value)
                                     )}
                                 </span>
                             </div>
@@ -226,8 +224,7 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                         </span>
                         <span className="text-base font-bold text-gray-900">
                             {formatPriceTag(
-                                +convertPaiseToRupees(priceList.total),
-                                true
+                                +convertPaiseToRupees(priceList.total)
                             )}
                         </span>
                     </div>
