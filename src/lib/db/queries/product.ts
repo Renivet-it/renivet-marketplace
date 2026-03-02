@@ -576,7 +576,7 @@ class ProductQuery {
         isPublished?: boolean;
         isDeleted?: boolean;
         verificationStatus?: Product["verificationStatus"];
-        sortBy?: "price" | "createdAt";
+        sortBy?: "price" | "createdAt" | "best-sellers";
         sortOrder?: "asc" | "desc";
         productImage?: Product["productImageFilter"];
         productVisiblity?: Product["productVisiblityFilter"];
@@ -782,6 +782,9 @@ class ProductQuery {
           )
         `
                 : undefined,
+            sortBy === "best-sellers"
+                ? eq(products.isBestSeller, true)
+                : undefined,
             // Discount filter: only show products with discount >= minDiscount%
             // Discount = ((compare_at_price - price) / compare_at_price) * 100
             minDiscount !== undefined && minDiscount !== null && minDiscount > 0
@@ -892,7 +895,7 @@ class ProductQuery {
         }
 
         // 🟨 Step 3: user-selected sorting (price or createdAt)
-        if (sortBy && sortOrder) {
+        if (sortBy && sortOrder && sortBy !== "best-sellers") {
             orderBy.push(
                 sortBy === "price"
                     ? sql`

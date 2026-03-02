@@ -29,7 +29,7 @@ interface PageProps {
         categoryId?: string;
         subCategoryId?: string;
         productTypeId?: string;
-        sortBy?: "price" | "createdAt" | "recommended";
+        sortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
         sortOrder?: "asc" | "desc";
         sizes?: string;
     }>;
@@ -55,8 +55,9 @@ export default async function Page({ searchParams }: PageProps) {
             categoryId: params.categoryId,
             subcategoryId: params.subCategoryId,
             productTypeId: params.productTypeId,
-            sortBy: params.sortBy,
-            sortOrder: params.sortOrder,
+            sortBy: params.sortBy === "recommended" ? undefined : params.sortBy,
+            sortOrder:
+                params.sortBy === "recommended" ? undefined : params.sortOrder,
             colors: params.colors?.split(","),
             sizes: params.sizes?.split(","),
             prioritizeBestSellers: parseInt(params.page || "1") === 1,

@@ -1357,6 +1357,7 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
 // The sorting options with Recommended as default
 const sortByWithOrderTypes = [
     { label: "Recommended", value: "recommended:desc" },
+    { label: "Best Sellers", value: "best-sellers:desc" },
     { label: "Newest First", value: "createdAt:desc" },
     { label: "Price: High to Low", value: "price:desc" },
     { label: "Price: Low to High", value: "price:asc" },
@@ -1371,6 +1372,7 @@ export function ShopSortBy() {
             "price",
             "createdAt",
             "recommended",
+            "best-sellers",
         ] as const).withDefault("recommended")
     );
     const [sortOrder, setSortOrder] = useQueryState(
@@ -1381,7 +1383,9 @@ export function ShopSortBy() {
 
     const handleSort = (value: string) => {
         const [sort, order] = value.split(":");
-        setSortBy(sort as "price" | "createdAt" | "recommended");
+        setSortBy(
+            sort as "price" | "createdAt" | "recommended" | "best-sellers"
+        );
         setSortOrder(order as "asc" | "desc");
         setPage(1);
     };
