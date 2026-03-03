@@ -77,7 +77,7 @@ export const productsRouter = createTRPCRouter({
                 verificationStatus:
                     productSchema.shape.verificationStatus.optional(),
                 sortBy: z
-                    .enum(["price", "createdAt", "recommended"])
+                    .enum(["price", "createdAt", "recommended", "best-sellers"])
                     .optional(),
                 sortOrder: z.enum(["asc", "desc"]).optional(),
                 productImage: productSchema.shape.productImageFilter,
@@ -182,7 +182,7 @@ export const productsRouter = createTRPCRouter({
                 verificationStatus:
                     productSchema.shape.verificationStatus.optional(),
                 sortBy: z
-                    .enum(["price", "createdAt", "recommended"])
+                    .enum(["price", "createdAt", "recommended", "best-sellers"])
                     .optional(),
                 sortOrder: z.enum(["asc", "desc"]).optional(),
                 productImage: productSchema.shape.productImageFilter,
