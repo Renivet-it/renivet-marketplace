@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "./src/lib/db";
 import { products } from "./src/lib/db/schema/product";
-//to check
+
 async function check() {
     try {
         const allProducts = await db
