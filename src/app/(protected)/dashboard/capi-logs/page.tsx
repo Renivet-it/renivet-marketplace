@@ -3,20 +3,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog-dash";
-import {
     Pagination,
     PaginationContent,
     PaginationItem,
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination-dash";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
     Table,
@@ -28,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { format } from "date-fns";
-import { Copy, Eye } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -67,7 +59,9 @@ export default function CapiLogsPage() {
                             <TableHead>Time</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Event ID</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
+                            <TableHead>User Data</TableHead>
+                            <TableHead>Custom Data</TableHead>
+                            <TableHead>Response</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -86,15 +80,21 @@ export default function CapiLogsPage() {
                                     <TableCell>
                                         <Skeleton className="h-5 w-64" />
                                     </TableCell>
-                                    <TableCell className="text-right">
-                                        <Skeleton className="ml-auto h-8 w-16" />
+                                    <TableCell>
+                                        <Skeleton className="h-5 w-48" />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Skeleton className="h-5 w-48" />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Skeleton className="h-5 w-48" />
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : data?.logs.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={5}
+                                    colSpan={7}
                                     className="h-24 text-center"
                                 >
                                     No CAPI logs found.
@@ -140,8 +140,32 @@ export default function CapiLogsPage() {
                                             <Copy className="h-3 w-3" />
                                         </Button>
                                     </TableCell>
-                                    <TableCell className="text-right">
-                                        <LogDetailsDialog log={log} />
+                                    <TableCell>
+                                        <pre className="max-w-xs overflow-x-auto rounded-md bg-muted p-2 text-xs">
+                                            {JSON.stringify(
+                                                log.userData,
+                                                null,
+                                                2
+                                            )}
+                                        </pre>
+                                    </TableCell>
+                                    <TableCell>
+                                        <pre className="max-w-xs overflow-x-auto rounded-md bg-muted p-2 text-xs">
+                                            {JSON.stringify(
+                                                log.customData,
+                                                null,
+                                                2
+                                            )}
+                                        </pre>
+                                    </TableCell>
+                                    <TableCell>
+                                        <pre className="max-w-xs overflow-x-auto rounded-md bg-muted p-2 text-xs">
+                                            {JSON.stringify(
+                                                log.response,
+                                                null,
+                                                2
+                                            )}
+                                        </pre>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -150,7 +174,7 @@ export default function CapiLogsPage() {
                 </Table>
             </div>
 
-            {/* Advanced Pagination Controls */}
+            {/* Pagination Controls */}
             {data && (
                 <div className="py-4">
                     <Pagination>
@@ -188,77 +212,5 @@ export default function CapiLogsPage() {
                 </div>
             )}
         </div>
-    );
-}
-
-function LogDetailsDialog({ log }: { log: any }) {
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text);
-        toast.success("Copied to clipboard");
-    };
-
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                    <Eye className="mr-2 h-4 w-4" />
-                    Inspect
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col overflow-hidden">
-                <DialogHeader>
-                    <DialogTitle>CAPI Request Details</DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="flex-1 rounded-md border p-4">
-                    <div className="space-y-4">
-                        <div>
-                            <div className="mb-2 flex items-center justify-between">
-                                <h4 className="text-sm font-semibold">
-                                    Response
-                                </h4>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                        copyToClipboard(
-                                            JSON.stringify(
-                                                log.response,
-                                                null,
-                                                2
-                                            )
-                                        )
-                                    }
-                                >
-                                    Copy
-                                </Button>
-                            </div>
-                            <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">
-                                {JSON.stringify(log.response, null, 2)}
-                            </pre>
-                        </div>
-                        <div>
-                            <div className="mb-2 flex items-center justify-between">
-                                <h4 className="text-sm font-semibold">
-                                    User Data
-                                </h4>
-                            </div>
-                            <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">
-                                {JSON.stringify(log.userData, null, 2)}
-                            </pre>
-                        </div>
-                        <div>
-                            <div className="mb-2 flex items-center justify-between">
-                                <h4 className="text-sm font-semibold">
-                                    Custom Data
-                                </h4>
-                            </div>
-                            <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">
-                                {JSON.stringify(log.customData, null, 2)}
-                            </pre>
-                        </div>
-                    </div>
-                </ScrollArea>
-            </DialogContent>
-        </Dialog>
     );
 }
