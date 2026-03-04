@@ -10,19 +10,22 @@ import {
     PaginationPrevious,
 } from "@/components/ui/pagination-dash";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/trpc/client";
 import { format } from "date-fns";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Filter } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
+const EVENT_NAMES = [
+    "ViewContent",
+    "AddToCart",
+    "Purchase",
+    "InitiateCheckout",
+    "Search",
+    "AddToWishlist",
+    "Lead",
+    "CompleteRegistration",
+] as const;
 
 // ─── Field definitions with human-readable labels ───────────────────────────
 
@@ -70,11 +73,13 @@ function cellValue(val: unknown): string {
 
 export default function CapiLogsPage() {
     const [page, setPage] = useState(1);
+    const [eventFilter, setEventFilter] = useState<string>("");
     const limit = 50;
 
     const { data, isLoading } = trpc.general.capiLogs.getLogs.useQuery({
         page,
         limit,
+        eventName: eventFilter || undefined,
     });
 
     const copyToClipboard = (text: string) => {
@@ -135,7 +140,7 @@ export default function CapiLogsPage() {
         5 + USER_DATA_FIELDS.length + CUSTOM_DATA_FIELDS.length + 1;
 
     return (
-        <div className="flex h-full flex-col space-y-4 p-8">
+        <div className="block w-full min-w-0 space-y-4 p-8">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -153,15 +158,54 @@ export default function CapiLogsPage() {
                     onClick={exportCSV}
                     disabled={isLoading || !data?.logs?.length}
                 >
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="mr-2 size-4" />
                     Export CSV
                 </Button>
             </div>
 
+            {/* Filter bar */}
+            <div className="flex items-center gap-3">
+                <Filter className="size-4 text-muted-foreground" />
+                <select
+                    value={eventFilter}
+                    onChange={(e) => {
+                        setEventFilter(e.target.value);
+                        setPage(1);
+                    }}
+                    className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                    <option value="">All Events</option>
+                    {EVENT_NAMES.map((name) => (
+                        <option key={name} value={name}>
+                            {name}
+                        </option>
+                    ))}
+                </select>
+
+                {eventFilter && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            setEventFilter("");
+                            setPage(1);
+                        }}
+                        className="text-xs text-muted-foreground"
+                    >
+                        Clear filter
+                    </Button>
+                )}
+            </div>
+
             {/* Scrollable table — must fill parent width and scroll horizontally */}
             <div
-                className="w-full rounded-md border"
-                style={{ overflowX: "auto", overflowY: "visible" }}
+                style={{
+                    display: "block",
+                    width: "100%",
+                    overflowX: "scroll",
+                    borderRadius: "6px",
+                    border: "1px solid hsl(var(--border))",
+                }}
             >
                 <table
                     style={{
