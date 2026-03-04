@@ -21,10 +21,6 @@ const EVENT_NAMES = [
     "AddToCart",
     "Purchase",
     "InitiateCheckout",
-    "Search",
-    "AddToWishlist",
-    "Lead",
-    "CompleteRegistration",
 ] as const;
 
 // ─── Field definitions with human-readable labels ───────────────────────────
