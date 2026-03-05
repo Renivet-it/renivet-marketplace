@@ -60,7 +60,9 @@ export default async function Page({ searchParams }: PageProps) {
                 params.sortBy === "recommended" ? undefined : params.sortOrder,
             colors: params.colors?.split(","),
             sizes: params.sizes?.split(","),
-            prioritizeBestSellers: parseInt(params.page || "1") === 1,
+            // Don't prioritize best sellers when search is active
+            prioritizeBestSellers:
+                !params.search && parseInt(params.page || "1") === 1,
             requireMedia: true,
         }),
     ]);
@@ -441,8 +443,11 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
                 sortOrder,
                 colors,
                 sizes,
+                // Don't prioritize best sellers when search is active
                 prioritizeBestSellers:
-                    page === 1 && (!sortByRaw || sortByRaw === "recommended"),
+                    !search &&
+                    page === 1 &&
+                    (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
         }
