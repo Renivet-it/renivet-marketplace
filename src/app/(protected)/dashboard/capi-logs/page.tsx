@@ -78,58 +78,80 @@ export default function CapiLogsPage() {
         eventName: eventFilter || undefined,
     });
 
+    const utils = trpc.useUtils();
+    const [isExporting, setIsExporting] = useState(false);
+
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
         toast.success("Copied to clipboard");
     };
 
-    const exportCSV = () => {
-        if (!data?.logs?.length) return;
+    const exportCSV = async () => {
+        setIsExporting(true);
+        try {
+            const allData = await utils.general.capiLogs.getAllLogs.fetch({
+                eventName: eventFilter || undefined,
+            });
 
-        const headers = [
-            "ID",
-            "Event Name",
-            "Event ID",
-            "Status",
-            "Created At",
-            ...USER_DATA_FIELDS.map((f) => f.label),
-            ...CUSTOM_DATA_FIELDS.map((f) => f.label),
-            "FB Response",
-        ];
+            if (!allData?.logs?.length) {
+                toast.error("No logs to export");
+                return;
+            }
 
-        const rows = data.logs.map((log) => {
-            const ud = (log.userData as Record<string, unknown>) ?? {};
-            const cd = (log.customData as Record<string, unknown>) ?? {};
-            return [
-                log.id,
-                log.eventName,
-                log.eventId,
-                log.status,
-                log.createdAt
-                    ? format(new Date(log.createdAt), "MMM d, yyyy HH:mm:ss")
-                    : "N/A",
-                ...USER_DATA_FIELDS.map((f) => cellValue(ud[f.key])),
-                ...CUSTOM_DATA_FIELDS.map((f) => cellValue(cd[f.key])),
-                JSON.stringify(log.response ?? null),
+            const headers = [
+                "ID",
+                "Event Name",
+                "Event ID",
+                "Status",
+                "Created At",
+                ...USER_DATA_FIELDS.map((f) => f.label),
+                ...CUSTOM_DATA_FIELDS.map((f) => f.label),
+                "FB Response",
             ];
-        });
 
-        const csvContent = [headers, ...rows]
-            .map((row) =>
-                row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")
-            )
-            .join("\n");
+            const rows = allData.logs.map((log) => {
+                const ud = (log.userData as Record<string, unknown>) ?? {};
+                const cd = (log.customData as Record<string, unknown>) ?? {};
+                return [
+                    log.id,
+                    log.eventName,
+                    log.eventId,
+                    log.status,
+                    log.createdAt
+                        ? format(
+                              new Date(log.createdAt),
+                              "MMM d, yyyy HH:mm:ss"
+                          )
+                        : "N/A",
+                    ...USER_DATA_FIELDS.map((f) => cellValue(ud[f.key])),
+                    ...CUSTOM_DATA_FIELDS.map((f) => cellValue(cd[f.key])),
+                    JSON.stringify(log.response ?? null),
+                ];
+            });
 
-        const blob = new Blob([csvContent], {
-            type: "text/csv;charset=utf-8;",
-        });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `capi-logs-page-${page}-${Date.now()}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
-        toast.success("CSV downloaded");
+            const csvContent = [headers, ...rows]
+                .map((row) =>
+                    row
+                        .map((c) => `"${String(c).replace(/"/g, '""')}"`)
+                        .join(",")
+                )
+                .join("\n");
+
+            const blob = new Blob([csvContent], {
+                type: "text/csv;charset=utf-8;",
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `capi-logs-all-${Date.now()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            toast.success(`CSV downloaded — ${allData.logs.length} total logs`);
+        } catch {
+            toast.error("Failed to export logs");
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     const totalCols =
@@ -152,10 +174,10 @@ export default function CapiLogsPage() {
                     variant="outline"
                     size="sm"
                     onClick={exportCSV}
-                    disabled={isLoading || !data?.logs?.length}
+                    disabled={isExporting}
                 >
                     <Download className="mr-2 size-4" />
-                    Export CSV
+                    {isExporting ? "Exporting..." : "Export All CSV"}
                 </Button>
             </div>
 

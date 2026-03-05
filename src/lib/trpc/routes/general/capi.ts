@@ -38,4 +38,24 @@ export const capiLogsRouter = createTRPCRouter({
                 totalPages: Math.ceil(totalCountResult / limit),
             };
         }),
+
+    getAllLogs: adminProcedure
+        .input(
+            z.object({
+                eventName: z.string().optional(),
+            })
+        )
+        .query(async ({ input }) => {
+            const whereClause = input.eventName
+                ? eq(capiLogs.eventName, input.eventName)
+                : undefined;
+
+            const logs = await db
+                .select()
+                .from(capiLogs)
+                .where(whereClause)
+                .orderBy(desc(capiLogs.createdAt));
+
+            return { logs };
+        }),
 });

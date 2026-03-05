@@ -156,19 +156,24 @@ export function ShopProducts({
             sortOrder: sortBy === "recommended" ? undefined : sortOrder,
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
+            // Don't boost best sellers when search is active — search relevance should win
             prioritizeBestSellers:
-                page === 1 && (!sortBy || sortBy === "recommended"),
+                !search && page === 1 && (!sortBy || sortBy === "recommended"),
             requireMedia: true,
-            // Enable personalized recommendations on all pages (when no filters)
-            useRecommendations: true,
+            // Only enable recommendations when there's no active search
+            useRecommendations: !search,
         },
         {
             initialData: isSameAsInitial
-                ? { ...initialData, recommendationSource: null }
+                ? {
+                      ...initialData,
+                      recommendationSource: null,
+                      topBrandMatch: null,
+                  }
                 : undefined,
             placeholderData: keepPreviousData,
-            // Only apply staleTime when no filters active (for recommendations)
-            // When filters are active, allow immediate refetch
+            // Never cache search results — always fetch fresh so search is accurate
+            // Only apply staleTime when showing default browse (no filters at all)
             staleTime:
                 !search &&
                 !categoryId.length &&

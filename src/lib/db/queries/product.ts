@@ -674,18 +674,31 @@ class ProductQuery {
         let searchQuery;
         if (searchEmbedding768) {
             // Use 768-dim embeddings for better semantic matching
-            const highRelevanceThreshold = 0.5; // Tighter threshold for 768-dim
-            const lowRelevanceThreshold = 0.85;
+            // Tightened: only include products within a relevant distance range
+            const highRelevanceThreshold = 0.5;
+            const lowRelevanceThreshold = 0.65; // was 0.85 — too loose, caused irrelevant results
             const highRelevanceQuery = sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector < ${highRelevanceThreshold}`;
             const lowRelevanceQuery = sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-            searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+            const semanticQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+            // Also include exact text matches (title/description) so literal brand/product searches always work
+            const textQuery = or(
+                ilike(products.title, `%${search}%`),
+                ilike(products.description, `%${search}%`)
+            );
+            searchQuery = or(semanticQuery, textQuery);
         } else if (searchEmbedding) {
             // Fallback to 384-dim embeddings
             const highRelevanceThreshold = 0.6;
-            const lowRelevanceThreshold = 0.99;
+            const lowRelevanceThreshold = 0.8; // was 0.99 — too loose
             const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
             const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-            searchQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+            const semanticQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
+            // Also include exact text matches
+            const textQuery = or(
+                ilike(products.title, `%${search}%`),
+                ilike(products.description, `%${search}%`)
+            );
+            searchQuery = or(semanticQuery, textQuery);
         }
 
         // --- Build filters ---
