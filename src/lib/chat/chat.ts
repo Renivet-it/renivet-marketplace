@@ -3,7 +3,19 @@ import { getEmbedding768 } from "@/lib/python/sematic-search";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { sql } from "drizzle-orm";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || "");
+let _genAI: GoogleGenerativeAI | null = null;
+
+function getGenAI(): GoogleGenerativeAI | null {
+    if (!_genAI) {
+        const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+        if (!apiKey) {
+            console.warn("GOOGLE_GEMINI_API_KEY is not configured");
+            return null;
+        }
+        _genAI = new GoogleGenerativeAI(apiKey);
+    }
+    return _genAI;
+}
 
 // ---------- Types ----------
 
@@ -189,7 +201,7 @@ function isProductQuery(message: string): boolean {
 // ---------- Context Building ----------
 
 function buildSystemPrompt(products: ChatProduct[]): string {
-    const basePrompt = `You are Reni, the friendly AI shopping assistant for Renivet — a sustainable marketplace that connects conscious consumers with eco-friendly, ethically sourced products.
+    const basePrompt = `You are Sage, the friendly AI shopping assistant for Renivet — a sustainable marketplace that connects conscious consumers with eco-friendly, ethically sourced products.
 
 Your personality:
 - Warm, helpful, and knowledgeable about sustainable fashion and products
@@ -237,6 +249,16 @@ export async function generateChatResponse(
     userMessage: string,
     conversationHistory: ChatMessage[]
 ): Promise<{ content: string; products: ChatProduct[] }> {
+    const genAI = getGenAI();
+
+    if (!genAI) {
+        return {
+            content:
+                "I'm currently being set up. Please check back shortly! 🛠️",
+            products: [],
+        };
+    }
+
     let products: ChatProduct[] = [];
 
     // Detect if this is a product-related query
@@ -248,43 +270,56 @@ export async function generateChatResponse(
 
     const systemPrompt = buildSystemPrompt(products);
 
-    // Build conversation for Gemini
-    const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        systemInstruction: systemPrompt,
-    });
+    // Try multiple models as fallback chain
+    const models = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"];
 
-    // Build chat history for context
-    const history = conversationHistory.slice(-10).map((msg) => ({
-        role: msg.role === "user" ? ("user" as const) : ("model" as const),
-        parts: [{ text: msg.content }],
-    }));
+    for (let i = 0; i < models.length; i++) {
+        const modelName = models[i];
+        try {
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                systemInstruction: systemPrompt,
+            });
 
-    const chat = model.startChat({
-        history,
-        generationConfig: {
-            maxOutputTokens: 500,
-            temperature: 0.7,
-        },
-    });
+            const history = conversationHistory.slice(-10).map((msg) => ({
+                role:
+                    msg.role === "user"
+                        ? ("user" as const)
+                        : ("model" as const),
+                parts: [{ text: msg.content }],
+            }));
 
-    try {
-        const result = await chat.sendMessage(userMessage);
-        const response = result.response;
-        const text = response.text();
+            const chat = model.startChat({
+                history,
+                generationConfig: {
+                    maxOutputTokens: 500,
+                    temperature: 0.7,
+                },
+            });
 
-        return {
-            content: text,
-            products: needsProducts
-                ? products.filter((p) => p.similarity > 0.3)
-                : [],
-        };
-    } catch (error) {
-        console.error("Error generating chat response:", error);
-        return {
-            content:
-                "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment! 🙂",
-            products: [],
-        };
+            const result = await chat.sendMessage(userMessage);
+            const response = result.response;
+            const text = response.text();
+
+            return {
+                content: text,
+                products: needsProducts
+                    ? products.filter((p) => p.similarity > 0.3)
+                    : [],
+            };
+        } catch (error: unknown) {
+            const errMsg =
+                error instanceof Error ? error.message : String(error);
+            console.warn(
+                `Model ${modelName} failed: ${errMsg.slice(0, 100)}${i < models.length - 1 ? " → trying next..." : ""}`
+            );
+            if (i < models.length - 1) continue;
+        }
     }
+
+    return {
+        content:
+            "I'm a bit busy right now! Please try again in a few seconds 🙂",
+        products: [],
+    };
 }

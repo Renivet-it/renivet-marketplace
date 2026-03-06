@@ -9,7 +9,7 @@ import { ChatProductCarousel } from "./chat-product-card";
 function TypingIndicator() {
     return (
         <div className="flex items-start gap-2.5 px-4">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[hsl(72,19%,16%)]">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(72,30%,25%)] to-[hsl(150,25%,15%)]">
                 <svg
                     width="14"
                     height="14"
@@ -65,7 +65,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         >
             {/* Avatar */}
             {!isUser && (
-                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[hsl(72,19%,16%)]">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(72,30%,25%)] to-[hsl(150,25%,15%)]">
                     <svg
                         width="14"
                         height="14"
@@ -87,8 +87,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 <div
                     className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                         isUser
-                            ? "rounded-tr-sm bg-[hsl(72,19%,16%)] text-white"
-                            : "rounded-tl-sm bg-gray-100 text-gray-800"
+                            ? "rounded-tr-sm bg-gradient-to-br from-[hsl(72,19%,16%)] to-[hsl(150,20%,14%)] text-white shadow-sm"
+                            : "rounded-tl-sm bg-gray-50 text-gray-800 ring-1 ring-gray-100"
                     }`}
                 >
                     <div className="whitespace-pre-wrap">{message.content}</div>
@@ -208,9 +208,9 @@ export function ChatWindow() {
     return (
         <div className="flex h-full flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between border-b bg-[hsl(72,19%,16%)] px-4 py-3">
-                <div className="flex items-center gap-2.5">
-                    <div className="flex size-9 items-center justify-center rounded-full bg-white/15">
+            <div className="flex items-center justify-between bg-gradient-to-r from-[hsl(72,19%,16%)] via-[hsl(90,18%,15%)] to-[hsl(150,20%,14%)] px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                    <div className="relative flex size-10 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/10">
                         <svg
                             width="18"
                             height="18"
@@ -225,13 +225,15 @@ export function ChatWindow() {
                             <path d="M2 17l10 5 10-5" />
                             <path d="M2 12l10 5 10-5" />
                         </svg>
+                        {/* Online indicator */}
+                        <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[hsl(72,19%,16%)] bg-emerald-400" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-semibold text-white">
-                            Reni
+                        <h3 className="text-sm font-bold tracking-wide text-white">
+                            Sage
                         </h3>
-                        <p className="text-[11px] text-white/60">
-                            Your sustainable shopping assistant
+                        <p className="text-[11px] font-medium text-white/50">
+                            AI Shopping Assistant • Online
                         </p>
                     </div>
                 </div>
@@ -262,14 +264,14 @@ export function ChatWindow() {
                     <div className="flex h-full flex-col">
                         {/* Welcome */}
                         <div className="px-4 pb-3 pt-5">
-                            <div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[hsl(72,19%,94%)]">
+                            <div className="mb-3 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[hsl(72,25%,92%)] to-[hsl(150,20%,90%)] shadow-sm">
                                 <svg
-                                    width="24"
-                                    height="24"
+                                    width="28"
+                                    height="28"
                                     viewBox="0 0 24 24"
                                     fill="none"
                                     stroke="hsl(72,19%,16%)"
-                                    strokeWidth="2"
+                                    strokeWidth="1.8"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
@@ -278,13 +280,13 @@ export function ChatWindow() {
                                     <path d="M2 12l10 5 10-5" />
                                 </svg>
                             </div>
-                            <h3 className="text-base font-semibold text-gray-900">
-                                Hi there! I&apos;m Reni 👋
+                            <h3 className="text-lg font-bold text-gray-900">
+                                Hi there! I&apos;m Sage 👋
                             </h3>
                             <p className="mt-1 text-sm leading-relaxed text-gray-500">
-                                Your sustainable shopping assistant. Ask me
-                                about products, brands, or anything about
-                                conscious fashion!
+                                Your AI sustainable shopping assistant. I can
+                                help you find products, explore brands, and
+                                discover conscious fashion!
                             </p>
                         </div>
 
@@ -305,7 +307,7 @@ export function ChatWindow() {
 
             {/* Input */}
             <div className="border-t bg-white p-3">
-                <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-1.5 transition-colors focus-within:border-[hsl(72,19%,16%)] focus-within:bg-white">
+                <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3 py-1.5 shadow-sm transition-all focus-within:border-[hsl(72,19%,30%)] focus-within:bg-white focus-within:shadow-md focus-within:ring-2 focus-within:ring-[hsl(72,19%,16%)]/10">
                     <input
                         ref={inputRef}
                         value={inputValue}
@@ -319,7 +321,7 @@ export function ChatWindow() {
                     <button
                         onClick={() => handleSend()}
                         disabled={!inputValue.trim() || isLoading}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[hsl(72,19%,16%)] text-white transition-all hover:bg-[hsl(72,19%,22%)] disabled:opacity-40"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[hsl(72,25%,22%)] to-[hsl(150,20%,14%)] text-white shadow-sm transition-all hover:shadow-md disabled:opacity-40"
                         aria-label="Send message"
                     >
                         <svg
@@ -338,7 +340,7 @@ export function ChatWindow() {
                     </button>
                 </div>
                 <p className="mt-1.5 text-center text-[10px] text-gray-300">
-                    Powered by Renivet AI
+                    Powered by Sage AI
                 </p>
             </div>
 
