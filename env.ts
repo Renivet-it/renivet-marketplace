@@ -70,6 +70,8 @@ export const env = createEnv({
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
+
+        GOOGLE_GEMINI_API_KEY: z.string().optional(),
     },
     client: {
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z
@@ -120,6 +122,7 @@ export const env = createEnv({
         SHIPROCKET_LOGIN_PASSWORD: process.env.SHIPROCKET_LOGIN_PASSWORD,
         SHIPROCKET_WEBHOOK_API_KEY: process.env.SHIPROCKET_WEBHOOK_API_KEY,
         NODE_ENV: process.env.NODE_ENV,
+        GOOGLE_GEMINI_API_KEY: process.env.GOOGLE_GEMINI_API_KEY,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
