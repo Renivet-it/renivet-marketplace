@@ -23,12 +23,30 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const desktopAspectRatio = 1440 / 500;
     const mobileAspectRatio = 375 / 487;
     const mobileImages = [
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNpB968wYoKFqlYMSWzhgNZG6Cm5OtIUjre39T",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkD4zwkxYt1TxMBy6jes3QdWaELUvNIiXHwRO",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqFXOkLGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
-        "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP"
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNpB968wYoKFqlYMSWzhgNZG6Cm5OtIUjre39T",
+            link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
+            link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
+            link: "https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkD4zwkxYt1TxMBy6jes3QdWaELUvNIiXHwRO",
+            link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqFXOkLGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
+            link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP",
+            link: "https://renivet.com/shop",
+        },
     ];
     const placeholders = ["Search For Products and Brands"];
 
@@ -235,7 +253,6 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     </div>
                 </div>
 
-                {/* 🔵 BANNER IMAGE */}
                 {/* 🔵 BANNER IMAGE WITH CENTER CTA */}
                 <div className="relative w-full overflow-hidden">
                     <Carousel
@@ -243,7 +260,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                         plugins={[Autoplay({ delay: 5000 })]}
                     >
                         <CarouselContent>
-                            {mobileImages.map((src, idx) => (
+                            {mobileImages.map((item, idx) => (
                                 <CarouselItem key={idx}>
                                     <div className="relative w-full overflow-hidden">
                                         <div
@@ -252,7 +269,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             }}
                                         />
                                         <Image
-                                            src={src}
+                                            src={item.src}
                                             alt={`Mobile Banner ${idx + 1}`}
                                             fill
                                             sizes="100vw"
@@ -262,24 +279,26 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                                 idx === 0 ? "high" : "auto"
                                             }
                                         />
+
+                                        {/* 🔵 CENTER BUTTON - NOW INSIDE SLIDE TO HAVE UNIQUE LINKS */}
+                                        <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-16 md:hidden">
+                                            <div className="pointer-events-auto">
+                                                <Link
+                                                    href={item.link}
+                                                    className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
+                                                >
+                                                    <span>
+                                                        Shop With Purpose
+                                                    </span>
+                                                    <Icons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                                                </Link>
+                                            </div>
+                                        </div>
                                     </div>
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
                     </Carousel>
-
-                    {/* 🔵 CENTER BUTTON — MOBILE ONLY */}
-                    <div className="pointer-events-none absolute inset-0 z-10 flex justify-center md:hidden">
-                        <div className="pointer-events-auto absolute bottom-16">
-                            <Link
-                                href="https://renivet.com/shop"
-                                className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
-                            >
-                                <span>Shop With Purpose</span>
-                                <Icons.ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                            </Link>
-                        </div>
-                    </div>
                 </div>
 
                 {/* 🔵 CTA BUTTON */}

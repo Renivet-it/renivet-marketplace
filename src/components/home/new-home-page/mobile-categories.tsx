@@ -24,6 +24,12 @@ export function MobileCategories() {
             link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=4489ecbd-cb3e-47f0-aced-defcf134629b",
         },
         {
+            title: "Sale",
+            imageUrl:
+                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmKiAnjNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
+            link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
+        },
+        {
             title: "Shirts",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvWCA90dPZsh5fuDbkAelMyqICmp3NU7X4nHY",
@@ -38,7 +44,7 @@ export function MobileCategories() {
         {
             title: "Home Decor",
             imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNhlQssEPAwZ71xI8cmpPRY6WBO42eGEJfosyi",
+                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNeqhEsg0rgXZuWwadPABUqnljV5RbJMFsx1v",
             link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
         },
         {
@@ -53,63 +59,115 @@ export function MobileCategories() {
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjgHih7umPpnZoHc5f2E4rFNLugdK3ty9ObjY",
             link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
         },
+
     ];
 
     return (
         <>
             {/* Mobile: 4-col grid */}
             <section className="block w-full bg-[#FCFBF4] px-4 py-6 md:hidden">
-                <div className="grid grid-cols-4 place-items-center gap-x-3 gap-y-6">
-                    {categories.map((item, index) => (
-                        <Link
-                            key={index}
-                            href={item.link}
-                            className="flex flex-col items-center"
-                        >
-                            {item.title === "Accessories" ? (
-                                <div className="perspective size-[78px]">
-                                    <div className="flip-card">
-                                        <div className="card-face card-front relative h-full w-full overflow-hidden">
-                                            <Image
-                                                src={item.imageUrl}
-                                                alt={item.title}
-                                                fill
-                                                sizes="78px"
-                                                className="object-cover"
-                                            />
-                                        </div>
-                                        <div className="card-face card-back">
-                                            <p className="text-[10px] leading-tight text-[#333]">
-                                                Buy Any 2
-                                            </p>
-                                            <p className="text-[11px] font-semibold text-[#000]">
-                                                Get 15% Off
-                                            </p>
+                <div className="flex flex-col gap-y-6">
+                    {/* Top Row: First 5 items */}
+                    <div className="flex justify-between gap-x-2">
+                        {categories.slice(0, 5).map((item, index) => (
+                            <Link
+                                key={`top-${index}`}
+                                href={item.link}
+                                className="flex flex-1 flex-col items-center"
+                            >
+                                {item.title === "Accessories" ? (
+                                    <div className="perspective aspect-square w-full max-w-[78px]">
+                                        <div className="flip-card">
+                                            <div className="card-face card-front relative h-full w-full overflow-hidden">
+                                                <Image
+                                                    src={item.imageUrl}
+                                                    alt={item.title}
+                                                    fill
+                                                    sizes="78px"
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <div className="card-face card-back">
+                                                <p className="text-[10px] leading-tight text-[#333]">
+                                                    Buy Any 2
+                                                </p>
+                                                <p className="text-[11px] font-semibold text-[#000]">
+                                                    Get 15% Off
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="relative size-[78px] overflow-hidden">
-                                    <Image
-                                        src={item.imageUrl}
-                                        alt={item.title}
-                                        fill
-                                        sizes="78px"
-                                        className="object-cover"
-                                    />
-                                </div>
-                            )}
-                            <p className="mt-2 text-center text-[12px] leading-tight text-[#333]">
-                                {item.title}
-                            </p>
-                        </Link>
-                    ))}
+                                ) : (
+                                    <div className="relative aspect-square w-full max-w-[78px] overflow-hidden">
+                                        <Image
+                                            src={item.imageUrl}
+                                            alt={item.title}
+                                            fill
+                                            sizes="78px"
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <p className="mt-2 text-center text-[10px] leading-tight text-[#333] sm:text-[12px]">
+                                    {item.title}
+                                </p>
+                            </Link>
+                        ))}
+                    </div>
+
+                    {/* Bottom Row: Remaining 4 items */}
+                    <div className="flex justify-center gap-x-4">
+                        {categories.slice(5).map((item, index) => (
+                            <Link
+                                key={`bottom-${index}`}
+                                href={item.link}
+                                className="flex w-[18%] flex-col items-center"
+                            >
+                                {item.title === "Accessories" ? (
+                                    <div className="perspective aspect-square w-full max-w-[78px]">
+                                        <div className="flip-card">
+                                            <div className="card-face card-front relative h-full w-full overflow-hidden">
+                                                <Image
+                                                    src={item.imageUrl}
+                                                    alt={item.title}
+                                                    fill
+                                                    sizes="78px"
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <div className="card-face card-back">
+                                                <p className="text-[10px] leading-tight text-[#333]">
+                                                    Buy Any 2
+                                                </p>
+                                                <p className="text-[11px] font-semibold text-[#000]">
+                                                    Get 15% Off
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="relative aspect-square w-full max-w-[78px] overflow-hidden">
+                                        <Image
+                                            src={item.imageUrl}
+                                            alt={item.title}
+                                            fill
+                                            sizes="78px"
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <p className="mt-2 text-center text-[10px] leading-tight text-[#333] sm:text-[12px]">
+                                    {item.title}
+                                </p>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
             </section>
 
             {/* Desktop: full-width grid, minimal padding */}
             <section className="hidden w-full bg-[#FCFBF4] px-4 py-8 md:block">
-                <div className="mx-auto grid max-w-screen-2xl grid-cols-8 gap-4 lg:gap-6">
+                <div className="mx-auto grid max-w-screen-2xl grid-cols-9 gap-4 lg:gap-6">
                     {categories.map((item, index) => (
                         <Link
                             key={index}
