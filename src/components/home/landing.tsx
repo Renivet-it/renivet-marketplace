@@ -25,23 +25,27 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const mobileImages = [
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNpB968wYoKFqlYMSWzhgNZG6Cm5OtIUjre39T",
-            link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
+            link: "https://renivet.com/shop",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
-            link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1",
+            link: "https://renivet.com/shop",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
-            link: "https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02",
+            link: "https://renivet.com/shop",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkD4zwkxYt1TxMBy6jes3QdWaELUvNIiXHwRO",
-            link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
+            link: "https://renivet.com/shop",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqFXOkLGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
-            link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
+            link: "https://renivet.com/shop",
+        },
+        {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSGDBaWVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
+            link: "https://renivet.com/shop",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP",
