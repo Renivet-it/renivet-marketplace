@@ -418,9 +418,22 @@ export function SummerClient({
                         </div>
                         <select
                             className="sort-sel"
-                            value={sortBy}
+                            value={
+                                sortBy === "price"
+                                    ? `price_${sortOrder}`
+                                    : sortBy
+                            }
                             onChange={(e) => {
-                                setSortBy(e.target.value as any);
+                                const val = e.target.value;
+                                if (val === "price_asc") {
+                                    setSortBy("price");
+                                    setSortOrder("asc");
+                                } else if (val === "price_desc") {
+                                    setSortBy("price");
+                                    setSortOrder("desc");
+                                } else {
+                                    setSortBy(val as any);
+                                }
                                 setPage(1);
                             }}
                         >
