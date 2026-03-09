@@ -4,6 +4,7 @@ import { trackProductClick } from "@/actions/track-product";
 import { trpc } from "@/lib/trpc/client";
 import { ProductWithBrand } from "@/lib/validations";
 import { keepPreviousData } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import {
     parseAsArrayOf,
@@ -14,9 +15,9 @@ import {
 } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import "./summer.css";
-import { ProductCard } from "@/components/globals/cards";
 import { Icons } from "@/components/icons";
 import { Pagination } from "@/components/ui/data-table-general";
+import { convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 
 interface SummerClientProps {
     initialData: {
@@ -138,6 +139,7 @@ export function SummerClient({
             productTypeId: !!productTypeId.length ? productTypeId : undefined,
             sortBy: sortBy === "recommended" ? undefined : sortBy,
             sortOrder: sortBy === "recommended" ? undefined : sortOrder,
+            minDiscount: minDiscount !== null ? minDiscount : undefined,
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
             isPublished: true,
@@ -474,9 +476,44 @@ export function SummerClient({
                                                     item.productId ===
                                                     product.id
                                             ) ?? false;
+
+                                        let productPrice = 0;
+                                        let productCompareAtPrice = 0;
+
+                                        if (!product.productHasVariants) {
+                                            productPrice = product.price || 0;
+                                            productCompareAtPrice =
+                                                product.compareAtPrice || 0;
+                                        } else {
+                                            const minPriceVariant =
+                                                product.variants?.[0];
+                                            productPrice =
+                                                minPriceVariant?.price || 0;
+                                            productCompareAtPrice =
+                                                minPriceVariant?.compareAtPrice ||
+                                                0;
+                                        }
+
+                                        const offPercent =
+                                            productCompareAtPrice > productPrice
+                                                ? Math.round(
+                                                      ((productCompareAtPrice -
+                                                          productPrice) /
+                                                          productCompareAtPrice) *
+                                                          100
+                                                  )
+                                                : 0;
+
+                                        const imageUrl =
+                                            product.media?.[0]?.mediaItem
+                                                ?.url ||
+                                            "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80";
+
                                         return (
-                                            <div
+                                            <Link
+                                                href={`/products/${product.slug}`}
                                                 key={product.id}
+                                                className="card"
                                                 onClick={() =>
                                                     handleProductClick(
                                                         product.id,
@@ -484,15 +521,114 @@ export function SummerClient({
                                                     )
                                                 }
                                             >
-                                                {/* Re-using the standard ProductCard rather than the heavy custom HTML, 
-                                                but letting the summer-grid control sizing. */}
-                                                <ProductCard
-                                                    product={product}
-                                                    isWishlisted={isWishlisted}
-                                                    userId={userId}
-                                                    className="max-w-full border-[1px] border-[var(--summer-border-soft)] bg-[var(--summer-bg-card)] shadow-sm transition-all hover:border-[var(--summer-peach)] hover:shadow-md"
-                                                />
-                                            </div>
+                                                <div className="card-img relative">
+                                                    <Image
+                                                        src={imageUrl}
+                                                        alt={product.title}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                    {offPercent > 0 && (
+                                                        <div className="tag tag-off">
+                                                            {offPercent}% Off
+                                                        </div>
+                                                    )}
+                                                    <div className="wish">
+                                                        <svg
+                                                            viewBox="0 0 24 24"
+                                                            fill={
+                                                                isWishlisted
+                                                                    ? "#C0607A"
+                                                                    : "white"
+                                                            }
+                                                            stroke="#C0607A"
+                                                            strokeWidth="2"
+                                                        >
+                                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div className="quick">
+                                                        Quick Add
+                                                    </div>
+                                                </div>
+                                                <div className="dots">
+                                                    {product.media &&
+                                                        product.media
+                                                            .slice(0, 3)
+                                                            .map((_, i) => (
+                                                                <div
+                                                                    key={i}
+                                                                    className={`dot ${i === 0 ? "on" : ""}`}
+                                                                ></div>
+                                                            ))}
+                                                    {(!product.media ||
+                                                        product.media.length ===
+                                                            0) && (
+                                                        <div className="dot on"></div>
+                                                    )}
+                                                </div>
+                                                <div className="card-info">
+                                                    <div className="brand-name">
+                                                        {product.brand?.name}
+                                                    </div>
+                                                    <div className="prod-name">
+                                                        {product.title}
+                                                    </div>
+                                                    <div className="pricing">
+                                                        <span className="price-now">
+                                                            ₹
+                                                            {formatPriceTag(
+                                                                parseFloat(
+                                                                    convertPaiseToRupees(
+                                                                        productPrice
+                                                                    )
+                                                                )
+                                                            )}
+                                                        </span>
+                                                        {productCompareAtPrice >
+                                                            productPrice && (
+                                                            <>
+                                                                <span className="price-was">
+                                                                    ₹
+                                                                    {formatPriceTag(
+                                                                        parseFloat(
+                                                                            convertPaiseToRupees(
+                                                                                productCompareAtPrice
+                                                                            )
+                                                                        )
+                                                                    )}
+                                                                </span>
+                                                                <span className="price-off">
+                                                                    {offPercent}
+                                                                    % off
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    {product.variants &&
+                                                        product.variants
+                                                            .length > 0 && (
+                                                            <div className="swatches">
+                                                                {product.variants
+                                                                    .slice(0, 3)
+                                                                    .map(
+                                                                        (v) => (
+                                                                            <div
+                                                                                key={
+                                                                                    v.id
+                                                                                }
+                                                                                className="swatch"
+                                                                                style={{
+                                                                                    background:
+                                                                                        "#F2B8C0",
+                                                                                }}
+                                                                            ></div>
+                                                                        )
+                                                                    )}
+                                                            </div>
+                                                        )}
+                                                </div>
+                                            </Link>
                                         );
                                     })}
                                 </div>
