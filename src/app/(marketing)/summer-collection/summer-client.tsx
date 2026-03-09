@@ -15,9 +15,64 @@ import {
 } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import "./summer.css";
+import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { Icons } from "@/components/icons";
 import { Pagination } from "@/components/ui/data-table-general";
 import { convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+/* --------------------------------------------------------
+   GUEST CART HOOK
+-------------------------------------------------------- */
+function useGuestCart() {
+    const [guestCart, setGuestCart] = useState<any[]>([]);
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem("guest_cart");
+            if (stored) setGuestCart(JSON.parse(stored));
+        } catch {
+            setGuestCart([]);
+        }
+    }, []);
+
+    const addToGuestCart = (item: any) => {
+        const stored = localStorage.getItem("guest_cart");
+        const prev = stored ? JSON.parse(stored) : [];
+
+        const existing = prev.find(
+            (x: any) =>
+                x.productId === item.productId &&
+                (x.variantId || null) === (item.variantId || null)
+        );
+
+        const updated = existing
+            ? prev.map((x: any) =>
+                  x.productId === item.productId &&
+                  (x.variantId || null) === (item.variantId || null)
+                      ? { ...x, quantity: x.quantity + item.quantity }
+                      : x
+              )
+            : [...prev, item];
+
+        localStorage.setItem("guest_cart", JSON.stringify(updated));
+        setGuestCart(updated);
+        window.dispatchEvent(new Event("guestCartUpdated"));
+        if (item.fullProduct) {
+            showAddToCartToast(
+                item.fullProduct,
+                null,
+                existing ? "Increased quantity in Cart" : "Item added to cart!"
+            );
+        } else {
+            toast.success(existing ? "Updated Cart" : "Added to Cart!");
+        }
+    };
+
+    return { guestCart, addToGuestCart };
+}
 
 interface SummerClientProps {
     initialData: {
@@ -164,10 +219,109 @@ export function SummerClient({
         }
     );
 
-    const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
-        { userId: userId! },
-        { enabled: !!userId }
-    );
+    const router = useRouter();
+    const { addToGuestCart } = useGuestCart();
+
+    const { mutateAsync: addToCart } =
+        trpc.general.users.cart.addProductToCart.useMutation({
+            onSuccess: () => {},
+            onError: (err) =>
+                toast.error(err.message || "Could not add to cart."),
+        });
+
+    const { data: user, isPending: isUserFetching } =
+        trpc.general.users.currentUser.useQuery();
+
+    const { data: wishlist, refetch: refetchWishlist } =
+        trpc.general.users.wishlist.getWishlist.useQuery(
+            { userId: userId! },
+            { enabled: !!userId }
+        );
+
+    const { mutate: addToWishlist } =
+        trpc.general.users.wishlist.addProductInWishlist.useMutation({
+            onMutate: () => {
+                toast.success("Added to wishlist");
+            },
+            onSuccess: () => refetchWishlist(),
+            onError: (err) => toast.error(err.message),
+        });
+
+    const { mutate: removeFromWishlist } =
+        trpc.general.users.wishlist.removeProductInWishlist.useMutation({
+            onMutate: () => {
+                toast.success("Removed from wishlist");
+            },
+            onSuccess: () => refetchWishlist(),
+            onError: (err) => toast.error(err.message),
+        });
+
+    const handleWishlistToggle = (
+        e: React.MouseEvent,
+        productId: string,
+        isWishlisted: boolean
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isUserFetching) return toast.error("User fetching in progress...");
+        if (!userId || !user) return router.push("/auth/signin");
+
+        if (user.roles.length > 0)
+            return toast.error("Only customers can use the wishlist");
+
+        if (isWishlisted) {
+            removeFromWishlist({ userId, productId });
+        } else {
+            addToWishlist({ userId, productId });
+        }
+    };
+
+    const handleAddProductToCart = async (
+        e: React.MouseEvent,
+        product: ProductWithBrand,
+        productPrice: number,
+        imageUrl: string
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const buttonEl = e.currentTarget as HTMLElement | null;
+
+        try {
+            const rawPrice = product.variants?.[0]?.price || product.price || 0;
+            const variantId = product.variants?.[0]?.id || null;
+
+            if (userId) {
+                await addToCart({
+                    productId: product.id,
+                    variantId: variantId,
+                    quantity: 1,
+                    userId,
+                });
+                showAddToCartToast(product, null, "Item added to cart!");
+            } else {
+                addToGuestCart({
+                    productId: product.id,
+                    variantId,
+                    quantity: 1,
+                    title: product.title,
+                    brand: product.brand?.name,
+                    price: rawPrice,
+                    image: imageUrl,
+                    fullProduct: product,
+                });
+            }
+
+            if (buttonEl) {
+                try {
+                    handleCartFlyAnimation(e, imageUrl);
+                } catch {}
+            }
+        } catch (err: any) {
+            toast.error(err.message || "Could not add to cart.");
+        }
+    };
 
     const visibleProducts = useMemo(
         () =>
@@ -244,26 +398,6 @@ export function SummerClient({
                     </div>
                 </div>
             </div>
-
-            <nav className="summer-nav">
-                <Link href="/" className="logo">
-                    <div className="logo-box">R</div>Renivet
-                </Link>
-                <div className="nav-right">
-                    <div className="search-pill">
-                        <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                        >
-                            <circle cx="11" cy="11" r="8" />
-                            <path d="m21 21-4.35-4.35" />
-                        </svg>
-                        Search products...
-                    </div>
-                </div>
-            </nav>
 
             <div className="hero">
                 <div className="hero-left">
@@ -470,8 +604,8 @@ export function SummerClient({
                                         No products found
                                     </h3>
                                     <p className="text-gray-500">
-                                        We couldn't find any products matching
-                                        your filters.
+                                        We couldn&apos;t find any products
+                                        matching your filters.
                                     </p>
                                     <button
                                         className="btn-primary mt-6"
@@ -546,7 +680,16 @@ export function SummerClient({
                                                             {offPercent}% Off
                                                         </div>
                                                     )}
-                                                    <div className="wish">
+                                                    <div
+                                                        className="wish"
+                                                        onClick={(e) =>
+                                                            handleWishlistToggle(
+                                                                e,
+                                                                product.id,
+                                                                isWishlisted
+                                                            )
+                                                        }
+                                                    >
                                                         <svg
                                                             viewBox="0 0 24 24"
                                                             fill={
@@ -560,7 +703,17 @@ export function SummerClient({
                                                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                                                         </svg>
                                                     </div>
-                                                    <div className="quick">
+                                                    <div
+                                                        className="quick"
+                                                        onClick={(e) =>
+                                                            handleAddProductToCart(
+                                                                e,
+                                                                product,
+                                                                productPrice,
+                                                                imageUrl
+                                                            )
+                                                        }
+                                                    >
                                                         Quick Add
                                                     </div>
                                                 </div>
