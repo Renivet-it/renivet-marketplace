@@ -24,6 +24,12 @@ export function MobileCategories() {
             link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=4489ecbd-cb3e-47f0-aced-defcf134629b",
         },
         {
+            title: "Sale",
+            imageUrl:
+                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmKiAnjNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
+        },
+        {
             title: "Shirts",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvWCA90dPZsh5fuDbkAelMyqICmp3NU7X4nHY",
@@ -38,14 +44,8 @@ export function MobileCategories() {
         {
             title: "Home Decor",
             imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNhlQssEPAwZ71xI8cmpPRY6WBO42eGEJfosyi",
+                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNeqhEsg0rgXZuWwadPABUqnljV5RbJMFsx1v",
             link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
-        },
-        {
-            title: "Handbags",
-            imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNVZ18VKBbpNcg6ZSKi0IGkAsjuLwQox3znmlt",
-            link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=711eac71-1676-40eb-b637-7e4074d542d0",
         },
         {
             title: "Kids",
@@ -59,15 +59,15 @@ export function MobileCategories() {
         <>
             {/* Mobile: 4-col grid */}
             <section className="block w-full bg-[#FCFBF4] px-4 py-6 md:hidden">
-                <div className="grid grid-cols-4 place-items-center gap-x-3 gap-y-6">
+                <div className="grid grid-cols-4 gap-x-2 gap-y-6">
                     {categories.map((item, index) => (
                         <Link
-                            key={index}
+                            key={`mobile-${index}`}
                             href={item.link}
                             className="flex flex-col items-center"
                         >
                             {item.title === "Accessories" ? (
-                                <div className="perspective size-[78px]">
+                                <div className="perspective aspect-square w-full max-w-[78px]">
                                     <div className="flip-card">
                                         <div className="card-face card-front relative h-full w-full overflow-hidden">
                                             <Image
@@ -89,7 +89,7 @@ export function MobileCategories() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="relative size-[78px] overflow-hidden">
+                                <div className="relative aspect-square w-full max-w-[78px] overflow-hidden">
                                     <Image
                                         src={item.imageUrl}
                                         alt={item.title}
@@ -99,7 +99,7 @@ export function MobileCategories() {
                                     />
                                 </div>
                             )}
-                            <p className="mt-2 text-center text-[12px] leading-tight text-[#333]">
+                            <p className="mt-2 text-center text-[10px] leading-tight text-[#333] sm:text-[12px]">
                                 {item.title}
                             </p>
                         </Link>

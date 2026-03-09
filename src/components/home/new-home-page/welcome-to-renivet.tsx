@@ -14,7 +14,7 @@ export function WelcomeRenivet() {
                     {/* LEFT IMAGE */}
                     <div className="relative h-[430px] w-[480px] overflow-hidden rounded-md">
                         <Image
-                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkKIY1exYt1TxMBy6jes3QdWaELUvNIiXHwRO"
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQX1mcOvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT"
                             alt="Renivet Circle"
                             fill
                             sizes="(max-width: 768px) 100vw, 480px"
@@ -107,7 +107,7 @@ export function WelcomeRenivet() {
 
                         <div className="relative mb-3 h-[96px] w-[110px] overflow-hidden">
                             <Image
-                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkKIY1exYt1TxMBy6jes3QdWaELUvNIiXHwRO"
+                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQX1mcOvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT"
                                 alt="Renivet Circle"
                                 fill
                                 sizes="(max-width: 768px) 120px, 480px"

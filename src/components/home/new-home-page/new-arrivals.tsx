@@ -132,15 +132,23 @@ export function ProductGridNewArrivals({
                                 {section}
                             </h2>
 
-                            {/* Product grid */}
-                            <div className="grid grid-cols-3 gap-3 sm:grid-cols-3 sm:gap-6 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
-                                {sectionProducts.map(({ product }) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                        userId={userId}
-                                    />
-                                ))}
+                            {/* Product grid - 3 cols mobile, perfectly centered leftovers */}
+                            <div className="relative flex flex-wrap justify-center gap-3 md:grid md:grid-cols-4 md:gap-6 lg:grid-cols-5 xl:grid-cols-7">
+                                {sectionProducts.map(({ product }) => {
+                                    return (
+                                        <div
+                                            key={product.id}
+                                            // calc(33.333% - gap) for exactly 3 columns on mobile.
+                                            // The gap is 3 (12px), so we subtract 8px (approx 2/3 of 12) from each to fit 3 in a row precisely
+                                            className="w-[calc(33.333%-8px)] md:w-auto"
+                                        >
+                                            <ProductCard
+                                                product={product}
+                                                userId={userId}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     );
