@@ -6,6 +6,7 @@ import type { Metadata, Viewport } from "next";
 import { dmsans, josefin, playfair, rubik, worksans } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
+import { GuestAddToCartPopup } from "@/components/globals/modals/guest-add-to-cart-popup";
 import { FB_PIXEL_ID } from "@/lib/fbpixel";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
@@ -170,6 +171,7 @@ export default function RootLayout({ children }: LayoutProps) {
                     <ClientProvider>
                         <MergeGuestCart />
                         <MergeGuestWishlist />
+                        <GuestAddToCartPopup />
                         {children}
                         <Toaster />
                         {/* Track page changes + enrich pixel with user data client-side */}
