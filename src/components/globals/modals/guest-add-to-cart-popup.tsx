@@ -16,7 +16,7 @@ import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`;
 
 export function GuestAddToCartPopup() {
-    const { isOpen, closePopup } = useGuestPopupStore();
+    const { isOpen, closePopup, mode } = useGuestPopupStore();
     const { isSignedIn } = useAuth();
 
     if (isSignedIn) return null;
@@ -140,14 +140,18 @@ export function GuestAddToCartPopup() {
                             </div>
 
                             <div className="delay-[800ms] flex flex-col items-center gap-2.5 text-center duration-700 animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
-                                <p className="font-outfit text-13 font-semibold text-[#1a1a1a]">
-                                    Item was successfully added to cart.
-                                </p>
+                                {mode === "cart" && (
+                                    <p className="font-outfit text-13 font-semibold text-[#1a1a1a]">
+                                        Item was successfully added to cart.
+                                    </p>
+                                )}
                                 <button
                                     onClick={closePopup}
                                     className="font-outfit group inline-flex items-center gap-2 text-14 leading-none text-[#555555] transition-colors hover:text-[#1a1a1a]"
                                 >
-                                    Continue to checkout as guest
+                                    {mode === "cart"
+                                        ? "Continue to checkout as guest"
+                                        : "Continue exploring"}
                                     <Icons.ArrowRight className="size-3.5 transition-transform group-hover:translate-x-[3px]" />
                                 </button>
                             </div>
