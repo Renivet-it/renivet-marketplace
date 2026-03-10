@@ -9,6 +9,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
@@ -83,6 +84,7 @@ export function ProductCard({
     userId,
     ...props
 }: PageProps) {
+    const { trackAddToCartEvent } = useAddToCartTracking();
     const [isProductHovered, setIsProductHovered] = useState(false);
     const [isWishlistHovered, setIsWishlistHovered] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -166,10 +168,19 @@ export function ProductCard({
         e.preventDefault();
         e.stopPropagation();
 
-        // Capture ref before async — React nullifies e.currentTarget after await
-        const buttonEl = e.currentTarget as HTMLElement | null;
+        // Trigger flying animation before async tracking
+        handleCartFlyAnimation(e, imageUrl);
 
         try {
+            await trackAddToCartEvent({
+                productId: product.id,
+                brandId: product.brandId,
+                productTitle: product.title,
+                brandName: product.brand?.name,
+                productPrice: productPrice,
+                quantity: 1,
+            });
+
             if (userId) {
                 await addToCart({
                     productId: product.id,
@@ -189,15 +200,6 @@ export function ProductCard({
                     image: imageUrl,
                     fullProduct: product,
                 });
-            }
-
-            // Trigger flying animation (safe — buttonEl may be null in Sheet portal)
-            if (buttonEl) {
-                try {
-                    handleCartFlyAnimation(e, imageUrl);
-                } catch {
-                    // Animation failure should not block cart logic
-                }
             }
 
             setIsAdded(true);

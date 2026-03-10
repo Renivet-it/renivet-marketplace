@@ -105,7 +105,9 @@ function useGuestCart() {
 
     return { guestCart, addToGuestCart, clearGuestCart };
 }
-export function NavbarHome() {
+export function NavbarHome({
+    customLogo,
+}: { customLogo?: React.ReactNode } = {}) {
     const [isMenuHidden, setIsMenuHidden] = useState(false);
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
@@ -331,13 +333,17 @@ export function NavbarHome() {
                     </button>
 
                     <div className="flex items-center gap-20">
-                        <Link
-                            href="/"
-                            title="Home"
-                            className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
-                        >
-                            <RenivetFull width={120} height={36} />
-                        </Link>
+                        {customLogo ? (
+                            customLogo
+                        ) : (
+                            <Link
+                                href="/"
+                                title="Home"
+                                className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
+                            >
+                                <RenivetFull width={120} height={36} />
+                            </Link>
+                        )}
 
                         <div className="hidden items-center gap-1 lg:flex">
                             <NavigationMenu className="static h-full max-w-none">

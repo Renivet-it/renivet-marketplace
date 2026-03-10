@@ -17,7 +17,7 @@ export const handleCartFlyAnimation = (
 
     if (targetSelector) {
         imageElem = document.querySelector(targetSelector);
-    } else {
+    } else if (button) {
         const container =
             button.closest(".group") ||
             button.closest(".product-card-container") ||
@@ -27,8 +27,13 @@ export const handleCartFlyAnimation = (
         }
     }
 
-    const startRect =
-        imageElem?.getBoundingClientRect() || button.getBoundingClientRect();
+    const startRect = imageElem?.getBoundingClientRect() ||
+        button?.getBoundingClientRect() || {
+            left: window.innerWidth / 2,
+            top: window.innerHeight / 2,
+            width: 50,
+            height: 50,
+        };
     const cartIcons = Array.from(
         document.querySelectorAll(".global-cart-icon")
     );
