@@ -20,74 +20,91 @@ export function GuestAddToCartPopup() {
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && closePopup()}>
-            <DialogContent className="overflow-hidden border-none p-0 shadow-2xl sm:max-w-md">
-                <div className="relative overflow-hidden bg-primary/5 p-6 text-center sm:p-10">
-                    {/* Decorative elements */}
-                    <div className="absolute right-0 top-0 -mr-10 -mt-10 size-40 rounded-full bg-primary/10 blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 -mb-10 -ml-10 size-40 rounded-full bg-primary/10 blur-3xl"></div>
+            <DialogContent className="overflow-hidden border-none p-0 shadow-2xl sm:max-w-md [&>button:last-child]:text-white hover:[&>button:last-child]:bg-white/10">
+                <div className="flex flex-col bg-background">
+                    {/* Top Half: Brand & Offer */}
+                    <div className="relative bg-[#8ba6cf] px-6 pb-12 pt-8 text-white sm:px-10 sm:pt-10">
+                        {/* Subtle Background Pattern / Gradient */}
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
 
-                    <div className="relative z-10 mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-primary/10">
-                        <Icons.Sparkles className="size-8 text-primary" />
+                        <div className="relative flex items-center gap-2">
+                            <div className="flex size-7 items-center justify-center rounded bg-white">
+                                <Icons.Sparkles className="size-4 text-[#8ba6cf]" />
+                            </div>
+                            <span className="font-outfit text-lg font-medium tracking-tight text-white">
+                                Renivet
+                            </span>
+                        </div>
+
+                        <div className="relative mt-8">
+                            <div className="font-outfit mb-4 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold tracking-wider text-white backdrop-blur-md">
+                                <Icons.Tag className="size-3" />
+                                WELCOME
+                            </div>
+                            <h2 className="font-playfair text-[32px] font-medium leading-[1.15] text-white sm:text-4xl">
+                                Fashion that feels good & does good.
+                            </h2>
+                            <p className="font-outfit mt-4 text-[15px] font-light text-white/90">
+                                India's sustainable marketplace. Get{" "}
+                                <span className="font-semibold text-white">
+                                    10% OFF
+                                </span>{" "}
+                                your first order.
+                            </p>
+                        </div>
                     </div>
 
-                    <DialogHeader className="relative z-10 space-y-3">
-                        <DialogTitle className="text-center font-playfair text-2xl font-bold sm:text-3xl">
-                            Get{" "}
-                            <span className="font-playfair italic text-primary">
-                                10% Off
-                            </span>{" "}
-                            Your First Order!
-                        </DialogTitle>
-                        <DialogDescription className="text-center text-base">
-                            Use code{" "}
-                            <span className="rounded bg-primary/10 px-2 py-0.5 font-mono font-bold text-foreground">
-                                RENIVET10
-                            </span>{" "}
-                            at checkout. Join our sustainable community today!
-                        </DialogDescription>
-                    </DialogHeader>
+                    {/* Bottom Half: Actions */}
+                    <div className="bg-background px-6 py-8 sm:px-10">
+                        <DialogHeader className="sr-only">
+                            <DialogTitle>Welcome to Renivet</DialogTitle>
+                            <DialogDescription>
+                                Login or sign up to claim your 10% discount.
+                            </DialogDescription>
+                        </DialogHeader>
 
-                    <div className="relative z-10 mt-8 flex flex-col gap-3">
-                        <SignInButton
-                            mode="modal"
-                            signUpFallbackRedirectUrl="/mycart"
-                            forceRedirectUrl="/mycart"
-                        >
-                            <Button
-                                size="lg"
-                                className="font-outfit h-12 w-full text-base font-semibold"
+                        <div className="mx-auto flex w-full flex-col gap-3">
+                            <SignInButton
+                                mode="modal"
+                                signUpFallbackRedirectUrl="/mycart"
+                                forceRedirectUrl="/mycart"
                             >
-                                Login to Claim
-                            </Button>
-                        </SignInButton>
-                        <SignUpButton
-                            mode="modal"
-                            signInFallbackRedirectUrl="/mycart"
-                            forceRedirectUrl="/mycart"
-                        >
-                            <Button
-                                variant="outline"
-                                size="lg"
-                                className="font-outfit h-12 w-full text-base font-semibold"
+                                <Button
+                                    size="lg"
+                                    className="font-outfit h-[46px] w-full bg-[#8ba6cf] text-[15px] font-semibold text-white transition-colors hover:bg-[#7b94b8]"
+                                >
+                                    Login to Claim: RENIVET10
+                                </Button>
+                            </SignInButton>
+
+                            <SignUpButton
+                                mode="modal"
+                                signInFallbackRedirectUrl="/mycart"
+                                forceRedirectUrl="/mycart"
                             >
-                                Create an Account
-                            </Button>
-                        </SignUpButton>
-                    </div>
+                                <Button
+                                    variant="outline"
+                                    size="lg"
+                                    className="font-outfit h-[46px] w-full border-[#8ba6cf]/30 text-[15px] font-semibold text-[#8ba6cf] transition-colors hover:bg-[#8ba6cf]/5 hover:text-[#7b94b8]"
+                                >
+                                    Create Free Account
+                                </Button>
+                            </SignUpButton>
+                        </div>
 
-                    <div className="mt-4 flex justify-center">
-                        <button
-                            onClick={closePopup}
-                            className="text-sm text-muted-foreground hover:underline"
-                        >
-                            Continue as Guest
-                        </button>
+                        <div className="mt-6 flex items-center justify-between text-sm md:mt-8">
+                            <p className="font-outfit text-[13px] text-muted-foreground">
+                                Item added to guest cart.
+                            </p>
+                            <button
+                                onClick={closePopup}
+                                className="font-outfit group inline-flex items-center gap-1.5 text-[13px] font-medium text-[#8ba6cf] transition-colors hover:text-[#7b94b8]"
+                            >
+                                Skip for now
+                                <Icons.ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                            </button>
+                        </div>
                     </div>
-
-                    <p className="relative z-10 mt-6 text-xs text-muted-foreground">
-                        Item has been added to your guest cart. By continuing,
-                        you agree to our Terms of Service.
-                    </p>
                 </div>
             </DialogContent>
         </Dialog>
