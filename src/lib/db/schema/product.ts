@@ -114,6 +114,7 @@ export const products = pgTable(
         isAddedInEventProductPage: boolean(
             "is_added_in_event_product_page"
         ).default(false),
+        isSummerCollection: boolean("is_summer_collection").default(false),
         isHomeHeroProducts: boolean("is_home_hero_products").default(false),
         isHomeLoveTheseProducts: boolean("is_home_love_these_products").default(
             false

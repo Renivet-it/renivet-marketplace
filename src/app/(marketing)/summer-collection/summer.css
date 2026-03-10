@@ -402,10 +402,10 @@
 .summer-page-wrapper .card:nth-child(8){animation-delay:.32s}
 
 .summer-page-wrapper .card-img {
-  aspect-ratio: 1; position: relative; overflow: hidden;
+  aspect-ratio: 3 / 4; position: relative; overflow: hidden;
 }
 .summer-page-wrapper .card-img img {
-  width: 100%; height: 100%; object-fit: cover;
+  width: 100%; height: 100%; object-fit: cover; object-position: top;
   transition: transform .45s ease;
 }
 .summer-page-wrapper .card:hover .card-img img { transform: scale(1.06); }

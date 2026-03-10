@@ -40,7 +40,7 @@ export default async function Page({ searchParams }: PageProps) {
             categoryCache.getAll(),
             productQueries.getProducts({
                 page: parseInt(params.page || "1"),
-                limit: parseInt(params.limit || "24"),
+                limit: parseInt(params.limit || "25"),
                 search: params.search,
                 isAvailable: true,
                 isActive: true,
@@ -67,6 +67,7 @@ export default async function Page({ searchParams }: PageProps) {
                 prioritizeBestSellers:
                     !params.search && parseInt(params.page || "1") === 1,
                 requireMedia: true,
+                isSummerCollection: true,
             }),
             db
                 .selectDistinct({ brandId: products.brandId })

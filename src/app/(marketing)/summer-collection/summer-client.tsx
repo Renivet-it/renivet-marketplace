@@ -1,6 +1,7 @@
 "use client";
 
 import { trackProductClick } from "@/actions/track-product";
+import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { ProductWithBrand } from "@/lib/validations";
 import { keepPreviousData } from "@tanstack/react-query";
@@ -96,7 +97,7 @@ export function SummerClient({
         "page",
         parseAsInteger.withDefault(1)
     );
-    const [limit] = useQueryState("limit", parseAsInteger.withDefault(24)); // Changed to 24 for nicer grid
+    const [limit] = useQueryState("limit", parseAsInteger.withDefault(25)); // Changed to 25 for 5x5 grid or 25 limit
     const [search] = useQueryState("search", { defaultValue: "" });
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
@@ -208,6 +209,7 @@ export function SummerClient({
                 !search && page === 1 && (!sortBy || sortBy === "recommended"),
             requireMedia: true,
             useRecommendations: !search,
+            isSummerCollection: true,
         },
         {
             initialData: isSameAsInitial
@@ -223,6 +225,7 @@ export function SummerClient({
 
     const router = useRouter();
     const { addToGuestCart } = useGuestCart();
+    const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
 
     const { mutateAsync: addToCart } =
         trpc.general.users.cart.addProductToCart.useMutation({
@@ -261,13 +264,34 @@ export function SummerClient({
     const handleWishlistToggle = (
         e: React.MouseEvent,
         productId: string,
-        isWishlisted: boolean
+        isWishlisted: boolean,
+        product: any
     ) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (isUserFetching) return toast.error("User fetching in progress...");
-        if (!userId || !user) return router.push("/auth/signin");
+        // GUEST LOGIC
+        if (!userId || !user) {
+            if (isWishlisted) {
+                toast.error("Item is already in your wishlist!");
+                return;
+            }
+            addToGuestWishlist({
+                productId: product.id,
+                variantId: null,
+                title: product.title,
+                brand: product.brand?.name,
+                price: product.price,
+                image:
+                    product.media?.[0]?.mediaItem?.url ??
+                    product.thumbnail ??
+                    null,
+                sku: null,
+                fullProduct: product,
+            });
+            toast.success("Added to Wishlist");
+            return;
+        }
 
         if (user.roles.length > 0)
             return toast.error("Only customers can use the wishlist");
@@ -630,11 +654,17 @@ export function SummerClient({
                                 <div className="summer-grid">
                                     {visibleProducts.map((product) => {
                                         const isWishlisted =
-                                            wishlist?.some(
-                                                (item) =>
-                                                    item.productId ===
-                                                    product.id
-                                            ) ?? false;
+                                            userId && user
+                                                ? (wishlist?.some(
+                                                      (item) =>
+                                                          item.productId ===
+                                                          product.id
+                                                  ) ?? false)
+                                                : guestWishlist.some(
+                                                      (item) =>
+                                                          item.productId ===
+                                                          product.id
+                                                  );
 
                                         let productPrice = 0;
                                         let productCompareAtPrice = 0;
@@ -698,7 +728,8 @@ export function SummerClient({
                                                             handleWishlistToggle(
                                                                 e,
                                                                 product.id,
-                                                                isWishlisted
+                                                                isWishlisted,
+                                                                product
                                                             )
                                                         }
                                                     >

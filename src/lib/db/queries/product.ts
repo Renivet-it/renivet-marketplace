@@ -561,6 +561,7 @@ class ProductQuery {
         prioritizeBestSellers,
         requireMedia,
         priorityProductIds,
+        isSummerCollection,
     }: {
         limit: number;
         page: number;
@@ -586,6 +587,7 @@ class ProductQuery {
         prioritizeBestSellers?: boolean;
         requireMedia?: boolean;
         priorityProductIds?: string[];
+        isSummerCollection?: boolean | null;
     }) {
         console.log(
             "[getProducts] search:",
@@ -830,6 +832,9 @@ class ProductQuery {
                 : undefined,
             // Filter for products with media (images) - used by shop page
             requireMedia ? hasMedia(products, "media") : undefined,
+            isSummerCollection !== undefined && isSummerCollection !== null
+                ? eq(products.isSummerCollection, isSummerCollection)
+                : undefined,
         ].filter(Boolean);
 
         // --- OrderBy construction ---
