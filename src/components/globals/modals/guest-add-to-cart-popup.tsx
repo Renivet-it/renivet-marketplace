@@ -37,7 +37,7 @@ export function GuestAddToCartPopup() {
                         </div>
 
                         <div className="relative mt-8">
-                            <div className="font-outfit mb-4 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold tracking-wider text-white backdrop-blur-md">
+                            <div className="font-outfit mb-4 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-11 font-bold tracking-wider text-white backdrop-blur-md">
                                 <Icons.Tag className="size-3" />
                                 WELCOME
                             </div>
@@ -45,7 +45,7 @@ export function GuestAddToCartPopup() {
                                 Fashion that feels good & does good.
                             </h2>
                             <p className="font-outfit mt-4 text-[15px] font-light text-white/90">
-                                India's sustainable marketplace. Get{" "}
+                                India&apos;s sustainable marketplace. Get{" "}
                                 <span className="font-semibold text-white">
                                     10% OFF
                                 </span>{" "}
@@ -93,12 +93,12 @@ export function GuestAddToCartPopup() {
                         </div>
 
                         <div className="mt-6 flex items-center justify-between text-sm md:mt-8">
-                            <p className="font-outfit text-[13px] text-muted-foreground">
+                            <p className="font-outfit text-13 text-muted-foreground">
                                 Item added to guest cart.
                             </p>
                             <button
                                 onClick={closePopup}
-                                className="font-outfit group inline-flex items-center gap-1.5 text-[13px] font-medium text-[#8ba6cf] transition-colors hover:text-[#7b94b8]"
+                                className="font-outfit group inline-flex items-center gap-1.5 text-13 font-medium text-[#8ba6cf] transition-colors hover:text-[#7b94b8]"
                             >
                                 Skip for now
                                 <Icons.ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
