@@ -3,7 +3,7 @@ import { productQueries } from "@/lib/db/queries";
 import { products } from "@/lib/db/schema";
 import { brandCache, categoryCache } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { SummerClient } from "./summer-client";
 
 export const metadata = {
@@ -40,7 +40,7 @@ export default async function Page({ searchParams }: PageProps) {
             categoryCache.getAll(),
             productQueries.getProducts({
                 page: parseInt(params.page || "1"),
-                limit: parseInt(params.limit || "24"),
+                limit: parseInt(params.limit || "25"),
                 search: params.search,
                 isAvailable: true,
                 isActive: true,
@@ -67,11 +67,17 @@ export default async function Page({ searchParams }: PageProps) {
                 prioritizeBestSellers:
                     !params.search && parseInt(params.page || "1") === 1,
                 requireMedia: true,
+                isSummerCollection: true,
             }),
             db
                 .selectDistinct({ brandId: products.brandId })
                 .from(products)
-                .where(eq(products.isPublished, true)),
+                .where(
+                    and(
+                        eq(products.isPublished, true),
+                        eq(products.isSummerCollection, true)
+                    )
+                ),
         ]);
 
     const activeBrandIds = new Set(activeBrandsData.map((b) => b.brandId));

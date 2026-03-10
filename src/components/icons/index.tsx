@@ -110,6 +110,7 @@ import {
     Star,
     StarHalf,
     Store,
+    Sun,
     Tag,
     Ticket,
     Trash,
@@ -256,6 +257,7 @@ export const Icons = {
     Home,
     Megaphone,
     StarHalf,
+    Sun,
     ChartNoAxesColumn,
     TrendingDown,
     X_Twitter: (props: LucideProps) => (

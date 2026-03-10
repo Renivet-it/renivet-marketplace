@@ -1507,3 +1507,39 @@ export async function toggleBestSeller(
         return { success: false, error: "Failed to update Best Seller status" };
     }
 }
+
+export async function toggleSummerCollection(
+    productId: string,
+    isFeatured: boolean
+) {
+    try {
+        const existingProduct = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        await db
+            .update(products)
+            .set({ isSummerCollection: !isFeatured })
+            .where(eq(products.id, productId));
+
+        revalidatePath("/dashboard/general/products");
+        return {
+            success: true,
+            message: !isFeatured
+                ? "Product added to Summer Collection"
+                : "Product removed from Summer Collection",
+        };
+    } catch (error) {
+        console.error("Error toggling Summer Collection status:", error);
+        return {
+            success: false,
+            error: "Failed to update Summer Collection status",
+        };
+    }
+}

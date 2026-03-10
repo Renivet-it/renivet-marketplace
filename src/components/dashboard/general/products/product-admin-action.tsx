@@ -16,6 +16,7 @@ import {
     toggleHomeYouMayLoveProduct,
     toggleKidsFetchSection,
     toggleMenStyleWithSubstance,
+    toggleSummerCollection,
     toggleWomenStyleWithSubstance,
 } from "@/actions/product-action";
 import {
@@ -79,6 +80,7 @@ interface PageProps {
         isHomeYouMayAlsoLikeTheseProducts?: boolean;
         isHomePageProduct?: boolean;
         isBestSeller?: boolean;
+        isSummerCollection?: boolean;
     };
 }
 
@@ -450,6 +452,26 @@ export function ProductAction({ product }: PageProps) {
         }
     };
 
+    const handleToggleSummerCollection = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleSummerCollection(
+                product.id,
+                product.isSummerCollection ?? false
+            );
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Summer Collection status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <>
             <DropdownMenu>
@@ -696,6 +718,17 @@ export function ProductAction({ product }: PageProps) {
                                 {product.isBeautyTopPicks
                                     ? "Remove from Top Picks(Beauty Personal)"
                                     : "Add to Top Picks(Beauty Personal)"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handleToggleSummerCollection}
+                            disabled={isLoading}
+                        >
+                            <Icons.Sun className="size-4" />
+                            <span>
+                                {product.isSummerCollection
+                                    ? "Remove from Summer Collection"
+                                    : "Add to Summer Collection"}
                             </span>
                         </DropdownMenuItem>
                         {/* --- Refactored New Arrivals Section --- */}

@@ -104,6 +104,7 @@ export const productsRouter = createTRPCRouter({
                 isHomePageProduct: productSchema.shape.isHomePageProduct,
                 isHomeLoveTheseProducts:
                     productSchema.shape.isHomeLoveTheseProducts,
+                isSummerCollection: z.boolean().optional(),
                 colors: z.array(z.string()).optional(),
                 sizes: z.array(z.string()).optional(),
                 minDiscount: z.number().min(0).max(100).optional(),
@@ -209,6 +210,7 @@ export const productsRouter = createTRPCRouter({
                 isHomePageProduct: productSchema.shape.isHomePageProduct,
                 isHomeLoveTheseProducts:
                     productSchema.shape.isHomeLoveTheseProducts,
+                isSummerCollection: z.boolean().optional(),
             })
         )
         .query(async ({ input, ctx }) => {
