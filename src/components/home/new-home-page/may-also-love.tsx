@@ -2,6 +2,7 @@
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { Icons } from "@/components/icons";
+import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { convertPaiseToRupees } from "@/lib/utils";
@@ -71,6 +72,7 @@ const ProductCard = ({
     banner: Banner;
     userId?: string;
 }) => {
+    const { trackAddToCartEvent } = useAddToCartTracking();
     const { product } = banner;
 
     const { addToGuestWishlist } = useGuestWishlist();
@@ -124,7 +126,18 @@ const ProductCard = ({
         e.preventDefault();
         e.stopPropagation();
 
+        handleCartFlyAnimation(e, imageUrl);
+
         try {
+            await trackAddToCartEvent({
+                productId: product.id,
+                brandId: product.brandId,
+                productTitle: product.title,
+                brandName: product.brand?.name,
+                productPrice: rawPrice,
+                quantity: 1,
+            });
+
             if (userId) {
                 await addToCart({
                     productId: product.id,
@@ -145,9 +158,6 @@ const ProductCard = ({
                     fullProduct: product,
                 });
             }
-
-            // Trigger flying animation
-            handleCartFlyAnimation(e, imageUrl);
 
             setIsAdded(true);
             setTimeout(() => {

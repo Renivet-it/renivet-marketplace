@@ -18,6 +18,7 @@ import "./summer.css";
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { Icons } from "@/components/icons";
 import { Pagination } from "@/components/ui/data-table-general";
+import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { useRouter } from "next/navigation";
@@ -90,6 +91,7 @@ export function SummerClient({
     categories,
     userId,
 }: SummerClientProps) {
+    const { trackAddToCartEvent } = useAddToCartTracking();
     const [page, setPage] = useQueryState(
         "page",
         parseAsInteger.withDefault(1)
@@ -288,9 +290,25 @@ export function SummerClient({
 
         const buttonEl = e.currentTarget as HTMLElement | null;
 
+        // Trigger flying animation before async tracking
+        if (buttonEl) {
+            try {
+                handleCartFlyAnimation(e, imageUrl);
+            } catch {}
+        }
+
         try {
             const rawPrice = product.variants?.[0]?.price || product.price || 0;
             const variantId = product.variants?.[0]?.id || null;
+
+            await trackAddToCartEvent({
+                productId: product.id,
+                brandId: product.brandId,
+                productTitle: product.title,
+                brandName: product.brand?.name,
+                productPrice: rawPrice,
+                quantity: 1,
+            });
 
             if (userId) {
                 await addToCart({
@@ -311,12 +329,6 @@ export function SummerClient({
                     image: imageUrl,
                     fullProduct: product,
                 });
-            }
-
-            if (buttonEl) {
-                try {
-                    handleCartFlyAnimation(e, imageUrl);
-                } catch {}
             }
         } catch (err: any) {
             toast.error(err.message || "Could not add to cart.");

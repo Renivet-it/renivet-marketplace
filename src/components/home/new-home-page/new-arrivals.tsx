@@ -2,6 +2,7 @@
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { Icons } from "@/components/icons";
+import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
@@ -73,6 +74,7 @@ interface Product {
     id: string;
     media: { mediaItem: { url: string } }[];
     title: string;
+    brandId?: string;
     brand?: { name: string };
     compareAtPrice?: number;
     variants?: {
@@ -169,6 +171,7 @@ function ProductCard({
     product: Product;
     userId?: string;
 }) {
+    const { trackAddToCartEvent } = useAddToCartTracking();
     const { addToGuestCart } = useGuestCart();
     const { addToGuestWishlist } = useGuestWishlist();
     const [isWishlisted, setIsWishlisted] = useState(false);
@@ -218,7 +221,18 @@ function ProductCard({
         e.preventDefault();
         e.stopPropagation();
 
+        handleCartFlyAnimation(e, imageUrl);
+
         try {
+            await trackAddToCartEvent({
+                productId: product.id,
+                brandId: product.brandId || "",
+                productTitle: product.title,
+                brandName: product.brand?.name,
+                productPrice: rawPrice,
+                quantity: 1,
+            });
+
             if (userId) {
                 await addToCart({
                     productId: product.id,
@@ -238,9 +252,6 @@ function ProductCard({
                     fullProduct: product,
                 });
             }
-
-            // Trigger flying animation
-            handleCartFlyAnimation(e, imageUrl);
 
             setIsAdded(true);
             setTimeout(() => {

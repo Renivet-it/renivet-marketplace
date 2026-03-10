@@ -186,8 +186,56 @@ export function OrderPage({
 
     const { mutate: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
-            onSuccess: (newOrder) => {
+            onSuccess: (newOrder, variables) => {
                 console.log("Successfully created order:", newOrder);
+                const eventId =
+                    typeof crypto !== "undefined" && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : "evt_" +
+                          new Date().getTime() +
+                          "_" +
+                          Math.random().toString(36).substr(2, 9);
+
+                fbEvent(
+                    "Purchase",
+                    {
+                        value: variables.totalAmount,
+                        currency: "INR",
+                        content_type: "product",
+                        content_ids: variables.items.map(
+                            (item: any) => item.productId
+                        ),
+                        num_items: variables.totalItems,
+                    },
+                    { eventId }
+                );
+
+                trackPurchaseCapi(
+                    eventId,
+                    {
+                        em: user?.email,
+                        ph: selectedShippingAddress?.phone,
+                        fn: user?.firstName ?? undefined,
+                        ln: user?.lastName ?? undefined,
+                        ct: selectedShippingAddress?.city,
+                        st: selectedShippingAddress?.state,
+                        zp: selectedShippingAddress?.zip,
+                        external_id: user?.id,
+                        fb_login_id: user?.externalAccounts?.find(
+                            (acc) => acc.provider === "oauth_facebook"
+                        )?.externalId,
+                    },
+                    {
+                        value: variables.totalAmount,
+                        currency: "INR",
+                        content_type: "product",
+                        content_ids: variables.items.map(
+                            (item: any) => item.productId
+                        ),
+                        num_items: variables.totalItems,
+                    },
+                    getAbsoluteURL(window.location.href)
+                ).catch((err) => console.error("CAPI Purchase Error:", err));
             },
             onError: (err) => {
                 console.error("Error creating order:", {
@@ -380,21 +428,6 @@ export function OrderPage({
                                 );
                             }
                             console.log(orderDetails, "orderDetails for fb");
-
-                            // ✅ Fire Facebook Pixel Purchase Event here
-                            fbEvent("Purchase", {
-                                value: orderDetails.totalAmount, // Pass actual total amount
-                                currency: "INR",
-                                contents: orderDetails.items.map(
-                                    (item: any) => ({
-                                        id: item.productId,
-                                        // name: item.product.title, // ✅ Include product title
-                                        quantity: item.quantity,
-                                        price: item.price,
-                                    })
-                                ),
-                                content_type: "product",
-                            });
                         } catch (error: any) {
                             console.error(
                                 "Failed to create order after retries:",
@@ -437,7 +470,13 @@ export function OrderPage({
             return;
         }
         // 🔹 Generate Event ID
-        const eventId = crypto.randomUUID();
+        const eventId =
+            typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : "evt_" +
+                  new Date().getTime() +
+                  "_" +
+                  Math.random().toString(36).substring(2, 9);
 
         // 🔹 FB Pixel (Client)
         fbEvent(
@@ -461,22 +500,13 @@ export function OrderPage({
                 })),
                 content_type: "product",
                 num_items: totalQuantity, // Number of items
-                // User Data
-                em: user.emailAddresses?.[0]?.emailAddress,
-                ph: selectedShippingAddress.phone,
-                fn: user.firstName ?? undefined,
-                ln: user.lastName ?? undefined,
-                ct: selectedShippingAddress.city,
-                st: selectedShippingAddress.state,
-                zp: selectedShippingAddress.zip,
-                external_id: user.id,
             },
             { eventId }
         );
 
         // 🔹 CAPI (Server)
         const userData = {
-            em: user?.emailAddresses?.[0]?.emailAddress,
+            em: user?.email,
             ph: selectedShippingAddress.phone,
             fn: user.firstName ?? undefined,
             ln: user.lastName ?? undefined,

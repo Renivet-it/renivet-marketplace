@@ -15,7 +15,12 @@ import { orderQueries, productQueries } from "@/lib/db/queries";
 // If not, I might need a polyfill or just use globalThis.crypto.
 import { CapiUserData } from "@/lib/fb-capi";
 import { fbEvent } from "@/lib/fbpixel";
-import { formatPriceTag, getAbsoluteURL, handleClientError } from "@/lib/utils";
+import {
+    convertPaiseToRupees,
+    formatPriceTag,
+    getAbsoluteURL,
+    handleClientError,
+} from "@/lib/utils";
 import { CachedUser } from "@/lib/validations";
 import { RazorpayPaymentOptions } from "@/types";
 import { Dispatch, SetStateAction } from "react";
@@ -151,75 +156,6 @@ export function createRazorpayPaymentOptions({
                 console.log("Verifying payment...");
                 await verifyPayment(payload);
                 console.log("Payment verified successfully");
-
-                // 🔹 Track Purchase Event (Pixel + CAPI)
-                try {
-                    const eventId = crypto.randomUUID();
-
-                    // Pixel
-                    if (typeof window !== "undefined") {
-                        fbEvent(
-                            "Purchase",
-                            {
-                                value: prices.total,
-                                currency: "INR",
-                                content_type: "product",
-                                contents: orderDetailsByBrand.flatMap((order) =>
-                                    order.items.map((item) => ({
-                                        id: item.productId,
-                                        quantity: item.quantity,
-                                        price: item.price,
-                                    }))
-                                ),
-                                num_items: orderDetailsByBrand.reduce(
-                                    (acc, order) => acc + order.totalItems,
-                                    0
-                                ),
-                                em: user.email,
-                                ph: deliveryAddress.phone,
-                                fn: user.firstName,
-                                ct: deliveryAddress.city,
-                                st: deliveryAddress.state,
-                                zp: deliveryAddress.zip,
-                                external_id: user.id,
-                            },
-                            { eventId }
-                        );
-                    }
-
-                    // CAPI
-                    const userData: CapiUserData = {
-                        em: user.email,
-                        ph: deliveryAddress.phone,
-                        fn: user.firstName,
-                        ct: deliveryAddress.city,
-                        st: deliveryAddress.state,
-                        zp: deliveryAddress.zip,
-                        external_id: user.id,
-                    };
-
-                    trackPurchaseCapi(
-                        eventId,
-                        userData,
-                        {
-                            value: prices.total,
-                            currency: "INR",
-                            content_type: "product",
-                            content_ids: orderDetailsByBrand.flatMap((order) =>
-                                order.items.map((item) => item.productId)
-                            ),
-                            num_items: orderDetailsByBrand.reduce(
-                                (acc, order) => acc + order.totalItems,
-                                0
-                            ),
-                        },
-                        getAbsoluteURL(window.location.href)
-                    ).catch((err) =>
-                        console.error("CAPI Purchase Error:", err)
-                    );
-                } catch (e) {
-                    console.error("Error tracking purchase:", e);
-                }
 
                 console.log(
                     orderIntentId,

@@ -241,6 +241,53 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
     const { mutateAsync: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
+            onSuccess: (order, variables) => {
+                const eventId =
+                    typeof crypto !== "undefined" && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : "evt_" +
+                          new Date().getTime() +
+                          "_" +
+                          Math.random().toString(36).substr(2, 9);
+
+                fbEvent(
+                    "Purchase",
+                    {
+                        value: variables.totalAmount,
+                        currency: "INR",
+                        content_type: "product",
+                        content_ids: variables.items.map(
+                            (item: any) => item.productId
+                        ),
+                        num_items: variables.totalItems,
+                    },
+                    { eventId }
+                );
+
+                trackPurchaseCapi(
+                    eventId,
+                    {
+                        em: user?.emailAddresses?.[0]?.emailAddress,
+                        ph: selectedShippingAddress?.phone,
+                        fn: user?.firstName ?? undefined,
+                        ln: user?.lastName ?? undefined,
+                        ct: selectedShippingAddress?.city,
+                        st: selectedShippingAddress?.state,
+                        zp: selectedShippingAddress?.zip,
+                        external_id: user?.id,
+                    },
+                    {
+                        value: variables.totalAmount,
+                        currency: "INR",
+                        content_type: "product",
+                        content_ids: variables.items.map(
+                            (item: any) => item.productId
+                        ),
+                        num_items: variables.totalItems,
+                    },
+                    getAbsoluteURL(window.location.href)
+                ).catch((err) => console.error("CAPI Purchase Error:", err));
+            },
             onError: (err) => {
                 console.error("Error creating order:", err);
                 handleClientError(err);
@@ -408,18 +455,6 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                     orderId: createdOrder.id,
                                 });
                             }
-                            fbEvent("Purchase", {
-                                value: orderDetails.totalAmount,
-                                currency: "INR",
-                                contents: orderDetails.items.map(
-                                    (item: any) => ({
-                                        id: item.productId,
-                                        quantity: item.quantity,
-                                        price: item.price,
-                                    })
-                                ),
-                                content_type: "product",
-                            });
                         } catch (error: any) {
                             throw new Error(
                                 `Order creation failed: ${error.message}`
@@ -455,7 +490,13 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             return toast.error("Cart or address missing");
         if (!user) return toast.error("User missing");
 
-        const eventId = crypto.randomUUID();
+        const eventId =
+            typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : "evt_" +
+                  new Date().getTime() +
+                  "_" +
+                  Math.random().toString(36).substring(2, 9);
         fbEvent(
             "InitiateCheckout",
             {
@@ -477,14 +518,6 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 })),
                 content_type: "product",
                 num_items: itemsCount,
-                em: user.emailAddresses?.[0]?.emailAddress,
-                ph: selectedShippingAddress.phone,
-                fn: user.firstName ?? undefined,
-                ln: user.lastName ?? undefined,
-                ct: selectedShippingAddress.city,
-                st: selectedShippingAddress.state,
-                zp: selectedShippingAddress.zip,
-                external_id: user.id,
             },
             { eventId }
         );
