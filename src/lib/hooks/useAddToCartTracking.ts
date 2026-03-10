@@ -3,6 +3,7 @@
 import { trackAddToCartCapi } from "@/actions/analytics";
 import { trackAddToCart } from "@/actions/track-product";
 import { fbEvent } from "@/lib/fbpixel";
+import { useGuestPopupStore } from "@/lib/store/use-guest-popup-store";
 import { convertPaiseToRupees, getAbsoluteURL } from "@/lib/utils";
 import { useUser } from "@clerk/nextjs";
 import { useCallback } from "react";
@@ -18,6 +19,7 @@ export interface TrackAddToCartParams {
 
 export function useAddToCartTracking() {
     const { user } = useUser();
+    const { openPopup } = useGuestPopupStore();
 
     const trackAddToCartEvent = useCallback(
         async ({
@@ -29,6 +31,11 @@ export function useAddToCartTracking() {
             quantity = 1,
         }: TrackAddToCartParams) => {
             try {
+                // Trigger discount popup for guests
+                if (!user) {
+                    openPopup();
+                }
+
                 // Tracking product in DB
                 await trackAddToCart(productId, brandId);
 
@@ -63,8 +70,8 @@ export function useAddToCartTracking() {
                     ln: user?.lastName ?? undefined,
                     external_id: user?.id,
                     fb_login_id: user?.externalAccounts.find(
-                        (acc) => acc.provider === "oauth_facebook"
-                    )?.externalId,
+                        (acc: any) => acc.provider === "oauth_facebook"
+                    )?.providerUserId,
                 };
 
                 // CAPI Server Side tracking
@@ -85,7 +92,7 @@ export function useAddToCartTracking() {
                 console.error("Failed to track AddToCart:", error);
             }
         },
-        [user]
+        [user, openPopup]
     );
 
     return { trackAddToCartEvent };
