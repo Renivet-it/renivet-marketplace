@@ -25,9 +25,9 @@ export function GuestAddToCartPopup() {
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && closePopup()}>
             <DialogContent className="overflow-hidden border-none bg-transparent p-0 shadow-[0_0_80px_-15px_rgba(0,0,0,0.5)] sm:max-w-[800px] md:max-w-[700px] lg:max-w-[800px] [&>button:last-child]:text-white hover:[&>button:last-child]:bg-white/10 sm:[&>button:last-child]:text-muted-foreground sm:hover:[&>button:last-child]:bg-accent">
-                <div className="flex max-h-[90vh] w-full flex-col overflow-y-auto bg-background sm:min-h-[480px] sm:flex-row sm:overflow-visible">
+                <div className="flex max-h-[85vh] w-full flex-col overflow-y-auto bg-background sm:max-h-[90vh] sm:min-h-[480px] sm:flex-row sm:overflow-visible">
                     {/* Top/Left Half: Brand & Offer Image Section */}
-                    <div className="relative flex flex-col bg-[#8AA4C8] px-6 py-10 text-white sm:w-[45%] sm:p-12 md:w-1/2 lg:w-[45%]">
+                    <div className="relative flex flex-col bg-[#8AA4C8] p-6 text-white sm:h-auto sm:w-[45%] sm:p-12 md:w-1/2 lg:w-[45%]">
                         {/* Subtle Background Elements */}
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/15 to-transparent mix-blend-overlay"></div>
                         <div
@@ -36,26 +36,22 @@ export function GuestAddToCartPopup() {
                         ></div>
 
                         <div className="relative z-10 flex items-center duration-700 animate-in fade-in slide-in-from-top-4">
-                            <RenivetFull
-                                className="text-white drop-shadow-sm"
-                                width={116}
-                                height={34}
-                            />
+                            <RenivetFull className="h-[26px] w-[90px] text-white drop-shadow-sm sm:h-[34px] sm:w-[116px]" />
                         </div>
 
-                        <div className="relative z-10 mt-12 flex flex-1 flex-col justify-center delay-200 duration-700 animate-in fade-in slide-in-from-bottom-8 fill-mode-both sm:mt-0">
-                            <h2 className="font-playfair text-[36px] uppercase tracking-wide text-[#4A6B9C] sm:text-[42px] md:text-5xl">
+                        <div className="relative z-10 mt-6 flex flex-1 flex-col justify-center delay-200 duration-700 animate-in fade-in slide-in-from-bottom-8 fill-mode-both sm:mt-0">
+                            <h2 className="font-playfair text-[28px] uppercase tracking-wide text-[#4A6B9C] sm:text-[42px] md:text-5xl">
                                 WELCOME
                             </h2>
-                            <p className="font-outfit mt-3 text-16 leading-relaxed text-white sm:mt-4 sm:text-[18px]">
+                            <p className="font-outfit mt-1.5 text-14 leading-relaxed text-white sm:mt-4 sm:text-16">
                                 Where homegrown brands meet conscious
                                 craftsmanship.
                             </p>
-                            <div className="mt-8 sm:mt-10">
-                                <p className="font-outfit text-[22px] font-bold text-[#F6EE9A] sm:text-[26px]">
+                            <div className="mt-5 sm:mt-10">
+                                <p className="font-outfit text-[18px] font-bold text-[#F6EE9A] sm:text-[26px]">
                                     Get flat 20% off
                                 </p>
-                                <p className="font-outfit text-[22px] font-bold text-[#F6EE9A] sm:text-[26px]">
+                                <p className="font-outfit text-[18px] font-bold text-[#F6EE9A] sm:text-[26px]">
                                     CODE:{" "}
                                     <span className="italic">TRYNEW20</span>
                                 </p>
@@ -64,7 +60,7 @@ export function GuestAddToCartPopup() {
                     </div>
 
                     {/* Bottom/Right Half: Actions & Details */}
-                    <div className="relative flex flex-col justify-center overflow-hidden bg-background px-6 py-8 sm:w-[55%] sm:px-12 sm:py-10 md:w-1/2 lg:w-[55%]">
+                    <div className="relative flex flex-col justify-center overflow-hidden bg-background p-6 sm:w-[55%] sm:px-12 sm:py-10 md:w-1/2 lg:w-[55%]">
                         {/* Decorative subtle blurred shapes on the right panel */}
                         <div className="absolute right-0 top-0 -mr-20 -mt-20 size-64 animate-pulse rounded-full bg-[#8AA4C8]/5 blur-[80px]"></div>
                         <div
@@ -81,11 +77,11 @@ export function GuestAddToCartPopup() {
                         </DialogHeader>
 
                         <div className="relative z-10 mx-auto w-full max-w-[340px]">
-                            <div className="mb-8 text-center delay-300 duration-700 animate-in fade-in slide-in-from-right-8 fill-mode-both sm:text-left">
-                                <h3 className="font-playfair text-[26px] font-medium text-[#1a1a1a] md:text-[30px]">
+                            <div className="mb-6 text-center delay-300 duration-700 animate-in fade-in slide-in-from-right-8 fill-mode-both sm:mb-8 sm:text-left">
+                                <h3 className="font-playfair text-[24px] font-medium text-[#1a1a1a] sm:text-[26px] md:text-[30px]">
                                     Stay in the loop 🌱
                                 </h3>
-                                <p className="font-outfit mt-3 text-[15px] leading-[1.6] text-[#555555] sm:mt-4 sm:text-base">
+                                <p className="font-outfit mt-2 text-14 leading-normal text-[#555555] sm:mt-4 sm:text-base">
                                     Curated products that makes you want to
                                     share the story straight to your inbox
                                 </p>
@@ -97,10 +93,10 @@ export function GuestAddToCartPopup() {
                                     signUpFallbackRedirectUrl="/mycart"
                                     forceRedirectUrl="/mycart"
                                 >
-                                    <div className="rounded-[16px] border border-[#a8a8a8] p-[3px] transition-transform duration-300 hover:scale-[1.02]">
+                                    <div className="rounded-[16px] border border-[#a8a8a8] p-[2px] transition-transform duration-300 hover:scale-[1.02] sm:p-[3px]">
                                         <Button
                                             size="lg"
-                                            className="font-outfit group relative h-[50px] w-full overflow-hidden rounded-[12px] border border-[#8AA4C8]/20 bg-[#8AA4C8] text-[15px] font-semibold tracking-wide text-white shadow-sm transition-all duration-300 hover:bg-[#7896be]"
+                                            className="font-outfit group relative h-[44px] w-full overflow-hidden rounded-[12px] border border-[#8AA4C8]/20 bg-[#8AA4C8] text-14 font-semibold tracking-wide text-white shadow-sm transition-all duration-300 hover:bg-[#7896be] sm:h-[50px] sm:text-[15px]"
                                         >
                                             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-out group-hover:translate-x-full"></div>
                                             <span className="relative">
@@ -118,14 +114,14 @@ export function GuestAddToCartPopup() {
                                     <Button
                                         variant="ghost"
                                         size="lg"
-                                        className="font-outfit mt-1 h-[52px] w-full rounded-[14px] text-[15px] font-semibold text-[#1a1a1a] transition-all duration-300 hover:bg-black/5 hover:text-[#1a1a1a]"
+                                        className="font-outfit mt-1 h-[46px] w-full rounded-[14px] text-14 font-semibold text-[#1a1a1a] transition-all duration-300 hover:bg-black/5 hover:text-[#1a1a1a] sm:h-[52px] sm:text-[15px]"
                                     >
                                         Create Free Account
                                     </Button>
                                 </SignUpButton>
                             </div>
 
-                            <div className="relative mt-4 flex items-center py-4 delay-700 duration-700 animate-in fade-in fill-mode-both sm:mt-6 sm:py-5">
+                            <div className="relative mt-3 flex items-center py-3 delay-700 duration-700 animate-in fade-in fill-mode-both sm:mt-6 sm:py-5">
                                 <div className="grow border-t border-[#e2e2e2]"></div>
                                 <span className="font-outfit mx-4 shrink-0 text-11 uppercase tracking-[0.15em] text-[#8e8e8e]">
                                     or
