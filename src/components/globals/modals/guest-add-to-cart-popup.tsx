@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { RenivetFull } from "@/components/svgs";
 import { Button } from "@/components/ui/button-dash";
 import {
     Dialog,
@@ -26,7 +27,7 @@ export function GuestAddToCartPopup() {
             <DialogContent className="overflow-hidden border-none bg-transparent p-0 shadow-[0_0_80px_-15px_rgba(0,0,0,0.5)] sm:max-w-[800px] md:max-w-[700px] lg:max-w-[800px] [&>button:last-child]:text-white hover:[&>button:last-child]:bg-white/10 sm:[&>button:last-child]:text-muted-foreground sm:hover:[&>button:last-child]:bg-accent">
                 <div className="flex max-h-[90vh] w-full flex-col overflow-y-auto bg-background sm:min-h-[480px] sm:flex-row sm:overflow-visible">
                     {/* Top/Left Half: Brand & Offer Image Section */}
-                    <div className="relative flex flex-col justify-between bg-[#8AA4C8] px-6 py-8 text-white sm:w-[45%] sm:p-10 md:w-1/2 lg:w-[45%]">
+                    <div className="relative flex flex-col bg-[#8AA4C8] px-6 py-10 text-white sm:w-[45%] sm:p-12 md:w-1/2 lg:w-[45%]">
                         {/* Subtle Background Elements */}
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/15 to-transparent mix-blend-overlay"></div>
                         <div
@@ -34,31 +35,31 @@ export function GuestAddToCartPopup() {
                             style={{ backgroundImage: NOISE_SVG }}
                         ></div>
 
-                        <div className="relative z-10 flex items-center justify-between duration-700 animate-in fade-in slide-in-from-top-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="flex size-8 items-center justify-center rounded-lg bg-white/20 shadow-sm backdrop-blur-md transition-transform hover:scale-110">
-                                    <Icons.Sparkles className="size-4.5 text-white" />
-                                </div>
-                                <span className="font-outfit text-xl font-medium tracking-tight text-white drop-shadow-sm">
-                                    Renivet
-                                </span>
-                            </div>
+                        <div className="relative z-10 flex items-center duration-700 animate-in fade-in slide-in-from-top-4">
+                            <RenivetFull
+                                className="text-white drop-shadow-sm"
+                                width={116}
+                                height={34}
+                            />
                         </div>
 
-                        <div className="relative z-10 mt-12 delay-200 duration-700 animate-in fade-in slide-in-from-bottom-8 fill-mode-both sm:mt-auto">
-                            <div className="font-outfit mb-5 inline-flex items-center gap-1.5 rounded-[12px] border border-white/50 bg-transparent px-3 py-1.5 text-xs font-semibold tracking-wider text-white shadow-sm backdrop-blur-md transition-transform hover:scale-105">
-                                <Icons.Tag className="size-3.5" />
-                                EXCLUSIVE WELCOME
-                            </div>
-                            <h2 className="font-playfair text-[32px] font-medium leading-[1.1] tracking-tight text-white drop-shadow-sm sm:text-[42px] md:text-5xl">
-                                Fashion that
-                                <br />
-                                feels good &<br />
-                                does good.
+                        <div className="relative z-10 mt-12 flex flex-1 flex-col justify-center delay-200 duration-700 animate-in fade-in slide-in-from-bottom-8 fill-mode-both sm:mt-0">
+                            <h2 className="font-playfair text-[36px] uppercase tracking-wide text-[#4A6B9C] sm:text-[42px] md:text-5xl">
+                                WELCOME
                             </h2>
-                            <p className="font-outfit mt-4 text-[15px] font-light leading-relaxed text-white/95 sm:mt-6 sm:text-[17px]">
-                                India&apos;s sustainable marketplace.
+                            <p className="font-outfit mt-3 text-16 leading-relaxed text-white sm:mt-4 sm:text-[18px]">
+                                Where homegrown brands meet conscious
+                                craftsmanship.
                             </p>
+                            <div className="mt-8 sm:mt-10">
+                                <p className="font-outfit text-[22px] font-bold text-[#F6EE9A] sm:text-[26px]">
+                                    Get flat 20% off
+                                </p>
+                                <p className="font-outfit text-[22px] font-bold text-[#F6EE9A] sm:text-[26px]">
+                                    CODE:{" "}
+                                    <span className="italic">TRYNEW20</span>
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -81,19 +82,12 @@ export function GuestAddToCartPopup() {
 
                         <div className="relative z-10 mx-auto w-full max-w-[340px]">
                             <div className="mb-8 text-center delay-300 duration-700 animate-in fade-in slide-in-from-right-8 fill-mode-both sm:text-left">
-                                <h3 className="font-playfair text-3xl font-semibold text-[#1a1a1a] md:text-[34px]">
-                                    Claim your{" "}
-                                    <span className="italic text-[#8AA4C8]">
-                                        10% off
-                                    </span>
+                                <h3 className="font-playfair text-[26px] font-medium text-[#1a1a1a] md:text-[30px]">
+                                    Stay in the loop 🌱
                                 </h3>
-                                <p className="font-outfit mt-3 text-13 leading-[1.6] text-[#555555] sm:mt-4 sm:text-sm">
-                                    Create a free account or login to apply the
-                                    code{" "}
-                                    <span className="font-mono font-bold text-[#1a1a1a]">
-                                        RENIVET10
-                                    </span>{" "}
-                                    to your first order.
+                                <p className="font-outfit mt-3 text-[15px] leading-[1.6] text-[#555555] sm:mt-4 sm:text-base">
+                                    Curated products that makes you want to
+                                    share the story straight to your inbox
                                 </p>
                             </div>
 
