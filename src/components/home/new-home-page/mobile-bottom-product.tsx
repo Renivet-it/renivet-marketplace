@@ -3,7 +3,7 @@
 import { convertPaiseToRupees } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import Image from "next/image";
-import Link from "next/link";
+import { AnimatedProductLink } from "./animated-product-link";
 
 const PLACEHOLDER_IMAGE_URL =
     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
@@ -41,7 +41,10 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
     const productUrl = `/products/${product.slug}`;
 
     return (
-        <Link href={productUrl} className="block w-[173px] cursor-pointer">
+        <AnimatedProductLink
+            href={productUrl}
+            className="block w-[173px] cursor-pointer"
+        >
             {/* IMAGE */}
             <div className="relative h-[230px] w-full overflow-hidden bg-gray-50">
                 <Image
@@ -79,7 +82,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
                     )}
                 </div>
             </div>
-        </Link>
+        </AnimatedProductLink>
     );
 };
 

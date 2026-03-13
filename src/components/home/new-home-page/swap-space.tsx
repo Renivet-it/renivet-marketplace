@@ -1,6 +1,7 @@
 "use client";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -10,8 +11,6 @@ import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { Banner } from "@/lib/validations";
 import { Check, ShoppingCart } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -216,7 +215,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
     return (
         <div className="product-card-container group w-[146px] flex-shrink-0 cursor-pointer md:flex md:w-[260px] md:flex-col">
-            <Link href={productUrl}>
+            <AnimatedProductLink href={productUrl}>
                 <div className="product-image-container relative h-[223px] w-[156px] overflow-hidden bg-gray-50 md:h-[350px] md:w-full">
                     {/* (Icons Removed from Image) */}
                     <Image
@@ -234,19 +233,23 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                         </span>
                     )}
                 </div>
-            </Link>
+            </AnimatedProductLink>
 
             {/* TITLE */}
-            <div className="h-[42px] overflow-hidden pb-2 pt-3 text-left md:h-[48px]">
-                <Link href={productUrl}>
+            <AnimatedProductLink
+                href={productUrl}
+                className="block h-[42px] overflow-hidden pb-2 pt-3 text-left md:h-[48px]"
+            >
                     <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[14px]">
                         {product.title}
                     </h3>
-                </Link>
-            </div>
+            </AnimatedProductLink>
 
             {/* PRICE ROW */}
-            <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
+            <AnimatedProductLink
+                href={productUrl}
+                className="flex h-[26px] items-center gap-1 sm:gap-1.5"
+            >
                 <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
                     ₹{price}
                 </span>
@@ -260,7 +263,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                         ₹0000
                     </span>
                 )}
-            </div>
+            </AnimatedProductLink>
 
             {/* BUTTONS ROW (CART + WISHLIST) */}
             <div className="mt-2.5 flex items-center gap-2">
@@ -336,7 +339,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
 
     return (
         <section className={cn("w-full bg-[#FCFBF4] py-6", className)}>
-            <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+            <h2 className="mb-6 text-center font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Best Sellers
             </h2>
 
