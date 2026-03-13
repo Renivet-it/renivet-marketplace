@@ -6,36 +6,27 @@ import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { format } from "date-fns";
 import {
-    AlertCircle,
-    ArrowLeft,
-    ArrowRight,
+    CheckCircle2,
+    ChevronDown,
     ChevronRight,
     CreditCard,
     HelpCircle,
     Loader2,
     MessageCircle,
     Package,
-    RefreshCw,
-    Send,
     ShoppingBag,
     Truck,
     User,
-    XCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
 import { toast } from "sonner";
 
 // ── Types ────────────────────────────────────────────────────────────
-type Step =
-    | "home"
-    | "select_order"
-    | "select_category"
-    | "select_issue"
-    | "create_ticket"
-    | "my_tickets";
+type SidebarTab = "order" | "non_order" | "recent" | "faq";
+type SubStep = "list" | "select_issue" | "create_ticket";
 
 type SupportCategory =
     | "order"
@@ -217,42 +208,55 @@ const CATEGORY_META: {
     label: string;
     description: string;
     icon: React.ElementType;
-    color: string;
 }[] = [
     {
-        key: "payment",
-        label: "Payment Issues",
-        description: "Failed payments, refunds, charges",
-        icon: CreditCard,
-        color: "bg-violet-50 text-violet-600 border-violet-200",
-    },
-    {
         key: "account",
-        label: "Account Issues",
+        label: "Account",
         description: "Login, profile, settings",
         icon: User,
-        color: "bg-blue-50 text-blue-600 border-blue-200",
+    },
+    {
+        key: "payment",
+        label: "Payments",
+        description: "Failed payments, refunds, charges",
+        icon: CreditCard,
     },
     {
         key: "product",
-        label: "Product Inquiry",
+        label: "Returns & Exchanges",
         description: "Size, availability, details",
         icon: ShoppingBag,
-        color: "bg-amber-50 text-amber-600 border-amber-200",
     },
     {
         key: "shipping",
-        label: "Shipping Query",
+        label: "Cancellations & Charges",
         description: "Delivery, tracking, address",
         icon: Truck,
-        color: "bg-green-50 text-green-600 border-green-200",
     },
     {
         key: "other",
         label: "Other",
         description: "Anything else",
         icon: HelpCircle,
-        color: "bg-gray-50 text-gray-600 border-gray-200",
+    },
+];
+
+const FAQ_LIST = [
+    {
+        q: "How do I track my order?",
+        a: "Go to Orders in your profile to see real-time tracking of all your orders.",
+    },
+    {
+        q: "What is the return policy?",
+        a: "Most items can be returned within 15 days of delivery. Check the product page for specific return eligibility.",
+    },
+    {
+        q: "How long do refunds take?",
+        a: "Refunds are typically processed within 5-7 business days after we receive the returned item.",
+    },
+    {
+        q: "How do I change my delivery address?",
+        a: "You can update your address before the order is shipped from the Orders section.",
     },
 ];
 
@@ -264,7 +268,15 @@ interface PageProps {
 
 export function HelpCenterPage({ initialOrders, user }: PageProps) {
     const router = useRouter();
-    const [step, setStep] = useState<Step>("home");
+
+    // UI state
+    const [sidebarTab, setSidebarTab] = useState<SidebarTab>("order");
+    const [subStep, setSubStep] = useState<SubStep>("list");
+    const [recentFilter, setRecentFilter] = useState<
+        "30_days" | "six_months" | "all_time"
+    >("30_days");
+
+    // Data state
     const [selectedOrder, setSelectedOrder] =
         useState<OrderWithItemAndBrand | null>(null);
     const [selectedCategory, setSelectedCategory] =
@@ -272,17 +284,18 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
     const [selectedIssue, setSelectedIssue] = useState<IssueOption | null>(
         null
     );
-    const [showFaq, setShowFaq] = useState<string | null>(null);
+    const [expandedAccordion, setExpandedAccordion] = useState<string | null>(
+        null
+    );
     const [ticketDescription, setTicketDescription] = useState("");
 
-    // Tickets query
+    // Queries
     const { data: myTickets, refetch: refetchTickets } =
         trpc.general.userSupport.listMyTickets.useQuery(
             { limit: 50, page: 1 },
             { enabled: true }
         );
 
-    // Orders
     const { data: orders } = trpc.general.orders.getOrdersByUserId.useQuery(
         { userId: user.id },
         { initialData: initialOrders }
@@ -305,67 +318,36 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
             },
         });
 
-    // Reset flow
     const resetFlow = () => {
-        setStep("home");
+        setSubStep("list");
         setSelectedOrder(null);
         setSelectedCategory(null);
         setSelectedIssue(null);
-        setShowFaq(null);
+        setExpandedAccordion(null);
         setTicketDescription("");
     };
 
-    // Go back
-    const goBack = () => {
-        if (step === "select_order") {
-            resetFlow();
-            return;
-        }
-        if (step === "select_category") {
-            resetFlow();
-            return;
-        }
-        if (step === "select_issue") {
-            if (selectedOrder) setStep("select_order");
-            else setStep("select_category");
-            setSelectedIssue(null);
-            setShowFaq(null);
-            return;
-        }
-        if (step === "create_ticket") {
-            setStep("select_issue");
-            return;
-        }
-        if (step === "my_tickets") {
-            resetFlow();
-            return;
-        }
+    const changeSidebarTab = (tab: SidebarTab) => {
+        setSidebarTab(tab);
+        resetFlow();
     };
 
-    // Handle order selection
     const handleOrderSelect = (order: OrderWithItemAndBrand) => {
         setSelectedOrder(order);
         setSelectedCategory("order");
-        setStep("select_issue");
+        setSubStep("select_issue");
     };
 
-    // Handle category selection
     const handleCategorySelect = (cat: SupportCategory) => {
         setSelectedCategory(cat);
-        setStep("select_issue");
+        setSubStep("select_issue");
     };
 
-    // Handle issue selection
     const handleIssueSelect = (issue: IssueOption) => {
         setSelectedIssue(issue);
-        if (issue.faq) {
-            setShowFaq(issue.key);
-        } else {
-            setStep("create_ticket");
-        }
+        setSubStep("create_ticket");
     };
 
-    // Submit ticket
     const handleSubmitTicket = () => {
         if (!selectedCategory || !selectedIssue) return;
 
@@ -383,7 +365,6 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
         });
     };
 
-    // Get order image
     const getOrderImage = (order: OrderWithItemAndBrand) => {
         const firstItem = order.items[0];
         const itemMedia = firstItem?.product?.media?.[0]?.mediaItem ?? null;
@@ -395,583 +376,674 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
         };
     };
 
-    // ── Render ────────────────────────────────────────────────────────
-    return (
-        <div className="min-w-0 flex-1">
-            {/* Header with breadcrumb */}
-            <div className="mb-6">
-                <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
-                    {step !== "home" && (
-                        <button
-                            onClick={goBack}
-                            className="flex items-center gap-1 text-blue-600 transition-colors hover:text-blue-700"
-                        >
-                            <ArrowLeft className="size-4" />
-                            Back
-                        </button>
-                    )}
+    // --- Sub-Renders ---
+
+    // 1. Order Flow View
+    const renderOrderFlow = () => {
+        if (subStep === "list") {
+            return (
+                <div>
+                    <h2 className="mb-4 text-[13px] font-bold uppercase tracking-wide text-gray-700">
+                        Select the item we can help you with
+                    </h2>
+                    <div
+                        className="max-h-[550px] space-y-4 overflow-y-auto pr-2"
+                        style={{ scrollbarWidth: "thin" }}
+                    >
+                        {orders && orders.length > 0 ? (
+                            orders.map((order) => {
+                                const img = getOrderImage(order);
+                                const isDelivered =
+                                    order.status === "delivered";
+                                const statusColor = isDelivered
+                                    ? "text-[#5B9BD5]"
+                                    : "text-amber-500";
+                                const iconClasses = isDelivered
+                                    ? "text-[#5B9BD5]"
+                                    : "text-amber-500";
+
+                                return (
+                                    <div
+                                        key={order.id}
+                                        className="overflow-hidden rounded-sm border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:shadow-md"
+                                    >
+                                        <div className="flex items-center gap-3 border-b border-gray-50 bg-gray-50/30 px-5 py-3">
+                                            <div className="relative">
+                                                <div className="flex items-center justify-center rounded-full bg-gray-800 p-1.5">
+                                                    <Package className="size-4 text-white" />
+                                                </div>
+                                                {isDelivered && (
+                                                    <CheckCircle2 className="absolute -bottom-0.5 -right-0.5 size-3.5 fill-[#5B9BD5] text-white" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p
+                                                    className={`text-[13px] font-bold ${statusColor} mb-1 capitalize leading-none`}
+                                                >
+                                                    {order.status}
+                                                </p>
+                                                <p className="text-[11px] text-gray-500">
+                                                    On{" "}
+                                                    {format(
+                                                        new Date(
+                                                            order.createdAt
+                                                        ),
+                                                        "E, d MMM"
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() =>
+                                                handleOrderSelect(order)
+                                            }
+                                            className="group flex w-full items-center gap-4 p-4 text-left transition hover:bg-gray-50/50"
+                                        >
+                                            <div className="relative size-16 shrink-0 overflow-hidden rounded bg-gray-100">
+                                                <Image
+                                                    src={img.url}
+                                                    alt={img.alt}
+                                                    fill
+                                                    className="object-cover mix-blend-multiply"
+                                                />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-[13px] font-bold text-gray-900">
+                                                    {order.items[0]?.product
+                                                        ?.brand?.name ??
+                                                        "Brand"}
+                                                </p>
+                                                <p className="mt-0.5 truncate text-xs text-gray-600">
+                                                    {order.items[0]?.product
+                                                        ?.title ??
+                                                        "Product Name"}
+                                                </p>
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    Size:{" "}
+                                                    {order.items[0]?.variant
+                                                        ?.size ?? "N/A"}{" "}
+                                                    {order.items.length > 1 &&
+                                                        `| +${order.items.length - 1} more items`}
+                                                </p>
+                                            </div>
+                                            <ChevronRight className="size-5 shrink-0 text-gray-300 transition group-hover:text-gray-600" />
+                                        </button>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="rounded-md border border-gray-100 bg-white py-12 text-center">
+                                <Package className="mx-auto mb-3 size-12 text-gray-300" />
+                                <p className="text-sm text-gray-500">
+                                    No recent orders found.
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
-                    {step === "home" && "Help Center"}
-                    {step === "select_order" && "Select an Order"}
-                    {step === "select_category" && "Select a Category"}
-                    {step === "select_issue" && "What's your issue?"}
-                    {step === "create_ticket" && "Describe your issue"}
-                    {step === "my_tickets" && "My Support Tickets"}
-                </h1>
-                <p className="mt-1 text-sm text-gray-500">
-                    {step === "home" && "How can we help you today?"}
-                    {step === "select_order" &&
-                        "Choose the order you need help with"}
-                    {step === "select_category" &&
-                        "Pick the category that best describes your concern"}
-                    {step === "select_issue" &&
-                        "Select the issue you're facing"}
-                    {step === "create_ticket" &&
-                        "Tell us more so we can help you better"}
-                    {step === "my_tickets" &&
-                        "View and track your support requests"}
-                </p>
-            </div>
+            );
+        }
 
-            {/* ── STEP: Home ────────────────────────────────────────── */}
-            {step === "home" && (
-                <div className="space-y-6">
-                    {/* Main action cards */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {/* Order Related */}
-                        <button
-                            onClick={() => setStep("select_order")}
-                            className="group relative flex flex-col items-start gap-4 rounded-2xl border border-gray-200 bg-white p-6 text-left shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
-                        >
-                            <div className="rounded-xl bg-blue-50 p-3">
-                                <Package className="size-7 text-blue-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    Order Related
-                                </h3>
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Track orders, returns, refunds,
-                                    cancellations
-                                </p>
-                            </div>
-                            <ArrowRight className="absolute right-5 top-1/2 size-5 -translate-y-1/2 text-gray-300 transition-colors group-hover:text-blue-500" />
-                        </button>
+        if (subStep === "select_issue" && selectedOrder) {
+            return (
+                <div>
+                    <button
+                        onClick={resetFlow}
+                        className="mb-4 text-xs font-semibold text-[#5B9BD5] hover:underline"
+                    >
+                        &larr; Back to orders
+                    </button>
+                    <h2 className="mb-6 text-base font-bold text-gray-900">
+                        What issue are you facing with this order?
+                    </h2>
+                    <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white shadow-sm">
+                        {CATEGORY_ISSUES.order.map((issue) => (
+                            <FaqAccordion
+                                key={issue.key}
+                                issue={issue}
+                                expanded={expandedAccordion === issue.key}
+                                onToggle={() =>
+                                    setExpandedAccordion(
+                                        expandedAccordion === issue.key
+                                            ? null
+                                            : issue.key
+                                    )
+                                }
+                                onContactSupport={() =>
+                                    handleIssueSelect(issue)
+                                }
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
 
-                        {/* Non-Order */}
-                        <button
-                            onClick={() => setStep("select_category")}
-                            className="group relative flex flex-col items-start gap-4 rounded-2xl border border-gray-200 bg-white p-6 text-left shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
-                        >
-                            <div className="rounded-xl bg-emerald-50 p-3">
-                                <HelpCircle className="size-7 text-emerald-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">
-                                    Non-Order Issue
-                                </h3>
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Account, payments, products, general queries
-                                </p>
-                            </div>
-                            <ArrowRight className="absolute right-5 top-1/2 size-5 -translate-y-1/2 text-gray-300 transition-colors group-hover:text-emerald-500" />
-                        </button>
+        if (subStep === "create_ticket") return renderCreateTicket();
+    };
+
+    // 2. Non-Order Flow View
+    const renderNonOrderFlow = () => {
+        if (subStep === "list") {
+            return (
+                <div>
+                    <h2 className="mb-4 text-[15px] font-bold text-gray-900">
+                        Browse Topics
+                    </h2>
+                    <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3">
+                        {CATEGORY_META.map((cat) => {
+                            const Icon = cat.icon;
+                            return (
+                                <button
+                                    key={cat.key}
+                                    onClick={() =>
+                                        handleCategorySelect(cat.key)
+                                    }
+                                    className="group flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.02)] transition hover:border-[#5B9BD5]"
+                                >
+                                    <div className="rounded-full bg-[#5B9BD5]/5 p-2.5 transition-colors group-hover:bg-[#5B9BD5]/10">
+                                        <Icon
+                                            className="size-5 text-gray-800"
+                                            strokeWidth={1.5}
+                                        />
+                                    </div>
+                                    <span className="text-left text-[13px] font-bold leading-tight text-gray-900">
+                                        {cat.label}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    {/* My Tickets */}
-                    {myTickets && myTickets.length > 0 && (
-                        <div>
-                            <div className="mb-4 flex items-center justify-between">
-                                <h2 className="text-lg font-semibold text-gray-900">
-                                    Recent Tickets
-                                </h2>
-                                <button
-                                    onClick={() => setStep("my_tickets")}
-                                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                                >
-                                    View all →
-                                </button>
-                            </div>
-                            <div className="space-y-3">
-                                {myTickets.slice(0, 3).map((ticket) => (
-                                    <TicketCard
-                                        key={ticket.id}
-                                        ticket={ticket}
+                    <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                        <div className="divide-y divide-gray-100">
+                            {CATEGORY_ISSUES.account
+                                .slice(0, 4)
+                                .map((issue) => (
+                                    <FaqAccordion
+                                        key={issue.key}
+                                        issue={issue}
+                                        expanded={
+                                            expandedAccordion === issue.key
+                                        }
+                                        onToggle={() =>
+                                            setExpandedAccordion(
+                                                expandedAccordion === issue.key
+                                                    ? null
+                                                    : issue.key
+                                            )
+                                        }
+                                        onContactSupport={() => {
+                                            setSelectedCategory("account");
+                                            handleIssueSelect(issue);
+                                        }}
                                     />
                                 ))}
-                            </div>
                         </div>
-                    )}
+                    </div>
+                </div>
+            );
+        }
 
-                    {/* Quick Help */}
-                    <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-blue-50/50 to-white p-6">
-                        <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                            Frequently Asked Questions
-                        </h2>
-                        <div className="space-y-3">
-                            {[
-                                {
-                                    q: "How do I track my order?",
-                                    a: "Go to Orders in your profile to see real-time tracking of all your orders.",
-                                },
-                                {
-                                    q: "What is the return policy?",
-                                    a: "Most items can be returned within 15 days of delivery. Check the product page for specific return eligibility.",
-                                },
-                                {
-                                    q: "How long do refunds take?",
-                                    a: "Refunds are typically processed within 5-7 business days after we receive the returned item.",
-                                },
-                                {
-                                    q: "How do I change my delivery address?",
-                                    a: "You can update your address before the order is shipped from the Orders section.",
-                                },
-                            ].map(({ q, a }, i) => (
-                                <FaqItem key={i} question={q} answer={a} />
+        if (subStep === "select_issue" && selectedCategory) {
+            const catMeta = CATEGORY_META.find(
+                (c) => c.key === selectedCategory
+            ) || { label: selectedCategory, icon: User };
+            const Icon = catMeta.icon;
+
+            return (
+                <div>
+                    {/* Horizontal topic switcher */}
+                    <div className="scrollbar-hide mb-8 flex gap-1 overflow-x-auto border-b border-gray-200 pb-0">
+                        {CATEGORY_META.map((cat) => {
+                            const isCurrent = cat.key === selectedCategory;
+                            const CatIcon = cat.icon;
+                            return (
+                                <button
+                                    key={cat.key}
+                                    onClick={() =>
+                                        handleCategorySelect(cat.key)
+                                    }
+                                    className={`flex min-w-[100px] flex-col items-center justify-center border-b-2 px-3 pb-3 transition-colors ${isCurrent ? "border-[#5B9BD5]" : "border-transparent hover:border-gray-300"}`}
+                                >
+                                    <div
+                                        className={`mb-2 rounded-full p-2 ${isCurrent ? "bg-[#5B9BD5]/10" : "bg-gray-50"}`}
+                                    >
+                                        <CatIcon
+                                            className={`size-5 ${isCurrent ? "text-gray-900" : "text-gray-500"}`}
+                                            strokeWidth={1.5}
+                                        />
+                                    </div>
+                                    <span
+                                        className={`text-center text-[11px] font-semibold leading-tight ${isCurrent ? "text-gray-900" : "text-gray-500"}`}
+                                    >
+                                        {cat.label}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                        <div className="p-6 pb-4">
+                            <div className="mb-3 flex items-center gap-2">
+                                <Icon
+                                    className="size-5 text-gray-800"
+                                    strokeWidth={1.5}
+                                />
+                                <h3 className="text-[15px] font-bold text-gray-900">
+                                    {catMeta.label}
+                                </h3>
+                            </div>
+                            <p className="text-[13px] leading-relaxed text-gray-500">
+                                For {catMeta.label.toLowerCase()} related issues
+                                refer to the below questions to get the complete
+                                information and if you're still unable to
+                                resolve it, click on the{" "}
+                                <strong className="text-gray-700">
+                                    Contact Us
+                                </strong>{" "}
+                                option to talk to our customer care.
+                            </p>
+                        </div>
+
+                        <div className="divide-y divide-gray-100 border-t border-gray-100">
+                            {CATEGORY_ISSUES[selectedCategory].map((issue) => (
+                                <FaqAccordion
+                                    key={issue.key}
+                                    issue={issue}
+                                    expanded={expandedAccordion === issue.key}
+                                    onToggle={() =>
+                                        setExpandedAccordion(
+                                            expandedAccordion === issue.key
+                                                ? null
+                                                : issue.key
+                                        )
+                                    }
+                                    onContactSupport={() =>
+                                        handleIssueSelect(issue)
+                                    }
+                                />
                             ))}
                         </div>
                     </div>
                 </div>
-            )}
+            );
+        }
 
-            {/* ── STEP: Select Order ────────────────────────────────── */}
-            {step === "select_order" && (
-                <div className="space-y-4">
-                    {orders && orders.length > 0 ? (
-                        orders.slice(0, 10).map((order) => {
-                            const img = getOrderImage(order);
-                            const statusColor =
-                                order.status === "delivered"
-                                    ? "text-green-600 bg-green-50"
-                                    : order.status === "cancelled"
-                                      ? "text-red-600 bg-red-50"
-                                      : order.status === "shipped"
-                                        ? "text-blue-600 bg-blue-50"
-                                        : "text-amber-600 bg-amber-50";
+        if (subStep === "create_ticket") return renderCreateTicket();
+    };
 
-                            return (
-                                <button
-                                    key={order.id}
-                                    onClick={() => handleOrderSelect(order)}
-                                    className="group flex w-full items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
-                                >
-                                    <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                                        <Image
-                                            src={img.url}
-                                            alt={img.alt}
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <p className="truncate text-sm font-semibold text-gray-900">
-                                                {order.items[0]?.product
-                                                    ?.title ?? "Order"}
-                                            </p>
-                                            {order.items.length > 1 && (
-                                                <span className="shrink-0 text-xs text-gray-400">
-                                                    +{order.items.length - 1}{" "}
-                                                    more
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                                            <span>
-                                                Order #{order.id.slice(0, 8)}
-                                            </span>
-                                            <span>•</span>
-                                            <span>
-                                                {format(
-                                                    new Date(order.createdAt),
-                                                    "dd MMM yyyy"
-                                                )}
-                                            </span>
-                                            <span>•</span>
-                                            <span>
-                                                {formatPriceTag(
-                                                    parseFloat(
-                                                        convertPaiseToRupees(
-                                                            Number(
-                                                                order.totalAmount
-                                                            )
-                                                        )
-                                                    ),
-                                                    true
-                                                )}
-                                            </span>
-                                        </div>
-                                        <div className="mt-1.5">
-                                            <span
-                                                className={cn(
-                                                    "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
-                                                    statusColor
-                                                )}
-                                            >
-                                                {order.status}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="size-5 shrink-0 text-gray-300 transition-colors group-hover:text-blue-500" />
-                                </button>
-                            );
-                        })
-                    ) : (
-                        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-gray-300 bg-gray-50/50 py-12">
-                            <Package className="size-10 text-gray-400" />
-                            <p className="text-sm text-gray-500">
-                                No orders found
-                            </p>
+    // 3. Recent Flow View
+    const renderRecentFlow = () => {
+        let filteredTickets = myTickets || [];
+        if (recentFilter === "30_days") {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 30);
+            filteredTickets = filteredTickets.filter(
+                (t) => new Date(t.createdAt) >= cutoff
+            );
+        } else if (recentFilter === "six_months") {
+            const cutoff = new Date();
+            cutoff.setMonth(cutoff.getMonth() - 6);
+            filteredTickets = filteredTickets.filter(
+                (t) => new Date(t.createdAt) >= cutoff
+            );
+        }
+
+        return (
+            <div>
+                <div className="mb-6 flex items-center justify-between">
+                    <p className="text-[13px] text-gray-600">
+                        Queries from{" "}
+                        <strong className="font-bold text-gray-900">
+                            {recentFilter === "30_days" && "Last 30 Days"}
+                            {recentFilter === "six_months" && "Last 6 Months"}
+                            {recentFilter === "all_time" && "All Time"}
+                        </strong>
+                    </p>
+                    <select
+                        value={recentFilter}
+                        onChange={(e) => setRecentFilter(e.target.value as any)}
+                        className="rounded border border-gray-200 bg-white px-2 py-1 text-[11px] font-bold text-gray-600 outline-none hover:border-gray-300 focus:border-[#5B9BD5]"
+                    >
+                        <option value="30_days">Last 30 Days</option>
+                        <option value="six_months">Last 6 Months</option>
+                        <option value="all_time">All Time</option>
+                    </select>
+                </div>
+
+                {filteredTickets.length > 0 ? (
+                    <div
+                        className="max-h-[550px] space-y-4 overflow-y-auto pr-2"
+                        style={{ scrollbarWidth: "thin" }}
+                    >
+                        {filteredTickets.map((ticket) => (
                             <Link
-                                href="/shop"
-                                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                                key={ticket.id}
+                                href={`/profile/help-center/${ticket.id}`}
+                                className="group block rounded-md border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md"
                             >
-                                Start shopping →
-                            </Link>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* ── STEP: Select Category ─────────────────────────────── */}
-            {step === "select_category" && (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {CATEGORY_META.map(
-                        ({ key, label, description, icon: Icon, color }) => (
-                            <button
-                                key={key}
-                                onClick={() => handleCategorySelect(key)}
-                                className="group flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
-                            >
-                                <div
-                                    className={cn(
-                                        "flex size-12 shrink-0 items-center justify-center rounded-xl border",
-                                        color
-                                    )}
-                                >
-                                    <Icon className="size-6" />
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-sm font-semibold text-gray-900">
-                                        {label}
+                                <div className="mb-2 flex items-start justify-between">
+                                    <h3 className="text-sm font-bold text-gray-900 transition group-hover:text-[#5B9BD5]">
+                                        {ticket.title}
                                     </h3>
-                                    <p className="text-xs text-gray-500">
-                                        {description}
-                                    </p>
+                                    <span className="rounded-sm bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                        {ticket.status.replace("_", " ")}
+                                    </span>
                                 </div>
-                                <ChevronRight className="size-5 shrink-0 text-gray-300 transition-colors group-hover:text-blue-500" />
-                            </button>
-                        )
-                    )}
-                </div>
-            )}
-
-            {/* ── STEP: Select Issue ────────────────────────────────── */}
-            {step === "select_issue" && selectedCategory && (
-                <div className="space-y-4">
-                    {/* Show order context if order-related */}
-                    {selectedOrder && (
-                        <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
-                            <div className="relative size-12 shrink-0 overflow-hidden rounded-lg">
-                                <Image
-                                    src={getOrderImage(selectedOrder).url}
-                                    alt={getOrderImage(selectedOrder).alt}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                    {selectedOrder.items[0]?.product?.title ??
-                                        "Order"}
-                                </p>
                                 <p className="text-xs text-gray-500">
-                                    Order #{selectedOrder.id.slice(0, 8)} •{" "}
+                                    Query ID: {ticket.id}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Created:{" "}
                                     {format(
-                                        new Date(selectedOrder.createdAt),
-                                        "dd MMM yyyy"
+                                        new Date(ticket.createdAt),
+                                        "dd MMM yyyy, hh:mm a"
                                     )}
                                 </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Issue options */}
-                    <div className="space-y-2">
-                        {CATEGORY_ISSUES[selectedCategory].map((issue) => (
-                            <div key={issue.key}>
-                                <button
-                                    onClick={() => handleIssueSelect(issue)}
-                                    className={cn(
-                                        "flex w-full items-center justify-between rounded-xl border bg-white p-4 text-left shadow-sm transition-all hover:border-blue-300 hover:shadow-md",
-                                        showFaq === issue.key
-                                            ? "border-blue-300 shadow-md"
-                                            : "border-gray-200"
-                                    )}
-                                >
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-gray-900">
-                                            {issue.label}
-                                        </h3>
-                                        <p className="text-xs text-gray-500">
-                                            {issue.description}
-                                        </p>
-                                    </div>
-                                    <ChevronRight
-                                        className={cn(
-                                            "size-5 shrink-0 transition-transform",
-                                            showFaq === issue.key
-                                                ? "rotate-90 text-blue-500"
-                                                : "text-gray-300"
-                                        )}
-                                    />
-                                </button>
-
-                                {/* FAQ quick answer */}
-                                {showFaq === issue.key && issue.faq && (
-                                    <div className="mt-2 rounded-xl border border-blue-100 bg-blue-50/30 p-4">
-                                        <p className="text-sm leading-relaxed text-gray-700">
-                                            {issue.faq}
-                                        </p>
-                                        <div className="mt-4 flex items-center gap-3">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={resetFlow}
-                                                className="text-xs"
-                                            >
-                                                This solved my issue
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                onClick={() => {
-                                                    setSelectedIssue(issue);
-                                                    setStep("create_ticket");
-                                                }}
-                                                className="text-xs"
-                                            >
-                                                Still need help
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            </Link>
                         ))}
                     </div>
-                </div>
-            )}
-
-            {/* ── STEP: Create Ticket ───────────────────────────────── */}
-            {step === "create_ticket" && selectedCategory && selectedIssue && (
-                <div className="space-y-6">
-                    {/* Summary */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-5">
-                        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                            Issue Summary
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="mb-6 h-24 w-24 rounded-full bg-blue-50"></div>
+                        <h3 className="mb-2 text-base font-bold text-gray-900">
+                            No queries found
                         </h3>
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                                <span className="w-20 text-xs text-gray-400">
-                                    Category
-                                </span>
-                                <span className="text-sm font-medium capitalize text-gray-900">
-                                    {selectedCategory}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-20 text-xs text-gray-400">
-                                    Issue
-                                </span>
-                                <span className="text-sm font-medium text-gray-900">
-                                    {selectedIssue.label}
-                                </span>
-                            </div>
-                            {selectedOrder && (
-                                <div className="flex items-center gap-2">
-                                    <span className="w-20 text-xs text-gray-400">
-                                        Order
-                                    </span>
-                                    <span className="text-sm font-medium text-gray-900">
-                                        #{selectedOrder.id.slice(0, 8)}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
+                        <p className="text-center text-[13px] leading-relaxed text-gray-500">
+                            There were no queries raised
+                            <br />
+                            in{" "}
+                            <strong>
+                                {recentFilter === "30_days"
+                                    ? "Last 30 Days"
+                                    : recentFilter === "six_months"
+                                      ? "Last 6 Months"
+                                      : "All Time"}
+                            </strong>
+                        </p>
+                        {recentFilter !== "all_time" && (
+                            <button
+                                onClick={() => setRecentFilter("all_time")}
+                                className="mt-8 text-[13px] font-medium text-gray-500"
+                            >
+                                Search queries from{" "}
+                                <strong className="cursor-pointer text-[#5B9BD5] hover:underline">
+                                    Different dates
+                                </strong>
+                            </button>
+                        )}
                     </div>
+                )}
+            </div>
+        );
+    };
 
-                    {/* Description */}
-                    <div className="rounded-xl border border-gray-200 bg-white p-5">
-                        <label className="mb-2 block text-sm font-semibold text-gray-900">
-                            Describe your issue{" "}
-                            <span className="font-normal text-gray-400">
-                                (optional)
-                            </span>
-                        </label>
-                        <textarea
-                            value={ticketDescription}
-                            onChange={(e) =>
-                                setTicketDescription(e.target.value)
-                            }
-                            placeholder="Tell us more about your issue so we can help you better..."
-                            rows={4}
-                            className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 transition-all placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-                        />
-                    </div>
-
-                    {/* Submit */}
-                    <div className="flex items-center gap-3">
-                        <Button
-                            variant="outline"
-                            onClick={goBack}
-                            className="flex-1 sm:flex-initial"
-                        >
-                            Back
-                        </Button>
-                        <Button
-                            onClick={handleSubmitTicket}
-                            disabled={createTicketMutation.isPending}
-                            className="flex-1 sm:flex-initial"
-                        >
-                            {createTicketMutation.isPending ? (
-                                <>
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                    Creating...
-                                </>
-                            ) : (
-                                <>
-                                    <Send className="mr-2 size-4" />
-                                    Submit Ticket
-                                </>
-                            )}
-                        </Button>
-                    </div>
+    // 4. FAQ Flow View
+    const renderFaqFlow = () => {
+        return (
+            <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                <div className="border-b border-gray-100 p-6">
+                    <h2 className="text-lg font-bold text-gray-900">
+                        Frequently Asked Questions
+                    </h2>
                 </div>
-            )}
-
-            {/* ── STEP: My Tickets ──────────────────────────────────── */}
-            {step === "my_tickets" && (
-                <div className="space-y-3">
-                    {myTickets && myTickets.length > 0 ? (
-                        myTickets.map((ticket) => (
-                            <TicketCard key={ticket.id} ticket={ticket} />
-                        ))
-                    ) : (
-                        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-gray-300 bg-gray-50/50 py-12">
-                            <MessageCircle className="size-10 text-gray-400" />
-                            <p className="text-sm text-gray-500">
-                                No support tickets yet
+                <div className="divide-y divide-gray-100">
+                    {FAQ_LIST.map((faq, i) => (
+                        <div key={i} className="px-6 py-4">
+                            <h3 className="mb-2 text-sm font-bold text-gray-900">
+                                {faq.q}
+                            </h3>
+                            <p className="text-sm leading-relaxed text-gray-600">
+                                {faq.a}
                             </p>
                         </div>
-                    )}
+                    ))}
                 </div>
-            )}
+            </div>
+        );
+    };
+
+    // Shared Form: Create Ticket
+    const renderCreateTicket = () => {
+        return (
+            <div className="mx-auto max-w-2xl rounded-lg border border-gray-100 bg-white p-6 shadow-sm">
+                <button
+                    onClick={() => setSubStep("select_issue")}
+                    className="mb-6 text-xs font-semibold text-[#5B9BD5] hover:underline"
+                >
+                    &larr; Back to issues
+                </button>
+                <h2 className="mb-6 text-lg font-bold text-gray-900">
+                    Tell us more about your issue
+                </h2>
+
+                <div className="mb-6 rounded-md border border-gray-100 bg-gray-50 p-4">
+                    <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
+                        Issue Type
+                    </p>
+                    <p className="text-sm font-bold text-gray-900">
+                        {selectedIssue?.label}
+                    </p>
+                </div>
+
+                <div className="mb-6">
+                    <label className="mb-2 block text-[13px] font-bold text-gray-900">
+                        Description{" "}
+                        <span className="text-xs font-normal text-gray-400">
+                            (optional)
+                        </span>
+                    </label>
+                    <textarea
+                        value={ticketDescription}
+                        onChange={(e) => setTicketDescription(e.target.value)}
+                        placeholder="Please provide any extra details so we can assist you faster."
+                        rows={5}
+                        className="w-full resize-none rounded-md border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 transition focus:border-[#5B9BD5] focus:outline-none focus:ring-1 focus:ring-[#5B9BD5]"
+                    />
+                </div>
+
+                <Button
+                    onClick={handleSubmitTicket}
+                    disabled={createTicketMutation.isPending}
+                    className="w-full rounded-sm bg-[#5B9BD5] py-6 font-bold tracking-wide text-white hover:bg-[#4A8BC5]"
+                >
+                    {createTicketMutation.isPending ? (
+                        <>
+                            <Loader2 className="mr-2 size-4 animate-spin" />{" "}
+                            SUBMITTING...
+                        </>
+                    ) : (
+                        "SUBMIT TICKET"
+                    )}
+                </Button>
+            </div>
+        );
+    };
+
+    // ── Main Render Structure ──────────────────────────────────────────
+    return (
+        <div className="mx-auto mb-10 w-full max-w-6xl overflow-hidden rounded-sm border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+            {/* Header */}
+            <div className="relative z-10 flex items-center justify-between border-b border-gray-100 bg-white p-6 shadow-sm md:px-8">
+                <div>
+                    <h1 className="text-xl font-extrabold uppercase leading-none tracking-wide text-gray-900 md:text-2xl">
+                        HELP CENTER
+                    </h1>
+                    <p className="mt-1 text-xs text-gray-500 md:text-sm">
+                        We are here to help you
+                    </p>
+                </div>
+                <div className="hidden items-center gap-6 md:flex">
+                    <div className="flex items-center gap-4 border-r border-gray-200 pr-6">
+                        <ShoppingBag
+                            className="size-8 font-light text-gray-400"
+                            strokeWidth={1}
+                        />
+                        <div className="flex flex-col justify-center">
+                            <p className="text-[11px] font-bold tracking-wider text-gray-800">
+                                TRACK, CANCEL, RETURN/EXCHANGE
+                            </p>
+                            <p className="text-[11px] text-gray-500">
+                                Manage your purchases
+                            </p>
+                        </div>
+                    </div>
+                    <Link
+                        href="/profile/orders"
+                        className="rounded-sm border border-[#5B9BD5] px-8 py-2.5 text-[11px] font-bold tracking-widest text-[#5B9BD5] transition hover:bg-[#5B9BD5]/5 hover:shadow-sm"
+                    >
+                        ORDERS
+                    </Link>
+                </div>
+            </div>
+
+            <div className="flex min-h-[600px] flex-col items-stretch md:flex-row">
+                {/* Left Sidebar Menu */}
+                <div className="flex w-full shrink-0 flex-col items-stretch border-r border-gray-100 bg-white pt-8 md:w-[280px]">
+                    <div className="mb-4 px-8">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-800">
+                            SELECT QUERY TYPE
+                        </p>
+                    </div>
+                    <nav className="flex flex-col">
+                        <SidebarItem
+                            tab="order"
+                            current={sidebarTab}
+                            onClick={() => changeSidebarTab("order")}
+                            label="Order Related Queries"
+                        />
+                        <SidebarItem
+                            tab="non_order"
+                            current={sidebarTab}
+                            onClick={() => changeSidebarTab("non_order")}
+                            label="Non-order Related Issues"
+                        />
+                        <SidebarItem
+                            tab="recent"
+                            current={sidebarTab}
+                            onClick={() => changeSidebarTab("recent")}
+                            label="Recent Issues"
+                        />
+
+                        <div className="mx-8 my-5 border-t border-gray-100" />
+
+                        <SidebarItem
+                            tab="faq"
+                            current={sidebarTab}
+                            onClick={() => changeSidebarTab("faq")}
+                            label="Frequently Asked Questions"
+                        />
+                    </nav>
+                    <div className="mt-auto border-t border-gray-50 bg-gray-50/30 px-8 py-8 md:pb-12">
+                        <p className="text-[11px] font-bold leading-relaxed tracking-wide text-gray-500">
+                            Want to reach us old style? Here is our <br />
+                            <a
+                                href="#"
+                                className="text-[#5B9BD5] hover:underline"
+                            >
+                                postal address
+                            </a>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Right Main Content */}
+                <div className="relative flex-1 bg-[#f4f4f5]/60 p-6 md:p-8">
+                    <div className="mx-auto h-full max-w-4xl">
+                        {sidebarTab === "order" && renderOrderFlow()}
+                        {sidebarTab === "non_order" && renderNonOrderFlow()}
+                        {sidebarTab === "recent" && renderRecentFlow()}
+                        {sidebarTab === "faq" && renderFaqFlow()}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
 
-// ── Ticket Card ──────────────────────────────────────────────────────
-function TicketCard({
-    ticket,
+// ── Shared Sub-components ────────────────────────────────────────────
+
+function SidebarItem({
+    tab,
+    current,
+    onClick,
+    label,
 }: {
-    ticket: {
-        id: string;
-        title: string;
-        status: string;
-        category: string;
-        issueType: string;
-        createdAt: Date;
-        orderId: string | null;
-    };
+    tab: string;
+    current: string;
+    onClick: () => void;
+    label: string;
 }) {
-    const statusConfig: Record<
-        string,
-        { color: string; icon: React.ElementType }
-    > = {
-        open: {
-            color: "bg-amber-50 text-amber-700 border-amber-200",
-            icon: AlertCircle,
-        },
-        in_progress: {
-            color: "bg-blue-50 text-blue-700 border-blue-200",
-            icon: RefreshCw,
-        },
-        resolved: {
-            color: "bg-green-50 text-green-700 border-green-200",
-            icon: XCircle,
-        },
-    };
-
-    const config = statusConfig[ticket.status] ?? statusConfig.open;
-    const StatusIcon = config.icon;
-
+    const isActive = tab === current;
     return (
-        <Link
-            href={`/profile/help-center/${ticket.id}`}
-            className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
+        <button
+            onClick={onClick}
+            className={`group flex items-center justify-between border-l-4 px-8 py-4 text-[13px] font-bold tracking-wide transition-colors ${isActive ? "border-[#5B9BD5] bg-[#5B9BD5]/5 text-[#5B9BD5] hover:bg-[#5B9BD5]/10" : "border-transparent text-gray-600 hover:bg-gray-50"}`}
         >
-            <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                    <h3 className="truncate text-sm font-semibold text-gray-900">
-                        {ticket.title}
-                    </h3>
-                    <span
-                        className={cn(
-                            "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                            config.color
-                        )}
-                    >
-                        <StatusIcon className="size-3" />
-                        {ticket.status.replace("_", " ")}
-                    </span>
-                </div>
-                <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                    <span className="capitalize">{ticket.category}</span>
-                    <span>•</span>
-                    <span>
-                        {format(
-                            new Date(ticket.createdAt),
-                            "dd MMM yyyy, hh:mm a"
-                        )}
-                    </span>
-                    {ticket.orderId && (
-                        <>
-                            <span>•</span>
-                            <span>Order #{ticket.orderId.slice(0, 8)}</span>
-                        </>
-                    )}
-                </div>
-            </div>
-            <ChevronRight className="size-5 shrink-0 text-gray-300 transition-colors group-hover:text-blue-500" />
-        </Link>
+            {label}{" "}
+            <ChevronRight
+                className={`size-4 ${isActive ? "text-[#5B9BD5]" : "text-gray-300 group-hover:text-gray-500"}`}
+                strokeWidth={isActive ? 2.5 : 2}
+            />
+        </button>
     );
 }
 
-// ── FAQ Item ─────────────────────────────────────────────────────────
-function FaqItem({ question, answer }: { question: string; answer: string }) {
-    const [open, setOpen] = useState(false);
-
+function FaqAccordion({
+    issue,
+    expanded,
+    onToggle,
+    onContactSupport,
+}: {
+    issue: IssueOption;
+    expanded: boolean;
+    onToggle: () => void;
+    onContactSupport: () => void;
+}) {
     return (
-        <div className="overflow-hidden rounded-lg border border-gray-100 bg-white">
+        <div className="bg-white">
             <button
-                onClick={() => setOpen(!open)}
-                className="flex w-full items-center justify-between px-4 py-3 text-left"
+                onClick={onToggle}
+                className="flex w-full items-center justify-between px-6 py-5 transition hover:bg-gray-50/50"
             >
-                <span className="text-sm font-medium text-gray-900">
-                    {question}
+                <span className="text-left text-[13px] font-bold text-gray-900">
+                    {issue.label}
                 </span>
-                <ChevronRight
-                    className={cn(
-                        "size-4 shrink-0 text-gray-400 transition-transform",
-                        open && "rotate-90"
-                    )}
+                <ChevronDown
+                    className={`size-4 text-gray-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
                 />
             </button>
-            {open && (
-                <div className="border-t border-gray-100 px-4 py-3">
-                    <p className="text-sm leading-relaxed text-gray-600">
-                        {answer}
-                    </p>
+
+            {expanded && (
+                <div className="px-6 pb-6 pt-0 text-sm">
+                    {issue.faq ? (
+                        <>
+                            <p className="mb-4 whitespace-pre-line rounded-md border border-gray-100 bg-gray-50/50 p-4 text-[13px] leading-relaxed text-gray-600">
+                                {issue.faq}
+                            </p>
+                            <p className="text-[13px] font-medium text-gray-500">
+                                Still unable to resolve it?{" "}
+                                <button
+                                    onClick={onContactSupport}
+                                    className="ml-1 font-bold uppercase tracking-wide text-[#5B9BD5] hover:underline"
+                                >
+                                    Contact Us
+                                </button>
+                            </p>
+                        </>
+                    ) : (
+                        <p className="text-[13px] font-medium text-gray-500">
+                            Need help with this?{" "}
+                            <button
+                                onClick={onContactSupport}
+                                className="ml-1 font-bold uppercase tracking-wide text-[#5B9BD5] hover:underline"
+                            >
+                                Contact Us
+                            </button>
+                        </p>
+                    )}
                 </div>
             )}
         </div>
