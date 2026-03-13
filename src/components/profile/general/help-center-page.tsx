@@ -382,12 +382,12 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
     const renderOrderFlow = () => {
         if (subStep === "list") {
             return (
-                <div>
-                    <h2 className="mb-4 text-[13px] font-bold uppercase tracking-wide text-gray-700">
+                <div className="duration-300 animate-in fade-in slide-in-from-bottom-2">
+                    <h2 className="mb-5 text-sm font-bold uppercase tracking-widest text-[#5B9BD5]">
                         Select the item we can help you with
                     </h2>
                     <div
-                        className="max-h-[550px] space-y-4 overflow-y-auto pr-2"
+                        className="max-h-[550px] space-y-4 overflow-y-auto pr-3"
                         style={{ scrollbarWidth: "thin" }}
                     >
                         {orders && orders.length > 0 ? (
@@ -405,11 +405,11 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                                 return (
                                     <div
                                         key={order.id}
-                                        className="overflow-hidden rounded-sm border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition hover:shadow-md"
+                                        className="group/order overflow-hidden rounded-xl border border-gray-100/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                                     >
-                                        <div className="flex items-center gap-3 border-b border-gray-50 bg-gray-50/30 px-5 py-3">
+                                        <div className="flex items-center gap-3 border-b border-gray-50/50 bg-gray-50/30 px-5 py-3 transition-colors group-hover/order:bg-[#5B9BD5]/5">
                                             <div className="relative">
-                                                <div className="flex items-center justify-center rounded-full bg-gray-800 p-1.5">
+                                                <div className="flex items-center justify-center rounded-full bg-gradient-to-br from-gray-800 to-gray-700 p-2 shadow-inner">
                                                     <Package className="size-4 text-white" />
                                                 </div>
                                                 {isDelivered && (
@@ -437,14 +437,14 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                                             onClick={() =>
                                                 handleOrderSelect(order)
                                             }
-                                            className="group flex w-full items-center gap-4 p-4 text-left transition hover:bg-gray-50/50"
+                                            className="group flex w-full items-center gap-5 p-5 text-left transition-colors hover:bg-gray-50/50"
                                         >
-                                            <div className="relative size-16 shrink-0 overflow-hidden rounded bg-gray-100">
+                                            <div className="relative size-16 shrink-0 overflow-hidden rounded-lg bg-gray-100 ring-1 ring-black/5">
                                                 <Image
                                                     src={img.url}
                                                     alt={img.alt}
                                                     fill
-                                                    className="object-cover mix-blend-multiply"
+                                                    className="object-cover transition-transform duration-500 group-hover:scale-110"
                                                 />
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -466,7 +466,12 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                                                         `| +${order.items.length - 1} more items`}
                                                 </p>
                                             </div>
-                                            <ChevronRight className="size-5 shrink-0 text-gray-300 transition group-hover:text-gray-600" />
+                                            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gray-50 transition-colors group-hover:bg-[#5B9BD5]/10">
+                                                <ChevronRight
+                                                    className="size-4 text-gray-400 transition-colors group-hover:text-[#5B9BD5]"
+                                                    strokeWidth={2.5}
+                                                />
+                                            </div>
                                         </button>
                                     </div>
                                 );
@@ -486,17 +491,18 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
 
         if (subStep === "select_issue" && selectedOrder) {
             return (
-                <div>
+                <div className="duration-300 animate-in fade-in slide-in-from-right-4">
                     <button
                         onClick={resetFlow}
-                        className="mb-4 text-xs font-semibold text-[#5B9BD5] hover:underline"
+                        className="group mb-6 flex items-center text-xs font-semibold tracking-wide text-[#5B9BD5] transition-colors hover:text-[#4A8BC5]"
                     >
-                        &larr; Back to orders
+                        <ChevronRight className="mr-1 size-3 rotate-180 transition-transform group-hover:-translate-x-1" />{" "}
+                        Back to orders
                     </button>
-                    <h2 className="mb-6 text-base font-bold text-gray-900">
+                    <h2 className="mb-6 text-xl font-bold tracking-tight text-gray-900">
                         What issue are you facing with this order?
                     </h2>
-                    <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white shadow-sm">
+                    <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white shadow-sm ring-1 ring-black/5">
                         {CATEGORY_ISSUES.order.map((issue) => (
                             <FaqAccordion
                                 key={issue.key}
@@ -526,11 +532,11 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
     const renderNonOrderFlow = () => {
         if (subStep === "list") {
             return (
-                <div>
-                    <h2 className="mb-4 text-[15px] font-bold text-gray-900">
+                <div className="duration-300 animate-in fade-in slide-in-from-bottom-2">
+                    <h2 className="mb-5 text-sm font-bold uppercase tracking-widest text-[#5B9BD5]">
                         Browse Topics
                     </h2>
-                    <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3">
+                    <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-3">
                         {CATEGORY_META.map((cat) => {
                             const Icon = cat.icon;
                             return (
@@ -539,15 +545,15 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                                     onClick={() =>
                                         handleCategorySelect(cat.key)
                                     }
-                                    className="group flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-5 shadow-[0_1px_4px_rgba(0,0,0,0.02)] transition hover:border-[#5B9BD5]"
+                                    className="group flex flex-col items-center justify-center gap-3 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:border-[#5B9BD5] hover:shadow-md"
                                 >
-                                    <div className="rounded-full bg-[#5B9BD5]/5 p-2.5 transition-colors group-hover:bg-[#5B9BD5]/10">
+                                    <div className="rounded-full bg-gradient-to-br from-gray-50 to-gray-100 p-4 shadow-inner ring-1 ring-gray-200/50 transition-all duration-300 group-hover:from-[#5B9BD5]/10 group-hover:to-[#5B9BD5]/5 group-hover:ring-[#5B9BD5]/20">
                                         <Icon
-                                            className="size-5 text-gray-800"
+                                            className="size-6 text-gray-600 transition-colors group-hover:text-[#5B9BD5]"
                                             strokeWidth={1.5}
                                         />
                                     </div>
-                                    <span className="text-left text-[13px] font-bold leading-tight text-gray-900">
+                                    <span className="text-center text-sm font-semibold tracking-tight text-gray-900">
                                         {cat.label}
                                     </span>
                                 </button>
@@ -555,7 +561,7 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                         })}
                     </div>
 
-                    <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm ring-1 ring-black/5">
                         <div className="divide-y divide-gray-100">
                             {CATEGORY_ISSUES.account
                                 .slice(0, 4)
@@ -592,9 +598,9 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
             const Icon = catMeta.icon;
 
             return (
-                <div>
+                <div className="duration-300 animate-in fade-in slide-in-from-right-4">
                     {/* Horizontal topic switcher */}
-                    <div className="scrollbar-hide mb-8 flex gap-1 overflow-x-auto border-b border-gray-200 pb-0">
+                    <div className="scrollbar-hide mb-8 flex gap-2 overflow-x-auto border-b border-gray-100 pb-0">
                         {CATEGORY_META.map((cat) => {
                             const isCurrent = cat.key === selectedCategory;
                             const CatIcon = cat.icon;
@@ -604,10 +610,16 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                                     onClick={() =>
                                         handleCategorySelect(cat.key)
                                     }
-                                    className={`flex min-w-[100px] flex-col items-center justify-center border-b-2 px-3 pb-3 transition-colors ${isCurrent ? "border-[#5B9BD5]" : "border-transparent hover:border-gray-300"}`}
+                                    className={`relative flex min-w-[110px] flex-col items-center justify-center px-4 pb-4 transition-colors ${isCurrent ? "" : "rounded-t-xl hover:bg-gray-50/50"}`}
                                 >
+                                    {isCurrent && (
+                                        <div className="absolute inset-y-0 left-0 right-0 rounded-t-xl bg-gradient-to-t from-[#5B9BD5]/10 to-transparent opacity-50" />
+                                    )}
+                                    {isCurrent && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#5B9BD5]" />
+                                    )}
                                     <div
-                                        className={`mb-2 rounded-full p-2 ${isCurrent ? "bg-[#5B9BD5]/10" : "bg-gray-50"}`}
+                                        className={`mb-3 rounded-full p-2.5 shadow-sm ring-1 transition-all ${isCurrent ? "bg-white ring-gray-100/50" : "bg-gray-50 ring-transparent"}`}
                                     >
                                         <CatIcon
                                             className={`size-5 ${isCurrent ? "text-gray-900" : "text-gray-500"}`}
@@ -624,18 +636,20 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                         })}
                     </div>
 
-                    <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                        <div className="p-6 pb-4">
-                            <div className="mb-3 flex items-center gap-2">
-                                <Icon
-                                    className="size-5 text-gray-800"
-                                    strokeWidth={1.5}
-                                />
-                                <h3 className="text-[15px] font-bold text-gray-900">
+                    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm ring-1 ring-black/5">
+                        <div className="bg-gradient-to-r from-gray-50 to-white p-8">
+                            <div className="mb-4 flex items-center gap-3">
+                                <div className="rounded-lg bg-white p-2 shadow-sm ring-1 ring-gray-100">
+                                    <Icon
+                                        className="size-5 text-[#5B9BD5]"
+                                        strokeWidth={2}
+                                    />
+                                </div>
+                                <h3 className="text-xl font-bold tracking-tight text-gray-900">
                                     {catMeta.label}
                                 </h3>
                             </div>
-                            <p className="text-[13px] leading-relaxed text-gray-500">
+                            <p className="max-w-2xl text-[13px] leading-relaxed text-gray-500">
                                 For {catMeta.label.toLowerCase()} related issues
                                 refer to the below questions to get the complete
                                 information and if you're still unable to
@@ -692,20 +706,29 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
         }
 
         return (
-            <div>
-                <div className="mb-6 flex items-center justify-between">
-                    <p className="text-[13px] text-gray-600">
-                        Queries from{" "}
-                        <strong className="font-bold text-gray-900">
-                            {recentFilter === "30_days" && "Last 30 Days"}
-                            {recentFilter === "six_months" && "Last 6 Months"}
-                            {recentFilter === "all_time" && "All Time"}
-                        </strong>
-                    </p>
+            <div className="duration-300 animate-in fade-in">
+                <div className="mb-6 flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-4 ring-1 ring-black/5">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-full bg-white p-2 shadow-sm ring-1 ring-gray-100">
+                            <MessageCircle
+                                className="size-4 text-[#5B9BD5]"
+                                strokeWidth={2}
+                            />
+                        </div>
+                        <p className="text-sm text-gray-600">
+                            Showing queries from{" "}
+                            <strong className="font-bold text-gray-900">
+                                {recentFilter === "30_days" && "Last 30 Days"}
+                                {recentFilter === "six_months" &&
+                                    "Last 6 Months"}
+                                {recentFilter === "all_time" && "All Time"}
+                            </strong>
+                        </p>
+                    </div>
                     <select
                         value={recentFilter}
                         onChange={(e) => setRecentFilter(e.target.value as any)}
-                        className="rounded border border-gray-200 bg-white px-2 py-1 text-[11px] font-bold text-gray-600 outline-none hover:border-gray-300 focus:border-[#5B9BD5]"
+                        className="cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm outline-none transition-all hover:border-gray-300 focus:border-[#5B9BD5] focus:ring-1 focus:ring-[#5B9BD5]"
                     >
                         <option value="30_days">Last 30 Days</option>
                         <option value="six_months">Last 6 Months</option>
@@ -715,63 +738,68 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
 
                 {filteredTickets.length > 0 ? (
                     <div
-                        className="max-h-[550px] space-y-4 overflow-y-auto pr-2"
+                        className="max-h-[600px] space-y-4 overflow-y-auto pr-2"
                         style={{ scrollbarWidth: "thin" }}
                     >
                         {filteredTickets.map((ticket) => (
                             <Link
                                 key={ticket.id}
                                 href={`/profile/help-center/${ticket.id}`}
-                                className="group block rounded-md border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md"
+                                className="group block rounded-xl border border-gray-100/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#5B9BD5]/30 hover:shadow-md"
                             >
-                                <div className="mb-2 flex items-start justify-between">
-                                    <h3 className="text-sm font-bold text-gray-900 transition group-hover:text-[#5B9BD5]">
+                                <div className="mb-3 flex items-start justify-between">
+                                    <h3 className="text-base font-bold text-gray-900 transition-colors group-hover:text-[#5B9BD5]">
                                         {ticket.title}
                                     </h3>
-                                    <span className="rounded-sm bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                    <span className="rounded-md border border-gray-100 bg-gray-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600 shadow-sm">
                                         {ticket.status.replace("_", " ")}
                                     </span>
                                 </div>
-                                <p className="text-xs text-gray-500">
-                                    Query ID: {ticket.id}
-                                </p>
-                                <p className="mt-1 text-xs text-gray-500">
-                                    Created:{" "}
-                                    {format(
-                                        new Date(ticket.createdAt),
-                                        "dd MMM yyyy, hh:mm a"
-                                    )}
-                                </p>
+                                <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                                    <span className="flex items-center gap-1.5 rounded-md border border-gray-100 bg-gray-50 px-2 py-1 text-gray-600">
+                                        ID: {ticket.id.slice(0, 8)}
+                                    </span>
+                                    <span>
+                                        Created{" "}
+                                        {format(
+                                            new Date(ticket.createdAt),
+                                            "MMM d, yyyy"
+                                        )}
+                                    </span>
+                                </div>
                             </Link>
                         ))}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-20">
-                        <div className="mb-6 h-24 w-24 rounded-full bg-blue-50"></div>
-                        <h3 className="mb-2 text-base font-bold text-gray-900">
+                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50/50 py-24">
+                        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5">
+                            <MessageCircle
+                                className="size-10 text-gray-300"
+                                strokeWidth={1}
+                            />
+                        </div>
+                        <h3 className="mb-2 text-lg font-bold tracking-tight text-gray-900">
                             No queries found
                         </h3>
-                        <p className="text-center text-[13px] leading-relaxed text-gray-500">
-                            There were no queries raised
+                        <p className="text-center text-sm leading-relaxed text-gray-500">
+                            You haven't raised any support tickets
                             <br />
-                            in{" "}
+                            in the{" "}
                             <strong>
                                 {recentFilter === "30_days"
                                     ? "Last 30 Days"
                                     : recentFilter === "six_months"
                                       ? "Last 6 Months"
                                       : "All Time"}
-                            </strong>
+                            </strong>{" "}
+                            timeframe.
                         </p>
                         {recentFilter !== "all_time" && (
                             <button
                                 onClick={() => setRecentFilter("all_time")}
-                                className="mt-8 text-[13px] font-medium text-gray-500"
+                                className="mt-8 rounded-full border border-gray-200 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-[#5B9BD5]"
                             >
-                                Search queries from{" "}
-                                <strong className="cursor-pointer text-[#5B9BD5] hover:underline">
-                                    Different dates
-                                </strong>
+                                View All Previous Queries
                             </button>
                         )}
                     </div>
@@ -808,50 +836,68 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
     // Shared Form: Create Ticket
     const renderCreateTicket = () => {
         return (
-            <div className="mx-auto max-w-2xl rounded-lg border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mx-auto max-w-2xl rounded-2xl border border-gray-100/80 bg-white p-8 shadow-sm ring-1 ring-black/5 duration-300 animate-in fade-in slide-in-from-bottom-4">
                 <button
                     onClick={() => setSubStep("select_issue")}
-                    className="mb-6 text-xs font-semibold text-[#5B9BD5] hover:underline"
+                    className="group mb-8 flex items-center text-xs font-semibold tracking-wide text-[#5B9BD5] transition-colors hover:text-[#4A8BC5]"
                 >
-                    &larr; Back to issues
+                    <ChevronRight className="mr-1 size-3 rotate-180 transition-transform group-hover:-translate-x-1" />{" "}
+                    Back to issues
                 </button>
-                <h2 className="mb-6 text-lg font-bold text-gray-900">
-                    Tell us more about your issue
-                </h2>
-
-                <div className="mb-6 rounded-md border border-gray-100 bg-gray-50 p-4">
-                    <p className="mb-1 text-xs font-semibold uppercase text-gray-500">
-                        Issue Type
-                    </p>
-                    <p className="text-sm font-bold text-gray-900">
-                        {selectedIssue?.label}
-                    </p>
+                <div className="mb-8 flex items-center gap-4">
+                    <div className="flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#5B9BD5]/20 to-[#5B9BD5]/5 ring-1 ring-[#5B9BD5]/20">
+                        <MessageCircle
+                            className="size-6 text-[#5B9BD5]"
+                            strokeWidth={1.5}
+                        />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold tracking-tight text-gray-900">
+                            Create Support Ticket
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            Tell us how we can help
+                        </p>
+                    </div>
                 </div>
 
-                <div className="mb-6">
-                    <label className="mb-2 block text-[13px] font-bold text-gray-900">
-                        Description{" "}
+                <div className="mb-6 overflow-hidden rounded-xl border border-gray-100 bg-gray-50/50 ring-1 ring-black/5">
+                    <div className="border-b border-gray-100 bg-white px-5 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                            Query Type
+                        </p>
+                    </div>
+                    <div className="px-5 py-4">
+                        <p className="font-semibold text-gray-900">
+                            {selectedIssue?.label}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mb-8">
+                    <label className="mb-2 flex items-center justify-between font-semibold text-gray-900">
+                        <span>Additional Details</span>
                         <span className="text-xs font-normal text-gray-400">
-                            (optional)
+                            Optional but recommended
                         </span>
                     </label>
                     <textarea
                         value={ticketDescription}
                         onChange={(e) => setTicketDescription(e.target.value)}
-                        placeholder="Please provide any extra details so we can assist you faster."
+                        placeholder="Please describe your issue in detail. The more info you provide, the faster we can help resolve it."
                         rows={5}
-                        className="w-full resize-none rounded-md border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 transition focus:border-[#5B9BD5] focus:outline-none focus:ring-1 focus:ring-[#5B9BD5]"
+                        className="w-full resize-y rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-900 shadow-inner transition-all focus:border-[#5B9BD5] focus:outline-none focus:ring-4 focus:ring-[#5B9BD5]/10"
                     />
                 </div>
 
                 <Button
                     onClick={handleSubmitTicket}
                     disabled={createTicketMutation.isPending}
-                    className="w-full rounded-sm bg-[#5B9BD5] py-6 font-bold tracking-wide text-white hover:bg-[#4A8BC5]"
+                    className="w-full rounded-xl bg-[#5B9BD5] py-6 font-bold tracking-wide text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-[#4A8BC5] hover:shadow-lg active:translate-y-0 active:shadow-sm"
                 >
                     {createTicketMutation.isPending ? (
                         <>
-                            <Loader2 className="mr-2 size-4 animate-spin" />{" "}
+                            <Loader2 className="mr-2 size-5 animate-spin" />{" "}
                             SUBMITTING...
                         </>
                     ) : (
@@ -864,93 +910,111 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
 
     // ── Main Render Structure ──────────────────────────────────────────
     return (
-        <div className="mx-auto mb-10 w-full max-w-6xl overflow-hidden rounded-sm border border-gray-100 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+        <div className="mx-auto mb-10 w-full max-w-6xl overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-xl shadow-gray-200/40">
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between border-b border-gray-100 bg-white p-6 shadow-sm md:px-8">
-                <div>
-                    <h1 className="text-xl font-extrabold uppercase leading-none tracking-wide text-gray-900 md:text-2xl">
-                        HELP CENTER
-                    </h1>
-                    <p className="mt-1 text-xs text-gray-500 md:text-sm">
-                        We are here to help you
-                    </p>
+            <div className="relative z-10 flex items-center justify-between border-b border-gray-100 bg-white/80 p-6 shadow-sm backdrop-blur-xl md:px-10">
+                <div className="flex items-center gap-4">
+                    <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5B9BD5] to-[#4A8BC5] shadow-lg shadow-[#5B9BD5]/20">
+                        <HelpCircle
+                            className="size-7 text-white"
+                            strokeWidth={2}
+                        />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-extrabold uppercase leading-none tracking-tight text-gray-900 md:text-2xl">
+                            HELP CENTER
+                        </h1>
+                        <p className="mt-1 text-sm font-medium text-gray-500">
+                            We are here to help you
+                        </p>
+                    </div>
                 </div>
-                <div className="hidden items-center gap-6 md:flex">
-                    <div className="flex items-center gap-4 border-r border-gray-200 pr-6">
+                <div className="hidden items-center gap-8 md:flex">
+                    <div className="flex items-center gap-5 border-r border-gray-200 pr-8">
                         <ShoppingBag
-                            className="size-8 font-light text-gray-400"
-                            strokeWidth={1}
+                            className="size-10 text-gray-300"
+                            strokeWidth={1.5}
                         />
                         <div className="flex flex-col justify-center">
-                            <p className="text-[11px] font-bold tracking-wider text-gray-800">
-                                TRACK, CANCEL, RETURN/EXCHANGE
+                            <p className="text-xs font-bold tracking-wider text-gray-800">
+                                TRACK, CANCEL, RETURN
                             </p>
-                            <p className="text-[11px] text-gray-500">
+                            <p className="text-xs text-gray-500">
                                 Manage your purchases
                             </p>
                         </div>
                     </div>
                     <Link
                         href="/profile/orders"
-                        className="rounded-sm border border-[#5B9BD5] px-8 py-2.5 text-[11px] font-bold tracking-widest text-[#5B9BD5] transition hover:bg-[#5B9BD5]/5 hover:shadow-sm"
+                        className="rounded-full border-2 border-[#5B9BD5] px-8 py-2.5 text-xs font-bold tracking-widest text-[#5B9BD5] shadow-sm transition-all hover:bg-[#5B9BD5] hover:text-white"
                     >
                         ORDERS
                     </Link>
                 </div>
             </div>
 
-            <div className="flex min-h-[600px] flex-col items-stretch md:flex-row">
+            <div className="flex min-h-[650px] flex-col items-stretch bg-[#f4f4f5]/30 md:flex-row">
                 {/* Left Sidebar Menu */}
-                <div className="flex w-full shrink-0 flex-col items-stretch border-r border-gray-100 bg-white pt-8 md:w-[280px]">
-                    <div className="mb-4 px-8">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-800">
-                            SELECT QUERY TYPE
+                <div className="z-10 flex w-full shrink-0 flex-col items-stretch border-r border-gray-200 bg-white pt-8 shadow-[2px_0_8px_-4px_rgba(0,0,0,0.05)] md:w-[300px]">
+                    <div className="mb-6 px-10">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#5B9BD5]">
+                            Select Query Type
                         </p>
                     </div>
-                    <nav className="flex flex-col">
+                    <nav className="flex flex-col gap-1 px-4">
                         <SidebarItem
                             tab="order"
                             current={sidebarTab}
                             onClick={() => changeSidebarTab("order")}
                             label="Order Related Queries"
+                            icon={<Package className="size-4" />}
                         />
                         <SidebarItem
                             tab="non_order"
                             current={sidebarTab}
                             onClick={() => changeSidebarTab("non_order")}
                             label="Non-order Related Issues"
+                            icon={<HelpCircle className="size-4" />}
                         />
                         <SidebarItem
                             tab="recent"
                             current={sidebarTab}
                             onClick={() => changeSidebarTab("recent")}
                             label="Recent Issues"
+                            icon={<MessageCircle className="size-4" />}
                         />
 
-                        <div className="mx-8 my-5 border-t border-gray-100" />
+                        <div className="mx-6 my-4 border-t border-gray-100" />
 
                         <SidebarItem
                             tab="faq"
                             current={sidebarTab}
                             onClick={() => changeSidebarTab("faq")}
                             label="Frequently Asked Questions"
+                            icon={<HelpCircle className="size-4" />}
                         />
                     </nav>
-                    <div className="mt-auto border-t border-gray-50 bg-gray-50/30 px-8 py-8 md:pb-12">
-                        <p className="text-[11px] font-bold leading-relaxed tracking-wide text-gray-500">
-                            Want to reach us old style? Here is our <br />
-                            <a
-                                href="#"
-                                className="text-[#5B9BD5] hover:underline"
-                            >
-                                postal address
-                            </a>
-                        </p>
+                    <div className="mt-auto border-t border-gray-100 bg-gradient-to-b from-transparent to-gray-50/50 px-8 py-8 md:pb-12">
+                        <div className="flex items-center gap-3 opacity-60 transition-opacity hover:opacity-100">
+                            <div className="rounded-full bg-gray-200 p-2">
+                                <Truck className="size-4 text-gray-600" />
+                            </div>
+                            <p className="text-xs font-bold leading-relaxed tracking-wide text-gray-500">
+                                Want to reach us old style? <br />
+                                Here is our{" "}
+                                <a
+                                    href="#"
+                                    className="font-extrabold text-[#5B9BD5] hover:underline"
+                                >
+                                    postal address
+                                </a>
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 {/* Right Main Content */}
-                <div className="relative flex-1 bg-[#f4f4f5]/60 p-6 md:p-8">
+                <div className="relative flex-1 p-6 md:p-10">
                     <div className="mx-auto h-full max-w-4xl">
                         {sidebarTab === "order" && renderOrderFlow()}
                         {sidebarTab === "non_order" && renderNonOrderFlow()}
@@ -970,21 +1034,32 @@ function SidebarItem({
     current,
     onClick,
     label,
+    icon,
 }: {
     tab: string;
     current: string;
     onClick: () => void;
     label: string;
+    icon?: React.ReactNode;
 }) {
     const isActive = tab === current;
     return (
         <button
             onClick={onClick}
-            className={`group flex items-center justify-between border-l-4 px-8 py-4 text-[13px] font-bold tracking-wide transition-colors ${isActive ? "border-[#5B9BD5] bg-[#5B9BD5]/5 text-[#5B9BD5] hover:bg-[#5B9BD5]/10" : "border-transparent text-gray-600 hover:bg-gray-50"}`}
+            className={`group flex items-center justify-between rounded-xl px-4 py-4 text-[13px] font-bold tracking-wide transition-all duration-200 ${isActive ? "bg-[#5B9BD5] text-white shadow-md shadow-[#5B9BD5]/20" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
         >
-            {label}{" "}
+            <div className="flex items-center gap-3">
+                {icon && (
+                    <span
+                        className={`${isActive ? "text-white" : "text-gray-400 group-hover:text-gray-600"} transition-colors`}
+                    >
+                        {icon}
+                    </span>
+                )}
+                {label}
+            </div>
             <ChevronRight
-                className={`size-4 ${isActive ? "text-[#5B9BD5]" : "text-gray-300 group-hover:text-gray-500"}`}
+                className={`size-4 transition-transform group-hover:translate-x-1 ${isActive ? "text-white/80" : "text-gray-300 group-hover:text-gray-400"}`}
                 strokeWidth={isActive ? 2.5 : 2}
             />
         </button>
@@ -1003,17 +1078,21 @@ function FaqAccordion({
     onContactSupport: () => void;
 }) {
     return (
-        <div className="bg-white">
+        <div className="bg-white transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-gray-50/30">
             <button
                 onClick={onToggle}
-                className="flex w-full items-center justify-between px-6 py-5 transition hover:bg-gray-50/50"
+                className="flex w-full items-center justify-between px-6 py-5 outline-none"
             >
-                <span className="text-left text-[13px] font-bold text-gray-900">
+                <span className="text-left text-sm font-semibold text-gray-900">
                     {issue.label}
                 </span>
-                <ChevronDown
-                    className={`size-4 text-gray-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-                />
+                <div
+                    className={`flex size-6 items-center justify-center rounded-full transition-colors ${expanded ? "bg-[#5B9BD5]/10" : "bg-gray-50 group-hover:bg-gray-100"}`}
+                >
+                    <ChevronDown
+                        className={`size-4 transition-transform duration-300 ${expanded ? "rotate-180 text-[#5B9BD5]" : "text-gray-400"}`}
+                    />
+                </div>
             </button>
 
             {expanded && (
