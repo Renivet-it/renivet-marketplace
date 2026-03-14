@@ -9,6 +9,204 @@ import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
 import { useEffect, useRef, useState } from "react";
 
+type IntakeRow = { label: string; value: string };
+type IntakeQA = { question: string; answer: string };
+type IntakeSummary = {
+    context: IntakeRow[];
+    qa: IntakeQA[];
+    complaint: string;
+};
+
+const normalizeLabel = (value: string) =>
+    value
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .trim();
+
+const parseIntakeSummary = (text: string): IntakeSummary | null => {
+    const lines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    if (lines.length === 0) return null;
+
+    const isNewFormat = lines.some((line) => line === "SUPPORT INTAKE SUMMARY");
+    const isLegacyFormat = lines[0]
+        .toLowerCase()
+        .startsWith("order support pre-chat details");
+
+    if (!isNewFormat && !isLegacyFormat) return null;
+
+    const summary: IntakeSummary = {
+        context: [],
+        qa: [],
+        complaint: "",
+    };
+
+    if (isNewFormat) {
+        let inComplaintBlock = false;
+
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
+
+            if (line === "Customer Complaint (Detailed)") {
+                inComplaintBlock = true;
+                continue;
+            }
+
+            if (inComplaintBlock) {
+                summary.complaint = summary.complaint
+                    ? `${summary.complaint}\n${line}`
+                    : line;
+                continue;
+            }
+
+            const contextMatch = line.match(
+                /^-\s*(Issue Type|Order ID|Order Status|Item):\s*(.+)$/i
+            );
+            if (contextMatch) {
+                summary.context.push({
+                    label: normalizeLabel(contextMatch[1]),
+                    value: contextMatch[2].trim(),
+                });
+                continue;
+            }
+
+            const questionMatch = line.match(/^\d+\.\s*Question:\s*(.+)$/i);
+            if (questionMatch) {
+                const responseLine = lines[index + 1] ?? "";
+                const responseMatch = responseLine.match(/^Response:\s*(.+)$/i);
+                summary.qa.push({
+                    question: questionMatch[1].trim(),
+                    answer: responseMatch ? responseMatch[1].trim() : "Not provided",
+                });
+                if (responseMatch) index += 1;
+            }
+        }
+    } else {
+        for (const line of lines) {
+            const contextMatch = line.match(
+                /^(Issue|Order ID|Order status|Item):\s*(.+)$/i
+            );
+            if (contextMatch) {
+                summary.context.push({
+                    label: normalizeLabel(contextMatch[1]),
+                    value: contextMatch[2].trim(),
+                });
+                continue;
+            }
+
+            const currentSituationMatch = line.match(
+                /^Current situation:\s*(.+)$/i
+            );
+            if (currentSituationMatch) {
+                summary.qa.push({
+                    question: "What best describes the current situation?",
+                    answer: currentSituationMatch[1].trim(),
+                });
+                continue;
+            }
+
+            const requestedHelpMatch = line.match(/^Requested help:\s*(.+)$/i);
+            if (requestedHelpMatch) {
+                summary.qa.push({
+                    question: "What would you like support to do next?",
+                    answer: requestedHelpMatch[1].trim(),
+                });
+                continue;
+            }
+
+            const packagingMatch = line.match(
+                /^Item and packaging available:\s*(.+)$/i
+            );
+            if (packagingMatch) {
+                summary.qa.push({
+                    question: "Do you still have the item and packaging?",
+                    answer: packagingMatch[1].trim(),
+                });
+                continue;
+            }
+
+            const complaintMatch = line.match(/^What happened:\s*(.+)$/i);
+            if (complaintMatch) {
+                summary.complaint = complaintMatch[1].trim();
+            }
+        }
+    }
+
+    if (
+        summary.context.length === 0 &&
+        summary.qa.length === 0 &&
+        !summary.complaint
+    ) {
+        return null;
+    }
+
+    return summary;
+};
+
+function IntakeSummaryMessage({ summary }: { summary: IntakeSummary }) {
+    return (
+        <div className="space-y-3">
+            <div className="inline-flex rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-700">
+                Support Intake Summary
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                    Order Context
+                </p>
+                <div className="mt-2 space-y-1.5">
+                    {summary.context.map((row) => (
+                        <p key={`${row.label}-${row.value}`} className="text-xs">
+                            <span className="font-semibold text-slate-800">
+                                {row.label}:
+                            </span>{" "}
+                            <span className="text-slate-700">{row.value}</span>
+                        </p>
+                    ))}
+                </div>
+            </div>
+
+            {summary.qa.length > 0 && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                        Assistant Q&A
+                    </p>
+                    <div className="mt-2 space-y-2">
+                        {summary.qa.map((row, index) => (
+                            <div
+                                key={`${row.question}-${index}`}
+                                className="rounded-md border border-blue-100 bg-white/80 px-2.5 py-2"
+                            >
+                                <p className="text-xs font-semibold text-slate-800">
+                                    Q{index + 1}. {row.question}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-700">
+                                    <span className="font-semibold text-blue-700">
+                                        Customer:
+                                    </span>{" "}
+                                    {row.answer}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                    Customer Complaint
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-800">
+                    {summary.complaint || "Not provided"}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 export default function AdminSupportPage() {
     // --------------------------------------------------------
     // FILTER STATE
@@ -313,30 +511,43 @@ export default function AdminSupportPage() {
                         {/* MESSAGES */}
                         <ScrollArea className="flex-1 bg-slate-50/50 p-4">
                             <div className="space-y-4">
-                                {messages.map((m: any) => (
-                                    <div
-                                        key={m.id}
-                                        className={`max-w-xl rounded-2xl p-3 text-sm ${
-                                            m.sender === "admin"
-                                                ? "ml-auto rounded-br-sm bg-primary text-primary-foreground"
-                                                : "mr-auto rounded-bl-sm border bg-white shadow-sm"
-                                        }`}
-                                    >
-                                        <p className="whitespace-pre-wrap">
-                                            {m.text}
-                                        </p>
+                                {messages.map((m: any) => {
+                                    const intakeSummary =
+                                        m.sender === "user"
+                                            ? parseIntakeSummary(m.text)
+                                            : null;
+
+                                    return (
                                         <div
-                                            className={`mt-2 text-[10px] ${m.sender === "admin" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                                            key={m.id}
+                                            className={`max-w-xl rounded-2xl p-3 text-sm ${
+                                                m.sender === "admin"
+                                                    ? "ml-auto rounded-br-sm bg-primary text-primary-foreground"
+                                                    : "mr-auto rounded-bl-sm border bg-white shadow-sm"
+                                            }`}
                                         >
-                                            {new Date(
-                                                m.createdAt
-                                            ).toLocaleTimeString([], {
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                            })}
+                                            {intakeSummary ? (
+                                                <IntakeSummaryMessage
+                                                    summary={intakeSummary}
+                                                />
+                                            ) : (
+                                                <p className="whitespace-pre-wrap">
+                                                    {m.text}
+                                                </p>
+                                            )}
+                                            <div
+                                                className={`mt-2 text-[10px] ${m.sender === "admin" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                                            >
+                                                {new Date(
+                                                    m.createdAt
+                                                ).toLocaleTimeString([], {
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
                                 {messages.length === 0 && (
                                     <div className="py-10 text-center text-sm text-muted-foreground">

@@ -755,22 +755,33 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
             }
 
             const intakeLines = [
-                "Order support pre-chat details",
-                `Issue: ${selectedIssue.label}`,
-                `Order ID: ${selectedOrder.id}`,
-                `Order status: ${selectedOrder.status.replace(/_/g, " ")}`,
-                `Item: ${selectedOrder.items[0]?.product?.title ?? "N/A"}`,
+                "SUPPORT INTAKE SUMMARY",
+                "======================",
+                "Order Context",
+                `- Issue Type: ${selectedIssue.label}`,
+                `- Order ID: ${selectedOrder.id}`,
+                `- Order Status: ${selectedOrder.status.replace(/_/g, " ")}`,
+                `- Item: ${selectedOrder.items[0]?.product?.title ?? "N/A"}`,
                 "",
-                `What happened: ${orderSupportIntake.issueSummary.trim()}`,
-                `Current situation: ${getIntakeOptionLabel(statusOptions, orderSupportIntake.currentStatus)}`,
-                `Requested help: ${getIntakeOptionLabel(resolutionOptions, orderSupportIntake.preferredResolution)}`,
+                "Assistant Questions and Customer Responses",
+                `1. Question: What best describes the current situation?`,
+                `   Response: ${getIntakeOptionLabel(statusOptions, orderSupportIntake.currentStatus)}`,
+                `2. Question: What would you like support to do next?`,
+                `   Response: ${getIntakeOptionLabel(resolutionOptions, orderSupportIntake.preferredResolution)}`,
             ];
 
             if (needsPackagingCheck) {
                 intakeLines.push(
-                    `Item and packaging available: ${getIntakeOptionLabel(PACKAGING_STATUS_OPTIONS, orderSupportIntake.packagingStatus)}`
+                    `3. Question: Do you still have the item and packaging?`,
+                    `   Response: ${getIntakeOptionLabel(PACKAGING_STATUS_OPTIONS, orderSupportIntake.packagingStatus)}`
                 );
             }
+
+            intakeLines.push(
+                "",
+                "Customer Complaint (Detailed)",
+                orderSupportIntake.issueSummary.trim()
+            );
 
             description = intakeLines.join("\n");
         }
