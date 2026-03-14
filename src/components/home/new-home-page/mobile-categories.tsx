@@ -1,7 +1,102 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { MouseEvent, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+
+const REDIRECT_DELAY_MS = 220;
+
+interface StripLoaderLinkProps {
+    href: string;
+    children: ReactNode;
+    className?: string;
+}
+
+function StripLoaderLink({ href, children, className }: StripLoaderLinkProps) {
+    const router = useRouter();
+    const [isRedirecting, setIsRedirecting] = useState(false);
+    const timeoutRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current !== null) {
+                window.clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+        if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (isRedirecting) {
+            return;
+        }
+
+        setIsRedirecting(true);
+        timeoutRef.current = window.setTimeout(() => {
+            try {
+                const nextUrl = new URL(href, window.location.href);
+                if (nextUrl.origin === window.location.origin) {
+                    router.push(
+                        `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+                    );
+                    return;
+                }
+            } catch {
+                // fallback to full navigation below
+            }
+
+            window.location.assign(href);
+        }, REDIRECT_DELAY_MS);
+    };
+
+    return (
+        <Link
+            href={href}
+            data-no-route-loader="true"
+            aria-busy={isRedirecting}
+            onClick={handleClick}
+            className={cn("relative", className)}
+        >
+            {children}
+
+            <span
+                aria-hidden="true"
+                className={cn(
+                    "pointer-events-none absolute inset-0 z-[2] rounded-[inherit] bg-[#FCFBF4]/55 opacity-0 transition duration-200",
+                    isRedirecting && "opacity-100"
+                )}
+            />
+
+            <span
+                aria-hidden="true"
+                className={cn(
+                    "pointer-events-none absolute left-1/2 top-1/2 z-[3] flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/75 bg-white/92 shadow-sm transition duration-200",
+                    isRedirecting ? "scale-100 opacity-100" : "scale-90 opacity-0"
+                )}
+            >
+                <span className="relative block size-4">
+                    <span className="absolute inset-0 rounded-full border-2 border-[#d7c49c]" />
+                    <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-r-[#8E6C2E] border-t-[#8E6C2E]" />
+                </span>
+            </span>
+        </Link>
+    );
+}
 
 export function MobileCategories() {
     const categories = [
@@ -61,7 +156,7 @@ export function MobileCategories() {
             <section className="block w-full bg-[#FCFBF4] px-4 py-6 md:hidden">
                 <div className="grid grid-cols-4 gap-x-2 gap-y-6">
                     {categories.map((item, index) => (
-                        <Link
+                        <StripLoaderLink
                             key={`mobile-${index}`}
                             href={item.link}
                             className="flex flex-col items-center"
@@ -102,7 +197,7 @@ export function MobileCategories() {
                             <p className="mt-2 text-center text-[10px] leading-tight text-[#333] sm:text-[12px]">
                                 {item.title}
                             </p>
-                        </Link>
+                        </StripLoaderLink>
                     ))}
                 </div>
             </section>
@@ -111,7 +206,7 @@ export function MobileCategories() {
             <section className="hidden w-full bg-[#FCFBF4] px-4 py-8 md:block">
                 <div className="mx-auto grid max-w-screen-2xl grid-cols-8 gap-4 lg:gap-6">
                     {categories.map((item, index) => (
-                        <Link
+                        <StripLoaderLink
                             key={index}
                             href={item.link}
                             className="group flex flex-col items-center"
@@ -152,7 +247,7 @@ export function MobileCategories() {
                             <p className="mt-2.5 text-center text-sm font-medium text-[#333] transition-colors group-hover:text-[#6B7A5E]">
                                 {item.title}
                             </p>
-                        </Link>
+                        </StripLoaderLink>
                     ))}
                 </div>
             </section>
