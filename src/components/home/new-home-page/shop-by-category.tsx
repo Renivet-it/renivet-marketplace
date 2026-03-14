@@ -85,8 +85,10 @@ export function ShopCategories() {
                                             prefetch={false}
                                             onClick={(e) => {
                                                 e.preventDefault();
-                                                window.location.href =
-                                                    category.href; // full page reload
+                                                window.setTimeout(() => {
+                                                    window.location.href =
+                                                        category.href;
+                                                }, 220);
                                             }}
                                             className="group flex flex-col items-center"
                                         >

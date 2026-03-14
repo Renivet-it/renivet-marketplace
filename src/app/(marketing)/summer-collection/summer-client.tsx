@@ -853,7 +853,7 @@ export function SummerClient({
                 </main>
             </div>
 
-            <button className="btt" onClick={scrollToTop}>
+            {/* <button className="btt" onClick={scrollToTop}>
                 <svg
                     viewBox="0 0 24 24"
                     fill="none"
@@ -862,7 +862,7 @@ export function SummerClient({
                 >
                     <path d="M18 15l-6-6-6 6" />
                 </svg>
-            </button>
+            </button> */}
         </div>
     );
 }

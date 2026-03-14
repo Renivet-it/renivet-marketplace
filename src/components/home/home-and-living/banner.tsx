@@ -133,7 +133,9 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                 className="flex flex-col items-center text-center"
                                 onClick={(e) => {
                                     e.preventDefault();
-                                    window.location.href = cat.href; // ✅ HARD RELOAD (FIX)
+                                    window.setTimeout(() => {
+                                        window.location.href = cat.href;
+                                    }, 220);
                                 }}
                             >
                                 <div
