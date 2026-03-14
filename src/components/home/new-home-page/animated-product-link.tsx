@@ -11,7 +11,9 @@ interface AnimatedProductLinkProps {
     children: ReactNode;
     className?: string;
     target?: string;
+    rel?: string;
     prefetch?: boolean;
+    onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
 const REDIRECT_DELAY_MS = 220;
@@ -21,7 +23,9 @@ export function AnimatedProductLink({
     children,
     className,
     target,
+    rel,
     prefetch,
+    onClick,
 }: AnimatedProductLinkProps) {
     const router = useRouter();
     const [isRedirecting, setIsRedirecting] = useState(false);
@@ -36,6 +40,11 @@ export function AnimatedProductLink({
     }, []);
 
     const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+        onClick?.(event);
+        if (event.defaultPrevented) {
+            return;
+        }
+
         const isModifiedClick =
             event.metaKey ||
             event.ctrlKey ||
@@ -63,6 +72,7 @@ export function AnimatedProductLink({
         <Link
             href={href}
             target={target}
+            rel={rel}
             prefetch={prefetch}
             aria-busy={isRedirecting}
             data-redirecting={isRedirecting ? "true" : "false"}

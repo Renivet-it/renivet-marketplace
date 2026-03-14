@@ -1,6 +1,7 @@
 "use client";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
 import {
     Sheet,
@@ -16,7 +17,6 @@ import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { ProductWithBrand } from "@/lib/validations";
 import { Check, ShoppingCart } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProductCartAddForm } from "../forms";
@@ -220,13 +220,11 @@ export function ProductCard({
             onMouseLeave={() => setIsProductHovered(false)}
         >
             <div className="group/image relative block">
-                <Link
+                <AnimatedProductLink
                     href={`/products/${product.slug}`}
                     onClick={(e) => {
                         if (isWishlistHovered) e.preventDefault();
                     }}
-                    target="_blank"
-                    rel="noreferrer"
                 >
                     <div className="relative aspect-[3/4] overflow-hidden">
                         {/* Product default image */}
@@ -307,7 +305,7 @@ export function ProductCard({
                             </button>
                         </div>
                     </div>
-                </Link>
+                </AnimatedProductLink>
 
                 {/* Mobile Floating Add to Cart */}
                 <div className="absolute bottom-2 right-2 z-20 md:hidden">

@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -81,7 +82,7 @@ export function ProductGrid({
                             className="max-w-[180px] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
                         >
                             <CardHeader className="relative p-0">
-                                <Link
+                                <AnimatedProductLink
                                     href={`/products/${item.product.slug}`}
                                     className="block"
                                 >
@@ -98,7 +99,7 @@ export function ProductGrid({
                                             sizes="(max-width: 768px) 100vw"
                                         />
                                     </div>
-                                </Link>
+                                </AnimatedProductLink>
                                 <div className="absolute left-1 top-1">
                                     <Badge className="bg-green-100 text-[10px] text-green-800">
                                         🌿

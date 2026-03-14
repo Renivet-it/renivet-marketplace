@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import {
     Carousel,
     CarouselContent,
@@ -12,7 +13,6 @@ import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import Link from "next/link";
 import { toast } from "sonner";
 
 /* ---------------- TYPES ---------------- */
@@ -163,7 +163,7 @@ function ProductCard({
     const isMobile = variant === "mobile";
 
     return (
-        <Link
+        <AnimatedProductLink
             href={`/products/${product.slug}`}
             className={cn("group block", isMobile ? "w-[110px]" : "w-[240px]")}
         >
@@ -242,6 +242,6 @@ function ProductCard({
             >
                 {product.title}
             </p>
-        </Link>
+        </AnimatedProductLink>
     );
 }
