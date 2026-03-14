@@ -33,7 +33,9 @@ interface TicketPageProps {
 
 export function TicketPage({ initialTicket }: TicketPageProps) {
     const [msgText, setMsgText] = useState("");
-    const chatEndRef = useRef<HTMLDivElement>(null);
+    const chatScrollRef = useRef<HTMLDivElement>(null);
+    const hasInitializedScrollRef = useRef(false);
+    const previousMessageCountRef = useRef(0);
 
     // Ticket data
     const ticketQuery = trpc.general.userSupport.getTicket.useQuery(
@@ -56,9 +58,29 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
         },
     });
 
-    // Scroll to bottom on new messages
+    // Keep chat scrolling inside the chat panel only (not the whole page).
     useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        const container = chatScrollRef.current;
+        if (!container || !messages) return;
+
+        const currentCount = messages.length;
+
+        if (!hasInitializedScrollRef.current) {
+            hasInitializedScrollRef.current = true;
+            previousMessageCountRef.current = currentCount;
+            return;
+        }
+
+        const hasNewMessage = currentCount > previousMessageCountRef.current;
+        const distanceFromBottom =
+            container.scrollHeight - container.scrollTop - container.clientHeight;
+        const isNearBottom = distanceFromBottom < 140;
+
+        if (hasNewMessage && isNearBottom) {
+            container.scrollTop = container.scrollHeight;
+        }
+
+        previousMessageCountRef.current = currentCount;
     }, [messages]);
 
     const isResolved = ticket?.status === "resolved";
@@ -182,6 +204,7 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
             <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
                 {/* Messages */}
                 <div
+                    ref={chatScrollRef}
                     className="flex-1 space-y-4 overflow-y-auto p-4"
                     style={{ maxHeight: 450 }}
                 >
@@ -273,7 +296,7 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
                         </div>
                     )}
 
-                    <div ref={chatEndRef} />
+                    <div className="h-px" />
                 </div>
 
                 {/* Input */}
