@@ -36,10 +36,10 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     // Ticket data
-    const { data: ticket } = trpc.general.userSupport.getTicket.useQuery(
-        initialTicket.id,
-        { initialData: initialTicket as unknown as typeof ticket }
+    const ticketQuery = trpc.general.userSupport.getTicket.useQuery(
+        initialTicket.id
     );
+    const ticket = ticketQuery.data ?? initialTicket;
 
     // Messages
     const { data: messages, refetch: refetchMessages } =
@@ -62,6 +62,12 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
     }, [messages]);
 
     const isResolved = ticket?.status === "resolved";
+    const hasHumanSupportReply =
+        messages?.some(
+            (msg) => msg.sender === "admin" && msg.senderId !== "support-bot"
+        ) ?? false;
+    const isAssistantHandling =
+        ticket?.category === "order" && !isResolved && !hasHumanSupportReply;
 
     const handleSend = () => {
         if (!msgText.trim()) return;
@@ -194,6 +200,8 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
 
                     {messages?.map((msg) => {
                         const isUser = msg.sender === "user";
+                        const isSupportAssistant =
+                            !isUser && msg.senderId === "support-bot";
                         return (
                             <div
                                 key={msg.id}
@@ -207,12 +215,23 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
                                         "max-w-[75%] rounded-2xl px-4 py-3",
                                         isUser
                                             ? "rounded-br-md bg-blue-600 text-white"
-                                            : "rounded-bl-md bg-gray-100 text-gray-900"
+                                            : isSupportAssistant
+                                              ? "rounded-bl-md border border-[#D7E7F8] bg-[#F5FAFF] text-gray-900"
+                                              : "rounded-bl-md bg-gray-100 text-gray-900"
                                     )}
                                 >
                                     {!isUser && (
-                                        <p className="mb-1 text-[10px] font-semibold text-blue-600">
-                                            Support Team
+                                        <p
+                                            className={cn(
+                                                "mb-1 text-[10px] font-semibold",
+                                                isSupportAssistant
+                                                    ? "text-[#5B9BD5]"
+                                                    : "text-blue-600"
+                                            )}
+                                        >
+                                            {isSupportAssistant
+                                                ? "Support Assistant"
+                                                : "Support Team"}
                                         </p>
                                     )}
                                     <p className="whitespace-pre-wrap text-sm leading-relaxed">
@@ -269,12 +288,25 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
                     </div>
                 ) : (
                     <div className="border-t border-gray-200 bg-white p-4">
+                        {isAssistantHandling && (
+                            <div className="mb-3 rounded-xl border border-[#D7E7F8] bg-[#F5FAFF] px-4 py-3 text-sm text-gray-600">
+                                <span className="font-semibold text-[#5B9BD5]">
+                                    Support Assistant:
+                                </span>{" "}
+                                You can keep chatting here. I'll capture your
+                                updates until a support specialist joins.
+                            </div>
+                        )}
                         <div className="flex items-end gap-3">
                             <textarea
                                 value={msgText}
                                 onChange={(e) => setMsgText(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Type your message..."
+                                placeholder={
+                                    isAssistantHandling
+                                        ? "Type your update for Support Assistant..."
+                                        : "Type your message..."
+                                }
                                 rows={1}
                                 className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 transition-all placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 style={{ minHeight: 44, maxHeight: 120 }}
