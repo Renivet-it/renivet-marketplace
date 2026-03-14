@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button-general";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import {
     Carousel,
     CarouselContent,
@@ -12,7 +12,6 @@ import {
 import { cn, convertPaiseToRupees } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
-import Link from "next/link";
 
 interface Product {
     slug: any;
@@ -39,11 +38,6 @@ export function ProductGridNewArrivals({
     if (!products || !Array.isArray(products) || products.length === 0) {
         return null;
     }
-
-    const getProductPrice = (product: Product) => {
-        const priceInPaise = product.variants?.[0]?.price || product.price || 0;
-        return convertPaiseToRupees(priceInPaise);
-    };
 
     return (
         <section
@@ -129,7 +123,7 @@ function ProductCard({ product }: { product: Product }) {
         <div className="w-full">
             <Card className="h-[780px] border-0 bg-transparent p-0 shadow-none">
                 <CardHeader className="relative h-[640px] p-0">
-                    <Link
+                    <AnimatedProductLink
                         href={`/products/${product.slug}`}
                         className="block h-full"
                     >
@@ -145,7 +139,7 @@ function ProductCard({ product }: { product: Product }) {
                                 sizes="640px"
                             />
                         </div>
-                    </Link>
+                    </AnimatedProductLink>
                 </CardHeader>
 
                 <CardContent className="h-[140px] p-0 pt-6">
@@ -172,7 +166,7 @@ function MobileProductCard({ product }: { product: Product }) {
         <div className="w-full px-2">
             <Card className="border-0 bg-transparent p-0 shadow-none">
                 <CardHeader className="relative aspect-square p-0">
-                    <Link
+                    <AnimatedProductLink
                         href={`/products/${product.slug}`}
                         className="block h-full"
                     >
@@ -188,7 +182,7 @@ function MobileProductCard({ product }: { product: Product }) {
                                 sizes="100vw"
                             />
                         </div>
-                    </Link>
+                    </AnimatedProductLink>
                 </CardHeader>
 
                 <CardContent className="p-0 pt-4">

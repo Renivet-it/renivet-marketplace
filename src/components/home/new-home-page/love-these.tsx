@@ -1,6 +1,7 @@
 "use client";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -10,12 +11,11 @@ import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { Banner } from "@/lib/validations";
 import { Check, ShoppingCart } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 /* =============================
-   ⭐ GUEST CART HOOK
+   GUEST CART HOOK
 ============================= */
 function useGuestCart() {
     const [guestCart, setGuestCart] = useState<any[]>([]);
@@ -203,103 +203,93 @@ export const ProductCard = ({
     };
 
     return (
-        <Link
-            href={productUrl}
-            className="product-card-container relative block w-[120px] sm:w-[200px]"
-        >
-            {/* IMAGE */}
-            <div className="product-image-container relative h-[180px] w-full overflow-hidden bg-gray-50 sm:h-[220px]">
-                <Image
-                    src={imageUrl}
-                    alt={product.title}
-                    fill
-                    sizes="(max-width: 640px) 120px, 200px"
-                    className="object-cover"
-                />
+        <div className="product-card-container group/product relative block w-[120px] sm:w-[200px]">
+            <AnimatedProductLink href={productUrl} className="block">
+                <div className="product-image-container relative h-[180px] w-full overflow-hidden bg-gray-50 sm:h-[220px]">
+                    <Image
+                        src={imageUrl}
+                        alt={product.title}
+                        fill
+                        sizes="(max-width: 640px) 120px, 200px"
+                        className="object-cover transition-transform duration-300 group-hover/product:scale-105"
+                    />
 
-                {/* 🔴 Rectangular discount strip — matches Best Sellers */}
-                {discountPct && discountPct > 0 && (
-                    <span className="absolute left-0 top-2.5 z-10 whitespace-nowrap rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-2.5 md:py-1 md:text-xs">
-                        {discountPct}% OFF
-                    </span>
-                )}
-            </div>
-
-            {/* CONTENT */}
-            <div className="pt-2">
-                <h3 className="line-clamp-2 h-9 text-[12px] font-normal text-gray-800 sm:text-[14px]">
-                    {product.title}
-                </h3>
-
-                {/* PRICE ROW */}
-                <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
-                    <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
-                        ₹{price}
-                    </span>
-
-                    {displayCompareAt ? (
-                        <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
-                            ₹{displayCompareAt}
-                        </span>
-                    ) : (
-                        <span className="text-[11px] opacity-0 sm:text-[12px]">
-                            ₹0000
+                    {discountPct && discountPct > 0 && (
+                        <span className="absolute left-0 top-2.5 z-10 whitespace-nowrap rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-2.5 md:py-1 md:text-xs">
+                            {discountPct}% OFF
                         </span>
                     )}
                 </div>
 
-                {/* BUTTONS ROW (CART + WISHLIST) */}
-                <div className="mt-2.5 flex items-center gap-2">
-                    <button
-                        onClick={handleWishlist}
-                        className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
-                    >
-                        {isWishlisted ? (
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4 scale-110 text-red-500 md:h-5 md:w-5"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                            >
-                                <path
-                                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
+                <div className="pt-2">
+                    <h3 className="line-clamp-2 h-9 text-[12px] font-normal text-gray-800 sm:text-[14px]">
+                        {product.title}
+                    </h3>
+
+                    <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
+                        <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
+                            â‚¹{price}
+                        </span>
+
+                        {displayCompareAt ? (
+                            <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
+                                â‚¹{displayCompareAt}
+                            </span>
+                        ) : (
+                            <span className="text-[11px] opacity-0 sm:text-[12px]">
+                                â‚¹0000
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </AnimatedProductLink>
+
+            <div className="mt-2.5 flex items-center gap-2">
+                <button
+                    onClick={handleWishlist}
+                    className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
+                >
+                    {isWishlisted ? (
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 scale-110 text-red-500 md:h-5 md:w-5"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
                 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
                 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
                 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                                />
-                            </svg>
-                        ) : (
-                            <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
-                        )}
-                    </button>
+                            />
+                        </svg>
+                    ) : (
+                        <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
+                    )}
+                </button>
 
-                    <button
-                        onClick={handleAddToCart}
-                        disabled={isLoading || isAdded}
-                        className={`flex h-9 flex-1 items-center justify-center rounded border transition-all duration-300 disabled:opacity-50 md:h-10 ${
-                            isAdded
-                                ? "border-green-600 bg-green-600 text-white"
-                                : "border-gray-300 bg-white hover:bg-gray-50 hover:shadow-sm"
-                        }`}
-                    >
-                        {isLoading ? (
-                            <Icons.Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
-                        ) : isAdded ? (
-                            <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
-                        ) : (
-                            <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
-                        )}
-                    </button>
-                </div>
+                <button
+                    onClick={handleAddToCart}
+                    disabled={isLoading || isAdded}
+                    className={`flex h-9 flex-1 items-center justify-center rounded border transition-all duration-300 disabled:opacity-50 md:h-10 ${
+                        isAdded
+                            ? "border-green-600 bg-green-600 text-white"
+                            : "border-gray-300 bg-white hover:bg-gray-50 hover:shadow-sm"
+                    }`}
+                >
+                    {isLoading ? (
+                        <Icons.Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
+                    ) : isAdded ? (
+                        <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
+                    ) : (
+                        <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
+                    )}
+                </button>
             </div>
-        </Link>
+        </div>
     );
 };
 
-// ============================================================
-// ⭐ MOBILE = 2 ROWS + HORIZONTAL SCROLL
-// ⭐ DESKTOP = NORMAL GRID (18 items)
-// ============================================================
 export function LoveThese({
     banners,
     userId,
@@ -317,7 +307,6 @@ export function LoveThese({
                 Basic Collection
             </h2>
 
-            {/* MOBILE */}
             <div className="scrollbar-hide overflow-x-auto px-4 md:hidden">
                 <div className="grid w-max auto-cols-max grid-flow-col grid-rows-2 gap-x-4 gap-y-5">
                     {shownProducts.map((item) => (
@@ -330,7 +319,6 @@ export function LoveThese({
                 </div>
             </div>
 
-            {/* DESKTOP */}
             <div className="mx-auto hidden max-w-screen-2xl px-6 md:block">
                 <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                     {shownProducts.map((item) => (

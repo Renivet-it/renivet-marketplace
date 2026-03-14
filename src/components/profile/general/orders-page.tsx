@@ -46,6 +46,7 @@ import {
     Droplets,
     Eye,
     Heart,
+    HelpCircle,
     Leaf,
     Loader2,
     MoreHorizontal,
@@ -1042,6 +1043,13 @@ function OnTheWayOrderCard({
                             <XCircle className="h-4 w-4" />
                         </button>
                     )}
+                    <Link
+                        href={`/profile/help-center`}
+                        className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-50"
+                        title="Get Help"
+                    >
+                        <HelpCircle className="h-4 w-4" />
+                    </Link>
                 </div>
             </div>
 
@@ -1342,6 +1350,12 @@ function DeliveredOrderCard({
                                 className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
                                 <Eye className="h-4 w-4" /> View Details
+                            </Link>
+                            <Link
+                                href={`/profile/help-center`}
+                                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                                <HelpCircle className="h-4 w-4" /> Get Help
                             </Link>
                             {showReturnReplaceButtons && (
                                 <>

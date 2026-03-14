@@ -18,6 +18,9 @@ export const users = pgTable("users", {
     avatarUrl: text("avatar_url"),
     isEmailVerified: boolean("is_email_verified").notNull().default(false),
     isPhoneVerified: boolean("is_phone_verified").notNull().default(false),
+    hasReceivedAbandonedCartEmail: boolean("has_received_abandoned_cart_email")
+        .notNull()
+        .default(false),
     ...timestamps,
 });
 

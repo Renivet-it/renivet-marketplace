@@ -64,7 +64,9 @@ function NavItem({ item, pathname }: { item: Item; pathname: string }) {
         return content;
     }
 
-    const finalHref = ["contact-us", "shopping-bag"].includes(item.name)
+    const finalHref = ["contact-us", "shopping-bag", "help-center"].includes(
+        item.name
+    )
         ? item.href
         : `/profile${item.href}`;
 
@@ -202,7 +204,7 @@ export function ProfileNav({ className, ...props }: GenericProps) {
         {
             icon: "CircleHelp",
             name: "help-center",
-            href: "#",
+            href: "/profile/help-center",
             label: "Help Center",
         },
         {

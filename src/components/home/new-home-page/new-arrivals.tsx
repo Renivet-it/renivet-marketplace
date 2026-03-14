@@ -1,6 +1,7 @@
 "use client";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -9,13 +10,8 @@ import { cn, convertPaiseToRupees } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { Check, ShoppingCart } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
-/* --------------------------------------------------------
-   GUEST CART HOOK
--------------------------------------------------------- */
 
 function useGuestCart() {
     const [guestCart, setGuestCart] = useState<any[]>([]);
@@ -65,10 +61,6 @@ function useGuestCart() {
     return { guestCart, addToGuestCart };
 }
 
-/* --------------------------------------------------------
-   TYPES
--------------------------------------------------------- */
-
 interface Product {
     slug: any;
     id: string;
@@ -97,15 +89,7 @@ interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> {
     userId?: string;
 }
 
-/* --------------------------------------------------------
-   SECTIONS TO DISPLAY
--------------------------------------------------------- */
-
 const SECTIONS = ["Most Ordered", "In Season"] as const;
-
-/* --------------------------------------------------------
-   MAIN GRID
--------------------------------------------------------- */
 
 export function ProductGridNewArrivals({
     className,
@@ -129,28 +113,22 @@ export function ProductGridNewArrivals({
 
                     return (
                         <div key={section}>
-                            {/* Section heading */}
-                            <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+                            <h2 className="mb-6 text-center font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                                 {section}
                             </h2>
 
-                            {/* Product grid - 3 cols mobile, perfectly centered leftovers */}
                             <div className="relative flex flex-wrap justify-center gap-3 md:grid md:grid-cols-4 md:gap-6 lg:grid-cols-5 xl:grid-cols-7">
-                                {sectionProducts.map(({ product }) => {
-                                    return (
-                                        <div
-                                            key={product.id}
-                                            // calc(33.333% - gap) for exactly 3 columns on mobile.
-                                            // The gap is 3 (12px), so we subtract 8px (approx 2/3 of 12) from each to fit 3 in a row precisely
-                                            className="w-[calc(33.333%-8px)] md:w-auto"
-                                        >
-                                            <ProductCard
-                                                product={product}
-                                                userId={userId}
-                                            />
-                                        </div>
-                                    );
-                                })}
+                                {sectionProducts.map(({ product }) => (
+                                    <div
+                                        key={product.id}
+                                        className="w-[calc(33.333%-8px)] md:w-auto"
+                                    >
+                                        <ProductCard
+                                            product={product}
+                                            userId={userId}
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     );
@@ -159,10 +137,6 @@ export function ProductGridNewArrivals({
         </section>
     );
 }
-
-/* --------------------------------------------------------
-   PRODUCT CARD (PLUS = ADD TO CART)
--------------------------------------------------------- */
 
 function ProductCard({
     product,
@@ -200,7 +174,6 @@ function ProductCard({
         product.media?.[0]?.mediaItem?.url ||
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
-    /* ---- Discount calculation ---- */
     const originalPrice =
         product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
 
@@ -290,19 +263,20 @@ function ProductCard({
     };
 
     return (
-        <div className="product-card-container group flex-shrink-0 cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
-            <Link href={`/products/${product.slug}`} className="block">
-                {/* Image + discount badge */}
+        <div className="product-card-container group/product flex-shrink-0 cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
+            <AnimatedProductLink
+                href={`/products/${product.slug}`}
+                className="block"
+            >
                 <div className="product-image-container relative aspect-[1/1] w-full overflow-hidden">
                     <Image
                         src={imageUrl}
                         alt={product.title}
                         fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="object-cover transition-transform duration-300 group-hover/product:scale-105"
                         sizes="(max-width: 640px) 33vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                     />
 
-                    {/* 🏷️ Discount badge */}
                     {discountPct && discountPct > 0 && (
                         <span className="absolute left-0 top-2 rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md sm:px-2.5 sm:py-1 sm:text-xs">
                             {discountPct}% OFF
@@ -310,75 +284,73 @@ function ProductCard({
                     )}
                 </div>
 
-                {/* Info */}
                 <div className="space-y-1 p-2 sm:p-2.5">
-                    {/* Title */}
                     <h3 className="truncate text-xs font-medium text-gray-700 sm:text-sm">
                         {product.title}
                     </h3>
 
-                    {/* Price row */}
                     <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
                         <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
-                            ₹{price}
+                            â‚¹{price}
                         </span>
 
                         {displayOriginal ? (
                             <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
-                                ₹{displayOriginal}
+                                â‚¹{displayOriginal}
                             </span>
                         ) : (
                             <span className="text-[11px] opacity-0 sm:text-[12px]">
-                                ₹0000
+                                â‚¹0000
                             </span>
                         )}
                     </div>
+                </div>
+            </AnimatedProductLink>
 
-                    {/* BUTTONS ROW (CART + WISHLIST) */}
-                    <div className="mt-2.5 flex items-center gap-2">
-                        <button
-                            onClick={handleAddToWishlist}
-                            className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
-                        >
-                            {isWishlisted ? (
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4 scale-110 text-red-500 md:h-5 md:w-5"
-                                    viewBox="0 0 24 24"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
+            <div className="px-2 pb-2 sm:px-2.5 sm:pb-2.5">
+                <div className="mt-2.5 flex items-center gap-2">
+                    <button
+                        onClick={handleAddToWishlist}
+                        className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
+                    >
+                        {isWishlisted ? (
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 scale-110 text-red-500 md:h-5 md:w-5"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                            >
+                                <path
+                                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
                     4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
                     14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
                     3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                                    />
-                                </svg>
-                            ) : (
-                                <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
-                            )}
-                        </button>
+                                />
+                            </svg>
+                        ) : (
+                            <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
+                        )}
+                    </button>
 
-                        <button
-                            onClick={handleAddToCart}
-                            disabled={isLoading || isAdded}
-                            className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded border text-[12px] font-medium transition-all duration-300 disabled:opacity-50 md:h-10 md:text-sm ${
-                                isAdded
-                                    ? "border-green-600 bg-green-600 text-white"
-                                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:shadow-sm"
-                            }`}
-                        >
-                            {isLoading ? (
-                                <Icons.Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
-                            ) : isAdded ? (
-                                <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
-                            ) : (
-                                <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
-                            )}
-                        </button>
-                    </div>
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={isLoading || isAdded}
+                        className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded border text-[12px] font-medium transition-all duration-300 disabled:opacity-50 md:h-10 md:text-sm ${
+                            isAdded
+                                ? "border-green-600 bg-green-600 text-white"
+                                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:shadow-sm"
+                        }`}
+                    >
+                        {isLoading ? (
+                            <Icons.Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
+                        ) : isAdded ? (
+                            <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
+                        ) : (
+                            <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
+                        )}
+                    </button>
                 </div>
-            </Link>
+            </div>
         </div>
     );
 }

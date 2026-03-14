@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "has_received_abandoned_cart_email" boolean DEFAULT false NOT NULL;

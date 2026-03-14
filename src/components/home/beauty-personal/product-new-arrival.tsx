@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button-general";
 import { Card, CardContent } from "@/components/ui/card";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import {
     Carousel,
     CarouselContent,
@@ -10,7 +11,6 @@ import {
 import { cn, convertPaiseToRupees } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 interface Product {
     slug: string;
@@ -108,19 +108,12 @@ export function ProductGridNewArrivals({
 }
 
 function ProductCard({ product }: { product: Product }) {
-    const router = useRouter();
     const price = convertPaiseToRupees(
         product.variants?.[0]?.price || product.price || 0
     );
 
-    const handleAddToBag = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        router.push(`/products/${product.slug}`);
-    };
-
     return (
-        <Link href={`/products/${product.slug}`} passHref>
+        <AnimatedProductLink href={`/products/${product.slug}`}>
             <Card className="flex h-full flex-col border-0 bg-transparent p-0 shadow-none hover:cursor-pointer">
                 {/* Product Image */}
                 <div className="relative mb-4 aspect-square overflow-hidden">
@@ -155,30 +148,22 @@ function ProductCard({ product }: { product: Product }) {
                     <Button
                         variant="outline"
                         className="h-12 w-full border border-black px-3 py-2 text-base hover:bg-[#FCFBF4] hover:text-black"
-                        onClick={handleAddToBag}
                     >
                         View
                     </Button>
                 </CardContent>
             </Card>
-        </Link>
+        </AnimatedProductLink>
     );
 }
 
 function MobileProductCard({ product }: { product: Product }) {
-    const router = useRouter();
     const price = convertPaiseToRupees(
         product.variants?.[0]?.price || product.price || 0
     );
 
-    const handleAddToBag = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        router.push(`/products/${product.slug}`);
-    };
-
     return (
-        <Link href={`/products/${product.slug}`} passHref>
+        <AnimatedProductLink href={`/products/${product.slug}`}>
             <Card className="border-0 bg-transparent p-0 shadow-none hover:cursor-pointer">
                 {/* Product Image */}
                 <div className="relative mb-3 aspect-square overflow-hidden">
@@ -224,13 +209,12 @@ function MobileProductCard({ product }: { product: Product }) {
                         <Button
                             variant="outline"
                             className="h-8 border border-black px-3 py-1 text-xs hover:bg-black hover:text-white"
-                            onClick={handleAddToBag}
                         >
                             Add To Bag
                         </Button>
                     </div>
                 </CardContent>
             </Card>
-        </Link>
+        </AnimatedProductLink>
     );
 }

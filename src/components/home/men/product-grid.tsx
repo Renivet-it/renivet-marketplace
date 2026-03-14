@@ -3,6 +3,7 @@
 
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -69,14 +70,17 @@ export function ProductGrid({ className, products, ...props }: ProductGridProps)
               className="overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200 max-w-[180px]"
             >
               <CardHeader className="p-0 relative">
-                <Link href={`/products/${item.product.slug}`} className="block">
+                <AnimatedProductLink
+                  href={`/products/${item.product.slug}`}
+                  className="block"
+                >
                   <div className="relative w-full h-40 overflow-hidden">
                     <Image
                     // @ts-ignore
                       src={item.product.media[0]?.mediaItem?.url}
                       fill alt={""}/>
                   </div>
-                </Link>
+                </AnimatedProductLink>
                 <div className="absolute top-1 left-1">
                   <Badge className="bg-green-100 text-green-800 text-[10px]">
                     🌿 {/* Placeholder for brand logo/icon */}

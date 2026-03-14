@@ -182,3 +182,34 @@ h3.tiptap-heading + h2.tiptap-heading {
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
   }
+
+.home-product-link[data-redirecting="true"] {
+    cursor: progress;
+}
+
+.home-product-link__overlay {
+    background:
+        linear-gradient(135deg, rgba(252, 251, 244, 0.08), rgba(176, 138, 74, 0.18));
+    backdrop-filter: blur(1.5px);
+}
+
+.home-product-link__sheen {
+    animation: home-product-link-sheen 340ms ease-out forwards;
+    opacity: 1;
+}
+
+@keyframes home-product-link-sheen {
+    0% {
+        transform: translateX(0) skewX(-18deg);
+        opacity: 0;
+    }
+
+    25% {
+        opacity: 0.45;
+    }
+
+    100% {
+        transform: translateX(340%) skewX(-18deg);
+        opacity: 0;
+    }
+}

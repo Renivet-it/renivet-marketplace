@@ -41,6 +41,7 @@ import {
     tagsRouter,
     ticketRouter,
     usersRouter,
+    userSupportRouter,
 } from "./routes/general";
 import { addressesRouter } from "./routes/general/address";
 import { capiLogsRouter } from "./routes/general/capi";
@@ -71,6 +72,7 @@ export const appRouter = createTRPCRouter({
         returnExchangeReasons: ReasonRouter,
         returnReplace: returnReplaceRouter,
         adminSupportRouter: adminSupportRouter,
+        userSupport: userSupportRouter,
         packingTypes: packingTypesRouter,
         brandProductTypePacking: brandProductTypePackingRouter,
         search: searchRouter,

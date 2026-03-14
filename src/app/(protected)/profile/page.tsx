@@ -325,7 +325,7 @@ export default function OverviewPage() {
                         <MobileNavItem
                             icon={HelpCircle}
                             label="Help Center"
-                            href="#"
+                            href="/profile/help-center"
                         />
                         <MobileNavItem
                             icon={MessageCircle}

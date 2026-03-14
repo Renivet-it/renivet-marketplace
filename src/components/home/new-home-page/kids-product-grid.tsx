@@ -1,11 +1,11 @@
 "use client";
 
+import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees } from "@/lib/utils";
 import Image from "next/image";
-import Link from "next/link";
 import { toast } from "sonner";
 
 interface Product {
@@ -94,7 +94,9 @@ export function ProductGrid({
                                     key={product.id}
                                     className="relative w-[90px] flex-shrink-0 sm:w-[120px] md:w-[150px]"
                                 >
-                                    <Link href={`/products/${product.slug}`}>
+                                    <AnimatedProductLink
+                                        href={`/products/${product.slug}`}
+                                    >
                                         {/* IMAGE */}
                                         <div className="relative h-[120px] w-full overflow-hidden bg-white sm:h-[160px] md:h-[200px]">
                                             <Image
@@ -123,7 +125,7 @@ export function ProductGrid({
                                         <p className="text-xs font-semibold text-gray-900 md:text-sm">
                                             ₹{price}
                                         </p>
-                                    </Link>
+                                    </AnimatedProductLink>
                                 </div>
                             );
                         })}
