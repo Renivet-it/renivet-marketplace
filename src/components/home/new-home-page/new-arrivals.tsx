@@ -291,16 +291,16 @@ function ProductCard({
 
                     <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
                         <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
-                            â‚¹{price}
+                            ₹{price}
                         </span>
 
                         {displayOriginal ? (
                             <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
-                                â‚¹{displayOriginal}
+                                ₹{displayOriginal}
                             </span>
                         ) : (
                             <span className="text-[11px] opacity-0 sm:text-[12px]">
-                                â‚¹0000
+                                ₹0000
                             </span>
                         )}
                     </div>
