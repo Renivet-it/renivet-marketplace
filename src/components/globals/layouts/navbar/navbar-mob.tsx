@@ -515,7 +515,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                     <MobileNavItem
                                         icon={HelpCircle}
                                         label="Help Center"
-                                        href="#"
+                                        href="/profile/help-center"
                                     />
                                     <MobileNavItem
                                         icon={MessageCircle}
