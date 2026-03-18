@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -15,7 +16,8 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
 
 const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
     ({ className, disabled, type = "search", classNames, ...props }, ref) => {
-        const [search, setSearch] = useQueryState("search", {
+        const router = useRouter();
+        const [search] = useQueryState("search", {
             defaultValue: "",
         });
         const [localSearch, setLocalSearch] = useState(search);
@@ -26,12 +28,12 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
         const updateSearch = useCallback(
             (value: string) => {
                 if (value.length > 2) {
-                    setSearch(value);
-                } else {
-                    setSearch("");
+                    router.push(`/shop?search=${encodeURIComponent(value)}`);
+                } else if (value.length === 0) {
+                    router.push("/shop");
                 }
             },
-            [setSearch]
+            [router]
         );
 
         useEffect(() => {
