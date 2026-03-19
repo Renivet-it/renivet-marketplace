@@ -112,10 +112,7 @@ export function ProductAction({ product }: PageProps) {
     const handleToggleBestSeller = async () => {
         setIsLoading(true);
         try {
-            const result = await toggleBestSeller(
-                product.id,
-                product.isBestSeller ?? false
-            );
+            const result = await toggleBestSeller(product.id);
             if (result.success) {
                 refetch();
                 toast.success(result.message);

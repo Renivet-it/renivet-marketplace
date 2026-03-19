@@ -26,6 +26,9 @@ interface PageProps {
     }>;
 }
 
+const FALLBACK_IMAGE_URL =
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+
 // ------------------
 // 🔹 generateMetadata with OG + product meta tags
 // ------------------
@@ -54,7 +57,7 @@ export async function generateMetadata({
 
     const availability =
         (existingProduct.quantity ?? 0) > 0 ? "in stock" : "out of stock";
-    const image = existingProduct.media?.[0]?.mediaItem?.url ?? "";
+    const image = existingProduct.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL;
     const url = getAbsoluteURL(`/products/${slug}`);
 
     return {
@@ -225,7 +228,7 @@ async function ProductFetch({ params }: PageProps) {
         "@type": "Product",
         sku: retailerItemId,
         name: existingProduct.title,
-        image: [existingProduct.media?.[0]?.mediaItem?.url ?? ""],
+        image: [existingProduct.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL],
         description: existingProduct.description ?? "",
         brand: {
             "@type": "Brand",

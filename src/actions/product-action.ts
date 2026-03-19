@@ -933,9 +933,10 @@ export async function toggleHomeHeroProduct(
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
+            revalidatePath("/");
             return {
                 success: true,
-                message: "Product removed from Style With Substance list",
+                message: "Product removed from Home Best Sellers section",
             };
         } else {
             // Check if product already exists and is not deleted
@@ -948,7 +949,7 @@ export async function toggleHomeHeroProduct(
             if (existing && !existing.isDeleted) {
                 return {
                     success: false,
-                    error: "Product is already in Style With Substance",
+                    error: "Product is already in Home Best Sellers section",
                 };
             }
 
@@ -973,9 +974,10 @@ export async function toggleHomeHeroProduct(
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
+            revalidatePath("/");
             return {
                 success: true,
-                message: "Product added to Style With Substance list",
+                message: "Product added to Home Best Sellers section",
             };
         }
     } catch (error) {
@@ -1474,8 +1476,7 @@ export async function newEventPageSection(
 }
 
 export async function toggleBestSeller(
-    productId: string,
-    isBestSeller: boolean
+    productId: string
 ) {
     try {
         // Check if product exists in products table
@@ -1489,18 +1490,36 @@ export async function toggleBestSeller(
             return { success: false, error: "Product not found" };
         }
 
-        // Toggle the isBestSeller status
+        const nextBestSellerState = !existingProduct.isBestSeller;
+
+        // Toggle based on DB value (prevents stale UI state issues)
         await db
             .update(products)
-            .set({ isBestSeller: !isBestSeller })
+            .set({ isBestSeller: nextBestSellerState })
             .where(eq(products.id, productId));
 
+        const updatedProduct = await db
+            .select({ isBestSeller: products.isBestSeller })
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!updatedProduct) {
+            return {
+                success: false,
+                error: "Failed to verify updated Best Seller status",
+            };
+        }
+
         revalidatePath("/dashboard/general/products");
+        revalidatePath("/");
+        revalidatePath("/shop");
         return {
             success: true,
-            message: isBestSeller
-                ? "Product removed from Best Sellers"
-                : "Product added to Best Sellers",
+            message: updatedProduct.isBestSeller
+                ? "Product added to Best Sellers"
+                : "Product removed from Best Sellers",
+            isBestSeller: updatedProduct.isBestSeller,
         };
     } catch (error) {
         console.error("Error toggling Best Seller status:", error);
