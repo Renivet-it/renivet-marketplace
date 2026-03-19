@@ -247,6 +247,18 @@ export const Icons = {
     Sun,
     ChartNoAxesColumn,
     TrendingDown,
+    SlidersHorizontal,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
+    Edit,
+    Loader,
+    LockKeyholeOpen,
+    Key,
+    Pencil,
+    PlaneLanding,
+    PlaneTakeoff,
+    Trash,
     X_Twitter: (props: LucideProps) => (
         <svg
             aria-hidden="true"
