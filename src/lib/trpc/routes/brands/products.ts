@@ -14,7 +14,7 @@ import {
 } from "@/lib/db/schema/product";
 import { posthog } from "@/lib/posthog/client";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
-import { getEmbedding } from "@/lib/python/sematic-search";
+import { getEmbedding, getEmbedding768 } from "@/lib/python/sematic-search";
 import {
     analytics,
     categoryCache,
@@ -600,19 +600,36 @@ export const productsRouter = createTRPCRouter({
                 console.log("Text for embedding:", text);
 
                 let embeddings: number[] | null = null;
+                let semanticSearchEmbeddings: number[] | null = null;
+                let searchSuggestionEmbeddings: number[] | null = null;
+
+                const suggestionText = [
+                    (product.metaKeywords || []).join(", "),
+                    (product as any).category?.name || (category as any).name || "",
+                    (product as any).subcategory?.name || (subCategoryName as any).name || "",
+                    (product as any).productType?.name || (productTypeName as any).name || "",
+                    user.brand?.name || "",
+                ]
+                    .filter((p) => p.trim() !== "")
+                    .join(" ");
+
+                if (suggestionText) {
+                    try {
+                        const suggestionEmbeddingArray = await getEmbedding(suggestionText);
+                        if (
+                            Array.isArray(suggestionEmbeddingArray) &&
+                            suggestionEmbeddingArray.length === 384
+                        ) {
+                            searchSuggestionEmbeddings = suggestionEmbeddingArray;
+                        }
+                    } catch (error) {
+                        console.error("Error generating suggestion embedding:", error);
+                    }
+                }
+
                 if (text) {
                     try {
-                        //   console.log("Calling Hugging Face API for feature extraction...");
-                        //   const response = await client.featureExtraction({
-                        //     model: "sentence-transformers/all-MiniLM-L6-v2",
-                        //     inputs: text,
-                        //   });
-
-                        //   console.log("Hugging Face API response:", response);
-
-                        //   const embeddingArray = Array.isArray(response) ? response : (response as any).data;
                         const embeddingArray = await getEmbedding(text);
-
                         if (
                             !Array.isArray(embeddingArray) ||
                             embeddingArray.length !== 384
@@ -631,6 +648,21 @@ export const productsRouter = createTRPCRouter({
                             `Error generating embedding for product with SKU ${product.sku}:`,
                             error
                         );
+                    }
+
+                    try {
+                        const embedding768Array = await getEmbedding768(text);
+                        if (
+                            Array.isArray(embedding768Array) &&
+                            embedding768Array.length === 768
+                        ) {
+                            semanticSearchEmbeddings = embedding768Array;
+                            console.log(`Generated 768 embedding for product ${product.sku}: ${semanticSearchEmbeddings.length} dimensions`);
+                        } else {
+                            console.error(`Invalid 768 embedding for product ${product.sku}.`);
+                        }
+                    } catch (error) {
+                        console.error(`Error generating 768 embedding for product ${product.sku}:`, error);
                     }
                 } else {
                     console.warn(
@@ -663,6 +695,8 @@ export const productsRouter = createTRPCRouter({
                                 weight: product.weight,
                                 brandId: product.brandId,
                                 embeddings,
+                                semanticSearchEmbeddings,
+                                searchSuggestionEmbeddings,
                                 updatedAt: new Date(),
                             })
                             .where(eq(products.id, existingProductId))
@@ -854,6 +888,8 @@ export const productsRouter = createTRPCRouter({
                         ...product,
                         slug,
                         embeddings, // Include embeddings for new product
+                        semanticSearchEmbeddings,
+                        searchSuggestionEmbeddings,
                         returnExchangePolicy: {
                             returnable: product.returnable,
                             exchangeable: product.exchangeable,

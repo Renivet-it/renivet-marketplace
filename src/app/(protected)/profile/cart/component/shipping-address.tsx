@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
@@ -23,7 +24,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Loader2, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./address-add-form";
 
@@ -87,7 +88,7 @@ export default function ShippingAddress({
                 <CardContent>
                     {isLoading ? (
                         <div className="flex h-24 items-center justify-center text-muted-foreground">
-                            <Loader2 className="mr-2 animate-spin" />
+                            <Spinner className="mr-2 animate-spin" />
                             Loading addresses...
                         </div>
                     ) : addresses.length === 0 || !selectedAddress ? (

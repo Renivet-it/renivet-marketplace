@@ -1,5 +1,5 @@
-// src/components/analytics/facebook-pixel-events.tsx
 "use client";
+// src/components/analytics/facebook-pixel-events.tsx
 
 import { fbEvent } from "@/lib/fbpixel";
 import { convertPaiseToRupees } from "@/lib/utils";

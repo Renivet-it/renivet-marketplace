@@ -1,3 +1,5 @@
+"use client";
+
 // hooks/useGuestWishlist.ts
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

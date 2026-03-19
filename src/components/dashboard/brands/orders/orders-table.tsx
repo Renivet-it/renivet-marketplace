@@ -1,3 +1,4 @@
+"use client";
 // "use client";
 
 // import { Badge } from "@/components/ui/badge";
@@ -177,7 +178,6 @@
 //         </div>
 //     );
 // }
-"use client";
 
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";

@@ -1,4 +1,6 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
+
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -209,7 +211,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 >
                     <div className="bg-[#fbfaf4] p-2 pl-3">
                         {isSearching || isFetchingSuggestions ? (
-                            <Icons.Loader2 className="size-5 animate-spin opacity-60" />
+                            <Spinner className="size-5 animate-spin opacity-60" />
                         ) : (
                             <Icons.Search className="size-5 bg-[#fbfaf4] opacity-60" />
                         )}

@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { Icons } from "@/components/icons";
@@ -703,7 +704,7 @@ export function ProductCartAddForm({
                             >
                                 {isPending ? (
                                     <>
-                                        <Icons.Loader2 className="mr-2 size-5 animate-spin" />
+                                        <Spinner className="mr-2 size-5 animate-spin" />
                                         Adding...
                                     </>
                                 ) : isAddedToCart ? (
@@ -750,7 +751,7 @@ export function ProductCartAddForm({
                                 >
                                     {isPending && isBuyNow ? (
                                         <>
-                                            <Icons.Loader2 className="mr-2 size-5 animate-spin" />
+                                            <Spinner className="mr-2 size-5 animate-spin" />
                                             Wait...
                                         </>
                                     ) : (
@@ -875,7 +876,7 @@ export function ProductCartAddForm({
                                 >
                                     {isPending && !isBuyNow ? (
                                         <>
-                                            <Icons.Loader2 className="mr-2 size-4 animate-spin" />
+                                            <Spinner className="mr-2 size-4 animate-spin" />
                                             Wait...
                                         </>
                                     ) : isAddedToCart ? (
@@ -922,7 +923,7 @@ export function ProductCartAddForm({
                                     >
                                         {isPending && isBuyNow ? (
                                             <>
-                                                <Icons.Loader2 className="mr-2 size-4 animate-spin" />
+                                                <Spinner className="mr-2 size-4 animate-spin" />
                                                 Wait...
                                             </>
                                         ) : (

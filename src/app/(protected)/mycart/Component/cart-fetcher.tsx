@@ -1,5 +1,5 @@
-// src/app/(protected)/mycart/Component/cart-fetcher.tsx
 "use client";
+// src/app/(protected)/mycart/Component/cart-fetcher.tsx
 
 import { trpc } from "@/lib/trpc/client";
 import { OrderProductCard } from "./payment-stepper/ordered-product-card-view";

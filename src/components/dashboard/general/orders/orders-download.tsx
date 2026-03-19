@@ -1,3 +1,4 @@
+"use client";
 // "use client";
 
 // import { Icons } from "@/components/icons";
@@ -100,7 +101,6 @@
 //     );
 // }
 
-"use client";
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";

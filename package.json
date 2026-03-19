@@ -95,6 +95,7 @@
     "next-sitemap": "^4.2.3",
     "next-themes": "^0.3.0",
     "next-video": "^1.4.0",
+    "nextjs-toploader": "^3.9.17",
     "nuqs": "^2.3.2",
     "papaparse": "^5.5.2",
     "pdfkit": "^0.17.2",

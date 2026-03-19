@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { getShiprocketBalance } from "@/actions";
 import { trackInitiateCheckoutCapi } from "@/actions/analytics";
@@ -24,17 +25,7 @@ import {
     handleClientError,
 } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
-import {
-    ArrowLeft,
-    ChevronRight,
-    Clock,
-    CreditCard,
-    Loader2,
-    MapPin,
-    ShieldCheck,
-    Tag,
-    Ticket,
-} from "lucide-react";
+import { ArrowLeft, ChevronRight, Clock, CreditCard, MapPin, ShieldCheck, Tag, Ticket } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -691,7 +682,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                     className="h-9 shrink-0 bg-blue-600 px-4 hover:bg-blue-700"
                                 >
                                     {isValidatingCoupon ? (
-                                        <Loader2 className="size-4 animate-spin" />
+                                        <Spinner className="size-4 animate-spin" />
                                     ) : (
                                         "Apply"
                                     )}
@@ -702,7 +693,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                             <div className="space-y-2.5">
                                 {isCouponsLoading ? (
                                     <div className="flex items-center justify-center py-8">
-                                        <Loader2 className="size-5 animate-spin text-gray-400" />
+                                        <Spinner className="size-5 animate-spin text-gray-400" />
                                     </div>
                                 ) : !filteredCoupons?.length ? (
                                     <div className="py-8 text-center">

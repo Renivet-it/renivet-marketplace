@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
@@ -290,7 +291,7 @@ export function ProductCard({
                                 }`}
                             >
                                 {isLoading ? (
-                                    <Icons.Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                                    <Spinner className="h-5 w-5 shrink-0 animate-spin" />
                                 ) : isAdded ? (
                                     <>
                                         <Check className="h-5 w-5 shrink-0" />

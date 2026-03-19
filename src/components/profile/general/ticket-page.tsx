@@ -1,17 +1,11 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Button } from "@/components/ui/button-general";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import {
-    AlertCircle,
-    ArrowLeft,
-    CheckCircle,
-    Loader2,
-    RefreshCw,
-    Send,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -343,7 +337,7 @@ export function TicketPage({ initialTicket }: TicketPageProps) {
                                 className="h-11 rounded-xl px-4"
                             >
                                 {sendMutation.isPending ? (
-                                    <Loader2 className="size-4 animate-spin" />
+                                    <Spinner className="size-4 animate-spin" />
                                 ) : (
                                     <Send className="size-4" />
                                 )}

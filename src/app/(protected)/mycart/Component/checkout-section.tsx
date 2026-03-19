@@ -1,5 +1,6 @@
-// src/app/(protected)/mycart/Component/checkout-section.tsx
 "use client";
+import { Spinner } from "@/components/ui/spinner";
+// src/app/(protected)/mycart/Component/checkout-section.tsx
 
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
@@ -16,17 +17,7 @@ import {
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
-import {
-    ChevronRight,
-    Clock,
-    Leaf,
-    Loader2,
-    Recycle,
-    Tag,
-    Ticket,
-    Truck,
-    Users,
-} from "lucide-react";
+import { ChevronRight, Clock, Leaf, Recycle, Tag, Ticket, Truck, Users } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -478,7 +469,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                     className="h-9 shrink-0 bg-blue-600 px-4 hover:bg-blue-700"
                                 >
                                     {isValidating ? (
-                                        <Loader2 className="size-4 animate-spin" />
+                                        <Spinner className="size-4 animate-spin" />
                                     ) : (
                                         "Apply"
                                     )}
@@ -489,7 +480,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                             <div className="space-y-2.5">
                                 {isCouponsLoading ? (
                                     <div className="flex items-center justify-center py-6">
-                                        <Loader2 className="size-5 animate-spin text-gray-400" />
+                                        <Spinner className="size-5 animate-spin text-gray-400" />
                                     </div>
                                 ) : !filteredCoupons?.length ? (
                                     <div className="py-6 text-center">

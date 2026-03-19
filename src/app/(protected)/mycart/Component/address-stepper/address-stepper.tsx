@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { UserAddressDeleteModal } from "@/components/globals/modals";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Edit, Loader2, Phone, Plus, Trash2 } from "lucide-react";
+import { Edit, Phone, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -114,7 +115,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
                     </CardTitle>
                     {isLoading ? (
                         <div className="flex h-24 items-center justify-center text-sm text-gray-600">
-                            <Loader2 className="mr-2 size-4 animate-spin" />
+                            <Spinner className="mr-2 size-4 animate-spin" />
                             Loading addresses...
                         </div>
                     ) : addresses.length === 0 ? (

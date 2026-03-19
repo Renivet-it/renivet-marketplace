@@ -1,3 +1,4 @@
+"use client";
 import { env } from "@/../env";
 import { verifyPayment } from "@/actions";
 import { trackPurchaseCapi } from "@/actions/analytics";
@@ -9,7 +10,6 @@ import { orderQueries, productQueries } from "@/lib/db/queries";
 // Assuming needed for value formatting if not available
 // crypto is usually available globally in Node but for client side... wait.
 // payment.ts is a utility file. Is it client or server?
-// It imports "use client" hooks? No.
 // It imports "trpc/client". It is likely client-side or shared.
 // If client-side, crypto.randomUUID() is available in modern browsers.
 // If not, I might need a polyfill or just use globalThis.crypto.
