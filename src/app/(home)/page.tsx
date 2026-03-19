@@ -87,6 +87,13 @@ const SwapSpace = dynamic(() =>
         default: m.SwapSpace,
     }))
 );
+const ProductsUnder999 = dynamic(() =>
+    import("@/components/home/new-home-page/products-under-999").then(
+        (m) => ({
+            default: m.ProductsUnder999,
+        })
+    )
+);
 const SwipeCard = dynamic(() =>
     import("@/components/home/new-home-page/swipe-card").then((m) => ({
         default: m.SwipeCard,
@@ -123,6 +130,9 @@ export default function Page() {
             </Suspense> */}
             <Suspense>
                 <SwapSpaceBannerFetch />
+            </Suspense>
+            <Suspense>
+                <ProductsUnder999Fetch />
             </Suspense>
             <Suspense>
                 <LoveTheseFetch />
@@ -276,6 +286,13 @@ async function LoveTheseFetch() {
     if (!brandProducts.length) return null;
 
     return <LoveThese banners={brandProducts} />;
+}
+
+async function ProductsUnder999Fetch() {
+    const products = await productQueries.getHomeProductsUnder999();
+    if (!products.length) return null;
+
+    return <ProductsUnder999 products={products} />;
 }
 
 async function HomePageMainProductFetch() {

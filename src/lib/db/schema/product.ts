@@ -124,6 +124,7 @@ export const products = pgTable(
         ).default(false),
         isHomePageProduct: boolean("is_home_page_product").default(false),
         isBestSeller: boolean("is_best_seller").default(false),
+        isUnder999: boolean("is_under_999").default(false).notNull(),
 
         embeddings: vector("embeddings", { dimensions: 384 }),
         searchSuggestionEmbeddings: vector("search_suggestion_embeddings", {

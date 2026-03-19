@@ -562,6 +562,7 @@ class ProductQuery {
         requireMedia,
         priorityProductIds,
         isSummerCollection,
+        isUnder999,
     }: {
         limit: number;
         page: number;
@@ -588,6 +589,7 @@ class ProductQuery {
         requireMedia?: boolean;
         priorityProductIds?: string[];
         isSummerCollection?: boolean | null;
+        isUnder999?: boolean | null;
     }) {
         console.log(
             "[getProducts] search:",
@@ -834,6 +836,9 @@ class ProductQuery {
             requireMedia ? hasMedia(products, "media") : undefined,
             isSummerCollection !== undefined && isSummerCollection !== null
                 ? eq(products.isSummerCollection, isSummerCollection)
+                : undefined,
+            isUnder999 !== undefined && isUnder999 !== null
+                ? eq(products.isUnder999, isUnder999)
                 : undefined,
         ].filter(Boolean);
 
@@ -3263,6 +3268,24 @@ class ProductQuery {
         }));
 
         return enhancedData;
+    }
+
+    async getHomeProductsUnder999(limit: number = 18) {
+        const { data } = await this.getProducts({
+            limit,
+            page: 1,
+            isActive: true,
+            isAvailable: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            isUnder999: true,
+            requireMedia: true,
+            sortBy: "createdAt",
+            sortOrder: "desc",
+        });
+
+        return data;
     }
 
     async getHomeHeroProducts() {
