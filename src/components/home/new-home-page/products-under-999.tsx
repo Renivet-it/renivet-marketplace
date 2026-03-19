@@ -190,54 +190,61 @@ function Under999ProductCard({
     };
 
     return (
-        <div className="group/product w-[168px] flex-shrink-0 overflow-hidden rounded-2xl border border-[#f4d8bd] bg-white/95 p-2.5 shadow-[0_8px_30px_rgba(180,83,9,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(180,83,9,0.2)] md:w-full">
+        <article className="product-card-container group/product w-full cursor-pointer overflow-hidden rounded-lg bg-white shadow-sm transition-all duration-300 hover:shadow-lg">
             <AnimatedProductLink href={productUrl} className="block">
-                <div className="relative h-[190px] w-full overflow-hidden rounded-xl bg-[#fff6ea] md:h-[240px]">
+                <div className="product-image-container relative aspect-[1/1] w-full overflow-hidden bg-gray-50">
                     <Image
                         src={imageUrl}
                         alt={product.title}
                         fill
-                        sizes="(max-width: 768px) 168px, 260px"
-                        className="object-cover transition-transform duration-300 group-hover/product:scale-105"
+                        sizes="(max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                        className="object-cover object-center transition-transform duration-300 group-hover/product:scale-105"
                     />
 
                     {discountPct && discountPct > 0 && (
-                        <span className="absolute left-0 top-3 rounded-r-full bg-gradient-to-r from-[#dc2626] to-[#ea580c] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        <span className="absolute left-0 top-2 rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md sm:px-2.5 sm:py-1 sm:text-xs">
                             {discountPct}% OFF
                         </span>
                     )}
-                    <span className="absolute right-2 top-2 rounded-full bg-[#111827]/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur">
-                        Under 999
-                    </span>
                 </div>
 
-                <div className="space-y-1.5 px-1 pb-1 pt-3">
-                    <h3 className="line-clamp-2 h-9 text-[13px] leading-tight text-[#1f2937] md:text-[14px]">
+                <div className="space-y-1 p-2 sm:p-2.5">
+                    <h3 className="line-clamp-2 h-9 text-[12px] font-normal text-gray-800 sm:text-[14px]">
                         {product.title}
                     </h3>
 
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-[15px] font-semibold text-[#111827]">
+                    <div className="flex h-[26px] items-center gap-1 sm:gap-1.5">
+                        <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
                             Rs.{price}
                         </span>
                         {displayCompareAt ? (
-                            <span className="text-[12px] text-[#9ca3af] line-through">
+                            <span className="text-xs text-[#9ca3af] line-through">
                                 Rs.{displayCompareAt}
                             </span>
                         ) : null}
                     </div>
+                    {discountPct && discountPct > 0 ? (
+                        <p className="text-xs font-medium text-emerald-700">
+                            You save {discountPct}%
+                        </p>
+                    ) : (
+                        <p className="text-xs font-medium text-[#64748b]">
+                            Great value pick
+                        </p>
+                    )}
                 </div>
             </AnimatedProductLink>
 
-            <div className="mt-2 flex items-center gap-2">
+            <div className="px-2 pb-2 sm:px-2.5 sm:pb-2.5">
+                <div className="mt-2.5 flex items-center gap-2">
                 <button
                     onClick={handleAddToWishlist}
-                    className="flex h-9 flex-1 items-center justify-center rounded-lg border border-[#f0c7a2] bg-[#fff8f0] transition-all duration-300 hover:border-[#ef4444] hover:bg-[#fff1f2]"
+                    className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
                 >
                     {isWishlisted ? (
-                        <Icons.Heart className="h-4 w-4 fill-current text-[#ef4444]" />
+                        <Icons.Heart className="size-4 fill-current text-red-500" />
                     ) : (
-                        <Icons.Heart className="h-4 w-4 text-[#7f1d1d]" />
+                        <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
                     )}
                 </button>
 
@@ -245,22 +252,23 @@ function Under999ProductCard({
                     onClick={handleAddToCart}
                     disabled={isLoading || isAdded}
                     className={cn(
-                        "flex h-9 flex-1 items-center justify-center rounded-lg border transition-all duration-300 disabled:opacity-60",
+                        "flex h-9 flex-1 items-center justify-center gap-1.5 rounded border text-[12px] font-medium transition-all duration-300 disabled:opacity-50 md:h-10 md:text-sm",
                         isAdded
                             ? "border-emerald-600 bg-emerald-600 text-white"
-                            : "border-[#f0c7a2] bg-white hover:bg-[#fff8f0]"
+                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:shadow-sm"
                     )}
                 >
                     {isLoading ? (
-                        <Spinner className="h-4 w-4 animate-spin text-[#374151]" />
+                        <Spinner className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
                     ) : isAdded ? (
-                        <Check className="h-4 w-4" />
+                        <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
                     ) : (
-                        <ShoppingCart className="h-4 w-4 text-[#7f1d1d]" />
+                        <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
                     )}
                 </button>
+                </div>
             </div>
-        </div>
+        </article>
     );
 }
 
@@ -280,31 +288,16 @@ export function ProductsUnder999({
     const shownProducts = products.slice(0, 18);
 
     return (
-        <section
-            className={cn(
-                "relative overflow-hidden bg-gradient-to-b from-[#fff7ed] via-[#fffaf0] to-[#fff7e6] py-8 md:py-12",
-                className
-            )}
-            {...props}
-        >
-            <div className="pointer-events-none absolute -left-16 -top-16 h-48 w-48 rounded-full bg-[#fb923c]/15 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-20 right-0 h-56 w-56 rounded-full bg-[#f59e0b]/20 blur-3xl" />
-
-            <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+        <section className={cn("w-full bg-[#FCFBF4] py-4 md:py-6", className)} {...props}>
+            <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-6 text-center md:mb-8">
-                    <p className="mx-auto mb-3 inline-flex rounded-full border border-[#f0c7a2] bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a3412]">
-                        Budget Picks
-                    </p>
-                    <h2 className="font-playfair text-[24px] leading-tight text-[#7a2e0f] md:text-[36px]">
+                    <h2 className="font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                         Products Under 999
                     </h2>
-                    <p className="mx-auto mt-2 max-w-2xl text-[13px] text-[#9a3412] md:text-[15px]">
-                        Handpicked style steals for your everyday wardrobe.
-                    </p>
                 </div>
 
-                <div className="scrollbar-hide overflow-x-auto md:hidden">
-                    <div className="flex w-max gap-3 pb-1">
+                <div className="md:hidden">
+                    <div className="grid grid-cols-3 gap-3">
                         {shownProducts.map((product) => (
                             <Under999ProductCard
                                 key={product.id}
