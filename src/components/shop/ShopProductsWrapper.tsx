@@ -31,6 +31,7 @@ export function ShopProductsWrapper({
             "price",
             "createdAt",
             "recommended",
+            "best-sellers",
         ] as const).withDefault("recommended"),
         sortOrder: parseAsStringLiteral(["asc", "desc"] as const).withDefault(
             "desc"

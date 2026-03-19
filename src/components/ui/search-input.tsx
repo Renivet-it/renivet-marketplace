@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -17,10 +17,12 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
 const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
     ({ className, disabled, type = "search", classNames, ...props }, ref) => {
         const router = useRouter();
+        const searchParams = useSearchParams();
         const [search] = useQueryState("search", {
             defaultValue: "",
         });
         const [localSearch, setLocalSearch] = useState(search);
+        const hasMountedRef = React.useRef(false);
         const debounceTimerRef = React.useRef<ReturnType<
             typeof setTimeout
         > | null>(null);
@@ -30,13 +32,27 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
                 if (value.length > 2) {
                     router.push(`/shop?search=${encodeURIComponent(value)}`);
                 } else if (value.length === 0) {
-                    router.push("/shop");
+                    // Preserve existing filters when page has no search param.
+                    if (searchParams.get("search") !== null) {
+                        router.push("/shop");
+                    }
+                } else {
+                    return;
                 }
             },
-            [router]
+            [router, searchParams]
         );
 
         useEffect(() => {
+            setLocalSearch(search);
+        }, [search]);
+
+        useEffect(() => {
+            if (!hasMountedRef.current) {
+                hasMountedRef.current = true;
+                return;
+            }
+
             if (debounceTimerRef.current) {
                 clearTimeout(debounceTimerRef.current);
             }

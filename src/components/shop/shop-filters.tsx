@@ -640,7 +640,7 @@ function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
                     className="mt-2 text-sm text-blue-600 hover:underline"
                     onClick={() => setShowAllBrands(!showAllBrands)}
                 >
-                    {showAllBrands ? "View Less -" : `View More +`}
+                    {showAllBrands ? "View Less -" : "View More +"}
                 </button>
             )}
         </div>
@@ -661,9 +661,27 @@ function CategoryFilter({
     const [categoryId, setCategoryId] = useQueryState("categoryId", {
         defaultValue: "",
     });
-    const [subCategoryId, setSubCategoryId] = useQueryState("subcategoryId", {
+    const [subCategoryId, setSubCategoryId] = useQueryState("subCategoryId", {
         defaultValue: "",
     });
+    const [legacySubCategoryId, setLegacySubCategoryId] = useQueryState(
+        "subcategoryId",
+        {
+            defaultValue: "",
+        }
+    );
+    const effectiveSubCategoryId = subCategoryId || legacySubCategoryId;
+    const updateSubCategoryId = (id: string) => {
+        void setSubCategoryId(id);
+        // Clear legacy key once we write the canonical one.
+        void setLegacySubCategoryId(null);
+    };
+    const clearSubCategoryId = () => {
+        updateSubCategoryId("");
+    };
+    const toggleSubCategoryId = (id: string) => {
+        updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
+    };
     const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
         defaultValue: "",
     });
@@ -677,7 +695,7 @@ function CategoryFilter({
                     value={categoryId}
                     onValueChange={(id) => {
                         setCategoryId(id === categoryId ? "" : id);
-                        setSubCategoryId("");
+                        clearSubCategoryId();
                         setProductTypeId("");
                         setPage(1);
                         if (setSearch) setSearch("");
@@ -707,9 +725,9 @@ function CategoryFilter({
             <div className="space-y-2">
                 <Label className="font-semibold uppercase">Subcategory</Label>
                 <RadioGroup
-                    value={subCategoryId}
+                    value={effectiveSubCategoryId}
                     onValueChange={(id) => {
-                        setSubCategoryId(id === subCategoryId ? "" : id);
+                        toggleSubCategoryId(id);
                         setProductTypeId("");
                         setPage(1);
                         if (setSearch) setSearch("");
@@ -745,7 +763,7 @@ function CategoryFilter({
                 </RadioGroup>
             </div>
             <Separator />
-            {subCategoryId && (
+            {effectiveSubCategoryId && (
                 <>
                     <Separator />
                     <div className="space-y-2">
@@ -766,7 +784,7 @@ function CategoryFilter({
                                     (t) =>
                                         (t.productCount ?? 0) > 0 &&
                                         String(t.subCategoryId) ===
-                                            String(subCategoryId)
+                                            String(effectiveSubCategoryId)
                                 )
                                 .map((t) => (
                                     <div

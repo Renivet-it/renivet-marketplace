@@ -28,6 +28,7 @@ interface PageProps {
         maxPrice?: string;
         categoryId?: string;
         subCategoryId?: string;
+        subcategoryId?: string;
         productTypeId?: string;
         sortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
         sortOrder?: "asc" | "desc";
@@ -38,6 +39,7 @@ interface PageProps {
 export default async function Page({ searchParams }: PageProps) {
     // const productTypes = await productTypeCache.getAll();
     const params = await searchParams;
+    const subCategoryId = params.subCategoryId || params.subcategoryId;
     const [productTypes, data] = await Promise.all([
         productTypeCache.getAll(),
         productQueries.getProducts({
@@ -53,7 +55,7 @@ export default async function Page({ searchParams }: PageProps) {
             minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
             maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 10000,
             categoryId: params.categoryId,
-            subcategoryId: params.subCategoryId,
+            subcategoryId: subCategoryId,
             productTypeId: params.productTypeId,
             sortBy: params.sortBy === "recommended" ? undefined : params.sortBy,
             sortOrder:
@@ -78,7 +80,7 @@ export default async function Page({ searchParams }: PageProps) {
                         <ShopFiltersFetch
                             className="space-y-4 pr-2"
                             categoryId={params.categoryId}
-                            subCategoryId={params.subCategoryId}
+                            subCategoryId={subCategoryId}
                             productTypeId={params.productTypeId}
                         />
                     </Suspense>
@@ -104,7 +106,7 @@ export default async function Page({ searchParams }: PageProps) {
                                 <ShopFiltersFetch
                                     isMobileFullWidth={true}
                                     categoryId={params.categoryId}
-                                    subCategoryId={params.subCategoryId}
+                                    subCategoryId={subCategoryId}
                                     productTypeId={params.productTypeId}
                                 />
                             </Suspense>
@@ -309,6 +311,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
         maxPrice: maxPriceRaw,
         categoryId: categoryIdRaw,
         subCategoryId: subCategoryIdRaw,
+        subcategoryId: subcategoryIdRaw,
         productTypeId: productTypeIdRaw,
         sortBy: sortByRaw,
         sortOrder: sortOrderRaw,
@@ -332,9 +335,13 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             ? parseInt(maxPriceRaw)
             : 10000;
     const categoryId = !!categoryIdRaw?.length ? categoryIdRaw : undefined;
-    const subCategoryId = !!subCategoryIdRaw?.length
-        ? subCategoryIdRaw
-        : undefined;
+    const subCategoryId =
+        (subCategoryIdRaw && subCategoryIdRaw.length > 0
+            ? subCategoryIdRaw
+            : undefined) ||
+        (subcategoryIdRaw && subcategoryIdRaw.length > 0
+            ? subcategoryIdRaw
+            : undefined);
     const productTypeId = !!productTypeIdRaw?.length
         ? productTypeIdRaw
         : undefined;
@@ -575,16 +582,8 @@ function ShopProductsSkeleton() {
 
             <Separator />
 
-            <div className="flex w-full items-center justify-center gap-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton
-                        key={i}
-                        className={cn("size-10 rounded", {
-                            "w-20": i === 0 || i === 4,
-                            "hidden md:inline-block": i === 1 || i === 3,
-                        })}
-                    />
-                ))}
+            <div className="flex w-full items-center justify-center py-4">
+                <Skeleton className="h-10 w-40 rounded-md" />
             </div>
         </>
     );
