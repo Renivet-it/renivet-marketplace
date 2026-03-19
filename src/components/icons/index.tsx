@@ -135,6 +135,7 @@ export type Icon = LucideIcon;
 export const Icons = {
     Bell,
     CreditCard,
+    LockKeyhole,
     MapPin,
     Recycle,
     RotateCw,
