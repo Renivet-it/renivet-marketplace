@@ -4,7 +4,6 @@ import { trackProductClick } from "@/actions/track-product";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
-import { keepPreviousData } from "@tanstack/react-query";
 import Link from "next/link";
 import {
     parseAsArrayOf,
@@ -13,11 +12,16 @@ import {
     parseAsStringLiteral,
     useQueryState,
 } from "nuqs";
-import { useEffect, useMemo, useState } from "react";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { ProductCard } from "../globals/cards";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
-import { Pagination } from "../ui/data-table-general";
 import {
     EmptyPlaceholder,
     EmptyPlaceholderContent,
@@ -25,7 +29,7 @@ import {
     EmptyPlaceholderIcon,
     EmptyPlaceholderTitle,
 } from "../ui/empty-placeholder-general";
-import { Separator } from "../ui/separator";
+import { Spinner } from "../ui/spinner";
 
 interface PageProps extends GenericProps {
     initialData: {
@@ -67,9 +71,13 @@ export function ShopProducts({
         parseAsInteger.withDefault(1000000)
     );
     const [categoryId] = useQueryState("categoryId", { defaultValue: "" });
-    const [subCategoryId] = useQueryState("subcategoryId", {
+    const [subCategoryId] = useQueryState("subCategoryId", {
         defaultValue: "",
     });
+    const [legacySubCategoryId] = useQueryState("subcategoryId", {
+        defaultValue: "",
+    });
+    const effectiveSubCategoryId = subCategoryId || legacySubCategoryId;
     const [productTypeId] = useQueryState("productTypeId", {
         defaultValue: "",
     });
@@ -87,6 +95,7 @@ export function ShopProducts({
             "price",
             "createdAt",
             "recommended",
+            "best-sellers",
         ] as const).withDefault("recommended")
     );
     const [sortOrder] = useQueryState(
@@ -104,7 +113,7 @@ export function ShopProducts({
             minPrice,
             maxPrice,
             categoryId,
-            subCategoryId,
+            subCategoryId: effectiveSubCategoryId,
             productTypeId,
             sortBy,
             sortOrder,
@@ -122,7 +131,7 @@ export function ShopProducts({
         minPrice,
         maxPrice,
         categoryId,
-        subCategoryId,
+        effectiveSubCategoryId,
         productTypeId,
         sortBy,
         sortOrder,
@@ -133,9 +142,44 @@ export function ShopProducts({
 
     const isSameAsInitial = initialParams === currentParams;
 
+    const filterParamsKey = useMemo(
+        () =>
+            JSON.stringify({
+                limit,
+                search,
+                brandIds,
+                minPrice,
+                maxPrice,
+                categoryId,
+                subCategoryId: effectiveSubCategoryId,
+                productTypeId,
+                sortBy,
+                sortOrder,
+                colors,
+                sizes,
+                minDiscount,
+            }),
+        [
+            limit,
+            search,
+            brandIds,
+            minPrice,
+            maxPrice,
+            categoryId,
+            effectiveSubCategoryId,
+            productTypeId,
+            sortBy,
+            sortOrder,
+            colors,
+            sizes,
+            minDiscount,
+        ]
+    );
+
     const {
-        data: { data: products, count },
+        data: queryData,
         isFetching,
+        isError,
     } = trpc.brands.products.getProducts.useQuery(
         {
             page,
@@ -150,17 +194,19 @@ export function ShopProducts({
             minPrice: minPrice < 0 ? 0 : minPrice,
             maxPrice: maxPrice,
             categoryId: !!categoryId.length ? categoryId : undefined,
-            subcategoryId: !!subCategoryId.length ? subCategoryId : undefined,
+            subcategoryId: !!effectiveSubCategoryId.length
+                ? effectiveSubCategoryId
+                : undefined,
             productTypeId: !!productTypeId.length ? productTypeId : undefined,
             sortBy: sortBy === "recommended" ? undefined : sortBy,
             sortOrder: sortBy === "recommended" ? undefined : sortOrder,
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
-            // Don't boost best sellers when search is active — search relevance should win
+            // Don't boost best sellers when search is active; search relevance should win.
             prioritizeBestSellers:
                 !search && page === 1 && (!sortBy || sortBy === "recommended"),
             requireMedia: true,
-            // Only enable recommendations when there's no active search
+            // Only enable recommendations when there's no active search.
             useRecommendations: !search,
         },
         {
@@ -171,13 +217,13 @@ export function ShopProducts({
                       topBrandMatch: null,
                   }
                 : undefined,
-            placeholderData: keepPreviousData,
-            // Never cache search results — always fetch fresh so search is accurate
-            // Only apply staleTime when showing default browse (no filters at all)
+            // Never cache search results; always fetch fresh so search is accurate.
+            // Only apply staleTime when showing default browse (no filters at all).
             staleTime:
                 !search &&
                 !categoryId.length &&
-                !subCategoryId.length &&
+                !effectiveSubCategoryId.length &&
+
                 !productTypeId.length &&
                 !brandIds?.length &&
                 !colors.length &&
@@ -193,29 +239,111 @@ export function ShopProducts({
         { enabled: !!userId, initialData: initialWishlist }
     );
 
-    // --- FILTER PRODUCTS ---
-    // We now filter for media on the server (requireMedia: true), so we trust the server count
+    const count = queryData?.count ?? 0;
+
     const visibleProducts: ProductWithBrand[] = useMemo(() => {
+        const products = queryData?.data ?? [];
         return Array.isArray(products)
             ? products.filter((p: ProductWithBrand) => !p?.isDeleted)
             : [];
-    }, [products]);
+    }, [queryData?.data]);
 
-    const pages = Math.ceil(count / limit) ?? 1;
-    const [checkedPages, setCheckedPages] = useState<number[]>([]);
+    const [allProducts, setAllProducts] = useState<ProductWithBrand[]>(() =>
+        Array.isArray(initialData?.data)
+            ? initialData.data.filter((p) => !p?.isDeleted)
+            : []
+    );
+    const [totalCount, setTotalCount] = useState<number>(
+        initialData?.count ?? 0
+    );
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const loadedPagesRef = useRef<Set<number>>(new Set([page || 1]));
+    const previousFilterKeyRef = useRef(filterParamsKey);
+    const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-    // --- AUTO-SKIP EMPTY PAGE LOGIC ---
+    const hasMoreProducts = allProducts.length < totalCount;
+
+    const loadMoreProducts = useCallback(() => {
+        if (isFetching || isLoadingMore || !hasMoreProducts) return;
+
+        setIsLoadingMore(true);
+        void setPage((page || 1) + 1);
+    }, [hasMoreProducts, isFetching, isLoadingMore, page, setPage]);
+
     useEffect(() => {
-        if (!isFetching && visibleProducts.length === 0 && page < pages) {
-            if (!checkedPages.includes(page)) {
-                setCheckedPages((prev) => [...prev, page]);
-                setPage(page + 1);
-            }
-        }
-    }, [visibleProducts, page, pages, isFetching, checkedPages, setPage]);
+        if (previousFilterKeyRef.current === filterParamsKey) return;
 
-    // --- LOADING INDICATOR ---
-    if (isFetching && !visibleProducts.length) {
+        previousFilterKeyRef.current = filterParamsKey;
+        loadedPagesRef.current = new Set();
+        setAllProducts([]);
+        setTotalCount(0);
+        setIsLoadingMore(false);
+
+        if (page !== 1) {
+            void setPage(1);
+        }
+    }, [filterParamsKey, page, setPage]);
+
+    useEffect(() => {
+        if (isFetching) return;
+
+        const currentPage = page || 1;
+
+        if (currentPage === 1) {
+            loadedPagesRef.current = new Set([1]);
+            setAllProducts(visibleProducts);
+            setTotalCount(count);
+            setIsLoadingMore(false);
+            return;
+        }
+
+        if (loadedPagesRef.current.has(currentPage)) {
+            setIsLoadingMore(false);
+            return;
+        }
+
+        loadedPagesRef.current.add(currentPage);
+        setTotalCount(count);
+        setAllProducts((previousProducts) => {
+            const existingIds = new Set(previousProducts.map((p) => p.id));
+            const uniqueNewProducts = visibleProducts.filter(
+                (p) => !existingIds.has(p.id)
+            );
+
+            return [...previousProducts, ...uniqueNewProducts];
+        });
+        setIsLoadingMore(false);
+    }, [count, isFetching, page, visibleProducts]);
+
+    // The "Show more" button IS the sentinel — when it scrolls into view it
+    // auto-fires loadMoreProducts, so no extra invisible div is needed.
+    useEffect(() => {
+        if (!autoLoadTriggerRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (!entries[0]?.isIntersecting) return;
+                if (hasMoreProducts && !isFetching && !isLoadingMore) {
+                    loadMoreProducts();
+                }
+            },
+            {
+                // Start loading as soon as the button is 200px away from entering view
+                rootMargin: "0px 0px 200px 0px",
+                threshold: 0,
+            }
+        );
+
+        observer.observe(autoLoadTriggerRef.current);
+        return () => observer.disconnect();
+    }, [hasMoreProducts, isFetching, isLoadingMore, loadMoreProducts]);
+
+    useEffect(() => {
+        if (!isError) return;
+        setIsLoadingMore(false);
+    }, [isError]);
+
+    if (isFetching && !allProducts.length) {
         return (
             <div className="flex justify-center py-10">
                 <Spinner className="size-6 animate-spin" />
@@ -223,8 +351,7 @@ export function ShopProducts({
         );
     }
 
-    // --- FINAL CHECK ---
-    if (!visibleProducts.length && page >= pages) {
+    if (!allProducts.length && !isFetching) {
         return <NoProductCard />;
     }
 
@@ -237,7 +364,7 @@ export function ShopProducts({
                 )}
                 {...props}
             >
-                {visibleProducts.map((product) => {
+                {allProducts.map((product) => {
                     const isWishlisted =
                         wishlist?.some(
                             (item) => item.productId === product.id
@@ -261,9 +388,39 @@ export function ShopProducts({
                 })}
             </div>
 
-            <Separator />
+            <div className="flex flex-col items-center gap-3 py-8">
+                {hasMoreProducts ? (
+                    <Button
+                        ref={
+                            autoLoadTriggerRef as React.RefObject<HTMLButtonElement>
+                        }
+                        onClick={loadMoreProducts}
+                        disabled={isFetching || isLoadingMore}
+                        className="min-w-[160px]"
+                    >
+                        {isFetching || isLoadingMore ? (
+                            <span className="inline-flex items-center gap-2">
+                                <Spinner className="size-4 animate-spin" />
+                                Loading...
+                            </span>
+                        ) : (
+                            "Show more"
+                        )}
+                    </Button>
+                ) : (
+                    allProducts.length > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                            You&apos;ve reached the end of this list.
+                        </p>
+                    )
+                )}
 
-            <Pagination total={pages} />
+                {isError && (
+                    <p className="text-sm text-destructive">
+                        Could not load more products. Please try again.
+                    </p>
+                )}
+            </div>
         </>
     );
 }
