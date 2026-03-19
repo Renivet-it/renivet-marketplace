@@ -37,6 +37,9 @@ interface PageProps extends GenericProps {
     userId?: string;
 }
 
+const FALLBACK_IMAGE_URL =
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+
 export function ProductPage({
     className,
     product,
@@ -63,8 +66,8 @@ export function ProductPage({
 
     const images = Array.from(
         new Map(
-            product.media
-                ?.map((media) => ({
+            (product.media ?? [])
+                .map((media) => ({
                     url: media?.mediaItem?.url,
                     alt: media?.mediaItem?.alt,
                     id: media.id,
@@ -116,8 +119,11 @@ export function ProductPage({
         product.title,
     ]);
 
-    function isEmptyArray(arr: Array<any>): boolean {
-        return arr.length === 0;
+    const selectedImageData =
+        sortedImages[selectedImage] ?? sortedImages[0] ?? null;
+
+    function isEmptyArray(arr: Array<any> | undefined): boolean {
+        return !arr?.length;
     }
 
     return (
@@ -149,7 +155,7 @@ export function ProductPage({
                                         <CarouselItem className="basis-1/5 pt-4">
                                             <div className="overflow-hidden rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
                                                 <Image
-                                                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                                    src={FALLBACK_IMAGE_URL}
                                                     alt="Default Thumbnail"
                                                     width={80}
                                                     height={80}
@@ -208,15 +214,12 @@ export function ProductPage({
                             <div className="flex size-full items-center justify-center">
                                 <Image
                                     src={
-                                        isEmptyArray(sortedImages)
-                                            ? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                                            : sortedImages[selectedImage]?.url
+                                        selectedImageData?.url ??
+                                        FALLBACK_IMAGE_URL
                                     }
                                     alt={
-                                        isEmptyArray(sortedImages)
-                                            ? "Default Product Image"
-                                            : sortedImages[selectedImage]
-                                                  ?.alt || "Product image"
+                                        selectedImageData?.alt ||
+                                        "Default Product Image"
                                     }
                                     width={485}
                                     height={485}
@@ -259,7 +262,17 @@ export function ProductPage({
                     className="md:hidden"
                 >
                     <CarouselContent className="m-0 flex flex-row gap-4">
-                        {sortedImages?.map((image, i) => (
+                        {(sortedImages.length
+                            ? sortedImages
+                            : [
+                                  {
+                                      id: "fallback",
+                                      url: FALLBACK_IMAGE_URL,
+                                      alt: "Default Product Image",
+                                      position: -1,
+                                  },
+                              ]
+                        ).map((image, i) => (
                             <CarouselItem
                                 key={image.id}
                                 className="p-0 text-center md:basis-1/2 lg:basis-1/4"
@@ -319,7 +332,17 @@ export function ProductPage({
                         }}
                     >
                         <CarouselContent className="m-0">
-                            {sortedImages?.map((image, i) => (
+                            {(sortedImages.length
+                                ? sortedImages
+                                : [
+                                      {
+                                          id: "fallback-modal",
+                                          url: FALLBACK_IMAGE_URL,
+                                          alt: "Default Product Image",
+                                          position: -1,
+                                      },
+                                  ]
+                            ).map((image, i) => (
                                 <CarouselItem
                                     key={image.id}
                                     className="p-0 text-center"

@@ -23,8 +23,13 @@ interface PageProps {
     product: ProductWithBrand;
 }
 
+const FALLBACK_IMAGE_URL =
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+
 export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
     const productUrl = getAbsoluteURL(`/products/${product.slug}`);
+    const primaryMediaUrl =
+        product?.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL;
 
     const facebookShareUrl = new URLBuilder(
         "https://www.facebook.com/dialog/share"
@@ -52,7 +57,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
         "https://www.pinterest.com/pin/create/button/"
     )
         .addQueryParam("url", productUrl)
-        .addQueryParam("media", product?.media?.[0]?.mediaItem!.url)
+        .addQueryParam("media", primaryMediaUrl)
         .addQueryParam(
             "description",
             product.description?.replace(/<[^>]*>/gm, "") ?? ""
