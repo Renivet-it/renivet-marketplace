@@ -288,36 +288,107 @@ export function ProductsUnder999({
     const shownProducts = products.slice(0, 18);
 
     return (
-        <section className={cn("w-full bg-[#FCFBF4] py-4 md:py-6", className)} {...props}>
-            <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+        <section
+            className={cn(
+                "relative w-full overflow-hidden bg-[#FCFBF4] py-4 md:py-6",
+                className
+            )}
+            {...props}
+        >
+            <div className="pointer-events-none absolute inset-0" />
+            <div className="under999-glow pointer-events-none absolute -left-20 top-16 h-44 w-44 rounded-full bg-amber-200/35 blur-3xl" />
+            <div className="under999-glow pointer-events-none absolute -right-20 bottom-4 h-48 w-48 rounded-full bg-orange-200/35 blur-3xl" />
+
+            <div className="relative mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-6 text-center md:mb-8">
                     <h2 className="font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                         Products Under 999
                     </h2>
+                    <div className="mx-auto mt-2 h-[2px] w-28 overflow-hidden rounded-full bg-[#e7dccf]">
+                        <div className="under999-shimmer h-full w-16 rounded-full bg-gradient-to-r from-transparent via-[#d8b27b] to-transparent" />
+                    </div>
                 </div>
 
                 <div className="md:hidden">
                     <div className="grid grid-cols-3 gap-3">
-                        {shownProducts.map((product) => (
-                            <Under999ProductCard
+                        {shownProducts.map((product, idx) => (
+                            <div
                                 key={product.id}
-                                product={product}
-                                userId={userId}
-                            />
+                                className="under999-reveal"
+                                style={{
+                                    animationDelay: `${Math.min(idx, 8) * 70}ms`,
+                                }}
+                            >
+                                <Under999ProductCard
+                                    product={product}
+                                    userId={userId}
+                                />
+                            </div>
                         ))}
                     </div>
                 </div>
 
                 <div className="hidden md:grid md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-6">
-                    {shownProducts.map((product) => (
-                        <Under999ProductCard
+                    {shownProducts.map((product, idx) => (
+                        <div
                             key={product.id}
-                            product={product}
-                            userId={userId}
-                        />
+                            className="under999-reveal"
+                            style={{
+                                animationDelay: `${(idx % 6) * 90}ms`,
+                            }}
+                        >
+                            <Under999ProductCard
+                                product={product}
+                                userId={userId}
+                            />
+                        </div>
                     ))}
                 </div>
             </div>
+
+            <style jsx>{`
+                .under999-reveal {
+                    animation: under999FadeUp 0.55s ease both;
+                }
+
+                .under999-shimmer {
+                    animation: under999Shimmer 2.8s linear infinite;
+                }
+
+                .under999-glow {
+                    animation: under999Float 6s ease-in-out infinite;
+                }
+
+                @keyframes under999FadeUp {
+                    0% {
+                        opacity: 0;
+                        transform: translateY(8px);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes under999Shimmer {
+                    0% {
+                        transform: translateX(-100%);
+                    }
+                    100% {
+                        transform: translateX(220%);
+                    }
+                }
+
+                @keyframes under999Float {
+                    0%,
+                    100% {
+                        transform: translateY(0);
+                    }
+                    50% {
+                        transform: translateY(-10px);
+                    }
+                }
+            `}</style>
         </section>
     );
 }
