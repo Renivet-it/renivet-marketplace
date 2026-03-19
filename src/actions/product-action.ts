@@ -1508,6 +1508,38 @@ export async function toggleBestSeller(
     }
 }
 
+export async function toggleUnder999(productId: string, isUnder999: boolean) {
+    try {
+        const existingProduct = await db
+            .select()
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((res) => res[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        await db
+            .update(products)
+            .set({ isUnder999: !isUnder999 })
+            .where(eq(products.id, productId));
+
+        revalidatePath("/dashboard/general/products");
+        revalidatePath("/");
+
+        return {
+            success: true,
+            message: isUnder999
+                ? "Product removed from Under 999 section"
+                : "Product added to Under 999 section",
+        };
+    } catch (error) {
+        console.error("Error toggling Under 999 status:", error);
+        return { success: false, error: "Failed to update Under 999 status" };
+    }
+}
+
 export async function toggleSummerCollection(
     productId: string,
     isFeatured: boolean

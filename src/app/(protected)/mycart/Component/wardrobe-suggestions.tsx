@@ -1,8 +1,9 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Check, Loader2, ShoppingBag, Sparkles } from "lucide-react";
+import { Check, ShoppingBag, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -205,7 +206,7 @@ function SuggestionCard({
                         )}
                     >
                         {addToCartMutation.isPending ? (
-                            <Loader2 className="size-3 animate-spin" />
+                            <Spinner className="size-3 animate-spin" />
                         ) : addedToBag ? (
                             <>
                                 <Check className="size-3" />

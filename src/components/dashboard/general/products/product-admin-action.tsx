@@ -12,6 +12,7 @@ import {
     toggleHomeHeroProduct,
     toggleHomeNewArrivalsProduct,
     toggleHomePageProduct,
+    toggleUnder999,
     toggleHomeYouMayAlsoLikeProduct,
     toggleHomeYouMayLoveProduct,
     toggleKidsFetchSection,
@@ -80,6 +81,7 @@ interface PageProps {
         isHomeYouMayAlsoLikeTheseProducts?: boolean;
         isHomePageProduct?: boolean;
         isBestSeller?: boolean;
+        isUnder999?: boolean;
         isSummerCollection?: boolean;
     };
 }
@@ -122,6 +124,26 @@ export function ProductAction({ product }: PageProps) {
             }
         } catch (error) {
             toast.error("Failed to update Best Seller status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleToggleUnder999 = async () => {
+        setIsLoading(true);
+        try {
+            const result = await toggleUnder999(
+                product.id,
+                product.isUnder999 ?? false
+            );
+            if (result.success) {
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch (error) {
+            toast.error("Failed to update Under 999 status");
         } finally {
             setIsLoading(false);
         }
@@ -573,6 +595,17 @@ export function ProductAction({ product }: PageProps) {
                                 {product.isBestSeller
                                     ? "Remove from Best Sellers"
                                     : "Add to Best Sellers"}
+                            </span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={handleToggleUnder999}
+                            disabled={isLoading}
+                        >
+                            <Icons.DollarSign className="size-4" />
+                            <span>
+                                {product.isUnder999
+                                    ? "Remove from Under 999 section"
+                                    : "Add to Under 999 section"}
                             </span>
                         </DropdownMenuItem>
                         <DropdownMenuItem

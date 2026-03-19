@@ -1,5 +1,5 @@
-// components/home/women/ProductGrid.jsx
 "use client";
+// components/home/women/ProductGrid.jsx
 
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";

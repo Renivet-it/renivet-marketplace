@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -522,7 +523,7 @@ export function BrandAction({ brand }: PageProps) {
                                     }
                                 >
                                     {isUpdatingBrand && (
-                                        <Icons.Loader2 className="animate-spin" />
+                                        <Spinner className="animate-spin" />
                                     )}
                                     Save Brand Info
                                 </Button>
@@ -566,7 +567,7 @@ export function BrandAction({ brand }: PageProps) {
                     >
                         {!confidentialData ? (
                             <div className="flex items-center justify-center py-8">
-                                <Icons.Loader2 className="size-6 animate-spin" />
+                                <Spinner className="size-6 animate-spin" />
                             </div>
                         ) : (
                             <>
@@ -974,7 +975,7 @@ export function BrandAction({ brand }: PageProps) {
                                             }
                                         >
                                             {isUpdatingConfidential && (
-                                                <Icons.Loader2 className="animate-spin" />
+                                                <Spinner className="animate-spin" />
                                             )}
                                             Save Confidential Details
                                         </Button>

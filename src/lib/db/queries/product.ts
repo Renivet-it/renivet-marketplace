@@ -562,6 +562,7 @@ class ProductQuery {
         requireMedia,
         priorityProductIds,
         isSummerCollection,
+        isUnder999,
     }: {
         limit: number;
         page: number;
@@ -588,6 +589,7 @@ class ProductQuery {
         requireMedia?: boolean;
         priorityProductIds?: string[];
         isSummerCollection?: boolean | null;
+        isUnder999?: boolean | null;
     }) {
         console.log(
             "[getProducts] search:",
@@ -834,6 +836,9 @@ class ProductQuery {
             requireMedia ? hasMedia(products, "media") : undefined,
             isSummerCollection !== undefined && isSummerCollection !== null
                 ? eq(products.isSummerCollection, isSummerCollection)
+                : undefined,
+            isUnder999 !== undefined && isUnder999 !== null
+                ? eq(products.isUnder999, isUnder999)
                 : undefined,
         ].filter(Boolean);
 
@@ -1693,18 +1698,35 @@ class ProductQuery {
                 .trim();
 
             let embeddings: number[] | null = null;
+            let semanticSearchEmbeddings: number[] | null = null;
+            let searchSuggestionEmbeddings: number[] | null = null;
+
+            const suggestionText = [
+                (values.metaKeywords || []).join(", "),
+                categoryName || "",
+                subcategoryName || "",
+                productTypeName || "",
+                brandName || "",
+            ]
+                .filter((p) => p.trim() !== "")
+                .join(" ");
+
+            if (suggestionText) {
+                try {
+                    const suggestionEmbeddingArray = await getEmbedding(suggestionText);
+                    if (
+                        Array.isArray(suggestionEmbeddingArray) &&
+                        suggestionEmbeddingArray.length === 384
+                    ) {
+                        searchSuggestionEmbeddings = suggestionEmbeddingArray;
+                    }
+                } catch (error) {
+                    console.error("Error generating suggestion embedding:", error);
+                }
+            }
+
             if (text) {
                 try {
-                    //         console.log("Calling Hugging Face API for feature extraction...");
-                    //         const response = await hf.featureExtraction({
-                    //           model: "sentence-transformers/all-MiniLM-L6-v2",
-                    //    inputs: text,
-                    //         });
-
-                    //         console.log("Hugging Face API response:", response);
-
-                    // Extract the embedding array
-                    // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
                     const embeddingArray = await getEmbedding(text);
                     if (
                         !Array.isArray(embeddingArray) ||
@@ -1725,6 +1747,21 @@ class ProductQuery {
                         error
                     );
                 }
+
+                try {
+                    const embedding768Array = await getEmbedding768(text);
+                    if (
+                        Array.isArray(embedding768Array) &&
+                        embedding768Array.length === 768
+                    ) {
+                        semanticSearchEmbeddings = embedding768Array;
+                        console.log(`Generated 768 embedding for product ${values.title}: ${semanticSearchEmbeddings.length} dimensions`);
+                    } else {
+                        console.error(`Invalid 768 embedding for product ${values.title}.`);
+                    }
+                } catch (error) {
+                    console.error(`Error generating 768 embedding for product ${values.title}:`, error);
+                }
             } else {
                 console.warn(
                     `No text available for embedding generation for product with title ${values.title}`
@@ -1737,6 +1774,8 @@ class ProductQuery {
                 .values({
                     ...values,
                     embeddings, // Include embeddings in the initial insert
+                    semanticSearchEmbeddings,
+                    searchSuggestionEmbeddings,
                 })
                 .returning()
                 .then((res) => res[0]);
@@ -1814,6 +1853,8 @@ class ProductQuery {
         values: (CreateProduct & {
             slug: string;
             embeddings?: number[] | null;
+            semanticSearchEmbeddings?: number[] | null;
+            searchSuggestionEmbeddings?: number[] | null;
         })[]
     ) {
         const data = await db.transaction(async (tx) => {
@@ -1828,6 +1869,8 @@ class ProductQuery {
                     values.map((value) => ({
                         ...value,
                         embeddings: value.embeddings, // Include embeddings
+                        semanticSearchEmbeddings: value.semanticSearchEmbeddings,
+                        searchSuggestionEmbeddings: value.searchSuggestionEmbeddings,
                     }))
                 )
                 .returning()
@@ -2142,18 +2185,35 @@ class ProductQuery {
                     console.log("Text for embedding:", text);
 
                     let embeddings: number[] | null = null;
+                    let semanticSearchEmbeddings: number[] | null = null;
+                    let searchSuggestionEmbeddings: number[] | null = null;
+
+                    const suggestionText = [
+                        (values.metaKeywords || []).join(", "),
+                        categoryName || "",
+                        subcategoryName || "",
+                        productTypeName || "",
+                        brandName || "",
+                    ]
+                        .filter((p) => p.trim() !== "")
+                        .join(" ");
+
+                    if (suggestionText) {
+                        try {
+                            const suggestionEmbeddingArray = await getEmbedding(suggestionText);
+                            if (
+                                Array.isArray(suggestionEmbeddingArray) &&
+                                suggestionEmbeddingArray.length === 384
+                            ) {
+                                searchSuggestionEmbeddings = suggestionEmbeddingArray;
+                            }
+                        } catch (error) {
+                            console.error("Error generating suggestion embedding:", error);
+                        }
+                    }
+
                     if (text) {
                         try {
-                            // console.log("Calling Hugging Face API for feature extraction...");
-                            // const response = await hf.featureExtraction({
-                            //   model: "sentence-transformers/all-MiniLM-L6-v2",
-                            //   inputs: text,
-                            // });
-
-                            // console.log("Hugging Face API response:", response);
-
-                            // Extract the embedding array
-                            // const embeddingArray = Array.isArray(response) ? response : (response as any).data;
                             const embeddingArray = await getEmbedding(text);
                             if (
                                 !Array.isArray(embeddingArray) ||
@@ -2174,6 +2234,21 @@ class ProductQuery {
                                 error
                             );
                         }
+
+                        try {
+                            const embedding768Array = await getEmbedding768(text);
+                            if (
+                                Array.isArray(embedding768Array) &&
+                                embedding768Array.length === 768
+                            ) {
+                                semanticSearchEmbeddings = embedding768Array;
+                                console.log(`Generated 768 embedding for product ${productId}: ${semanticSearchEmbeddings.length} dimensions`);
+                            } else {
+                                console.error(`Invalid 768 embedding for product ${productId}.`);
+                            }
+                        } catch (error) {
+                            console.error(`Error generating 768 embedding for product ${productId}:`, error);
+                        }
                     } else {
                         console.warn(
                             `No text available for embedding generation for product ${productId}`
@@ -2186,6 +2261,8 @@ class ProductQuery {
                         .set({
                             ...values,
                             embeddings,
+                            semanticSearchEmbeddings,
+                            searchSuggestionEmbeddings,
                             media: validatedMedia, // Use validated media
                             updatedAt: new Date(),
                         })
@@ -3191,6 +3268,24 @@ class ProductQuery {
         }));
 
         return enhancedData;
+    }
+
+    async getHomeProductsUnder999(limit: number = 18) {
+        const { data } = await this.getProducts({
+            limit,
+            page: 1,
+            isActive: true,
+            isAvailable: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            isUnder999: true,
+            requireMedia: true,
+            sortBy: "createdAt",
+            sortOrder: "desc",
+        });
+
+        return data;
     }
 
     async getHomeHeroProducts() {

@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { UnavailableOrdersModal } from "@/components/globals/modals";
 import {
@@ -39,27 +40,7 @@ import {
 } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { differenceInDays, differenceInMonths, format } from "date-fns";
-import {
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Droplets,
-    Eye,
-    Heart,
-    HelpCircle,
-    Leaf,
-    Loader2,
-    MoreHorizontal,
-    Package,
-    RefreshCw,
-    RotateCcw,
-    Shirt,
-    ShoppingBag,
-    ShoppingCart,
-    Star,
-    Truck,
-    XCircle,
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Droplets, Eye, Heart, HelpCircle, Leaf, MoreHorizontal, Package, RefreshCw, RotateCcw, Shirt, ShoppingBag, ShoppingCart, Star, Truck, XCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
@@ -1328,7 +1309,7 @@ function DeliveredOrderCard({
                     >
                         {isReordering ? (
                             <>
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Spinner className="h-3 w-3 animate-spin" />
                                 Adding…
                             </>
                         ) : (

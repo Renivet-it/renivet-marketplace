@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
@@ -22,7 +23,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Leaf, Loader2, MapPin, Phone, Plus } from "lucide-react";
+import { Leaf, MapPin, Phone, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AddAddressForm from "./add-address";
 
@@ -105,7 +106,7 @@ export default function ShippingAddress({ className, ...props }: GenericProps) {
 
                 {isLoading ? (
                     <div className="flex h-20 items-center justify-center text-muted-foreground">
-                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        <Spinner className="mr-2 size-4 animate-spin" />
                         <span className="text-sm">Loading addresses...</span>
                     </div>
                 ) : addresses.length === 0 || !selectedAddress ? (

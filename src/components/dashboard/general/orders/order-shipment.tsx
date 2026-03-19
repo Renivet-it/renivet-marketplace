@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import {
     ApiResponse,
@@ -22,7 +23,7 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import { cn, generatePickupLocationCode } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, Truck } from "lucide-react";
+import { CalendarIcon, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import CourierCardList from "./courier-card-list";
@@ -393,7 +394,7 @@ export default function OrderShipment({
                             >
                                 {buttonLoading ? (
                                     <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        <Spinner className="h-4 w-4 animate-spin" />
                                         Processing...
                                     </>
                                 ) : (
@@ -410,7 +411,7 @@ export default function OrderShipment({
                     {!isDelhivery &&
                         (loading ? (
                             <div className="flex h-24 items-center justify-center text-muted-foreground">
-                                <Loader2 className="mr-2 animate-spin" />
+                                <Spinner className="mr-2 animate-spin" />
                                 Loading courier partners...
                             </div>
                         ) : recommendedCourierForShiping?.data?.data

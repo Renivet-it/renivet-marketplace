@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { trackProductClick } from "@/actions/track-product";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -630,7 +631,7 @@ export function SummerClient({
 
                     {isFetching && !visibleProducts.length ? (
                         <div className="flex justify-center py-10">
-                            <Icons.Loader2 className="size-6 animate-spin text-[var(--summer-peach)]" />
+                            <Spinner className="size-6 animate-spin text-[var(--summer-peach)]" />
                         </div>
                     ) : (
                         <>

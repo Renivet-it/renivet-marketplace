@@ -100,7 +100,7 @@ export function GuestAddToCartPopup() {
                                         >
                                             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-out group-hover:translate-x-full"></div>
                                             <span className="relative">
-                                                Log in to Claim Offer
+                                                Login to Claim the Offer
                                             </span>
                                         </Button>
                                     </div>

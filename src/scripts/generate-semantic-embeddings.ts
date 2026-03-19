@@ -1,13 +1,14 @@
 import { db } from "@/lib/db";
 import { products } from "@/lib/db/schema";
 import { getEmbedding } from "@/lib/python/sematic-search";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 
 async function main() {
     console.log("Starting semantic search embedding generation...");
 
-    // 1. Fetch all products with necessary relations
+    // 1. Fetch all products without embeddings, with necessary relations
     const allProducts = await db.query.products.findMany({
+        where: isNull(products.semanticSearchEmbeddings),
         with: {
             brand: true,
             category: true,

@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { getShiprocketBalance, updateOrderAddress } from "@/actions";
 import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
@@ -25,7 +26,7 @@ import {
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+;
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -258,7 +259,7 @@ export function OrderPage({
                         <div className="md:col-span-3">
                             {localLoading ? (
                                 <div className="flex h-24 items-center justify-center text-muted-foreground">
-                                    <Loader2 className="mr-2 animate-spin" />
+                                    <Spinner className="mr-2 animate-spin" />
                                     Loading addresses...
                                 </div>
                             ) : deliveryAddress ? (

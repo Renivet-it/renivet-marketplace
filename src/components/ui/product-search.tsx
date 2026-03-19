@@ -1,8 +1,9 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
+
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { useDebouncedCallback } from "@mantine/hooks";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
@@ -23,7 +24,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [search, setSearch] = useQueryState("search", {
             defaultValue: "",
         });
-        const [, setPage] = useQueryState("page", { defaultValue: "1" });
 
         const [localSearch, setLocalSearch] = useState(search);
         const [isSearching, setIsSearching] = useState(false);
@@ -89,27 +89,17 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     setIsSearching(false);
                     setShowSuggestions(false);
 
-                    // Simply pass the query to search param - shop page handles everything
-                    if (pathname === "/shop") {
-                        setSearch(result.originalQuery);
-                        setPage("1");
-                    } else {
-                        router.push(
-                            `/shop?search=${encodeURIComponent(result.originalQuery)}`
-                        );
-                    }
+                    // Force router push to drop any existing filters
+                    router.push(
+                        `/shop?search=${encodeURIComponent(result.originalQuery)}`
+                    );
                 },
                 onError: (error) => {
                     setIsSearching(false);
                     console.error("Search error:", error);
-                    if (pathname === "/shop") {
-                        setSearch(localSearch);
-                        setPage("1");
-                    } else {
-                        router.push(
-                            `/shop?search=${encodeURIComponent(localSearch)}`
-                        );
-                    }
+                    router.push(
+                        `/shop?search=${encodeURIComponent(localSearch)}`
+                    );
                 },
             });
 
@@ -185,9 +175,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             setLocalSearch("");
             setSuggestions([]);
             setShowSuggestions(false);
-            if (pathname.startsWith("/shop")) {
-                setSearch("");
-            }
+            router.push("/shop");
         };
 
         // Close suggestions when clicking outside
@@ -223,7 +211,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 >
                     <div className="bg-[#fbfaf4] p-2 pl-3">
                         {isSearching || isFetchingSuggestions ? (
-                            <Icons.Loader2 className="size-5 animate-spin opacity-60" />
+                            <Spinner className="size-5 animate-spin opacity-60" />
                         ) : (
                             <Icons.Search className="size-5 bg-[#fbfaf4] opacity-60" />
                         )}

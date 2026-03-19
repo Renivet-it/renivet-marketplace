@@ -1,23 +1,12 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Button } from "@/components/ui/button-general";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { format } from "date-fns";
-import {
-    CheckCircle2,
-    ChevronDown,
-    ChevronRight,
-    CreditCard,
-    HelpCircle,
-    Loader2,
-    MessageCircle,
-    Package,
-    ShoppingBag,
-    Truck,
-    User,
-} from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, CreditCard, HelpCircle, MessageCircle, Package, ShoppingBag, Truck, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -1604,7 +1593,7 @@ export function HelpCenterPage({ initialOrders, user }: PageProps) {
                 >
                     {createTicketMutation.isPending ? (
                         <>
-                            <Loader2 className="mr-2 size-5 animate-spin" />{" "}
+                            <Spinner className="mr-2 size-5 animate-spin" />{" "}
                             {isOrderSupportFlow
                                 ? "STARTING CHAT..."
                                 : "SUBMITTING..."}

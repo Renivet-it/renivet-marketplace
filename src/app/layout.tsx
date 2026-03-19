@@ -14,6 +14,7 @@ import Script from "next/script";
 import { MergeGuestCart } from "../components/globals/layouts/guest/merge-guest-cart";
 import { MergeGuestWishlist } from "../components/globals/layouts/guest/merge-guest-wishlist";
 import FacebookPixel from "./facebook-pixel";
+import NextTopLoader from "nextjs-toploader";
 
 export const viewport: Viewport = {
     themeColor: [
@@ -170,6 +171,7 @@ export default function RootLayout({ children }: LayoutProps) {
                     className={cn("min-h-screen overflow-x-hidden antialiased")}
                 >
                     <ClientProvider>
+                        <NextTopLoader color="#111827" showSpinner={false} />
                         <MergeGuestCart />
                         <MergeGuestWishlist />
                         <WelcomePopupTrigger />

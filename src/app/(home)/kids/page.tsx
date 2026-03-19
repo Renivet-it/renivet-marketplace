@@ -1,3 +1,4 @@
+"use client";
 // export const revalidate = 60;
 
 
@@ -135,7 +136,6 @@
 
 
 
-"use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { Suspense } from "react";

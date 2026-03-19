@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -558,7 +559,7 @@ export function BrandSettingsForm({
                                     }
                                 >
                                     {isDetailsUpdating && (
-                                        <Icons.Loader2 className="animate-spin" />
+                                        <Spinner className="animate-spin" />
                                     )}
                                     Save Details
                                 </Button>
@@ -1165,7 +1166,7 @@ export function BrandSettingsForm({
                                 }
                             >
                                 {isConfidentialUpdating && (
-                                    <Icons.Loader2 className="animate-spin" />
+                                    <Spinner className="animate-spin" />
                                 )}
                                 Save All Business Information
                             </Button>

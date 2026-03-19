@@ -1,4 +1,5 @@
 "use client";
+import { Spinner } from "@/components/ui/spinner";
 
 import { cn } from "@/lib/utils";
 import { CachedWishlist } from "@/lib/validations";
@@ -23,7 +24,7 @@ import {
   parseAsStringLiteral,
 } from "nuqs";
 import { useState, useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
+;
 import Image from "next/image";
 
 // --- 1. Final, Accurate PromoBanner Component ---
@@ -799,7 +800,7 @@ export function ShopEventProducts({
 
   {loading && (
     <div className="flex justify-center items-center mt-4">
-      <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+      <Spinner className="h-8 w-8 animate-spin text-gray-600" />
     </div>
   )}
 
