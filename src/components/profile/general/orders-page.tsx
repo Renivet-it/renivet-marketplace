@@ -144,7 +144,7 @@ export function OrdersPage({
         []
     );
 
-    const { data: orders } = trpc.general.orders.getOrdersByUserId.useQuery(
+    const { data: orders = [] } = trpc.general.orders.getOrdersByUserId.useQuery(
         { userId: user.id },
         { initialData }
     );

@@ -84,6 +84,57 @@ type EventFilters = {
 };
 
 const hf = new InferenceClient(token);
+
+const toNonNegativeInt = (value: unknown) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0, Math.trunc(numeric));
+};
+
+const sanitizeProductQuantities = (product: any) => ({
+    ...product,
+    quantity:
+        product.quantity === null || product.quantity === undefined
+            ? product.quantity
+            : toNonNegativeInt(product.quantity),
+    variants: Array.isArray(product.variants)
+        ? product.variants.map((variant: any) => ({
+              ...variant,
+              quantity: toNonNegativeInt(variant.quantity),
+          }))
+        : product.variants,
+});
+
+const parseProductArraySafely = (productsData: any[]): ProductWithBrand[] => {
+    const sanitizedProducts = productsData.map(sanitizeProductQuantities);
+    const parsed = productWithBrandSchema.array().safeParse(sanitizedProducts);
+
+    if (parsed.success) {
+        return parsed.data;
+    }
+
+    console.error(
+        "product query: array validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitizedProducts as ProductWithBrand[];
+};
+
+const parseSingleProductSafely = (productData: any): ProductWithBrand => {
+    const sanitizedProduct = sanitizeProductQuantities(productData);
+    const parsed = productWithBrandSchema.safeParse(sanitizedProduct);
+
+    if (parsed.success) {
+        return parsed.data;
+    }
+
+    console.error(
+        "product query: single validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitizedProduct as ProductWithBrand;
+};
+
 interface CreateWomenPageFeaturedProduct {
     productId: string;
 }
@@ -257,11 +308,7 @@ class ProductQuery {
             })),
         }));
 
-        const parsed: ProductWithBrand[] = productWithBrandSchema
-            .array()
-            .parse(enhancedData);
-
-        return parsed;
+        return parseProductArraySafely(enhancedData);
     }
 
     // async getProducts({
@@ -1009,9 +1056,7 @@ class ProductQuery {
             })),
         }));
 
-        const parsed: ProductWithBrand[] = productWithBrandSchema
-            .array()
-            .parse(enhancedData);
+        const parsed = parseProductArraySafely(enhancedData);
 
         // Filter out products with no valid media (where media items don't have URLs)
         // This handles cases where media IDs exist but the actual media was deleted
@@ -1328,9 +1373,7 @@ class ProductQuery {
             })),
         }));
 
-        const parsed: ProductWithBrand[] = productWithBrandSchema
-            .array()
-            .parse(enhancedData);
+        const parsed = parseProductArraySafely(enhancedData);
         return {
             data: parsed,
             total: parsed.length,
@@ -1435,7 +1478,7 @@ class ProductQuery {
             })),
         };
 
-        return productWithBrandSchema.parse(enhancedData);
+        return parseSingleProductSafely(enhancedData);
     }
 
     async getProductBySku({
@@ -1646,7 +1689,7 @@ class ProductQuery {
             })),
         };
 
-        return productWithBrandSchema.parse(enhancedData);
+        return parseSingleProductSafely(enhancedData);
     }
 
     async createProduct(

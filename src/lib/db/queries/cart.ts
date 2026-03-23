@@ -1,8 +1,77 @@
 import { mediaCache } from "@/lib/redis/methods";
-import { cachedCartSchema, CreateCart, UpdateCart } from "@/lib/validations";
+import {
+    cachedCartSchema,
+    CachedCart,
+    CreateCart,
+    UpdateCart,
+} from "@/lib/validations";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "..";
 import { carts } from "../schema";
+
+const toNonNegativeInt = (value: unknown) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0, Math.trunc(numeric));
+};
+
+const sanitizeCartQuantities = (cart: any) => ({
+    ...cart,
+    product: cart.product
+        ? {
+              ...cart.product,
+              quantity:
+                  cart.product.quantity === null ||
+                  cart.product.quantity === undefined
+                      ? cart.product.quantity
+                      : toNonNegativeInt(cart.product.quantity),
+              variants: Array.isArray(cart.product.variants)
+                  ? cart.product.variants.map((variant: any) => ({
+                        ...variant,
+                        quantity: toNonNegativeInt(variant.quantity),
+                    }))
+                  : cart.product.variants,
+          }
+        : cart.product,
+    variant: cart.variant
+        ? {
+              ...cart.variant,
+              quantity: toNonNegativeInt(cart.variant.quantity),
+          }
+        : cart.variant,
+});
+
+const parseCartArraySafely = (cartsData: any[]): CachedCart[] => {
+    const sanitizedCarts = cartsData.map(sanitizeCartQuantities);
+    const parsed = cachedCartSchema.array().safeParse(sanitizedCarts);
+
+    if (parsed.success) {
+        return parsed.data;
+    }
+
+    console.error(
+        "cart query: array validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitizedCarts as CachedCart[];
+};
+
+const parseSingleCartSafely = (cartData: any): CachedCart | null => {
+    if (!cartData) return null;
+
+    const sanitizedCart = sanitizeCartQuantities(cartData);
+    const parsed = cachedCartSchema.safeParse(sanitizedCart);
+
+    if (parsed.success) {
+        return parsed.data;
+    }
+
+    console.error(
+        "cart query: single validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitizedCart as CachedCart;
+};
 
 class UserCartQuery {
     async getCartProductCountForUser(userId: string) {
@@ -65,8 +134,7 @@ class UserCartQuery {
             product: enhancedProducts.find((p) => p.id === d.productId),
         }));
 
-        const parsed = cachedCartSchema.array().parse(enhancedData);
-        return parsed;
+        return parseCartArraySafely(enhancedData);
     }
 
     async getProductInCart({
@@ -135,8 +203,7 @@ class UserCartQuery {
             product: enhancedProduct,
         };
 
-        const parsed = cachedCartSchema.optional().parse(enhancedData);
-        return parsed;
+        return parseSingleCartSafely(enhancedData);
     }
 
     async addProductToCart(values: CreateCart) {

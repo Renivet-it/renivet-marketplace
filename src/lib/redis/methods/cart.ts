@@ -3,6 +3,61 @@ import { parseToJSON } from "@/lib/utils";
 import { CachedCart, cachedCartSchema } from "@/lib/validations";
 import { redis } from "..";
 
+const toNonNegativeInt = (value: unknown) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0, Math.trunc(numeric));
+};
+
+const sanitizeCachedCartQuantities = (cart: any) => ({
+    ...cart,
+    product: cart?.product
+        ? {
+              ...cart.product,
+              quantity:
+                  cart.product.quantity === null ||
+                  cart.product.quantity === undefined
+                      ? cart.product.quantity
+                      : toNonNegativeInt(cart.product.quantity),
+              variants: Array.isArray(cart.product.variants)
+                  ? cart.product.variants.map((variant: any) => ({
+                        ...variant,
+                        quantity: toNonNegativeInt(variant.quantity),
+                    }))
+                  : cart.product.variants,
+          }
+        : cart?.product,
+    variant: cart?.variant
+        ? {
+              ...cart.variant,
+              quantity: toNonNegativeInt(cart.variant.quantity),
+          }
+        : cart?.variant,
+});
+
+const parseCachedCartArraySafely = (carts: any[]): CachedCart[] => {
+    const sanitized = carts.map(sanitizeCachedCartQuantities);
+    const parsed = cachedCartSchema.array().safeParse(sanitized);
+    if (parsed.success) return parsed.data;
+    console.error(
+        "cart cache: array validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitized as CachedCart[];
+};
+
+const parseCachedCartSafely = (cart: any): CachedCart | null => {
+    if (!cart) return null;
+    const sanitized = sanitizeCachedCartQuantities(cart);
+    const parsed = cachedCartSchema.safeParse(sanitized);
+    if (parsed.success) return parsed.data;
+    console.error(
+        "cart cache: single validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitized as CachedCart;
+};
+
 class UserCartCache {
     async get(userId: string) {
         const [dbCartsCount, keys] = await Promise.all([
@@ -16,9 +71,7 @@ class UserCartCache {
             const dbCarts = await userCartQueries.getCartForUser(userId);
             if (!dbCarts.length) return [];
 
-            const cachedCarts = cachedCartSchema
-                .array()
-                .parse(dbCarts)
+            const cachedCarts = parseCachedCartArraySafely(dbCarts)
                 .sort(
                     (a, b) =>
                         new Date(b.createdAt).getTime() -
@@ -35,20 +88,22 @@ class UserCartCache {
         if (!keys.length) return [];
 
         const cachedCarts = await redis.mget(...keys);
-        return cachedCartSchema.array().parse(
+        const parsedCachedCarts = parseCachedCartArraySafely(
             cachedCarts
                 .map((sub) => parseToJSON<CachedCart>(sub))
                 .filter((sub): sub is CachedCart => sub !== null)
-                .sort(
-                    (a, b) =>
-                        new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime()
-                )
-                .sort((a, b) => {
-                    if (a.status === b.status) return 0;
-                    return a.status ? -1 : 1;
-                })
         );
+
+        return parsedCachedCarts
+            .sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+            )
+            .sort((a, b) => {
+                if (a.status === b.status) return 0;
+                return a.status ? -1 : 1;
+            });
     }
 
     async getProduct({
@@ -73,13 +128,14 @@ class UserCartCache {
             });
             if (!dbCart) return null;
 
-            const cachedCart = cachedCartSchema.parse(dbCart);
+            const cachedCart = parseCachedCartSafely(dbCart);
+            if (!cachedCart) return null;
 
             await this.add(cachedCart);
             return cachedCart;
         }
 
-        return cachedCartSchema.parse(parseToJSON(cachedCart));
+        return parseCachedCartSafely(parseToJSON(cachedCart));
     }
 
     async add(cart: CachedCart) {

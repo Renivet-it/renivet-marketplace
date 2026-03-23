@@ -95,12 +95,18 @@ export function Sidebar() {
     );
 
     return (
-        <ShadSidebar collapsible="icon">
-            <SidebarHeader>
+        <ShadSidebar
+            collapsible="icon"
+            className="border-r border-sidebar-border/70 bg-sidebar/95 backdrop-blur-md"
+        >
+            <SidebarHeader className="border-b border-sidebar-border/70 p-3">
                 <GenericHeader />
             </SidebarHeader>
 
-            <SidebarContent style={{ scrollbarWidth: "none" }}>
+            <SidebarContent
+                className="gap-3 px-2 py-3"
+                style={{ scrollbarWidth: "none" }}
+            >
                 <NavMain
                     items={data.navMain}
                     userPermissions={userPermissions}
@@ -128,7 +134,7 @@ export function Sidebar() {
                 />
             </SidebarContent>
 
-            <SidebarFooter>
+            <SidebarFooter className="border-t border-sidebar-border/70 p-3">
                 <NavUser />
             </SidebarFooter>
 

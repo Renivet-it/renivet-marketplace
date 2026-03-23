@@ -56,6 +56,9 @@ export function OrderPage({
         "pending" | "success" | "error"
     >("pending");
     const [isProcessing, setIsProcessing] = useState(false);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+        "online" | "cod"
+    >("online");
 
     const { selectedShippingAddress, appliedCoupon } = useCartStore();
 
@@ -184,7 +187,7 @@ export function OrderPage({
         }
     };
 
-    const { mutate: createOrder, isPending: isOrderCreating } =
+    const { mutateAsync: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
             onSuccess: (newOrder, variables) => {
                 console.log("Successfully created order:", newOrder);
@@ -245,6 +248,81 @@ export function OrderPage({
                 handleClientError(err);
             },
         });
+
+    const buildOrderDetailsByBrand = ({
+        paymentMethod,
+        razorpayOrderId,
+        razorpayPaymentId,
+    }: {
+        paymentMethod: "razorpay" | "COD";
+        razorpayOrderId: string;
+        razorpayPaymentId?: string;
+    }) => {
+        if (!selectedShippingAddress) return [];
+
+        const itemsByBrand = availableItems.reduce(
+            (acc, item) => {
+                const brandId = item.product.brandId;
+                if (!acc[brandId]) {
+                    acc[brandId] = [];
+                }
+                acc[brandId].push(item);
+                return acc;
+            },
+            {} as Record<string, typeof availableItems>
+        );
+
+        return Object.entries(itemsByBrand).map(([, brandItems]) => {
+            const brandTotal = brandItems.reduce((acc, item) => {
+                const price = item.variantId
+                    ? (item.product.variants?.find(
+                          (v) => v.id === item.variantId
+                      )?.price ??
+                      item.product.price ??
+                      0)
+                    : (item.product.price ?? 0);
+                return acc + price * item.quantity;
+            }, 0);
+
+            return {
+                userId: user.id,
+                coupon: appliedCoupon?.code,
+                addressId: selectedShippingAddress.id,
+                deliveryAmount: priceList.delivery,
+                taxAmount: 0,
+                totalAmount: Number(brandTotal.toFixed(2)),
+                discountAmount: Number(
+                    (
+                        priceList.discount * (brandTotal / priceList.items)
+                    ).toFixed(2)
+                ),
+                paymentMethod,
+                totalItems: brandItems.reduce(
+                    (acc, item) => acc + item.quantity,
+                    0
+                ),
+                shiprocketOrderId: null,
+                shiprocketShipmentId: null,
+                items: brandItems.map((item) => ({
+                    price: item.variantId
+                        ? (item.product.variants.find(
+                              (v) => v.id === item.variantId
+                          )?.price ??
+                          item.product.price ??
+                          0)
+                        : (item.product.price ?? 0),
+                    brandId: item.product.brandId,
+                    productId: item.product.id,
+                    variantId: item.variantId,
+                    sku: item.variant?.nativeSku ?? item.product.nativeSku,
+                    quantity: item.quantity,
+                    categoryId: item.product.categoryId,
+                })),
+                razorpayOrderId,
+                ...(razorpayPaymentId ? { razorpayPaymentId } : {}),
+            };
+        });
+    };
 
     const { mutate: deleteItemFromCart, isPending: isRemoving } =
         trpc.general.orders.deleteItemFromCart.useMutation({
@@ -322,77 +400,10 @@ export function OrderPage({
 
                 setIsProcessing(true);
 
-                // Group items by brand to create multiple orders after payment
-                const itemsByBrand = availableItems.reduce(
-                    (acc, item) => {
-                        const brandId = item.product.brandId;
-                        if (!acc[brandId]) {
-                            acc[brandId] = [];
-                        }
-                        acc[brandId].push(item);
-                        return acc;
-                    },
-                    {} as Record<string, typeof availableItems>
-                );
-
-                console.log("Items grouped by brand:", itemsByBrand);
-
-                const orderDetailsByBrand = Object.entries(itemsByBrand).map(
-                    ([brandId, brandItems]) => {
-                        const brandTotal = brandItems.reduce((acc, item) => {
-                            const price = item.variantId
-                                ? (item.product.variants?.find(
-                                      (v) => v.id === item.variantId
-                                  )?.price ??
-                                  item.product.price ??
-                                  0)
-                                : (item.product.price ?? 0);
-                            return acc + price * item.quantity;
-                        }, 0);
-
-                        const orderDetails = {
-                            userId: user.id,
-                            coupon: appliedCoupon?.code,
-                            addressId: selectedShippingAddress.id,
-                            deliveryAmount: priceList.delivery,
-                            taxAmount: 0,
-                            totalAmount: Number(brandTotal.toFixed(2)),
-                            discountAmount: Number(
-                                (
-                                    priceList.discount *
-                                    (brandTotal / priceList.items)
-                                ).toFixed(2)
-                            ),
-                            paymentMethod: "razorpay",
-                            totalItems: brandItems.reduce(
-                                (acc, item) => acc + item.quantity,
-                                0
-                            ),
-                            shiprocketOrderId: null,
-                            shiprocketShipmentId: null,
-                            items: brandItems.map((item) => ({
-                                price: item.variantId
-                                    ? (item.product.variants.find(
-                                          (v) => v.id === item.variantId
-                                      )?.price ??
-                                      item.product.price ??
-                                      0)
-                                    : (item.product.price ?? 0),
-                                brandId: item.product.brandId,
-                                productId: item.product.id,
-                                variantId: item.variantId,
-                                sku:
-                                    item.variant?.nativeSku ??
-                                    item.product.nativeSku,
-                                quantity: item.quantity,
-                                categoryId: item.product.categoryId,
-                            })),
-                            razorpayOrderId: razorpayOrderId,
-                        };
-
-                        return orderDetails;
-                    }
-                );
+                const orderDetailsByBrand = buildOrderDetailsByBrand({
+                    paymentMethod: "razorpay",
+                    razorpayOrderId,
+                });
 
                 console.log(
                     "Order details by brand before payment:",
@@ -464,7 +475,65 @@ export function OrderPage({
             },
         });
 
-    const handlePayNow = () => {
+    const handleCodOrder = async () => {
+        if (!selectedShippingAddress) {
+            toast.error("No shipping address selected");
+            return;
+        }
+
+        if (availableItems.length === 0) {
+            toast.error("Cart is empty");
+            return;
+        }
+
+        const codRef = `cod_${Date.now()}`;
+        const orderDetailsByBrand = buildOrderDetailsByBrand({
+            paymentMethod: "COD",
+            razorpayOrderId: codRef,
+            razorpayPaymentId: `${codRef}_pending`,
+        });
+
+        if (!orderDetailsByBrand.length) {
+            toast.error("No items available to place order");
+            return;
+        }
+
+        setIsProcessing(true);
+        setProcessingModalTitle("Placing COD Order...");
+        setProcessingModalDescription(
+            "Please wait while we place your Cash on Delivery order."
+        );
+        setProcessingModalState("pending");
+        setIsProcessingModalOpen(true);
+
+        try {
+            for (const orderDetails of orderDetailsByBrand) {
+                await retryCreateOrder(orderDetails);
+            }
+
+            setProcessingModalTitle("Order Placed Successfully");
+            setProcessingModalDescription(
+                "Your COD order has been placed successfully. Redirecting to your orders..."
+            );
+            setProcessingModalState("success");
+
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            setIsProcessingModalOpen(false);
+            window.location.href = "/profile/orders";
+        } catch (error: any) {
+            console.error("COD order creation failed:", error);
+            setProcessingModalTitle("COD Order Failed");
+            setProcessingModalDescription(
+                error?.message ||
+                    "Failed to place COD order. Please try again."
+            );
+            setProcessingModalState("error");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handlePlaceOrder = () => {
         if (!userCart || !selectedShippingAddress) {
             toast.error("Cart or address missing");
             return;
@@ -531,6 +600,11 @@ export function OrderPage({
             },
             getAbsoluteURL(window.location.href)
         ).catch((err) => console.error("CAPI InitiateCheckout Error:", err));
+
+        if (selectedPaymentMethod === "cod") {
+            void handleCodOrder();
+            return;
+        }
 
         initPayment();
     };
@@ -627,6 +701,45 @@ export function OrderPage({
                 </div>
 
                 <div className="mt-4 space-y-3">
+                    <div className="rounded-xl border border-gray-200 bg-white p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Payment Method
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSelectedPaymentMethod("online")
+                                }
+                                className={cn(
+                                    "flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                    selectedPaymentMethod === "online"
+                                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                                        : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                                )}
+                            >
+                                <CreditCard className="size-4" />
+                                <span>Pay Online</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPaymentMethod("cod")}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                    selectedPaymentMethod === "cod"
+                                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                                        : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                                )}
+                            >
+                                <Truck className="size-4" />
+                                <span>Cash on Delivery</span>
+                            </button>
+                        </div>
+                        <p className="mt-2 text-[11px] text-gray-500">
+                            COD orders are fulfilled via Delhivery.
+                        </p>
+                    </div>
+
                     <Button
                         size="lg"
                         className="group w-full rounded-xl bg-[#95b6da] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#82a3c7] hover:shadow-md"
@@ -651,14 +764,16 @@ export function OrderPage({
                                       ? "destructive"
                                       : "secondary"
                         }
-                        onClick={handlePayNow}
+                        onClick={handlePlaceOrder}
                     >
                         {!selectedShippingAddress
                             ? "Select Address"
                             : availableItems.length === 0
                               ? "Cart is Empty"
                               : order?.paymentStatus === "pending"
-                                ? "Pay Now"
+                                ? selectedPaymentMethod === "cod"
+                                    ? "Place COD Order"
+                                    : "Pay Now"
                                 : order?.paymentStatus === "paid"
                                   ? "Already Paid"
                                   : order?.paymentStatus === "failed" &&

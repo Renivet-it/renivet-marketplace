@@ -6,7 +6,10 @@ import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
 import { productQueries, refundQueries } from "@/lib/db/queries";
 import { orderShipments } from "@/lib/db/schema/order-shipment";
-import { createOrder as createDelhiveryOrder } from "@/lib/delhivery/orders";
+import {
+    cancelOrder as cancelDelhiveryOrder,
+    createOrder as createDelhiveryOrder,
+} from "@/lib/delhivery/orders";
 import { razorpay } from "@/lib/razorpay";
 import {
     analytics,
@@ -238,6 +241,7 @@ export const ordersRouter = createTRPCRouter({
             console.log("🟢 Input meta:", {
                 itemsCount: input.items?.length,
                 coupon: input.coupon ?? null,
+                paymentMethod: input.paymentMethod ?? null,
                 razorpayOrderId: input.razorpayOrderId,
                 razorpayPaymentId: input.razorpayPaymentId,
                 userId: input.userId,
@@ -984,16 +988,23 @@ export const ordersRouter = createTRPCRouter({
                         // });
                     }
 
-                    // NEW: Logic 2 - Mark as Paid
-                    console.log(`Marking order ${newOrder.id} as paid`);
+                    // NEW: Logic 2 - Set payment state based on payment method
+                    const isCodPayment = input.paymentMethod === "COD";
+                    console.log(
+                        `Updating payment state for order ${newOrder.id} (COD: ${isCodPayment})`
+                    );
                     try {
                         await queries.orders.updateOrderStatus(newOrder.id, {
-                            paymentId: input.razorpayPaymentId,
-                            paymentMethod: "online",
-                            paymentStatus: "paid",
+                            paymentId: isCodPayment
+                                ? null
+                                : input.razorpayPaymentId,
+                            paymentMethod: isCodPayment ? "COD" : "online",
+                            paymentStatus: isCodPayment ? "pending" : "paid",
                             status: "processing",
                         });
-                        console.log(`Order ${newOrder.id} marked as paid`);
+                        console.log(
+                            `Order ${newOrder.id} payment status updated`
+                        );
                     } catch (statusError) {
                         console.error(
                             `Failed to update order status for order ${newOrder.id}:`,
@@ -1338,7 +1349,6 @@ export const ordersRouter = createTRPCRouter({
         })
         .mutation(async ({ ctx }) => {
             const { existingOrder, queries, db, schemas } = ctx;
-            const sr = await shiprocket();
 
             // Check if order can be cancelled
             if (!["pending", "processing"].includes(existingOrder.status)) {
@@ -1387,14 +1397,67 @@ export const ordersRouter = createTRPCRouter({
                 }
             }
 
-            // Cancel Shiprocket orders and update shipments
+            const hasShiprocketShipment = existingOrder.shipments.some(
+                (shipment) => !!shipment.shiprocketOrderId
+            );
+            const sr = hasShiprocketShipment ? await shiprocket() : null;
+
+            // Cancel Delhivery / Shiprocket shipments and update status
             for (const shipment of existingOrder.shipments) {
                 try {
-                    // Cancel Shiprocket order
-                    if (shipment.shiprocketOrderId)
+                    // Delhivery cancellation (AWB / upload WBN)
+                    const delhiveryTrackingIds = Array.from(
+                        new Set(
+                            [shipment.awbNumber, shipment.uploadWbn].filter(
+                                (id): id is string => !!id
+                            )
+                        )
+                    );
+                    if (delhiveryTrackingIds.length > 0) {
+                        let isCancelledInDelhivery = false;
+                        let lastDelhiveryError: unknown = null;
+
+                        for (const trackingId of delhiveryTrackingIds) {
+                            try {
+                                const cancelResponse =
+                                    await cancelDelhiveryOrder(trackingId);
+                                const statusText = String(
+                                    cancelResponse?.status ??
+                                        cancelResponse?.Status ??
+                                        ""
+                                ).toLowerCase();
+                                const isFailure =
+                                    statusText.includes("fail") ||
+                                    statusText.includes("error");
+
+                                if (!isFailure) {
+                                    isCancelledInDelhivery = true;
+                                    break;
+                                }
+
+                                lastDelhiveryError = cancelResponse;
+                            } catch (delhiveryError) {
+                                lastDelhiveryError = delhiveryError;
+                            }
+                        }
+
+                        if (!isCancelledInDelhivery) {
+                            console.error(
+                                `Delhivery cancellation failed for shipment ${shipment.id}`,
+                                lastDelhiveryError
+                            );
+                            throw new Error(
+                                "Failed to cancel shipment in Delhivery"
+                            );
+                        }
+                    }
+
+                    // Shiprocket cancellation (legacy shipments)
+                    if (shipment.shiprocketOrderId && sr) {
                         await sr.deleteOrder({
                             ids: [shipment.shiprocketOrderId],
                         });
+                    }
 
                     // Update shipment status
                     await db
@@ -1427,10 +1490,18 @@ export const ordersRouter = createTRPCRouter({
 
             await productQueries.updateProductStock(updateProductStockData);
 
+            const nextPaymentStatus =
+                existingOrder.paymentStatus === "refund_pending"
+                    ? "refund_pending"
+                    : existingOrder.paymentStatus === "paid" &&
+                        !!existingOrder.paymentId
+                      ? "refund_pending"
+                      : "failed";
+
             // Update order status
             await queries.orders.updateOrderStatus(existingOrder.id, {
                 status: "cancelled",
-                paymentStatus: "refund_pending",
+                paymentStatus: nextPaymentStatus,
                 paymentId: existingOrder.paymentId,
                 paymentMethod: existingOrder.paymentMethod,
             });
