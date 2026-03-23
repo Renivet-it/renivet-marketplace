@@ -23,9 +23,11 @@ import {
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+
 export async function toggleFeaturedProduct(
     productId: string,
-    isFeaturedWomen: boolean
+    isFeaturedWomen: boolean,
+    position: number = 0
 ) {
     try {
         // Check if product exists in products table
@@ -70,8 +72,16 @@ export async function toggleFeaturedProduct(
                 return { success: false, error: "Product is already featured" };
             }
 
-            // Add to featured products in womenPageFeaturedProducts
-            await productQueries.createWomenPageFeaturedProduct({ productId });
+            if (existing) {
+                // Restore with updated position
+                await db
+                    .update(womenPageFeaturedProducts)
+                    .set({ isDeleted: false, deletedAt: null, position })
+                    .where(eq(womenPageFeaturedProducts.productId, productId));
+            } else {
+                // Add to featured products in womenPageFeaturedProducts
+                await db.insert(womenPageFeaturedProducts).values({ productId, position });
+            }
 
             // Update isFeaturedWomen to true in products table
             await db
@@ -89,7 +99,8 @@ export async function toggleFeaturedProduct(
 
 export async function menToggleFeaturedProduct(
     productId: string,
-    isFeaturedMen: boolean
+    isFeaturedMen: boolean,
+    position: number = 0
 ) {
     try {
         // Check if product exists in products table
@@ -133,8 +144,15 @@ export async function menToggleFeaturedProduct(
                 return { success: false, error: "Product is already featured" };
             }
 
-            // Add to featured products in womenPageFeaturedProducts
-            await productQueries.createMenPageFeaturedProduct({ productId });
+            if (existing) {
+                await db
+                    .update(menPageFeaturedProducts)
+                    .set({ isDeleted: false, deletedAt: null, position })
+                    .where(eq(menPageFeaturedProducts.productId, productId));
+            } else {
+                // Add to featured products in womenPageFeaturedProducts
+                await db.insert(menPageFeaturedProducts).values({ productId, position });
+            }
 
             // Update isFeaturedWomen to true in products table
             await db
@@ -953,6 +971,7 @@ export async function toggleHomeHeroProduct(
                 };
             }
 
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -1273,10 +1292,11 @@ export async function toggleHomePageProduct(
 export async function toggleHomeNewArrivalsProduct(
     productId: string,
     isActive: boolean,
-    category: string
+    category: string,
+    position?: number
 ) {
     try {
-        // ✅ Check if product exists
+        // âœ Check if product exists
         const existingProduct = await db
             .select()
             .from(products)
@@ -1288,7 +1308,7 @@ export async function toggleHomeNewArrivalsProduct(
         }
 
         // =============================
-        // 🟢 ADD PRODUCT TO CATEGORY
+        // ðŸŸ ADD PRODUCT TO CATEGORY
         // =============================
         if (isActive) {
             const existing = await db
@@ -1297,11 +1317,11 @@ export async function toggleHomeNewArrivalsProduct(
                 .where(eq(homeNewArrivals.productId, productId))
                 .then((res) => res[0]);
 
-            // ✅ Only block if already active *and* we're adding again
-            if (existing && !existing.isDeleted) {
+            // âœ Only block if already active *and* we're adding again *and* it's the exact same category
+            if (existing && !existing.isDeleted && existing.category === category) {
                 return {
                     success: false,
-                    error: "Product is already in New Arrivals",
+                    error: "Product is already in New Arrivals in this category",
                 };
             }
 
@@ -1313,6 +1333,7 @@ export async function toggleHomeNewArrivalsProduct(
                         isDeleted: false,
                         deletedAt: null,
                         category,
+                        ...(position !== undefined ? { position } : {}),
                     })
                     .where(eq(homeNewArrivals.productId, productId));
             } else {
@@ -1320,10 +1341,11 @@ export async function toggleHomeNewArrivalsProduct(
                 await db.insert(homeNewArrivals).values({
                     productId,
                     category,
+                    ...(position !== undefined ? { position } : {}),
                 });
             }
 
-            // ✅ Update product table flag
+            // âœ Update product table flag
             await db
                 .update(products)
                 .set({
@@ -1339,7 +1361,7 @@ export async function toggleHomeNewArrivalsProduct(
         }
 
         // =============================
-        // 🔴 REMOVE PRODUCT
+        // ðŸ” REMOVE PRODUCT
         // =============================
         const existing = await db
             .select()
@@ -1362,12 +1384,10 @@ export async function toggleHomeNewArrivalsProduct(
             })
             .where(eq(homeNewArrivals.productId, productId));
 
-        // ✅ Update products table flag
+        // Update ishomeProductSection to false in products table
         await db
             .update(products)
-            .set({
-                isHomeNewArrival: false,
-            })
+            .set({ isHomeNewArrival: false })
             .where(eq(products.id, productId));
 
         revalidatePath("/dashboard/general/products");
@@ -1592,5 +1612,86 @@ export async function toggleSummerCollection(
             success: false,
             error: "Failed to update Summer Collection status",
         };
+    }
+}
+
+export type ProductSectionKey =
+    | "homeHero"
+    | "homeLoveThese"
+    | "homeMayAlsoLike"
+    | "homePageList"
+    | "homeNewArrivals"
+    | "featuredWomen"
+    | "featuredMen"
+    | "styleWithSubstanceWomen"
+    | "styleWithSubstanceMen"
+    | "kidsFetch"
+    | "homeLivingNewArrival"
+    | "homeLivingTopPicks"
+    | "beautyNewArrivals"
+    | "beautyTopPicks"
+    | "eventPage"
+    | "bestSeller"
+    | "under999";
+
+export async function updateSectionPosition(
+    productId: string,
+    section: ProductSectionKey,
+    position: number
+) {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sectionTableMap: Record<string, any> = {
+            homeHero: homeProductSection,
+            homeLoveThese: homeProductLoveTheseSection,
+            homeMayAlsoLike: homeProductMayAlsoLikeThese,
+            homePageList: homeProductPageList,
+            homeNewArrivals: homeNewArrivals,
+            featuredWomen: womenPageFeaturedProducts,
+            featuredMen: menPageFeaturedProducts,
+            styleWithSubstanceWomen: womenStyleWithSubstanceMiddlePageSection,
+            styleWithSubstanceMen: menCuratedHerEssence,
+            kidsFetch: kidsFreshCollectionSection,
+            homeLivingNewArrival: homeandlivingNewArrival,
+            homeLivingTopPicks: homeandlivingTopPicks,
+            beautyNewArrivals: beautyNewArrivals,
+            beautyTopPicks: beautyTopPicks,
+            eventPage: newProductEventPage,
+        };
+
+        if (section === "bestSeller") {
+            await db
+                .update(products)
+                .set({ bestSellerPosition: position })
+                .where(eq(products.id, productId));
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Best Seller position updated" };
+        }
+
+        if (section === "under999") {
+            await db
+                .update(products)
+                .set({ under999Position: position })
+                .where(eq(products.id, productId));
+            revalidatePath("/dashboard/general/products");
+            return { success: true, message: "Under 999 position updated" };
+        }
+
+        const table = sectionTableMap[section];
+        if (!table) {
+            return { success: false, error: "Unknown section" };
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await db
+            .update(table as any)
+            .set({ position })
+            .where(eq((table as any).productId, productId));
+
+        revalidatePath("/dashboard/general/products");
+        return { success: true, message: "Position updated successfully" };
+    } catch (error) {
+        console.error("Error updating section position:", error);
+        return { success: false, error: "Failed to update position" };
     }
 }

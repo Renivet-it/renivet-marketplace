@@ -858,8 +858,15 @@ class ProductQuery {
         // 🌟 Step 0: prioritize best sellers
         if (prioritizeBestSellers) {
             orderBy.push(
-                sql`CASE WHEN ${products.isBestSeller} = true THEN 0 ELSE 1 END ASC`
+                sql`CASE WHEN ${products.isBestSeller} = true THEN 0 ELSE 1 END ASC`,
+                asc(products.bestSellerPosition)
             );
+        } else if (sortBy === "best-sellers") {
+            orderBy.push(asc(products.bestSellerPosition));
+        }
+
+        if (isUnder999) {
+            orderBy.push(asc(products.under999Position));
         }
 
         // 🟦 Step 1: prioritize matched brand
@@ -3001,6 +3008,7 @@ class ProductQuery {
     async getWomenPageFeaturedProducts() {
         const data = await db.query.womenPageFeaturedProducts.findMany({
             where: eq(womenPageFeaturedProducts.isDeleted, false),
+            orderBy: [asc(womenPageFeaturedProducts.position)],
             with: {
                 product: {
                     with: {
@@ -3069,6 +3077,7 @@ class ProductQuery {
     async getMenPageFeaturedProducts() {
         const data = await db.query.menPageFeaturedProducts.findMany({
             where: eq(menPageFeaturedProducts.isDeleted, false),
+            orderBy: [asc(menPageFeaturedProducts.position)],
             with: {
                 product: {
                     with: {
@@ -3137,6 +3146,7 @@ class ProductQuery {
     async getKidsPageFeaturedProducts() {
         const data = await db.query.kidsFreshCollectionSection.findMany({
             where: eq(kidsFreshCollectionSection.isDeleted, false),
+            orderBy: [asc(kidsFreshCollectionSection.position)],
             with: {
                 product: {
                     with: {
@@ -3205,6 +3215,7 @@ class ProductQuery {
     async getHomePageFeaturedProducts() {
         const data = await db.query.homeNewArrivals.findMany({
             where: eq(homeNewArrivals.isDeleted, false),
+            orderBy: [asc(homeNewArrivals.position)],
             with: {
                 product: {
                     with: {
@@ -3291,6 +3302,7 @@ class ProductQuery {
     async getHomeHeroProducts() {
         const data = await db.query.homeProductSection.findMany({
             where: eq(homeProductSection.isDeleted, false),
+            orderBy: [asc(homeProductSection.position)],
             with: {
                 product: {
                     with: {
@@ -3359,6 +3371,7 @@ class ProductQuery {
     async getHomeLoveTheseProducts() {
         const data = await db.query.homeProductLoveTheseSection.findMany({
             where: eq(homeProductLoveTheseSection.isDeleted, false),
+            orderBy: [asc(homeProductLoveTheseSection.position)],
             with: {
                 product: {
                     with: {
@@ -3427,6 +3440,7 @@ class ProductQuery {
     async getHomePageProducts() {
         const data = await db.query.homeProductPageList.findMany({
             where: eq(homeProductPageList.isDeleted, false),
+            orderBy: [asc(homeProductPageList.position)],
             with: {
                 product: {
                     with: {
@@ -3495,6 +3509,7 @@ class ProductQuery {
     async getHomeYouMayAlsoLikeProducts() {
         const data = await db.query.homeProductMayAlsoLikeThese.findMany({
             where: eq(homeProductMayAlsoLikeThese.isDeleted, false),
+            orderBy: [asc(homeProductMayAlsoLikeThese.position)],
             with: {
                 product: {
                     with: {
@@ -3563,6 +3578,7 @@ class ProductQuery {
     async getHomeAndLivingTopPicks() {
         const data = await db.query.homeandlivingTopPicks.findMany({
             where: eq(homeandlivingTopPicks.isDeleted, false),
+            orderBy: [asc(homeandlivingTopPicks.position)],
             with: {
                 product: {
                     with: {
@@ -3631,6 +3647,7 @@ class ProductQuery {
     async getHomeAndLivingNewArrivals() {
         const data = await db.query.homeandlivingNewArrival.findMany({
             where: eq(homeandlivingNewArrival.isDeleted, false),
+            orderBy: [asc(homeandlivingNewArrival.position)],
             with: {
                 product: {
                     with: {
@@ -3699,6 +3716,7 @@ class ProductQuery {
     async getBeautyNewArrivals() {
         const data = await db.query.beautyNewArrivals.findMany({
             where: eq(beautyNewArrivals.isDeleted, false),
+            orderBy: [asc(beautyNewArrivals.position)],
             with: {
                 product: {
                     with: {
@@ -3767,6 +3785,7 @@ class ProductQuery {
     async getBeautyTopPicks() {
         const data = await db.query.beautyTopPicks.findMany({
             where: eq(beautyTopPicks.isDeleted, false),
+            orderBy: [asc(beautyTopPicks.position)],
             with: {
                 product: {
                     with: {
@@ -3908,6 +3927,7 @@ class ProductQuery {
     async getNewEventPage(filters: EventFilters = {}) {
         const data = await db.query.newProductEventPage.findMany({
             where: eq(newProductEventPage.isDeleted, false),
+            orderBy: [asc(newProductEventPage.position)],
             with: {
                 product: {
                     with: {
