@@ -617,6 +617,9 @@ class ProductQuery {
         const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
         const normalizedColors = colors?.map((c) => c.toLowerCase());
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
+        // Best Sellers should include all products; media-only filtering can hide many items.
+        const shouldRequireMedia =
+            !!requireMedia && sortBy !== "best-sellers";
         // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
 
@@ -799,9 +802,6 @@ class ProductQuery {
           )
         `
                 : undefined,
-            sortBy === "best-sellers"
-                ? eq(products.isBestSeller, true)
-                : undefined,
             // Discount filter: only show products with discount >= minDiscount%
             // Discount = ((compare_at_price - price) / compare_at_price) * 100
             minDiscount !== undefined && minDiscount !== null && minDiscount > 0
@@ -833,7 +833,7 @@ class ProductQuery {
                 )`
                 : undefined,
             // Filter for products with media (images) - used by shop page
-            requireMedia ? hasMedia(products, "media") : undefined,
+            shouldRequireMedia ? hasMedia(products, "media") : undefined,
             isSummerCollection !== undefined && isSummerCollection !== null
                 ? eq(products.isSummerCollection, isSummerCollection)
                 : undefined,
@@ -856,13 +856,11 @@ class ProductQuery {
         }
 
         // 🌟 Step 0: prioritize best sellers
-        if (prioritizeBestSellers) {
+        if (prioritizeBestSellers || sortBy === "best-sellers") {
             orderBy.push(
                 sql`CASE WHEN ${products.isBestSeller} = true THEN 0 ELSE 1 END ASC`,
                 asc(products.bestSellerPosition)
             );
-        } else if (sortBy === "best-sellers") {
-            orderBy.push(asc(products.bestSellerPosition));
         }
 
         if (isUnder999) {
@@ -943,6 +941,8 @@ class ProductQuery {
                       ? asc(products[sortBy])
                       : desc(products[sortBy])
             );
+        } else if (!sortBy || sortBy === "best-sellers") {
+            orderBy.push(desc(products.createdAt));
         }
 
         // --- Query the DB ---
@@ -1015,7 +1015,7 @@ class ProductQuery {
 
         // Filter out products with no valid media (where media items don't have URLs)
         // This handles cases where media IDs exist but the actual media was deleted
-        const filteredData = requireMedia
+        const filteredData = shouldRequireMedia
             ? parsed.filter((product) => {
                   // Check if product has at least one media item with a valid URL
                   const hasValidMedia = product.media.some(
@@ -1025,7 +1025,7 @@ class ProductQuery {
               })
             : parsed;
 
-        if (requireMedia && search) {
+        if (shouldRequireMedia && search) {
             console.log(
                 `[getProducts] Filtered ${parsed.length} -> ${filteredData.length} products`
             );

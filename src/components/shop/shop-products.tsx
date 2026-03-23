@@ -131,7 +131,7 @@ export function ShopProducts({
         minPrice,
         maxPrice,
         categoryId,
-        effectiveSubCategoryId,
+        subCategoryId: effectiveSubCategoryId,
         productTypeId,
         sortBy,
         sortOrder,
@@ -206,10 +206,13 @@ export function ShopProducts({
             prioritizeBestSellers:
                 !search && page === 1 && (!sortBy || sortBy === "recommended"),
             requireMedia: true,
-            // Only enable recommendations when there's no active search.
-            useRecommendations: !search,
+            // Only enable recommendations for the default "recommended" sort.
+            useRecommendations:
+                !search && (!sortBy || sortBy === "recommended"),
         },
         {
+            // Prevent a duplicate client fetch on first render when server data already matches.
+            enabled: !isSameAsInitial,
             initialData: isSameAsInitial
                 ? {
                       ...initialData,

@@ -10,7 +10,7 @@ export async function GET(req: Request) {
         search: searchParams.get("search") || undefined,
         brandIds: searchParams.get("brandIds")?.split(","),
         minPrice: parseInt(searchParams.get("minPrice") || "0"),
-        maxPrice: parseInt(searchParams.get("maxPrice") || "10000"),
+        maxPrice: parseInt(searchParams.get("maxPrice") || "1000000"),
         categoryId: searchParams.get("categoryId") || undefined,
         subcategoryId: searchParams.get("subCategoryId") || undefined,
         productTypeId: searchParams.get("productTypeId") || undefined,

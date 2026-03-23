@@ -34,14 +34,12 @@ export function SearchableProductTypes({
     isDesktop?: boolean;
 }) {
     const searchParams = useSearchParams();
-    const qpString = searchParams.toString(); // stable string to watch
     const searchTerm = searchParams.get("search") ?? "";
 
     // 1) start with whichever prop the parent passed (fallback to [])
     const [products, setProducts] = useState<Product[]>(
         productsProp ?? initialProducts ?? []
     );
-    const [loading, setLoading] = useState(false);
     const [showAll, setShowAll] = useState(false);
 
     // 2) sync when parent updates the prop (e.g. full page navigation / SSR)
@@ -49,46 +47,7 @@ export function SearchableProductTypes({
         setProducts(productsProp ?? initialProducts ?? []);
     }, [productsProp, initialProducts]);
 
-    // 3) fetch fresh product list from the API every time query string changes
-    useEffect(() => {
-        let mounted = true;
-        const fetchProducts = async () => {
-            setLoading(true);
-            console.log(
-                "[SearchableProductTypes] fetching /api/products?" + qpString
-            );
-            try {
-                const res = await fetch(`/api/products?${qpString}`, {
-                    cache: "no-store",
-                });
-                const json = await res.json();
-                console.log("[SearchableProductTypes] api response:", json);
-
-                // Normalize to an array using common shapes
-                let items: Product[] = [];
-                if (Array.isArray(json)) items = json;
-                else if (Array.isArray(json.data)) items = json.data;
-                else if (Array.isArray(json.products)) items = json.products;
-                else if (Array.isArray(json.result)) items = json.result;
-                else items = [];
-
-                if (mounted) setProducts(items);
-            } catch (err) {
-                console.error("[SearchableProductTypes] fetch error:", err);
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        };
-
-        // Kick off fetch (do it even if qpString is empty so initialProducts can be refreshed)
-        fetchProducts();
-
-        return () => {
-            mounted = false;
-        };
-    }, [qpString]); // run when any query param changes
-
-    // 4) compute active types from the (client) products state
+    // 3) compute active types from the products state
     const activeTypes = useMemo(() => {
         const unique = new Set<string>();
         const types: { id: string; name: string; subCategoryName?: string }[] =
@@ -158,11 +117,7 @@ export function SearchableProductTypes({
                     All Items
                 </a>
 
-                {loading ? (
-                    <p className="px-2 text-sm text-muted-foreground">
-                        Loading...
-                    </p>
-                ) : activeTypes.length > 0 ? (
+                {activeTypes.length > 0 ? (
                     <>
                         {(isDesktop && !showAll
                             ? activeTypes.slice(0, 6)
