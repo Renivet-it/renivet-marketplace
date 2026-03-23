@@ -14,7 +14,6 @@ import {
 import { cn } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
-import AutoRefresher from "./AutoRefresher";
 import { SearchableProductTypes } from "./search-component";
 
 interface PageProps {
@@ -53,7 +52,7 @@ export default async function Page({ searchParams }: PageProps) {
             verificationStatus: "approved",
             brandIds: params.brandIds?.split(","),
             minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
-            maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 10000,
+            maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 1000000,
             categoryId: params.categoryId,
             subcategoryId: subCategoryId,
             productTypeId: params.productTypeId,
@@ -64,15 +63,13 @@ export default async function Page({ searchParams }: PageProps) {
             sizes: params.sizes?.split(","),
             // Don't prioritize best sellers when search is active
             prioritizeBestSellers:
-                !params.search && parseInt(params.page || "1") === 1,
+                !params.search && (!params.sortBy || params.sortBy === "recommended"),
             requireMedia: true,
         }),
     ]);
 
     return (
         <GeneralShell>
-            <AutoRefresher />
-
             <div className="flex flex-col gap-5 md:flex-row">
                 {/* Desktop filters - Fixed sidebar */}
                 <aside className="hidden md:sticky md:top-4 md:block md:max-h-[calc(100vh-2rem)] md:basis-1/5 md:self-start md:overflow-y-auto">
@@ -333,7 +330,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
     const maxPrice =
         maxPriceRaw && !isNaN(parseInt(maxPriceRaw))
             ? parseInt(maxPriceRaw)
-            : 10000;
+            : 1000000;
     const categoryId = !!categoryIdRaw?.length ? categoryIdRaw : undefined;
     const subCategoryId =
         (subCategoryIdRaw && subCategoryIdRaw.length > 0
@@ -405,7 +402,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
                 colors,
                 sizes,
                 prioritizeBestSellers:
-                    page === 1 && (!sortByRaw || sortByRaw === "recommended"),
+                    !search && (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
 
@@ -453,7 +450,6 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
                 // Don't prioritize best sellers when search is active
                 prioritizeBestSellers:
                     !search &&
-                    page === 1 &&
                     (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
@@ -480,7 +476,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             colors,
             sizes,
             prioritizeBestSellers:
-                page === 1 && (!sortByRaw || sortByRaw === "recommended"),
+                !search && (!sortByRaw || sortByRaw === "recommended"),
             requireMedia: true,
         });
     }

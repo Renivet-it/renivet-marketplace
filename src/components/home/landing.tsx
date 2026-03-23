@@ -25,31 +25,31 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const mobileImages = [
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNpB968wYoKFqlYMSWzhgNZG6Cm5OtIUjre39T",
-            link: "https://renivet.com/shop",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
-            link: "https://renivet.com/shop",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
-            link: "https://renivet.com/shop",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkD4zwkxYt1TxMBy6jes3QdWaELUvNIiXHwRO",
-            link: "https://renivet.com/shop",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqFXOkLGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
-            link: "https://renivet.com/shop",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSGDBaWVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
-            link: "https://renivet.com/shop",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP",
-            link: "https://renivet.com/shop",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
         },
     ];
     const placeholders = ["Search For Products and Brands"];
