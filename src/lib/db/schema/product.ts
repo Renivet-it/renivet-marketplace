@@ -126,6 +126,10 @@ export const products = pgTable(
         isBestSeller: boolean("is_best_seller").default(false),
         isUnder999: boolean("is_under_999").default(false).notNull(),
 
+        // POSITION/SEQUENCE — for boolean-only sections stored directly on products table
+        bestSellerPosition: integer("best_seller_position").default(0).notNull(),
+        under999Position: integer("under999_position").default(0).notNull(),
+
         embeddings: vector("embeddings", { dimensions: 384 }),
         searchSuggestionEmbeddings: vector("search_suggestion_embeddings", {
             dimensions: 384,
@@ -167,6 +171,7 @@ export const products = pgTable(
             }),
     })
 );
+
 export const productEvents = pgTable(
     "product_events",
     {
@@ -204,6 +209,7 @@ export const productEvents = pgTable(
         ).on(t.userId, t.event, t.createdAt),
     })
 );
+
 export const womenPageFeaturedProducts = pgTable(
     "women_page_featured_products",
     {
@@ -211,6 +217,7 @@ export const womenPageFeaturedProducts = pgTable(
         productId: uuid("product_id")
             .notNull()
             .references(() => products.id, { onDelete: "cascade" }),
+        position: integer("position").default(0).notNull(),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,
@@ -222,6 +229,7 @@ export const menPageFeaturedProducts = pgTable("men_page_featured_products", {
     productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -234,6 +242,7 @@ export const womenStyleWithSubstanceMiddlePageSection = pgTable(
         productId: uuid("product_id")
             .notNull()
             .references(() => products.id, { onDelete: "cascade" }),
+        position: integer("position").default(0).notNull(),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,
@@ -245,6 +254,7 @@ export const menCuratedHerEssence = pgTable("men_style_with_substance", {
     productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -257,6 +267,7 @@ export const kidsFreshCollectionSection = pgTable(
         productId: uuid("product_id")
             .notNull()
             .references(() => products.id, { onDelete: "cascade" }),
+        position: integer("position").default(0).notNull(),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,
@@ -268,6 +279,7 @@ export const homeandlivingNewArrival = pgTable("home_and_living_new_arrival", {
     productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -278,6 +290,7 @@ export const homeandlivingTopPicks = pgTable("home_living_top_picks", {
     productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -288,6 +301,7 @@ export const beautyNewArrivals = pgTable("beauty_new_arrivals", {
     productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -299,6 +313,7 @@ export const homeNewArrivals = pgTable("home_new_arrivals", {
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
     category: text("category"),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -310,6 +325,7 @@ export const homeProductSection = pgTable("home_product_Section", {
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
     category: text("category"),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -323,6 +339,7 @@ export const homeProductLoveTheseSection = pgTable(
             .notNull()
             .references(() => products.id, { onDelete: "cascade" }),
         category: text("category"),
+        position: integer("position").default(0).notNull(),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,
@@ -335,10 +352,12 @@ export const homeProductPageList = pgTable("home_product_page_list", {
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
     category: text("category"),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
 });
+
 export const homeProductMayAlsoLikeThese = pgTable(
     "home_product__may_also_like_these_Section",
     {
@@ -347,6 +366,7 @@ export const homeProductMayAlsoLikeThese = pgTable(
             .notNull()
             .references(() => products.id, { onDelete: "cascade" }),
         category: text("category"),
+        position: integer("position").default(0).notNull(),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,
@@ -358,6 +378,7 @@ export const beautyTopPicks = pgTable("beauty_top_picks", {
     productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
@@ -368,10 +389,12 @@ export const newProductEventPage = pgTable("new_product_event_page", {
     productId: uuid("product_id")
         .notNull()
         .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
     isDeleted: boolean("is_deleted").default(false).notNull(),
     deletedAt: timestamp("deleted_at"),
     ...timestamps,
 });
+
 export const productOptions = pgTable(
     "product_options",
     {
@@ -453,6 +476,7 @@ export const productsJourney = pgTable(
         ).on(table.productId),
     })
 );
+
 export const productSpecifications = pgTable("product_specifications", {
     id: uuid("id").primaryKey().defaultRandom(),
     productId: uuid("product_id").references(() => products.id, {
@@ -463,6 +487,7 @@ export const productSpecifications = pgTable("product_specifications", {
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...timestamps,
 });
+
 export const returnExchangePolicy = pgTable("return_exchange_policies", {
     id: uuid("id").primaryKey().defaultRandom(),
     productId: uuid("product_id").references(() => products.id, {
@@ -620,6 +645,7 @@ export const homeNewArrivalsRelation = relations(
         }),
     })
 );
+
 export const homeProductSectionRelation = relations(
     homeProductSection,
     ({ one }) => ({
@@ -659,12 +685,14 @@ export const homeProductMayAlsoLikeTheseRelation = relations(
         }),
     })
 );
+
 export const beautyTopPicksRelation = relations(beautyTopPicks, ({ one }) => ({
     product: one(products, {
         fields: [beautyTopPicks.productId],
         references: [products.id],
     }),
 }));
+
 export const newProductEventPageRelation = relations(
     newProductEventPage,
     ({ one }) => ({
