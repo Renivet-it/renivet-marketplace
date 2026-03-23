@@ -238,6 +238,7 @@ export const ordersRouter = createTRPCRouter({
             console.log("🟢 Input meta:", {
                 itemsCount: input.items?.length,
                 coupon: input.coupon ?? null,
+                paymentMethod: input.paymentMethod ?? null,
                 razorpayOrderId: input.razorpayOrderId,
                 razorpayPaymentId: input.razorpayPaymentId,
                 userId: input.userId,
@@ -984,16 +985,23 @@ export const ordersRouter = createTRPCRouter({
                         // });
                     }
 
-                    // NEW: Logic 2 - Mark as Paid
-                    console.log(`Marking order ${newOrder.id} as paid`);
+                    // NEW: Logic 2 - Set payment state based on payment method
+                    const isCodPayment = input.paymentMethod === "COD";
+                    console.log(
+                        `Updating payment state for order ${newOrder.id} (COD: ${isCodPayment})`
+                    );
                     try {
                         await queries.orders.updateOrderStatus(newOrder.id, {
-                            paymentId: input.razorpayPaymentId,
-                            paymentMethod: "online",
-                            paymentStatus: "paid",
+                            paymentId: isCodPayment
+                                ? null
+                                : input.razorpayPaymentId,
+                            paymentMethod: isCodPayment ? "COD" : "online",
+                            paymentStatus: isCodPayment ? "pending" : "paid",
                             status: "processing",
                         });
-                        console.log(`Order ${newOrder.id} marked as paid`);
+                        console.log(
+                            `Order ${newOrder.id} payment status updated`
+                        );
                     } catch (statusError) {
                         console.error(
                             `Failed to update order status for order ${newOrder.id}:`,

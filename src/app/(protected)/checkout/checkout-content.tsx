@@ -2,7 +2,10 @@
 import { Spinner } from "@/components/ui/spinner";
 
 import { getShiprocketBalance } from "@/actions";
-import { trackInitiateCheckoutCapi } from "@/actions/analytics";
+import {
+    trackInitiateCheckoutCapi,
+    trackPurchaseCapi,
+} from "@/actions/analytics";
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
@@ -25,7 +28,17 @@ import {
     handleClientError,
 } from "@/lib/utils";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, ChevronRight, Clock, CreditCard, MapPin, ShieldCheck, Tag, Ticket } from "lucide-react";
+import {
+    ArrowLeft,
+    ChevronRight,
+    Clock,
+    CreditCard,
+    MapPin,
+    ShieldCheck,
+    Tag,
+    Ticket,
+    Truck,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -57,6 +70,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
     const [isCouponExpanded, setIsCouponExpanded] = useState(false);
     const [couponCode, setCouponCode] = useState("");
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+        "online" | "cod"
+    >("online");
 
     const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
         useCartStore();
@@ -258,7 +274,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 trackPurchaseCapi(
                     eventId,
                     {
-                        em: user?.emailAddresses?.[0]?.emailAddress,
+                        em: user?.email,
                         ph: selectedShippingAddress?.phone,
                         fn: user?.firstName ?? undefined,
                         ln: user?.lastName ?? undefined,
@@ -284,6 +300,79 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 handleClientError(err);
             },
         });
+
+    const buildOrderDetailsByBrand = ({
+        paymentMethod,
+        razorpayOrderId,
+        razorpayPaymentId,
+    }: {
+        paymentMethod: "razorpay" | "COD";
+        razorpayOrderId: string;
+        razorpayPaymentId?: string;
+    }) => {
+        if (!selectedShippingAddress || !user) return [];
+
+        const itemsByBrand = availableItems.reduce(
+            (acc, item) => {
+                const brandId = item.product.brandId;
+                if (!acc[brandId]) acc[brandId] = [];
+                acc[brandId].push(item);
+                return acc;
+            },
+            {} as Record<string, typeof availableItems>
+        );
+
+        return Object.entries(itemsByBrand).map(([, brandItems]) => {
+            const brandTotal = brandItems.reduce((acc, item) => {
+                const price = item.variantId
+                    ? (item.product.variants?.find(
+                          (v) => v.id === item.variantId
+                      )?.price ??
+                      item.product.price ??
+                      0)
+                    : (item.product.price ?? 0);
+                return acc + price * item.quantity;
+            }, 0);
+
+            return {
+                userId: user.id,
+                coupon: appliedCoupon?.code,
+                addressId: selectedShippingAddress.id,
+                deliveryAmount: priceList.delivery,
+                taxAmount: 0,
+                totalAmount: Number(brandTotal.toFixed(2)),
+                discountAmount: Number(
+                    (
+                        priceList.discount * (brandTotal / priceList.items)
+                    ).toFixed(2)
+                ),
+                paymentMethod,
+                totalItems: brandItems.reduce(
+                    (acc, item) => acc + item.quantity,
+                    0
+                ),
+                shiprocketOrderId: null,
+                shiprocketShipmentId: null,
+                items: brandItems.map((item) => ({
+                    price: item.variantId
+                        ? (item.product.variants.find(
+                              (v) => v.id === item.variantId
+                          )?.price ??
+                          item.product.price ??
+                          0)
+                        : (item.product.price ?? 0),
+                    brandId: item.product.brandId,
+                    productId: item.product.id,
+                    variantId: item.variantId,
+                    sku: item.variant?.nativeSku ?? item.product.nativeSku,
+                    quantity: item.quantity,
+                    categoryId: item.product.categoryId,
+                })),
+                razorpayOrderId,
+                ...(razorpayPaymentId ? { razorpayPaymentId } : {}),
+            };
+        });
+    };
 
     const { mutate: deleteItemFromCart, isPending: isRemoving } =
         trpc.general.orders.deleteItemFromCart.useMutation({
@@ -357,70 +446,10 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
                 setIsProcessing(true);
 
-                const itemsByBrand = availableItems.reduce(
-                    (acc, item) => {
-                        const brandId = item.product.brandId;
-                        if (!acc[brandId]) acc[brandId] = [];
-                        acc[brandId].push(item);
-                        return acc;
-                    },
-                    {} as Record<string, typeof availableItems>
-                );
-
-                const orderDetailsByBrand = Object.entries(itemsByBrand).map(
-                    ([brandId, brandItems]) => {
-                        const brandTotal = brandItems.reduce((acc, item) => {
-                            const price = item.variantId
-                                ? (item.product.variants?.find(
-                                      (v) => v.id === item.variantId
-                                  )?.price ??
-                                  item.product.price ??
-                                  0)
-                                : (item.product.price ?? 0);
-                            return acc + price * item.quantity;
-                        }, 0);
-
-                        return {
-                            userId: user.id,
-                            coupon: appliedCoupon?.code,
-                            addressId: selectedShippingAddress.id,
-                            deliveryAmount: priceList.delivery,
-                            taxAmount: 0,
-                            totalAmount: Number(brandTotal.toFixed(2)),
-                            discountAmount: Number(
-                                (
-                                    priceList.discount *
-                                    (brandTotal / priceList.items)
-                                ).toFixed(2)
-                            ),
-                            paymentMethod: "razorpay",
-                            totalItems: brandItems.reduce(
-                                (acc, item) => acc + item.quantity,
-                                0
-                            ),
-                            shiprocketOrderId: null,
-                            shiprocketShipmentId: null,
-                            items: brandItems.map((item) => ({
-                                price: item.variantId
-                                    ? (item.product.variants.find(
-                                          (v) => v.id === item.variantId
-                                      )?.price ??
-                                      item.product.price ??
-                                      0)
-                                    : (item.product.price ?? 0),
-                                brandId: item.product.brandId,
-                                productId: item.product.id,
-                                variantId: item.variantId,
-                                sku:
-                                    item.variant?.nativeSku ??
-                                    item.product.nativeSku,
-                                quantity: item.quantity,
-                                categoryId: item.product.categoryId,
-                            })),
-                            razorpayOrderId: razorpayOrderId,
-                        };
-                    }
-                );
+                const orderDetailsByBrand = buildOrderDetailsByBrand({
+                    paymentMethod: "razorpay",
+                    razorpayOrderId,
+                });
 
                 const options = createRazorpayPaymentOptions({
                     orderId: razorpayOrderId,
@@ -476,7 +505,62 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             },
         });
 
-    const handlePayNow = () => {
+    const handleCodOrder = async () => {
+        if (!userCart || !selectedShippingAddress)
+            return toast.error("Cart or address missing");
+        if (!user) return toast.error("User missing");
+        if (availableItems.length === 0)
+            return toast.error("No items available for checkout");
+
+        const codRef = `cod_${Date.now()}`;
+        const orderDetailsByBrand = buildOrderDetailsByBrand({
+            paymentMethod: "COD",
+            razorpayOrderId: codRef,
+            razorpayPaymentId: `${codRef}_pending`,
+        });
+
+        if (!orderDetailsByBrand.length) {
+            return toast.error("Unable to build COD order details");
+        }
+
+        setIsProcessing(true);
+        setProcessingModalTitle("Placing COD Order...");
+        setProcessingModalDescription(
+            "Please wait while we place your Cash on Delivery order."
+        );
+        setProcessingModalState("pending");
+        setIsProcessingModalOpen(true);
+
+        try {
+            for (const orderDetails of orderDetailsByBrand) {
+                await retryCreateOrder(orderDetails);
+            }
+
+            if (!isBuyNow) {
+                deleteItemFromCart({ userId });
+            }
+
+            setProcessingModalTitle("Order Placed Successfully");
+            setProcessingModalDescription(
+                "Your COD order has been placed successfully. Redirecting to your orders..."
+            );
+            setProcessingModalState("success");
+
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            setIsProcessingModalOpen(false);
+            window.location.href = "/profile/orders";
+        } catch (error: any) {
+            setProcessingModalTitle("COD Order Failed");
+            setProcessingModalDescription(
+                error?.message || "Failed to place COD order. Please try again."
+            );
+            setProcessingModalState("error");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handlePlaceOrder = () => {
         if (!userCart || !selectedShippingAddress)
             return toast.error("Cart or address missing");
         if (!user) return toast.error("User missing");
@@ -516,7 +600,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         trackInitiateCheckoutCapi(
             eventId,
             {
-                em: user?.emailAddresses?.[0]?.emailAddress,
+                em: user?.email,
                 ph: selectedShippingAddress.phone,
                 fn: user.firstName ?? undefined,
                 ln: user.lastName ?? undefined,
@@ -534,6 +618,11 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             },
             getAbsoluteURL(window.location.href)
         ).catch((err) => console.error("CAPI InitiateCheckout Error:", err));
+
+        if (selectedPaymentMethod === "cod") {
+            void handleCodOrder();
+            return;
+        }
 
         initPayment();
     };
@@ -908,27 +997,52 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             {/* Sticky Bottom Bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-3 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
                 <div className="mx-auto max-w-2xl space-y-3">
-                    <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-2 px-3 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="rounded-md bg-gray-100 p-1">
-                                <CreditCard className="size-5 text-gray-700" />
-                            </div>
-                            <div className="text-xs">
-                                <p className="font-semibold text-gray-900">
-                                    Razorpay Secure
-                                </p>
-                                <p className="line-clamp-1 text-gray-500">
-                                    UPI, Credit/Debit Card, NetBanking
-                                </p>
-                            </div>
+                    <div className="rounded-xl border border-gray-100 bg-white p-2 px-3 shadow-sm">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Payment Method
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPaymentMethod("online")}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors",
+                                    selectedPaymentMethod === "online"
+                                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                                        : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                                )}
+                            >
+                                <CreditCard className="size-4" />
+                                <span>Pay Online</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPaymentMethod("cod")}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors",
+                                    selectedPaymentMethod === "cod"
+                                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                                        : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                                )}
+                            >
+                                <Truck className="size-4" />
+                                <span>Cash on Delivery</span>
+                            </button>
                         </div>
-                        <ShieldCheck className="size-5 text-green-600" />
+                        <div className="mt-2 flex items-center justify-between">
+                            <p className="text-[11px] text-gray-500">
+                                {selectedPaymentMethod === "cod"
+                                    ? "COD fulfilled via Delhivery"
+                                    : "Razorpay Secure: UPI, Card, NetBanking"}
+                            </p>
+                            <ShieldCheck className="size-4 text-green-600" />
+                        </div>
                     </div>
 
                     <Button
                         size="lg"
                         className="h-12 w-full rounded-xl bg-[#84abd6] text-lg font-bold text-white shadow-none hover:bg-[#6d96c2]"
-                        onClick={handlePayNow}
+                        onClick={handlePlaceOrder}
                         disabled={
                             isProcessing ||
                             isPaymentInitializing ||
@@ -941,7 +1055,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     >
                         {isProcessing || isPaymentInitializing
                             ? "Processing..."
-                            : `Confirm & Pay ${formatPriceTag(+convertPaiseToRupees(priceList.total))}`}
+                            : selectedPaymentMethod === "cod"
+                              ? `Place COD Order ${formatPriceTag(+convertPaiseToRupees(priceList.total))}`
+                              : `Confirm & Pay ${formatPriceTag(+convertPaiseToRupees(priceList.total))}`}
                     </Button>
                 </div>
             </div>

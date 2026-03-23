@@ -671,7 +671,10 @@ export function ProductCartAddForm({
                         )}
 
                         {/* Inline buttons (normal flow) */}
-                        <div ref={buttonsRef} className="flex gap-2 sm:gap-4">
+                        <div
+                            ref={buttonsRef}
+                            className="flex items-center gap-2 sm:gap-4"
+                        >
                             <Button
                                 type="submit"
                                 size="sm"
@@ -765,7 +768,7 @@ export function ProductCartAddForm({
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="hidden h-9 flex-1 rounded-full px-5 text-sm font-medium md:flex"
+                                    className="hidden h-12 flex-1 items-center justify-center rounded-full px-5 text-sm font-semibold md:flex"
                                     userId={userId}
                                     productId={product.id}
                                     isProductWishlisted={isProductWishlisted}
@@ -782,7 +785,7 @@ export function ProductCartAddForm({
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="hidden h-9 flex-1 rounded-full px-5 text-sm font-medium md:flex"
+                                    className="hidden h-12 flex-1 items-center justify-center rounded-full px-5 text-sm font-semibold md:flex"
                                     onClick={() => {
                                         addToGuestWishlist({
                                             productId: product.id,

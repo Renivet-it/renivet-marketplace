@@ -38,10 +38,7 @@ export function UnavailableOrdersModal({
     isOpen,
     setIsOpen,
 }: PageProps) {
-    const { refetch } = trpc.general.orders.getOrdersByUserId.useQuery({
-        userId,
-        year: selectedYear,
-    });
+    const utils = trpc.useUtils();
 
     const { mutate: updateOrders, isPending: isUpdating } =
         trpc.general.orders.bulkUpdateOrderStatus.useMutation({
@@ -49,9 +46,17 @@ export function UnavailableOrdersModal({
                 const toastId = toast.loading("Updating orders...");
                 return { toastId };
             },
-            onSuccess: (_, __, { toastId }) => {
+            onSuccess: async (_, __, { toastId }) => {
                 toast.success("Orders updated", { id: toastId });
-                refetch();
+                await Promise.all([
+                    utils.general.orders.getOrdersByUserId.invalidate({
+                        userId,
+                    }),
+                    utils.general.orders.getOrdersByUserId.invalidate({
+                        userId,
+                        year: selectedYear,
+                    }),
+                ]);
                 setIsOpen(false);
             },
             onError: (err, _, ctx) => {

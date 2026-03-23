@@ -49,6 +49,71 @@ import {
     returnReasonDetails,
 } from "../schema/order-return-exchange";
 
+const toNonNegativeInt = (value: unknown) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.max(0, Math.trunc(numeric));
+};
+
+const sanitizeOrderQuantities = (order: any) => ({
+    ...order,
+    items: (order.items ?? []).map((item: any) => ({
+        ...item,
+        product: item.product
+            ? {
+                  ...item.product,
+                  quantity:
+                      item.product.quantity === null ||
+                      item.product.quantity === undefined
+                          ? item.product.quantity
+                          : toNonNegativeInt(item.product.quantity),
+                  variants: Array.isArray(item.product.variants)
+                      ? item.product.variants.map((variant: any) => ({
+                            ...variant,
+                            quantity: toNonNegativeInt(variant.quantity),
+                        }))
+                      : item.product.variants,
+              }
+            : item.product,
+        variant: item.variant
+            ? {
+                  ...item.variant,
+                  quantity: toNonNegativeInt(item.variant.quantity),
+              }
+            : item.variant,
+    })),
+});
+
+const parseOrderArraySafely = (ordersData: any[]): OrderWithItemAndBrand[] => {
+    const sanitizedOrders = ordersData.map(sanitizeOrderQuantities);
+    const parsed = orderWithItemAndBrandSchema.array().safeParse(sanitizedOrders);
+
+    if (parsed.success) {
+        return parsed.data;
+    }
+
+    console.error(
+        "order query: array validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitizedOrders as OrderWithItemAndBrand[];
+};
+
+const parseSingleOrderSafely = (orderData: any): OrderWithItemAndBrand => {
+    const sanitizedOrder = sanitizeOrderQuantities(orderData);
+    const parsed = orderWithItemAndBrandSchema.safeParse(sanitizedOrder);
+
+    if (parsed.success) {
+        return parsed.data;
+    }
+
+    console.error(
+        "order query: single validation failed, returning sanitized fallback",
+        parsed.error.issues
+    );
+    return sanitizedOrder as OrderWithItemAndBrand;
+};
+
 class OrderQuery {
     async getAllOrders() {
         const data = await db.query.orders.findMany({
@@ -123,10 +188,7 @@ class OrderQuery {
             })),
         }));
 
-        const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
-            .array()
-            .parse(enhancedData);
-        return parsed;
+        return parseOrderArraySafely(enhancedData);
     }
 
     async getOrders({
@@ -361,11 +423,8 @@ class OrderQuery {
                 product: enhancedProducts.find((p) => p.id === i.productId),
             })),
         }));
-        const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
-            .array()
-            .parse(enhancedData);
         return {
-            data: parsed,
+            data: parseOrderArraySafely(enhancedData),
             count: +data?.[0]?.count || 0,
         };
     }
@@ -770,11 +829,7 @@ class OrderQuery {
             })),
         }));
 
-        const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
-            .array()
-            .parse(enhancedData);
-
-        return parsed;
+        return parseOrderArraySafely(enhancedData);
     }
 
     async getOrderById(orderId: string, year?: number) {
@@ -850,9 +905,7 @@ class OrderQuery {
             })),
         };
 
-        const parsed: OrderWithItemAndBrand =
-            orderWithItemAndBrandSchema.parse(enhancedData);
-        return parsed;
+        return parseSingleOrderSafely(enhancedData);
     }
 
     async getOrdersByUserId(userId: string, year?: number) {
@@ -930,11 +983,7 @@ class OrderQuery {
             })),
         }));
 
-        const parsed: OrderWithItemAndBrand[] = orderWithItemAndBrandSchema
-            .array()
-            .parse(enhancedData);
-
-        return parsed;
+        return parseOrderArraySafely(enhancedData);
     }
 
     async createOrder(values: CreateOrder) {
