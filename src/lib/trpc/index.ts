@@ -24,6 +24,7 @@ import {
     categoriesRouter,
     contentRouter,
     couponRouter,
+    decodeXRouter,
     legalRouter,
     newsletterSubscriberRouter,
     orderIntentRouter,
@@ -77,6 +78,7 @@ export const appRouter = createTRPCRouter({
         brandProductTypePacking: brandProductTypePackingRouter,
         search: searchRouter,
         capiLogs: capiLogsRouter,
+        decodex: decodeXRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,

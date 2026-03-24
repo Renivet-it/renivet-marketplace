@@ -1527,6 +1527,13 @@
       "when": 1774255058376,
       "tag": "0217_little_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 218,
+      "version": "7",
+      "when": 1774376968158,
+      "tag": "0218_classy_human_torch",
+      "breakpoints": true
     }
   ]
 }
