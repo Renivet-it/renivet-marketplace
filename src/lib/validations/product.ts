@@ -450,6 +450,8 @@ export const productSchema = z.object({
     isHomePageProduct: z.boolean().optional().default(false),
     isBestSeller: z.boolean().optional().default(false),
     isUnder999: z.boolean().optional().default(false),
+    bestSellerPosition: z.number().optional().default(0),
+    under999Position: z.number().optional().default(0),
 });
 
 export const productOptionSchema = z.object({

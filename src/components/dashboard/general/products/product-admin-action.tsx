@@ -1,6 +1,7 @@
 "use client";
 
 import {
+    getSectionPosition,
     menToggleFeaturedProduct,
     newEventPageSection,
     toggleBeautyNewArrivalSection,
@@ -50,7 +51,7 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import Link from "next/link";
 import { parseAsInteger, useQueryState } from "nuqs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { TableProduct as ReviewTableProduct } from "./products-review-table";
 
@@ -86,12 +87,15 @@ interface PageProps {
         isHomePageProduct?: boolean;
         isBestSeller?: boolean;
         isUnder999?: boolean;
+        bestSellerPosition?: number;
+        under999Position?: number;
         isSummerCollection?: boolean;
     };
 }
 
 
 function SectionPositionToggle({
+    productId,
     label,
     icon: Icon,
     isActive,
@@ -99,8 +103,10 @@ function SectionPositionToggle({
     sectionKey,
     onToggle,
     onUpdatePosition,
+    currentPosition,
     extraSuffix,
 }: {
+    productId: string;
     label: string;
     icon: any;
     isActive: boolean;
@@ -108,11 +114,45 @@ function SectionPositionToggle({
     sectionKey: ProductSectionKey;
     onToggle: (position?: number) => Promise<void>;
     onUpdatePosition: (section: ProductSectionKey, position: number) => Promise<void>;
+    currentPosition?: number;
     extraSuffix?: string;
 }) {
-    const [pos, setPos] = useState<number>(1);
+    const [pos, setPos] = useState<number>(
+        typeof currentPosition === "number" && currentPosition > 0
+            ? Math.floor(currentPosition)
+            : 1
+    );
+
+    useEffect(() => {
+        if (typeof currentPosition === "number" && currentPosition > 0) {
+            setPos(Math.floor(currentPosition));
+        }
+    }, [currentPosition]);
+
+    const handleOpenChange = async (open: boolean) => {
+        if (!open || !isActive) return;
+
+        try {
+            const result = await getSectionPosition(productId, sectionKey);
+            if (
+                result?.success &&
+                typeof result.position === "number" &&
+                result.position > 0
+            ) {
+                setPos(Math.floor(result.position));
+                return;
+            }
+        } catch (_error) {
+            // Keep current local value if fetch fails.
+        }
+
+        if (typeof currentPosition === "number" && currentPosition > 0) {
+            setPos(Math.floor(currentPosition));
+        }
+    };
+
     return (
-        <DropdownMenuSub>
+        <DropdownMenuSub onOpenChange={handleOpenChange}>
             <DropdownMenuSubTrigger disabled={isLoading}>
                 <Icon className="mr-2 size-4" />
                 <span>{isActive ? `Edit / Remove from ${label}` : `Add to ${label}`}{(extraSuffix ? ` ${extraSuffix}` : "")}</span>
@@ -209,7 +249,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleUnder999(
                 product.id,
-                product.isUnder999 ?? false
+                product.isUnder999 ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -259,7 +300,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleFeaturedProduct(
                 product.id,
-                product.isFeaturedWomen ?? false
+                product.isFeaturedWomen ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -278,7 +320,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await menToggleFeaturedProduct(
                 product.id,
-                product.isFeaturedMen ?? false
+                product.isFeaturedMen ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -297,7 +340,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleWomenStyleWithSubstance(
                 product.id,
-                product.isStyleWithSubstanceWoMen ?? false
+                product.isStyleWithSubstanceWoMen ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -317,7 +361,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleHomeHeroProduct(
                 product.id,
-                product.isHomeHeroProducts ?? false
+                product.isHomeHeroProducts ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -337,7 +382,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleHomeYouMayLoveProduct(
                 product.id,
-                product.isHomeLoveTheseProducts ?? false
+                product.isHomeLoveTheseProducts ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -357,7 +403,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleHomeYouMayAlsoLikeProduct(
                 product.id,
-                product.isHomeYouMayAlsoLikeTheseProducts ?? false
+                product.isHomeYouMayAlsoLikeTheseProducts ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -377,7 +424,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleHomePageProduct(
                 product.id,
-                product.isHomePageProduct ?? false
+                product.isHomePageProduct ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -397,7 +445,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleMenStyleWithSubstance(
                 product.id,
-                product.isStyleWithSubstanceMen ?? false
+                product.isStyleWithSubstanceMen ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -416,7 +465,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleKidsFetchSection(
                 product.id,
-                product.iskidsFetchSection ?? false
+                product.iskidsFetchSection ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -435,7 +485,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleHomeAndLivingNewArrivalsSection(
                 product.id,
-                product.isHomeAndLivingSectionNewArrival ?? false
+                product.isHomeAndLivingSectionNewArrival ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -454,7 +505,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleHomeAndLivingTopPicksSection(
                 product.id,
-                product.isHomeAndLivingSectionTopPicks ?? false
+                product.isHomeAndLivingSectionTopPicks ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -473,7 +525,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleBeautyNewArrivalSection(
                 product.id,
-                product.isBeautyNewArrival ?? false
+                product.isBeautyNewArrival ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -492,7 +545,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await toggleBeautyTopPickSection(
                 product.id,
-                product.isBeautyTopPicks ?? false
+                product.isBeautyTopPicks ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -511,7 +565,8 @@ export function ProductAction({ product }: PageProps) {
         try {
             const result = await newEventPageSection(
                 product.id,
-                product.isAddedInEventProductPage ?? false
+                product.isAddedInEventProductPage ?? false,
+                position
             );
             if (result.success) {
                 refetch();
@@ -638,33 +693,21 @@ export function ProductAction({ product }: PageProps) {
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                        <SectionPositionToggle label="Best Sellers" icon={Icons.Star} isActive={product.isBestSeller ?? false} isLoading={isLoading} sectionKey="bestSeller" onToggle={handleToggleBestSeller} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Under 999 section" icon={Icons.DollarSign} isActive={product.isUnder999 ?? false} isLoading={isLoading} sectionKey="under999" onToggle={handleToggleUnder999} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Featured Women" icon={Icons.Star} isActive={product.isFeaturedWomen ?? false} isLoading={isLoading} sectionKey="featuredWomen" onToggle={handleToggleFeatured} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Hero Home Page" icon={Icons.Star} isActive={product.isHomeHeroProducts ?? false} isLoading={isLoading} sectionKey="homeHero" onToggle={handleToggleProductHeroHomePage} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="You may love these products Home Page" icon={Icons.Star} isActive={product.isHomeLoveTheseProducts ?? false} isLoading={isLoading} sectionKey="homeLoveThese" onToggle={handleToggleYouMayLoveThese} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="You may also like these products Home Page" icon={Icons.Star} isActive={product.isHomeYouMayAlsoLikeTheseProducts ?? false} isLoading={isLoading} sectionKey="homeMayAlsoLike" onToggle={handleToggleYouMayAlsoLikeThese} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="bottom products Home Page" icon={Icons.Star} isActive={product.isHomePageProduct ?? false} isLoading={isLoading} sectionKey="homePageList" onToggle={handleToggleHomePageMainProduct} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Featured Men" icon={Icons.Star} isActive={product.isFeaturedMen ?? false} isLoading={isLoading} sectionKey="featuredMen" onToggle={handleToggleFeaturedMen} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Style With Substance (Women)" icon={Icons.Layers} isActive={product.isStyleWithSubstanceWoMen ?? false} isLoading={isLoading} sectionKey="styleWithSubstanceWomen" onToggle={handleToggleWomenStyleWithSubstance} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Style With Substance (Men)" icon={Icons.Layers} isActive={product.isStyleWithSubstanceMen ?? false} isLoading={isLoading} sectionKey="styleWithSubstanceMen" onToggle={handleToggleMenStyleWithSubstance} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Product Feature (Kids)" icon={Icons.Layers} isActive={product.iskidsFetchSection ?? false} isLoading={isLoading} sectionKey="kidsFetch" onToggle={handleToggleKidsFetchProducts} onUpdatePosition={handleUpdatePosition} />
-                        <DropdownMenuItem
-                            onClick={
-                                handletoggleHomeAndLivingNewArrivalsSection
-                            }
-                            disabled={isLoading}
-                        >
-                            <Icons.Layers className="size-4" />
-                            <span>
-                                {product.isHomeAndLivingSectionNewArrival
-                                    ? "Remove from New Arrivals (Home living)"
-                                    : "Add to New Arrivals (Home living)"}
-                            </span>
-                        </DropdownMenuItem>
-                        <SectionPositionToggle label="Top Picks(Home living)" icon={Icons.Layers} isActive={product.isHomeAndLivingSectionTopPicks ?? false} isLoading={isLoading} sectionKey="homeLivingTopPicks" onToggle={handletoggleHomeAndLivingTopPicksSection} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="New Arrivals(Beauty Personal)" icon={Icons.Layers} isActive={product.isBeautyNewArrival ?? false} isLoading={isLoading} sectionKey="beautyNewArrivals" onToggle={handletoggleBeautyNewArrivalSection} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle label="Top Picks(Beauty Personal)" icon={Icons.Layers} isActive={product.isBeautyTopPicks ?? false} isLoading={isLoading} sectionKey="beautyTopPicks" onToggle={handletoggleBeautyTopPickSection} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Best Sellers" icon={Icons.Star} isActive={product.isBestSeller ?? false} isLoading={isLoading} sectionKey="bestSeller" onToggle={handleToggleBestSeller} onUpdatePosition={handleUpdatePosition} currentPosition={product.bestSellerPosition} />
+                        <SectionPositionToggle productId={product.id} label="Under 999 section" icon={Icons.DollarSign} isActive={product.isUnder999 ?? false} isLoading={isLoading} sectionKey="under999" onToggle={handleToggleUnder999} onUpdatePosition={handleUpdatePosition} currentPosition={product.under999Position} />
+                        <SectionPositionToggle productId={product.id} label="Featured Women" icon={Icons.Star} isActive={product.isFeaturedWomen ?? false} isLoading={isLoading} sectionKey="featuredWomen" onToggle={handleToggleFeatured} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Hero Home Page" icon={Icons.Star} isActive={product.isHomeHeroProducts ?? false} isLoading={isLoading} sectionKey="homeHero" onToggle={handleToggleProductHeroHomePage} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="You may love these products Home Page" icon={Icons.Star} isActive={product.isHomeLoveTheseProducts ?? false} isLoading={isLoading} sectionKey="homeLoveThese" onToggle={handleToggleYouMayLoveThese} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="You may also like these products Home Page" icon={Icons.Star} isActive={product.isHomeYouMayAlsoLikeTheseProducts ?? false} isLoading={isLoading} sectionKey="homeMayAlsoLike" onToggle={handleToggleYouMayAlsoLikeThese} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="bottom products Home Page" icon={Icons.Star} isActive={product.isHomePageProduct ?? false} isLoading={isLoading} sectionKey="homePageList" onToggle={handleToggleHomePageMainProduct} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Featured Men" icon={Icons.Star} isActive={product.isFeaturedMen ?? false} isLoading={isLoading} sectionKey="featuredMen" onToggle={handleToggleFeaturedMen} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Style With Substance (Women)" icon={Icons.Layers} isActive={product.isStyleWithSubstanceWoMen ?? false} isLoading={isLoading} sectionKey="styleWithSubstanceWomen" onToggle={handleToggleWomenStyleWithSubstance} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Style With Substance (Men)" icon={Icons.Layers} isActive={product.isStyleWithSubstanceMen ?? false} isLoading={isLoading} sectionKey="styleWithSubstanceMen" onToggle={handleToggleMenStyleWithSubstance} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Product Feature (Kids)" icon={Icons.Layers} isActive={product.iskidsFetchSection ?? false} isLoading={isLoading} sectionKey="kidsFetch" onToggle={handleToggleKidsFetchProducts} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="New Arrivals (Home living)" icon={Icons.Layers} isActive={product.isHomeAndLivingSectionNewArrival ?? false} isLoading={isLoading} sectionKey="homeLivingNewArrival" onToggle={handletoggleHomeAndLivingNewArrivalsSection} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Top Picks(Home living)" icon={Icons.Layers} isActive={product.isHomeAndLivingSectionTopPicks ?? false} isLoading={isLoading} sectionKey="homeLivingTopPicks" onToggle={handletoggleHomeAndLivingTopPicksSection} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="New Arrivals(Beauty Personal)" icon={Icons.Layers} isActive={product.isBeautyNewArrival ?? false} isLoading={isLoading} sectionKey="beautyNewArrivals" onToggle={handletoggleBeautyNewArrivalSection} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Top Picks(Beauty Personal)" icon={Icons.Layers} isActive={product.isBeautyTopPicks ?? false} isLoading={isLoading} sectionKey="beautyTopPicks" onToggle={handletoggleBeautyTopPickSection} onUpdatePosition={handleUpdatePosition} />
                         <DropdownMenuItem
                             onClick={handleToggleSummerCollection}
                             disabled={isLoading}
@@ -679,7 +722,22 @@ export function ProductAction({ product }: PageProps) {
                         {/* --- Refactored New Arrivals Section --- */}
                         {/* --- Fixed New Arrivals Section --- */}
                         {/* --- Fixed New Arrivals Section --- */}
-                        <DropdownMenuSub>
+                        <DropdownMenuSub
+                            onOpenChange={async (open) => {
+                                if (!open || !product.isHomeNewArrival) return;
+                                const result = await getSectionPosition(
+                                    product.id,
+                                    "homeNewArrivals"
+                                );
+                                if (
+                                    result?.success &&
+                                    typeof result.position === "number" &&
+                                    result.position > 0
+                                ) {
+                                    setNewArrivalsPos(Math.floor(result.position));
+                                }
+                            }}
+                        >
                             <DropdownMenuSubTrigger disabled={isLoading}>
                                 <Icons.Layers className="mr-2 size-4" />
                                 <span>New Arrivals (Home Page)</span>
@@ -704,8 +762,9 @@ export function ProductAction({ product }: PageProps) {
                                                 () =>
                                                     handletoggleHomeNewArrivalsProduct(
                                                         category,
-                                                        true
-                                                    ) // ✅ add (isActive = true)
+                                                        true,
+                                                        newArrivalsPos
+                                                    )
                                             }
                                             disabled={isLoading}
                                         >
@@ -751,7 +810,7 @@ export function ProductAction({ product }: PageProps) {
 
                         {/* --- End of Refactored Section --- */}
 
-                        <SectionPositionToggle label="Event Exibition Page" icon={Icons.Layers} isActive={product.isAddedInEventProductPage ?? false} isLoading={isLoading} sectionKey="eventPage" onToggle={handlenewEventPageSectionProduct} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle productId={product.id} label="Event Exibition Page" icon={Icons.Layers} isActive={product.isAddedInEventProductPage ?? false} isLoading={isLoading} sectionKey="eventPage" onToggle={handlenewEventPageSectionProduct} onUpdatePosition={handleUpdatePosition} />
 
                         {product.verificationStatus === "idle" && (
                             <DropdownMenuItem
@@ -839,3 +898,4 @@ export function ProductAction({ product }: PageProps) {
         </>
     );
 }
+
