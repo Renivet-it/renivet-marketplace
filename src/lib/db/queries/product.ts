@@ -911,7 +911,11 @@ class ProductQuery {
         }
 
         if (isUnder999) {
-            orderBy.push(asc(products.under999Position));
+            orderBy.push(
+                // Keep explicitly sequenced products first; unsequenced (0) go to the end.
+                sql`CASE WHEN COALESCE(${products.under999Position}, 0) > 0 THEN 0 ELSE 1 END ASC`,
+                asc(products.under999Position)
+            );
         }
 
         // 🟦 Step 1: prioritize matched brand

@@ -23,11 +23,40 @@ import {
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+function normalizePosition(position?: number) {
+    return typeof position === "number" && Number.isFinite(position) && position > 0
+        ? Math.floor(position)
+        : undefined;
+}
+
+async function resolveSectionPosition(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sectionTable: any,
+    requestedPosition?: number,
+    existingPosition?: number
+) {
+    const normalized = normalizePosition(requestedPosition);
+    if (normalized !== undefined) return normalized;
+
+    if (
+        typeof existingPosition === "number" &&
+        Number.isFinite(existingPosition) &&
+        existingPosition > 0
+    ) {
+        return Math.floor(existingPosition);
+    }
+
+    const activeCount = await db.$count(
+        sectionTable,
+        eq(sectionTable.isDeleted, false)
+    );
+    return activeCount + 1;
+}
 
 export async function toggleFeaturedProduct(
     productId: string,
     isFeaturedWomen: boolean,
-    position: number = 0
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -72,15 +101,28 @@ export async function toggleFeaturedProduct(
                 return { success: false, error: "Product is already featured" };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                womenPageFeaturedProducts,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore with updated position
                 await db
                     .update(womenPageFeaturedProducts)
-                    .set({ isDeleted: false, deletedAt: null, position })
+                    .set({
+                        isDeleted: false,
+                        deletedAt: null,
+                        position: targetPosition,
+                    })
                     .where(eq(womenPageFeaturedProducts.productId, productId));
             } else {
                 // Add to featured products in womenPageFeaturedProducts
-                await db.insert(womenPageFeaturedProducts).values({ productId, position });
+                await db.insert(womenPageFeaturedProducts).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isFeaturedWomen to true in products table
@@ -100,7 +142,7 @@ export async function toggleFeaturedProduct(
 export async function menToggleFeaturedProduct(
     productId: string,
     isFeaturedMen: boolean,
-    position: number = 0
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -144,14 +186,27 @@ export async function menToggleFeaturedProduct(
                 return { success: false, error: "Product is already featured" };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                menPageFeaturedProducts,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 await db
                     .update(menPageFeaturedProducts)
-                    .set({ isDeleted: false, deletedAt: null, position })
+                    .set({
+                        isDeleted: false,
+                        deletedAt: null,
+                        position: targetPosition,
+                    })
                     .where(eq(menPageFeaturedProducts.productId, productId));
             } else {
                 // Add to featured products in womenPageFeaturedProducts
-                await db.insert(menPageFeaturedProducts).values({ productId, position });
+                await db.insert(menPageFeaturedProducts).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isFeaturedWomen to true in products table
@@ -257,7 +312,8 @@ export async function menToggleFeaturedProduct(
 
 export async function toggleWomenStyleWithSubstance(
     productId: string,
-    isStyleWithSubstanceWoMen: boolean
+    isStyleWithSubstanceWoMen: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -324,6 +380,12 @@ export async function toggleWomenStyleWithSubstance(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                womenStyleWithSubstanceMiddlePageSection,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -331,6 +393,7 @@ export async function toggleWomenStyleWithSubstance(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(
                         eq(
@@ -342,7 +405,7 @@ export async function toggleWomenStyleWithSubstance(
                 // Add new entry
                 await db
                     .insert(womenStyleWithSubstanceMiddlePageSection)
-                    .values({ productId });
+                    .values({ productId, position: targetPosition });
             }
 
             // Update isStyleWithSubstanceWoMen to true in products table
@@ -368,7 +431,8 @@ export async function toggleWomenStyleWithSubstance(
 
 export async function toggleMenStyleWithSubstance(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -422,6 +486,12 @@ export async function toggleMenStyleWithSubstance(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                menCuratedHerEssence,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -429,11 +499,15 @@ export async function toggleMenStyleWithSubstance(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(menCuratedHerEssence.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(menCuratedHerEssence).values({ productId });
+                await db.insert(menCuratedHerEssence).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isStyleWithSubstanceMen to true in products table
@@ -459,7 +533,8 @@ export async function toggleMenStyleWithSubstance(
 
 export async function toggleKidsFetchSection(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -513,6 +588,12 @@ export async function toggleKidsFetchSection(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                kidsFreshCollectionSection,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -520,13 +601,14 @@ export async function toggleKidsFetchSection(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(kidsFreshCollectionSection.productId, productId));
             } else {
                 // Add new entry
                 await db
                     .insert(kidsFreshCollectionSection)
-                    .values({ productId });
+                    .values({ productId, position: targetPosition });
             }
 
             // Update iskidsFetchSection to true in products table
@@ -552,7 +634,8 @@ export async function toggleKidsFetchSection(
 
 export async function toggleHomeAndLivingNewArrivalsSection(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -606,6 +689,12 @@ export async function toggleHomeAndLivingNewArrivalsSection(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                homeandlivingNewArrival,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -613,11 +702,15 @@ export async function toggleHomeAndLivingNewArrivalsSection(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(homeandlivingNewArrival.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeandlivingNewArrival).values({ productId });
+                await db.insert(homeandlivingNewArrival).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isHomeAndLivingSectionNewArrival to true in products table
@@ -643,7 +736,8 @@ export async function toggleHomeAndLivingNewArrivalsSection(
 
 export async function toggleHomeAndLivingTopPicksSection(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -697,6 +791,12 @@ export async function toggleHomeAndLivingTopPicksSection(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                homeandlivingTopPicks,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -704,11 +804,15 @@ export async function toggleHomeAndLivingTopPicksSection(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(homeandlivingTopPicks.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeandlivingTopPicks).values({ productId });
+                await db.insert(homeandlivingTopPicks).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isHomeAndLivingSectionTopPicks to true in products table
@@ -734,7 +838,8 @@ export async function toggleHomeAndLivingTopPicksSection(
 
 export async function toggleBeautyNewArrivalSection(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -788,6 +893,12 @@ export async function toggleBeautyNewArrivalSection(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                beautyNewArrivals,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -795,11 +906,15 @@ export async function toggleBeautyNewArrivalSection(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(beautyNewArrivals.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(beautyNewArrivals).values({ productId });
+                await db.insert(beautyNewArrivals).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isBeautyNewArrival to true in products table
@@ -825,7 +940,8 @@ export async function toggleBeautyNewArrivalSection(
 
 export async function toggleBeautyTopPickSection(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -879,6 +995,12 @@ export async function toggleBeautyTopPickSection(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                beautyTopPicks,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -886,11 +1008,15 @@ export async function toggleBeautyTopPickSection(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(beautyTopPicks.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(beautyTopPicks).values({ productId });
+                await db.insert(beautyTopPicks).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isBeautyTopPicks to true in products table
@@ -916,7 +1042,8 @@ export async function toggleBeautyTopPickSection(
 
 export async function toggleHomeHeroProduct(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -971,6 +1098,12 @@ export async function toggleHomeHeroProduct(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                homeProductSection,
+                position,
+                existing?.position
+            );
+
 
             if (existing) {
                 // Restore if previously soft deleted
@@ -979,11 +1112,15 @@ export async function toggleHomeHeroProduct(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(homeProductSection.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeProductSection).values({ productId });
+                await db.insert(homeProductSection).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update ishomeProductSection to true in products table
@@ -1010,7 +1147,8 @@ export async function toggleHomeHeroProduct(
 
 export async function toggleHomeYouMayLoveProduct(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -1064,6 +1202,12 @@ export async function toggleHomeYouMayLoveProduct(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                homeProductLoveTheseSection,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -1071,6 +1215,7 @@ export async function toggleHomeYouMayLoveProduct(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(
                         eq(homeProductLoveTheseSection.productId, productId)
@@ -1079,7 +1224,7 @@ export async function toggleHomeYouMayLoveProduct(
                 // Add new entry
                 await db
                     .insert(homeProductLoveTheseSection)
-                    .values({ productId });
+                    .values({ productId, position: targetPosition });
             }
 
             // Update ishomeProductSection to true in products table
@@ -1105,7 +1250,8 @@ export async function toggleHomeYouMayLoveProduct(
 
 export async function toggleHomeYouMayAlsoLikeProduct(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -1159,6 +1305,12 @@ export async function toggleHomeYouMayAlsoLikeProduct(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                homeProductMayAlsoLikeThese,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -1166,6 +1318,7 @@ export async function toggleHomeYouMayAlsoLikeProduct(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(
                         eq(homeProductMayAlsoLikeThese.productId, productId)
@@ -1174,7 +1327,7 @@ export async function toggleHomeYouMayAlsoLikeProduct(
                 // Add new entry
                 await db
                     .insert(homeProductMayAlsoLikeThese)
-                    .values({ productId });
+                    .values({ productId, position: targetPosition });
             }
 
             // Update ishomeProductSection to true in products table
@@ -1200,7 +1353,8 @@ export async function toggleHomeYouMayAlsoLikeProduct(
 
 export async function toggleHomePageProduct(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -1254,6 +1408,12 @@ export async function toggleHomePageProduct(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                homeProductPageList,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -1261,11 +1421,15 @@ export async function toggleHomePageProduct(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(homeProductPageList.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(homeProductPageList).values({ productId });
+                await db.insert(homeProductPageList).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update ishomeProductSection to true in products table
@@ -1316,14 +1480,12 @@ export async function toggleHomeNewArrivalsProduct(
                 .from(homeNewArrivals)
                 .where(eq(homeNewArrivals.productId, productId))
                 .then((res) => res[0]);
-
-            // âœ Only block if already active *and* we're adding again *and* it's the exact same category
-            if (existing && !existing.isDeleted && existing.category === category) {
-                return {
-                    success: false,
-                    error: "Product is already in New Arrivals in this category",
-                };
-            }
+            // Add or update the same row/category with the latest requested sequence.
+            const targetPosition = await resolveSectionPosition(
+                homeNewArrivals,
+                position,
+                existing?.position
+            );
 
             if (existing) {
                 // Reactivate + update category
@@ -1333,7 +1495,7 @@ export async function toggleHomeNewArrivalsProduct(
                         isDeleted: false,
                         deletedAt: null,
                         category,
-                        ...(position !== undefined ? { position } : {}),
+                        position: targetPosition,
                     })
                     .where(eq(homeNewArrivals.productId, productId));
             } else {
@@ -1341,7 +1503,7 @@ export async function toggleHomeNewArrivalsProduct(
                 await db.insert(homeNewArrivals).values({
                     productId,
                     category,
-                    ...(position !== undefined ? { position } : {}),
+                    position: targetPosition,
                 });
             }
 
@@ -1406,7 +1568,8 @@ export async function toggleHomeNewArrivalsProduct(
 
 export async function newEventPageSection(
     productId: string,
-    isFeatured: boolean
+    isFeatured: boolean,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -1460,6 +1623,12 @@ export async function newEventPageSection(
                 };
             }
 
+            const targetPosition = await resolveSectionPosition(
+                newProductEventPage,
+                position,
+                existing?.position
+            );
+
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -1467,11 +1636,15 @@ export async function newEventPageSection(
                     .set({
                         isDeleted: false,
                         deletedAt: null,
+                        position: targetPosition,
                     })
                     .where(eq(newProductEventPage.productId, productId));
             } else {
                 // Add new entry
-                await db.insert(newProductEventPage).values({ productId });
+                await db.insert(newProductEventPage).values({
+                    productId,
+                    position: targetPosition,
+                });
             }
 
             // Update isHomeAndLivingSectionTopPicks to true in products table
@@ -1496,7 +1669,8 @@ export async function newEventPageSection(
 }
 
 export async function toggleBestSeller(
-    productId: string
+    productId: string,
+    position?: number
 ) {
     try {
         // Check if product exists in products table
@@ -1512,10 +1686,25 @@ export async function toggleBestSeller(
 
         const nextBestSellerState = !existingProduct.isBestSeller;
 
+        const normalizedPosition = normalizePosition(position);
+        const fallbackBestSellerPosition =
+            existingProduct.bestSellerPosition > 0
+                ? existingProduct.bestSellerPosition
+                : (await db.$count(products, eq(products.isBestSeller, true))) +
+                  1;
+
         // Toggle based on DB value (prevents stale UI state issues)
         await db
             .update(products)
-            .set({ isBestSeller: nextBestSellerState })
+            .set(
+                nextBestSellerState
+                    ? {
+                          isBestSeller: true,
+                          bestSellerPosition:
+                              normalizedPosition ?? fallbackBestSellerPosition,
+                      }
+                    : { isBestSeller: false }
+            )
             .where(eq(products.id, productId));
 
         const updatedProduct = await db
@@ -1547,7 +1736,11 @@ export async function toggleBestSeller(
     }
 }
 
-export async function toggleUnder999(productId: string, isUnder999: boolean) {
+export async function toggleUnder999(
+    productId: string,
+    isUnder999: boolean,
+    position?: number
+) {
     try {
         const existingProduct = await db
             .select()
@@ -1559,13 +1752,30 @@ export async function toggleUnder999(productId: string, isUnder999: boolean) {
             return { success: false, error: "Product not found" };
         }
 
+        const normalizedPosition = normalizePosition(position);
+        const fallbackUnder999Position =
+            existingProduct.under999Position > 0
+                ? existingProduct.under999Position
+                : (await db.$count(products, eq(products.isUnder999, true))) + 1;
+
         await db
             .update(products)
-            .set({ isUnder999: !isUnder999 })
+            .set(
+                isUnder999
+                    ? { isUnder999: false }
+                    : {
+                          isUnder999: true,
+                          // Keep existing sequence when present; otherwise append at the end.
+                          under999Position:
+                              normalizedPosition ??
+                              fallbackUnder999Position,
+                      }
+            )
             .where(eq(products.id, productId));
 
         revalidatePath("/dashboard/general/products");
         revalidatePath("/");
+        revalidatePath("/shop");
 
         return {
             success: true,
@@ -1634,12 +1844,116 @@ export type ProductSectionKey =
     | "bestSeller"
     | "under999";
 
+export async function getSectionPosition(
+    productId: string,
+    section: ProductSectionKey
+) {
+    try {
+        if (section === "bestSeller") {
+            const data = await db
+                .select({
+                    position: products.bestSellerPosition,
+                    isActive: products.isBestSeller,
+                })
+                .from(products)
+                .where(eq(products.id, productId))
+                .then((res) => res[0]);
+
+            if (!data || !data.isActive) {
+                return { success: true, position: 0 };
+            }
+
+            return { success: true, position: data.position ?? 0 };
+        }
+
+        if (section === "under999") {
+            const data = await db
+                .select({
+                    position: products.under999Position,
+                    isActive: products.isUnder999,
+                })
+                .from(products)
+                .where(eq(products.id, productId))
+                .then((res) => res[0]);
+
+            if (!data || !data.isActive) {
+                return { success: true, position: 0 };
+            }
+
+            return { success: true, position: data.position ?? 0 };
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sectionTableMap: Record<string, any> = {
+            homeHero: homeProductSection,
+            homeLoveThese: homeProductLoveTheseSection,
+            homeMayAlsoLike: homeProductMayAlsoLikeThese,
+            homePageList: homeProductPageList,
+            homeNewArrivals: homeNewArrivals,
+            featuredWomen: womenPageFeaturedProducts,
+            featuredMen: menPageFeaturedProducts,
+            styleWithSubstanceWomen: womenStyleWithSubstanceMiddlePageSection,
+            styleWithSubstanceMen: menCuratedHerEssence,
+            kidsFetch: kidsFreshCollectionSection,
+            homeLivingNewArrival: homeandlivingNewArrival,
+            homeLivingTopPicks: homeandlivingTopPicks,
+            beautyNewArrivals: beautyNewArrivals,
+            beautyTopPicks: beautyTopPicks,
+            eventPage: newProductEventPage,
+        };
+
+        const table = sectionTableMap[section];
+        if (!table) {
+            return { success: false, error: "Unknown section", position: 0 };
+        }
+
+        const row = await db
+            .select({
+                position: table.position,
+                isDeleted: table.isDeleted,
+            })
+            .from(table)
+            .where(eq(table.productId, productId))
+            .then((res) => res[0]);
+
+        if (!row || row.isDeleted) {
+            return { success: true, position: 0 };
+        }
+
+        return { success: true, position: row.position ?? 0 };
+    } catch (error) {
+        console.error("Error getting section position:", error);
+        return { success: false, error: "Failed to get section position", position: 0 };
+    }
+}
+
 export async function updateSectionPosition(
     productId: string,
     section: ProductSectionKey,
     position: number
 ) {
     try {
+        const safePosition = normalizePosition(position) ?? 1;
+        const sectionPaths: Partial<Record<ProductSectionKey, string[]>> = {
+            homeHero: ["/", "/shop"],
+            homeLoveThese: ["/", "/shop"],
+            homeMayAlsoLike: ["/", "/shop"],
+            homePageList: ["/", "/shop"],
+            homeNewArrivals: ["/", "/shop"],
+            featuredWomen: ["/women", "/shop"],
+            featuredMen: ["/men", "/shop"],
+            styleWithSubstanceWomen: ["/women", "/shop"],
+            styleWithSubstanceMen: ["/men", "/shop"],
+            kidsFetch: ["/kids", "/shop"],
+            homeLivingNewArrival: ["/home-living", "/shop"],
+            homeLivingTopPicks: ["/home-living", "/shop"],
+            beautyNewArrivals: ["/beauty-personal", "/shop"],
+            beautyTopPicks: ["/beauty-personal", "/shop"],
+            eventPage: ["/", "/shop"],
+            bestSeller: ["/", "/shop"],
+            under999: ["/", "/shop"],
+        };
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sectionTableMap: Record<string, any> = {
             homeHero: homeProductSection,
@@ -1662,18 +1976,22 @@ export async function updateSectionPosition(
         if (section === "bestSeller") {
             await db
                 .update(products)
-                .set({ bestSellerPosition: position })
+                .set({ bestSellerPosition: safePosition })
                 .where(eq(products.id, productId));
             revalidatePath("/dashboard/general/products");
+            revalidatePath("/");
+            revalidatePath("/shop");
             return { success: true, message: "Best Seller position updated" };
         }
 
         if (section === "under999") {
             await db
                 .update(products)
-                .set({ under999Position: position })
+                .set({ under999Position: safePosition })
                 .where(eq(products.id, productId));
             revalidatePath("/dashboard/general/products");
+            revalidatePath("/");
+            revalidatePath("/shop");
             return { success: true, message: "Under 999 position updated" };
         }
 
@@ -1685,13 +2003,17 @@ export async function updateSectionPosition(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await db
             .update(table as any)
-            .set({ position })
+            .set({ position: safePosition })
             .where(eq((table as any).productId, productId));
 
         revalidatePath("/dashboard/general/products");
+        for (const path of sectionPaths[section] ?? []) {
+            revalidatePath(path);
+        }
         return { success: true, message: "Position updated successfully" };
     } catch (error) {
         console.error("Error updating section position:", error);
         return { success: false, error: "Failed to update position" };
     }
 }
+
