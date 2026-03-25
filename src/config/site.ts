@@ -281,7 +281,9 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 url: "/dashboard/general/decodex",
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |
-                    BitFieldSitePermission.VIEW_FEEDBACK,
+                    BitFieldSitePermission.VIEW_FEEDBACK |
+                    BitFieldSitePermission.MANAGE_PRODUCTS |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
             },
             {
                 title: "Discrepency Table",

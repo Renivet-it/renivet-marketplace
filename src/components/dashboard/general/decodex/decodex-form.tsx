@@ -178,7 +178,8 @@ export function DecodeXForm({
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <Field label="Brand">
                         <Select
-                            value={form.watch("brandId")}
+                            key={brandOptions ? "loaded" : "loading"}
+                            value={form.watch("brandId") || undefined}
                             onValueChange={(value) => {
                                 form.setValue("brandId", value);
                                 form.setValue("subcategoryId", "");
@@ -199,7 +200,8 @@ export function DecodeXForm({
 
                     <Field label="Sub-category">
                         <Select
-                            value={form.watch("subcategoryId")}
+                            key={subcategoryOptions ? "loaded" : "loading"}
+                            value={form.watch("subcategoryId") || undefined}
                             onValueChange={(value) =>
                                 form.setValue("subcategoryId", value)
                             }

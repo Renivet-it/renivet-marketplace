@@ -915,17 +915,18 @@ class RecommendationQuery {
         if (data.length === 0) return [];
 
         try {
-            const mediaIds = new Set<string>();
+            const mediaKeys = new Set<string>();
             for (const product of data) {
-                product.media?.forEach((m) => mediaIds.add(m.id));
+                const bId = String(product.brandId);
+                product.media?.forEach((m) => mediaKeys.add(`media:${m.id}:${bId}`));
                 product.variants?.forEach((v) => {
-                    if (v.image) mediaIds.add(v.image);
+                    if (v.image) mediaKeys.add(`media:${v.image}:${bId}`);
                 });
                 if (product.sustainabilityCertificate)
-                    mediaIds.add(product.sustainabilityCertificate);
+                    mediaKeys.add(`media:${product.sustainabilityCertificate}:${bId}`);
             }
 
-            const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+            const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
             const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
 
             const enhancedData = data.map((product) => ({

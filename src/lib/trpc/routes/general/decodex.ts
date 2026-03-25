@@ -56,7 +56,10 @@ export const decodeXRouter = createTRPCRouter({
             isTRPCAuth(
                 BitFieldSitePermission.MANAGE_FEEDBACK |
                     BitFieldSitePermission.VIEW_FEEDBACK,
-                "any"
+                "any",
+                "site",
+                BitFieldSitePermission.MANAGE_PRODUCTS |
+                    BitFieldSitePermission.VIEW_PRODUCTS
             )
         )
         .query(async () => {
@@ -79,7 +82,10 @@ export const decodeXRouter = createTRPCRouter({
             isTRPCAuth(
                 BitFieldSitePermission.MANAGE_FEEDBACK |
                     BitFieldSitePermission.VIEW_FEEDBACK,
-                "any"
+                "any",
+                "site",
+                BitFieldSitePermission.MANAGE_PRODUCTS |
+                    BitFieldSitePermission.VIEW_PRODUCTS
             )
         )
         .query(async ({ input }) => {
@@ -177,7 +183,10 @@ export const decodeXRouter = createTRPCRouter({
             isTRPCAuth(
                 BitFieldSitePermission.MANAGE_FEEDBACK |
                     BitFieldSitePermission.VIEW_FEEDBACK,
-                "any"
+                "any",
+                "site",
+                BitFieldSitePermission.MANAGE_PRODUCTS |
+                    BitFieldSitePermission.VIEW_PRODUCTS
             )
         )
         .query(async ({ input }) => {
@@ -281,7 +290,10 @@ export const decodeXRouter = createTRPCRouter({
             isTRPCAuth(
                 BitFieldSitePermission.MANAGE_FEEDBACK |
                     BitFieldSitePermission.VIEW_FEEDBACK,
-                "any"
+                "any",
+                "site",
+                BitFieldSitePermission.MANAGE_PRODUCTS |
+                    BitFieldSitePermission.VIEW_PRODUCTS
             )
         )
         .query(async ({ input }) => {
@@ -333,7 +345,14 @@ export const decodeXRouter = createTRPCRouter({
 
     create: protectedProcedure
         .input(decodeXBaseSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_FEEDBACK))
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.MANAGE_FEEDBACK,
+                "any",
+                "site",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
+        )
         .mutation(async ({ input }) => {
             const existing =
                 await db.query.brandSubcategoryDecodeXJourneys.findFirst({
@@ -399,7 +418,14 @@ export const decodeXRouter = createTRPCRouter({
                 id: z.string().uuid(),
             })
         )
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_FEEDBACK))
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.MANAGE_FEEDBACK,
+                "any",
+                "site",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
+        )
         .mutation(async ({ input }) => {
             const existing =
                 await db.query.brandSubcategoryDecodeXJourneys.findFirst({
@@ -512,7 +538,14 @@ export const decodeXRouter = createTRPCRouter({
                 id: z.string().uuid(),
             })
         )
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_FEEDBACK))
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.MANAGE_FEEDBACK,
+                "any",
+                "site",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
+        )
         .mutation(async ({ input }) => {
             const existing =
                 await db.query.brandSubcategoryDecodeXJourneys.findFirst({
