@@ -154,24 +154,117 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
     if (!decodeX) {
         return (
-            <section className="mt-6 overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] p-6">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <Badge className="bg-[#1c2535] px-3 py-1 text-[10px] uppercase tracking-wider text-white">
-                        DecodeX - Behind The Product
-                    </Badge>
-                    <Badge variant="outline" className="border-[#c6d3e2] text-[#5e738c]">
-                        Profile in progress
-                    </Badge>
+            <div className="relative mt-6 overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] text-[#1e2b3f]">
+                {/* Sharp Overlay Text */}
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/40 p-6 text-center">
+                    <h3 className="font-playfair text-[32px] md:text-[40px] font-bold leading-tight text-[#111827]">
+                        Decode X <br />
+                        Behind The Product
+                    </h3>
+                    <p className="mt-4 text-sm md:text-[15px] font-bold uppercase tracking-widest text-[#374151]">
+                        Coming Soon
+                    </p>
                 </div>
-                <h3 className="font-playfair text-[34px] leading-[1.12] text-[#1e2b3f]">
-                    What you&apos;re{" "}
-                    <span className="italic text-[#7d9ec2]">really</span> buying
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-[#5d6d80]">
-                    DecodeX mapping for {product.brand.name}{" "}
-                    {product.subcategory.name.toLowerCase()} is being prepared.
-                </p>
-            </section>
+
+                {/* Blurred Fake Background Content */}
+                <div className="pointer-events-none p-6 opacity-50 blur-[5px] select-none">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="flex size-7 items-center justify-center rounded-full bg-green-200/60">
+                            <Leaf className="size-3.5 text-green-600" />
+                        </div>
+                        <h4 className="text-xl font-bold tracking-tight text-[#111827]">Decodex - Behind The Product</h4>
+                    </div>
+                    <p className="mb-8 text-[13px] font-medium leading-[1.6] text-[#6b7280]">
+                        With Total Transparency, We Want To Tell Our Community The Story And The Impact Behind Every Single Product To Help You Make Better And Conscious Decisions.
+                    </p>
+
+                    <div className="mb-8">
+                        <div className="flex justify-between items-center mb-6">
+                            <h5 className="text-lg font-bold text-[#111827]">Product Values</h5>
+                            <span className="text-xl text-gray-400">+</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8 mb-10">
+                            {/* Fake circular charts */}
+                            <div className="flex items-center gap-4">
+                                <div className="flex size-16 items-center justify-center rounded-full border-[6px] border-green-100 relative">
+                                    <svg className="absolute inset-0 size-full -rotate-90" viewBox="0 0 36 36">
+                                        <path
+                                            className="text-green-400 stroke-current"
+                                            strokeWidth="4"
+                                            strokeDasharray="64, 100"
+                                            fill="none"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                    </svg>
+                                    <span className="font-bold text-sm">64%</span>
+                                </div>
+                                <div>
+                                    <p className="font-bold text-sm">Water Saved</p>
+                                    <p className="text-[10px] text-gray-400 mt-1 leading-tight">68 L Compared<br/>To Fast Fashion</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex size-16 items-center justify-center rounded-full border-[6px] border-green-50 relative">
+                                    <svg className="absolute inset-0 size-full -rotate-90" viewBox="0 0 36 36">
+                                        <path
+                                            className="text-green-300 stroke-current"
+                                            strokeWidth="4"
+                                            strokeDasharray="81, 100"
+                                            fill="none"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                    </svg>
+                                    <span className="font-bold text-sm">81%</span>
+                                </div>
+                                <div>
+                                    <p className="font-bold text-sm leading-tight">Fossil Fuels<br/>Conserved</p>
+                                    <p className="text-[10px] text-gray-400 mt-1 leading-tight">264 times Vs<br/>Baseline</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Fake Progress Bars */}
+                        <div className="space-y-4">
+                            <div className="flex items-center text-xs">
+                                <span className="w-24 font-medium text-gray-500">Softness</span>
+                                <div className="flex-1 h-2 bg-gray-100 rounded-full mx-4 overflow-hidden">
+                                    <div className="h-full bg-[#d6ad8e] w-[75%]" />
+                                </div>
+                                <span className="w-8 text-right font-medium text-gray-500">6/8</span>
+                            </div>
+                            <div className="flex items-center text-xs">
+                                <span className="w-24 font-medium text-gray-500">Breathability</span>
+                                <div className="flex-1 h-2 bg-gray-100 rounded-full mx-4 overflow-hidden">
+                                    <div className="h-full bg-[#d6ad8e] w-[75%]" />
+                                </div>
+                                <span className="w-8 text-right font-medium text-gray-500">6/8</span>
+                            </div>
+                            <div className="flex items-center text-xs">
+                                <span className="w-24 font-medium text-gray-500">Transparency</span>
+                                <div className="flex-1 h-2 bg-gray-100 rounded-full mx-4 overflow-hidden">
+                                    <div className="h-full bg-[#d6ad8e] w-[37.5%]" />
+                                </div>
+                                <span className="w-8 text-right font-medium text-gray-500">3/8</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-2">
+                        <div className="flex justify-between items-center mb-6">
+                            <h5 className="text-lg font-bold text-[#111827]">Product Journey</h5>
+                            <span className="text-xl text-gray-400">+</span>
+                        </div>
+                        <div className="space-y-5 px-1 relative before:absolute before:inset-y-2 before:left-3 before:w-px before:bg-gray-200">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex items-center gap-5 relative z-10">
+                                    <div className="border-[3px] border-white rounded-full bg-gray-200 size-[18px]" />
+                                    <div className="h-2 w-3/4 max-w-[150px] bg-[#fcfbf4] rounded-full" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
         );
     }
 
