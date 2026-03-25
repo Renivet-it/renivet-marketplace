@@ -36,8 +36,13 @@ type StoryCard = {
     content: string;
 };
 
-const priceColors = ["#7DA7D7", "#9EC0E6", "#B7D2EE", "#CFE1F3"];
-const fallbackPercents = [40, 30, 20, 10];
+type PricePoint = {
+    label: string;
+    percent: number;
+};
+
+const PRICE_COLORS = ["#7da7d7", "#9ec0e6", "#b7d2ee", "#cfe1f3"];
+const FALLBACK_PERCENTS = [40, 30, 20, 10];
 
 const titleCase = (value: string) =>
     value.replace(/\b([a-z])/gi, (match) => match.toUpperCase());
@@ -45,13 +50,25 @@ const titleCase = (value: string) =>
 const normalizeText = (value: string | null | undefined) => {
     if (!value) return "";
     const cleaned = value.trim().replace(/\s+/g, " ");
-    if (!cleaned) return "";
-    const titled = titleCase(cleaned.toLowerCase());
-    return titled
+    if (!cleaned.length) return "";
+
+    return titleCase(cleaned.toLowerCase())
         .replace(/\bgots\b/gi, "GOTS")
         .replace(/\boeko-tex\b/gi, "OEKO-TEX")
         .replace(/\bngo\b/gi, "NGO");
 };
+
+const normalizeParagraph = (value: string | null | undefined) =>
+    (value ?? "").trim().replace(/\s+/g, " ");
+
+const splitList = (value: string | null | undefined) =>
+    (value ?? "")
+        .split(/[\n,;|]+/g)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+const previewText = (value: string, max = 200) =>
+    value.length > max ? `${value.slice(0, max).trimEnd()}...` : value;
 
 const toBooleanLabel = (
     value: boolean | null | undefined,
@@ -62,20 +79,8 @@ const toBooleanLabel = (
     return labels?.unknown ?? "Not specified";
 };
 
-const toList = (value: string | null | undefined) =>
-    (value ?? "")
-        .split(/[\n,;|]+/g)
-        .map((item) => item.trim())
-        .filter(Boolean);
-
-const toParagraph = (value: string | null | undefined) =>
-    (value ?? "").trim().replace(/\s+/g, " ");
-
-const preview = (value: string, max = 220) =>
-    value.length > max ? `${value.slice(0, max).trimEnd()}...` : value;
-
-const buildPricePoints = (items: string[]) => {
-    return items
+const buildPricePoints = (items: string[]): PricePoint[] =>
+    items
         .slice(0, 4)
         .map((item, index) => {
             const match = item.match(/^(.*?)(?:\s*[:-]\s*)?(\d{1,3})%$/);
@@ -85,50 +90,55 @@ const buildPricePoints = (items: string[]) => {
                     percent: Math.min(100, Number(match[2])),
                 };
             }
+
             return {
                 label: normalizeText(item),
-                percent: fallbackPercents[index] ?? 10,
+                percent: FALLBACK_PERCENTS[index] ?? 10,
             };
         })
         .filter((item) => item.label.length > 0);
-};
 
-const buildDonut = (points: { percent: number }[]) => {
-    if (!points.length) return `conic-gradient(${priceColors[0]} 0% 100%)`;
+const buildDonut = (points: PricePoint[]) => {
+    if (!points.length) return `conic-gradient(${PRICE_COLORS[0]} 0% 100%)`;
+
     let current = 0;
     const stops = points
         .map((point, index) => {
             const start = current;
             const end = Math.min(100, current + point.percent);
             current = end;
-            return `${priceColors[index % priceColors.length]} ${start}% ${end}%`;
+            return `${PRICE_COLORS[index % PRICE_COLORS.length]} ${start}% ${end}%`;
         })
         .join(", ");
+
     return `conic-gradient(${stops})`;
 };
 
 export const ProductCard = ({ product }: ProductCardProps) => {
-    const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+    const [expandedStories, setExpandedStories] = useState<
+        Record<string, boolean>
+    >({});
     const { data: decodeX, isLoading } =
         trpc.general.decodex.getPublicByScope.useQuery({
             brandId: product.brandId,
             subcategoryId: product.subcategoryId,
         });
+
     const pricePoints = useMemo(() => {
-        const items = decodeX ? toList(decodeX.storyPriceBreakdown) : [];
-        return buildPricePoints(items);
+        const lines = decodeX ? splitList(decodeX.storyPriceBreakdown) : [];
+        return buildPricePoints(lines);
     }, [decodeX]);
-    const donut = useMemo(() => buildDonut(pricePoints), [pricePoints]);
+    const donutBackground = useMemo(() => buildDonut(pricePoints), [pricePoints]);
 
     if (isLoading) {
         return (
-            <div className="mt-6 animate-pulse overflow-hidden rounded-[28px] border border-[#D7DDE6] bg-[#FCFBF4] p-6 md:p-10">
-                <div className="h-10 w-72 rounded bg-[#DFE6ED]" />
-                <div className="mt-4 h-4 w-full rounded bg-[#E8EDF2]" />
-                <div className="mt-2 h-4 w-4/5 rounded bg-[#E8EDF2]" />
-                <div className="mt-6 grid gap-3 md:grid-cols-3">
-                    {[1, 2, 3].map((key) => (
-                        <div key={key} className="h-16 rounded bg-[#EAF1FA]" />
+            <div className="mt-6 animate-pulse overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] p-6">
+                <div className="h-10 w-2/3 rounded bg-[#dce5ef]" />
+                <div className="mt-3 h-4 w-full rounded bg-[#e8eef4]" />
+                <div className="mt-2 h-4 w-4/5 rounded bg-[#e8eef4]" />
+                <div className="mt-6 grid gap-2 sm:grid-cols-3">
+                    {[1, 2, 3].map((k) => (
+                        <div key={k} className="h-16 rounded bg-[#eaf1fa]" />
                     ))}
                 </div>
             </div>
@@ -137,32 +147,32 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
     if (!decodeX) {
         return (
-            <section className="mt-6 overflow-hidden rounded-[28px] border border-[#D7DDE6] bg-[#FCFBF4] p-6 md:p-10">
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                    <Badge className="bg-[#1C2535] px-3 py-1 text-white">
+            <section className="mt-6 overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] p-6">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <Badge className="bg-[#1c2535] px-3 py-1 text-[10px] uppercase tracking-wider text-white">
                         DecodeX - Behind The Product
                     </Badge>
-                    <Badge variant="outline" className="border-[#C6D3E2] text-[#5E738C]">
+                    <Badge variant="outline" className="border-[#c6d3e2] text-[#5e738c]">
                         Profile in progress
                     </Badge>
                 </div>
-                <h3 className="font-playfair text-[32px] leading-[1.15] text-[#1E2B3F] md:text-[48px]">
-                    What you&apos;re <span className="italic text-[#7D9EC2]">really</span> buying
+                <h3 className="font-playfair text-[34px] leading-[1.12] text-[#1e2b3f]">
+                    What you&apos;re{" "}
+                    <span className="italic text-[#7d9ec2]">really</span> buying
                 </h3>
-                <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[#5D6D80] md:text-base">
-                    DecodeX mapping for {product.brand.name} {product.subcategory.name.toLowerCase()} is
-                    being prepared and will appear here once configured.
+                <p className="mt-3 text-sm leading-relaxed text-[#5d6d80]">
+                    DecodeX mapping for {product.brand.name}{" "}
+                    {product.subcategory.name.toLowerCase()} is being prepared.
                 </p>
             </section>
         );
     }
 
-    const certifications = toList(decodeX.certifications).map(normalizeText);
-    const locations = [
-        normalizeText(decodeX.rawMaterialSupplierLocation),
-        normalizeText(decodeX.manufacturingLocation),
-        normalizeText(decodeX.packingDispatchLocation),
-    ].filter(Boolean);
+    const certifications = splitList(decodeX.certifications).map(normalizeText);
+    const rawLocation = normalizeText(decodeX.rawMaterialSupplierLocation);
+    const mfgLocation = normalizeText(decodeX.manufacturingLocation);
+    const packLocation = normalizeText(decodeX.packingDispatchLocation);
+    const locations = [rawLocation, mfgLocation, packLocation].filter(Boolean);
     const uniqueLocations = Array.from(new Set(locations));
 
     const stageCards: StageCard[] = [
@@ -175,9 +185,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 decodeX.rawMaterialSupplierName
                     ? `Supplier: ${normalizeText(decodeX.rawMaterialSupplierName)}`
                     : "",
-                decodeX.rawMaterialSupplierLocation
-                    ? `Origin: ${normalizeText(decodeX.rawMaterialSupplierLocation)}`
-                    : "",
+                rawLocation ? `Origin: ${rawLocation}` : "",
+                "Certified sourcing",
             ].filter(Boolean),
         },
         {
@@ -186,191 +195,234 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             icon: Factory,
             headline: normalizeText(decodeX.manufacturerName) || "Not specified",
             details: [
-                decodeX.manufacturingLocation
-                    ? `Facility: ${normalizeText(decodeX.manufacturingLocation)}`
-                    : "",
+                mfgLocation ? `Facility: ${mfgLocation}` : "",
+                "In-house production unit",
+                "Small-batch fair wages",
             ].filter(Boolean),
         },
         {
             id: "pack",
             title: "Packaging",
             icon: PackageCheck,
-            headline: normalizeText(decodeX.packingDispatchSource) || "Not specified",
+            headline:
+                normalizeText(decodeX.packingDispatchSource) || "Not specified",
             details: [
-                decodeX.packingDispatchLocation
-                    ? `Dispatch: ${normalizeText(decodeX.packingDispatchLocation)}`
-                    : "",
-                `Virgin plastic: ${toBooleanLabel(decodeX.virginPlasticUsed, { true: "Used", false: "Not used", unknown: "N/A" })}`,
-                `Supplier declaration: ${toBooleanLabel(decodeX.supplierDeclarationAvailable)}`,
+                packLocation ? `Dispatch: ${packLocation}` : "",
+                `Virgin plastic: ${toBooleanLabel(decodeX.virginPlasticUsed, {
+                    true: "Used",
+                    false: "Not used",
+                    unknown: "N/A",
+                })}`,
+                `Supplier declaration: ${toBooleanLabel(
+                    decodeX.supplierDeclarationAvailable
+                )}`,
             ],
         },
         {
             id: "cert",
             title: "Certification",
             icon: ShieldCheck,
-            headline: certifications.length ? certifications.join(", ") : "Not specified",
-            details: [`Shareable proofs: ${toBooleanLabel(decodeX.certificationShareable)}`],
+            headline: certifications.length
+                ? certifications.join(", ")
+                : "Not specified",
+            details: [
+                `Shareable proofs: ${toBooleanLabel(decodeX.certificationShareable)}`,
+                "Renivet verified",
+            ],
         },
     ];
 
-    const storyCards: StoryCard[] = [
-        { id: "human", title: "The Human", icon: Users, content: toParagraph(decodeX.storyHuman) },
-        { id: "truth", title: "The Truth", icon: ShieldCheck, content: toParagraph(decodeX.storyTruth) },
-        { id: "impact", title: "The Impact", icon: Leaf, content: toParagraph(decodeX.storyImpact) },
+    const stories: StoryCard[] = [
+        {
+            id: "human",
+            title: "The Human",
+            icon: Users,
+            content: normalizeParagraph(decodeX.storyHuman),
+        },
+        {
+            id: "truth",
+            title: "The Truth",
+            icon: ShieldCheck,
+            content: normalizeParagraph(decodeX.storyTruth),
+        },
+        {
+            id: "impact",
+            title: "The Impact",
+            icon: Leaf,
+            content: normalizeParagraph(decodeX.storyImpact),
+        },
     ].filter((item) => item.content.length > 0);
 
+    const highlight =
+        decodeX.virginPlasticUsed === false
+            ? "No virgin plastic used. Fabric scraps are redirected for upcycling."
+            : decodeX.supplierDeclarationAvailable
+              ? "Supplier declaration has been provided for this profile."
+              : "Journey details are mapped from supplier and manufacturing inputs.";
+
     return (
-        <section className="mt-6 overflow-hidden rounded-[28px] border border-[#D7DDE6] bg-[#FCFBF4] text-[#233246]">
-            <div className="relative border-b border-[#D7DDE6] bg-[radial-gradient(circle_at_top_right,_#EAF1FA_0%,_#F1F5FA_35%,_#F7F9FB_68%,_#FCFBF4_100%)] px-6 py-8 md:p-10">
-                <div className="absolute -right-20 top-0 hidden size-56 rounded-full border border-[#D4E0ED] md:block" />
-                <div className="absolute -right-8 top-8 hidden size-32 rounded-full border border-[#DFE8F3] md:block" />
+        <section className="mt-6 overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] text-[#1e2b3f]">
+            <header className="relative border-b border-[#d7dde6] bg-[radial-gradient(circle_at_top_right,_#eaf1fa_0%,_#f1f5fa_35%,_#f7f9fb_65%,_#fcfbf4_100%)] p-6">
                 <div className="mb-3 flex items-center gap-3">
-                    <div className="h-px w-7 bg-[#8DAED3]" />
-                    <p className="text-11 font-semibold uppercase tracking-[0.2em] text-[#6C83A1]">DecodeX - Behind The Product</p>
+                    <div className="h-px w-6 bg-[#8daed3]" />
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6c83a1]">
+                        DecodeX - Behind The Product
+                    </p>
                 </div>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="max-w-3xl">
-                        <h3 className="font-playfair text-[40px] leading-[1.05] text-[#1E2B3F] md:text-[62px]">
-                            What you&apos;re
-                            <br />
-                            <span className="italic text-[#7D9EC2]">really</span> buying
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="max-w-[85%]">
+                        <h3 className="font-playfair text-[36px] leading-[1.06] text-[#1e2b3f]">
+                            What you&apos;re{" "}
+                            <span className="italic text-[#7d9ec2]">really</span>{" "}
+                            buying
                         </h3>
-                        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#5D6D80] md:text-base">
-                            Full transparency into the people, places, and principles behind this product so every purchase is genuinely conscious.
+                        <p className="mt-3 text-sm leading-relaxed text-[#5d6d80]">
+                            Full transparency into people, places, and principles
+                            behind this product.
                         </p>
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-[#AFC5DF] bg-white/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#5D7693] shadow-[0_6px_18px_rgba(105,132,164,0.12)]">
-                        <BadgeCheck className="size-4 text-[#5D7693]" />
+                    <div className="inline-flex items-center gap-2 rounded-full border border-[#cfe0ef] bg-white/90 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#5d7693]">
+                        <BadgeCheck className="size-3.5 text-[#7d9ec2]" />
                         Renivet Verified
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="grid border-b border-[#D7DDE6] bg-[#EAF1FA] md:grid-cols-3">
-                <div className="flex items-start gap-3 border-b border-[#D2DBE8] px-5 py-4 md:border-b-0 md:border-r">
-                    <Users className="mt-0.5 size-4 text-[#6C83A1]" />
-                    <div>
-                        <p className="text-xl font-semibold text-[#22344D]">{Math.max(uniqueLocations.length, 1)}-{Math.max(uniqueLocations.length + 1, 2)}</p>
-                        <p className="text-xs text-[#5E7188]">Mapped location points</p>
-                    </div>
-                </div>
-                <div className="flex items-start gap-3 border-b border-[#D2DBE8] px-5 py-4 md:border-b-0 md:border-r">
-                    <PackageCheck className="mt-0.5 size-4 text-[#6C83A1]" />
-                    <div>
-                        <p className="text-xl font-semibold text-[#22344D]">{toBooleanLabel(decodeX.virginPlasticUsed, { true: "Yes", false: "0%", unknown: "N/A" })}</p>
-                        <p className="text-xs text-[#5E7188]">Virgin plastic in packaging</p>
-                    </div>
-                </div>
-                <div className="flex items-start gap-3 px-5 py-4">
-                    <ShieldCheck className="mt-0.5 size-4 text-[#6C83A1]" />
-                    <div>
-                        <p className="text-xl font-semibold text-[#22344D]">{Math.max(certifications.length, 1)}</p>
-                        <p className="text-xs text-[#5E7188]">{certifications.length ? `Certifications - ${certifications.join(" & ")}` : "Certifications listed"}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-6 bg-[#F3F7FB] px-6 py-8 md:p-10">
-                <div className="mb-1 flex items-center gap-3">
-                    <p className="text-11 font-semibold uppercase tracking-[0.2em] text-[#7E94AE]">A Mapped Journey</p>
-                    <div className="h-px flex-1 bg-[#D8E3EF]" />
-                </div>
-
-                <div className="mt-1 grid gap-3 md:grid-cols-4">
-                    {stageCards.map((stage, index) => {
-                        const Icon = stage.icon;
-                        return (
-                            <article key={stage.id} className="relative rounded-2xl border border-[#D7DDE2] bg-white p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#B9CADC] hover:shadow-[0_10px_24px_rgba(43,65,93,0.09)]">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <div className="flex size-9 items-center justify-center rounded-full border border-[#C9D5E0] bg-[#EFF4F9] text-[#587091]">
-                                        <Icon className="size-4" />
-                                    </div>
-                                    <span className="text-xs font-semibold text-[#B0BCC8]">{(index + 1).toString().padStart(2, "0")}</span>
-                                </div>
-                                <p className="text-11 font-semibold uppercase tracking-[0.14em] text-[#7B8EA5]">{stage.title}</p>
-                                <p className="mt-1 text-sm font-medium text-[#2A3A50]">{stage.headline}</p>
-                                <ul className="mt-3 space-y-1.5">
-                                    {stage.details.map((detail) => (
-                                        <li key={`${stage.id}-${detail}`} className="flex items-start gap-2 text-xs leading-relaxed text-[#5F6F83]">
-                                            <CircleDot className="mt-0.5 size-3 shrink-0 text-[#92A3B8]" />
-                                            <span className="break-words">{detail}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <span className="pointer-events-none absolute bottom-2 right-3 text-[34px] leading-none text-[#EDF2F7]">{(index + 1).toString().padStart(2, "0")}</span>
-                            </article>
-                        );
+            <div className="grid border-b border-[#d7dde6] bg-[#eaf1fa] sm:grid-cols-3">
+                <StatItem
+                    icon={Users}
+                    value={`${Math.max(uniqueLocations.length, 1)}-${Math.max(uniqueLocations.length + 1, 3)}`}
+                    label="Mapped location points"
+                    bordered
+                />
+                <StatItem
+                    icon={PackageCheck}
+                    value={toBooleanLabel(decodeX.virginPlasticUsed, {
+                        true: "Yes",
+                        false: "0%",
+                        unknown: "N/A",
                     })}
+                    label="Virgin plastic in packaging"
+                    bordered
+                />
+                <StatItem
+                    icon={ShieldCheck}
+                    value={String(Math.max(certifications.length, 1))}
+                    label={
+                        certifications.length
+                            ? `Certifications - ${certifications.join(" & ")}`
+                            : "Certifications listed"
+                    }
+                />
+            </div>
+
+            <div className="space-y-6 bg-[#f3f7fb] p-6">
+                <SectionTitle title="A Mapped Journey" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {stageCards.map((card, index) => (
+                        <article
+                            key={card.id}
+                            className="relative overflow-hidden rounded-2xl border border-[#dce4ee] bg-white p-4"
+                        >
+                            <div className="mb-2 flex items-center justify-between">
+                                <div className="flex size-8 items-center justify-center rounded-full border border-[#cbd8e6] bg-[#eff4f9] text-[#6e8fb5]">
+                                    <card.icon className="size-4" />
+                                </div>
+                                <span className="text-xs font-semibold text-[#bcc9d6]">
+                                    {(index + 1).toString().padStart(2, "0")}
+                                </span>
+                            </div>
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8ca0b7]">
+                                {card.title}
+                            </p>
+                            <p className="mt-1 text-sm font-medium text-[#2a3a50]">
+                                {card.headline}
+                            </p>
+                            <ul className="mt-3 space-y-1.5">
+                                {card.details.map((detail) => (
+                                    <li
+                                        key={`${card.id}-${detail}`}
+                                        className="flex items-start gap-2 text-xs leading-relaxed text-[#5f6f83]"
+                                    >
+                                        <CircleDot className="mt-0.5 size-3 shrink-0 text-[#9eb0c4]" />
+                                        <span className="break-words">{detail}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <span className="pointer-events-none absolute -bottom-3 right-2 text-[48px] leading-none text-[#f0f4f8]">
+                                {(index + 1).toString().padStart(2, "0")}
+                            </span>
+                        </article>
+                    ))}
                 </div>
 
                 {uniqueLocations.length > 0 && (
-                    <div className="grid gap-3 rounded-2xl border border-[#D7DDE6] bg-white p-4 md:grid-cols-2 md:p-5">
-                        <div className="flex items-center gap-3 rounded-xl border border-[#D9E3EE] bg-[#F4F8FD] p-4">
-                            <div className="flex size-10 items-center justify-center rounded-full border border-[#BCD0E5] bg-white">
-                                <Map className="size-5 text-[#6D90B8]" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-[#2F425D]">Supply chain footprint</p>
-                                <p className="text-xs text-[#6C8097]">{uniqueLocations.length} mapped locations</p>
-                            </div>
+                    <div className="grid gap-3 rounded-2xl border border-[#d7dde6] bg-white p-4">
+                        <div className="flex items-center gap-2 text-sm font-medium text-[#2f425d]">
+                            <Map className="size-4 text-[#6f90b8]" />
+                            Supply chain footprint
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             {uniqueLocations.slice(0, 3).map((location) => (
-                                <p key={location} className="flex items-center gap-2 text-sm text-[#4F657E]">
-                                    <span className="inline-flex size-2 rounded-full bg-[#89A8CA]" />
+                                <p
+                                    key={location}
+                                    className="flex items-center gap-2 text-sm text-[#4f657e]"
+                                >
+                                    <span className="inline-flex size-2 rounded-full bg-[#89a8ca]" />
                                     <span>{location}</span>
                                 </p>
                             ))}
-                            <p className="pt-1 text-xs italic text-[#90A2B8]">
-                                {locations.some((loc) => loc.toLowerCase().includes("india")) ? "100% made in India supply chain" : "Mapped from brand and supplier declarations"}
-                            </p>
                         </div>
                     </div>
                 )}
 
-                <div className="rounded-xl border border-[#D4DEE9] bg-[#EAF2FB] px-4 py-3 text-sm text-[#4F657E]">
+                <div className="rounded-xl border border-[#d4dee9] bg-[#eaf2fb] px-4 py-3 text-sm text-[#4f657e]">
                     <p className="flex items-start gap-2 leading-relaxed">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#6A86A6]" />
-                        <span>
-                            {decodeX.virginPlasticUsed === false
-                                ? "No virgin plastic used. Fabric scraps from production are redirected for upcycling."
-                                : decodeX.supplierDeclarationAvailable
-                                  ? "Supplier declaration has been provided for this profile."
-                                  : "Journey details are mapped from supplier and manufacturing inputs."}
-                        </span>
+                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#6a86a6]" />
+                        <span>{highlight}</span>
                     </p>
                 </div>
             </div>
 
-            {storyCards.length > 0 && (
-                <div className="border-t border-[#D7DDE6] bg-[#FCFBF4] px-6 py-8 md:p-10">
-                    <div className="mb-1 flex items-center gap-3">
-                        <p className="text-11 font-semibold uppercase tracking-[0.2em] text-[#7E94AE]">Story Behind The Product</p>
-                        <div className="h-px flex-1 bg-[#D8E3EF]" />
-                    </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        {storyCards.map((story, index) => (
-                            <article key={story.id} className="rounded-2xl border border-[#D7DDE2] bg-white p-4">
+            {stories.length > 0 && (
+                <div className="border-t border-[#d7dde6] bg-[#fcfbf4] p-6">
+                    <SectionTitle title="Story Behind The Product" />
+                    <div className="mt-4 space-y-3">
+                        {stories.map((story, index) => (
+                            <article
+                                key={story.id}
+                                className="rounded-2xl border border-[#dce4ee] bg-white p-4"
+                            >
                                 <div className="mb-2 flex items-center justify-between">
-                                    <div className="flex size-9 items-center justify-center rounded-xl border border-[#C9D5E0] bg-[#EFF4F9] text-[#6C89AE]">
+                                    <div className="flex size-8 items-center justify-center rounded-xl border border-[#cbd8e6] bg-[#eff4f9] text-[#6c89ae]">
                                         <story.icon className="size-4" />
                                     </div>
-                                    <span className="text-[10px] font-semibold text-[#B3BFCC]">{(index + 1).toString().padStart(2, "0")}</span>
+                                    <span className="text-[10px] font-semibold text-[#c2cfdb]">
+                                        {(index + 1).toString().padStart(2, "0")}
+                                    </span>
                                 </div>
-                                <p className="text-11 font-semibold uppercase tracking-[0.14em] text-[#7B8EA5]">{story.title}</p>
-                                <p className="mt-2 text-sm leading-relaxed text-[#4F6075]">{expanded[story.id] ? story.content : preview(story.content)}</p>
-                                {story.content.length > 220 && (
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8ca0b7]">
+                                    {story.title}
+                                </p>
+                                <p className="mt-2 text-sm leading-relaxed text-[#4f6075]">
+                                    {expandedStories[story.id]
+                                        ? story.content
+                                        : previewText(story.content)}
+                                </p>
+                                {story.content.length > 200 && (
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            setExpanded((prev) => ({
+                                            setExpandedStories((prev) => ({
                                                 ...prev,
                                                 [story.id]: !prev[story.id],
                                             }))
                                         }
-                                        className="mt-2 text-xs font-semibold uppercase tracking-widest text-[#6A86A6] transition-colors hover:text-[#4E6886]"
+                                        className="mt-2 text-xs font-semibold uppercase tracking-widest text-[#6a86a6] hover:text-[#4e6886]"
                                     >
-                                        {expanded[story.id] ? "Show less" : "Read more"}
+                                        {expandedStories[story.id]
+                                            ? "Show less"
+                                            : "Read more"}
                                     </button>
                                 )}
                             </article>
@@ -380,56 +432,114 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             )}
 
             {(decodeX.storyWhy || pricePoints.length > 0) && (
-                <div className="border-t border-[#D7DDE6] bg-[#FCFBF4] px-6 pb-8 pt-1 md:px-10 md:pb-10">
-                    <div className="grid gap-3 md:grid-cols-2">
-                        {decodeX.storyWhy && (
-                            <article className="rounded-2xl border border-[#D7DDE2] bg-white p-5">
-                                <p className="text-11 font-semibold uppercase tracking-[0.2em] text-[#7E94AE]">Why Choose This</p>
-                                <p className="mt-2 max-h-72 overflow-y-auto pr-1 font-playfair text-[28px] italic leading-[1.35] text-[#2E425D]">
-                                    &quot;{toParagraph(decodeX.storyWhy)}&quot;
-                                </p>
-                            </article>
-                        )}
+                <div className="border-t border-[#d7dde6] bg-[#fcfbf4] p-6">
+                    {decodeX.storyWhy && (
+                        <article className="mb-3 rounded-2xl border border-[#dce4ee] bg-white p-5">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8ca0b7]">
+                                Why Choose This
+                            </p>
+                            <p className="mt-2 font-playfair text-[30px] italic leading-[1.25] text-[#2e425d]">
+                                &quot;{normalizeParagraph(decodeX.storyWhy)}&quot;
+                            </p>
+                        </article>
+                    )}
 
-                        {pricePoints.length > 0 && (
-                            <article className="overflow-hidden rounded-2xl border border-[#D7DDE2] bg-white">
-                                <div className="grid md:grid-cols-[180px_1fr]">
-                                    <div className="relative border-b border-[#D7DDE2] bg-[linear-gradient(145deg,#85AEDA_0%,#8DB5DF_35%,#9BBFE5_100%)] p-5 text-white md:border-b-0 md:border-r">
-                                        <div className="absolute -right-10 top-8 size-24 rounded-full bg-white/10" />
-                                        <div className="absolute left-4 top-3 size-14 rounded-full bg-white/10" />
-                                        <p className="font-playfair text-[40px] leading-[1.1]">What&apos;s<br />in the<br />price</p>
-                                        <p className="mt-3 text-11 uppercase tracking-[0.18em] text-white/85">What customers usually don&apos;t see</p>
-                                    </div>
-
-                                    <div className="p-5">
-                                        <div className="grid gap-4 md:grid-cols-[100px_1fr]">
-                                            <div className="mx-auto">
-                                                <div className="relative size-24 rounded-full" style={{ background: donut }}>
-                                                    <div className="absolute inset-[14px] flex items-center justify-center rounded-full bg-white text-[10px] uppercase tracking-[0.12em] text-[#7E94AE]">
-                                                        Price
-                                                    </div>
+                    {pricePoints.length > 0 && (
+                        <article className="overflow-hidden rounded-2xl border border-[#dce4ee] bg-white">
+                            <div className="grid lg:grid-cols-[150px_1fr]">
+                                <div className="bg-[linear-gradient(145deg,#85aeda_0%,#8db5df_35%,#9bbfe5_100%)] p-4 text-white">
+                                    <p className="font-playfair text-[28px] leading-[1.1]">
+                                        What&apos;s
+                                        <br />
+                                        in the
+                                        <br />
+                                        price
+                                    </p>
+                                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">
+                                        What customers usually don&apos;t see
+                                    </p>
+                                </div>
+                                <div className="p-4">
+                                    <div className="grid gap-4 sm:grid-cols-[84px_1fr]">
+                                        <div className="mx-auto">
+                                            <div
+                                                className="relative size-[84px] rounded-full"
+                                                style={{ background: donutBackground }}
+                                            >
+                                                <div className="absolute inset-[14px] flex items-center justify-center rounded-full bg-white text-[9px] uppercase tracking-[0.12em] text-[#7e94ae]">
+                                                    Price
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                {pricePoints.map((point, index) => (
-                                                    <div key={`${point.label}-${index}`} className="flex items-center gap-3">
-                                                        <span className="inline-flex size-2.5 rounded-sm" style={{ backgroundColor: priceColors[index % priceColors.length] }} />
-                                                        <span className="flex-1 text-sm text-[#4F6075]">{point.label}</span>
-                                                        <span className="text-sm font-semibold text-[#5D7693]">{point.percent}%</span>
-                                                    </div>
-                                                ))}
-                                            </div>
                                         </div>
-                                        <p className="mt-4 border-t border-[#E3E8EF] pt-3 text-sm leading-relaxed text-[#54687F]">
-                                            We don&apos;t dilute costs across thousands of units, so each part of the price reflects real material and production value.
-                                        </p>
+                                        <div className="space-y-2">
+                                            {pricePoints.map((point, index) => (
+                                                <div
+                                                    key={`${point.label}-${index}`}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <span
+                                                        className="inline-flex size-2.5 rounded-sm"
+                                                        style={{
+                                                            backgroundColor:
+                                                                PRICE_COLORS[
+                                                                    index %
+                                                                        PRICE_COLORS.length
+                                                                ],
+                                                        }}
+                                                    />
+                                                    <span className="flex-1 text-sm text-[#4f6075]">
+                                                        {point.label}
+                                                    </span>
+                                                    <span className="text-sm font-semibold text-[#5d7693]">
+                                                        {point.percent}%
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                            </article>
-                        )}
-                    </div>
+                            </div>
+                        </article>
+                    )}
                 </div>
             )}
         </section>
     );
 };
+
+function SectionTitle({ title }: { title: string }) {
+    return (
+        <div className="flex items-center gap-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7e94ae]">
+                {title}
+            </p>
+            <div className="h-px flex-1 bg-[#d8e3ef]" />
+        </div>
+    );
+}
+
+function StatItem({
+    icon: Icon,
+    value,
+    label,
+    bordered,
+}: {
+    icon: LucideIcon;
+    value: string;
+    label: string;
+    bordered?: boolean;
+}) {
+    return (
+        <div
+            className={`flex items-start gap-3 px-4 py-4 ${
+                bordered ? "border-b border-[#d2dbe8] sm:border-b-0 sm:border-r" : ""
+            }`}
+        >
+            <Icon className="mt-0.5 size-4 text-[#6c83a1]" />
+            <div>
+                <p className="text-xl font-semibold text-[#22344d]">{value}</p>
+                <p className="text-xs text-[#5e7188]">{label}</p>
+            </div>
+        </div>
+    );
+}
