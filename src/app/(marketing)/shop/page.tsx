@@ -13,6 +13,7 @@ import {
 } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
+import { unstable_cache } from "next/cache";
 import { Suspense } from "react";
 import { SearchableProductTypes } from "./search-component";
 
@@ -36,37 +37,9 @@ interface PageProps {
 }
 
 export default async function Page({ searchParams }: PageProps) {
-    // const productTypes = await productTypeCache.getAll();
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
-    const [productTypes, data] = await Promise.all([
-        productTypeCache.getAll(),
-        productQueries.getProducts({
-            page: parseInt(params.page || "1"),
-            limit: parseInt(params.limit || "28"),
-            search: params.search,
-            isAvailable: true,
-            isActive: true,
-            isPublished: true,
-            isDeleted: false,
-            verificationStatus: "approved",
-            brandIds: params.brandIds?.split(","),
-            minPrice: params.minPrice ? parseInt(params.minPrice) : 0,
-            maxPrice: params.maxPrice ? parseInt(params.maxPrice) : 1000000,
-            categoryId: params.categoryId,
-            subcategoryId: subCategoryId,
-            productTypeId: params.productTypeId,
-            sortBy: params.sortBy === "recommended" ? undefined : params.sortBy,
-            sortOrder:
-                params.sortBy === "recommended" ? undefined : params.sortOrder,
-            colors: params.colors?.split(","),
-            sizes: params.sizes?.split(","),
-            // Don't prioritize best sellers when search is active
-            prioritizeBestSellers:
-                !params.search && (!params.sortBy || params.sortBy === "recommended"),
-            requireMedia: true,
-        }),
-    ]);
+    const productTypes = await productTypeCache.getAll();
 
     return (
         <GeneralShell>
@@ -124,33 +97,8 @@ export default async function Page({ searchParams }: PageProps) {
                         <ShopSortBy />
                     </div>
 
-                    {/* Mobile Product Types */}
-                    <div className="block md:hidden">
-                        <SearchableProductTypes
-                            productTypes={productTypes}
-                            productTypeId={
-                                (await searchParams).productTypeId ?? ""
-                            }
-                            initialProducts={data?.data ?? []} // 👈 renamed prop
-                        />
-                    </div>
-
-                    {/* Desktop Product Types */}
-                    <div className="hidden md:block">
-                        <SearchableProductTypes
-                            productTypes={productTypes.slice(0, 10)}
-                            productTypeId={
-                                (await searchParams).productTypeId ?? ""
-                            }
-                            initialProducts={data?.data ?? []} // 👈 renamed prop
-                            isDesktop
-                        />
-                    </div>
-
-                    <Separator />
-
                     <Suspense fallback={<ShopProductsSkeleton />}>
-                        <ShopProductsFetch searchParams={searchParams} />
+                        <ShopProductsFetch searchParams={searchParams} productTypes={productTypes} />
                     </Suspense>
                 </main>
             </div>
@@ -296,7 +244,27 @@ async function ShopFiltersFetch(
 }
 // --- END MODIFICATION ---
 
-async function ShopProductsFetch({ searchParams }: PageProps) {
+const getCachedDefaultProducts = unstable_cache(
+    async () => {
+        return await productQueries.getProducts({
+            page: 1,
+            limit: 28,
+            isAvailable: true,
+            isActive: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            minPrice: 0,
+            maxPrice: 1000000,
+            prioritizeBestSellers: true,
+            requireMedia: true,
+        });
+    },
+    ["default-shop-products-cache-v1"],
+    { revalidate: 60 }
+);
+
+async function ShopProductsFetch({ searchParams, productTypes }: { searchParams: PageProps["searchParams"], productTypes: any[] }) {
     const { userId } = await auth();
 
     const {
@@ -378,33 +346,7 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
 
         if (recommendations.products.length >= 5) {
             // Get regular products for count and remaining products
-            const regularData = await productQueries.getProducts({
-                page,
-                limit,
-                search,
-                isAvailable: true,
-                isActive: true,
-                isPublished: true,
-                isDeleted: false,
-                verificationStatus: "approved",
-                brandIds,
-                minPrice,
-                maxPrice,
-                categoryId: !!categoryId?.length ? categoryId : undefined,
-                subcategoryId: !!subCategoryId?.length
-                    ? subCategoryId
-                    : undefined,
-                productTypeId: !!productTypeId?.length
-                    ? productTypeId
-                    : undefined,
-                sortBy,
-                sortOrder,
-                colors,
-                sizes,
-                prioritizeBestSellers:
-                    !search && (!sortByRaw || sortByRaw === "recommended"),
-                requireMedia: true,
-            });
+            const regularData = await getCachedDefaultProducts();
 
             // Combine personalized first, then regular (exclude duplicates)
             const recommendedIds = new Set(
@@ -424,6 +366,18 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
             };
         } else {
             // Not enough personalized recommendations, use regular
+            finalData = await getCachedDefaultProducts();
+        }
+    } else {
+        // Regular products query
+        const isDefaultView = page === 1 && limit === 28 &&
+                              !search && !brandIds && minPrice === 0 && maxPrice === 1000000 &&
+                              !categoryId && !subCategoryId && !productTypeId &&
+                              (!sortByRaw || sortByRaw === "recommended") && !sortOrder && !colors && !sizes;
+                              
+        if (isDefaultView) {
+            finalData = await getCachedDefaultProducts();
+        } else {
             finalData = await productQueries.getProducts({
                 page,
                 limit,
@@ -437,64 +391,57 @@ async function ShopProductsFetch({ searchParams }: PageProps) {
                 minPrice,
                 maxPrice,
                 categoryId: !!categoryId?.length ? categoryId : undefined,
-                subcategoryId: !!subCategoryId?.length
-                    ? subCategoryId
-                    : undefined,
-                productTypeId: !!productTypeId?.length
-                    ? productTypeId
-                    : undefined,
+                subcategoryId: !!subCategoryId?.length ? subCategoryId : undefined,
+                productTypeId: !!productTypeId?.length ? productTypeId : undefined,
                 sortBy,
                 sortOrder,
                 colors,
                 sizes,
-                // Don't prioritize best sellers when search is active
                 prioritizeBestSellers:
-                    !search &&
-                    (!sortByRaw || sortByRaw === "recommended"),
+                    !search && (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
         }
-    } else {
-        // Regular products query
-        finalData = await productQueries.getProducts({
-            page,
-            limit,
-            search,
-            isAvailable: true,
-            isActive: true,
-            isPublished: true,
-            isDeleted: false,
-            verificationStatus: "approved",
-            brandIds,
-            minPrice,
-            maxPrice,
-            categoryId: !!categoryId?.length ? categoryId : undefined,
-            subcategoryId: !!subCategoryId?.length ? subCategoryId : undefined,
-            productTypeId: !!productTypeId?.length ? productTypeId : undefined,
-            sortBy,
-            sortOrder,
-            colors,
-            sizes,
-            prioritizeBestSellers:
-                !search && (!sortByRaw || sortByRaw === "recommended"),
-            requireMedia: true,
-        });
     }
 
     const userWishlist = userId
         ? await userWishlistCache.get(userId)
         : undefined;
 
-    console.log(finalData.data, "data");
+    // console.log(finalData.data, "data");
+    
     return (
-        <ShopProducts
-            initialData={{
-                ...finalData,
-                data: finalData?.data?.filter((p: any) => !p.isDeleted) ?? [],
-            }}
-            initialWishlist={userWishlist}
-            userId={userId ?? undefined}
-        />
+        <div className="space-y-5">
+            {/* Mobile Product Types */}
+            <div className="block md:hidden">
+                <SearchableProductTypes
+                    productTypes={productTypes}
+                    productTypeId={productTypeIdRaw ?? ""}
+                    initialProducts={finalData?.data ?? []}
+                />
+            </div>
+
+            {/* Desktop Product Types */}
+            <div className="hidden md:block">
+                <SearchableProductTypes
+                    productTypes={productTypes.slice(0, 10)}
+                    productTypeId={productTypeIdRaw ?? ""}
+                    initialProducts={finalData?.data ?? []}
+                    isDesktop
+                />
+            </div>
+
+            <Separator />
+
+            <ShopProducts
+                initialData={{
+                    ...finalData,
+                    data: finalData?.data?.filter((p: any) => !p.isDeleted) ?? [],
+                }}
+                initialWishlist={userWishlist}
+                userId={userId ?? undefined}
+            />
+        </div>
     );
 }
 
@@ -562,7 +509,18 @@ function ShopFiltersSkeleton() {
 
 function ShopProductsSkeleton() {
     return (
-        <>
+        <div className="space-y-5">
+            <div className="flex gap-2 overflow-hidden scrollbar-hide pb-2">
+                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
+                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
+                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
+                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
+                <Skeleton className="h-10 w-24 rounded-lg shrink-0 hidden md:block" />
+                <Skeleton className="h-10 w-24 rounded-lg shrink-0 hidden md:block" />
+            </div>
+            
+            <Separator />
+
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
                 {[...Array(10)].map((_, i) => (
                     <div key={i} className="space-y-3">
@@ -581,6 +539,6 @@ function ShopProductsSkeleton() {
             <div className="flex w-full items-center justify-center py-4">
                 <Skeleton className="h-10 w-40 rounded-md" />
             </div>
-        </>
+        </div>
     );
 }

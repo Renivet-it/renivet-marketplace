@@ -25,3 +25,4 @@ export * from "./brandwise-packingType";
 export * from "./search";
 export * from "./capi";
 export * from "./user-support";
+export * from "./decodex";

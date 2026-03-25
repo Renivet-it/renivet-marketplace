@@ -1022,17 +1022,17 @@ class ProductQuery {
         });
 
         // --- Media mapping ---
-        const mediaIds = new Set<string>();
+        const mediaKeys = new Set<string>();
         for (const product of data) {
-            product.media.forEach((m) => mediaIds.add(m.id));
+            product.media.forEach((m) => mediaKeys.add(`media:${m.id}:${product.brandId}`));
             product.variants.forEach((v) => {
-                if (v.image) mediaIds.add(v.image);
+                if (v.image) mediaKeys.add(`media:${v.image}:${product.brandId}`);
             });
             if (product.sustainabilityCertificate)
-                mediaIds.add(product.sustainabilityCertificate);
+                mediaKeys.add(`media:${product.sustainabilityCertificate}:${product.brandId}`);
         }
 
-        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
         const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
 
         const enhancedData = data.map((product) => ({
@@ -1338,16 +1338,16 @@ class ProductQuery {
         });
 
         // Media handling - same as getProducts
-        const mediaIds = new Set<string>();
+        const mediaKeys = new Set<string>();
         for (const product of data) {
-            product.media.forEach((media) => mediaIds.add(media.id));
+            product.media.forEach((media) => mediaKeys.add(`media:${media.id}:${product.brandId}`));
             product.variants.forEach((variant) => {
-                if (variant.image) mediaIds.add(variant.image);
+                if (variant.image) mediaKeys.add(`media:${variant.image}:${product.brandId}`);
             });
             if (product.sustainabilityCertificate)
-                mediaIds.add(product.sustainabilityCertificate);
+                mediaKeys.add(`media:${product.sustainabilityCertificate}:${product.brandId}`);
         }
-        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
         const mediaMap = new Map(
             mediaItems.data.map((item) => [item.id, item])
         );
@@ -1444,15 +1444,15 @@ class ProductQuery {
             ),
         });
         if (!data) return null;
-        const mediaIds = new Set<string>();
-        data.media.forEach((media) => mediaIds.add(media.id));
+        const mediaKeys = new Set<string>();
+        data.media.forEach((media) => mediaKeys.add(`media:${media.id}:${data.brandId}`));
         data.variants.forEach((variant) => {
-            if (variant.image) mediaIds.add(variant.image);
+            if (variant.image) mediaKeys.add(`media:${variant.image}:${data.brandId}`);
         });
         if (data.sustainabilityCertificate)
-            mediaIds.add(data.sustainabilityCertificate);
+            mediaKeys.add(`media:${data.sustainabilityCertificate}:${data.brandId}`);
 
-        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
         const mediaMap = new Map(
             mediaItems.data.map((item) => [item.id, item])
         );

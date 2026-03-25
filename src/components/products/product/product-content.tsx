@@ -273,7 +273,7 @@ export function ProductContent({
                 />
 
                 <Separator />
-                <ProductCard />
+                <ProductCard product={product} />
             </div>
 
             <ProductShareModal
